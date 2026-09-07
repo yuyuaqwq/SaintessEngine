@@ -70,11 +70,12 @@ def make_actor(
 ) -> dict:
     """构造一个全同构 actor dict。
 
-    - 播种全部战斗可变状态键（buffs/debuffs/stacks/resources/shields/cooldown/hot/...）
+    - 播种全部战斗可变状态键（buffs/state/shields/...）
     - 玩家面板字段（hp/mp/atk/def/spd/crit/...）由调用方按需传入（make_player 之类工厂）；
       引擎不在构造时做玩家面板聚合（那是 stats.py actor_stats 的活）。
     - 普通怪（无 class_name）：stats 里直接给 atk/def/matk/mdef/spd/crit/... 字段。
     - 玩家（有 class_name）：stats 给基础字段；聚合面板用 actor_stats()（stats.py）。
+    - ⚠️ 等级字段统一 level：引擎不认 lv。旧怪模板 lv 由数据桥入口翻译，这里不做兼容。
     """
     actor: dict = {
         # ① 身份/数据标签

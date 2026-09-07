@@ -16,6 +16,7 @@ from typing import Optional
 from .. import engine as E
 from ..core import constants as K
 from . import stats as S
+from .actors import state_of, state_spend
 
 # kind 常量（旧 battle.py K_PHYS/K_MAGI/K_TRUE 同义；用文案判断会脆，这里按旧语义）
 K_PHYS = "物理"
@@ -98,24 +99,19 @@ def _skill_usable(battle, actor: dict, info: dict) -> bool:
 
 
 def _spend_skill_cost(actor: dict, info: dict):
-    """扣除技能蓝耗/核心资源。basic/无消耗技能跳过。"""
+    """扣除技能蓝耗/核心资源（state 容器）。basic/无消耗技能跳过。"""
     mp = int(info.get("mp", 0) or 0)
     if mp > 0 and actor.get("mp") is not None:
         actor["mp"] = max(0, int(actor.get("mp", 0)) - mp)
-    # 核心资源消耗（res_cost / consume_all）——N2b 资源系统接入后补全
+    # 核心资源消耗（res_cost：扣 state[key]）
     res_cost = info.get("res_cost") or {}
     if res_cost:
-        from ..engine import core_resource_spend
         for rk, rv in res_cost.items():
-            core_resource_spend(actor.get("class_name", ""), actor.setdefault("resources", {}),
-                                int(rv or 0), key=rk)
+            state_spend(actor, rk, int(rv or 0))
+    # consume_all：清零该资源 key
     consume_all = info.get("consume_all") or {}
     if consume_all and consume_all.get("key"):
-        from ..engine import core_resource_def
-        rd = core_resource_def(actor.get("class_name", "")) or {}
-        k = consume_all.get("key")
-        # 全耗：清零该资源（扣到 0）
-        actor.setdefault("resources", {})[k] = 0
+        state_of(actor).pop(consume_all["key"], None)
 
 
 def _default_target(battle, actor: dict) -> Optional[dict]:
@@ -187,6 +183,8 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
     logs = []
     st = S.actor_stats(battle, actor)
     est = S.actor_stats(battle, target)
+    # state 声明伤害倍率（state_effects 表 dmg_mult：如 rage 狂暴层）
+    _st_mult = float(st.get("_state_dmg_mult", 1.0) or 1.0)
     crit_pct = float(st.get("crit", 0) or 0)
     is_crit = random.random() < crit_pct
     lucky = False
@@ -208,6 +206,8 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
                                           pp_phys, pf_phys, pp_magi, pf_magi, skill_flat)
         total += dmg_i
         magi_part += mseg_i
+    if _st_mult != 1.0:
+        total = max(1, int(total * _st_mult))
     if total <= 0:
         return logs
     logs.extend(_deal_hit(battle, actor, target, total))
@@ -271,93 +271,10 @@ def _skill_seg_damage(battle, actor, target, st, est, info, lv,
 
 
 def _deal_hit(battle, actor: dict, target: dict, dmg: int) -> list:
-    """命中落地：伤害打到目标（承伤链 N1 = 等级压制 + defending + 护盾 + 扣血）。
-
-    N1 对齐旧 _deal_damage → _damage_actor 的核心链：
-    - v136 双向等级压制曲线
-    - defending 减半
-    - 护盾吸收
-    闪避/格挡/反伤/吸血在 N2/N3 展开。
-    """
+    """命中落地薄包装：统一走 landing.deal_damage 收口（等级压制/护盾/死亡）。"""
     logs = []
-    # 等级压制（v136 双向曲线，与旧 _deal_damage 逐字对齐）
-    dmg = _lv_pressure(battle, actor, target, dmg)
-    if dmg <= 0:
-        return logs
-    # defending 减伤
-    if target.get("defending"):
-        dmg = max(1, int(dmg * 0.5))
-        logs.append(f"(格挡后 {dmg} 点伤害)")
-    # 睡眠被打醒 + 蓄力打断（N1 先处理睡眠唤醒）
-    if target.get("buffs", {}).get("sleep"):
-        target["buffs"].pop("sleep", None)
-        logs.append("💥 敌人被攻击惊醒！")
-    # 承伤落地
-    logs.extend(_damage_actor(battle, target, dmg))
-    return logs
-
-
-def _lv_pressure(battle, actor: dict, target: dict, dmg: int) -> int:
-    """v136 双向等级压制曲线（与旧 _deal_damage 逐字对齐）。
-
-    低打高：低 1-3 级 ×0.95/级，低 4+ 级 ×0.90/级（指数，封顶 ×0.30）
-    高打低：每高 1 级 ×1.02 连乘（指数，不封顶）
-    PVP 不压；目标无 lv 字段不压。
-    """
-    if battle.btype == "pvp":
-        return dmg
-    atk_lv = actor.get("level")
-    tgt_lv = target.get("lv")
-    if not atk_lv or not tgt_lv:
-        return dmg
-    try:
-        plv = int(atk_lv)
-        diff = int(tgt_lv) - plv
-        if diff > 0:
-            mult = 1.0
-            for i in range(min(diff, 10)):
-                mult *= (0.95 if i < 3 else 0.90)
-            return max(1, int(dmg * max(0.30, mult)))
-        elif diff < 0:
-            return max(1, int(dmg * (1.02 ** min(-diff, 50))))
-    except Exception:
-        pass
-    return dmg
-
-
-def _damage_actor(battle, target: dict, dmg: int) -> list:
-    """承伤链最小集：护盾吸收 + hp 扣减 + 死亡处理（N2/N3 展开格挡/反伤/吸血）。"""
-    logs = []
-    if dmg <= 0:
-        return logs
-    # 护盾吸收（shields = {key: {value, halve, expire_at}}）
-    shields = target.get("shields") or {}
-    if shields:
-        remaining = dmg
-        for sk in list(shields.keys()):
-            sh = shields[sk]
-            if not isinstance(sh, dict) or int(sh.get("value", 0) or 0) <= 0:
-                continue
-            sv = int(sh["value"])
-            absorb = min(sv, remaining)
-            sh["value"] = sv - absorb
-            remaining -= absorb
-            logs.append(f"🛡️ {target.get('name', '目标')} 的护盾吸收了 {absorb} 点伤害！")
-            if sh["value"] <= 0:
-                shields.pop(sk, None)
-            if remaining <= 0:
-                break
-        dmg = remaining
-    if dmg <= 0:
-        return logs
-    old = int(target.get("hp", 0) or 0)
-    new = max(0, old - dmg)
-    target["hp"] = new
-    if new <= 0:
-        logs.append(f"💥 {target.get('name', '目标')} 受到 {dmg} 点伤害，倒下了！")
-        battle._on_actor_dead(target)
-    else:
-        logs.append(f"💥 {target.get('name', '目标')} 受到 {dmg} 点伤害！")
+    from .landing import deal_damage
+    deal_damage(battle, actor, target, dmg, logs)
     return logs
 
 
@@ -394,11 +311,9 @@ def _do_heal(battle, ctx, actor, info, logs) -> list:
         pass
     if heal <= 0:
         return logs
-    # 落地（clamp max_hp）
-    _mx = target.get("max_hp", target.get("hp", 1)) or 1
-    _before = int(target.get("hp", 0) or 0)
-    target["hp"] = min(_mx, _before + heal)
-    _real = int(target["hp"]) - _before
+    # 落地（统一收口 landing.heal_actor：禁疗修正 + clamp max_hp）
+    from .landing import heal_actor
+    _real = heal_actor(battle, target, heal, logs)
     logs.append(f"你施展【{info.get('name', ctx.skill_name or '技能')}】，圣光治愈了你 {heal} 点生命！"
                 if _real >= heal else
                 f"你施展【{info.get('name', ctx.skill_name or '技能')}】，治愈了 {_real} 点生命！")
