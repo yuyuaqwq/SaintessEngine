@@ -127,13 +127,14 @@ def _apply_state_scale(st: dict, actor: dict) -> dict:
     - stat_scale: {"atk": 0.04} → 每点 atk +4%（面板乘算）
     - dmg_mult: {"dmg_mult": 0.12} → 折进 st["_state_dmg_mult"]（伤害结算读乘区）
     """
-    from .state_effects import STATE_EFFECTS
+    from .state_effects import all_state_effects
     state = actor.get("state") or {}
     if not state:
         return st
     dmg_mult = 1.0
+    state_table = all_state_effects()
     for key, val in state.items():
-        cfg = STATE_EFFECTS.get(key) or {}
+        cfg = state_table.get(key) or {}
         scale = cfg.get("stat_scale") or {}
         n = int(val or 0)
         if n <= 0:

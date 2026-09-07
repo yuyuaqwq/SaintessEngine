@@ -350,14 +350,15 @@ def eff_cleanse(battle, caster, target, params, logs):
       （引擎不认识具体 key，全表驱动）
     - 控制（buffs 容器）：stun/silence/freeze/spd_down/reduce 等
     """
-    from .state_effects import STATE_EFFECTS
+    from .state_effects import all_state_effects
     actor = target or caster
     if not actor:
         return
     rem = []
     st = actor.setdefault("state", {})
+    state_table = all_state_effects()
     for k in list(st.keys()):
-        cfg = STATE_EFFECTS.get(k) or {}
+        cfg = state_table.get(k) or {}
         if cfg.get("dot") or cfg.get("on") == "target":
             rem.append(k)
             st.pop(k, None)
