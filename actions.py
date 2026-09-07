@@ -211,7 +211,17 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
     if total <= 0:
         return logs
     logs.extend(_deal_hit(battle, actor, target, total))
+    # 命中后 mech/effect 效果（N3：mech → effects 兼容层）
+    _apply_hit_effects(battle, actor, target, info, lv, logs)
     return logs
+
+
+def _apply_hit_effects(battle, actor: dict, target: dict, info: dict, lv: int, logs: list):
+    """攻击命中后附加效果（mech → effects 兼容层，N3 核心接入点）。"""
+    from .effects import apply_effects, effects_from_skill
+    effs = effects_from_skill(info, lv)
+    if effs:
+        apply_effects(battle, actor, target, effs, logs)
 
 
 def _skill_lv_of(battle, actor: dict) -> int:
@@ -469,6 +479,15 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
         # （test_commands_battle.py:96 断言固化）。新引擎做正确值：10 刻。
         base_turns = skill_buff_turns(lv, info=info)
     if eff:
+        # 效果单表分派：EFFECT_HANDLERS 有该 effect → 走 handler（含 reduce/shield）
+        from .effects import EFFECT_HANDLERS, apply_effects
+        handler = EFFECT_HANDLERS.get(eff)
+        if handler:
+            apply_effects(battle, actor, actor, [{"type": eff, "turns": base_turns,
+                                                  "info": info, "mech_val": info.get("mech_val"),
+                                                  "effect_val": info.get("effect_val")}], logs)
+            logs.append(f"你施展【{info.get('name', ctx.skill_name or '技能')}】！")
+            return logs
         # 减伤类 effect（reduce：buffs["reduce"]=百分比 + reduce_left 剩余刻）
         if eff == "reduce":
             rp = float(info.get("reduce_pct") or 0)
