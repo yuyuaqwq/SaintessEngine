@@ -46,8 +46,6 @@ class ActCtx:
 _MUTABLE_KEYS = {
     "buffs": dict,
     "debuffs": dict,
-    "stacks": dict,
-    "resources": dict,
     "shields": dict,
     "cooldown": dict,
     "hot": dict,
@@ -106,8 +104,6 @@ def make_actor(
         # ③ 战斗可变状态（播种）
         "buffs": dict(stats.get("buffs") or {}),
         "debuffs": dict(stats.get("debuffs") or {}),
-        "stacks": dict(stats.get("stacks") or {}),
-        "resources": dict(stats.get("resources") or {}),
         "shields": dict(stats.get("shields") or {}),
         "cooldown": dict(stats.get("cooldown") or {}),
         "hot": dict(stats.get("hot") or {}),
@@ -115,6 +111,9 @@ def make_actor(
         "defending": bool(stats.get("defending", False)),
         "ct": float(stats.get("ct", 0.0)),
         "poi_buff": stats.get("poi_buff"),
+        # 统一数值状态容器（引擎不认识 key 语义；叠层/资源/职业数值全进这里，
+        # 影响规则查 state_effects 声明表，不硬编码在引擎）
+        "state": dict(stats.get("state") or {}),
         # ④ 配置/能力
         "class_name": class_name,
         "level": int(stats.get("level", level)),
@@ -171,24 +170,42 @@ def actor_debuffs(actor: dict) -> dict:
     return d
 
 
-def actor_stacks(actor: dict) -> dict:
-    """任意 actor 的职业叠层。"""
+def state_of(actor: dict) -> dict:
+    """actor 统一数值状态容器（惰性播种）。叠层/资源/职业数值全在这里。"""
     if actor is None:
         return {}
-    s = actor.get("stacks")
-    if s is None:
-        s = actor["stacks"] = {}
-    return s
+    st = actor.get("state")
+    if not isinstance(st, dict):
+        st = actor["state"] = {}
+    return st
 
 
-def actor_resources(actor: dict) -> dict:
-    """任意 actor 的核心资源。"""
-    if actor is None:
-        return {}
-    r = actor.get("resources")
-    if r is None:
-        r = actor["resources"] = {}
-    return r
+def state_get(actor: dict, key: str) -> int:
+    """读状态值（无 = 0）。"""
+    return int(state_of(actor).get(key, 0) or 0)
+
+
+def state_add(actor: dict, key: str, amount: int, cap: int | None = None) -> int:
+    """状态加值（封顶由调用方传或查 state_effects 声明表 cap）。返回加后值。"""
+    from .state_effects import state_def
+    if amount == 0:
+        return state_get(actor, key)
+    st = state_of(actor)
+    if cap is None:
+        cap = int(state_def(key).get("cap") or 0) or 999999
+    cur = int(st.get(key, 0) or 0)
+    st[key] = max(0, min(cap, cur + int(amount)))
+    return st[key]
+
+
+def state_spend(actor: dict, key: str, amount: int) -> int:
+    """状态消费（扣减，下限 0）。返回扣后值。"""
+    if amount <= 0:
+        return state_get(actor, key)
+    st = state_of(actor)
+    cur = int(st.get(key, 0) or 0)
+    st[key] = max(0, cur - int(amount))
+    return st[key]
 
 
 def actor_ext(actor: dict) -> dict:

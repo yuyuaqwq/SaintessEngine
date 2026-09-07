@@ -46,6 +46,8 @@ def actor_stats(battle, actor: dict) -> dict:
         st = _monster_base_stats(actor)
     # buffs 修正（战斗内 buffs dict → 面板属性）
     _apply_buffs(st, actor_buffs_of(actor))
+    # state 声明折算（state_effects 表 stat_scale：叠层/资源 → 面板属性）
+    _apply_state_scale(st, actor)
     return st
 
 
@@ -115,6 +117,37 @@ def _apply_buffs(st: dict, buffs: dict) -> dict:
             st[attr] = int(st.get(attr, 0) * SPD_DOWN_MULT)
         else:
             st[attr] = int(st.get(attr, 0) * (1 + n * mult))
+    return st
+
+
+def _apply_state_scale(st: dict, actor: dict) -> dict:
+    """state 声明折算：查 state_effects 表 stat_scale，把叠层/资源值折进面板。
+
+    通用动作（引擎不认识 key 语义）：
+    - stat_scale: {"atk": 0.04} → 每点 atk +4%（面板乘算）
+    - dmg_mult: {"dmg_mult": 0.12} → 折进 st["_state_dmg_mult"]（伤害结算读乘区）
+    """
+    from .state_effects import STATE_EFFECTS
+    state = actor.get("state") or {}
+    if not state:
+        return st
+    dmg_mult = 1.0
+    for key, val in state.items():
+        cfg = STATE_EFFECTS.get(key) or {}
+        scale = cfg.get("stat_scale") or {}
+        n = int(val or 0)
+        if n <= 0:
+            continue
+        for stat, per in scale.items():
+            if stat == "dmg_mult":
+                dmg_mult *= (1.0 + n * float(per))
+            elif stat == "reduce":
+                # 减伤折算：st["reduce"] 累加（cap 由消费侧）
+                st["reduce"] = min(float(st.get("reduce", 0) or 0) + n * float(per), 0.9)
+            elif stat in st:
+                st[stat] = int(st.get(stat, 0) * (1.0 + n * float(per)))
+    if dmg_mult != 1.0:
+        st["_state_dmg_mult"] = dmg_mult
     return st
 
 

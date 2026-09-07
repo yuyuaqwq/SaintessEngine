@@ -18,6 +18,9 @@ from __future__ import annotations
 
 from typing import Callable, Optional
 
+from .actors import state_add, state_get, state_spend
+from .state_effects import state_def
+
 # ============================================================
 # 注册表
 # ============================================================
@@ -63,23 +66,38 @@ def effects_from_skill(info: dict, lv: int, caster_side_is_player: bool = True) 
 
     迁移期用：技能数据还是旧格式（mech/effect 字段），
     N3 后数据层迁移成 effects 列表，本函数可删。
+
+    mech 分派（查 state_effects 声明表，引擎不硬编码 key）：
+    - key 声明为状态叠层（stat_scale/dot 在表里，无 on=target）→ 通用 state_add
+    - 否则按原 type 走 EFFECT_HANDLERS（控制/盾等真·动作效果）
     """
     effects = []
-    # mech → 对敌效果（命中后附加）
+    # mech → 状态/效果
     mech = info.get("mech") or ""
     mval = int(info.get("mech_val", 0) or 0)
     if mech and mval:
-        effects.append({"type": mech, "stacks": mval,
-                        "turns": int(info.get("cc_turns", 0) or 0),
-                        "mech": mech, "info": info})
+        effects.append(_mech_to_effect(mech, mval, info))
     # mech2（第二 mech）
     mech2 = info.get("mech2") or ""
     if mech2:
         m2v = int(info.get("mech2_val", 0) or 0)
-        effects.append({"type": mech2, "stacks": m2v,
-                        "turns": int(info.get("cc_turns", 0) or 0),
-                        "mech": mech2, "info": info})
+        effects.append(_mech_to_effect(mech2, m2v, info))
     return effects
+
+
+def _mech_to_effect(mech: str, mval: int, info: dict) -> dict:
+    """单个 mech key → effect dict（查 state_effects 声明表分派）。"""
+    cfg = state_def(mech)
+    on_target = bool(cfg.get("on") == "target")
+    # 声明表里的叠层/资源/dot 类 → 统一 state_add（引擎不认识 key 语义）
+    if cfg:
+        return {"type": "state_add", "key": mech, "amount": mval,
+                "on": "target" if on_target else "caster",
+                "info": info}
+    # 真·动作效果（控制/盾等，EFFECT_HANDLERS 注册）
+    return {"type": mech, "stacks": mval,
+            "turns": int(info.get("cc_turns", 0) or 0),
+            "mech": mech, "info": info}
 
 
 def _cc_turns_of(info: dict, lv: int) -> int:
@@ -93,102 +111,10 @@ def _cc_turns_of(info: dict, lv: int) -> int:
 
 
 # ============================================================
-# 对敌 debuff 叠层类（写 target.debuffs）
+# 对敌标记/DOT 已声明化（state_effects 表 on=target + dot 规则），
+# 由通用 state_add 写入 actor.state，N4 schedule 通用 dot 结算消费。
+# 引擎不注册 burn/bleed/poison/hunt_mark/元素印记 专用 handler。
 # ============================================================
-
-@register_effect("burn")
-def eff_burn(battle, caster, target, params, logs):
-    """灼烧：叠层（每层每刻掉 3% 生命，cap 5 层）。写 target.debuffs["burn"]={n, mult}。"""
-    if not target:
-        return
-    if "burn" in (target.get("immune_dots") or []):
-        logs.append("🛡️ 敌人免疫灼烧！")
-        return
-    stacks = int(params.get("stacks", 0) or 0)
-    if stacks <= 0:
-        return
-    deb = target.setdefault("debuffs", {})
-    cur = deb.get("burn") or {"n": 0, "mult": 1.0}
-    cur["mult"] = float(cur.get("mult", 1.0) or 1.0)
-    cur["n"] = min(5, int(cur.get("n", 0) or 0) + stacks)
-    deb["burn"] = cur
-    logs.append(f"🔥 灼烧层数 {cur['n']}(每刻 {cur['n'] * 3}% 生命)")
-
-
-@register_effect("bleed")
-def eff_bleed(battle, caster, target, params, logs):
-    """流血：叠层（每层每刻固定伤害，cap 按数据）。写 target.debuffs["bleed"]。"""
-    if not target:
-        return
-    stacks = int(params.get("stacks", 0) or 0)
-    if stacks <= 0:
-        return
-    deb = target.setdefault("debuffs", {})
-    cur = deb.get("bleed") or {"n": 0, "mult": 1.0}
-    cur["n"] = min(10, int(cur.get("n", 0) or 0) + stacks)
-    deb["bleed"] = cur
-    logs.append(f"🩸 流血层数 {cur['n']}")
-
-
-@register_effect("poison")
-def eff_poison(battle, caster, target, params, logs):
-    """中毒：叠层（每层每刻伤害）。写 target.debuffs["poison"]={n, mult}。"""
-    if not target:
-        return
-    if "poison" in (target.get("immune_dots") or []):
-        logs.append("🛡️ 敌人免疫中毒！")
-        return
-    stacks = int(params.get("stacks", 0) or 0)
-    if stacks <= 0:
-        return
-    deb = target.setdefault("debuffs", {})
-    cur = deb.get("poison") or {"n": 0, "mult": 1.0}
-    cur["n"] = min(5, int(cur.get("n", 0) or 0) + stacks)
-    deb["poison"] = cur
-    logs.append(f"☠️ 中毒层数 {cur['n']}")
-
-
-@register_effect("hunt_mark")
-def eff_hunt_mark(battle, caster, target, params, logs):
-    """猎印：叠层（目标易伤，每层 +8% 承伤，cap 默认 3）。"""
-    if not target:
-        return
-    stacks = int(params.get("stacks", 0) or 0)
-    if stacks <= 0:
-        return
-    deb = target.setdefault("debuffs", {})
-    deb["hunt_mark"] = min(3, int(deb.get("hunt_mark", 0) or 0) + stacks)
-    logs.append(f"🎯 猎印 {deb['hunt_mark']} 层（承伤 +{8 * deb['hunt_mark']}%）")
-
-
-@register_effect("soul_mark")
-def eff_soul_mark(battle, caster, target, params, logs):
-    """魂标：叠层（每层 +6% 承伤，cap 默认 3）。"""
-    if not target:
-        return
-    stacks = int(params.get("stacks", 0) or 0)
-    if stacks <= 0:
-        return
-    deb = target.setdefault("debuffs", {})
-    deb["soul_mark"] = min(3, int(deb.get("soul_mark", 0) or 0) + stacks)
-    logs.append(f"💀 魂标 {deb['soul_mark']} 层（承伤 +{6 * deb['soul_mark']}%）")
-
-
-# 元素印记（fire_mark/ice_mark/thunder_mark）→ debuffs 标记（元素反应 N3b 用）
-for _mk_key, _mk_name, _mk_mult in (("fire_mark", "火印", 0.15),
-                                    ("ice_mark", "冰印", 0.15),
-                                    ("thunder_mark", "雷印", 0.15)):
-    def _mk_handler(battle, caster, target, params, logs, _k=_mk_key, _n=_mk_name, _m=_mk_mult):
-        if not target:
-            return
-        stacks = int(params.get("stacks", 0) or 0)
-        if stacks <= 0:
-            return
-        deb = target.setdefault("debuffs", {})
-        deb[_k] = min(5, int(deb.get(_k, 0) or 0) + stacks)
-        logs.append(f"🪷 {_n} {deb[_k]} 层")
-    EFFECT_HANDLERS[_mk_key] = _mk_handler
-
 
 # ============================================================
 # 控制类（写 target.buffs 一次性控制标记）
@@ -253,95 +179,50 @@ def eff_sleep(battle, caster, target, params, logs):
 
 
 # ============================================================
-# 叠层类（写 caster.stacks / caster.resources）
+# 状态数值（统一 state 容器；引擎零职业语义，key 全数据驱动）
 # ============================================================
 
-def _stack_gain(actor: dict, key: str, amount: int, cap: int) -> int:
-    """叠层（写 actor.stacks[key]，封顶）。返回叠后层数。"""
-    stacks = actor.setdefault("stacks", {})
-    cur = int(stacks.get(key, 0) or 0)
-    stacks[key] = min(cap, cur + amount)
-    return stacks[key]
+@register_effect("state_add")
+def eff_state_add(battle, caster, target, params, logs):
+    """通用状态加值：给 actor.state[key] 加 amount（cap 查声明表）。
+
+    effect type 单一入口；具体加什么 key、影响什么由数据声明，
+    引擎不 care key 语义。mech 兼容层把 mech key 原样传到这里。
+    """
+    actor = params.get("on", "caster")
+    holder = caster if actor == "caster" else (target or caster)
+    if not holder:
+        return
+    key = params.get("key") or params.get("mech")
+    amount = int(params.get("amount", params.get("stacks", 0)) or 0)
+    if not key or amount <= 0:
+        return
+    n = state_add(holder, key, amount)
+    cap = int(state_def(key).get("cap") or 0)
+    cap_txt = f"/{cap}" if cap else ""
+    logs.append(f"✦ {key} {n}{cap_txt}（+{amount}）")
 
 
-@register_effect("zhan_yi")
-def eff_zhan_yi(battle, caster, target, params, logs):
-    """战意：叠层（0-10，每层 +4% 攻击，持有即生效）。写 caster.stacks["zhan_yi"]。"""
-    if not caster:
-        return
-    amount = int(params.get("stacks", 0) or 0)
-    if amount <= 0:
-        return
-    n = _stack_gain(caster, "zhan_yi", amount, 10)
-    logs.append(f"⚔️ 战意 {n}(每层攻击＋4%，满 10 进入狂暴)")
+@register_effect("state_spend")
+def eff_state_spend(battle, caster, target, params, logs):
+    """通用状态消费：actor.state[key] 扣 amount（下限 0）。
 
-
-@register_effect("zhan_yi_cash")
-def eff_zhan_yi_cash(battle, caster, target, params, logs):
-    """战意消耗：花 N 层战意换效果（写 caster.stacks["zhan_yi"] 扣减）。"""
-    if not caster:
+    技能要"花 N 层 X 换效果" = state_spend + 后续 effect 组合。
+    """
+    actor = params.get("on", "caster")
+    holder = caster if actor == "caster" else (target or caster)
+    if not holder:
         return
-    amount = int(params.get("stacks", 0) or 0)
-    if amount <= 0:
+    key = params.get("key") or params.get("mech")
+    amount = int(params.get("amount", params.get("stacks", 0)) or 0)
+    if not key or amount <= 0:
         return
-    stacks = caster.setdefault("stacks", {})
-    cur = int(stacks.get("zhan_yi", 0) or 0)
-    stacks["zhan_yi"] = max(0, cur - amount)
-    logs.append(f"⚔️ 消耗 {amount} 层战意（剩余 {stacks['zhan_yi']}）")
-
-
-@register_effect("lian_duan")
-def eff_lian_duan(battle, caster, target, params, logs):
-    """连段：叠层（计数型，断连归零）。写 caster.stacks["lian_duan"]。"""
-    if not caster:
+    cur = state_get(holder, key)
+    if cur < amount:
+        logs.append(f"⚠️ {key} 不足（需 {amount}，当前 {cur}）")
         return
-    amount = int(params.get("stacks", 0) or 0)
-    if amount <= 0:
-        return
-    n = _stack_gain(caster, "lian_duan", amount, 10)
-    logs.append(f"🔗 连段 {n}(计数型，断连归零)")
-
-
-@register_effect("rage")
-def eff_rage(battle, caster, target, params, logs):
-    """怒气：叠层（战士通用资源，rage 0-10）。写 caster.resources["rage"]。"""
-    if not caster:
-        return
-    amount = int(params.get("stacks", 0) or 0)
-    if amount <= 0:
-        return
-    res = caster.setdefault("resources", {})
-    cur = int(res.get("rage", 0) or 0)
-    res["rage"] = min(10, cur + amount)
-    logs.append(f"🔥 怒气 +{amount}（当前 {res['rage']}）")
-
-
-@register_effect("chi")
-def eff_chi(battle, caster, target, params, logs):
-    """气：叠层（拳师资源）。写 caster.resources["chi"]。"""
-    if not caster:
-        return
-    amount = int(params.get("stacks", 0) or 0)
-    if amount <= 0:
-        return
-    res = caster.setdefault("resources", {})
-    cur = int(res.get("chi", 0) or 0)
-    res["chi"] = min(10, cur + amount)
-    logs.append(f"🥋 气 +{amount}（当前 {res['chi']}）")
-
-
-@register_effect("arcane")
-def eff_arcane(battle, caster, target, params, logs):
-    """奥术充能：叠层（法师资源）。写 caster.resources["arcane"]。"""
-    if not caster:
-        return
-    amount = int(params.get("stacks", 0) or 0)
-    if amount <= 0:
-        return
-    res = caster.setdefault("resources", {})
-    cur = int(res.get("arcane", 0) or 0)
-    res["arcane"] = min(10, cur + amount)
-    logs.append(f"🔮 奥术充能 +{amount}（当前 {res['arcane']}）")
+    state_spend(holder, key, amount)
+    logs.append(f"✦ 消耗 {amount} 点 {key}（剩余 {cur - amount}）")
 
 
 # ============================================================
@@ -463,18 +344,28 @@ def eff_cc_immune(battle, caster, target, params, logs):
 
 @register_effect("cleanse")
 def eff_cleanse(battle, caster, target, params, logs):
-    """净化：移除 caster 自身一个减益（对敌 debuffs 读 target）。"""
+    """净化：移除目标身上的 DOT/标记/控制。
+
+    - DOT/标记（state 容器）：查 state_effects 表里 dot/on=target 的 key 动态清理
+      （引擎不认识具体 key，全表驱动）
+    - 控制（buffs 容器）：stun/silence/freeze/spd_down/reduce 等
+    """
+    from .state_effects import STATE_EFFECTS
     actor = target or caster
     if not actor:
         return
     rem = []
-    deb = actor.setdefault("debuffs", {})
-    for k in ("burn", "bleed", "poison", "spd_down", "stun", "silence", "freeze"):
-        if k in deb:
+    st = actor.setdefault("state", {})
+    for k in list(st.keys()):
+        cfg = STATE_EFFECTS.get(k) or {}
+        if cfg.get("dot") or cfg.get("on") == "target":
             rem.append(k)
-            deb.pop(k, None)
+            st.pop(k, None)
     for k in ("stun", "silence", "freeze", "spd_down", "reduce"):
-        actor.setdefault("buffs", {}).pop(k, None)
+        bf = actor.setdefault("buffs", {})
+        if k in bf:
+            rem.append(k)
+            bf.pop(k, None)
     if rem:
         logs.append(f"✨ 净化了 {'、'.join(rem)}！")
     else:
