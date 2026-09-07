@@ -1,0 +1,255 @@
+# -*- coding: utf-8 -*-
+"""v181.P4 battle2 引擎——行动结算链（actions.py）。
+
+按 docs/REFACTOR_v181P4_FULL_PLAN.md Part 2.2：
+- 全部结算显式 ctx/caster/target，不摸隐式全局目标
+- 数值公式复用旧 engine.py（resolve_formula/calc_damage/skill_*），不重写
+
+N1 范围：普攻（attack = basic_skill）+ 伤害落地 + 承伤链最小集（hp 扣减）。
+技能/治疗/增益/AOE 在 N2 展开（_do_skill 框架已留）。
+"""
+from __future__ import annotations
+
+import random
+from typing import Optional
+
+from .. import engine as E
+from ..core import constants as K
+from . import stats as S
+
+# kind 常量（旧 battle.py K_PHYS/K_MAGI/K_TRUE 同义；用文案判断会脆，这里按旧语义）
+K_PHYS = "物理"
+K_MAGI = "魔法"
+K_TRUE = "真伤"
+K_HEAL = "治疗"
+K_BUFF = "增益"
+
+
+def resolve_basic_skill(class_name: Optional[str]) -> dict:
+    """取职业 basic_skill 配置；无则回退纯物理普攻。
+
+    与旧 _actor_attack 同语义：普攻 = 释放职业 basic_skill（无 CD/无蓝耗）。
+    """
+    try:
+        from .. import content as C
+        cid = C.resolve("classes", class_name or "")
+        bs = (C.CLASSES.get(cid, {}) or {}).get("basic_skill") or {}
+        if isinstance(bs, dict) and bs.get("name") and (bs.get("exprs") or bs.get("formula")):
+            return dict(bs)
+    except Exception:
+        pass
+    return {"name": "攻击", "kind": K_PHYS, "exprs": ["atk*1.0"]}
+
+
+def do_attack(battle, ctx) -> list:
+    """普攻 = 释放 basic_skill（数据配置的普通技能），走统一技能管道。"""
+    actor = ctx.caster
+    info = resolve_basic_skill(actor.get("class_name"))
+    # basic 技能无 CD/无蓝耗/无需学习等级；资源获取由 res_gain / on_skill 数据驱动
+    sub = ctx.__class__(caster=actor, action="skill", skill_name=info["name"],
+                        info=info, target=ctx.target, target_side=ctx.target_side,
+                        scope=ctx.scope)
+    return do_skill(battle, sub)
+
+
+def do_skill(battle, ctx) -> list:
+    """技能结算入口（N2 展开：治疗/增益/伤害三分派）。N1 先支持攻击类。"""
+    actor = ctx.caster
+    info = ctx.info or {}
+    if not info:
+        return []
+    kind = info.get("kind", "")
+    logs = []
+    # 目标解析（N1：单目标；AOE N2）
+    target = ctx.target if ctx.target is not None else _default_target(battle, actor)
+    if target is None:
+        return ["但没有可攻击的目标！"]
+    # 技能等级（skill_levels 无此技能 → lv=0，basic 无成长）
+    lv = E.skill_level_of(actor, info.get("name", "")) if actor.get("class_name") else 0
+    if kind in (K_HEAL, K_BUFF):
+        # N2 实现治疗/增益管线
+        logs.append(f"（N2）{info.get('name', '技能')} 治疗/增益管线待实现")
+        return logs
+    # ---- 攻击类：伤害管线 ----
+    logs.extend(_attack_damage_pipeline(battle, actor, target, info, lv))
+    return logs
+
+
+def _default_target(battle, actor: dict) -> Optional[dict]:
+    """缺省目标：actor 敌对阵营存活第一人（AI/命令层未指定 target 时）。"""
+    from .actors import hostile_actors, actor_alive
+    for _a in hostile_actors(battle, actor.get("side", "")):
+        if actor_alive(_a):
+            return _a
+    return None
+
+
+# ============================================================
+# 伤害管线（N1：普攻 = 单段 expr 物理）
+# ============================================================
+
+def _attack_damage_pipeline(battle, actor: dict, target: dict, info: dict, lv: int) -> list:
+    """伤害管线核心（对齐旧 _actor_skill 攻击路径，N1 无被动/无词条/无标记场景）。
+
+    步骤：暴击判定 → 乘区装配（N1 恒 1.0）→ 单段伤害 resolve_formula → 命中落地。
+    """
+    logs = []
+    # 面板
+    st = S.actor_stats(battle, actor)
+    est = S.actor_stats(battle, target)
+    # 暴击判定：crit vs 面板 crit（对齐旧 _skill_crit_roll 基础项：面板 crit×韧性乘数）
+    # N1：无韧性/无被动/无套装 → is_crit = random() < st.crit
+    crit_pct = float(st.get("crit", 0) or 0)
+    is_crit = random.random() < crit_pct
+    # 幸运一击判定（v109.2 P1-1 运势）：暴击后 30% 概率追加 50% 伤害。
+    # ⚠️ random 消耗必须与旧引擎同步：is_crit=True 时无论是否触发 lucky 都消耗 1 次
+    # （旧 _skill_crit_roll 第 2 次 random），保证 resolve_formula 波动 random 序列对齐。
+    lucky = False
+    if is_crit:
+        lucky = random.random() < 0.30
+    # 段级暴击：basic 单段，首段吃暴击
+    seg_crit = is_crit
+    # 穿透（N1 玩家无穿透词条 → 0）
+    pp_phys = float(st.get("pene_phys", 0) or 0)
+    pf_phys = int(st.get("pene_flat_phys", 0) or 0)
+    pp_magi = float(st.get("pene_magi", 0) or 0)
+    pf_magi = int(st.get("pene_flat_magi", 0) or 0)
+    # 技能基础值（v156：flat = BASE + 玩家等级×PER_LV + 技能等级×PER_SKILL_LV）
+    skill_flat = E.skill_flat_value(int(actor.get("level", 1) or 1), lv, info)
+    # 表达式分支（basic_skill exprs=["atk*1.0"]）
+    dmg, _magi = _skill_seg_damage(battle, actor, target, st, est, info,
+                                   lv, seg_crit, lucky, pp_phys, pf_phys, pp_magi, pf_magi,
+                                   skill_flat)
+    if dmg <= 0:
+        return logs
+    # 命中判定（N1：无闪避/无格挡）
+    logs.extend(_deal_hit(battle, actor, target, dmg))
+    return logs
+
+
+def _skill_seg_damage(battle, actor, target, st, est, info, lv,
+                      seg_crit, lucky, pp_phys, pf_phys, pp_magi, pf_magi,
+                      skill_flat) -> tuple:
+    """单段伤害计算（对齐旧 _skill_seg_damage 的 expr 分支 + 非 formula 兜底）。"""
+    expr = E.skill_formula_expr(info, lv)
+    if expr:
+        # expr 段：type 由 kind 推导（物理→phys、真伤→true、其余 magi）
+        kind = info.get("kind", "")
+        seg_type = "true" if kind == K_TRUE else ("phys" if kind == K_PHYS else "magi")
+        st["_player_lv"] = int(actor.get("level", 1) or 1)
+        st["_skill_lv"] = lv
+        # expr 已内嵌技能成长 → 剔除 skill_power_mult（basic 无成长 → 恒 1.0，无影响）
+        spm = E.skill_power_mult(lv, info) or 1.0
+        pmult_expr = (1.0 / spm) if spm else 1.0
+        dmg, magi = E.resolve_formula(
+            [{"expr": expr, "type": seg_type}], st, est.get("def", 0), est.get("mdef", 0),
+            is_crit=seg_crit, pene_phys=pp_phys, pene_magi=pp_magi,
+            pene_flat_phys=pf_phys, pene_flat_magi=pf_magi,
+            mult=pmult_expr, variance=0.15,
+        )
+        # 幸运一击（v133 lucky_mult=1.3）：暴击命中后 30% 追加
+        if lucky:
+            dmg = int(dmg * 1.3)
+        return dmg, magi
+    # 非 formula/非 expr：按 kind 兜底（对齐旧非 formula 路径）
+    kind = info.get("kind", "")
+    power = float(info.get("power", 1.0) or 1.0)
+    if kind == K_TRUE:
+        return E.calc_damage(int((st.get("atk", 0) * power + skill_flat)), 0, seg_crit,
+                             dmg_type="true"), 0
+    if kind == K_PHYS:
+        return E.calc_damage(int((st.get("atk", 0) * power + skill_flat)), est.get("def", 0),
+                             seg_crit, pene_pct=pp_phys, pene_flat=pf_phys, dmg_type="phys"), 0
+    return E.calc_damage(int((st.get("matk", 0) * power + skill_flat)), est.get("mdef", 0),
+                         seg_crit, pene_pct=pp_magi, pene_flat=pf_magi, dmg_type="magi"), 0
+
+
+def _deal_hit(battle, actor: dict, target: dict, dmg: int) -> list:
+    """命中落地：伤害打到目标（承伤链 N1 = 等级压制 + defending + 护盾 + 扣血）。
+
+    N1 对齐旧 _deal_damage → _damage_actor 的核心链：
+    - v136 双向等级压制曲线
+    - defending 减半
+    - 护盾吸收
+    闪避/格挡/反伤/吸血在 N2/N3 展开。
+    """
+    logs = []
+    # 等级压制（v136 双向曲线，与旧 _deal_damage 逐字对齐）
+    dmg = _lv_pressure(battle, actor, target, dmg)
+    if dmg <= 0:
+        return logs
+    # defending 减伤
+    if target.get("defending"):
+        dmg = max(1, int(dmg * 0.5))
+        logs.append(f"(格挡后 {dmg} 点伤害)")
+    # 睡眠被打醒 + 蓄力打断（N1 先处理睡眠唤醒）
+    if target.get("buffs", {}).get("sleep"):
+        target["buffs"].pop("sleep", None)
+        logs.append("💥 敌人被攻击惊醒！")
+    # 承伤落地
+    logs.extend(_damage_actor(battle, target, dmg))
+    return logs
+
+
+def _lv_pressure(battle, actor: dict, target: dict, dmg: int) -> int:
+    """v136 双向等级压制曲线（与旧 _deal_damage 逐字对齐）。
+
+    低打高：低 1-3 级 ×0.95/级，低 4+ 级 ×0.90/级（指数，封顶 ×0.30）
+    高打低：每高 1 级 ×1.02 连乘（指数，不封顶）
+    PVP 不压；目标无 lv 字段不压。
+    """
+    if battle.btype == "pvp":
+        return dmg
+    atk_lv = actor.get("level")
+    tgt_lv = target.get("lv")
+    if not atk_lv or not tgt_lv:
+        return dmg
+    try:
+        plv = int(atk_lv)
+        diff = int(tgt_lv) - plv
+        if diff > 0:
+            mult = 1.0
+            for i in range(min(diff, 10)):
+                mult *= (0.95 if i < 3 else 0.90)
+            return max(1, int(dmg * max(0.30, mult)))
+        elif diff < 0:
+            return max(1, int(dmg * (1.02 ** min(-diff, 50))))
+    except Exception:
+        pass
+    return dmg
+
+
+def _damage_actor(battle, target: dict, dmg: int) -> list:
+    """承伤链最小集：护盾吸收 + hp 扣减 + 死亡处理（N2/N3 展开格挡/反伤/吸血）。"""
+    logs = []
+    if dmg <= 0:
+        return logs
+    # 护盾吸收（shields = {key: {value, halve, expire_at}}）
+    shields = target.get("shields") or {}
+    if shields:
+        remaining = dmg
+        for sk in list(shields.keys()):
+            sh = shields[sk]
+            if not isinstance(sh, dict) or int(sh.get("value", 0) or 0) <= 0:
+                continue
+            sv = int(sh["value"])
+            absorb = min(sv, remaining)
+            sh["value"] = sv - absorb
+            remaining -= absorb
+            logs.append(f"🛡️ {target.get('name', '目标')} 的护盾吸收了 {absorb} 点伤害！")
+            if sh["value"] <= 0:
+                shields.pop(sk, None)
+            if remaining <= 0:
+                break
+        dmg = remaining
+    if dmg <= 0:
+        return logs
+    old = int(target.get("hp", 0) or 0)
+    new = max(0, old - dmg)
+    target["hp"] = new
+    if new <= 0:
+        logs.append(f"💥 {target.get('name', '目标')} 受到 {dmg} 点伤害，倒下了！")
+        battle._on_actor_dead(target)
+    else:
+        logs.append(f"💥 {target.get('name', '目标')} 受到 {dmg} 点伤害！")
+    return logs
