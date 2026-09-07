@@ -124,6 +124,8 @@ def make_actor(
         "auto_act": auto_act or stats.get("auto_act"),
         # 技能索引（Battle 构造时灌入：技能名 → 技能 dict）
         "_skill_index": {},
+        # 外部扩展区（引擎绝不读；职业/机制自定义状态放这里，命名空间自管）
+        "ext": {},
     }
     # 携带的额外字段（rank/reach/role/is_boss/exp/gold/drops 等数据标签或旧怪字段）
     for k, v in stats.items():
@@ -187,6 +189,16 @@ def actor_resources(actor: dict) -> dict:
     if r is None:
         r = actor["resources"] = {}
     return r
+
+
+def actor_ext(actor: dict) -> dict:
+    """actor 外部扩展区（惰性播种）。职业/机制自定义状态写这里，引擎不读。"""
+    if actor is None:
+        return {}
+    e = actor.get("ext")
+    if not isinstance(e, dict):
+        e = actor["ext"] = {}
+    return e
 
 
 def actor_side_of(battle, actor: dict) -> Optional[str]:

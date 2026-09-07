@@ -14,7 +14,7 @@
 - serialize.py to_state/from_state（sides-only）——N5
 - data_bridge.py 读旧数据层适配——N1 起（技能表）
 """
-from .actors import ActCtx, make_actor
+from .actors import ActCtx, actor_ext, make_actor
 from .battle import Battle
 
-__all__ = ["Battle", "ActCtx", "make_actor"]
+__all__ = ["Battle", "ActCtx", "make_actor", "actor_ext"]
