@@ -394,61 +394,34 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
         # （test_commands_battle.py:96 断言固化）。新引擎做正确值：10 刻。
         base_turns = skill_buff_turns(lv, info=info)
     if eff:
-        # 效果单表分派：EFFECT_HANDLERS 有该 effect → 走 handler（含 reduce/shield）
-        from .effects import EFFECT_HANDLERS, apply_effects
-        handler = EFFECT_HANDLERS.get(eff)
-        if handler:
-            apply_effects(battle, actor, actor, [{"type": eff, "turns": base_turns,
-                                                  "info": info, "mech_val": info.get("mech_val"),
-                                                  "effect_val": info.get("effect_val")}], logs)
-            logs.append(f"你施展【{info.get('name', ctx.skill_name or '技能')}】！")
-            return logs
-        # 减伤类 effect（reduce：buffs["reduce"]=百分比 + reduce_left 剩余刻）
+        # 名词 effect → 统一走 apply_effects（查 EFFECT_ACTIONS 配置翻译成动词执行）
+        # reduce 的 value（百分比）由配置动词的 value 折算参数给出
+        from .effects import apply_effects
+        _eff_params = {
+            "type": eff, "turns": base_turns,
+            "info": info,
+            "mech_val": info.get("mech_val"),
+            "effect_val": info.get("effect_val"),
+            "reduce_pct": info.get("reduce_pct"),
+        }
+        # 减伤 reduce：value 由 mech_val/reduce_pct 折算（同旧 _sb_reduce）
         if eff == "reduce":
             rp = float(info.get("reduce_pct") or 0)
             if rp <= 0:
                 mv = float(info.get("mech_val") or 0)
                 rp = (mv / 100.0) if mv > 1 else (mv if 0 < mv <= 1 else 0.20)
-            rp = min(max(rp, 0.0), 0.9)
-            turns = max(1, skill_buff_turns(lv, info=info))
-            buffs = actor.setdefault("buffs", {})
-            buffs["reduce"] = rp
-            actor["reduce_left"] = max(int(actor.get("reduce_left", 0) or 0), turns)
-            logs.append(f"🛡️ 减伤 {int(rp*100)}%（持续 {actor['reduce_left']} 刻）")
-            logs.append(f"你施展【{info.get('name', ctx.skill_name or '技能')}】！")
-            return logs
-        # 护盾类 effect（shield_self / shield / shield_block 等）
-        if eff in ("shield_self", "shield_all") or "shield" in str(eff):
+            _eff_params["value"] = min(max(rp, 0.0), 0.9)
+        # 护盾类：shield_self 盾值 = mech_val/effect_val（skill_mech_val 折算后传 value）
+        if eff in ("shield_self", "shield_all", "shield") and "shield" in str(eff):
             from ..engine import skill_mech_val
-            # shield_self：玩家自盾（mech_val/effect_val 盾值）；怪 shield：max_hp×20%
             if eff == "shield_self":
                 mval = skill_mech_val(info, lv) or int(info.get("effect_val", 0) or 0)
-                shields = actor.setdefault("shields", {})
-                key = f"buff_{info.get('name', 'buff')}"
-                shields[key] = {"value": int(mval), "halve": False, "expire_at": None}
-                logs.append(f"🛡️ 你施展【{info.get('name', ctx.skill_name or '技能')}】，获得护盾 {int(mval)} 点！")
+                _eff_params["value"] = mval
+                _eff_params["halve"] = False
             else:
                 pct = float(info.get("shield_pct", 0.20) or 0.20)
-                val = int(actor.get("max_hp", 1) * pct)
-                shields = actor.setdefault("shields", {})
-                shields["buff"] = {"value": val, "halve": True}
-                logs.append(f"🛡️ 【{actor.get('name', '怪物')}】使用了【{info.get('name', ctx.skill_name or '技能')}】，周身浮现一层护盾(受伤减半)！")
-            return logs
-        # 通用 buff key（team_keys：atk_all→atk_up 等）
-        key = _team_key_map().get(eff, eff)
-        buffs = actor.setdefault("buffs", {})
-        buffs[key] = max(int(buffs.get(key, 0) or 0), base_turns)
+                _eff_params["pct"] = pct
+                _eff_params["halve"] = True
+        apply_effects(battle, actor, actor, [_eff_params], logs)
     logs.append(f"你施展【{info.get('name', ctx.skill_name or '技能')}】！")
     return logs
-
-
-def _team_key_map() -> dict:
-    """团队/全员 buff 键 → 自身有效键映射（对齐旧 MECH_CFG['buff']['team_keys'] 子集）。"""
-    # 从 data/battle_config 读（保持单一数据源）
-    try:
-        from ..data.battle_config import MECH_CFG
-        return dict((MECH_CFG.get("buff") or {}).get("team_keys") or {})
-    except Exception:
-        pass
-    return {"atk_all": "atk_up", "def_all": "def_up", "matk_all": "matk_up",
-            "mdef_all": "mdef_up", "spd_all": "spd_up"}

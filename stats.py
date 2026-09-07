@@ -15,20 +15,6 @@ from typing import Optional
 
 from .. import engine as E
 
-# 战斗 buff 键 → 面板属性映射（N3 效果系统前先支持普攻相关最小集）
-# 与旧 battle._apply_buffs 对齐（仅迁移普攻/N1 需要的键，后续补）
-_BUFF_STAT_KEYS = {
-    "atk_up": "atk",
-    "def_up": "def",
-    "matk_up": "matk",
-    "mdef_up": "mdef",
-    "spd_up": "spd",
-    "spd_down": "spd",  # 乘 0.8（SPD_DOWN_MULT）
-}
-
-# 减速乘数（旧 battle.py SPD_DOWN_MULT）
-SPD_DOWN_MULT = 0.8
-
 
 def actor_stats(battle, actor: dict) -> dict:
     """任意 actor 的聚合面板（伤害/防御公式输入）。
@@ -95,28 +81,34 @@ def _monster_base_stats(actor: dict) -> dict:
 def _apply_buffs(st: dict, buffs: dict) -> dict:
     """把 buffs dict 的属性加成应用到面板（st 原地改，返回同一 dict）。
 
-    N1 最小集（与旧 battle._apply_buffs 逐键对齐，后续 N3 补全）：
-    - atk_up/def_up/matk_up/mdef_up/spd_up: ×(1 + 层数×0.10)（ATK_UP_MULT 语义按层）
-    - spd_down: ×0.8
-    值可为 int 层数或 dict {n, mult, ...}（debuff 池结构）。
+    buff key → 属性折算规则查游戏配置（BUFF_STAT_KEYS）——引擎不内置。
+    value 存刻数 → 属性 ×(1+层数×0.10)；spd_down 特殊 ×SPD_DOWN_MULT。
+    值可为 int 刻数或 float 百分比。
     """
+    from . import config
     if not buffs:
         return st
+    _BUFF_STAT_KEYS = config.get_buff_stat_keys()
+    spd_down_mult = config.get_spd_down_mult()
     for key, attr in _BUFF_STAT_KEYS.items():
         if key not in buffs:
             continue
         val = buffs[key]
-        # 兼容 dict 结构（debuffs {n: 层数, mult: 系数}）
-        if isinstance(val, dict):
-            n = int(val.get("n", val.get("stacks", 1)) or 1)
-            mult = float(val.get("mult", 0.10) or 0.10)
+        if isinstance(val, (int, float)) and not isinstance(val, bool):
+            # float 值（0.45 这类百分比）→ 直接乘；int → 刻数语义 ×(1+0.10*n)
+            if isinstance(val, float):
+                if key == "spd_down":
+                    st[attr] = int(st.get(attr, 0) * (1.0 - min(float(val), 0.9)))
+                else:
+                    st[attr] = int(st.get(attr, 0) * (1.0 + float(val)))
+                continue
+            n = int(val or 1)
         else:
             n = int(val or 1)
-            mult = 0.10
         if key == "spd_down":
-            st[attr] = int(st.get(attr, 0) * SPD_DOWN_MULT)
+            st[attr] = int(st.get(attr, 0) * spd_down_mult)
         else:
-            st[attr] = int(st.get(attr, 0) * (1 + n * mult))
+            st[attr] = int(st.get(attr, 0) * (1 + n * 0.10))
     return st
 
 
