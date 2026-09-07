@@ -289,3 +289,18 @@ class Battle:
                 self.result = "defeat"
             return True
         return False
+
+    # ============================================================
+    # 序列化（N5：sides-only）
+    # ============================================================
+
+    def to_state(self) -> dict:
+        """Battle → JSON 化 dict（battle_state.state 存）。"""
+        from .serialize import to_state as _ts
+        return _ts(self)
+
+    @classmethod
+    def from_state(cls, st: dict) -> "Battle":
+        """dict → Battle（断线恢复/续战用）。"""
+        from .serialize import from_state as _fs
+        return _fs(st)
