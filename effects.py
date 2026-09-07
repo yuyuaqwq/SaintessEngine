@@ -153,16 +153,6 @@ def _mech_to_effect(mech: str, mval: int, info: dict) -> dict:
             "mech": mech, "info": info}
 
 
-def _cc_turns_of(info: dict, lv: int) -> int:
-    """控制/减益持续刻数（cc 字段优先，缺省按技能等级成长）。"""
-    cc = info.get("cc") or {}
-    if isinstance(cc, dict):
-        t = int(cc.get("turns", 0) or 0)
-        if t > 0:
-            return t
-    return int(info.get("cc_turns", 0) or 0) or max(1, min(lv, 3))
-
-
 # ============================================================
 # 动词执行器
 # ============================================================
