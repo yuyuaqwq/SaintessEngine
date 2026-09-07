@@ -141,9 +141,9 @@ class Battle:
         """命令层唯一入口。构造 ActCtx 后调 self.act()。
 
         返回 (logs, ended, who)：
-        - logs：出手日志
+        - logs：出手日志 + 推进期间事件日志
         - ended：战斗是否结束
-        - who：下一个该决策的 actor（N4 多人调度；单人 = 自己/None）
+        - who：下一个该决策的 actor（多人调度；单人 = 自己/None）
         """
         caster = actor or self.focus()
         if caster is None:
@@ -153,13 +153,48 @@ class Battle:
         ctx = ActCtx(caster=caster, action=action, skill_name=skill_name,
                      target=target, target_side=target_side)
         logs, ended = self.act(ctx)
+        # 玩家出手后：行动耗时推 ct + 推进自动 actor 到下一个决策点
+        if not ended and action in ("attack", "skill", "defend"):
+            from .schedule import _after_act
+            _after_act(self, caster, action)
+            logs2 = []
+            who = self.advance(logs2)
+            logs.extend(logs2)
+            if who is None:
+                ended = True
+            return logs, ended, who
         who = None if ended else (self.focus() if self.focus() else None)
         return logs, ended, who
+
+    def advance(self, logs: list) -> Optional[dict]:
+        """推进战斗到下一个决策点（自动 actor 行动 + DOT 结算）。
+
+        返回下一个该决策的人控 actor；战斗结束返回 None。
+        """
+        from .schedule import advance as _adv
+        _kind, who = _adv(self, logs)
+        return who
+
+    def auto_run(self, logs: list, max_steps: int = 500):
+        """全自动跑战斗（测试/AI 模式）：所有 actor 自动行动直到结束。"""
+        from .schedule import advance as _adv
+        guard = 0
+        while self.result is None and guard < max_steps:
+            guard += 1
+            _kind, who = _adv(self, logs)
+            if who is None:
+                break
+            # 人控 actor 在 auto_run 里也自动行动（普攻）
+            if actor_alive(who):
+                sub, ended = self.actor_auto(who)
+                logs.extend(sub)
+                if ended or self.result:
+                    break
 
     def actor_auto(self, actor: dict, ctx_target=None) -> tuple:
         """actor 自动行动（怪/随从按 auto_act 配置；N4 schedule 用）。
 
-        N1：读 auto_act，缺省普攻。
+        读 auto_act，缺省普攻；行动后推 ct。
         """
         caster = actor
         if caster is None or actor_dead(caster):
@@ -175,7 +210,12 @@ class Battle:
             skill_name = _a.get("skill")
         ctx = ActCtx(caster=caster, action=action, skill_name=skill_name,
                      target=ctx_target)
-        return self.act(ctx)
+        logs, ended = self.act(ctx)
+        # 行动后推 ct（自动 actor）
+        if not ended:
+            from .schedule import _after_act
+            _after_act(self, caster, action)
+        return logs, ended
 
     def act(self, ctx: ActCtx) -> tuple:
         """统一行动执行（人类/AI/随从都走这里）。返回 (logs, ended)。"""
