@@ -21,6 +21,11 @@ from . import actions
 DEFAULT_CT_WAIT = 2.0  # CTB 基础行动间隔（N4 schedule 细化）
 
 
+def _now_of(battle) -> float:
+    """battle 当前绝对时刻（schedule 未接入时 = 0；CD 以此刻为基准）。"""
+    return float(getattr(battle, "_now", 0) or 0)
+
+
 class Battle:
     def __init__(self, btype: str = "monster", sides: Optional[dict] = None,
                  title_bonus: Optional[dict] = None, dmg_mult: float = 1.0,

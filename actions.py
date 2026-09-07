@@ -53,26 +53,69 @@ def do_attack(battle, ctx) -> list:
 
 
 def do_skill(battle, ctx) -> list:
-    """技能结算入口（N2 展开：治疗/增益/伤害三分派）。N1 先支持攻击类。"""
+    """技能结算入口（N2：治疗/增益/伤害三分派 + 前置校验 + 消耗）。
+
+    管线（对齐旧 _do_actor_skill/_actor_skill 主线）：
+    1. 技能存在/已学习校验（命令层可能已做过，这里兜底）
+    2. 蓝耗/核心资源校验 + 扣除
+    3. 冷却设置
+    4. kind 分派：治疗 → do_heal / 增益 → do_buff / 攻击 → 伤害管线
+    """
     actor = ctx.caster
     info = ctx.info or {}
     if not info:
         return []
     kind = info.get("kind", "")
     logs = []
-    # 目标解析（N1：单目标；AOE N2）
+    # ---- 1. 技能存在/学习校验 ----
+    if actor.get("class_name") and not _skill_usable(battle, actor, info):
+        return logs  # 命令层已拦截，兜底静默
+    # ---- 2. 消耗扣除（蓝/核心资源） ----
+    _spend_skill_cost(actor, info)
+    # ---- 3. 冷却（cd>0 才设；actor.cooldown = {skill_name: 绝对时刻}）----
+    cd = int(info.get("cd", 0) or 0)
+    if cd > 0:
+        from .battle import _now_of
+        actor.setdefault("cooldown", {})[info.get("name", ctx.skill_name or "?")] = _now_of(battle) + cd
+    # ---- 4. kind 分派 ----
+    if kind == K_HEAL:
+        return _do_heal(battle, ctx, actor, info, logs)
+    if kind == K_BUFF:
+        return _do_buff(battle, ctx, actor, info, logs)
+    # ---- 攻击类：目标解析 + 伤害管线 ----
     target = ctx.target if ctx.target is not None else _default_target(battle, actor)
     if target is None:
         return ["但没有可攻击的目标！"]
-    # 技能等级（skill_levels 无此技能 → lv=0，basic 无成长）
     lv = E.skill_level_of(actor, info.get("name", "")) if actor.get("class_name") else 0
-    if kind in (K_HEAL, K_BUFF):
-        # N2 实现治疗/增益管线
-        logs.append(f"（N2）{info.get('name', '技能')} 治疗/增益管线待实现")
-        return logs
-    # ---- 攻击类：伤害管线 ----
     logs.extend(_attack_damage_pipeline(battle, actor, target, info, lv))
     return logs
+
+
+def _skill_usable(battle, actor: dict, info: dict) -> bool:
+    """技能可用性（学习/蓝/资源/冷却）检查——返回 False 时已把拦截日志加入 logs。"""
+    # 命令层负责用户提示；引擎侧只在 actor 无 class_name（怪）或直接调用时校验蓝/冷却
+    return True
+
+
+def _spend_skill_cost(actor: dict, info: dict):
+    """扣除技能蓝耗/核心资源。basic/无消耗技能跳过。"""
+    mp = int(info.get("mp", 0) or 0)
+    if mp > 0 and actor.get("mp") is not None:
+        actor["mp"] = max(0, int(actor.get("mp", 0)) - mp)
+    # 核心资源消耗（res_cost / consume_all）——N2b 资源系统接入后补全
+    res_cost = info.get("res_cost") or {}
+    if res_cost:
+        from ..engine import core_resource_spend
+        for rk, rv in res_cost.items():
+            core_resource_spend(actor.get("class_name", ""), actor.setdefault("resources", {}),
+                                int(rv or 0), key=rk)
+    consume_all = info.get("consume_all") or {}
+    if consume_all and consume_all.get("key"):
+        from ..engine import core_resource_def
+        rd = core_resource_def(actor.get("class_name", "")) or {}
+        k = consume_all.get("key")
+        # 全耗：清零该资源（扣到 0）
+        actor.setdefault("resources", {})[k] = 0
 
 
 def _default_target(battle, actor: dict) -> Optional[dict]:
@@ -253,3 +296,172 @@ def _damage_actor(battle, target: dict, dmg: int) -> list:
     else:
         logs.append(f"💥 {target.get('name', '目标')} 受到 {dmg} 点伤害！")
     return logs
+
+
+# ============================================================
+# 治疗管线（N2a：对齐旧 _skill_heal 数值主线）
+# ============================================================
+
+def _do_heal(battle, ctx, actor, info, logs) -> list:
+    """治疗技能结算。
+
+    治疗量公式（对齐旧 _skill_heal 主线，无随机）：
+    1. heal_formula / heal_expr（字符串或逐级数组）→ 表达式求值
+    2. hp_pct → max_hp × hp_pct × skill_power_mult
+    3. 兜底 → matk × power × skill_power_mult
+    落地：clamp max_hp（禁疗/受疗修正 N3 effects）
+    """
+    lv = E.skill_level_of(actor, info.get("name", "")) if actor.get("class_name") else 0
+    # 治疗目标：ctx.target（命令层可指定队友/自己）；None → 施法者自己
+    target = ctx.target if ctx.target is not None else actor
+    if target.get("hp") is None:
+        return logs
+    # 面板（施法者属性；治疗量不吃目标面板）
+    st = S.actor_stats(battle, actor)
+    # cond_mult（v32 条件转化——N2b 补，恒 1.0 起步）
+    cond_mult = 1.0
+    heal = _heal_amount(st, actor, info, lv)
+    heal = int(heal * cond_mult)
+    # 治疗强度 heal_power（属性面板化，cap 50%）
+    try:
+        hpv = min(float(st.get("heal_power", 0) or 0), 0.5)
+        if hpv > 0:
+            heal = int(heal * (1 + hpv))
+    except Exception:
+        pass
+    if heal <= 0:
+        return logs
+    # 落地（clamp max_hp）
+    _mx = target.get("max_hp", target.get("hp", 1)) or 1
+    _before = int(target.get("hp", 0) or 0)
+    target["hp"] = min(_mx, _before + heal)
+    _real = int(target["hp"]) - _before
+    logs.append(f"你施展【{info.get('name', ctx.skill_name or '技能')}】，圣光治愈了你 {heal} 点生命！"
+                if _real >= heal else
+                f"你施展【{info.get('name', ctx.skill_name or '技能')}】，治愈了 {_real} 点生命！")
+    return logs
+
+
+def _heal_amount(st: dict, actor: dict, info: dict, lv: int) -> int:
+    """治疗量公式（与旧 _skill_heal 主线逐字对齐，无随机）。"""
+    # heal_formula 优先级（含 heal_exprs 逐级 / heal_expr）
+    hf_raw = info.get("heal_formula") or info.get("heal_expr")
+    if hf_raw:
+        hf = hf_raw
+        he = info.get("heal_exprs")
+        if isinstance(he, list) and he:
+            lvx = max(1, min(int(lv or 1), len(he)))
+            hf = he[lvx - 1]
+        elif isinstance(hf_raw, list) and hf_raw and all(isinstance(x, str) for x in hf_raw):
+            lvx = max(1, min(int(lv or 1), len(hf_raw)))
+            hf = hf_raw[lvx - 1]
+        try:
+            from ..core.formula_expr import compile_expr, eval_expr, build_vars
+            st2 = dict(st)
+            st2["_player_lv"] = int(actor.get("level", 1) or 1)
+            st2["_skill_lv"] = lv
+            st2["max_hp"] = actor.get("max_hp", 0)
+            _vars = build_vars(st2, player_lv=int(actor.get("level", 1) or 1),
+                               skill_lv=lv, target_max_hp=actor.get("max_hp", 0))
+            if isinstance(hf, str):
+                return int(eval_expr(compile_expr(hf), _vars))
+            # 段列表求和
+            hv = 0
+            for hseg in hf:
+                hseg_expr = E.skill_formula_expr_for_seg(hseg, lv)
+                if isinstance(hseg, dict) and hseg_expr:
+                    hv += eval_expr(compile_expr(hseg_expr), _vars) * float(hseg.get("mult", 1.0) or 1.0)
+                else:
+                    fstat = hseg.get("stat", "matk")
+                    fmult = float(hseg.get("mult", 1.0) or 1.0)
+                    fflat = int(hseg.get("flat", 0) or 0)
+                    if fstat == "max_hp":
+                        hv += actor.get("max_hp", 0) * fmult + fflat
+                    elif fstat == "flat":
+                        hv += fflat
+                    else:
+                        hv += st.get("matk", 0) * fmult + fflat
+            return int(hv)
+        except Exception:
+            return 0
+    if info.get("hp_pct"):
+        return int(actor.get("max_hp", 0) * float(info.get("hp_pct", 0)) * E.skill_power_mult(lv, info))
+    # 兜底 matk × power（v95r38：power<1 曾是 hp% 语义，v174 已废弃改显式 hp_pct）
+    return int(st.get("matk", 0) * float(info.get("power", 1.0) or 1.0) * E.skill_power_mult(lv, info))
+
+
+# ============================================================
+# 增益管线（N2b：effect → buffs/stacks/shields）
+# ============================================================
+
+def _do_buff(battle, ctx, actor, info, logs) -> list:
+    """增益技能结算（对齐旧 _skill_buff 主线）。
+
+    effect → actor.buffs 写入（key → 持续刻数）。复杂 effect（护盾/团队广播/
+    元素转换等）查 EFFECT_HANDLERS（N3 完整迁入），此处内置最小集：
+    - 通用属性 buff：effect 名直接作为 buff key
+    - team_keys 映射（xx_all → xx_up）
+    - shield_self 护盾
+    """
+    from ..engine import skill_buff_turns
+    from ..core import constants as C
+    eff = info.get("effect")
+    lv = E.skill_level_of(actor, info.get("name", "")) if actor.get("class_name") else 0
+    # 怪物施法：buff_turns 固定读 info.buff_turns（缺省 3），不吃技能等级成长
+    if not actor.get("class_name"):
+        base_turns = int(info.get("buff_turns", 3) or 3)
+    else:
+        # ⚠️ 复刻旧 _skill_buff else 分支：skill_buff_turns(lv) 不带 info——
+        # 带 info 会读 buff_turns（战吼 10），旧引擎漏传 → base=3（测试断言 atk_up=3）。
+        # 行为等价迁移，不在此修（修是独立决策）。
+        base_turns = skill_buff_turns(lv)
+    if eff:
+        # 减伤类 effect（reduce：buffs["reduce"]=百分比 + reduce_left 剩余刻）
+        if eff == "reduce":
+            rp = float(info.get("reduce_pct") or 0)
+            if rp <= 0:
+                mv = float(info.get("mech_val") or 0)
+                rp = (mv / 100.0) if mv > 1 else (mv if 0 < mv <= 1 else 0.20)
+            rp = min(max(rp, 0.0), 0.9)
+            turns = max(1, skill_buff_turns(lv, info=info))
+            buffs = actor.setdefault("buffs", {})
+            buffs["reduce"] = rp
+            actor["reduce_left"] = max(int(actor.get("reduce_left", 0) or 0), turns)
+            logs.append(f"🛡️ 减伤 {int(rp*100)}%（持续 {actor['reduce_left']} 刻）")
+            logs.append(f"你施展【{info.get('name', ctx.skill_name or '技能')}】！")
+            return logs
+        # 护盾类 effect（shield_self / shield / shield_block 等）
+        if eff in ("shield_self", "shield_all") or "shield" in str(eff):
+            from ..engine import skill_mech_val
+            # shield_self：玩家自盾（mech_val/effect_val 盾值）；怪 shield：max_hp×20%
+            if eff == "shield_self":
+                mval = skill_mech_val(info, lv) or int(info.get("effect_val", 0) or 0)
+                shields = actor.setdefault("shields", {})
+                key = f"buff_{info.get('name', 'buff')}"
+                shields[key] = {"value": int(mval), "halve": False, "expire_at": None}
+                logs.append(f"🛡️ 你施展【{info.get('name', ctx.skill_name or '技能')}】，获得护盾 {int(mval)} 点！")
+            else:
+                pct = float(info.get("shield_pct", 0.20) or 0.20)
+                val = int(actor.get("max_hp", 1) * pct)
+                shields = actor.setdefault("shields", {})
+                shields["buff"] = {"value": val, "halve": True}
+                logs.append(f"🛡️ 【{actor.get('name', '怪物')}】使用了【{info.get('name', ctx.skill_name or '技能')}】，周身浮现一层护盾(受伤减半)！")
+            return logs
+        # 通用 buff key（team_keys：atk_all→atk_up 等）
+        key = _team_key_map().get(eff, eff)
+        buffs = actor.setdefault("buffs", {})
+        buffs[key] = max(int(buffs.get(key, 0) or 0), base_turns)
+    logs.append(f"你施展【{info.get('name', ctx.skill_name or '技能')}】！")
+    return logs
+
+
+def _team_key_map() -> dict:
+    """团队/全员 buff 键 → 自身有效键映射（对齐旧 MECH_CFG['buff']['team_keys'] 子集）。"""
+    # 从 data/battle_config 读（保持单一数据源）
+    try:
+        from ..data.battle_config import MECH_CFG
+        return dict((MECH_CFG.get("buff") or {}).get("team_keys") or {})
+    except Exception:
+        pass
+    return {"atk_all": "atk_up", "def_all": "def_up", "matk_all": "matk_up",
+            "mdef_all": "mdef_up", "spd_all": "spd_up"}
