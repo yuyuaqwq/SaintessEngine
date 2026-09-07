@@ -134,39 +134,92 @@ def _default_target(battle, actor: dict) -> Optional[dict]:
 def _attack_damage_pipeline(battle, actor: dict, target: dict, info: dict, lv: int) -> list:
     """伤害管线核心（对齐旧 _actor_skill 攻击路径，N1 无被动/无词条/无标记场景）。
 
-    步骤：暴击判定 → 乘区装配（N1 恒 1.0）→ 单段伤害 resolve_formula → 命中落地。
+    步骤：暴击判定 → 乘区装配（N1 恒 1.0）→ 段循环（hits/multi）→ 命中落地。
+    AOE：直接逐目标独立完整结算（_deal_aoe）。
     """
+    # AOE：每目标独立完整伤害（各自 roll/防御/等级压制）
+    if info.get("aoe"):
+        return _deal_aoe(battle, actor, target, info, 0)
+    return _single_target_pipeline(battle, actor, target, info, lv)
+
+
+def _deal_aoe(battle, actor: dict, target: dict, info: dict, total: int) -> list:
+    """AOE 逐目标结算（N2c 最终版：每目标独立完整伤害）。
+
+    正确语义（鱼鱼拍板：新引擎不陪葬旧引擎 bug）：AOE = 对范围内每个目标
+    独立结算一次完整技能伤害——各自吃自己的防御/波动/等级压制，互不影响。
+
+    旧引擎 _aoe_damage 的 infer_atk 反推方案（拿副目标防御解主目标伤害方程）
+    数学上不自洽（无解时产生伪 atk），且主目标日志与实际扣血不符——不迁移。
+
+    实现：_attack_damage_pipeline 的 AOE 变体——多段循环在单目标上已完成
+    （total 是主目标总伤）；这里对每个目标重算单段伤害之和。
+    """
+    from ..core import formation as _fm
+    from .actors import actor_alive, hostile_sides
     logs = []
-    # 面板
+    scope = "all" if info.get("aoe") is True else str(info.get("aoe") or "all")
+    enemies = []
+    for _sn in hostile_sides(battle, actor.get("side", "")):
+        enemies.extend(battle.sides.get(_sn) or [])
+    if not enemies:
+        return logs
+    attacker = {"reach": int(info.get("reach") or 3), "uid": "aoe"}
+    try:
+        targets = _fm.select_aoe_targets(attacker, enemies, scope)
+    except Exception:
+        targets = enemies
+    if not targets:
+        return logs
+    falloff = float(info.get("aoe_falloff", 1.0) or 1.0)
+    for t in targets:
+        if not actor_alive(t):
+            continue
+        logs.extend(_single_target_pipeline(battle, actor, t, info, _skill_lv_of(battle, actor)))
+        # rank>1 目标 aoe_falloff：简化——falloff!=1.0 时按比例补算（见 _aoe_falloff_apply）
+        if falloff != 1.0 and int(t.get("rank", 1) or 1) > 1:
+            logs = _aoe_falloff_apply(logs)
+    return logs
+
+
+def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: int) -> list:
+    """单目标完整伤害管线（AOE 逐目标内部用；不递归触发 aoe）。"""
+    logs = []
     st = S.actor_stats(battle, actor)
     est = S.actor_stats(battle, target)
-    # 暴击判定：crit vs 面板 crit（对齐旧 _skill_crit_roll 基础项：面板 crit×韧性乘数）
-    # N1：无韧性/无被动/无套装 → is_crit = random() < st.crit
     crit_pct = float(st.get("crit", 0) or 0)
     is_crit = random.random() < crit_pct
-    # 幸运一击判定（v109.2 P1-1 运势）：暴击后 30% 概率追加 50% 伤害。
-    # ⚠️ random 消耗必须与旧引擎同步：is_crit=True 时无论是否触发 lucky 都消耗 1 次
-    # （旧 _skill_crit_roll 第 2 次 random），保证 resolve_formula 波动 random 序列对齐。
     lucky = False
     if is_crit:
         lucky = random.random() < 0.30
-    # 段级暴击：basic 单段，首段吃暴击
-    seg_crit = is_crit
-    # 穿透（N1 玩家无穿透词条 → 0）
+    multi = int(info.get("hits") or info.get("multi") or 1)
     pp_phys = float(st.get("pene_phys", 0) or 0)
     pf_phys = int(st.get("pene_flat_phys", 0) or 0)
     pp_magi = float(st.get("pene_magi", 0) or 0)
     pf_magi = int(st.get("pene_flat_magi", 0) or 0)
-    # 技能基础值（v156：flat = BASE + 玩家等级×PER_LV + 技能等级×PER_SKILL_LV）
     skill_flat = E.skill_flat_value(int(actor.get("level", 1) or 1), lv, info)
-    # 表达式分支（basic_skill exprs=["atk*1.0"]）
-    dmg, _magi = _skill_seg_damage(battle, actor, target, st, est, info,
-                                   lv, seg_crit, lucky, pp_phys, pf_phys, pp_magi, pf_magi,
-                                   skill_flat)
-    if dmg <= 0:
+    total = 0
+    magi_part = 0
+    for seg in range(multi):
+        _seg_crit = is_crit and (seg == 0)
+        _lucky_seg = lucky and (seg == 0)
+        dmg_i, mseg_i = _skill_seg_damage(battle, actor, target, st, est, info,
+                                          lv, _seg_crit, _lucky_seg,
+                                          pp_phys, pf_phys, pp_magi, pf_magi, skill_flat)
+        total += dmg_i
+        magi_part += mseg_i
+    if total <= 0:
         return logs
-    # 命中判定（N1：无闪避/无格挡）
-    logs.extend(_deal_hit(battle, actor, target, dmg))
+    logs.extend(_deal_hit(battle, actor, target, total))
+    return logs
+
+
+def _skill_lv_of(battle, actor: dict) -> int:
+    return E.skill_level_of(actor, "") if actor.get("class_name") else 0
+
+
+def _aoe_falloff_apply(logs):
+    """AOE falloff 标记（占位——N5 命令层接入时按需精确实现）。"""
     return logs
 
 
@@ -411,10 +464,10 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
     if not actor.get("class_name"):
         base_turns = int(info.get("buff_turns", 3) or 3)
     else:
-        # ⚠️ 复刻旧 _skill_buff else 分支：skill_buff_turns(lv) 不带 info——
-        # 带 info 会读 buff_turns（战吼 10），旧引擎漏传 → base=3（测试断言 atk_up=3）。
-        # 行为等价迁移，不在此修（修是独立决策）。
-        base_turns = skill_buff_turns(lv)
+        # 玩家施法：skill_buff_turns 带 info → 读 buff_turns（战吼 10）。
+        # 旧引擎 else 分支漏传 info → 战吼只给 3 刻（desc 说 10 刻）= 旧 bug
+        # （test_commands_battle.py:96 断言固化）。新引擎做正确值：10 刻。
+        base_turns = skill_buff_turns(lv, info=info)
     if eff:
         # 减伤类 effect（reduce：buffs["reduce"]=百分比 + reduce_left 剩余刻）
         if eff == "reduce":
