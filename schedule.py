@@ -139,7 +139,14 @@ def _next_auto_due(battle):
 def _after_act(battle, actor: dict, action: str):
     """行动后推进 actor.ct（行动耗时 + 固定推进）。"""
     base = action_base_of(action)
-    actor["ct"] = float(battle._now) + action_time(int(actor.get("spd", 0)), base)
+    # 用聚合面板速度（buffs 修正）——actor 裸 spd 字段可能是 0（玩家面板由
+    # stats.actor_stats 从 class/equip 聚合），与 next_ct 保持一致口径。
+    try:
+        from . import stats as S
+        spd = S.actor_spd(battle, actor)
+    except Exception:
+        spd = int(actor.get("spd", 0) or 0)
+    actor["ct"] = float(battle._now) + action_time(spd, base)
 
 
 def _advance_time(battle, dt: float, logs: list):
