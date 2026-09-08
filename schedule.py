@@ -198,23 +198,38 @@ def _settle_time_effects(battle, logs: list):
                         continue  # 永久盾
                     if now >= float(exp):
                         sh.pop(key, None)
-            # DOT（state 声明 dot 规则）
+            # DOT（state 声明 dot 规则，N7.4：按 interval 绝对时刻跳，跨多刻跳多次）
             st = a.get("state") or {}
             if not st:
                 continue
             table = all_state_effects()
+            dnext = a.setdefault("dot_next", {})
             for key, val in list(st.items()):
                 cfg = table.get(key) or {}
                 dot = cfg.get("dot")
                 n = int(val or 0)
                 if not dot or n <= 0 or cfg.get("on") != "target":
                     continue
-                # 每层每刻扣（简化 tick：每推进一次结算一跳；interval 字段预留）
-                pct = float(dot.get("pct_max_hp", 0) or 0)
-                if pct > 0:
-                    dmg = max(1, int(a.get("max_hp", 1) * pct * n))
-                else:
-                    dmg = max(1, n)
-                from .landing import deal_damage
-                deal_damage(battle, None, a, dmg, logs)
-                logs.append(f"🔥 {a.get('name', '目标')} 受 {key} {n} 层影响，损失 {dmg} 生命")
+                interval = float(dot.get("interval", 1.0) or 1.0)
+                # 首次挂 DOT：下一跳 = now + interval（对齐旧事件卡首跳延迟）
+                nx = dnext.get(key)
+                if nx is None:
+                    dnext[key] = now + interval
+                    continue
+                if now < float(nx):
+                    continue  # 未到下一跳
+                # 到点跳一次（可能跨多刻 → 循环补跳）
+                guard = 0
+                while now >= float(dnext[key]) and guard < 20:
+                    guard += 1
+                    pct = float(dot.get("pct_max_hp", 0) or 0)
+                    if pct > 0:
+                        dmg = max(1, int(a.get("max_hp", 1) * pct * n))
+                    else:
+                        dmg = max(1, n)
+                    from .landing import deal_damage
+                    deal_damage(battle, None, a, dmg, logs)
+                    logs.append(f"🔥 {a.get('name', '目标')} 受 {key} {n} 层影响，损失 {dmg} 生命")
+                    dnext[key] = float(dnext[key]) + interval
+                if not actor_alive(a):
+                    break
