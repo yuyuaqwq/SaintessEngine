@@ -196,9 +196,13 @@ def _apply_heal_mods(target: dict, amount: int, logs: list) -> int:
     heal = amount
     try:
         bf = target.get("buffs") or {}
+        st = target.get("state") or {}
+        # 受疗增幅（heal_amp_pct：装配层把 proc_heal amp 装备折算进 state，N9）
+        amp_pct = float(st.get("heal_amp_pct", 0) or 0)
+        if amp_pct > 0:
+            heal = int(round(heal * (1 + min(amp_pct, 1.0))))
         # 禁疗（heal_down 层×10% cap50%——v2 数值容器 state，声明表 cap；N9 收编
         # 旧 buffs int 直写形态，affix/weapon 挂 heal_down 用 state_add）
-        st = target.get("state") or {}
         ehd = int(st.get("heal_down", 0) or 0)
         if ehd > 0:
             cut = min(ehd * 0.10, 0.50)
