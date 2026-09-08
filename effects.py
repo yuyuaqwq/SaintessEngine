@@ -260,10 +260,15 @@ def act_apply(battle, caster, target, params, logs):
             holder["reduce_left"] = max(int(holder.get("reduce_left", 0) or 0), turns)
         logs.append(f"🛡️ {key} {float(value):.0%}（持续 {turns} 刻）")
         return
-    # 增益：动作参数 stat/op/mult（EFFECT_ACTIONS 配置给）→ 快照进条目
-    stat = params.get("stat")
-    o = params.get("op")
+    # 增益：参数 stat/op/mult（EFFECT_ACTIONS 静态配置已入 EFFECT_RULES[key].panel，
+    # V5 后动作瘦身 key-only——参数缺省查表；动态装配层仍参数直传覆盖）→ 快照进条目
+    cfg = state_def(key) or {}
+    panel = cfg.get("panel") or {}
+    stat = params.get("stat") or panel.get("stat")
+    o = params.get("op") or panel.get("op")
     mult = params.get("mult")
+    if mult is None and "mult" in panel:
+        mult = panel.get("mult")
     if stat and mult is not None:
         old = ef.get(key)
         old_exp = float(old.get("expire", 0) or 0) if isinstance(old, dict) else 0.0
