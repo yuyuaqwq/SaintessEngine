@@ -181,12 +181,14 @@ def _deal_aoe(battle, actor: dict, target: dict, info: dict, total: int) -> list
 def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: int) -> list:
     """单目标完整伤害管线（AOE 逐目标内部用；不递归触发 aoe）。"""
     logs = []
+    # N7.3 出手消费型 buff（on_hit：next_atk_up 增伤 / stealth 必暴等）——先查后打
+    hit_buffs = _consume_hit_buffs(battle, actor, logs)
     st = S.actor_stats(battle, actor)
     est = S.actor_stats(battle, target)
     # state 声明伤害倍率（state_effects 表 dmg_mult：如 rage 狂暴层）
     _st_mult = float(st.get("_state_dmg_mult", 1.0) or 1.0)
     crit_pct = float(st.get("crit", 0) or 0)
-    is_crit = random.random() < crit_pct
+    is_crit = hit_buffs["guaranteed_crit"] or (random.random() < crit_pct)
     lucky = False
     if is_crit:
         lucky = random.random() < 0.30
@@ -208,12 +210,43 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
         magi_part += mseg_i
     if _st_mult != 1.0:
         total = max(1, int(total * _st_mult))
+    if hit_buffs["dmg_mult"] != 1.0:
+        total = max(1, int(total * hit_buffs["dmg_mult"]))
     if total <= 0:
         return logs
     logs.extend(_deal_hit(battle, actor, target, total))
     # 命中后 mech/effect 效果（N3：mech → effects 兼容层）
     _apply_hit_effects(battle, actor, target, info, lv, logs)
     return logs
+
+
+def _consume_hit_buffs(battle, actor: dict, logs: list) -> dict:
+    """出手消费型 buff（N7.3）：查 actor.buffs 中带 hit 子键的条目。
+
+    条目形态：buffs[key] = {"expire": 时刻, "hit": {"dmg_mult": 1.5} |
+    {"guaranteed_crit": True}}——效果参数由动作/数据给，出手时消费删除。
+
+    返回 {"dmg_mult": float, "guaranteed_crit": bool}。
+    """
+    bf = actor.get("buffs") or {}
+    now = float(getattr(battle, "_now", 0.0) or 0.0)
+    out = {"dmg_mult": 1.0, "guaranteed_crit": False}
+    for key in list(bf.keys()):
+        entry = bf[key]
+        if not isinstance(entry, dict):
+            continue
+        hit = entry.get("hit")
+        if not isinstance(hit, dict):
+            continue
+        exp = entry.get("expire")
+        if exp is not None and now >= float(exp):
+            continue  # 过期不消费（schedule 到期删兜底）
+        out["dmg_mult"] *= float(hit.get("dmg_mult", 1.0) or 1.0)
+        if hit.get("guaranteed_crit"):
+            out["guaranteed_crit"] = True
+        logs.append(f"✨ {key} 生效！")
+        bf.pop(key, None)
+    return out
 
 
 def _apply_hit_effects(battle, actor: dict, target: dict, info: dict, lv: int, logs: list):

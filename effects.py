@@ -239,11 +239,18 @@ def act_buff(battle, caster, target, params, logs):
                    "stat": stat, "op": op or "mul", "mult": float(mult)}
         logs.append(f"✦ {key} 提升（{op or 'mul'}×{mult}，持续 {turns} 刻）")
         return
-    # 无 stat 的纯状态 buff（免疫/标记等）：只记录到期，不折算面板
+    # 无 stat 的纯状态 buff（免疫/一次性/标记等）：只记录到期，不折算面板
+    hit_params = params.get("hit")
     old = bf.get(key)
     old_exp = float(old.get("expire", 0) or 0) if isinstance(old, dict) else 0.0
-    bf[key] = {"expire": max(old_exp, expire)}
-    logs.append(f"✦ {key}（持续 {turns} 刻）")
+    entry = {"expire": max(old_exp, expire)}
+    # N7.3 出手消费型：hit 子键声明出手效果（dmg_mult 增伤 / guaranteed_crit 必暴）
+    if isinstance(hit_params, dict):
+        entry["hit"] = dict(hit_params)
+        logs.append(f"✦ {key} 出手效果就绪（{turns} 刻内生效）")
+    else:
+        logs.append(f"✦ {key}（持续 {turns} 刻）")
+    bf[key] = entry
 
 
 # ---- shield：护盾 ----
