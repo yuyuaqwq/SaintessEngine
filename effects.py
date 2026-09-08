@@ -22,7 +22,6 @@ from __future__ import annotations
 
 from typing import Callable, Optional
 
-from .actors import state_add, state_get, state_spend
 from .state_effects import state_def
 
 # ============================================================
@@ -161,13 +160,14 @@ def _mech_to_effect(mech: str, mval: int, info: dict) -> dict:
 
 @register_action("control")
 def act_control(battle, caster, target, params, logs):
-    """控制：写 target.buffs[tag] = 控制快照（v181.N7.2）。
+    """控制：写 target.effects[tag] = 控制快照（v181.N7.2，V 系列容器统一）。
 
     引擎不认"眩晕/冻结/沉默"——只执行"目标被标记 tag 持续 N 刻"，
     消费（跳过行动/禁技能）由调度层按 mode 执行：
       mode=skip（整跳）：轮到该 actor 行动 → 跳过 + 清除（stun/freeze/sleep）
       mode=no_skill（禁技）：行动时技能转普攻（silence）
     缺省 mode=skip。tag/turns/mode 由数据给（引擎零名词知识）。
+    条目：effects[tag] = {"expire": 绝对时刻, "mode": mode, "stacks": 1}
     """
     from .battle import _now_of
     if not target:
@@ -181,10 +181,10 @@ def act_control(battle, caster, target, params, logs):
         turns = max(1, turns // 2)
     mode = params.get("mode", "skip")
     now = _now_of(battle)
-    bf = target.setdefault("buffs", {})
-    old = bf.get(tag)
+    ef = target.setdefault("effects", {})
+    old = ef.get(tag)
     old_exp = float(old.get("expire", 0) or 0) if isinstance(old, dict) else 0.0
-    bf[tag] = {"expire": max(old_exp, now + turns), "mode": mode}
+    ef[tag] = {"expire": max(old_exp, now + turns), "mode": mode, "stacks": 1}
     logs.append(f"💫 {target.get('name', '目标')} 被【{tag}】{turns} 刻！")
 
 
@@ -192,13 +192,13 @@ def act_control(battle, caster, target, params, logs):
 
 @register_action("buff")
 def act_buff(battle, caster, target, params, logs):
-    """通用 buff：写 actor.buffs[key] = 状态快照（v181.N7.1）。
+    """通用 buff：写 actor.effects[key] = 状态快照（v181.N7.1，V 系列容器统一）。
 
-    形态（增益）：{"expire": now+turns, "stat": 面板键, "op": "mul"|"add",
+    形态（增益）：{"stacks": 1, "expire": now+turns, "stat": 面板键, "op": "mul"|"add",
                   "mult": 倍率/加值}——数值由动作参数（EFFECT_ACTIONS）给出并快照进条目，
-    面板折算读条目（stats._apply_buffs），引擎不查任何名字表。
+    面板折算读条目（stats._apply_effects），引擎不查任何名字表。
 
-    形态（value 型，如 reduce 减伤百分比）：{"expire", "v": float, "hits"}——
+    形态（value 型，如 reduce 减伤百分比）：{"stacks", "expire", "v": float, "hits"}——
     无面板乘区，纯状态（消费由规则表）。兼容旧 pct_from_mech_val 参数折算。
 
     on=target 时作用于 target（对敌减益型 buff）。
@@ -213,16 +213,17 @@ def act_buff(battle, caster, target, params, logs):
         return
     now = _now_of(battle)
     expire = now + turns
-    bf = holder.setdefault("buffs", {})
-    # value 型（如 reduce=0.45）：存 {expire, v}——纯状态/减伤独立计时
+    ef = holder.setdefault("effects", {})
+    # value 型（如 reduce=0.45）：存 {stacks, expire, v}——纯状态/减伤独立计时
     value = params.get("value")
     if params.get("pct_from_mech_val"):
         mv = float(params.get("mech_val") or 0)
         value = (mv / 100.0) if mv > 1 else mv  # 45→0.45；0.45→0.45
     if value is not None:
-        old = bf.get(key)
+        old = ef.get(key)
         old_v = float(old.get("v", 0)) if isinstance(old, dict) else 0.0
-        bf[key] = {"expire": max(float(old.get("expire", 0) or 0) if isinstance(old, dict) else expire, expire),
+        ef[key] = {"stacks": 1,
+                   "expire": max(float(old.get("expire", 0) or 0) if isinstance(old, dict) else expire, expire),
                    "v": max(old_v, float(value))}
         if key == "reduce":
             holder["reduce_left"] = max(int(holder.get("reduce_left", 0) or 0), turns)
@@ -233,24 +234,25 @@ def act_buff(battle, caster, target, params, logs):
     op = params.get("op")
     mult = params.get("mult")
     if stat and mult is not None:
-        old = bf.get(key)
+        old = ef.get(key)
         old_exp = float(old.get("expire", 0) or 0) if isinstance(old, dict) else 0.0
-        bf[key] = {"expire": max(old_exp, expire),
+        ef[key] = {"stacks": 1,
+                   "expire": max(old_exp, expire),
                    "stat": stat, "op": op or "mul", "mult": float(mult)}
         logs.append(f"✦ {key} 提升（{op or 'mul'}×{mult}，持续 {turns} 刻）")
         return
     # 无 stat 的纯状态 buff（免疫/一次性/标记等）：只记录到期，不折算面板
     hit_params = params.get("hit")
-    old = bf.get(key)
+    old = ef.get(key)
     old_exp = float(old.get("expire", 0) or 0) if isinstance(old, dict) else 0.0
-    entry = {"expire": max(old_exp, expire)}
+    entry = {"stacks": 1, "expire": max(old_exp, expire)}
     # N7.3 出手消费型：hit 子键声明出手效果（dmg_mult 增伤 / guaranteed_crit 必暴）
     if isinstance(hit_params, dict):
         entry["hit"] = dict(hit_params)
         logs.append(f"✦ {key} 出手效果就绪（{turns} 刻内生效）")
     else:
         logs.append(f"✦ {key}（持续 {turns} 刻）")
-    bf[key] = entry
+    ef[key] = entry
 
 
 # ---- shield：护盾 ----
@@ -305,8 +307,8 @@ def act_shield(battle, caster, target, params, logs):
 def act_cleanse(battle, caster, target, params, logs):
     """净化：移除目标身上的 DOT/标记/控制。
 
-    - DOT/标记（state 容器）：查 state 规则表 dot/on=target 的 key 动态清理
-    - 控制（buffs 容器）：按 control_tags 配置清（引擎查配置）
+    - DOT/标记（effects 条目）：查 EFFECT_RULES 表 dot/on=target 的 key 动态清理
+    - 控制（effects 条目 mode）：按 control_tags 配置清（引擎查配置）
     """
     from . import config
     from .state_effects import all_state_effects
@@ -314,20 +316,19 @@ def act_cleanse(battle, caster, target, params, logs):
     if not actor:
         return
     rem = []
-    st = actor.setdefault("state", {})
+    ef = actor.setdefault("effects", {})
     state_table = all_state_effects()
-    for k in list(st.keys()):
+    for k in list(ef.keys()):
         cfg = state_table.get(k) or {}
         if cfg.get("dot") or cfg.get("on") == "target":
             rem.append(k)
-            st.pop(k, None)
+            ef.pop(k, None)
     # 控制 tag 清理（配置声明的控制键；缺省常见集）
     ctrl_tags = config.get_cleanse_tags()
-    bf = actor.setdefault("buffs", {})
     for k in ctrl_tags:
-        if k in bf:
+        if k in ef:
             rem.append(k)
-            bf.pop(k, None)
+            ef.pop(k, None)
     if rem:
         logs.append(f"✨ 净化了 {'、'.join(rem)}！")
     else:
@@ -340,22 +341,28 @@ def act_cleanse_all(battle, caster, target, params, logs):
     act_cleanse(battle, caster, target or caster, params, logs)
 
 
-# ---- state 数值（统一 state 容器） ----
+# ---- effects 叠层（统一效果容器；V 系列：原 state 语义） ----
 
 @register_action("state_add")
 def act_state_add(battle, caster, target, params, logs):
-    """通用状态加值：actor.state[key] 加 amount（cap 查规则表）。"""
-    actor = params.get("on", "caster")
-    holder = caster if actor == "caster" else (target or caster)
+    """通用叠层加值：actor.effects[key].stacks 加 amount（cap 查规则表）。"""
+    on = params.get("on", "caster")
+    holder = caster if on == "caster" else (target or caster)
     if not holder:
         return
     key = params.get("key") or params.get("mech")
     amount = int(params.get("amount", params.get("stacks", 0)) or 0)
     if not key or amount <= 0:
         return
-    n = state_add(holder, key, amount)
-    cap = int(state_def(key).get("cap") or 0)
-    cap_txt = f"/{cap}" if cap else ""
+    ef = holder.setdefault("effects", {})
+    entry = ef.get(key)
+    if not isinstance(entry, dict):
+        entry = ef[key] = {}
+    cap = int(state_def(key).get("cap") or 0) or 999999
+    cur = int(entry.get("stacks", 0) or 0)
+    entry["stacks"] = max(0, min(cap, cur + int(amount)))
+    n = entry["stacks"]
+    cap_txt = f"/{cap}" if cap < 999999 else ""
     logs.append(f"✦ {key} {n}{cap_txt}（+{amount}）")
     # N8 事件：状态阈值（层数变化后——主体=层数持有者；"战意满 10 → 狂暴"由上层声明匹配）
     try:
@@ -367,20 +374,24 @@ def act_state_add(battle, caster, target, params, logs):
 
 @register_action("state_spend")
 def act_state_spend(battle, caster, target, params, logs):
-    """通用状态消费：actor.state[key] 扣 amount（下限 0）。"""
-    actor = params.get("on", "caster")
-    holder = caster if actor == "caster" else (target or caster)
+    """通用叠层消费：actor.effects[key].stacks 扣 amount（下限 0）。"""
+    on = params.get("on", "caster")
+    holder = caster if on == "caster" else (target or caster)
     if not holder:
         return
     key = params.get("key") or params.get("mech")
     amount = int(params.get("amount", params.get("stacks", 0)) or 0)
     if not key or amount <= 0:
         return
-    cur = state_get(holder, key)
+    ef = holder.setdefault("effects", {})
+    entry = ef.get(key)
+    cur = int(entry.get("stacks", 0) or 0) if isinstance(entry, dict) else 0
     if cur < amount:
         logs.append(f"⚠️ {key} 不足（需 {amount}，当前 {cur}）")
         return
-    state_spend(holder, key, amount)
+    if not isinstance(entry, dict):
+        entry = ef[key] = {}
+    entry["stacks"] = max(0, cur - int(amount))
     logs.append(f"✦ 消耗 {amount} 点 {key}（剩余 {cur - amount}）")
 
 
@@ -427,7 +438,7 @@ def act_heal(battle, caster, target, params, logs):
 
 @register_action("state_set")
 def act_state_set(battle, caster, target, params, logs):
-    """层数置值（N7.5a，stacks_set 语义）：actor.state[key] 直接置 amount。
+    """层数置值（N7.5a，stacks_set 语义）：actor.effects[key].stacks 直接置 amount。
 
     与 state_add 区别：add 是叠加，set 是覆盖（如 Boss 断过载 → 充能回 3）。
     """
@@ -438,10 +449,13 @@ def act_state_set(battle, caster, target, params, logs):
     amount = int(params.get("amount", params.get("value", 0)) or 0)
     if not key:
         return
-    from .actors import state_of
     cap = int(state_def(key).get("cap") or 0) or 999999
     val = max(0, min(cap, amount))
-    state_of(holder)[key] = val
+    ef = holder.setdefault("effects", {})
+    entry = ef.get(key)
+    if not isinstance(entry, dict):
+        entry = ef[key] = {}
+    entry["stacks"] = val
     logs.append(f"✦ {key} 置为 {val}")
     # N8 事件：状态阈值（置值也广播——主体=层数持有者；Boss 充能断点/回充场景）
     try:

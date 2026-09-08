@@ -274,9 +274,10 @@ class Battle:
         from .effect_triggers import fire as _fire
         _fire(self, "turn_start", {"actor": actor}, logs)
         # ---- 控制消费（统一入口，人类/自动/随从全走这里）----
-        bf = actor.get("buffs") or {}
+        # V 系列：控制条目在 effects 容器（effects[tag] = {expire, mode}）
+        ef = actor.get("effects") or {}
         now = float(self._now or 0)
-        for tag, entry in list(bf.items()):
+        for tag, entry in list(ef.items()):
             if not isinstance(entry, dict):
                 continue
             mode = entry.get("mode")
@@ -285,7 +286,7 @@ class Battle:
             # 过期控制（时间兜底）：到点自然消失
             exp = entry.get("expire")
             if exp is not None and now >= float(exp):
-                bf.pop(tag, None)
+                ef.pop(tag, None)
                 continue
             if mode == "no_skill" and ctx.action == "skill":
                 logs.append(f"🤐 {actor.get('name', '目标')} 被沉默，无法使用技能！(只能普攻/防御)")
@@ -294,7 +295,7 @@ class Battle:
                 continue
             if mode == "skip":
                 logs.append(f"💫 {actor.get('name', '目标')} 被【{tag}】控制，无法行动！")
-                bf.pop(tag, None)
+                ef.pop(tag, None)
                 # N8 事件：行动级消费点（控制跳过）
                 _fire(self, "on_act_consume", {"actor": actor, "tag": tag}, logs)
                 # 被控跳过：登记行动点但不结算（调用方推 ct = 行动浪费）

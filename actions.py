@@ -16,7 +16,7 @@ from typing import Optional
 from .. import engine as E
 from ..core import constants as K
 from . import stats as S
-from .actors import state_of, state_spend, actor_alive
+from .actors import actor_alive
 
 # kind 常量（旧 battle.py K_PHYS/K_MAGI/K_TRUE 同义；用文案判断会脆，这里按旧语义）
 K_PHYS = "物理"
@@ -107,19 +107,27 @@ def _skill_usable(battle, actor: dict, info: dict) -> bool:
 
 
 def _spend_skill_cost(actor: dict, info: dict):
-    """扣除技能蓝耗/核心资源（state 容器）。basic/无消耗技能跳过。"""
+    """扣除技能蓝耗/核心资源（effects 容器 stacks）。basic/无消耗技能跳过。"""
     mp = int(info.get("mp", 0) or 0)
     if mp > 0 and actor.get("mp") is not None:
         actor["mp"] = max(0, int(actor.get("mp", 0)) - mp)
-    # 核心资源消耗（res_cost：扣 state[key]）
+    # 核心资源消耗（res_cost：扣 effects[key].stacks）
     res_cost = info.get("res_cost") or {}
     if res_cost:
+        ef = actor.setdefault("effects", {})
         for rk, rv in res_cost.items():
-            state_spend(actor, rk, int(rv or 0))
+            entry = ef.get(rk)
+            cur = int(entry.get("stacks", 0) or 0) if isinstance(entry, dict) else 0
+            if cur <= 0:
+                continue
+            if not isinstance(entry, dict):
+                entry = ef[rk] = {}
+            entry["stacks"] = max(0, cur - int(rv or 0))
     # consume_all：清零该资源 key
     consume_all = info.get("consume_all") or {}
     if consume_all and consume_all.get("key"):
-        state_of(actor).pop(consume_all["key"], None)
+        ef = actor.setdefault("effects", {})
+        ef.pop(consume_all["key"], None)
 
 
 def _default_target(battle, actor: dict) -> Optional[dict]:
@@ -267,9 +275,9 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
 
 
 def _consume_hit_buffs(battle, actor: dict, logs: list) -> dict:
-    """出手消费型 buff（N7.3）：查 actor.buffs 中带 hit 子键的条目。
+    """出手消费型效果（N7.3，V 系列容器统一）：查 actor.effects 中带 hit 子键的条目。
 
-    条目形态：buffs[key] = {"expire": 时刻, "hit": {"dmg_mult": 1.5} |
+    条目形态：effects[key] = {"stacks": 1, "expire": 时刻, "hit": {"dmg_mult": 1.5} |
     {"guaranteed_crit": True} | {"bonus_atk_pct": 0.15, "bonus_tag": "⚡"}}——
     效果参数由动作/数据给，出手时消费删除。
 
@@ -278,12 +286,12 @@ def _consume_hit_buffs(battle, actor: dict, logs: list) -> dict:
     bonus_*：出手附伤（N9.8 trinity thunder 段）——按攻击者 atk × pct 额外
     结算一段独立伤害（参数化零名词；tag 仅日志装饰）。
     """
-    bf = actor.get("buffs") or {}
+    ef = actor.get("effects") or {}
     now = float(getattr(battle, "_now", 0.0) or 0.0)
     out = {"dmg_mult": 1.0, "guaranteed_crit": False,
            "bonus_atk_pct": 0.0, "bonus_tag": ""}
-    for key in list(bf.keys()):
-        entry = bf[key]
+    for key in list(ef.keys()):
+        entry = ef[key]
         if not isinstance(entry, dict):
             continue
         hit = entry.get("hit")
@@ -307,7 +315,7 @@ def _consume_hit_buffs(battle, actor: dict, logs: list) -> dict:
             _fire(battle, "on_hit_consume", {"actor": actor, "key": key}, logs)
         except Exception:
             pass
-        bf.pop(key, None)
+        ef.pop(key, None)
     return out
 
 

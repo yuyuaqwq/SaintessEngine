@@ -43,12 +43,13 @@ class ActCtx:
 # ============================================================
 
 # 播种的战斗可变状态键（全部 actor 同构）
+# V 系列统一：state/buffs/hot/debuffs 四容器 → 单 effects 容器
+#   effects[key] = {"stacks": N, "expire": t|None, ...效果快照字段}
+# shields（承伤资源）/ cooldown（调度）保留独立容器（见设计文档 §2.5）
 _MUTABLE_KEYS = {
-    "buffs": dict,
-    "debuffs": dict,
+    "effects": dict,
     "shields": dict,
     "cooldown": dict,
-    "hot": dict,
     "defending": bool,
     "charging": None,
 }
@@ -103,11 +104,15 @@ def make_actor(
         "pene": float(stats.get("pene", 0.0)),
         "race": stats.get("race"),
         # ③ 战斗可变状态（播种）
-        "buffs": dict(stats.get("buffs") or {}),
-        "debuffs": dict(stats.get("debuffs") or {}),
+        # V 系列统一：单 effects 容器（原 state/buffs/hot/debuffs 四键合并）
+        #   条目形态 effects[key] = {"stacks": 叠层, "expire": 绝对时刻|None, "value": 动态数值|None}
+        #   + 运行时辅助 last_tick/hits_left（schedule/消费点自管，可缺省）
+        #   行为/数值/周期/消费全查 EFFECT_RULES[key] 声明（引擎零名词）
+        "effects": dict(stats.get("effects") or {}),
+        # 承伤资源（吸收伤害的护盾量值；与效果正交，保留独立——见设计 §2.5）
         "shields": dict(stats.get("shields") or {}),
+        # 调度资源（技能下次可用时刻；保留独立——见设计 §2.5）
         "cooldown": dict(stats.get("cooldown") or {}),
-        "hot": dict(stats.get("hot") or {}),
         "charging": stats.get("charging"),
         "defending": bool(stats.get("defending", False)),
         "ct": float(stats.get("ct", 0.0)),
@@ -116,9 +121,6 @@ def make_actor(
         # 把装备特效/词条/套装/被动翻译挂上；引擎 fire() 匹配后走名词→动词翻译。
         # 引擎不认识事件效果内容（零游戏知识），只分发。
         "triggers": dict(stats.get("triggers") or {}),
-        # 统一数值状态容器（引擎不认识 key 语义；叠层/资源/职业数值全进这里，
-        # 影响规则查 state_effects 声明表，不硬编码在引擎）
-        "state": dict(stats.get("state") or {}),
         # ④ 配置/能力
         "class_name": class_name,
         "level": int(stats.get("level", level)),
@@ -155,62 +157,12 @@ def actor_dead(actor: dict) -> bool:
     return not actor_alive(actor)
 
 
-def actor_buffs(actor: dict) -> dict:
-    """任意 actor 的 buffs（惰性播种）。"""
+def effects_of(actor: dict) -> dict:
+    """actor 统一效果容器。make_actor/from_state 已播种；纯读兜底。"""
     if actor is None:
         return {}
-    b = actor.get("buffs")
-    if b is None:
-        b = actor["buffs"] = {}
-    return b
-
-
-def actor_debuffs(actor: dict) -> dict:
-    """任意 actor 的 debuffs（持续减益池）。"""
-    if actor is None:
-        return {}
-    d = actor.get("debuffs")
-    if d is None:
-        d = actor["debuffs"] = {}
-    return d
-
-
-def state_of(actor: dict) -> dict:
-    """actor 统一数值状态容器（惰性播种）。叠层/资源/职业数值全在这里。"""
-    if actor is None:
-        return {}
-    st = actor.get("state")
-    if not isinstance(st, dict):
-        st = actor["state"] = {}
-    return st
-
-
-def state_get(actor: dict, key: str) -> int:
-    """读状态值（无 = 0）。"""
-    return int(state_of(actor).get(key, 0) or 0)
-
-
-def state_add(actor: dict, key: str, amount: int, cap: int | None = None) -> int:
-    """状态加值（封顶由调用方传或查 state_effects 声明表 cap）。返回加后值。"""
-    from .state_effects import state_def
-    if amount == 0:
-        return state_get(actor, key)
-    st = state_of(actor)
-    if cap is None:
-        cap = int(state_def(key).get("cap") or 0) or 999999
-    cur = int(st.get(key, 0) or 0)
-    st[key] = max(0, min(cap, cur + int(amount)))
-    return st[key]
-
-
-def state_spend(actor: dict, key: str, amount: int) -> int:
-    """状态消费（扣减，下限 0）。返回扣后值。"""
-    if amount <= 0:
-        return state_get(actor, key)
-    st = state_of(actor)
-    cur = int(st.get(key, 0) or 0)
-    st[key] = max(0, cur - int(amount))
-    return st[key]
+    ef = actor.get("effects")
+    return ef if isinstance(ef, dict) else {}
 
 
 def actor_ext(actor: dict) -> dict:

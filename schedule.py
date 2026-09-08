@@ -162,43 +162,45 @@ def _advance_time(battle, dt: float, logs: list):
 
 
 def _settle_time_effects(battle, logs: list):
-    """时刻推进后的持续效果结算（DOT/时效）。
+    """时刻推进后的持续效果结算（V 系列统一：遍历 effects 容器）。
 
-    N7.2 收口（对齐旧 _decay_buff_table/_advance_time 的到期语义）：
-    - buffs 到期：时间型条目 expire <= now → 删（控制 on_act/一次性 on_hit 由
-      消费点清除，这里只做时间兜底：expire 到点自然消失）
-    - shields 到期：expire_at <= now → 删（None = 永久不删）
-    - HOT 正向周期恢复：actor["hot"] 非空 → 每 HOT_INTERVAL 结算一次回血/回蓝，
-      turns 递减，归零清容器（对齐旧引擎 v179 P3 每秒墙钟 tick 语义）
-    - DOT：查 state_effects 的 dot 规则，对带 dot 的 state key 结算（每推进一跳；
-      interval 字段 N7.4 补）
+    N7.2 收口（对齐旧 _decay_buff_table/_advance_time 的到期语义）+ V 系列合并：
+    - effects 到期：条目 expire <= now → 删（None=常驻/纯叠层；控制 on_act/
+      一次性 on_hit 由消费点清除，这里只做时间兜底）
+    - shields 到期：expire_at <= now → 删（None = 永久不删；独立容器）
+    - 周期跳（统一方向分流，DOT/HOT 同构）：
+      * 表声明 dot（EFFECT_RULES[key].dot，旧 damage 规则，静态每层数值）
+      * 条目自带 period（effects[key]["period"]，动态声明——食物 HOT 的
+        dir=heal/mana + value 数值随条目走，EFFECT_RULES 零名词）
+      按 interval 绝对时刻循环补跳；turns 限跳清层（旧 dot.turns 语义）
     """
     from .state_effects import all_state_effects
     now = float(getattr(battle, "_now", 0.0) or 0.0)
+    table = all_state_effects()
     for acts in battle.sides.values():
         for a in acts:
             if not actor_alive(a):
                 continue
-            # buffs 时间到期（快照条目形态）
-            bf = a.get("buffs")
-            if isinstance(bf, dict) and bf:
-                for key in list(bf.keys()):
-                    entry = bf[key]
+            ef = a.get("effects")
+            # ---------- 1) effects 到期（buff/控制/免疫/一次性）----------
+            if isinstance(ef, dict) and ef:
+                for key in list(ef.keys()):
+                    entry = ef[key]
                     if not isinstance(entry, dict):
                         continue
                     exp = entry.get("expire")
                     if exp is None:
-                        continue  # 永久/无到期
+                        continue  # 永久/无到期（纯叠层/资源）
                     if now >= float(exp):
-                        bf.pop(key, None)
-                        # N8 事件：buff 到期钩子
+                        ef.pop(key, None)
+                        # N8 事件：效果到期钩子（原 buff_expire，保留事件名兼容）
                         try:
                             from .effect_triggers import fire as _fire
                             _fire(battle, "buff_expire", {"actor": a, "target": a,
                                                           "key": key}, logs)
                         except Exception:
                             pass  # 事件源异常不阻断结算
-            # shields 到期
+            # ---------- 2) shields 到期（独立容器）----------
             sh = a.get("shields")
             if isinstance(sh, dict) and sh:
                 for key in list(sh.keys()):
@@ -210,106 +212,108 @@ def _settle_time_effects(battle, logs: list):
                         continue  # 永久盾
                     if now >= float(exp):
                         sh.pop(key, None)
-            # HOT 正向周期恢复（I1：对齐旧引擎 v179 P3 食物持续恢复——每秒墙钟跳，
-            # 谁挂谁跳、与出手快慢无关；actor["hot"]={heal:%, mana:%, turns:N}）
-            ht = a.get("hot")
-            if isinstance(ht, dict) and ht:
-                _ht_turns = int(ht.get("turns", 0) or 0)
-                if _ht_turns > 0:
-                    # 绝对时刻下一跳（挂载时未登记 → 首跳 = now + interval，对称 DOT）
-                    _hnx = a.get("hot_next")
-                    if _hnx is None:
-                        a["hot_next"] = now + HOT_INTERVAL
-                    else:
-                        _guard_hot = 0
-                        while now >= float(a["hot_next"]) and _guard_hot < 60:
-                            _guard_hot += 1
+            # ---------- 3) 周期跳（effects 条目：dot/period 声明）----------
+            if isinstance(ef, dict) and ef:
+                dnext = a.setdefault("dot_next", {})
+                djump = a.setdefault("dot_jumps", {})
+                for key, entry in list(ef.items()):
+                    if not isinstance(entry, dict):
+                        continue
+                    # 到期条目本轮已删；这里只处理未到期的周期声明
+                    exp = entry.get("expire")
+                    if exp is not None and now >= float(exp):
+                        continue
+                    # 声明源：条目自带 period（动态）优先；回落表 dot（旧 damage）
+                    period = entry.get("period")
+                    if not isinstance(period, dict):
+                        cfg = table.get(key) or {}
+                        dot = cfg.get("dot")
+                        if dot:
+                            # 旧表声明 → 折算成 period 语义（damage 方向）
+                            period = dict(dot)
+                            period["dir"] = "damage"
+                            period["_table_scale"] = True  # pct×stacks 表驱动
+                    if not isinstance(period, dict):
+                        continue
+                    n = int(entry.get("stacks", 0) or 0)
+                    if n <= 0:
+                        continue
+                    direction = str(period.get("dir", "damage") or "damage")
+                    interval = float(period.get("interval", 1.0) or 1.0)
+                    turns = int(period.get("turns", 0) or 0)
+                    # 首次挂：登记下一跳（对齐旧 DOT/事件卡首跳延迟）
+                    nx = dnext.get(key)
+                    if nx is None:
+                        dnext[key] = now + interval
+                        continue
+                    if now < float(nx):
+                        continue  # 未到下一跳
+                    guard = 0
+                    while now >= float(dnext[key]) and guard < 20:
+                        guard += 1
+                        if direction == "damage":
+                            pct = float(period.get("pct_max_hp", 0) or 0)
+                            pct_cur = float(period.get("pct_cur_hp", 0) or 0)
+                            if pct > 0:
+                                # boss 档（数据标签 is_boss/role 选 pct_boss）
+                                if (a.get("is_boss") or a.get("role") == "boss") and period.get("pct_boss"):
+                                    pct = float(period["pct_boss"])
+                                dmg = max(1, int(a.get("max_hp", 1) * pct * n))
+                            elif pct_cur > 0:
+                                if (a.get("is_boss") or a.get("role") == "boss") and period.get("pct_cur_boss"):
+                                    pct_cur = float(period["pct_cur_boss"])
+                                dmg = max(1, int(a.get("hp", 0) * pct_cur * n))
+                            else:
+                                dmg = max(1, n)
+                            from .landing import deal_damage
+                            deal_damage(battle, None, a, dmg, logs)
+                            logs.append(f"🔥 {a.get('name', '目标')} 受 {key} {n} 层影响，损失 {dmg} 生命")
+                            # N8 事件：DOT 每跳
+                            try:
+                                from .effect_triggers import fire as _fire
+                                _fire(battle, "dot_tick", {"actor": a, "target": a,
+                                                           "key": key, "dmg": dmg}, logs)
+                            except Exception:
+                                pass
+                        elif direction == "heal":
                             from .landing import heal_actor as _heal_actor
                             _mx_hp = a.get("max_hp", a.get("hp", 1)) or 1
-                            _mx_mp = a.get("max_mp", a.get("mp", 1)) or 1
-                            _hpct = float(ht.get("heal", 0) or 0)
-                            _mpct = float(ht.get("mana", 0) or 0)
-                            _nm = a.get("name", "目标")
+                            _hpct = float(period.get("heal_pct", entry.get("heal", 0)) or 0)
                             if _hpct > 0 and int(a.get("hp", 0) or 0) < _mx_hp:
                                 _gain = max(1, int(_mx_hp * _hpct))
                                 _real = _heal_actor(battle, a, _gain, logs)
                                 if _real > 0:
-                                    logs.append(f"🍲 {_nm} 持续恢复生效，恢复 {_real} 点生命！")
+                                    logs.append(f"🍲 {a.get('name', '目标')} 持续恢复，恢复 {_real} 点生命！")
+                            # 持续恢复双资源：dir=heal 同时处理 mana_pct（食物 hot 回血回蓝同刻）
+                            _mpct = float(period.get("mana_pct", entry.get("mana", 0)) or 0)
+                            if _mpct > 0:
+                                _mx_mp = a.get("max_mp", a.get("mp", 1)) or 1
+                                if int(a.get("mp", 0) or 0) < _mx_mp:
+                                    _gain = max(1, int(_mx_mp * _mpct))
+                                    _before = int(a.get("mp", 0) or 0)
+                                    a["mp"] = min(_mx_mp, _before + _gain)
+                                    _real = int(a["mp"]) - _before
+                                    if _real > 0:
+                                        logs.append(f"🍲 {a.get('name', '目标')} 持续恢复，恢复 {_real} 点魔力！")
+                        elif direction == "mana":
+                            _mx_mp = a.get("max_mp", a.get("mp", 1)) or 1
+                            _mpct = float(period.get("mana_pct", entry.get("mana", 0)) or 0)
                             if _mpct > 0 and int(a.get("mp", 0) or 0) < _mx_mp:
                                 _gain = max(1, int(_mx_mp * _mpct))
                                 _before = int(a.get("mp", 0) or 0)
                                 a["mp"] = min(_mx_mp, _before + _gain)
                                 _real = int(a["mp"]) - _before
                                 if _real > 0:
-                                    logs.append(f"🍲 {_nm} 持续恢复生效，恢复 {_real} 点魔力！")
-                            # turns 递减；耗尽 → 清容器（效果结束；保留 hot 空键=actor 同构）
-                            _ht_turns -= 1
-                            if _ht_turns <= 0:
-                                ht.clear()
-                                a.pop("hot_next", None)
+                                    logs.append(f"🍲 {a.get('name', '目标')} 持续恢复，恢复 {_real} 点魔力！")
+                        # 限时周期：跳够 turns 次 → 清层（到期自然消失）
+                        if turns > 0:
+                            c = int(djump.get(key, 0) or 0) + 1
+                            djump[key] = c
+                            if c >= turns:
+                                ef.pop(key, None)
+                                dnext.pop(key, None)
+                                djump.pop(key, None)
                                 break
-                            ht["turns"] = _ht_turns
-                            a["hot_next"] = float(a["hot_next"]) + HOT_INTERVAL
-            # DOT（state 声明 dot 规则，N7.4：按 interval 绝对时刻跳，跨多刻跳多次；
-            # N9：dot.turns 限时——跳够 turns 次后自动清层（武器特效限时 DOT））
-            st = a.get("state") or {}
-            if not st:
-                continue
-            table = all_state_effects()
-            dnext = a.setdefault("dot_next", {})
-            djump = a.setdefault("dot_jumps", {})
-            for key, val in list(st.items()):
-                cfg = table.get(key) or {}
-                dot = cfg.get("dot")
-                n = int(val or 0)
-                if not dot or n <= 0 or cfg.get("on") != "target":
-                    continue
-                interval = float(dot.get("interval", 1.0) or 1.0)
-                turns = int(dot.get("turns", 0) or 0)
-                # 首次挂 DOT：下一跳 = now + interval（对齐旧事件卡首跳延迟）
-                nx = dnext.get(key)
-                if nx is None:
-                    dnext[key] = now + interval
-                    continue
-                if now < float(nx):
-                    continue  # 未到下一跳
-                # 到点跳一次（可能跨多刻 → 循环补跳）
-                guard = 0
-                while now >= float(dnext[key]) and guard < 20:
-                    guard += 1
-                    pct = float(dot.get("pct_max_hp", 0) or 0)
-                    pct_cur = float(dot.get("pct_cur_hp", 0) or 0)
-                    if pct > 0:
-                        # boss 档（数据标签 is_boss/role 选 pct_boss——引擎零名词语义）
-                        if (a.get("is_boss") or a.get("role") == "boss") and dot.get("pct_boss"):
-                            pct = float(dot["pct_boss"])
-                        dmg = max(1, int(a.get("max_hp", 1) * pct * n))
-                    elif pct_cur > 0:
-                        # 当前生命% DOT（败血：每跳按当前 hp——先扣大后扣小）
-                        if (a.get("is_boss") or a.get("role") == "boss") and dot.get("pct_cur_boss"):
-                            pct_cur = float(dot["pct_cur_boss"])
-                        dmg = max(1, int(a.get("hp", 0) * pct_cur * n))
-                    else:
-                        dmg = max(1, n)
-                    from .landing import deal_damage
-                    deal_damage(battle, None, a, dmg, logs)
-                    logs.append(f"🔥 {a.get('name', '目标')} 受 {key} {n} 层影响，损失 {dmg} 生命")
-                    # N8 事件：DOT 每跳
-                    try:
-                        from .effect_triggers import fire as _fire
-                        _fire(battle, "dot_tick", {"actor": a, "target": a,
-                                                   "key": key, "dmg": dmg}, logs)
-                    except Exception:
-                        pass  # 事件源异常不阻断结算
-                    # 限时 DOT：跳够 turns 次 → 清层（到期自然消失）
-                    if turns > 0:
-                        c = int(djump.get(key, 0) or 0) + 1
-                        djump[key] = c
-                        if c >= turns:
-                            st.pop(key, None)
-                            dnext.pop(key, None)
-                            djump.pop(key, None)
-                            break
-                    dnext[key] = float(dnext[key]) + interval
-                if not actor_alive(a):
-                    break
+                        dnext[key] = float(dnext[key]) + interval
+                    if not actor_alive(a):
+                        break

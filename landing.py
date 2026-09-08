@@ -58,9 +58,9 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     if target.get("defending"):
         dmg = max(1, int(dmg * 0.5))
         logs.append(f"(格挡后 {dmg} 点伤害)")
-    # 睡眠被打醒（主动伤害打醒睡眠）
-    if target.get("buffs", {}).get("sleep"):
-        target["buffs"].pop("sleep", None)
+    # 睡眠被打醒（主动伤害打醒睡眠；sleep 效果条目在 effects 容器）
+    if target.get("effects", {}).get("sleep"):
+        target["effects"].pop("sleep", None)
         logs.append("💥 目标被攻击惊醒！")
     # 蓄力打断（主动伤害打断读条；DOT wake_sleep=False 不打）
     if target.get("charging") and target["charging"].get("skill"):
@@ -121,14 +121,18 @@ def _apply_death_guard(battle, target: dict, logs: list) -> bool:
     声明参数读 state_effects（引擎不认识具体 key 语义，纯规则消费）。
     """
     try:
-        st = target.get("state") or {}
-        n = int(st.get("death_guard", 0) or 0)
+        ef = target.get("effects") or {}
+        entry = ef.get("death_guard")
+        n = int(entry.get("stacks", 0) or 0) if isinstance(entry, dict) else 0
         if n <= 0:
             return False
         from .state_effects import state_def
         cfg = state_def("death_guard") or {}
         mhp = int(target.get("max_hp", 1) or 1)
-        st["death_guard"] = max(0, n - 1)
+        # 层 -1（保留条目——资源耗尽后由调用方清；这里只减层）
+        entry["stacks"] = max(0, n - 1)
+        if entry.get("stacks", 0) <= 0 and not entry.get("expire"):
+            ef.pop("death_guard", None)
         # 保底
         guard_pct = float(cfg.get("guard_hp_pct") or 0.10)
         target["hp"] = max(1, int(mhp * guard_pct))
@@ -240,28 +244,35 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
 
 
 def _apply_heal_mods(target: dict, amount: int, logs: list) -> int:
-    """受疗/禁疗修正（target 自身状态）。返回修正后治疗量（未 clamp）。"""
+    """受疗/禁疗修正（target 自身效果）。返回修正后治疗量（未 clamp）。"""
     heal = amount
     try:
-        bf = target.get("buffs") or {}
-        st = target.get("state") or {}
-        # 受疗增幅（heal_amp_pct：装配层把 proc_heal amp 装备折算进 state，N9）
-        amp_pct = float(st.get("heal_amp_pct", 0) or 0)
-        if amp_pct > 0:
-            heal = int(round(heal * (1 + min(amp_pct, 1.0))))
-        # 禁疗（heal_down 层×10% cap50%——v2 数值容器 state，声明表 cap；N9 收编
-        # 旧 buffs int 直写形态，affix/weapon 挂 heal_down 用 state_add）
-        ehd = int(st.get("heal_down", 0) or 0)
-        if ehd > 0:
-            cut = min(ehd * 0.10, 0.50)
-            heal = max(0, int(heal * (1 - cut)))
-            logs.append(f"🩸 禁疗：治疗量 -{int(cut * 100)}%！")
-        # 重伤（_anti_heal_pct cap80%）
-        aheal = float(bf.get("_anti_heal_pct", 0) or 0)
-        if aheal > 0:
-            cut2 = min(aheal, 0.80)
-            heal = max(0, int(heal * (1 - cut2)))
-            logs.append(f"🩸 重伤：治疗量 -{int(cut2 * 100)}%！")
+        ef = target.get("effects") or {}
+        # 受疗增幅（heal_amp_pct：装配层把 proc_heal amp 装备折算进 effects 条目 stacks/value）
+        amp_entry = ef.get("heal_amp_pct")
+        if isinstance(amp_entry, dict):
+            # 两种形态：stacks 计数（装配层旧写法）/ value.amp 数值
+            amp_pct = float(amp_entry.get("value", {}).get("amp", 0) or 0) \
+                if isinstance(amp_entry.get("value"), dict) \
+                else float(amp_entry.get("stacks", 0) or 0)
+            if amp_pct > 0:
+                heal = int(round(heal * (1 + min(amp_pct, 1.0))))
+        # 禁疗（heal_down 层×10% cap50%——effects 条目 stacks；声明表 cap）
+        hd_entry = ef.get("heal_down")
+        if isinstance(hd_entry, dict):
+            ehd = int(hd_entry.get("stacks", 0) or 0)
+            if ehd > 0:
+                cut = min(ehd * 0.10, 0.50)
+                heal = max(0, int(heal * (1 - cut)))
+                logs.append(f"🩸 禁疗：治疗量 -{int(cut * 100)}%！")
+        # 重伤（_anti_heal_pct cap80%；effects 条目 value 内嵌）
+        ah_entry = ef.get("_anti_heal_pct")
+        if isinstance(ah_entry, dict):
+            aheal = float((ah_entry.get("value") or {}).get("pct", 0) or 0)
+            if aheal > 0:
+                cut2 = min(aheal, 0.80)
+                heal = max(0, int(heal * (1 - cut2)))
+                logs.append(f"🩸 重伤：治疗量 -{int(cut2 * 100)}%！")
     except Exception:
         pass
     return max(0, heal)

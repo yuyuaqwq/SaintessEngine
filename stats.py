@@ -30,17 +30,56 @@ def actor_stats(battle, actor: dict) -> dict:
         st = _player_base_stats(battle, actor)
     else:
         st = _monster_base_stats(actor)
-    # buffs 修正（战斗内 buffs dict → 面板属性）
-    _apply_buffs(st, actor_buffs_of(actor))
-    # state 声明折算（state_effects 表 stat_scale：叠层/资源 → 面板属性）
-    _apply_state_scale(st, actor)
+    # 效果折算（V 系列统一：遍历 effects 容器，读 EFFECT_RULES 表）
+    #   - 面板快照型（buff：条目含 stat/op/mult/value 折算，origin act_buff）
+    #   - 叠层声明型（state：EFFECT_RULES[key].panel/stat_scale × stacks）
+    _apply_effects(st, actor)
     return st
 
 
-def actor_buffs_of(actor: dict) -> dict:
-    """惰性读取 actor.buffs（不写回播种——纯读）。"""
-    b = actor.get("buffs") or {}
-    return b if isinstance(b, dict) else {}
+def _apply_effects(st: dict, actor: dict) -> dict:
+    """把 actor.effects 全部条目折算进面板（st 原地改，返回同一 dict）。
+
+    每条目按 EFFECT_RULES[key] 声明折算：
+    - panel（静态整体增益）：按 panel.stat/op/mult 快照数值折算
+    - stat_scale（每层增益）：stacks × 每层系数（资源/叠层 buff）
+    - 无面板声明（纯状态/控制/周期/免疫）不折算面板
+    兼容过渡：原 buffs 快照字段（stat/op/mult 直接内嵌条目）也读
+    （EFFECT_ACTIONS 迁移前旧动作产物）——见数据表迁移 V5。
+    """
+    ef = actor.get("effects") or {}
+    if not isinstance(ef, dict) or not ef:
+        return st
+    from .state_effects import state_def
+    for key, entry in ef.items():
+        if not isinstance(entry, dict):
+            continue
+        cfg = state_def(key) or {}
+        n = int(entry.get("stacks", 0) or 0)
+        # ① 叠层声明型（stat_scale：每层面板修正）——需 stacks>0
+        if n > 0:
+            scale = cfg.get("stat_scale") or {}
+            for stat, per in scale.items():
+                if stat == "dmg_mult":
+                    st["_state_dmg_mult"] = float(st.get("_state_dmg_mult", 1.0)) * (1.0 + n * float(per))
+                elif stat == "reduce":
+                    st["reduce"] = min(float(st.get("reduce", 0) or 0) + n * float(per), 0.9)
+                elif stat in st:
+                    st[stat] = int(st.get(stat, 0) * (1.0 + n * float(per)))
+        # ② 面板快照型（buff：条目内嵌 stat/op/mult 或声明 panel）——默认 1 层
+        entry_stat = entry.get("stat") or (cfg.get("panel") or {}).get("stat")
+        entry_mult = entry.get("mult")
+        if entry_mult is None:
+            entry_mult = (cfg.get("panel") or {}).get("mult")
+        if entry_stat and entry_mult is not None:
+            _op = entry.get("op") or (cfg.get("panel") or {}).get("op") or "mul"
+            if key == "spd_down" or _op == "reduce":
+                st[entry_stat] = int(st.get(entry_stat, 0) * (1.0 - min(float(entry_mult), 0.9)))
+            elif _op == "add":
+                st[entry_stat] = float(st.get(entry_stat, 0) or 0) + float(entry_mult)
+            else:
+                st[entry_stat] = int(st.get(entry_stat, 0) * float(entry_mult))
+    return st
 
 
 def _player_base_stats(battle, actor: dict) -> dict:
@@ -82,65 +121,6 @@ def _monster_base_stats(actor: dict) -> dict:
         "magic_reduce": actor.get("magic_reduce", 0) or 0,
         "elem_res": actor.get("elem_res", 0) or 0,
     }
-
-
-def _apply_buffs(st: dict, buffs: dict) -> dict:
-    """把 buffs dict 的属性加成应用到面板（st 原地改，返回同一 dict）。
-
-    v181.N7.1：buff 条目 = 状态快照 dict（act_buff 写入）：
-      {"expire": 到期时刻, "stat": 面板键, "op": "mul"|"add"|"reduce", "mult": 数值}
-    折算直接读条目快照——数值随效果动作配置走，引擎不查任何名字表。
-    无 stat 的纯状态 buff（控制/免疫/一次性）不折算面板（只到期/消费）。
-    """
-    if not buffs:
-        return st
-    for key, entry in buffs.items():
-        if not isinstance(entry, dict):
-            continue  # 历史 int 形态：N7.1 后不再写入，忽略
-        stat = entry.get("stat")
-        mult = entry.get("mult")
-        if not stat or mult is None:
-            continue  # 无面板折算的纯状态 buff
-        if key == "spd_down" or entry.get("op") == "reduce":
-            st[stat] = int(st.get(stat, 0) * (1.0 - min(float(mult), 0.9)))
-            continue
-        if entry.get("op") == "add":
-            st[stat] = float(st.get(stat, 0) or 0) + float(mult)
-        else:  # mul
-            st[stat] = int(st.get(stat, 0) * float(mult))
-    return st
-
-
-def _apply_state_scale(st: dict, actor: dict) -> dict:
-    """state 声明折算：查 state_effects 表 stat_scale，把叠层/资源值折进面板。
-
-    通用动作（引擎不认识 key 语义）：
-    - stat_scale: {"atk": 0.04} → 每点 atk +4%（面板乘算）
-    - dmg_mult: {"dmg_mult": 0.12} → 折进 st["_state_dmg_mult"]（伤害结算读乘区）
-    """
-    from .state_effects import all_state_effects
-    state = actor.get("state") or {}
-    if not state:
-        return st
-    dmg_mult = 1.0
-    state_table = all_state_effects()
-    for key, val in state.items():
-        cfg = state_table.get(key) or {}
-        scale = cfg.get("stat_scale") or {}
-        n = int(val or 0)
-        if n <= 0:
-            continue
-        for stat, per in scale.items():
-            if stat == "dmg_mult":
-                dmg_mult *= (1.0 + n * float(per))
-            elif stat == "reduce":
-                # 减伤折算：st["reduce"] 累加（cap 由消费侧）
-                st["reduce"] = min(float(st.get("reduce", 0) or 0) + n * float(per), 0.9)
-            elif stat in st:
-                st[stat] = int(st.get(stat, 0) * (1.0 + n * float(per)))
-    if dmg_mult != 1.0:
-        st["_state_dmg_mult"] = dmg_mult
-    return st
 
 
 # ============================================================

@@ -85,11 +85,10 @@ def from_state(st: dict) -> Battle:
 def _deserialize_actor(data: dict) -> dict:
     """JSON 化 actor dict → actor（重建 _skill_index 空壳，Battle 构造时再索引）。"""
     actor = dict(data)
-    actor.setdefault("ext", {})
-    actor.setdefault("state", {})
-    actor.setdefault("buffs", {})
-    actor.setdefault("debuffs", {})
+    actor.setdefault("effects", {})
     actor.setdefault("shields", {})
+    actor.setdefault("cooldown", {})
+    actor.setdefault("ext", {})
     actor["_skill_index"] = {}
     return actor
 
