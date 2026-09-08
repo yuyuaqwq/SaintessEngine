@@ -70,6 +70,7 @@ def fire(battle, event: str, ctx: dict, logs: list) -> None:
     # 事件上下文暂存（游戏侧扩展动作读：dmg/heal/amount/is_crit/overflow/source...）——
     # 引擎动词不读；这是装配层族动作（ACTION_HANDLERS 扩展注册）拿事件数值的通道。
     # 单线程战斗同步 fire，下一 fire 覆盖；不落盘。
+    ctx.setdefault("_event", event)
     battle._fire_ctx = ctx
     for acts in battle.sides.values():
         for a in acts:
