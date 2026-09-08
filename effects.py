@@ -376,3 +376,68 @@ def act_state_spend(battle, caster, target, params, logs):
         return
     state_spend(holder, key, amount)
     logs.append(f"✦ 消耗 {amount} 点 {key}（剩余 {cur - amount}）")
+
+
+# ============================================================
+# N7.5a 补战斗动词：heal / state_set / interrupt
+# ============================================================
+
+@register_action("heal")
+def act_heal(battle, caster, target, params, logs):
+    """治疗动词（N7.5a）：落地走 landing.heal_actor 统一收口。
+
+    参数（引擎零公式知识）：
+    - pct：按目标 max_hp 百分比治疗（如 heal_pct 0.15 → 15%）
+    - expr：表达式（由数据给；暂不 eval——治疗技能走 actions._do_heal 公式链）
+    - value：固定治疗量
+    on=target 时治疗 target；缺省治疗 caster。
+    """
+    from .landing import heal_actor
+    holder = caster if params.get("on", "caster") == "caster" else (target or caster)
+    if not holder:
+        return
+    if holder.get("hp") is None:
+        return
+    info = params.get("info") or {}
+    pct = float(params.get("pct", 0) or 0)
+    if pct <= 0:
+        pct = float(info.get("hp_pct", 0) or 0)   # 怪 heal_self/heal_pct 数据 hp_pct
+    value = int(params.get("value", 0) or 0)
+    if pct > 0:
+        value = int((holder.get("max_hp", 1) or 1) * pct)
+    if value <= 0:
+        return
+    real = heal_actor(battle, holder, value, logs)
+    if real > 0:
+        logs.append(f"✨ {holder.get('name', '目标')} 恢复了 {real} 点生命！")
+
+
+@register_action("state_set")
+def act_state_set(battle, caster, target, params, logs):
+    """层数置值（N7.5a，stacks_set 语义）：actor.state[key] 直接置 amount。
+
+    与 state_add 区别：add 是叠加，set 是覆盖（如 Boss 断过载 → 充能回 3）。
+    """
+    holder = caster if params.get("on", "caster") == "caster" else (target or caster)
+    if not holder:
+        return
+    key = params.get("key") or params.get("mech")
+    amount = int(params.get("amount", params.get("value", 0)) or 0)
+    if not key:
+        return
+    from .actors import state_of
+    cap = int(state_def(key).get("cap") or 0) or 999999
+    val = max(0, min(cap, amount))
+    state_of(holder)[key] = val
+    logs.append(f"✦ {key} 置为 {val}")
+
+
+@register_action("interrupt")
+def act_interrupt(battle, caster, target, params, logs):
+    """打断读条（N7.5a）：清 target.charging（蓄力技被打断）。"""
+    actor = target or caster
+    if not actor:
+        return
+    if actor.get("charging") and actor["charging"].get("skill"):
+        actor["charging"] = None
+        logs.append(f"🔨 {actor.get('name', '目标')} 的蓄力被打破了！")

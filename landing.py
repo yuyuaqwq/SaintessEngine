@@ -35,6 +35,13 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     dmg = _lv_pressure(battle, source, target, amount)
     if dmg <= 0:
         return 0
+    # N7.5a 承伤乘区（vulnerable 破绽：被打更疼）——target["_dmg_taken_mult"]>1 生效
+    try:
+        _dtm = float(target.get("_dmg_taken_mult", 0) or 0)
+        if _dtm > 1.0:
+            dmg = max(1, int(dmg * _dtm))
+    except Exception:
+        pass
     # defending 减伤（防御姿态伤害减半）
     if target.get("defending"):
         dmg = max(1, int(dmg * 0.5))
