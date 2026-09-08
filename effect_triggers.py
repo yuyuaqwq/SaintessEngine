@@ -21,17 +21,19 @@ ctx 语义（插桩点统一约定）：
 执行语义：对每个存活 actor，查自身 triggers[event] → 以 ctx.caster/ctx.target
 为默认施放方/目标执行（effect dict 可带 on 覆盖作用对象）。
 
-事件全集（19 时机，DESIGN_effect_system_v2.md §3.3）：
-    battle_start 开战（词条/套装/仪式）   turn_start actor 回合开始
-    act_begin 行动前（读条前）            act_cast 行动施放瞬间（耗蓝/读条后）
-    skill_hit 技能命中后                  attack_hit 普攻命中后
-    crit 暴击命中（命中子集）             on_taken 受击（承伤后）
-    on_heal 治疗生效                      on_kill 击杀敌人
-    on_death 死亡                         dot_tick DOT 每跳
-    on_act_consume 行动级消费点（控制跳过） on_hit_consume 出手消费点（一次性）
-    buff_expire buff 到期钩子             threshold 状态阈值（层数变化后）
-    phase Boss 阶段转换（N9 上层）        player_low 玩家低血量（N9 上层）
-    pv_broken 破防（N9 上层）
+# 事件全集（DESIGN_effect_system_v2.md §3.3 19 时机 + N9.13 dmg_calc/taken_calc + act_done）：
+#    battle_start 开战（词条/套装/仪式）   turn_start actor 回合开始
+#    act_begin 行动前（读条前）            act_cast 行动施放瞬间（耗蓝/读条后）
+#    skill_hit 技能命中后                  attack_hit 普攻命中后
+#    crit 暴击命中（命中子集）             on_taken 受击（承伤后）
+#    on_heal 治疗生效                      on_kill 击杀敌人
+#    on_death 死亡                         dot_tick DOT 每跳
+#    on_act_consume 行动级消费点（控制跳过） on_hit_consume 出手消费点（一次性）
+#    buff_expire buff 到期钩子             threshold 状态阈值（层数变化后）
+#    dmg_calc 伤害算出后（攻击方乘区）      taken_calc 承伤修正（承伤方乘区）
+#    act_done 行动完成（全员广播——效果侧自判敌我，randuin/ice_vein 用）
+#    phase Boss 阶段转换（N9 上层）        player_low 玩家低血量（N9 上层）
+#    pv_broken 破防（N9 上层）
 
 N9 起：phase/player_low/pv_broken 无引擎自然点位（Boss 机制上层驱动），
 由上层按需调 fire()（EVENTS 已声明全集）。引擎已插桩自然点位 = 除
@@ -43,7 +45,7 @@ from .actors import actor_alive
 
 # 19 时机事件全集（必须单行定义——cov 按行 trace，多行续行会永久漏记；
 # 中文语义见模块 docstring）
-EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "attack_hit", "crit", "on_taken", "on_heal", "on_kill", "on_death", "dot_tick", "on_act_consume", "on_hit_consume", "buff_expire", "threshold", "dmg_calc", "taken_calc", "phase", "player_low", "pv_broken")
+EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "attack_hit", "crit", "on_taken", "on_heal", "on_kill", "on_death", "dot_tick", "on_act_consume", "on_hit_consume", "buff_expire", "threshold", "dmg_calc", "taken_calc", "act_done", "phase", "player_low", "pv_broken")
 
 # N9.13 数值修正钩子（伤害/承伤乘区——装配层乘区扩展动作改 _fire_ctx["mult"] 累乘）：
 #   dmg_calc  = 伤害算出后落地前（攻击者视角条件乘区：处决低血增伤/破魔/叠层放大器）

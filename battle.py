@@ -283,6 +283,14 @@ class Battle:
             logs = self._do_flee(ctx)
         else:
             logs = [f"未知行动类型：{action}"]
+        # N9A-2 事件：行动完成（全员广播——不带 actor 键避免主体过滤拦截旁观者；
+        # 刚行动的 actor 放 ctx["acted"]，效果侧自己 if 敌我判断，如 randuin/ice_vein
+        # 监听敌对 actor 行动叠减速）。被控跳过（skip）早退 return 不触发。
+        try:
+            from .effect_triggers import fire as _fire
+            _fire(self, "act_done", {"acted": actor}, logs)
+        except Exception:
+            pass  # 事件源异常不阻断行动结算
         # 胜负判定（死亡可能已触发）
         self._check_side_end()
         return logs, bool(self.result)
