@@ -16,7 +16,7 @@ from typing import Optional
 from .. import engine as E
 from ..core import constants as K
 from . import stats as S
-from .actors import state_of, state_spend
+from .actors import state_of, state_spend, actor_alive
 
 # kind 常量（旧 battle.py K_PHYS/K_MAGI/K_TRUE 同义；用文案判断会脆，这里按旧语义）
 K_PHYS = "物理"
@@ -238,6 +238,16 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
     if total <= 0:
         return logs
     logs.extend(_deal_hit(battle, actor, target, total))
+    # N9.8 出手附伤（trinity thunder 段等）：主伤害落完后按 atk × pct 结算一段
+    # 独立附加伤害（参数化零名词——数值/标签全来自 buff hit 子键声明）。
+    # 走 landing.deal_damage 统一收口（等级压制/护盾/死亡判定正常联动）。
+    bns = float(hit_buffs.get("bonus_atk_pct", 0.0) or 0.0)
+    if bns > 0:
+        _bst = S.actor_stats(battle, actor)
+        _bns_dmg = max(1, int((_bst.get("atk", 0) or 0) * bns))
+        if _bns_dmg > 0 and actor_alive(target):
+            logs.extend(_deal_hit(battle, actor, target, _bns_dmg))
+            logs.append(f"{hit_buffs.get('bonus_tag') or '⚡'} 附魔追击，追加 {_bns_dmg} 点伤害！")
     # 命中后 mech/effect 效果（N3：mech → effects 兼容层）
     _apply_hit_effects(battle, actor, target, info, lv, logs)
     # N8 事件：命中后——普攻 attack_hit / 技能 skill_hit；暴击 crit（子集）。
@@ -260,13 +270,18 @@ def _consume_hit_buffs(battle, actor: dict, logs: list) -> dict:
     """出手消费型 buff（N7.3）：查 actor.buffs 中带 hit 子键的条目。
 
     条目形态：buffs[key] = {"expire": 时刻, "hit": {"dmg_mult": 1.5} |
-    {"guaranteed_crit": True}}——效果参数由动作/数据给，出手时消费删除。
+    {"guaranteed_crit": True} | {"bonus_atk_pct": 0.15, "bonus_tag": "⚡"}}——
+    效果参数由动作/数据给，出手时消费删除。
 
-    返回 {"dmg_mult": float, "guaranteed_crit": bool}。
+    返回 {"dmg_mult": float, "guaranteed_crit": bool,
+          "bonus_atk_pct": float, "bonus_tag": str}。
+    bonus_*：出手附伤（N9.8 trinity thunder 段）——按攻击者 atk × pct 额外
+    结算一段独立伤害（参数化零名词；tag 仅日志装饰）。
     """
     bf = actor.get("buffs") or {}
     now = float(getattr(battle, "_now", 0.0) or 0.0)
-    out = {"dmg_mult": 1.0, "guaranteed_crit": False}
+    out = {"dmg_mult": 1.0, "guaranteed_crit": False,
+           "bonus_atk_pct": 0.0, "bonus_tag": ""}
     for key in list(bf.keys()):
         entry = bf[key]
         if not isinstance(entry, dict):
@@ -280,6 +295,11 @@ def _consume_hit_buffs(battle, actor: dict, logs: list) -> dict:
         out["dmg_mult"] *= float(hit.get("dmg_mult", 1.0) or 1.0)
         if hit.get("guaranteed_crit"):
             out["guaranteed_crit"] = True
+        # N9.8 出手附伤：bonus_atk_pct 累加（多 buff 并存时求和；缺省无此段）
+        bns = float(hit.get("bonus_atk_pct", 0.0) or 0.0)
+        if bns > 0:
+            out["bonus_atk_pct"] += bns
+            out["bonus_tag"] = hit.get("bonus_tag") or "⚡"
         logs.append(f"✨ {key} 生效！")
         # N8 事件：出手消费点（一次性 buff 被消费；主体=出手者）
         try:
