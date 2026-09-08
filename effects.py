@@ -455,3 +455,33 @@ def act_interrupt(battle, caster, target, params, logs):
     if actor.get("charging") and actor["charging"].get("skill"):
         actor["charging"] = None
         logs.append(f"🔨 {actor.get('name', '目标')} 的蓄力被打破了！")
+
+
+@register_action("damage")
+def act_damage(battle, caster, target, params, logs):
+    """直接伤害动词（N9）：落地统一走 landing.deal_damage（N8 事件随之广播）。
+
+    参数（引擎零公式知识）：
+    - value : 固定伤害量
+    - pct   : 按目标 max_hp 百分比（pct_max_hp 别名；与 DOT 同语义）
+    - kind  : phys/magi/true/""（透传 landing dmg_kind，免伤等按类型扩展）
+    目标语义：
+    - on=target（缺省）：对 ctx.target 造成伤害（技能/命中附加/溅射）
+    - on=caster：对施放方造成伤害（反伤打攻击者/血祭自伤——反伤时 fire 的
+      ctx.caster = 攻击方，正好是被打对象；source 仍记 caster 参数）
+    无 target 容器（hp 为 None）不执行；伤害全部经 landing 收口（护盾/死亡判定）。
+    """
+    from .landing import deal_damage
+    holder = caster if params.get("on", "target") == "caster" else (target or caster)
+    if not holder or holder.get("hp") is None:
+        return
+    value = int(params.get("value", 0) or 0)
+    pct = float(params.get("pct", params.get("pct_max_hp", 0)) or 0)
+    if pct > 0:
+        value = int((holder.get("max_hp", 1) or 1) * pct)
+    if value <= 0:
+        return
+    dmg_kind = str(params.get("kind", "") or "")
+    real = deal_damage(battle, caster, holder, value, logs, dmg_kind=dmg_kind)
+    if real > 0:
+        logs.append(f"💥 {holder.get('name', '目标')} 受到 {real} 点伤害！")
