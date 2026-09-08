@@ -184,14 +184,18 @@ def act_control(battle, caster, target, params, logs):
 
 @register_action("buff")
 def act_buff(battle, caster, target, params, logs):
-    """通用 buff：写 actor.buffs[key]=刻数（或 value 型）。
+    """通用 buff：写 actor.buffs[key] = 状态快照（v181.N7.1）。
 
-    key/turns/value 由数据给。引擎只执行"buff key 挂 N 刻"，
-    属性乘区消费在 stats（读 buffs + 游戏规则折算）。
+    形态（增益）：{"expire": now+turns, "stat": 面板键, "op": "mul"|"add",
+                  "mult": 倍率/加值}——数值由动作参数（EFFECT_ACTIONS）给出并快照进条目，
+    面板折算读条目（stats._apply_buffs），引擎不查任何名字表。
 
-    value 型（如减伤百分比）：params["value"] 或
-    pct_from_mech_val=true（配置声明 value 从 mech_val 折算：45→0.45）。
+    形态（value 型，如 reduce 减伤百分比）：{"expire", "v": float, "hits"}——
+    无面板乘区，纯状态（消费由规则表）。兼容旧 pct_from_mech_val 参数折算。
+
+    on=target 时作用于 target（对敌减益型 buff）。
     """
+    from .battle import _now_of
     holder = caster if params.get("on", "caster") == "caster" else (target or caster)
     if not holder:
         return
@@ -199,20 +203,39 @@ def act_buff(battle, caster, target, params, logs):
     turns = int(params.get("turns", 0) or 0)
     if not key or turns <= 0:
         return
+    now = _now_of(battle)
+    expire = now + turns
     bf = holder.setdefault("buffs", {})
-    # value 型（如 reduce=0.45）：直接存值（浮点百分比）
+    # value 型（如 reduce=0.45）：存 {expire, v}——纯状态/减伤独立计时
     value = params.get("value")
     if params.get("pct_from_mech_val"):
         mv = float(params.get("mech_val") or 0)
         value = (mv / 100.0) if mv > 1 else mv  # 45→0.45；0.45→0.45
     if value is not None:
-        bf[key] = max(float(bf.get(key, 0) or 0), float(value))
+        old = bf.get(key)
+        old_v = float(old.get("v", 0)) if isinstance(old, dict) else 0.0
+        bf[key] = {"expire": max(float(old.get("expire", 0) or 0) if isinstance(old, dict) else expire, expire),
+                   "v": max(old_v, float(value))}
         if key == "reduce":
             holder["reduce_left"] = max(int(holder.get("reduce_left", 0) or 0), turns)
         logs.append(f"🛡️ {key} {float(value):.0%}（持续 {turns} 刻）")
         return
-    bf[key] = max(int(bf.get(key, 0) or 0), turns)
-    logs.append(f"✦ {key} 提升（持续 {turns} 刻）")
+    # 增益：动作参数 stat/op/mult（EFFECT_ACTIONS 配置给）→ 快照进条目
+    stat = params.get("stat")
+    op = params.get("op")
+    mult = params.get("mult")
+    if stat and mult is not None:
+        old = bf.get(key)
+        old_exp = float(old.get("expire", 0) or 0) if isinstance(old, dict) else 0.0
+        bf[key] = {"expire": max(old_exp, expire),
+                   "stat": stat, "op": op or "mul", "mult": float(mult)}
+        logs.append(f"✦ {key} 提升（{op or 'mul'}×{mult}，持续 {turns} 刻）")
+        return
+    # 无 stat 的纯状态 buff（免疫/标记等）：只记录到期，不折算面板
+    old = bf.get(key)
+    old_exp = float(old.get("expire", 0) or 0) if isinstance(old, dict) else 0.0
+    bf[key] = {"expire": max(old_exp, expire)}
+    logs.append(f"✦ {key}（持续 {turns} 刻）")
 
 
 # ---- shield：护盾 ----

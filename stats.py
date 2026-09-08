@@ -81,34 +81,27 @@ def _monster_base_stats(actor: dict) -> dict:
 def _apply_buffs(st: dict, buffs: dict) -> dict:
     """把 buffs dict 的属性加成应用到面板（st 原地改，返回同一 dict）。
 
-    buff key → 属性折算规则查游戏配置（BUFF_STAT_KEYS）——引擎不内置。
-    value 存刻数 → 属性 ×(1+层数×0.10)；spd_down 特殊 ×SPD_DOWN_MULT。
-    值可为 int 刻数或 float 百分比。
+    v181.N7.1：buff 条目 = 状态快照 dict（act_buff 写入）：
+      {"expire": 到期时刻, "stat": 面板键, "op": "mul"|"add"|"reduce", "mult": 数值}
+    折算直接读条目快照——数值随效果动作配置走，引擎不查任何名字表。
+    无 stat 的纯状态 buff（控制/免疫/一次性）不折算面板（只到期/消费）。
     """
-    from . import config
     if not buffs:
         return st
-    _BUFF_STAT_KEYS = config.get_buff_stat_keys()
-    spd_down_mult = config.get_spd_down_mult()
-    for key, attr in _BUFF_STAT_KEYS.items():
-        if key not in buffs:
+    for key, entry in buffs.items():
+        if not isinstance(entry, dict):
+            continue  # 历史 int 形态：N7.1 后不再写入，忽略
+        stat = entry.get("stat")
+        mult = entry.get("mult")
+        if not stat or mult is None:
+            continue  # 无面板折算的纯状态 buff
+        if key == "spd_down" or entry.get("op") == "reduce":
+            st[stat] = int(st.get(stat, 0) * (1.0 - min(float(mult), 0.9)))
             continue
-        val = buffs[key]
-        if isinstance(val, (int, float)) and not isinstance(val, bool):
-            # float 值（0.45 这类百分比）→ 直接乘；int → 刻数语义 ×(1+0.10*n)
-            if isinstance(val, float):
-                if key == "spd_down":
-                    st[attr] = int(st.get(attr, 0) * (1.0 - min(float(val), 0.9)))
-                else:
-                    st[attr] = int(st.get(attr, 0) * (1.0 + float(val)))
-                continue
-            n = int(val or 1)
-        else:
-            n = int(val or 1)
-        if key == "spd_down":
-            st[attr] = int(st.get(attr, 0) * spd_down_mult)
-        else:
-            st[attr] = int(st.get(attr, 0) * (1 + n * 0.10))
+        if entry.get("op") == "add":
+            st[stat] = float(st.get(stat, 0) or 0) + float(mult)
+        else:  # mul
+            st[stat] = int(st.get(stat, 0) * float(mult))
     return st
 
 

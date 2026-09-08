@@ -16,13 +16,11 @@ _LOADED = {
     "state_effects": {},   # state key → 规则（cap/stat_scale/dot/on/threshold）
     "effect_actions": {},  # 游戏名词效果 → 引擎动词动作序列
     "cleanse_tags": [],    # 净化清的控制键
-    "buff_stat_keys": {},  # buff key → 面板属性折算规则
-    "spd_down_mult": 0.8,  # 减速乘数
 }
 
 
 def set_config(kind: str, table) -> None:
-    """游戏层挂载配置表。kind: state_effects/effect_actions/cleanse_tags/buff_stat_keys。"""
+    """游戏层挂载配置表。kind: state_effects/effect_actions/cleanse_tags。"""
     if kind in _LOADED:
         _LOADED[kind] = table if table is not None else ([] if kind in ("cleanse_tags",) else {})
 
@@ -32,8 +30,6 @@ def load_game_rules(module) -> None:
     set_config("state_effects", getattr(module, "STATE_EFFECTS", {}))
     set_config("effect_actions", getattr(module, "EFFECT_ACTIONS", {}))
     set_config("cleanse_tags", getattr(module, "CLEANSE_TAGS", []))
-    set_config("buff_stat_keys", getattr(module, "BUFF_STAT_KEYS", {}))
-    set_config("spd_down_mult", getattr(module, "SPD_DOWN_MULT", 0.8))
 
 
 def load_game_defaults() -> None:
@@ -59,16 +55,6 @@ def get_cleanse_tags() -> list:
     """净化应清的控制键（游戏配置声明；无 = 不清理 buff 容器控制键）。"""
     tags = _LOADED.get("cleanse_tags")
     return tags if isinstance(tags, list) else []
-
-
-def get_buff_stat_keys() -> dict:
-    """buff key → 面板属性折算规则（游戏配置；无 = 引擎不折算 buff）。"""
-    v = _LOADED.get("buff_stat_keys")
-    return v if isinstance(v, dict) else {}
-
-
-def get_spd_down_mult() -> float:
-    return float(_LOADED.get("spd_down_mult", 0.8) or 0.8)
 
 
 def state_def(key: str) -> dict:
