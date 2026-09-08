@@ -205,12 +205,14 @@ def _settle_time_effects(battle, logs: list):
                         continue  # 永久盾
                     if now >= float(exp):
                         sh.pop(key, None)
-            # DOT（state 声明 dot 规则，N7.4：按 interval 绝对时刻跳，跨多刻跳多次）
+            # DOT（state 声明 dot 规则，N7.4：按 interval 绝对时刻跳，跨多刻跳多次；
+            # N9：dot.turns 限时——跳够 turns 次后自动清层（武器特效限时 DOT））
             st = a.get("state") or {}
             if not st:
                 continue
             table = all_state_effects()
             dnext = a.setdefault("dot_next", {})
+            djump = a.setdefault("dot_jumps", {})
             for key, val in list(st.items()):
                 cfg = table.get(key) or {}
                 dot = cfg.get("dot")
@@ -218,6 +220,7 @@ def _settle_time_effects(battle, logs: list):
                 if not dot or n <= 0 or cfg.get("on") != "target":
                     continue
                 interval = float(dot.get("interval", 1.0) or 1.0)
+                turns = int(dot.get("turns", 0) or 0)
                 # 首次挂 DOT：下一跳 = now + interval（对齐旧事件卡首跳延迟）
                 nx = dnext.get(key)
                 if nx is None:
@@ -230,8 +233,17 @@ def _settle_time_effects(battle, logs: list):
                 while now >= float(dnext[key]) and guard < 20:
                     guard += 1
                     pct = float(dot.get("pct_max_hp", 0) or 0)
+                    pct_cur = float(dot.get("pct_cur_hp", 0) or 0)
                     if pct > 0:
+                        # boss 档（数据标签 is_boss/role 选 pct_boss——引擎零名词语义）
+                        if (a.get("is_boss") or a.get("role") == "boss") and dot.get("pct_boss"):
+                            pct = float(dot["pct_boss"])
                         dmg = max(1, int(a.get("max_hp", 1) * pct * n))
+                    elif pct_cur > 0:
+                        # 当前生命% DOT（败血：每跳按当前 hp——先扣大后扣小）
+                        if (a.get("is_boss") or a.get("role") == "boss") and dot.get("pct_cur_boss"):
+                            pct_cur = float(dot["pct_cur_boss"])
+                        dmg = max(1, int(a.get("hp", 0) * pct_cur * n))
                     else:
                         dmg = max(1, n)
                     from .landing import deal_damage
@@ -244,6 +256,15 @@ def _settle_time_effects(battle, logs: list):
                                                    "key": key, "dmg": dmg}, logs)
                     except Exception:
                         pass  # 事件源异常不阻断结算
+                    # 限时 DOT：跳够 turns 次 → 清层（到期自然消失）
+                    if turns > 0:
+                        c = int(djump.get(key, 0) or 0) + 1
+                        djump[key] = c
+                        if c >= turns:
+                            st.pop(key, None)
+                            dnext.pop(key, None)
+                            djump.pop(key, None)
+                            break
                     dnext[key] = float(dnext[key]) + interval
                 if not actor_alive(a):
                     break

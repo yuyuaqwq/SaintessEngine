@@ -63,6 +63,10 @@ def fire(battle, event: str, ctx: dict, logs: list) -> None:
     # 施放方的场景）；target 保持事件目标（可由插桩点显式给）。
     caster = ctx.get("caster")
     target = ctx.get("target")
+    # 事件上下文暂存（游戏侧扩展动作读：dmg/heal/amount/is_crit/overflow...）——
+    # 引擎动词不读；这是装配层族动作（ACTION_HANDLERS 扩展注册）拿事件数值的通道。
+    # 单线程战斗同步 fire，下一 fire 覆盖；不落盘。
+    battle._fire_ctx = ctx
     for acts in battle.sides.values():
         for a in acts:
             if not actor_alive(a):
