@@ -154,9 +154,10 @@ class Battle:
                      target=target, target_side=target_side)
         logs, ended = self.act(ctx)
         # 玩家出手后：行动耗时推 ct + 推进自动 actor 到下一个决策点
-        if not ended and action in ("attack", "skill", "defend"):
+        # （v181.N7.2：被沉默转普攻后 action 已变 attack → 耗时按普攻打）
+        if not ended and ctx.action in ("attack", "skill", "defend"):
             from .schedule import _after_act
-            _after_act(self, caster, action)
+            _after_act(self, caster, ctx.action)
             logs2 = []
             who = self.advance(logs2)
             logs.extend(logs2)
@@ -218,16 +219,46 @@ class Battle:
         return logs, ended
 
     def act(self, ctx: ActCtx) -> tuple:
-        """统一行动执行（人类/AI/随从都走这里）。返回 (logs, ended)。"""
+        """统一行动执行（人类/AI/随从都走这里）。返回 (logs, ended)。
+
+        行动前检查控制状态（v181.N7.2）：
+        - mode=skip（stun/freeze/sleep）：行动被跳过 + 清除（ct 由调用方照推 = 行动浪费）
+        - mode=no_skill（silence）+ action=skill：技能转普攻（不禁普攻）
+        """
         if self.result:
             return [], True
         actor = ctx.caster
         if actor is None or actor_dead(actor):
             return [], False
+        logs = []
+        # ---- 控制消费（统一入口，人类/自动/随从全走这里）----
+        bf = actor.get("buffs") or {}
+        now = float(self._now or 0)
+        for tag, entry in list(bf.items()):
+            if not isinstance(entry, dict):
+                continue
+            mode = entry.get("mode")
+            if not mode:
+                continue
+            # 过期控制（时间兜底）：到点自然消失
+            exp = entry.get("expire")
+            if exp is not None and now >= float(exp):
+                bf.pop(tag, None)
+                continue
+            if mode == "no_skill" and ctx.action == "skill":
+                logs.append(f"🤐 {actor.get('name', '目标')} 被沉默，无法使用技能！(只能普攻/防御)")
+                ctx.action = "attack"
+                ctx.skill_name = None
+                continue
+            if mode == "skip":
+                logs.append(f"💫 {actor.get('name', '目标')} 被【{tag}】控制，无法行动！")
+                bf.pop(tag, None)
+                # 被控跳过：登记行动点但不结算（调用方推 ct = 行动浪费）
+                self._p_acts += 1
+                return logs, False
         # 登记行动点（展示用）
         self._p_acts += 1
         action = ctx.action
-        logs = []
         if action == "attack":
             logs = actions.do_attack(self, ctx)
         elif action == "skill":

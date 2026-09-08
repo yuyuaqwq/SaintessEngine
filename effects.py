@@ -161,11 +161,15 @@ def _mech_to_effect(mech: str, mval: int, info: dict) -> dict:
 
 @register_action("control")
 def act_control(battle, caster, target, params, logs):
-    """控制：写 target.buffs[tag]=刻数。tag/turns 由数据给。
+    """控制：写 target.buffs[tag] = 控制快照（v181.N7.2）。
 
-    引擎不认"眩晕/冻结/沉默"——只执行"目标被标记为 tag 持续 N 刻"，
-    消费（跳过行动/禁技能）由调度层按 tag 查配置。
+    引擎不认"眩晕/冻结/沉默"——只执行"目标被标记 tag 持续 N 刻"，
+    消费（跳过行动/禁技能）由调度层按 mode 执行：
+      mode=skip（整跳）：轮到该 actor 行动 → 跳过 + 清除（stun/freeze/sleep）
+      mode=no_skill（禁技）：行动时技能转普攻（silence）
+    缺省 mode=skip。tag/turns/mode 由数据给（引擎零名词知识）。
     """
+    from .battle import _now_of
     if not target:
         return
     tag = params.get("tag") or params.get("key")
@@ -175,8 +179,12 @@ def act_control(battle, caster, target, params, logs):
     # Boss 控制减半（对齐旧 _boss_ctrl_dur）
     if target.get("is_boss") or target.get("role") == "boss":
         turns = max(1, turns // 2)
+    mode = params.get("mode", "skip")
+    now = _now_of(battle)
     bf = target.setdefault("buffs", {})
-    bf[tag] = max(int(bf.get(tag, 0) or 0), turns)
+    old = bf.get(tag)
+    old_exp = float(old.get("expire", 0) or 0) if isinstance(old, dict) else 0.0
+    bf[tag] = {"expire": max(old_exp, now + turns), "mode": mode}
     logs.append(f"💫 {target.get('name', '目标')} 被【{tag}】{turns} 刻！")
 
 
@@ -242,19 +250,45 @@ def act_buff(battle, caster, target, params, logs):
 
 @register_action("shield")
 def act_shield(battle, caster, target, params, logs):
-    """护盾：写 actor.shields["buff"]={value, halve}。value/halve 由数据给。"""
+    """护盾：写 actor.shields[key]（v181.N7.2 补 expire_at + 同源叠厚）。
+
+    结构：shields[key] = {"value": 盾值, "expire_at": now+turns, "halve": bool}
+    - 同源（同 key）：value 累加（叠厚）+ expire_at 取 max（对齐旧 _add_shield）
+    - 异源并存各计各的时长
+    - turns=0/缺省 → 3 刻；turns>=999 → 永久（expire_at=None，不到期删）
+    value/halve/turns 由数据给。
+    """
+    from .battle import _now_of
     holder = caster if params.get("on", "caster") == "caster" else (target or caster)
     if not holder:
         return
     info = params.get("info") or {}
+    key = params.get("key") or "buff"
     value = int(params.get("value") or params.get("mech_val") or 0)
     pct = float(params.get("pct", info.get("shield_pct", 0)) or 0)
     if value <= 0 and pct > 0:
         value = int(holder.get("max_hp", 1) * pct)
     if value <= 0:
         value = int(holder.get("max_hp", 1) * 0.20)
+    turns = int(params.get("turns", 0) or 0) or 3
     halve = bool(params.get("halve", False))
-    holder.setdefault("shields", {})["buff"] = {"value": value, "halve": halve}
+    now = _now_of(battle)
+    # 永久盾（turns>=999 或显式 forever）
+    if params.get("forever") or turns >= 999:
+        expire = None
+    else:
+        expire = now + max(1, turns)
+    sh = holder.setdefault("shields", {})
+    cur = sh.get(key)
+    if cur and isinstance(cur, dict):
+        cur["value"] = int(cur.get("value", 0) or 0) + value          # 同源叠厚（累加）
+        if cur.get("expire_at") is not None:
+            if expire is None:
+                cur["expire_at"] = None                                # 新永久 → 永久
+            else:
+                cur["expire_at"] = max(float(cur.get("expire_at", 0) or 0), expire)
+    else:
+        sh[key] = {"value": value, "expire_at": expire, "halve": halve}
     logs.append(f"🛡️ {holder.get('name', '目标')} 获得护盾 {value} 点！")
 
 

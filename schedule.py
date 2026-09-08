@@ -161,18 +161,48 @@ def _advance_time(battle, dt: float, logs: list):
 def _settle_time_effects(battle, logs: list):
     """时刻推进后的持续效果结算（DOT/时效）。
 
-    N4 最小集：查 state_effects 的 dot 规则，对带 dot 的 state key 结算。
-    每 actor 每结算 tick 掉一次（简化：每次推进都跳——N4 后期按 interval）。
+    N7.2 收口（对齐旧 _decay_buff_table/_advance_time 的到期语义）：
+    - buffs 到期：时间型条目 expire <= now → 删（控制 on_act/一次性 on_hit 由
+      消费点清除，这里只做时间兜底：expire 到点自然消失）
+    - shields 到期：expire_at <= now → 删（None = 永久不删）
+    - DOT：查 state_effects 的 dot 规则，对带 dot 的 state key 结算（每推进一跳；
+      interval 字段 N7.4 补）
     """
     from .state_effects import all_state_effects
-    table = all_state_effects()
+    now = float(getattr(battle, "_now", 0.0) or 0.0)
     for acts in battle.sides.values():
         for a in acts:
             if not actor_alive(a):
                 continue
+            # buffs 时间到期（快照条目形态）
+            bf = a.get("buffs")
+            if isinstance(bf, dict) and bf:
+                for key in list(bf.keys()):
+                    entry = bf[key]
+                    if not isinstance(entry, dict):
+                        continue
+                    exp = entry.get("expire")
+                    if exp is None:
+                        continue  # 永久/无到期
+                    if now >= float(exp):
+                        bf.pop(key, None)
+            # shields 到期
+            sh = a.get("shields")
+            if isinstance(sh, dict) and sh:
+                for key in list(sh.keys()):
+                    s = sh[key]
+                    if not isinstance(s, dict):
+                        continue
+                    exp = s.get("expire_at")
+                    if exp is None:
+                        continue  # 永久盾
+                    if now >= float(exp):
+                        sh.pop(key, None)
+            # DOT（state 声明 dot 规则）
             st = a.get("state") or {}
             if not st:
                 continue
+            table = all_state_effects()
             for key, val in list(st.items()):
                 cfg = table.get(key) or {}
                 dot = cfg.get("dot")
