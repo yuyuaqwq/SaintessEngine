@@ -105,3 +105,11 @@ def fire(battle, event: str, ctx: dict, logs: list) -> None:
             except Exception:
                 # 单个源异常不阻断其他源/战斗（引擎容错）
                 continue
+    # 战斗级观察者（N5b4-5E）：fire 尾部通知外部（命令层记账/团队广播/存活同步）。
+    # 只读 ctx 或调引擎动词改状态，不返回影响结算；异常不阻断（观察者容错）。
+    _obs = getattr(battle, "on_event", None)
+    if _obs is not None:
+        try:
+            _obs(battle, event, ctx, logs)
+        except Exception:
+            pass

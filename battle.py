@@ -30,17 +30,27 @@ class Battle:
     def __init__(self, btype: str = "monster", sides: Optional[dict] = None,
                  title_bonus: Optional[dict] = None, dmg_mult: float = 1.0,
                  pet: Optional[dict] = None, st: Optional[dict] = None,
-                 hostile_map: Optional[dict] = None, **kwargs):
+                 hostile_map: Optional[dict] = None,
+                 target_picker=None, on_event=None, **kwargs):
         """构造战斗。
 
         sides: dict[str, list[actor]] —— 唯一入口。sides["player"] 第一个
           human_controlled actor 是命令层焦点（命令层用它展示/等输入）。
         hostile_map: 阵营敌对关系（缺省 = 除自己外的全部阵营）
+        target_picker: （N5b4-5E 战斗级注入钩子）callable(battle, actor) -> Optional[actor]。
+          自动 actor（actor_auto/advance 内）行动前若未指定 target，先问外部"打谁"——
+          引擎零游戏知识（不认识仇恨/嘲讽/策略），只提供决策注入点；返回 None 回落
+          默认目标（hostile 首个存活）。副本命令层用它注入仇恨/嘲讽选择。
+        on_event: （N5b4-5E 战斗级注入钩子）callable(battle, evt_name, ctx, logs) -> None。
+          事件总线 fire() 尾部通知外部观察者（命令层记账/团队技能广播/存活同步）；
+          只读 ctx 或调引擎动词改状态，不返回影响结算。与 actor.triggers 声明效果正交。
         """
         self.btype = btype
         self.title_bonus = title_bonus or {}
         self.dmg_mult = dmg_mult
         self.pet = pet or {}
+        self.target_picker = target_picker
+        self.on_event = on_event
         # 阵营容器（唯一）
         self.sides: dict = {}
         for sn, acts in (sides or {}).items():
@@ -198,6 +208,8 @@ class Battle:
         """actor 自动行动（怪/随从按 auto_act 配置；N4 schedule 用）。
 
         读 auto_act，缺省普攻；行动后推 ct。
+        N5b4-5E：未指定 target 且战斗配了 target_picker → 先问外部"打谁"
+        （仇恨/嘲讽等上层策略注入；None 回落默认敌对目标）。
         """
         caster = actor
         if caster is None or actor_dead(caster):
@@ -211,6 +223,11 @@ class Battle:
             _a = aa["act"]
             action = _a.get("type", "attack")
             skill_name = _a.get("skill")
+        if ctx_target is None and self.target_picker is not None:
+            try:
+                ctx_target = self.target_picker(self, caster) or None
+            except Exception:
+                ctx_target = None
         ctx = ActCtx(caster=caster, action=action, skill_name=skill_name,
                      target=ctx_target)
         logs, ended = self.act(ctx)
