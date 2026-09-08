@@ -80,11 +80,10 @@ def do_skill(battle, ctx) -> list:
     if cd > 0:
         from .battle import _now_of
         actor.setdefault("cooldown", {})[info.get("name", ctx.skill_name or "?")] = _now_of(battle) + cd
-    # ---- N8 事件：施放瞬间（扣费/冷却后、结算前）----
+    # ---- N8 事件：施放瞬间（扣费/冷却后、结算前；主体=施法者）----
     try:
         from .effect_triggers import fire as _fire
-        _fire(battle, "act_cast", {"caster": actor, "actor": actor,
-                                   "target": ctx.target, "info": info}, logs)
+        _fire(battle, "act_cast", {"actor": actor, "target": ctx.target, "info": info}, logs)
     except Exception:
         pass
     # ---- 4. kind 分派 ----
@@ -227,16 +226,15 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
     # 命中后 mech/effect 效果（N3：mech → effects 兼容层）
     _apply_hit_effects(battle, actor, target, info, lv, logs)
     # N8 事件：命中后——普攻 attack_hit / 技能 skill_hit；暴击 crit（子集）。
-    # 注：AOE 逐目标独立走本管线 → 每目标各触发一次命中事件（语义对齐旧引擎
-    # 词条按目标触发）。技能自身 mech 已由 _apply_hit_effects 落地后再广播，
-    # 避免与事件源重复/前置依赖错乱。
+    # 主体 = 攻击者（只有攻击者自己的命中效果触发）；AOE 逐目标独立走本管线
+    # → 每目标各触发一次命中事件。技能自身 mech 已由 _apply_hit_effects 落地后再广播。
     try:
         from .effect_triggers import fire as _fire
         ev = "attack_hit" if info.get("_basic") else "skill_hit"
-        _fire(battle, ev, {"caster": actor, "actor": actor, "target": target,
+        _fire(battle, ev, {"actor": actor, "target": target,
                            "info": info, "dmg": total}, logs)
         if is_crit:
-            _fire(battle, "crit", {"caster": actor, "actor": actor, "target": target,
+            _fire(battle, "crit", {"actor": actor, "target": target,
                                    "info": info, "dmg": total}, logs)
     except Exception:
         pass  # 事件源异常不阻断战斗
@@ -268,11 +266,10 @@ def _consume_hit_buffs(battle, actor: dict, logs: list) -> dict:
         if hit.get("guaranteed_crit"):
             out["guaranteed_crit"] = True
         logs.append(f"✨ {key} 生效！")
-        # N8 事件：出手消费点（一次性 buff 被消费）
+        # N8 事件：出手消费点（一次性 buff 被消费；主体=出手者）
         try:
             from .effect_triggers import fire as _fire
-            _fire(battle, "on_hit_consume", {"caster": actor, "actor": actor,
-                                             "target": None, "key": key}, logs)
+            _fire(battle, "on_hit_consume", {"actor": actor, "key": key}, logs)
         except Exception:
             pass
         bf.pop(key, None)

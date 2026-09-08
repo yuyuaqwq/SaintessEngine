@@ -237,9 +237,10 @@ class Battle:
         logs = []
         # ---- 开战事件（整场一次，首个 actor 行动前）----
         self._ensure_battle_started(logs)
-        # ---- N8 事件：回合开始（先于控制检查——"回合开始回蓝"被晕也触发）----
+        # ---- N8 事件：回合开始（先于控制检查——"回合开始回蓝"被晕也触发；
+        #      主体=行动者，只处理其自身声明，旁观者不误触发）----
         from .effect_triggers import fire as _fire
-        _fire(self, "turn_start", {"caster": actor, "actor": actor, "target": actor}, logs)
+        _fire(self, "turn_start", {"actor": actor}, logs)
         # ---- 控制消费（统一入口，人类/自动/随从全走这里）----
         bf = actor.get("buffs") or {}
         now = float(self._now or 0)
@@ -263,12 +264,12 @@ class Battle:
                 logs.append(f"💫 {actor.get('name', '目标')} 被【{tag}】控制，无法行动！")
                 bf.pop(tag, None)
                 # N8 事件：行动级消费点（控制跳过）
-                _fire(self, "on_act_consume", {"caster": actor, "actor": actor, "tag": tag}, logs)
+                _fire(self, "on_act_consume", {"actor": actor, "tag": tag}, logs)
                 # 被控跳过：登记行动点但不结算（调用方推 ct = 行动浪费）
                 self._p_acts += 1
                 return logs, False
-        # N8 事件：行动开始（控制通过，执行行动前）
-        _fire(self, "act_begin", {"caster": actor, "actor": actor, "target": ctx.target}, logs)
+        # N8 事件：行动开始（控制通过，执行行动前；主体=行动者）
+        _fire(self, "act_begin", {"actor": actor, "target": ctx.target}, logs)
         # 登记行动点（展示用）
         self._p_acts += 1
         action = ctx.action

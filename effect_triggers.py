@@ -63,21 +63,38 @@ def fire(battle, event: str, ctx: dict, logs: list) -> None:
     # 施放方的场景）；target 保持事件目标（可由插桩点显式给）。
     caster = ctx.get("caster")
     target = ctx.get("target")
-    # 事件上下文暂存（游戏侧扩展动作读：dmg/heal/amount/is_crit/overflow...）——
+    # 事件主体过滤（N9 修正）：ctx.actor = 该事件的主体 actor（谁回合/谁施法/谁受击/
+    # 谁被治疗...）——只处理主体 actor 自己声明的 triggers，避免旁观者（同阵营其他
+    # 带装备 actor）效果被全局广播误触发。None = 无主体事件（battle_start：全体触发）。
+    subject = ctx.get("actor")
+    # 事件上下文暂存（游戏侧扩展动作读：dmg/heal/amount/is_crit/overflow/source...）——
     # 引擎动词不读；这是装配层族动作（ACTION_HANDLERS 扩展注册）拿事件数值的通道。
     # 单线程战斗同步 fire，下一 fire 覆盖；不落盘。
     battle._fire_ctx = ctx
     for acts in battle.sides.values():
         for a in acts:
-            if not actor_alive(a):
+            # 主体事件只处理主体 actor；主体死亡例外（on_death 死者自己的效果由
+            # 引擎动词执行，fire 允许 subject=dead 的声明执行——如死亡遗言类）
+            if subject is not None and a is not subject:
+                continue
+            if not actor_alive(a) and a is not subject:
                 continue
             effs = (a.get("triggers") or {}).get(event)
             if not effs:
                 continue
             try:
                 from .effects import apply_effects
+                # 声明者（owner）随副本注入 params（扩展动作自查归属用）
+                eff_list = []
+                for _e in effs:
+                    if isinstance(_e, dict):
+                        _e2 = dict(_e)
+                        _e2.setdefault("_owner", a)
+                        eff_list.append(_e2)
+                    else:
+                        eff_list.append(_e)
                 apply_effects(battle, caster if caster is not None else a,
-                              target, list(effs), logs)
+                              target, eff_list, logs)
             except Exception:
                 # 单个源异常不阻断其他源/战斗（引擎容错）
                 continue

@@ -56,12 +56,14 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
         logs.append(f"🔨 {target.get('name', '目标')} 的蓄力被打破了！")
     # 承伤落地（护盾吸收 → 扣血 → 死亡）
     real = _apply_damage(battle, target, dmg, logs, source)
-    # N8 事件：受击（承伤后）——死者走 on_death/on_kill，不再触发受击
+    # N8 事件：受击（承伤后）——主体=受击者；死者走 on_death/on_kill 不再触发。
+    # 攻击方放 ctx["source"]（fire caster 缺省=受击者本体，on=caster 效果作用自己；
+    # 反伤等需要攻击者的扩展动作读 _fire_ctx["source"]）
     if target.get("hp", 0) > 0:
         try:
             from .effect_triggers import fire as _fire
-            _fire(battle, "on_taken", {"caster": source, "actor": target,
-                                       "target": target, "dmg": real}, logs)
+            _fire(battle, "on_taken", {"actor": target, "target": target,
+                                       "source": source, "dmg": real}, logs)
         except Exception:
             pass  # 事件源异常不阻断落地
     return real
@@ -133,11 +135,11 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
         logs.append(f"💥 {target.get('name', '目标')} 受到 {_real} 点伤害，倒下了！")
         if hasattr(battle, "_on_actor_dead"):
             battle._on_actor_dead(target, logs)
-        # N8 事件：击杀（有攻击方才有击杀者；DOT/环境杀无 on_kill）
+        # N8 事件：击杀（主体=击杀者；DOT/环境杀无 on_kill）
         if source is not None:
             try:
                 from .effect_triggers import fire as _fire
-                _fire(battle, "on_kill", {"caster": source, "actor": source,
+                _fire(battle, "on_kill", {"actor": source,
                                           "target": target, "dmg": _real}, logs)
             except Exception:
                 pass  # 事件源异常不阻断落地
@@ -175,12 +177,12 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
     _real = int(target["hp"]) - _before
     if _real > 0 and label:
         logs.append(label.format(_real=_real, _planned=heal))
-    # N8 事件：治疗生效（实际回血 >0）
+    # N8 事件：治疗生效（主体=被治疗者；实际回血 >0；治疗者放 source）
     if _real > 0:
         try:
             from .effect_triggers import fire as _fire
-            _fire(battle, "on_heal", {"caster": source, "actor": target,
-                                      "target": target, "amount": _real}, logs)
+            _fire(battle, "on_heal", {"actor": target, "target": target,
+                                      "source": source, "amount": _real}, logs)
         except Exception:
             pass  # 事件源异常不阻断落地
     return _real
@@ -190,9 +192,11 @@ def _apply_heal_mods(target: dict, amount: int, logs: list) -> int:
     """受疗/禁疗修正（target 自身状态）。返回修正后治疗量（未 clamp）。"""
     heal = amount
     try:
-        # 禁疗（heal_down 层×10% cap50%）
         bf = target.get("buffs") or {}
-        ehd = int(bf.get("heal_down", 0) or 0)
+        # 禁疗（heal_down 层×10% cap50%——v2 数值容器 state，声明表 cap；N9 收编
+        # 旧 buffs int 直写形态，affix/weapon 挂 heal_down 用 state_add）
+        st = target.get("state") or {}
+        ehd = int(st.get("heal_down", 0) or 0)
         if ehd > 0:
             cut = min(ehd * 0.10, 0.50)
             heal = max(0, int(heal * (1 - cut)))
