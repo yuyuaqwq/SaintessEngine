@@ -23,6 +23,9 @@ CAST_SKILL = 1.6
 CAST_DEFEND = 0.6
 CAST_ITEM = 1.0
 SPD_REF = 50.0
+# hot 周期恢复间隔（对齐旧引擎 ACT_TICK=1 游戏秒一拍；正向持续恢复的墙钟节奏，
+# 与 actor 出手快慢无关——v179 P3 拍板语义：N 刻 = N 秒）
+HOT_INTERVAL = 1.0
 
 
 def action_time(spd: int, base: float = CAST_ATK) -> float:
@@ -165,6 +168,8 @@ def _settle_time_effects(battle, logs: list):
     - buffs 到期：时间型条目 expire <= now → 删（控制 on_act/一次性 on_hit 由
       消费点清除，这里只做时间兜底：expire 到点自然消失）
     - shields 到期：expire_at <= now → 删（None = 永久不删）
+    - HOT 正向周期恢复：actor["hot"] 非空 → 每 HOT_INTERVAL 结算一次回血/回蓝，
+      turns 递减，归零清容器（对齐旧引擎 v179 P3 每秒墙钟 tick 语义）
     - DOT：查 state_effects 的 dot 规则，对带 dot 的 state key 结算（每推进一跳；
       interval 字段 N7.4 补）
     """
@@ -205,6 +210,46 @@ def _settle_time_effects(battle, logs: list):
                         continue  # 永久盾
                     if now >= float(exp):
                         sh.pop(key, None)
+            # HOT 正向周期恢复（I1：对齐旧引擎 v179 P3 食物持续恢复——每秒墙钟跳，
+            # 谁挂谁跳、与出手快慢无关；actor["hot"]={heal:%, mana:%, turns:N}）
+            ht = a.get("hot")
+            if isinstance(ht, dict) and ht:
+                _ht_turns = int(ht.get("turns", 0) or 0)
+                if _ht_turns > 0:
+                    # 绝对时刻下一跳（挂载时未登记 → 首跳 = now + interval，对称 DOT）
+                    _hnx = a.get("hot_next")
+                    if _hnx is None:
+                        a["hot_next"] = now + HOT_INTERVAL
+                    else:
+                        _guard_hot = 0
+                        while now >= float(a["hot_next"]) and _guard_hot < 60:
+                            _guard_hot += 1
+                            from .landing import heal_actor as _heal_actor
+                            _mx_hp = a.get("max_hp", a.get("hp", 1)) or 1
+                            _mx_mp = a.get("max_mp", a.get("mp", 1)) or 1
+                            _hpct = float(ht.get("heal", 0) or 0)
+                            _mpct = float(ht.get("mana", 0) or 0)
+                            _nm = a.get("name", "目标")
+                            if _hpct > 0 and int(a.get("hp", 0) or 0) < _mx_hp:
+                                _gain = max(1, int(_mx_hp * _hpct))
+                                _real = _heal_actor(battle, a, _gain, logs)
+                                if _real > 0:
+                                    logs.append(f"🍲 {_nm} 持续恢复生效，恢复 {_real} 点生命！")
+                            if _mpct > 0 and int(a.get("mp", 0) or 0) < _mx_mp:
+                                _gain = max(1, int(_mx_mp * _mpct))
+                                _before = int(a.get("mp", 0) or 0)
+                                a["mp"] = min(_mx_mp, _before + _gain)
+                                _real = int(a["mp"]) - _before
+                                if _real > 0:
+                                    logs.append(f"🍲 {_nm} 持续恢复生效，恢复 {_real} 点魔力！")
+                            # turns 递减；耗尽 → 清容器（效果结束；保留 hot 空键=actor 同构）
+                            _ht_turns -= 1
+                            if _ht_turns <= 0:
+                                ht.clear()
+                                a.pop("hot_next", None)
+                                break
+                            ht["turns"] = _ht_turns
+                            a["hot_next"] = float(a["hot_next"]) + HOT_INTERVAL
             # DOT（state 声明 dot 规则，N7.4：按 interval 绝对时刻跳，跨多刻跳多次；
             # N9：dot.turns 限时——跳够 turns 次后自动清层（武器特效限时 DOT））
             st = a.get("state") or {}
