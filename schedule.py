@@ -186,6 +186,13 @@ def _settle_time_effects(battle, logs: list):
                         continue  # 永久/无到期
                     if now >= float(exp):
                         bf.pop(key, None)
+                        # N8 事件：buff 到期钩子
+                        try:
+                            from .effect_triggers import fire as _fire
+                            _fire(battle, "buff_expire", {"actor": a, "target": a,
+                                                          "key": key}, logs)
+                        except Exception:
+                            pass  # 事件源异常不阻断结算
             # shields 到期
             sh = a.get("shields")
             if isinstance(sh, dict) and sh:
@@ -230,6 +237,13 @@ def _settle_time_effects(battle, logs: list):
                     from .landing import deal_damage
                     deal_damage(battle, None, a, dmg, logs)
                     logs.append(f"🔥 {a.get('name', '目标')} 受 {key} {n} 层影响，损失 {dmg} 生命")
+                    # N8 事件：DOT 每跳
+                    try:
+                        from .effect_triggers import fire as _fire
+                        _fire(battle, "dot_tick", {"actor": a, "target": a,
+                                                   "key": key, "dmg": dmg}, logs)
+                    except Exception:
+                        pass  # 事件源异常不阻断结算
                     dnext[key] = float(dnext[key]) + interval
                 if not actor_alive(a):
                     break

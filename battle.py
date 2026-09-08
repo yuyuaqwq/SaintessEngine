@@ -58,6 +58,8 @@ class Battle:
         self._now: float = 0.0
         self._p_acts: int = 0
         self._events: list = []
+        # 开战事件已触发标记（N8：battle_start 整场一次；from_state 恢复 = True）
+        self._started: bool = False
         # 技能索引：actor.skills key 列表 → 技能 dict（从 data 桥读取）
         self._index_skills()
         # 初始 ct（N4 前：所有 actor ct=0，命令层轮流驱动）
@@ -221,6 +223,8 @@ class Battle:
     def act(self, ctx: ActCtx) -> tuple:
         """统一行动执行（人类/AI/随从都走这里）。返回 (logs, ended)。
 
+        事件总线插桩（N8）：turn_start（回合开始，先于控制检查）→ 控制消费
+        （skip 时 on_act_consume）→ act_begin（行动执行前）。
         行动前检查控制状态（v181.N7.2）：
         - mode=skip（stun/freeze/sleep）：行动被跳过 + 清除（ct 由调用方照推 = 行动浪费）
         - mode=no_skill（silence）+ action=skill：技能转普攻（不禁普攻）
@@ -231,6 +235,11 @@ class Battle:
         if actor is None or actor_dead(actor):
             return [], False
         logs = []
+        # ---- 开战事件（整场一次，首个 actor 行动前）----
+        self._ensure_battle_started(logs)
+        # ---- N8 事件：回合开始（先于控制检查——"回合开始回蓝"被晕也触发）----
+        from .effect_triggers import fire as _fire
+        _fire(self, "turn_start", {"caster": actor, "actor": actor, "target": actor}, logs)
         # ---- 控制消费（统一入口，人类/自动/随从全走这里）----
         bf = actor.get("buffs") or {}
         now = float(self._now or 0)
@@ -253,9 +262,13 @@ class Battle:
             if mode == "skip":
                 logs.append(f"💫 {actor.get('name', '目标')} 被【{tag}】控制，无法行动！")
                 bf.pop(tag, None)
+                # N8 事件：行动级消费点（控制跳过）
+                _fire(self, "on_act_consume", {"caster": actor, "actor": actor, "tag": tag}, logs)
                 # 被控跳过：登记行动点但不结算（调用方推 ct = 行动浪费）
                 self._p_acts += 1
                 return logs, False
+        # N8 事件：行动开始（控制通过，执行行动前）
+        _fire(self, "act_begin", {"caster": actor, "actor": actor, "target": ctx.target}, logs)
         # 登记行动点（展示用）
         self._p_acts += 1
         action = ctx.action
@@ -290,13 +303,38 @@ class Battle:
     # 死亡/胜负
     # ============================================================
 
-    def _on_actor_dead(self, actor: dict):
-        """actor 死亡：记录（击杀奖励/任务进度由命令层处理）。"""
+    def _ensure_battle_started(self, logs: list):
+        """开战事件（N8）：整场一次，首个 actor 行动前 fire("battle_start")。
+
+        序列化续战（from_state）置 _started=True → 不重复触发（起手效果已
+        随 actor 状态落盘）。
+        """
+        if self._started:
+            return
+        self._started = True
+        try:
+            from .effect_triggers import fire as _fire
+            _fire(self, "battle_start", {}, logs)
+        except Exception:
+            pass  # 事件源异常不阻断开战
+
+    def _on_actor_dead(self, actor: dict, logs: Optional[list] = None):
+        """actor 死亡：记录（击杀奖励/任务进度由命令层处理）。
+
+        N8：死亡事件 fire("on_death")——所有死亡路径统一在此触发
+        （主动伤害/DOT/环境），ctx.actor = 死者。
+        """
         if actor not in self.killed_actors:
             self.killed_actors.append(actor)
         # 死亡 actor 清 defending/charging 状态
         actor["defending"] = False
         actor["charging"] = None
+        if logs is not None:
+            try:
+                from .effect_triggers import fire as _fire
+                _fire(self, "on_death", {"actor": actor, "target": actor}, logs)
+            except Exception:
+                pass
 
     def _check_side_end(self) -> bool:
         """胜负判定：存活阵营数 ≤1 → 置 result。

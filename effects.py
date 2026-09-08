@@ -357,6 +357,13 @@ def act_state_add(battle, caster, target, params, logs):
     cap = int(state_def(key).get("cap") or 0)
     cap_txt = f"/{cap}" if cap else ""
     logs.append(f"✦ {key} {n}{cap_txt}（+{amount}）")
+    # N8 事件：状态阈值（层数变化后——"战意满 10 → 狂暴"由上层声明匹配）
+    try:
+        from .effect_triggers import fire as _fire
+        _fire(battle, "threshold", {"caster": holder, "actor": holder,
+                                    "target": holder, "key": key, "value": n}, logs)
+    except Exception:
+        pass
 
 
 @register_action("state_spend")
@@ -430,6 +437,13 @@ def act_state_set(battle, caster, target, params, logs):
     val = max(0, min(cap, amount))
     state_of(holder)[key] = val
     logs.append(f"✦ {key} 置为 {val}")
+    # N8 事件：状态阈值（置值也广播——Boss 充能断点/回充场景）
+    try:
+        from .effect_triggers import fire as _fire
+        _fire(battle, "threshold", {"caster": holder, "actor": holder,
+                                    "target": holder, "key": key, "value": val}, logs)
+    except Exception:
+        pass
 
 
 @register_action("interrupt")

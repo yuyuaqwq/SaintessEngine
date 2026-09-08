@@ -112,6 +112,10 @@ def make_actor(
         "defending": bool(stats.get("defending", False)),
         "ct": float(stats.get("ct", 0.0)),
         "poi_buff": stats.get("poi_buff"),
+        # 事件触发声明（N8）：{事件名: [效果名词 dict, ...]}——数据桥/上层构造时
+        # 把装备特效/词条/套装/被动翻译挂上；引擎 fire() 匹配后走名词→动词翻译。
+        # 引擎不认识事件效果内容（零游戏知识），只分发。
+        "triggers": dict(stats.get("triggers") or {}),
         # 统一数值状态容器（引擎不认识 key 语义；叠层/资源/职业数值全进这里，
         # 影响规则查 state_effects 声明表，不硬编码在引擎）
         "state": dict(stats.get("state") or {}),

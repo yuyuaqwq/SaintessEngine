@@ -69,6 +69,8 @@ def from_state(st: dict) -> Battle:
     b._p_acts = int(st.get("p_acts", 0) or 0)
     b.result = st.get("result")
     b.winner_side = st.get("winner_side")
+    # 续战（恢复的战斗已在开战事件后）→ 不重复 fire battle_start
+    b._started = True
     # 击杀记录（uid → 找 actor；找不到跳过——已从 sides 移除的阵亡单位）
     b.killed_actors = []
     for uid in (st.get("killed") or []):

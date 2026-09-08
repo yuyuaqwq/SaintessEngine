@@ -46,6 +46,8 @@ def do_attack(battle, ctx) -> list:
     """普攻 = 释放 basic_skill（数据配置的普通技能），走统一技能管道。"""
     actor = ctx.caster
     info = resolve_basic_skill(actor.get("class_name"))
+    # N8：标记 basic（普攻命中事件 attack_hit 与技能 skill_hit 区分用）
+    info["_basic"] = True
     # basic 技能无 CD/无蓝耗/无需学习等级；资源获取由 res_gain / on_skill 数据驱动
     sub = ctx.__class__(caster=actor, action="skill", skill_name=info["name"],
                         info=info, target=ctx.target, target_side=ctx.target_side,
@@ -78,6 +80,13 @@ def do_skill(battle, ctx) -> list:
     if cd > 0:
         from .battle import _now_of
         actor.setdefault("cooldown", {})[info.get("name", ctx.skill_name or "?")] = _now_of(battle) + cd
+    # ---- N8 事件：施放瞬间（扣费/冷却后、结算前）----
+    try:
+        from .effect_triggers import fire as _fire
+        _fire(battle, "act_cast", {"caster": actor, "actor": actor,
+                                   "target": ctx.target, "info": info}, logs)
+    except Exception:
+        pass
     # ---- 4. kind 分派 ----
     if kind == K_HEAL:
         return _do_heal(battle, ctx, actor, info, logs)
@@ -217,6 +226,20 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
     logs.extend(_deal_hit(battle, actor, target, total))
     # 命中后 mech/effect 效果（N3：mech → effects 兼容层）
     _apply_hit_effects(battle, actor, target, info, lv, logs)
+    # N8 事件：命中后——普攻 attack_hit / 技能 skill_hit；暴击 crit（子集）。
+    # 注：AOE 逐目标独立走本管线 → 每目标各触发一次命中事件（语义对齐旧引擎
+    # 词条按目标触发）。技能自身 mech 已由 _apply_hit_effects 落地后再广播，
+    # 避免与事件源重复/前置依赖错乱。
+    try:
+        from .effect_triggers import fire as _fire
+        ev = "attack_hit" if info.get("_basic") else "skill_hit"
+        _fire(battle, ev, {"caster": actor, "actor": actor, "target": target,
+                           "info": info, "dmg": total}, logs)
+        if is_crit:
+            _fire(battle, "crit", {"caster": actor, "actor": actor, "target": target,
+                                   "info": info, "dmg": total}, logs)
+    except Exception:
+        pass  # 事件源异常不阻断战斗
     return logs
 
 
@@ -245,6 +268,13 @@ def _consume_hit_buffs(battle, actor: dict, logs: list) -> dict:
         if hit.get("guaranteed_crit"):
             out["guaranteed_crit"] = True
         logs.append(f"✨ {key} 生效！")
+        # N8 事件：出手消费点（一次性 buff 被消费）
+        try:
+            from .effect_triggers import fire as _fire
+            _fire(battle, "on_hit_consume", {"caster": actor, "actor": actor,
+                                             "target": None, "key": key}, logs)
+        except Exception:
+            pass
         bf.pop(key, None)
     return out
 

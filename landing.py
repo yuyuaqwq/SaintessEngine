@@ -55,7 +55,16 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
         target["charging"] = None
         logs.append(f"🔨 {target.get('name', '目标')} 的蓄力被打破了！")
     # 承伤落地（护盾吸收 → 扣血 → 死亡）
-    return _apply_damage(battle, target, dmg, logs)
+    real = _apply_damage(battle, target, dmg, logs, source)
+    # N8 事件：受击（承伤后）——死者走 on_death/on_kill，不再触发受击
+    if target.get("hp", 0) > 0:
+        try:
+            from .effect_triggers import fire as _fire
+            _fire(battle, "on_taken", {"caster": source, "actor": target,
+                                       "target": target, "dmg": real}, logs)
+        except Exception:
+            pass  # 事件源异常不阻断落地
+    return real
 
 
 def _lv_pressure(battle, source: Optional[dict], target: dict, dmg: int) -> int:
@@ -90,8 +99,12 @@ def _lv_pressure(battle, source: Optional[dict], target: dict, dmg: int) -> int:
     return dmg
 
 
-def _apply_damage(battle, target: dict, dmg: int, logs: list) -> int:
-    """承伤落地：护盾吸收 → hp 扣减 → 死亡判定。返回实际扣血。"""
+def _apply_damage(battle, target: dict, dmg: int, logs: list,
+                  source: Optional[dict] = None) -> int:
+    """承伤落地：护盾吸收 → hp 扣减 → 死亡判定。返回实际扣血。
+
+    source: 攻击方（击杀事件 on_kill 用；None = DOT/环境无击杀者）
+    """
     # 护盾吸收（shields = {key: {value, halve, expire_at}}）
     shields = target.get("shields") or {}
     if shields:
@@ -119,7 +132,15 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list) -> int:
     if new <= 0:
         logs.append(f"💥 {target.get('name', '目标')} 受到 {_real} 点伤害，倒下了！")
         if hasattr(battle, "_on_actor_dead"):
-            battle._on_actor_dead(target)
+            battle._on_actor_dead(target, logs)
+        # N8 事件：击杀（有攻击方才有击杀者；DOT/环境杀无 on_kill）
+        if source is not None:
+            try:
+                from .effect_triggers import fire as _fire
+                _fire(battle, "on_kill", {"caster": source, "actor": source,
+                                          "target": target, "dmg": _real}, logs)
+            except Exception:
+                pass  # 事件源异常不阻断落地
     else:
         logs.append(f"💥 {target.get('name', '目标')} 受到 {_real} 点伤害！")
     return _real
@@ -154,6 +175,14 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
     _real = int(target["hp"]) - _before
     if _real > 0 and label:
         logs.append(label.format(_real=_real, _planned=heal))
+    # N8 事件：治疗生效（实际回血 >0）
+    if _real > 0:
+        try:
+            from .effect_triggers import fire as _fire
+            _fire(battle, "on_heal", {"caster": source, "actor": target,
+                                      "target": target, "amount": _real}, logs)
+        except Exception:
+            pass  # 事件源异常不阻断落地
     return _real
 
 
