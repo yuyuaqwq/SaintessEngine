@@ -222,6 +222,21 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
         total = max(1, int(total * hit_buffs["dmg_mult"]))
     if total <= 0:
         return logs
+    # N9.13 数值修正钩子：dmg_calc（攻击者视角条件乘区）——装配层乘区扩展动作
+    # 改 battle._fire_ctx["mult"] 累乘（处决低血增伤/破魔/叠层放大器等）。fire 后
+    # 该 ctx 仍是本次事件的（乘区动作同步改，无并发）。
+    try:
+        from .effect_triggers import fire as _fire
+        _fctx = {"actor": actor, "target": target, "dmg": total,
+                 "is_crit": is_crit, "info": info, "mult": 1.0}
+        _fire(battle, "dmg_calc", _fctx, logs)
+        _m = float((getattr(battle, "_fire_ctx", {}) or {}).get("mult", 1.0) or 1.0)
+        if _m != 1.0:
+            total = max(1, int(total * _m))
+    except Exception:
+        pass  # 修正钩子异常不阻断战斗
+    if total <= 0:
+        return logs
     logs.extend(_deal_hit(battle, actor, target, total))
     # 命中后 mech/effect 效果（N3：mech → effects 兼容层）
     _apply_hit_effects(battle, actor, target, info, lv, logs)

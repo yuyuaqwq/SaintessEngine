@@ -35,6 +35,18 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     dmg = _lv_pressure(battle, source, target, amount)
     if dmg <= 0:
         return 0
+    # N9.13 数值修正钩子：taken_calc（承伤者视角减伤乘区）——装配层乘区扩展动作
+    # 改 battle._fire_ctx["mult"]（沸血全减伤/death_dance 减伤等条件减伤）
+    try:
+        from .effect_triggers import fire as _fire
+        _fctx = {"actor": target, "target": target, "source": source,
+                 "dmg": dmg, "mult": 1.0}
+        _fire(battle, "taken_calc", _fctx, logs)
+        _m = float((getattr(battle, "_fire_ctx", {}) or {}).get("mult", 1.0) or 1.0)
+        if _m != 1.0:
+            dmg = max(1, int(dmg * _m))
+    except Exception:
+        pass  # 修正钩子异常不阻断落地
     # N7.5a 承伤乘区（vulnerable 破绽：被打更疼）——target["_dmg_taken_mult"]>1 生效
     try:
         _dtm = float(target.get("_dmg_taken_mult", 0) or 0)

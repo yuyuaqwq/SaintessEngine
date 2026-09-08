@@ -43,7 +43,11 @@ from .actors import actor_alive
 
 # 19 时机事件全集（必须单行定义——cov 按行 trace，多行续行会永久漏记；
 # 中文语义见模块 docstring）
-EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "attack_hit", "crit", "on_taken", "on_heal", "on_kill", "on_death", "dot_tick", "on_act_consume", "on_hit_consume", "buff_expire", "threshold", "phase", "player_low", "pv_broken")
+EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "attack_hit", "crit", "on_taken", "on_heal", "on_kill", "on_death", "dot_tick", "on_act_consume", "on_hit_consume", "buff_expire", "threshold", "dmg_calc", "taken_calc", "phase", "player_low", "pv_broken")
+
+# N9.13 数值修正钩子（伤害/承伤乘区——装配层乘区扩展动作改 _fire_ctx["mult"] 累乘）：
+#   dmg_calc  = 伤害算出后落地前（攻击者视角条件乘区：处决低血增伤/破魔/叠层放大器）
+#   taken_calc = 承伤修正（承伤者视角减伤乘区：沸血全减伤/death_dance 减伤）
 
 
 def fire(battle, event: str, ctx: dict, logs: list) -> None:
