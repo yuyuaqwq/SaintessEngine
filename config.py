@@ -14,21 +14,19 @@ from __future__ import annotations
 # 结构见各字段 docstring；由游戏层 set_config / 直接赋值 注入
 _LOADED = {
     "effect_actions": {},  # 游戏名词效果 → 引擎动词动作序列
-    "cleanse_tags": [],    # 净化清的控制键
     "effect_rules": {},    # 统一效果规则表（V 系列：cap/panel/stat_scale/period/consume/cleanse…）
 }
 
 
 def set_config(kind: str, table) -> None:
-    """游戏层挂载配置表。kind: effect_actions/cleanse_tags/effect_rules。"""
+    """游戏层挂载配置表。kind: effect_actions/effect_rules。"""
     if kind in _LOADED:
-        _LOADED[kind] = table if table is not None else ([] if kind in ("cleanse_tags",) else {})
+        _LOADED[kind] = table if table is not None else {}
 
 
 def load_game_rules(module) -> None:
     """从游戏规则模块加载约定字段。"""
     set_config("effect_actions", getattr(module, "EFFECT_ACTIONS", {}))
-    set_config("cleanse_tags", getattr(module, "CLEANSE_TAGS", []))
     set_config("effect_rules", getattr(module, "EFFECT_RULES", {}))
 
 
@@ -44,12 +42,6 @@ def load_game_defaults() -> None:
 def get_effect_actions() -> dict:
     """当前挂载的名词→动词动作表（默认空）。"""
     return _LOADED["effect_actions"]
-
-
-def get_cleanse_tags() -> list:
-    """净化应清的控制键（游戏配置声明；无 = 不清理控制条目）。"""
-    tags = _LOADED.get("cleanse_tags")
-    return tags if isinstance(tags, list) else []
 
 
 def get_effect_rules() -> dict:

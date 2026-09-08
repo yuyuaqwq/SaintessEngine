@@ -223,16 +223,12 @@ def _settle_time_effects(battle, logs: list):
                     exp = entry.get("expire")
                     if exp is not None and now >= float(exp):
                         continue
-                    # 声明源：条目自带 period（动态）优先；回落表 dot（旧 damage）
+                    # 声明源：条目自带 period（动态）优先；回落表 period（V5 统一声明，
+                    # 含 dir/interval/数值字段——表内已无旧 dot 字段）
                     period = entry.get("period")
                     if not isinstance(period, dict):
                         cfg = table.get(key) or {}
-                        dot = cfg.get("dot")
-                        if dot:
-                            # 旧表声明 → 折算成 period 语义（damage 方向）
-                            period = dict(dot)
-                            period["dir"] = "damage"
-                            period["_table_scale"] = True  # pct×stacks 表驱动
+                        period = cfg.get("period")
                     if not isinstance(period, dict):
                         continue
                     n = int(entry.get("stacks", 0) or 0)

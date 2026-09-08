@@ -141,17 +141,43 @@ def effects_from_skill(info: dict, lv: int, caster_side_is_player: bool = True) 
 
 
 def _mech_to_effect(mech: str, mval: int, info: dict) -> dict:
-    """单个 mech key → effect dict（查 state 规则表分派）。"""
+    """单个 mech key → effect dict（查 state 规则表分派）。
+
+    分派判据（V5② 精确化——防控制/增益 key 被当叠层资源劫持）：
+    - cfg 是「叠层资源型」（有 stat_scale/debuff_scale/period/dot/on_threshold/
+      guard_hp_pct 数值字段，或 cap>1 纯计数）→ apply op=add 叠层（层数=mech_val）
+    - cfg 仅效果声明（consume/panel/tag/cleanse 等，无叠层数值）→ 非叠层资源，
+      保留名词 type 由 EFFECT_ACTIONS 翻译（控制走 mode 语义，与入表前行为一致）
+    - cfg 空（控制/盾/未入表名词）→ 名词路径（同现状）
+    """
     cfg = state_def(mech)
-    on_target = bool(cfg.get("on") == "target")
-    if cfg:
+    if _is_stack_resource(cfg):
+        on_target = bool(cfg.get("on") == "target")
         return {"type": "apply", "op": "add", "key": mech, "amount": mval,
                 "on": "target" if on_target else "caster",
                 "info": info}
-    # 名词（控制/盾等）→ 保留 type，由 EFFECT_ACTIONS 配置翻译
+    # 名词（控制/盾/效果型）→ 保留 type，由 EFFECT_ACTIONS 配置翻译
     return {"type": mech, "stacks": mval,
             "turns": int(info.get("cc_turns", 0) or 0),
             "mech": mech, "info": info}
+
+
+def _is_stack_resource(cfg: dict) -> bool:
+    """判据：cfg 是否「叠层资源型」效果（技能 mech 按层数叠）。
+
+    叠层资源 = 有每层/每层数值字段（stat_scale/debuff_scale/period/dot/
+    on_threshold/guard_hp_pct）或 cap>1 纯计数层。控制（consume）、静态增益
+    （panel）、纯净化标记（tag/cleanse）不是叠层资源 → 走 EFFECT_ACTIONS 名词。
+    """
+    if not cfg:
+        return False
+    for f in ("stat_scale", "debuff_scale", "period", "dot",
+              "on_threshold", "guard_hp_pct"):
+        if cfg.get(f):
+            return True
+    if int(cfg.get("cap") or 0) > 1:
+        return True
+    return False
 
 
 # ============================================================
@@ -187,7 +213,12 @@ def act_apply(battle, caster, target, params, logs):
     if not key:
         return
     # ---------- 控制型（原 act_control：固定打 target，不回落 caster）----------
+    # V5②：mode 优先动作参数（装配层/翻译器直传覆盖），缺省查 EFFECT_RULES[key].consume.mode
     mode = params.get("mode")
+    if mode is None:
+        _mcfg = (state_def(key) or {}).get("consume")
+        if isinstance(_mcfg, dict):
+            mode = _mcfg.get("mode")
     if mode is not None:
         if not target:
             return
@@ -367,12 +398,14 @@ def act_shield(battle, caster, target, params, logs):
 
 @register_action("cleanse")
 def act_cleanse(battle, caster, target, params, logs):
-    """净化：移除目标身上的 DOT/标记/控制。
+    """净化：移除目标身上的 DOT/标记/控制（V5④ 全查表，无 CLEANSE_TAGS 白名单）。
 
-    - DOT/标记（effects 条目）：查 EFFECT_RULES 表 dot/on=target 的 key 动态清理
-    - 控制（effects 条目 mode）：按 control_tags 配置清（引擎查配置）
+    遍历 effects 条目，查 EFFECT_RULES[key]：
+    - period（周期 DOT/负面）→ 清
+    - on == target（对敌标记）→ 清
+    - cleanse == True（显式可净化声明：控制键/减伤——原 CLEANSE_TAGS 成员表化）→ 清
+    - 其余（无负面/不可净化声明）不清
     """
-    from . import config
     from .state_effects import all_state_effects
     actor = target or caster
     if not actor:
@@ -382,13 +415,7 @@ def act_cleanse(battle, caster, target, params, logs):
     state_table = all_state_effects()
     for k in list(ef.keys()):
         cfg = state_table.get(k) or {}
-        if cfg.get("dot") or cfg.get("on") == "target":
-            rem.append(k)
-            ef.pop(k, None)
-    # 控制 tag 清理（配置声明的控制键；缺省常见集）
-    ctrl_tags = config.get_cleanse_tags()
-    for k in ctrl_tags:
-        if k in ef:
+        if cfg.get("period") or cfg.get("on") == "target" or cfg.get("cleanse"):
             rem.append(k)
             ef.pop(k, None)
     if rem:
