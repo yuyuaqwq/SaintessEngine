@@ -31,7 +31,8 @@ class Battle:
                  title_bonus: Optional[dict] = None, dmg_mult: float = 1.0,
                  pet: Optional[dict] = None, st: Optional[dict] = None,
                  hostile_map: Optional[dict] = None,
-                 target_picker=None, on_event=None, action_override=None, **kwargs):
+                 target_picker=None, on_event=None, action_override=None,
+                 script_hook=None, **kwargs):
         """构造战斗。
 
         sides: dict[str, list[actor]] —— 唯一入口。sides["player"] 第一个
@@ -44,6 +45,10 @@ class Battle:
         on_event: （N5b4-5E 战斗级注入钩子）callable(battle, evt_name, ctx, logs) -> None。
           事件总线 fire() 尾部通知外部观察者（命令层记账/团队技能广播/存活同步）；
           只读 ctx 或调引擎动词改状态，不返回影响结算。与 actor.triggers 声明效果正交。
+        script_hook: （N5B5c P1 剧本导演钩子）callable(battle, actor, logs) -> bool。
+          自动 actor（actor_auto）行动前调用——命令层 Boss 剧本导演在此检查血量阈值/
+          刻计数 → 触发剧本动作（转阶段演出/换招/召唤等）。返回 True = 拦截本刻行动
+          （阶段演出刻，照推 ct 行动浪费）。引擎零游戏知识，只提供前置决策注入点。
         """
         self.btype = btype
         self.title_bonus = title_bonus or {}
@@ -52,6 +57,7 @@ class Battle:
         self.target_picker = target_picker
         self.on_event = on_event
         self.action_override = action_override
+        self.script_hook = script_hook
         # 阵营容器（唯一）
         self.sides: dict = {}
         for sn, acts in (sides or {}).items():
@@ -231,6 +237,17 @@ class Battle:
             return [], False
         if self.result:
             return [], True
+        # 5c P1：剧本导演钩子（自动 actor 行动帧前置——Boss 剧本导演检查血量阈值/
+        # 刻计数 → 转阶段演出/换招；返回 True = 演出刻拦截本刻行动，照推 ct）
+        _hook_logs = []
+        if self.script_hook is not None:
+            try:
+                if self.script_hook(self, caster, _hook_logs):
+                    from .schedule import _after_act
+                    _after_act(self, caster, "attack")
+                    return _hook_logs, False
+            except Exception:
+                pass  # 导演异常不阻断怪行动（回落默认行动）
         action = "attack"
         skill_name = None
         aa = caster.get("auto_act") or {}
@@ -246,6 +263,8 @@ class Battle:
         ctx = ActCtx(caster=caster, action=action, skill_name=skill_name,
                      target=ctx_target)
         logs, ended = self.act(ctx)
+        if _hook_logs:
+            logs = _hook_logs + logs
         # 行动后推 ct（自动 actor）
         if not ended:
             from .schedule import _after_act
