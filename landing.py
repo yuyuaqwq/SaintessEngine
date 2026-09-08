@@ -177,12 +177,15 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
     _real = int(target["hp"]) - _before
     if _real > 0 and label:
         logs.append(label.format(_real=_real, _planned=heal))
-    # N8 事件：治疗生效（主体=被治疗者；实际回血 >0；治疗者放 source）
+    # N8 事件：治疗生效（主体=被治疗者；实际回血 >0；治疗者放 source；
+    # overflow = 计划治疗超出 max_hp 的浪费量——溢出转盾类效果消费）
     if _real > 0:
+        _overflow = max(0, heal - _real)
         try:
             from .effect_triggers import fire as _fire
             _fire(battle, "on_heal", {"actor": target, "target": target,
-                                      "source": source, "amount": _real}, logs)
+                                      "source": source, "amount": _real,
+                                      "overflow": _overflow}, logs)
         except Exception:
             pass  # 事件源异常不阻断落地
     return _real
