@@ -101,6 +101,35 @@ def _lv_pressure(battle, source: Optional[dict], target: dict, dmg: int) -> int:
     return dmg
 
 
+def _apply_death_guard(battle, target: dict, logs: list) -> bool:
+    """濒死保护（N9.12）：target.state death_guard 层 >0 且命中会致死 → 保命。
+
+    触发后：hp 拉回 max_hp×guard_hp_pct（至少 1），额外回 max_hp×heal_pct
+    （走 heal_actor——禁疗/on_heal 联动正常），层 -1。返回是否触发。
+    声明参数读 state_effects（引擎不认识具体 key 语义，纯规则消费）。
+    """
+    try:
+        st = target.get("state") or {}
+        n = int(st.get("death_guard", 0) or 0)
+        if n <= 0:
+            return False
+        from .state_effects import state_def
+        cfg = state_def("death_guard") or {}
+        mhp = int(target.get("max_hp", 1) or 1)
+        st["death_guard"] = max(0, n - 1)
+        # 保底
+        guard_pct = float(cfg.get("guard_hp_pct") or 0.10)
+        target["hp"] = max(1, int(mhp * guard_pct))
+        # 额外回血（走 heal_actor 收口——clamp max_hp / on_heal 联动）
+        heal_pct = float(cfg.get("heal_pct") or 0.0)
+        if heal_pct > 0 and target.get("hp", 0) < mhp:
+            heal_actor(battle, target, int(mhp * heal_pct), logs)
+        logs.append(f"✨ {target.get('name', '目标')} 濒死意志触发，保住了性命！")
+        return True
+    except Exception:
+        return False
+
+
 def _apply_damage(battle, target: dict, dmg: int, logs: list,
                   source: Optional[dict] = None) -> int:
     """承伤落地：护盾吸收 → hp 扣减 → 死亡判定。返回实际扣血。
@@ -131,6 +160,13 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
     new = max(0, old - dmg)
     target["hp"] = new
     _real = old - new
+    # 濒死保护（N9.12）：伤害会致死时查 target.state death_guard 层（声明表参数）
+    # → 保底不死亡 + 回血 + 层-1。规则通用（引擎零名词——声明表 guard_hp_pct/heal_pct）
+    if new <= 0:
+        _guarded = _apply_death_guard(battle, target, logs)
+        if _guarded:
+            new = int(target.get("hp", 0) or 0)
+            _real = old - new
     if new <= 0:
         logs.append(f"💥 {target.get('name', '目标')} 受到 {_real} 点伤害，倒下了！")
         if hasattr(battle, "_on_actor_dead"):
