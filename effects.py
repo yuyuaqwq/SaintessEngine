@@ -395,6 +395,8 @@ def act_heal(battle, caster, target, params, logs):
 
     参数（引擎零公式知识）：
     - pct：按目标 max_hp 百分比治疗（如 heal_pct 0.15 → 15%）
+    - missing_pct：按目标已损生命百分比治疗（如 0.02 → 回 2% 缺口）
+      —— v2 通用治疗基准（regen 型装备：每刻回复已损/最大生命 %）
     - expr：表达式（由数据给；暂不 eval——治疗技能走 actions._do_heal 公式链）
     - value：固定治疗量
     on=target 时治疗 target；缺省治疗 caster。
@@ -410,8 +412,13 @@ def act_heal(battle, caster, target, params, logs):
     if pct <= 0:
         pct = float(info.get("hp_pct", 0) or 0)   # 怪 heal_self/heal_pct 数据 hp_pct
     value = int(params.get("value", 0) or 0)
+    missing_pct = float(params.get("missing_pct", 0) or 0)
     if pct > 0:
         value = int((holder.get("max_hp", 1) or 1) * pct)
+    elif missing_pct > 0:
+        _mx = int(holder.get("max_hp", 1) or 1)
+        value = int(max(0, _mx - int(holder.get("hp", 0) or 0)) * missing_pct)
+        value = max(1, value) if int(holder.get("hp", 0) or 0) < _mx else 0
     if value <= 0:
         return
     real = heal_actor(battle, holder, value, logs)
