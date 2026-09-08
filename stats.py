@@ -47,11 +47,11 @@ def _player_base_stats(battle, actor: dict) -> dict:
     """玩家/带 class_name 的 actor：走职业面板公式（不传 learned_skills——
     面板并入被动由 engine 做；战斗侧被动动态处理，传了会双算，与旧 _player_stats 同）。
 
-    title_bonus（N5b4-4 鱼鱼拍板 per-actor）：actor 自带 title_bonus 优先（PVP 双方
-    各带各的称号加成，随 actor 落盘），缺省回落 battle.title_bonus（野外单玩家整场
-    一份，行为不变）。空 dict 回落兜底——无加成场景零影响。
+    title_bonus/stat_bonus（N5b4-4 鱼鱼拍板 per-actor 通用容器）：actor 自带 stat_bonus
+    （外部面板数值增幅聚合，core/stat_bonus.py）优先——PVP 双方各带各的、随 actor 落盘；
+    缺省回落 battle.title_bonus（野外单玩家整场一份，N10 前过渡）。空 dict 回落兜底。
     """
-    _tb = actor.get("title_bonus") or getattr(battle, "title_bonus", None) or {}
+    _tb = actor.get("stat_bonus") or getattr(battle, "title_bonus", None) or {}
     st = E.player_final_stats(
         actor.get("class_name", "战士"),
         actor.get("level", 1),
