@@ -31,7 +31,7 @@ class Battle:
                  title_bonus: Optional[dict] = None, dmg_mult: float = 1.0,
                  pet: Optional[dict] = None, st: Optional[dict] = None,
                  hostile_map: Optional[dict] = None,
-                 target_picker=None, on_event=None, **kwargs):
+                 target_picker=None, on_event=None, action_override=None, **kwargs):
         """构造战斗。
 
         sides: dict[str, list[actor]] —— 唯一入口。sides["player"] 第一个
@@ -51,6 +51,7 @@ class Battle:
         self.pet = pet or {}
         self.target_picker = target_picker
         self.on_event = on_event
+        self.action_override = action_override
         # 阵营容器（唯一）
         self.sides: dict = {}
         for sn, acts in (sides or {}).items():
@@ -167,9 +168,23 @@ class Battle:
         logs, ended = self.act(ctx)
         # 玩家出手后：行动耗时推 ct + 推进自动 actor 到下一个决策点
         # （v181.N7.2：被沉默转普攻后 action 已变 attack → 耗时按普攻打）
-        if not ended and ctx.action in ("attack", "skill", "defend"):
+        # （v181.N5b4-5a R3：action_override 自定义动作也推 ct——use_item 等同样占刻）
+        _is_override = bool(getattr(ctx, "_override_consumed", False))
+        if not ended and (ctx.action in ("attack", "skill", "defend") or _is_override):
             from .schedule import _after_act
-            _after_act(self, caster, ctx.action)
+            if _is_override:
+                _cast = getattr(ctx, "_override_cast", None) or "attack"
+                # 回调返回的 cast：str=内置动作基准（defend/skill/attack，按 spd 缩放）
+                # 或数字=绝对耗时秒（命令层已算好时长，直接落 ct）
+                if isinstance(_cast, str):
+                    _after_act(self, caster, _cast)
+                else:
+                    try:
+                        caster["ct"] = float(self._now) + max(0.0, float(_cast))
+                    except Exception:
+                        _after_act(self, caster, "attack")
+            else:
+                _after_act(self, caster, ctx.action)
             logs2 = []
             who = self.advance(logs2)
             logs.extend(logs2)
@@ -299,7 +314,22 @@ class Battle:
         elif action == "flee":
             logs = self._do_flee(ctx)
         else:
-            logs = [f"未知行动类型：{action}"]
+            # N5b4-5a R3：非引擎内置动作（use_item/命令层自定义）→ 先问外部
+            # action_override 注入点（引擎零游戏知识——不认识道具/吃药/特殊动作，
+            # 只提供"这次行动做什么 + 耗时多少"的执行注入；效果由回调用引擎动词写）。
+            # 回调返回 (logs, cast_base_or_None)；None = 未消费 → 回落默认未知提示。
+            if self.action_override is not None:
+                try:
+                    _ov_logs, _ov_cast = self.action_override(
+                        self, ctx.action, actor, ctx.skill_name, ctx.target)
+                    if _ov_logs is not None:
+                        logs = _ov_logs
+                        ctx._override_cast = _ov_cast  # str("defend"/"skill"/"attack") 或数字秒或 None
+                        ctx._override_consumed = True
+                except Exception:
+                    logs = [f"未知行动类型：{action}"]
+            if not getattr(ctx, "_override_consumed", False):
+                logs = [f"未知行动类型：{action}"]
         # N9A-2 事件：行动完成（全员广播——不带 actor 键避免主体过滤拦截旁观者；
         # 刚行动的 actor 放 ctx["acted"]，效果侧自己 if 敌我判断，如 randuin/ice_vein
         # 监听敌对 actor 行动叠减速）。被控跳过（skip）早退 return 不触发。
