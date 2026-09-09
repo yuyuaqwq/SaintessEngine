@@ -751,5 +751,24 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
                 _eff_params["pct"] = pct
                 _eff_params["halve"] = True
         apply_effects(battle, actor, actor, [_eff_params], logs)
+    # mech（目标向效果）：增益技也可带 mech——法术反制（silence 沉默目标）/守护姿态
+    # （zhan_yi 攒给自己，on=caster 不受 target 影响）。走 effects_from_skill 同攻击命中。
+    mech = info.get("mech")
+    if mech:
+        try:
+            from .effects import apply_effects as _ae, effects_from_skill as _efs
+            tgt = ctx.target
+            if tgt is None:
+                from .actors import hostile_sides, actor_alive as _al
+                for _sn in hostile_sides(battle, actor.get("side", "")):
+                    for _a in (battle.sides.get(_sn) or []):
+                        if _al(_a):
+                            tgt = _a
+                            break
+                    if tgt is not None:
+                        break
+            _ae(battle, actor, tgt, _efs(info, lv), logs)
+        except Exception:
+            pass  # mech 落地异常不阻断增益
     logs.append(f"你施展【{info.get('name', ctx.skill_name or '技能')}】！")
     return logs

@@ -137,12 +137,22 @@ def apply_effects(battle, caster: dict, target: Optional[dict],
     """
     if not effects:
         return
+    import random as _rr
     for eff in effects:
         if not isinstance(eff, dict):
             continue
         etype = eff.get("type") or eff.get("action")
         if not etype:
             continue
+        # 通用概率 roll（eff.chance：技能 mech_chance / 装配层概率效果统一消费；
+        # None = 恒触发零影响）
+        _ch = eff.get("chance")
+        if _ch is not None:
+            try:
+                if _rr.random() >= float(_ch):
+                    continue
+            except Exception:
+                pass
         actions = resolve_actions(etype)
         if not actions and etype not in ACTION_HANDLERS:
             continue  # 未知名词/动词：跳过（引擎容错）
@@ -205,9 +215,20 @@ def _mech_to_effect(mech: str, mval: int, info: dict) -> dict:
                 "on": "target" if on_target else "caster",
                 "info": info}
     # 名词（控制/盾/效果型）→ 保留 type，由 EFFECT_ACTIONS 配置翻译
-    return {"type": mech, "stacks": mval,
-            "turns": int(info.get("cc_turns", 0) or 0),
-            "mech": mech, "info": info}
+    _eff = {"type": mech, "stacks": mval, "mech": mech, "info": info}
+    # 技能显式 cc_turns 才带 turns（覆盖 EFFECT_ACTIONS 默认刻数）；缺省不写
+    # turns —— 否则恒 turns=0 覆盖默认致控制 0 刻不施加（盾击·誓"眩晕 1 刻"bug）
+    _ct = int(info.get("cc_turns", 0) or 0)
+    if _ct > 0:
+        _eff["turns"] = _ct
+    # mech_chance（技能数据概率：盾击·誓 40% 眩晕）→ apply_effects 通用 chance roll
+    _ch = info.get("mech_chance")
+    if _ch is not None:
+        try:
+            _eff["chance"] = float(_ch)
+        except Exception:
+            pass
+    return _eff
 
 
 def _is_stack_resource(cfg: dict) -> bool:
