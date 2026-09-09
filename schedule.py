@@ -16,6 +16,7 @@ import math
 from typing import Optional
 
 from .actors import ActCtx, actor_alive
+from .effects import _cap_of as _stack_cap_of
 
 # 行动基准耗时（与 core.constants 对齐，引擎固有刻度常量）
 CAST_ATK = 1.0
@@ -304,21 +305,24 @@ def _settle_time_effects(battle, logs: list):
                                 if _real > 0:
                                     logs.append(f"🍲 {a.get('name', '目标')} 持续恢复，恢复 {_real} 点魔力！")
                         elif direction == "gain":
-                            # v181.M-R2：资源自然回（声明级，引擎零职业知识）——给自身
-                            # effects[key] 加层 clamp cap（游侠 energy 专注流量制：每刻 +18）。
-                            # 静默回复（资源跳不刷战斗日志）；cap 取 period.cap 或规则表 cap。
-                            _amt = int(period.get("amount", 0) or 0)
+                            # v181.M-R2e：资源自然回/衰减（声明级，引擎零职业知识）——
+                            # 给自身 effects[key] 加/减层 clamp [0, cap]（游侠 energy 每刻
+                            # +18 专注流量制；牧师 faith 每刻 -0.7 慢衰减 = B3 float 通用层，
+                            # amount 负值也走，clamp 下限 0 不归负）。cap 取 period.cap 或
+                            # _stack_cap_of（方案 A 收敛：EFFECT_RULES 基础 + actor.cap_bonus）。
+                            # 静默（资源跳不刷战斗日志）；写回经 _norm_stack 归一（int 资源
+                            # 保持 int 观感，float 保留 6 位精度——10-0.7 → 9.3）。
+                            _amt = float(period.get("amount", 0) or 0)
                             _cap = int(period.get("cap", 0) or 0)
                             if _cap <= 0:
-                                _cfg = table.get(key) or {}
-                                _cap = int(_cfg.get("cap", 0) or 0)
-                            if _amt > 0:
-                                _cur = int(entry.get("stacks", 0) or 0)
-                                _new = _cur + _amt
-                                if _cap > 0:
-                                    _new = min(_cap, _new)
-                                if _new > _cur:
-                                    entry["stacks"] = _new
+                                _cap = _stack_cap_of(a, key)
+                            if _amt != 0:
+                                _cur = float(entry.get("stacks", 0) or 0)
+                                _new = round(_cur + _amt, 6)
+                                _new = max(0.0, min(float(_cap), _new))
+                                if abs(_new - _cur) > 1e-9:
+                                    from .effects import _norm_stack as _ns
+                                    entry["stacks"] = _ns(_new)
                         # 限时周期：跳够 turns 次 → 清层（到期自然消失）
                         if turns > 0:
                             c = int(djump.get(key, 0) or 0) + 1

@@ -115,9 +115,10 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
             entry = ef.get(rk)
             if not isinstance(entry, dict):
                 continue  # 无条目（资源渠道未装配/非本资源技能）→ 不拦，保持历史行为
-            cur = int(entry.get("stacks", 0) or 0)
-            if cur < int(rv or 0):
-                logs.append(f"⚡ 核心资源不足：需要 {rv} {rk}，当前 {cur}！")
+            # v181.M-R2e B3：float 读（faith 衰减层 9.3 ≥ 3 足额判定保真）
+            cur = float(entry.get("stacks", 0) or 0)
+            if cur < float(rv or 0):
+                logs.append(f"⚡ 核心资源不足：需要 {rv} {rk}，当前 {cur:g}！")
                 return False
     return True
 
@@ -133,12 +134,14 @@ def _spend_skill_cost(actor: dict, info: dict):
         ef = actor.setdefault("effects", {})
         for rk, rv in res_cost.items():
             entry = ef.get(rk)
-            cur = int(entry.get("stacks", 0) or 0) if isinstance(entry, dict) else 0
+            # v181.M-R2e B3：float 读/写（faith 9.3 扣 3 → 6.3 保真；int 资源归一不变）
+            cur = float(entry.get("stacks", 0) or 0) if isinstance(entry, dict) else 0.0
             if cur <= 0:
                 continue
             if not isinstance(entry, dict):
                 entry = ef[rk] = {}
-            entry["stacks"] = max(0, cur - int(rv or 0))
+            from .effects import _norm_stack as _ns
+            entry["stacks"] = _ns(max(0.0, cur - float(rv or 0)))
     # consume_all：清零该资源 key
     consume_all = info.get("consume_all") or {}
     if consume_all and consume_all.get("key"):
@@ -527,6 +530,20 @@ def _do_heal(battle, ctx, actor, info, logs) -> list:
             heal = int(heal * (1 + hpv))
     except Exception:
         pass
+    # v181.M-R2e B2：heal_calc 乘区钩子（对齐 dmg_calc N9.13 模式）——装配层乘区
+    # 扩展动作改 battle._fire_ctx["mult"] 累乘（牧师 faith 负载档位 heal_mult 等）。
+    # fire 后该 ctx 仍是本次事件的（乘区动作同步改，无并发）；只挂施法者自己声明的
+    # triggers（subject=actor 过滤）→ 非牧师无钩子 = 恒 1.0 零行为。
+    try:
+        from .effect_triggers import fire as _fire
+        _fctx = {"actor": actor, "target": target, "heal": heal,
+                 "info": info, "mult": 1.0}
+        _fire(battle, "heal_calc", _fctx, logs)
+        _m = float((getattr(battle, "_fire_ctx", {}) or {}).get("mult", 1.0) or 1.0)
+        if _m != 1.0:
+            heal = max(1, int(heal * _m))
+    except Exception:
+        pass  # 修正钩子异常不阻断战斗
     if heal <= 0:
         return logs
     # 落地（统一收口 landing.heal_actor：禁疗修正 + clamp max_hp）

@@ -27,6 +27,54 @@ from typing import Callable, Optional
 from .state_effects import state_def
 
 # ============================================================
+# stacks 数值口径（v181.M-R2e B3：effects float 通用层）
+# ============================================================
+# 引擎零语义：stacks 允许 float（增量能力：faith 每刻 -0.7 衰减等小数刻度），
+# 但 int 资源保持 int 观感——写回统一走 _norm_stack 归一（整值落 int）。
+# 消费/展示侧审计：读 stacks 的点用 float() 保真或 int() floor（见各处注释）。
+
+
+def _fmt_stack(v):
+    """stacks 文案/日志显示：整值去 .0（float 为增量能力，玩家整数观感）。"""
+    try:
+        f = float(v)
+    except Exception:
+        return v
+    return int(f) if f.is_integer() else f
+
+
+def _norm_stack(v):
+    """stacks 写回归一：整值 → int（int 资源保持 int）；小数 → round 6 位（清 0.7 衰减
+    二进制定点尾差，如 10-0.7 → 9.3）。"""
+    try:
+        f = float(v)
+    except Exception:
+        return v
+    if f.is_integer():
+        return int(f)
+    return round(f, 6)
+
+
+def _cap_of(actor, key: str) -> int:
+    """叠层 cap 读取收敛点（v181.M-R2e 方案 A：affix 动态 cap）。
+
+    所有读 EFFECT_RULES[key].cap 做 clamp 的引擎点（effects 叠层 clamp /
+    schedule period gain clamp / 装配层渠道 gain clamp）统一走本函数：
+    cap = EFFECT_RULES 基础 cap + actor.cap_bonus[key]（纯 flat int 增量，
+    stat_bonus 平行哲学——引擎零语义，装配层开战写入）。actor 缺省/无
+    cap_bonus → 基础 cap。基础 cap 无声明（0）→ 999999 不设限（增量无意义）。
+    """
+    base = int(state_def(key).get("cap") or 0) or 999999
+    if base >= 999999:
+        return base
+    try:
+        cb = (actor or {}).get("cap_bonus") or {}
+        bonus = int(cb.get(key, 0) or 0)
+    except Exception:
+        bonus = 0
+    return base + max(0, bonus)
+
+# ============================================================
 # 动词注册表
 # ============================================================
 
@@ -246,24 +294,27 @@ def act_apply(battle, caster, target, params, logs):
     # 面板增益的 op 是 mul/add 面板算子且必带 stat，走快照分支）----------
     op = params.get("op")
     if op in ("add", "set") and not params.get("stat"):
-        amount = int(params.get("amount", params.get("value", params.get("stacks", 0))) or 0)
-        cap = int(state_def(key).get("cap") or 0) or 999999
-        cur = int((ef.get(key) or {}).get("stacks", 0) or 0) if isinstance(ef.get(key), dict) else 0
+        # v181.M-R2e B3：amount/cur float 读（stacks 允许小数刻度——faith 衰减等）；
+        # cap 收敛 _cap_of（方案 A：EFFECT_RULES 基础 cap + actor.cap_bonus 动态）。
+        # amount<=0 仍不加（负向消费走 consume / schedule period，apply 只增/置）。
+        amount = float(params.get("amount", params.get("value", params.get("stacks", 0))) or 0)
+        cap = _cap_of(holder, key)
+        cur = float((ef.get(key) or {}).get("stacks", 0) or 0) if isinstance(ef.get(key), dict) else 0.0
         if op == "add":
             if amount <= 0:
                 return
-            n = max(0, min(cap, cur + amount))
+            n = max(0.0, min(float(cap), cur + amount))
         else:
-            n = max(0, min(cap, amount))
+            n = max(0.0, min(float(cap), amount))
         entry = ef.get(key)
         if not isinstance(entry, dict):
             entry = ef[key] = {}
-        entry["stacks"] = n
+        entry["stacks"] = _norm_stack(n)
         if op == "add":
             cap_txt = f"/{cap}" if cap < 999999 else ""
-            logs.append(f"✦ {key} {n}{cap_txt}（+{amount}）")
+            logs.append(f"✦ {key} {_fmt_stack(n)}{cap_txt}（+{_fmt_stack(amount)}）")
         else:
-            logs.append(f"✦ {key} 置为 {n}")
+            logs.append(f"✦ {key} 置为 {_fmt_stack(n)}")
         # N8 事件：状态阈值（层数变化后广播——"战意满 10 → 狂暴"由上层声明匹配）
         try:
             from .effect_triggers import fire as _fire
@@ -335,19 +386,20 @@ def act_consume(battle, caster, target, params, logs):
     if not holder:
         return
     key = params.get("key") or params.get("mech")
-    amount = int(params.get("amount", params.get("stacks", 0)) or 0)
+    # v181.M-R2e B3：cur float 读（消费 float 层保真——faith 衰减后 9.3 扣 3 → 6.3）
+    amount = float(params.get("amount", params.get("stacks", 0)) or 0)
     if not key or amount <= 0:
         return
     ef = holder.setdefault("effects", {})
     entry = ef.get(key)
-    cur = int(entry.get("stacks", 0) or 0) if isinstance(entry, dict) else 0
+    cur = float(entry.get("stacks", 0) or 0) if isinstance(entry, dict) else 0.0
     if cur < amount:
-        logs.append(f"⚠️ {key} 不足（需 {amount}，当前 {cur}）")
+        logs.append(f"⚠️ {key} 不足（需 {_fmt_stack(amount)}，当前 {_fmt_stack(cur)}）")
         return
     if not isinstance(entry, dict):
         entry = ef[key] = {}
-    entry["stacks"] = max(0, cur - int(amount))
-    logs.append(f"✦ 消耗 {amount} 点 {key}（剩余 {cur - amount}）")
+    entry["stacks"] = _norm_stack(max(0.0, cur - amount))
+    logs.append(f"✦ 消耗 {_fmt_stack(amount)} 点 {key}（剩余 {_fmt_stack(cur - amount)}）")
 
 
 @register_action("shield")
