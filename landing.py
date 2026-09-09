@@ -21,13 +21,16 @@ from typing import Optional
 # ============================================================
 
 def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
-                logs: list, dmg_kind: str = "") -> int:
+                logs: list, dmg_kind: str = "", defend_reduce: Optional[float] = None) -> int:
     """伤害落地主链。返回实际扣血。
 
     source: 攻击方 actor（等级压制基准；None = 无来源不压制）
     target: 承伤 actor
     amount: 计划伤害（技能公式算好的值）
     dmg_kind: "phys"/"magi"/"true"/""（免伤等按类型消费，后续扩展）
+    defend_reduce: 攻击技能自带方向性防御挡伤比例（v178 E6：如风暴之眼 0.8 =
+        玩家防御该技能挡 80% 只受 20%）；None/缺省 = 0.5 旧行为（防御伤害减半）。
+        引擎零知识：只是读技能数据字段的数字，非名词判断。
     """
     if not target or amount <= 0:
         return 0
@@ -54,9 +57,14 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             dmg = max(1, int(dmg * _dtm))
     except Exception:
         pass
-    # defending 减伤（防御姿态伤害减半）
+    # defending 减伤（防御姿态；N10-B2 v178 E6 方向性防御：攻击技能自带 defend_reduce
+    # 覆盖默认 0.5——如风暴之眼 0.8 = 防御挡 80% 只受 20%）
     if target.get("defending"):
-        dmg = max(1, int(dmg * 0.5))
+        _dr = 0.5
+        if isinstance(defend_reduce, (int, float)) and 0 <= float(defend_reduce) <= 0.95:
+            _dr = float(defend_reduce)
+        # int 截断对齐旧 landing 默认 0.5 行为（coverage 87 断言口径）
+        dmg = max(1, int(dmg * (1.0 - _dr)))
         logs.append(f"(格挡后 {dmg} 点伤害)")
     # 睡眠被打醒（主动伤害打醒睡眠；sleep 效果条目在 effects 容器）
     if target.get("effects", {}).get("sleep"):

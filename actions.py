@@ -250,7 +250,8 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
         pass  # 修正钩子异常不阻断战斗
     if total <= 0:
         return logs
-    logs.extend(_deal_hit(battle, actor, target, total))
+    logs.extend(_deal_hit(battle, actor, target, total,
+                          defend_reduce=info.get("defend_reduce")))
     # N10-B1 吸血结算（对齐旧 _skill_finalize_damage 尾部 _settle_lifesteal）：
     # 面板吸血率（lifesteal/phys/magi）+ 技能级 info.lifesteal；真伤不吸；AOE 子调用跳过。
     if not _no_lifesteal:
@@ -386,11 +387,17 @@ def _skill_seg_damage(battle, actor, target, st, est, info, lv,
                          seg_crit, pene_pct=pp_magi, pene_flat=pf_magi, dmg_type="magi"), 0
 
 
-def _deal_hit(battle, actor: dict, target: dict, dmg: int) -> list:
-    """命中落地薄包装：统一走 landing.deal_damage 收口（等级压制/护盾/死亡）。"""
+def _deal_hit(battle, actor: dict, target: dict, dmg: int,
+              defend_reduce: Optional[float] = None) -> list:
+    """命中落地薄包装：统一走 landing.deal_damage 收口（等级压制/护盾/死亡）。
+
+    defend_reduce：方向性防御挡伤比例（v178 E6，技能数据 defend_reduce）——
+    防御姿态的承伤目标按攻击技能自带值挡伤（如风暴之眼 0.8 = 挡 80% 只受 20%）；
+    None → landing 缺省 0.5 旧行为。引擎零知识：纯数字透传。
+    """
     logs = []
     from .landing import deal_damage
-    deal_damage(battle, actor, target, dmg, logs)
+    deal_damage(battle, actor, target, dmg, logs, defend_reduce=defend_reduce)
     return logs
 
 
