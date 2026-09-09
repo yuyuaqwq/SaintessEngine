@@ -70,9 +70,9 @@ def do_skill(battle, ctx) -> list:
         return []
     kind = info.get("kind", "")
     logs = []
-    # ---- 1. 技能存在/学习校验 ----
-    if actor.get("class_name") and not _skill_usable(battle, actor, info):
-        return logs  # 命令层已拦截，兜底静默
+    # ---- 1. 技能存在/学习校验（res_cost 不足时 logs 已写拦截文案，直接返回展示）----
+    if actor.get("class_name") and not _skill_usable(battle, actor, info, logs):
+        return logs
     # ---- 2. 消耗扣除（蓝/核心资源） ----
     _spend_skill_cost(actor, info)
     # ---- 3. 冷却（cd>0 才设；actor.cooldown = {skill_name: 绝对时刻}）----
@@ -100,9 +100,25 @@ def do_skill(battle, ctx) -> list:
     return logs
 
 
-def _skill_usable(battle, actor: dict, info: dict) -> bool:
-    """技能可用性（学习/蓝/资源/冷却）检查——返回 False 时已把拦截日志加入 logs。"""
-    # 命令层负责用户提示；引擎侧只在 actor 无 class_name（怪）或直接调用时校验蓝/冷却
+def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
+    """技能可用性（学习/蓝/核心资源/冷却）检查——通用规则，引擎零职业知识。
+
+    v181.M-R1c：res_cost 前置拦截——技能声明 res_cost 扣 effects[key].stacks；
+    effects 已有该 key 条目且 stacks < 需求 → 资源不足不可施放（返回 False 并把
+    拦截文案写入 logs，命令层可直接展示）。effects 无该 key 条目（渠道未装配的
+    资源技能）→ 不拦（保持历史行为；R2 渠道接通后条目自然出现即自动严格）。
+    """
+    res_cost = info.get("res_cost") or {}
+    if res_cost and logs is not None:
+        ef = actor.get("effects") or {}
+        for rk, rv in res_cost.items():
+            entry = ef.get(rk)
+            if not isinstance(entry, dict):
+                continue  # 无条目（资源渠道未装配/非本资源技能）→ 不拦，保持历史行为
+            cur = int(entry.get("stacks", 0) or 0)
+            if cur < int(rv or 0):
+                logs.append(f"⚡ 核心资源不足：需要 {rv} {rk}，当前 {cur}！")
+                return False
     return True
 
 
