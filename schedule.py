@@ -265,6 +265,20 @@ def _settle_time_effects(battle, logs: list):
                             else:
                                 dmg = max(1, n)
                             from .landing import deal_damage
+                            # N9.14 dot_calc：DOT 伤害落地前乘区钩子（对齐 dmg_calc 模式）。
+                            # broadcast（无 actor 主体键）——施毒者被动（万毒归宗等）在施放方
+                            # 不在承伤者身上，subject 过滤会挡住；ctx.dot_key 供效果侧过滤。
+                            try:
+                                from .effect_triggers import fire as _fire
+                                _dc = {"target": a, "dot_key": key, "dmg": dmg,
+                                       "mult": 1.0}
+                                _fire(battle, "dot_calc", _dc, logs)
+                                _m = float((getattr(battle, "_fire_ctx", {}) or {})
+                                           .get("mult", 1.0) or 1.0)
+                                if _m != 1.0:
+                                    dmg = max(1, int(dmg * _m))
+                            except Exception:
+                                pass  # 修正钩子异常不阻断 DOT 落地
                             deal_damage(battle, None, a, dmg, logs)
                             logs.append(f"🔥 {a.get('name', '目标')} 受 {key} {n} 层影响，损失 {dmg} 生命")
                             # N8 事件：DOT 每跳
