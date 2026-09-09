@@ -187,15 +187,20 @@ def _deal_aoe(battle, actor: dict, target: dict, info: dict, total: int) -> list
     for t in targets:
         if not actor_alive(t):
             continue
-        logs.extend(_single_target_pipeline(battle, actor, t, info, _skill_lv_of(battle, actor)))
+        logs.extend(_single_target_pipeline(battle, actor, t, info, _skill_lv_of(battle, actor),
+                                            _no_lifesteal=True))  # N10-B1：AOE 不吸血（旧语义）
         # rank>1 目标 aoe_falloff：简化——falloff!=1.0 时按比例补算（见 _aoe_falloff_apply）
         if falloff != 1.0 and int(t.get("rank", 1) or 1) > 1:
             logs = _aoe_falloff_apply(logs)
     return logs
 
 
-def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: int) -> list:
-    """单目标完整伤害管线（AOE 逐目标内部用；不递归触发 aoe）。"""
+def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: int,
+                            _no_lifesteal: bool = False) -> list:
+    """单目标完整伤害管线（AOE 逐目标内部用；不递归触发 aoe）。
+
+    _no_lifesteal=True：AOE 子调用（旧引擎 _aoe_damage 无吸血——N10-B1 对齐）。
+    """
     logs = []
     # N7.3 出手消费型 buff（on_hit：next_atk_up 增伤 / stealth 必暴等）——先查后打
     hit_buffs = _consume_hit_buffs(battle, actor, logs)
@@ -246,6 +251,14 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
     if total <= 0:
         return logs
     logs.extend(_deal_hit(battle, actor, target, total))
+    # N10-B1 吸血结算（对齐旧 _skill_finalize_damage 尾部 _settle_lifesteal）：
+    # 面板吸血率（lifesteal/phys/magi）+ 技能级 info.lifesteal；真伤不吸；AOE 子调用跳过。
+    if not _no_lifesteal:
+        try:
+            _settle_lifesteal(battle, actor, total, info.get("kind", ""), logs,
+                              magi_part=magi_part, skill_info=info, skill_lv=lv)
+        except Exception:
+            pass  # 吸血结算异常不阻断战斗（落地已发生）
     # N9.8 出手附伤（trinity thunder 段等）：主伤害落完后按 atk × pct 结算一段
     # 独立附加伤害（参数化零名词——数值/标签全来自 buff hit 子键声明）。
     # 走 landing.deal_damage 统一收口（等级压制/护盾/死亡判定正常联动）。
@@ -379,6 +392,82 @@ def _deal_hit(battle, actor: dict, target: dict, dmg: int) -> list:
     from .landing import deal_damage
     deal_damage(battle, actor, target, dmg, logs)
     return logs
+
+
+def _mortal_wound_mult(battle, actor: dict) -> float:
+    """N10-B1：Boss『重创』（mortal_wound）→ 吸血减半。
+
+    玩家 effects["mortal_wound"] 条目由 boss_script opening 施加（{stacks, expire}）。
+    过期条目由 schedule._settle_time_effects 自动清，此处防御性判 expire。
+    """
+    try:
+        ef = actor.get("effects") or {}
+        mw = ef.get("mortal_wound")
+        if not isinstance(mw, dict):
+            return 1.0
+        exp = mw.get("expire")
+        if exp is not None:
+            now = float(getattr(battle, "_now", 0) or 0)
+            if now >= float(exp):
+                return 1.0
+        return 0.5
+    except Exception:
+        return 1.0
+
+
+def _settle_lifesteal(battle, actor: dict, dmg_total: int, kind: str, logs: list,
+                      magi_part: int = 0, skill_info: Optional[dict] = None,
+                      skill_lv: int = 0) -> None:
+    """N10-B1：玩家攻击吸血统一结算（对齐旧 battle._settle_lifesteal + info.lifesteal 技能级）。
+
+    引擎零游戏知识：吸血率 = actor 面板数据（S.actor_stats 的 lifesteal/lifesteal_phys/
+    lifesteal_magi），引擎只做通用"攻击者按面板吸血率回血"——纯怪无 lifesteal 面板
+    → 零行为（天然安全）。真伤不吸（v107 鱼鱼拍板）。AOE 由调用方 _no_lifesteal 跳过。
+
+    - 通用段（面板吸血率）：rate = lifesteal，混合段按 phys/magi 合成细分率
+    - 技能级：skill_info.lifesteal → E.skill_lifesteal_pct(info, lv) 附加
+    - cap 30%（对齐旧 min(rate, 0.30)）；mortal_wound → ×0.5
+    """
+    if dmg_total <= 0 or kind == K_TRUE:
+        return
+    try:
+        _mw = _mortal_wound_mult(battle, actor)
+        st = S.actor_stats(battle, actor)
+        rate = float(st.get("lifesteal", 0) or 0)
+        # 物/魔细分合成（对齐旧：1-(1-rate)(1-sub)）；混合段物段走 phys、魔段走 magi
+        sub_rate = 0.0
+        if magi_part > 0 and 0 < magi_part < dmg_total:
+            # 物理段伤害 × phys 吸血 + 魔法段伤害 × magi 吸血（各自合成）
+            phys_dmg = dmg_total - magi_part
+            sub_p = float(st.get("lifesteal_phys", 0) or 0)
+            sub_m = float(st.get("lifesteal_magi", 0) or 0)
+            rate_p = 1 - (1 - rate) * (1 - sub_p)
+            rate_m = 1 - (1 - rate) * (1 - sub_m)
+            heal = int(phys_dmg * min(rate_p, 0.30) + magi_part * min(rate_m, 0.30))
+        else:
+            is_magi = (kind == K_MAGI)
+            sub_key = "lifesteal_magi" if is_magi else "lifesteal_phys"
+            sub = float(st.get(sub_key, 0) or 0)
+            if sub > 0:
+                rate = 1 - (1 - rate) * (1 - sub)
+            rate = min(rate, 0.30)
+            heal = int(dmg_total * rate)
+        # 技能级吸血（info.lifesteal，如嗜血斩 0.25 随等级成长）——独立叠加、cap 30% 同限
+        if skill_info and skill_info.get("lifesteal"):
+            try:
+                spct = E.skill_lifesteal_pct(skill_info, skill_lv)
+                heal += int(dmg_total * min(float(spct), 0.30))
+            except Exception:
+                pass
+        if heal <= 0:
+            return
+        if _mw < 1.0:
+            heal = max(1, int(heal * _mw))
+        from .landing import heal_actor
+        heal_actor(battle, actor, heal, logs)
+        logs.append(f"🩸 吸血：回复 {heal} 点生命！")
+    except Exception:
+        pass  # 吸血异常不阻断战斗（伤害已落地）
 
 
 # ============================================================
