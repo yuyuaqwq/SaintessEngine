@@ -478,6 +478,13 @@ def act_interrupt(battle, caster, target, params, logs):
     if actor.get("charging") and actor["charging"].get("skill"):
         actor["charging"] = None
         logs.append(f"🔨 {actor.get('name', '目标')} 的蓄力被打破了！")
+        # N5B5c P5：打断事件（on_interrupt 剧本联动同 landing 伤害打断口径）
+        try:
+            from .effect_triggers import fire as _fire
+            _fire(battle, "interrupt", {"actor": actor, "target": actor,
+                                        "source": caster}, logs)
+        except Exception:
+            pass
 
 
 @register_action("damage")

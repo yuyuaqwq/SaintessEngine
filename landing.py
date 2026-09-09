@@ -66,6 +66,13 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     if target.get("charging") and target["charging"].get("skill"):
         target["charging"] = None
         logs.append(f"🔨 {target.get('name', '目标')} 的蓄力被打破了！")
+        # N5B5c P5：打断事件（on_interrupt 剧本联动：Boss 读条被断 → 反噬/破绽）
+        try:
+            from .effect_triggers import fire as _fire
+            _fire(battle, "interrupt", {"actor": target, "target": target,
+                                        "source": source}, logs)
+        except Exception:
+            pass
     # 承伤落地（护盾吸收 → 扣血 → 死亡）
     real = _apply_damage(battle, target, dmg, logs, source)
     # N8 事件：受击（承伤后）——主体=受击者；死者走 on_death/on_kill 不再触发。
