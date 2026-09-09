@@ -78,6 +78,14 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             dmg = max(1, int(dmg * _dtm))
     except Exception:
         pass
+    # N10-B6 闪避（actor 承伤 roll）：dodge 面板值 cap40%，闪避成功 → 本次承伤免伤。
+    # 引擎零知识：dodge 是面板数值字段；乘算合成上限与旧 _roll_dodge 对齐。
+    # 位置在 defending 前（对齐旧顺序：闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）。
+    try:
+        if _roll_dodge(battle, target, logs):
+            return 0
+    except Exception:
+        pass  # 闪避异常不阻断战斗
     # defending 减伤（防御姿态；N10-B2 v178 E6 方向性防御：攻击技能自带 defend_reduce
     # 覆盖默认 0.5——如风暴之眼 0.8 = 防御挡 80% 只受 20%）
     if target.get("defending"):
@@ -87,6 +95,13 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
         # int 截断对齐旧 landing 默认 0.5 行为（coverage 87 断言口径）
         dmg = max(1, int(dmg * (1.0 - _dr)))
         logs.append(f"(格挡后 {dmg} 点伤害)")
+    # N10-B6 百分比免伤 + 格挡（actor 承伤侧，按 dmg_kind 减免；对齐旧 _damage_actor：
+    # 物免/魔免按伤害类型 cap40% → block 格挡减免一半 cap40%）
+    if dmg_kind and dmg > 0:
+        try:
+            dmg = _apply_taken_reductions(battle, target, dmg, dmg_kind, logs)
+        except Exception:
+            pass  # 免伤异常不阻断落地
     # 睡眠被打醒（主动伤害打醒睡眠；sleep 效果条目在 effects 容器）
     if target.get("effects", {}).get("sleep"):
         target["effects"].pop("sleep", None)
@@ -147,6 +162,65 @@ def _lv_pressure(battle, source: Optional[dict], target: dict, dmg: int) -> int:
     except Exception:
         pass
     return dmg
+
+
+def _roll_dodge(battle, target: dict, logs: list) -> bool:
+    """N10-B6：actor 承伤闪避（对齐旧 battle._roll_dodge 基础段）。
+
+    读 S.actor_stats(target) 的 dodge 面板值（cap 40%——与旧上限一致）。
+    引擎零知识：dodge 是面板数值字段，闪避是通用承伤规则。
+    闪避成功返回 True（调用方中断本次承伤/免伤）。
+    """
+    try:
+        if not target:
+            return False
+        from . import stats as S
+        st = S.actor_stats(battle, target)
+        dodge = min(float(st.get("dodge", 0) or 0), 0.40)
+        if dodge <= 0:
+            return False
+        import random
+        if random.random() < dodge:
+            logs.append(f"💨 {target.get('name', '目标')} 闪避了攻击！")
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _apply_taken_reductions(battle, target: dict, dmg: int, dmg_kind: str,
+                            logs: list) -> int:
+    """N10-B6：承伤侧百分比免伤 + 格挡（对齐旧 _damage_actor 物免/魔免段 + block 段）。
+
+    按 dmg_kind 消费（phys 段吃物免 / magi 段吃魔免；各 cap 40%），随后 block 格挡
+    概率减免一半（cap 40%）。真伤/空 kind 不减免。引擎零知识：减免率是面板数值。
+    """
+    try:
+        from . import stats as S
+        st = S.actor_stats(battle, target)
+        kd = str(dmg_kind or "")
+        if "phys" in kd and "true" not in kd:
+            pr = min(float(st.get("phys_reduce", 0) or 0), 0.4)
+            if pr > 0:
+                red = max(1, int(dmg * pr))
+                dmg = max(1, dmg - red)
+                logs.append(f"🪨 物理免伤，减免 {red} 点物理伤害！")
+        if "magi" in kd and "true" not in kd:
+            mr = min(float(st.get("magic_reduce", 0) or 0), 0.4)
+            if mr > 0:
+                red = max(1, int(dmg * mr))
+                dmg = max(1, dmg - red)
+                logs.append(f"🛡️ 魔法抗性，减免 {red} 点魔法伤害！")
+        if dmg > 0 and "true" not in kd:
+            import random
+            bc = min(float(st.get("block", 0) or 0), 0.40)
+            if bc > 0 and random.random() < bc:
+                red = max(1, int(dmg * 0.5))
+                dmg = max(1, dmg - red)
+                logs.append(f"🛡️ 格挡！减免 {red} 点伤害！")
+    except Exception:
+        pass
+    return max(1, dmg)
 
 
 def _apply_death_guard(battle, target: dict, logs: list) -> bool:
