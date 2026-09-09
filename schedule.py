@@ -309,7 +309,8 @@ def _settle_time_effects(battle, logs: list):
                             # 给自身 effects[key] 加/减层 clamp [0, cap]（游侠 energy 每刻
                             # +18 专注流量制；牧师 faith 每刻 -0.7 慢衰减 = B3 float 通用层，
                             # amount 负值也走，clamp 下限 0 不归负）。cap 取 period.cap 或
-                            # _stack_cap_of（方案 A 收敛：EFFECT_RULES 基础 + actor.cap_bonus）。
+                            # _stack_cap_of（方案 A 收敛：EFFECT_RULES 基础 + actor.bonus.cap
+                            # 动态——v181.M-bonus 分域，旧 actor cap_bonus 键已全清）。
                             # 静默（资源跳不刷战斗日志）；写回经 _norm_stack 归一（int 资源
                             # 保持 int 观感，float 保留 6 位精度——10-0.7 → 9.3）。
                             _amt = float(period.get("amount", 0) or 0)

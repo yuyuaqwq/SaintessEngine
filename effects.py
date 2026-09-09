@@ -56,19 +56,19 @@ def _norm_stack(v):
 
 
 def _cap_of(actor, key: str) -> int:
-    """叠层 cap 读取收敛点（v181.M-R2e 方案 A：affix 动态 cap）。
+    """叠层 cap 读取收敛点（v181.M-R2e 方案 A：affix 动态 cap；v181.M-bonus 分域）。
 
     所有读 EFFECT_RULES[key].cap 做 clamp 的引擎点（effects 叠层 clamp /
     schedule period gain clamp / 装配层渠道 gain clamp）统一走本函数：
-    cap = EFFECT_RULES 基础 cap + actor.cap_bonus[key]（纯 flat int 增量，
-    stat_bonus 平行哲学——引擎零语义，装配层开战写入）。actor 缺省/无
-    cap_bonus → 基础 cap。基础 cap 无声明（0）→ 999999 不设限（增量无意义）。
+    cap = EFFECT_RULES 基础 cap + actor.bonus.cap[key]（纯 flat int 增量，
+    bonus 容器平行哲学——引擎零语义，装配层开战写入）。actor 缺省/无
+    bonus.cap → 基础 cap。基础 cap 无声明（0）→ 999999 不设限（增量无意义）。
     """
     base = int(state_def(key).get("cap") or 0) or 999999
     if base >= 999999:
         return base
     try:
-        cb = (actor or {}).get("cap_bonus") or {}
+        cb = ((actor or {}).get("bonus") or {}).get("cap") or {}
         bonus = int(cb.get(key, 0) or 0)
     except Exception:
         bonus = 0
@@ -295,7 +295,8 @@ def act_apply(battle, caster, target, params, logs):
     op = params.get("op")
     if op in ("add", "set") and not params.get("stat"):
         # v181.M-R2e B3：amount/cur float 读（stacks 允许小数刻度——faith 衰减等）；
-        # cap 收敛 _cap_of（方案 A：EFFECT_RULES 基础 cap + actor.cap_bonus 动态）。
+        # cap 收敛 _cap_of（方案 A：EFFECT_RULES 基础 cap + actor.bonus.cap 动态，
+        # v181.M-bonus 分域——旧 actor cap_bonus 键已全清）。
         # amount<=0 仍不加（负向消费走 consume / schedule period，apply 只增/置）。
         amount = float(params.get("amount", params.get("value", params.get("stacks", 0))) or 0)
         cap = _cap_of(holder, key)

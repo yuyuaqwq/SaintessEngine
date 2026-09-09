@@ -85,12 +85,27 @@ def from_state(st: dict) -> Battle:
 
 
 def _deserialize_actor(data: dict) -> dict:
-    """JSON 化 actor dict → actor（重建 _skill_index 空壳，Battle 构造时再索引）。"""
+    """JSON 化 actor dict → actor（重建 _skill_index 空壳，Battle 构造时再索引）。
+
+    v181.M-bonus：旧档 actor（无 bonus 容器、带 stat_bonus/cap_bonus 旧键）一次性
+    迁移进 bonus 分域并清旧键（存档数据迁移，非引擎读源回落——引擎读源一律
+    bonus 分域 get 兜底；新档 actor 已带 bonus 容器则原样）。
+    """
     actor = dict(data)
     actor.setdefault("effects", {})
     actor.setdefault("shields", {})
     actor.setdefault("cooldown", {})
     actor.setdefault("ext", {})
+    _bns = actor.get("bonus")
+    if not isinstance(_bns, dict) or "panel" not in _bns:
+        actor["bonus"] = {
+            "panel": dict(actor.get("stat_bonus") or actor.get("title_bonus") or {}),
+            "cap": dict(actor.get("cap_bonus") or {}),
+            "cost": {},
+        }
+        actor.pop("stat_bonus", None)
+        actor.pop("cap_bonus", None)
+        actor.pop("title_bonus", None)
     actor["_skill_index"] = {}
     return actor
 

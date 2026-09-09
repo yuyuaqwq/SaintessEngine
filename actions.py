@@ -107,8 +107,12 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
     effects 已有该 key 条目且 stacks < 需求 → 资源不足不可施放（返回 False 并把
     拦截文案写入 logs，命令层可直接展示）。effects 无该 key 条目（渠道未装配的
     资源技能）→ 不拦（保持历史行为；R2 渠道接通后条目自然出现即自动严格）。
+
+    v181.M-bonus：预检消耗 = _skill_pay_of 折算值（bonus.cost 消耗修正后），
+    与 _spend_skill_cost 扣费同源（同一折算函数——足额边界按折后值判）。
     """
-    res_cost = info.get("res_cost") or {}
+    pay = _skill_pay_of(actor, info)
+    res_cost = pay.get("res") or {}
     if res_cost and logs is not None:
         ef = actor.get("effects") or {}
         for rk, rv in res_cost.items():
@@ -118,18 +122,23 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
             # v181.M-R2e B3：float 读（faith 衰减层 9.3 ≥ 3 足额判定保真）
             cur = float(entry.get("stacks", 0) or 0)
             if cur < float(rv or 0):
-                logs.append(f"⚡ 核心资源不足：需要 {rv} {rk}，当前 {cur:g}！")
+                logs.append(f"⚡ 核心资源不足：需要 {rv:g} {rk}，当前 {cur:g}！")
                 return False
     return True
 
 
 def _spend_skill_cost(actor: dict, info: dict):
-    """扣除技能蓝耗/核心资源（effects 容器 stacks）。basic/无消耗技能跳过。"""
-    mp = int(info.get("mp", 0) or 0)
+    """扣除技能蓝耗/核心资源（effects 容器 stacks）。basic/无消耗技能跳过。
+
+    v181.M-bonus：扣费值 = _skill_pay_of 折算（与 _skill_usable 预检同源）；
+    浮点结果策略见 _skill_pay_of docstring（floor + 保底 1，玩家受益方向）。
+    """
+    pay = _skill_pay_of(actor, info)
+    mp = int(pay.get("mp") or 0)
     if mp > 0 and actor.get("mp") is not None:
         actor["mp"] = max(0, int(actor.get("mp", 0)) - mp)
     # 核心资源消耗（res_cost：扣 effects[key].stacks）
-    res_cost = info.get("res_cost") or {}
+    res_cost = pay.get("res") or {}
     if res_cost:
         ef = actor.setdefault("effects", {})
         for rk, rv in res_cost.items():
@@ -147,6 +156,90 @@ def _spend_skill_cost(actor: dict, info: dict):
     if consume_all and consume_all.get("key"):
         ef = actor.setdefault("effects", {})
         ef.pop(consume_all["key"], None)
+
+
+# ============================================================
+# v181.M-bonus cost 域：技能消耗统一折算点（预检/扣费同源）
+# ============================================================
+# actor["bonus"]["cost"] 形态与写入约定见 services/battle2_equip_proc.py
+# _apply_cost_bonus（词条装配翻译器）——引擎只读不写：
+#   {"mp_pct": 0.10, "mp_flat": 5, "res": {"energy": 0.05},
+#    "when": [{"mp_pct": ..., "judge": {...}}]}
+# 取整策略（v181.M-bonus 定稿，测试锁死）：
+#   pay = max(1, floor(声明 × (1 - Σpct)) - Σflat)
+#   - 折扣只减不增；声明 >0 的技能保底扣 1（0 消耗不许白嫖）
+#   - floor 向下取整（玩家受益方向）；无折扣 → 返回值与声明一致（行为零变化）
+#   - mp 与 res_cost 各自折算（res 折扣只作用于同名资源 key）
+# judge 谓词（施放点按技能判；装配层写——字段间 OR，任一命中即计入）：
+#   {"element": True} → info.element 非空；{"mech_prefix": [...]} → info.mech 前缀；
+#   {"name_contains": [...]} → 技能显示名 info.name 含任一子串；空 judge = 恒命中
+
+
+def _bonus_cost_of(actor: dict) -> dict:
+    """bonus.cost 分域读（无容器/无域 → {}；引擎读源兜底铁律）。"""
+    try:
+        _c = ((actor or {}).get("bonus") or {}).get("cost")
+        return _c if isinstance(_c, dict) else {}
+    except Exception:
+        return {}
+
+
+def _cost_judge_hit(judge, info: dict) -> bool:
+    """cost when 条目判据命中（任一谓词命中即 True；无 judge/空 judge 恒命中）。"""
+    if not isinstance(judge, dict) or not judge:
+        return True
+    try:
+        if judge.get("element") and (info or {}).get("element"):
+            return True
+        _m = str((info or {}).get("mech") or "")
+        for _p in (judge.get("mech_prefix") or []):
+            if _m.startswith(str(_p)):
+                return True
+        _nm = str((info or {}).get("name") or "")
+        for _kw in (judge.get("name_contains") or []):
+            if _kw and _kw in _nm:
+                return True
+    except Exception:
+        return False
+    return False
+
+
+def _skill_pay_of(actor: dict, info: dict) -> dict:
+    """技能实际消耗（v181.M-bonus 统一折算点，_skill_usable 预检与 _spend_skill_cost
+    扣费同源都走本函数）。返回 {"mp": int, "res": {key: int}}——折后值。
+
+    折扣聚合：bonus.cost 顶层无条件域（mp_pct/mp_flat/res）+ when 列表逐条按
+    judge 判本技能命中计入（同技能命中多条目 → pct/flat 加和；跨技能天然过滤）。
+    """
+    cost = _bonus_cost_of(actor)
+    mp_pct = float(cost.get("mp_pct") or 0)
+    mp_flat = int(cost.get("mp_flat") or 0)
+    res_disc: dict = {}
+    try:
+        for _k, _v in (cost.get("res") or {}).items():
+            res_disc[str(_k)] = float(_v or 0)
+    except Exception:
+        pass
+    for _w in (cost.get("when") or []):
+        if not isinstance(_w, dict) or not _cost_judge_hit(_w.get("judge"), info):
+            continue
+        mp_pct += float(_w.get("mp_pct") or 0)
+        mp_flat += int(_w.get("mp_flat") or 0)
+        for _k, _v in (_w.get("res") or {}).items():
+            res_disc[str(_k)] = float(res_disc.get(str(_k), 0.0) or 0.0) + float(_v or 0)
+    out: dict = {"mp": 0, "res": {}}
+    _dmp = int((info or {}).get("mp", 0) or 0)
+    if _dmp > 0:
+        out["mp"] = max(1, int(_dmp * (1.0 - min(max(mp_pct, 0.0), 0.99))) - mp_flat)
+    for _rk, _rv in ((info or {}).get("res_cost") or {}).items():
+        try:
+            _d = float(_rv or 0)
+        except Exception:
+            _d = 0.0
+        if _d > 0:
+            _disc = float(res_disc.get(str(_rk), 0.0) or 0.0)
+            out["res"][_rk] = max(1, int(_d * (1.0 - min(max(_disc, 0.0), 0.99))))
+    return out
 
 
 def _default_target(battle, actor: dict) -> Optional[dict]:
