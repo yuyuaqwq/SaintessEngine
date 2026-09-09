@@ -64,6 +64,8 @@ def from_state(st: dict) -> Battle:
                for sn, acts in (st.get("sides") or {}).items()},
         title_bonus=st.get("title_bonus") or {},
         hostile_map=st.get("hostile_map") or {},
+        # N10-B6b：恢复路径不重播初始 ct（actor ct 已随存档反序列化）
+        seed_ct=False,
     )
     b._now = float(st.get("now", 0) or 0)
     b._p_acts = int(st.get("p_acts", 0) or 0)

@@ -32,7 +32,7 @@ class Battle:
                  pet: Optional[dict] = None, st: Optional[dict] = None,
                  hostile_map: Optional[dict] = None,
                  target_picker=None, on_event=None, action_override=None,
-                 script_hook=None, **kwargs):
+                 script_hook=None, seed_ct: bool = True, **kwargs):
         """构造战斗。
 
         sides: dict[str, list[actor]] —— 唯一入口。sides["player"] 第一个
@@ -79,11 +79,24 @@ class Battle:
         self._started: bool = False
         # 技能索引：actor.skills key 列表 → 技能 dict（从 data 桥读取）
         self._index_skills()
-        # 初始 ct（N4 前：所有 actor ct=0，命令层轮流驱动）
-        for _acts in self.sides.values():
-            for _a in _acts:
-                if "ct" not in _a or _a.get("ct") is None:
-                    _a["ct"] = 0.0
+        # 初始 ct 播种（N10-B6b 对齐旧引擎 _ct_initial_wait：开局第一动也按速度排，
+        # 快者先手；旧 battle.py:733/770/1090 同款。此前全 0 = 玩家/命令层首轮抢跑、
+        # 快怪在首轮被跳过——真人对拍暴露的节奏 bug）
+        # seed_ct=False（from_state 恢复路径）：actor ct 已随存档反序列化，不重播。
+        if seed_ct:
+            for _acts in self.sides.values():
+                for _a in _acts:
+                    _has_ct = _a.get("ct") is not None
+                    if not _has_ct or float(_a.get("ct") or 0) <= 0:
+                        from .schedule import initial_ct as _ict
+                        _spd = _a.get("spd", 0) or 0
+                        # 真实玩家 actor 裸 spd 可能 0（面板聚合）——用聚合面板速度口径
+                        try:
+                            from . import stats as S
+                            _spd = S.actor_spd(self, _a)
+                        except Exception:
+                            pass
+                        _a["ct"] = _ict(_spd)
 
     # ============================================================
     # 构造辅助
