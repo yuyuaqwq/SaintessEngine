@@ -45,6 +45,8 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
         return 0
     # N10-B4 元素免疫/弱点表（v178 E5 数据驱动）：target.element_immune 含元素 → 归 0；
     # element_weak[元素] > 1 → ×倍率。引擎零知识：字段/元素名全是数据。
+    # N10-B6c 元素抗性（承伤方面板 elem_res/abyss_res）：dark 吃深渊抗、其余吃元素抗，
+    # cap 50%——对齐旧 _hostile_mitigate 8423-8458（玩家/怪 actor 通用）。
     if element:
         try:
             _imm = target.get("element_immune") or []
@@ -57,8 +59,17 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
                 if _wm > 1.0:
                     dmg = max(1, int(dmg * _wm))
                     logs.append(f"⚡ 弱点！【{target.get('name', '敌人')}】弱{element}，受到额外伤害！")
+            # 元素抗性减免（承伤方视角；怪打玩家吃玩家词条抗，玩家打怪怪无键=0 无感）
+            from . import stats as _S
+            _st_t = _S.actor_stats(battle, target)
+            _res_key = "abyss_res" if element == "dark" else "elem_res"
+            _ar = min(float(_st_t.get(_res_key, 0) or 0), 0.5)
+            if _ar > 0 and dmg > 0:
+                red = max(1, int(dmg * _ar))
+                dmg = max(1, dmg - red)
+                logs.append(f"🛡️ 元素抗性减免 {red} 点伤害！")
         except Exception:
-            pass  # 免疫/弱点异常不阻断落地
+            pass  # 免疫/弱点/抗性异常不阻断落地
     # N9.13 数值修正钩子：taken_calc（承伤者视角减伤乘区）——装配层乘区扩展动作
     # 改 battle._fire_ctx["mult"]（沸血全减伤/death_dance 减伤等条件减伤）
     try:
