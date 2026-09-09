@@ -79,6 +79,20 @@ def do_skill(battle, ctx) -> list:
     cd = int(info.get("cd", 0) or 0)
     if cd > 0:
         from .battle import _now_of
+        # cd_mult 修正（v181.M：effects 中态条目 EFFECT_RULES 声明 cd_mult——影舞态
+        # CD−20% 等态内冷却加速；声明驱动零名词，多态取最速 min）
+        try:
+            _cdm = 1.0
+            from .state_effects import state_def as _sdef
+            for _ek, _ee in (actor.get("effects") or {}).items():
+                if isinstance(_ee, dict):
+                    _cm = (_sdef(_ek) or {}).get("cd_mult")
+                    if _cm is not None:
+                        _cdm = min(_cdm, float(_cm))
+            if _cdm < 1.0:
+                cd = max(1, int(cd * _cdm))
+        except Exception:
+            pass  # cd 修正异常不阻断
         actor.setdefault("cooldown", {})[info.get("name", ctx.skill_name or "?")] = _now_of(battle) + cd
     # ---- N8 事件：施放瞬间（扣费/冷却后、结算前；主体=施法者）----
     try:
