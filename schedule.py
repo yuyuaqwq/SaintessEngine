@@ -232,9 +232,11 @@ def _settle_time_effects(battle, logs: list):
                     if not isinstance(period, dict):
                         continue
                     n = int(entry.get("stacks", 0) or 0)
-                    if n <= 0:
-                        continue
                     direction = str(period.get("dir", "damage") or "damage")
+                    # v181.M-R2：dir=gain（资源自然回）不依赖现有层数——0 层也要回
+                    # （游侠 energy 耗到 0 若被 n<=0 拦截将永远回不了，卡死）
+                    if n <= 0 and direction != "gain":
+                        continue
                     interval = float(period.get("interval", 1.0) or 1.0)
                     turns = int(period.get("turns", 0) or 0)
                     # 首次挂：登记下一跳（对齐旧 DOT/事件卡首跳延迟）
@@ -301,6 +303,22 @@ def _settle_time_effects(battle, logs: list):
                                 _real = int(a["mp"]) - _before
                                 if _real > 0:
                                     logs.append(f"🍲 {a.get('name', '目标')} 持续恢复，恢复 {_real} 点魔力！")
+                        elif direction == "gain":
+                            # v181.M-R2：资源自然回（声明级，引擎零职业知识）——给自身
+                            # effects[key] 加层 clamp cap（游侠 energy 专注流量制：每刻 +18）。
+                            # 静默回复（资源跳不刷战斗日志）；cap 取 period.cap 或规则表 cap。
+                            _amt = int(period.get("amount", 0) or 0)
+                            _cap = int(period.get("cap", 0) or 0)
+                            if _cap <= 0:
+                                _cfg = table.get(key) or {}
+                                _cap = int(_cfg.get("cap", 0) or 0)
+                            if _amt > 0:
+                                _cur = int(entry.get("stacks", 0) or 0)
+                                _new = _cur + _amt
+                                if _cap > 0:
+                                    _new = min(_cap, _new)
+                                if _new > _cur:
+                                    entry["stacks"] = _new
                         # 限时周期：跳够 turns 次 → 清层（到期自然消失）
                         if turns > 0:
                             c = int(djump.get(key, 0) or 0) + 1
