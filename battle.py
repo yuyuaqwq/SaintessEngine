@@ -111,6 +111,13 @@ class Battle:
                         if not info:
                             # sk_xxx key → 查 engine.skill_by_key
                             info = E.skill_by_key(sk)
+                        if not info:
+                            # N5B 怪技能源（ms_* 表——旧引擎 7666 同款：先怪表后玩家表；
+                            # battle2 此前只查玩家源 → 怪技能索引空 → 技能静默空放）
+                            try:
+                                info = (C.MONSTER_SKILLS or {}).get(sk)
+                            except Exception:
+                                info = None
                         if info:
                             idx[info.get("name", sk)] = info
                             idx[sk] = info
@@ -255,6 +262,17 @@ class Battle:
             _a = aa["act"]
             action = _a.get("type", "attack")
             skill_name = _a.get("skill")
+        else:
+            # N5B 怪 AI 决策器（无 auto_act 显式招时——导演换招/装配指定优先，
+            # AI 只兜底自选；再回落普攻）。resolve 返回 None = 普攻。
+            try:
+                from .ai import resolve_ai_move
+                _mv = resolve_ai_move(self, caster)
+                if _mv and isinstance(_mv, dict):
+                    action = str(_mv.get("type") or "attack")
+                    skill_name = _mv.get("skill")
+            except Exception:
+                pass
         if ctx_target is None and self.target_picker is not None:
             try:
                 ctx_target = self.target_picker(self, caster) or None
@@ -265,6 +283,8 @@ class Battle:
         logs, ended = self.act(ctx)
         if _hook_logs:
             logs = _hook_logs + logs
+        # 个体行动计数（AI round_mod 谓词；随 actor 序列化持久化）
+        caster["act_count"] = int(caster.get("act_count", 0) or 0) + 1
         # 行动后推 ct（自动 actor）
         if not ended:
             from .schedule import _after_act
