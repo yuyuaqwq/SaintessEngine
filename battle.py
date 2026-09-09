@@ -271,6 +271,11 @@ class Battle:
                 if _mv and isinstance(_mv, dict):
                     action = str(_mv.get("type") or "attack")
                     skill_name = _mv.get("skill")
+                    # N5B target_hint：AI 战术目标提示（如残血收割 lowest_hp）——
+                    # 挂瞬态字段，target_picker（命令层）消费后即弃；
+                    # 无 picker/未知 hint → 回落默认仇恨目标，尾部清理防残留
+                    if _mv.get("target_hint"):
+                        caster["_target_hint"] = _mv["target_hint"]
             except Exception:
                 pass
         if ctx_target is None and self.target_picker is not None:
@@ -278,6 +283,8 @@ class Battle:
                 ctx_target = self.target_picker(self, caster) or None
             except Exception:
                 ctx_target = None
+        # hint 一次性消费（picker 未识别也清，防残留到下一帧）
+        caster.pop("_target_hint", None)
         ctx = ActCtx(caster=caster, action=action, skill_name=skill_name,
                      target=ctx_target)
         logs, ended = self.act(ctx)
