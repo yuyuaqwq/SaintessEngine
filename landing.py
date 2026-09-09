@@ -21,7 +21,8 @@ from typing import Optional
 # ============================================================
 
 def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
-                logs: list, dmg_kind: str = "", defend_reduce: Optional[float] = None) -> int:
+                logs: list, dmg_kind: str = "", defend_reduce: Optional[float] = None,
+                element: str = "") -> int:
     """伤害落地主链。返回实际扣血。
 
     source: 攻击方 actor（等级压制基准；None = 无来源不压制）
@@ -31,6 +32,10 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     defend_reduce: 攻击技能自带方向性防御挡伤比例（v178 E6：如风暴之眼 0.8 =
         玩家防御该技能挡 80% 只受 20%）；None/缺省 = 0.5 旧行为（防御伤害减半）。
         引擎零知识：只是读技能数据字段的数字，非名词判断。
+    element: 攻击技能元素标签（"fire"/"ice"/"thunder"/"dark"/"holy"…；"" = 无元素）——
+        N10-B4 承伤方免疫/弱点表消费（v178 E5 数据驱动）：target.element_immune 含该
+        元素 → 伤害归 0；target.element_weak[element] > 1 → 伤害 × 倍率。引擎零知识：
+        元素名是数据字段值，免疫/弱点是 target 上的数据表。
     """
     if not target or amount <= 0:
         return 0
@@ -38,6 +43,22 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     dmg = _lv_pressure(battle, source, target, amount)
     if dmg <= 0:
         return 0
+    # N10-B4 元素免疫/弱点表（v178 E5 数据驱动）：target.element_immune 含元素 → 归 0；
+    # element_weak[元素] > 1 → ×倍率。引擎零知识：字段/元素名全是数据。
+    if element:
+        try:
+            _imm = target.get("element_immune") or []
+            if isinstance(_imm, (list, tuple)) and element in _imm:
+                logs.append(f"💠 免疫！【{target.get('name', '敌人')}】免疫{element}伤害！")
+                return 0
+            _wk = target.get("element_weak") or {}
+            if isinstance(_wk, dict):
+                _wm = float(_wk.get(element, 1.0) or 1.0)
+                if _wm > 1.0:
+                    dmg = max(1, int(dmg * _wm))
+                    logs.append(f"⚡ 弱点！【{target.get('name', '敌人')}】弱{element}，受到额外伤害！")
+        except Exception:
+            pass  # 免疫/弱点异常不阻断落地
     # N9.13 数值修正钩子：taken_calc（承伤者视角减伤乘区）——装配层乘区扩展动作
     # 改 battle._fire_ctx["mult"]（沸血全减伤/death_dance 减伤等条件减伤）
     try:
