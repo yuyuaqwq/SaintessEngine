@@ -13,33 +13,37 @@ from __future__ import annotations
 import random
 from typing import Optional
 
-from .. import engine as E
-from ..core import constants as K
+from . import config as _cfg
 from . import stats as S
 from .actors import actor_alive
 
-# kind 常量（旧 battle.py K_PHYS/K_MAGI/K_TRUE 同义；用文案判断会脆，这里按旧语义）
-K_PHYS = "物理"
-K_MAGI = "魔法"
-K_TRUE = "真伤"
-K_HEAL = "治疗"
-K_BUFF = "增益"
+# S1 断链（docs/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 R1/R2/R14/R15）：
+# 引擎不得 import game.engine / game.core.constants —— 原 `E.*` 数值公式调用与
+# 中文 kind 字面量全部改走 config 注入面（内容侧 game/bootstrap.py 装配）。
+
+
+def _kind(name: str) -> str:
+    """kind 语义值（内容注入；未装配 → ""）。引擎零 kind 字面量。"""
+    return _cfg.kind_of(name)
 
 
 def resolve_basic_skill(class_name: Optional[str]) -> dict:
-    """取职业 basic_skill 配置；无则回退纯物理普攻。
+    """取职业 basic_skill 配置；无则回退普攻兜底配置（均为内容侧注入）。
 
     与旧 _actor_attack 同语义：普攻 = 释放职业 basic_skill（无 CD/无蓝耗）。
     """
     try:
-        from .. import content as C
-        cid = C.resolve("classes", class_name or "")
-        bs = (C.CLASSES.get(cid, {}) or {}).get("basic_skill") or {}
+        fn = _cfg.get_hook("basic_skill_fn")
+        bs = fn(class_name) if fn is not None else None
         if isinstance(bs, dict) and bs.get("name") and (bs.get("exprs") or bs.get("formula")):
             return dict(bs)
     except Exception:
         pass
-    return {"name": "攻击", "kind": K_PHYS, "exprs": ["atk*1.0"]}
+    fb = _cfg.get_hook("basic_fallback")
+    if isinstance(fb, dict) and fb:
+        return dict(fb)
+    # 未装配：结构化兜底（零内容名；strict=True 时上面 get_hook 已抛）
+    return {"name": "", "kind": _kind("phys"), "exprs": ["atk*1.0"]}
 
 
 def do_attack(battle, ctx) -> list:
@@ -101,15 +105,15 @@ def do_skill(battle, ctx) -> list:
     except Exception:
         pass
     # ---- 4. kind 分派 ----
-    if kind == K_HEAL:
+    if kind == _kind("heal"):
         return _do_heal(battle, ctx, actor, info, logs)
-    if kind == K_BUFF:
+    if kind == _kind("buff"):
         return _do_buff(battle, ctx, actor, info, logs)
     # ---- 攻击类：目标解析 + 伤害管线 ----
     target = ctx.target if ctx.target is not None else _default_target(battle, actor)
     if target is None:
         return ["但没有可攻击的目标！"]
-    lv = E.skill_level_of(actor, info.get("name", "")) if actor.get("class_name") else 0
+    lv = _cfg.formulas().skill_level_of(actor, info.get("name", "")) if actor.get("class_name") else 0
     logs.extend(_attack_damage_pipeline(battle, actor, target, info, lv))
     return logs
 
@@ -256,6 +260,10 @@ def _skill_pay_of(actor: dict, info: dict) -> dict:
     return out
 
 
+# S2 公开 API 面（§5）：私有 → 公开；旧下划线名保留为别名（内容层/测试仍在用）。
+skill_pay_of = _skill_pay_of
+
+
 def _default_target(battle, actor: dict) -> Optional[dict]:
     """缺省目标：actor 敌对阵营存活第一人（AI/命令层未指定 target 时）。"""
     from .actors import hostile_actors, actor_alive
@@ -293,7 +301,7 @@ def _deal_aoe(battle, actor: dict, target: dict, info: dict, total: int) -> list
     实现：_attack_damage_pipeline 的 AOE 变体——多段循环在单目标上已完成
     （total 是主目标总伤）；这里对每个目标重算单段伤害之和。
     """
-    from ..core import formation as _fm
+    from .support import formation as _fm
     from .actors import actor_alive, hostile_sides
     logs = []
     scope = "all" if info.get("aoe") is True else str(info.get("aoe") or "all")
@@ -344,7 +352,7 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
     pf_phys = int(st.get("pene_flat_phys", 0) or 0)
     pp_magi = float(st.get("pene_magi", 0) or 0)
     pf_magi = int(st.get("pene_flat_magi", 0) or 0)
-    skill_flat = E.skill_flat_value(int(actor.get("level", 1) or 1), lv, info)
+    skill_flat = _cfg.formulas().skill_flat_value(int(actor.get("level", 1) or 1), lv, info)
     total = 0
     magi_part = 0
     for seg in range(multi):
@@ -469,7 +477,7 @@ def _apply_hit_effects(battle, actor: dict, target: dict, info: dict, lv: int, l
 
 
 def _skill_lv_of(battle, actor: dict) -> int:
-    return E.skill_level_of(actor, "") if actor.get("class_name") else 0
+    return _cfg.formulas().skill_level_of(actor, "") if actor.get("class_name") else 0
 
 
 def _aoe_falloff_apply(logs):
@@ -481,17 +489,17 @@ def _skill_seg_damage(battle, actor, target, st, est, info, lv,
                       seg_crit, lucky, pp_phys, pf_phys, pp_magi, pf_magi,
                       skill_flat) -> tuple:
     """单段伤害计算（对齐旧 _skill_seg_damage 的 expr 分支 + 非 formula 兜底）。"""
-    expr = E.skill_formula_expr(info, lv)
+    expr = _cfg.formulas().skill_formula_expr(info, lv)
     if expr:
         # expr 段：type 由 kind 推导（物理→phys、真伤→true、其余 magi）
         kind = info.get("kind", "")
-        seg_type = "true" if kind == K_TRUE else ("phys" if kind == K_PHYS else "magi")
+        seg_type = "true" if kind == _kind("true") else ("phys" if kind == _kind("phys") else "magi")
         st["_player_lv"] = int(actor.get("level", 1) or 1)
         st["_skill_lv"] = lv
         # expr 已内嵌技能成长 → 剔除 skill_power_mult（basic 无成长 → 恒 1.0，无影响）
-        spm = E.skill_power_mult(lv, info) or 1.0
+        spm = _cfg.formulas().skill_power_mult(lv, info) or 1.0
         pmult_expr = (1.0 / spm) if spm else 1.0
-        dmg, magi = E.resolve_formula(
+        dmg, magi = _cfg.formulas().resolve_formula(
             [{"expr": expr, "type": seg_type}], st, est.get("def", 0), est.get("mdef", 0),
             is_crit=seg_crit, pene_phys=pp_phys, pene_magi=pp_magi,
             pene_flat_phys=pf_phys, pene_flat_magi=pf_magi,
@@ -504,14 +512,14 @@ def _skill_seg_damage(battle, actor, target, st, est, info, lv,
     # 非 formula/非 expr：按 kind 兜底（对齐旧非 formula 路径）
     kind = info.get("kind", "")
     power = float(info.get("power", 1.0) or 1.0)
-    if kind == K_TRUE:
-        return E.calc_damage(int((st.get("atk", 0) * power + skill_flat)), 0, seg_crit,
-                             dmg_type="true"), 0
-    if kind == K_PHYS:
-        return E.calc_damage(int((st.get("atk", 0) * power + skill_flat)), est.get("def", 0),
-                             seg_crit, pene_pct=pp_phys, pene_flat=pf_phys, dmg_type="phys"), 0
-    return E.calc_damage(int((st.get("matk", 0) * power + skill_flat)), est.get("mdef", 0),
-                         seg_crit, pene_pct=pp_magi, pene_flat=pf_magi, dmg_type="magi"), 0
+    if kind == _kind("true"):
+        return _cfg.formulas().calc_damage(int((st.get("atk", 0) * power + skill_flat)), 0, seg_crit,
+                                           dmg_type="true"), 0
+    if kind == _kind("phys"):
+        return _cfg.formulas().calc_damage(int((st.get("atk", 0) * power + skill_flat)), est.get("def", 0),
+                                           seg_crit, pene_pct=pp_phys, pene_flat=pf_phys, dmg_type="phys"), 0
+    return _cfg.formulas().calc_damage(int((st.get("matk", 0) * power + skill_flat)), est.get("mdef", 0),
+                                       seg_crit, pene_pct=pp_magi, pene_flat=pf_magi, dmg_type="magi"), 0
 
 
 def _deal_hit(battle, actor: dict, target: dict, dmg: int,
@@ -564,7 +572,7 @@ def _settle_lifesteal(battle, actor: dict, dmg_total: int, kind: str, logs: list
     - 技能级：skill_info.lifesteal → E.skill_lifesteal_pct(info, lv) 附加
     - cap 30%（对齐旧 min(rate, 0.30)）；mortal_wound → ×0.5
     """
-    if dmg_total <= 0 or kind == K_TRUE:
+    if dmg_total <= 0 or kind == _kind("true"):
         return
     try:
         _mw = _mortal_wound_mult(battle, actor)
@@ -581,7 +589,7 @@ def _settle_lifesteal(battle, actor: dict, dmg_total: int, kind: str, logs: list
             rate_m = 1 - (1 - rate) * (1 - sub_m)
             heal = int(phys_dmg * min(rate_p, 0.30) + magi_part * min(rate_m, 0.30))
         else:
-            is_magi = (kind == K_MAGI)
+            is_magi = (kind == _kind("magi"))
             sub_key = "lifesteal_magi" if is_magi else "lifesteal_phys"
             sub = float(st.get(sub_key, 0) or 0)
             if sub > 0:
@@ -591,7 +599,7 @@ def _settle_lifesteal(battle, actor: dict, dmg_total: int, kind: str, logs: list
         # 技能级吸血（info.lifesteal，如嗜血斩 0.25 随等级成长）——独立叠加、cap 30% 同限
         if skill_info and skill_info.get("lifesteal"):
             try:
-                spct = E.skill_lifesteal_pct(skill_info, skill_lv)
+                spct = _cfg.formulas().skill_lifesteal_pct(skill_info, skill_lv)
                 heal += int(dmg_total * min(float(spct), 0.30))
             except Exception:
                 pass
@@ -619,7 +627,7 @@ def _do_heal(battle, ctx, actor, info, logs) -> list:
     3. 兜底 → matk × power × skill_power_mult
     落地：clamp max_hp（禁疗/受疗修正 N3 effects）
     """
-    lv = E.skill_level_of(actor, info.get("name", "")) if actor.get("class_name") else 0
+    lv = _cfg.formulas().skill_level_of(actor, info.get("name", "")) if actor.get("class_name") else 0
     # 治疗目标：ctx.target（命令层可指定队友/自己）；None → 施法者自己
     target = ctx.target if ctx.target is not None else actor
     if target.get("hp") is None:
@@ -676,7 +684,7 @@ def _heal_amount(st: dict, actor: dict, info: dict, lv: int) -> int:
             lvx = max(1, min(int(lv or 1), len(hf_raw)))
             hf = hf_raw[lvx - 1]
         try:
-            from ..core.formula_expr import compile_expr, eval_expr, build_vars
+            from .support.formula_expr import compile_expr, eval_expr, build_vars
             st2 = dict(st)
             st2["_player_lv"] = int(actor.get("level", 1) or 1)
             st2["_skill_lv"] = lv
@@ -688,7 +696,7 @@ def _heal_amount(st: dict, actor: dict, info: dict, lv: int) -> int:
             # 段列表求和
             hv = 0
             for hseg in hf:
-                hseg_expr = E.skill_formula_expr_for_seg(hseg, lv)
+                hseg_expr = _cfg.formulas().skill_formula_expr_for_seg(hseg, lv)
                 if isinstance(hseg, dict) and hseg_expr:
                     hv += eval_expr(compile_expr(hseg_expr), _vars) * float(hseg.get("mult", 1.0) or 1.0)
                 else:
@@ -705,9 +713,13 @@ def _heal_amount(st: dict, actor: dict, info: dict, lv: int) -> int:
         except Exception:
             return 0
     if info.get("hp_pct"):
-        return int(actor.get("max_hp", 0) * float(info.get("hp_pct", 0)) * E.skill_power_mult(lv, info))
+        return int(actor.get("max_hp", 0) * float(info.get("hp_pct", 0)) * _cfg.formulas().skill_power_mult(lv, info))
     # 兜底 matk × power（v95r38：power<1 曾是 hp% 语义，v174 已废弃改显式 hp_pct）
-    return int(st.get("matk", 0) * float(info.get("power", 1.0) or 1.0) * E.skill_power_mult(lv, info))
+    return int(st.get("matk", 0) * float(info.get("power", 1.0) or 1.0) * _cfg.formulas().skill_power_mult(lv, info))
+
+
+# S2 公开 API 面（§5）：私有 → 公开；旧下划线名保留为别名（commands/instance_battle 仍在用）。
+heal_amount = _heal_amount
 
 
 # ============================================================
@@ -723,10 +735,8 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
     - team_keys 映射（xx_all → xx_up）
     - shield_self 护盾
     """
-    from ..engine import skill_buff_turns
-    from ..core import constants as C
     eff = info.get("effect")
-    lv = E.skill_level_of(actor, info.get("name", "")) if actor.get("class_name") else 0
+    lv = _cfg.formulas().skill_level_of(actor, info.get("name", "")) if actor.get("class_name") else 0
     # 怪物施法：buff_turns 固定读 info.buff_turns（缺省 3），不吃技能等级成长
     if not actor.get("class_name"):
         base_turns = int(info.get("buff_turns", 3) or 3)
@@ -734,7 +744,7 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
         # 玩家施法：skill_buff_turns 带 info → 读 buff_turns（战吼 10）。
         # 旧引擎 else 分支漏传 info → 战吼只给 3 刻（desc 说 10 刻）= 旧 bug
         # （test_commands_battle.py:96 断言固化）。新引擎做正确值：10 刻。
-        base_turns = skill_buff_turns(lv, info=info)
+        base_turns = _cfg.formulas().skill_buff_turns(lv, info=info)
     if eff:
         # 名词 effect → 统一走 apply_effects（查 EFFECT_ACTIONS 配置翻译成动词执行）
         # reduce 的 value（百分比）由配置动词的 value 折算参数给出
@@ -755,9 +765,8 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
             _eff_params["value"] = min(max(rp, 0.0), 0.9)
         # 护盾类：shield_self 盾值 = mech_val/effect_val（skill_mech_val 折算后传 value）
         if eff in ("shield_self", "shield_all", "shield") and "shield" in str(eff):
-            from ..engine import skill_mech_val
             if eff == "shield_self":
-                mval = skill_mech_val(info, lv) or int(info.get("effect_val", 0) or 0)
+                mval = _cfg.formulas().skill_mech_val(info, lv) or int(info.get("effect_val", 0) or 0)
                 _eff_params["value"] = mval
                 _eff_params["halve"] = False
             else:

@@ -74,6 +74,12 @@ def _cap_of(actor, key: str) -> int:
         bonus = 0
     return base + max(0, bonus)
 
+
+# S2 公开 API 面（docs/ENGINE_CONTENT_SPLIT_PLAN.md §5）：私有符号提升为公开，
+# **旧下划线名保留为别名**（内容层/测试仍在用，不得删）。
+norm_stack = _norm_stack
+cap_of = _cap_of
+
 # ============================================================
 # 动词注册表
 # ============================================================

@@ -16,6 +16,7 @@ from typing import Optional
 
 from .actors import ActCtx, actor_alive, actor_dead
 from . import actions
+from . import config as _cfg
 
 # 旧 battle 常量（对外兼容读）
 DEFAULT_CT_WAIT = 2.0  # CTB 基础行动间隔（N4 schedule 细化）
@@ -24,6 +25,10 @@ DEFAULT_CT_WAIT = 2.0  # CTB 基础行动间隔（N4 schedule 细化）
 def _now_of(battle) -> float:
     """battle 当前绝对时刻（schedule 未接入时 = 0；CD 以此刻为基准）。"""
     return float(getattr(battle, "_now", 0) or 0)
+
+
+# S2 公开 API 面（§5）：私有 → 公开；旧下划线名保留为别名（不得删）。
+now_of = _now_of
 
 
 class Battle:
@@ -112,13 +117,13 @@ class Battle:
     def _index_one_actor(self, actor: dict) -> None:
         """单 actor 技能索引（构造期与运行期 add_actor 共用）。
 
-        N1：从 data_bridge 读技能表（旧 engine.skill_info）。技能 key 可能是
-        中文名或 sk_xxx——data_bridge 负责解析。索引失败不阻断（N1 政策：
+        S1 断链（docs/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 R9/R10）：原先 import
+        game.engine / game.content 直读技能表——现走 config 注入面
+        （skill_lookup / monster_skill_fn，内容侧装配）。技能 key 可能是
+        中文名或 sk_xxx——内容侧查询函数负责解析。索引失败不阻断（N1 政策：
         普攻走 resolve_basic_skill 兜底），故 try 包在本函数内、两个调用方同语义。
         """
         try:
-            from .. import engine as E
-            from .. import content as C
             idx = actor.setdefault("_skill_index", {})
             for sk in (actor.get("skills") or []):
                 if sk in idx:
@@ -126,15 +131,15 @@ class Battle:
                 info = None
                 # 尝试 skill_info（中文名/内部 key 双路）
                 if actor.get("class_name"):
-                    info = E.skill_info(actor["class_name"], sk)
+                    info = _cfg.skill_info_of(actor["class_name"], sk)
                 if not info:
-                    # sk_xxx key → 查 engine.skill_by_key
-                    info = E.skill_by_key(sk)
+                    # sk_xxx key → 查 skill_by_key
+                    info = _cfg.skill_by_key(sk)
                 if not info:
                     # N5B 怪技能源（ms_* 表——旧引擎 7666 同款：先怪表后玩家表；
                     # battle2 此前只查玩家源 → 怪技能索引空 → 技能静默空放）
                     try:
-                        info = (C.MONSTER_SKILLS or {}).get(sk)
+                        info = _cfg.monster_skill_of(sk)
                     except Exception:
                         info = None
                 if info:

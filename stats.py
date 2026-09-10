@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from .. import engine as E
+from . import config as _cfg
 
 
 def actor_stats(battle, actor: dict) -> dict:
@@ -83,18 +83,23 @@ def _apply_effects(st: dict, actor: dict) -> dict:
 
 
 def _player_base_stats(battle, actor: dict) -> dict:
-    """玩家/带 class_name 的 actor：走职业面板公式（不传 learned_skills——
-    面板并入被动由 engine 做；战斗侧被动动态处理，传了会双算，与旧 _player_stats 同）。
+    """玩家/带 class_name 的 actor：走职业面板公式（内容侧 config.panel_fn 注入；
+    不传 learned_skills——面板并入被动由内容侧做；战斗侧被动动态处理，传了会双算，
+    与旧 _player_stats 同）。
 
     title_bonus/bonus 容器（v181.M-bonus 统一数值容器；N5b4-4 鱼鱼拍板 per-actor 通用
     容器）：actor 自带 bonus.panel（外部面板数值增幅聚合，core/stat_bonus.py）优先——
     PVP 双方各带各的、随 actor 落盘；
     缺省回落 battle.title_bonus（野外单玩家整场一份，N10 前过渡）。空 dict 回落兜底。
+    未装配（无内容）→ strict 抛 EngineNotConfigured，否则空面板（见 R8）。
     """
     _tb = ((actor.get("bonus") or {}).get("panel")
            or getattr(battle, "title_bonus", None) or {})
-    st = E.player_final_stats(
-        actor.get("class_name", "战士"),
+    fn = _cfg.get_hook("panel_fn")
+    if fn is None:
+        return _cfg.unconfigured("panel_fn", {})
+    return fn(
+        actor.get("class_name", ""),
         actor.get("level", 1),
         actor.get("equipment") or {},
         actor.get("class_tier", 0),
@@ -103,7 +108,6 @@ def _player_base_stats(battle, actor: dict) -> dict:
         _tb,
         actor.get("race"),
     )
-    return st
 
 
 def _monster_base_stats(actor: dict) -> dict:
