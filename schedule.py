@@ -154,12 +154,22 @@ def _after_act(battle, actor: dict, action: str):
 
 
 def _advance_time(battle, dt: float, logs: list):
-    """推进全局时刻 dt（期间结算到期事件：DOT/时效）。"""
+    """推进全局时刻 dt（期间结算到期事件：DOT/时效 + 时钟事件广播）。
+
+    N4：DOT/时效结算（state_effects dot 规则 + buff 到期）接入点。
+    v181 破绽时间化：尾部广播 time_advance（通用「时钟推进」事件）——挂敌身条等
+    按刻连续结算的内容层声明订阅此事件，读点永远拿到当刻值（不再「谁读谁记得结算」）。
+    """
     if dt <= 0:
         return
     battle._now += dt
     # N4：DOT/时效结算（state_effects dot 规则 + buff 到期）接入点
     _settle_time_effects(battle, logs)
+    try:
+        from .effect_triggers import fire as _fire
+        _fire(battle, "time_advance", {"dt": float(dt), "now": float(battle._now)}, logs)
+    except Exception:
+        pass  # 时钟事件异常不阻断推进（容错铁律）
 
 
 def _settle_time_effects(battle, logs: list):
