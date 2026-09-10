@@ -86,56 +86,68 @@ class Battle:
         if seed_ct:
             for _acts in self.sides.values():
                 for _a in _acts:
-                    _has_ct = _a.get("ct") is not None
-                    if not _has_ct or float(_a.get("ct") or 0) <= 0:
-                        from .schedule import initial_ct as _ict
-                        _spd = _a.get("spd", 0) or 0
-                        # 真实玩家 actor 裸 spd 可能 0（面板聚合）——用聚合面板速度口径
-                        try:
-                            from . import stats as S
-                            _spd = S.actor_spd(self, _a)
-                        except Exception:
-                            pass
-                        _a["ct"] = _ict(_spd)
+                    self._seed_ct_one(_a)
 
     # ============================================================
     # 构造辅助
     # ============================================================
 
-    def _index_skills(self):
-        """把 skills key 列表解析成技能 dict 挂到 actor["_skill_index"]。
+    def _seed_ct_one(self, actor: dict) -> None:
+        """单 actor 初始 ct 播种（构造期与运行期 add_actor 共用）。
+
+        已有正 ct 不重播；裸 spd 可能 0（真实玩家 actor 面板聚合）——
+        用聚合面板速度口径（stats.actor_spd）。ct 为空会让 CTB 排序异常。
+        """
+        if actor.get("ct") is not None and float(actor.get("ct") or 0) > 0:
+            return
+        from .schedule import initial_ct as _ict
+        _spd = actor.get("spd", 0) or 0
+        try:
+            from . import stats as S
+            _spd = S.actor_spd(self, actor)
+        except Exception:
+            pass
+        actor["ct"] = _ict(_spd)
+
+    def _index_one_actor(self, actor: dict) -> None:
+        """单 actor 技能索引（构造期与运行期 add_actor 共用）。
 
         N1：从 data_bridge 读技能表（旧 engine.skill_info）。技能 key 可能是
-        中文名或 sk_xxx——data_bridge 负责解析。
+        中文名或 sk_xxx——data_bridge 负责解析。索引失败不阻断（N1 政策：
+        普攻走 resolve_basic_skill 兜底），故 try 包在本函数内、两个调用方同语义。
         """
         try:
             from .. import engine as E
             from .. import content as C
-            for _acts in self.sides.values():
-                for _a in _acts:
-                    idx = _a.setdefault("_skill_index", {})
-                    for sk in (_a.get("skills") or []):
-                        if sk in idx:
-                            continue
+            idx = actor.setdefault("_skill_index", {})
+            for sk in (actor.get("skills") or []):
+                if sk in idx:
+                    continue
+                info = None
+                # 尝试 skill_info（中文名/内部 key 双路）
+                if actor.get("class_name"):
+                    info = E.skill_info(actor["class_name"], sk)
+                if not info:
+                    # sk_xxx key → 查 engine.skill_by_key
+                    info = E.skill_by_key(sk)
+                if not info:
+                    # N5B 怪技能源（ms_* 表——旧引擎 7666 同款：先怪表后玩家表；
+                    # battle2 此前只查玩家源 → 怪技能索引空 → 技能静默空放）
+                    try:
+                        info = (C.MONSTER_SKILLS or {}).get(sk)
+                    except Exception:
                         info = None
-                        # 尝试 skill_info（中文名/内部 key 双路）
-                        if _a.get("class_name"):
-                            info = E.skill_info(_a["class_name"], sk)
-                        if not info:
-                            # sk_xxx key → 查 engine.skill_by_key
-                            info = E.skill_by_key(sk)
-                        if not info:
-                            # N5B 怪技能源（ms_* 表——旧引擎 7666 同款：先怪表后玩家表；
-                            # battle2 此前只查玩家源 → 怪技能索引空 → 技能静默空放）
-                            try:
-                                info = (C.MONSTER_SKILLS or {}).get(sk)
-                            except Exception:
-                                info = None
-                        if info:
-                            idx[info.get("name", sk)] = info
-                            idx[sk] = info
+                if info:
+                    idx[info.get("name", sk)] = info
+                    idx[sk] = info
         except Exception:
-            pass  # 索引失败不阻断构造（N1 普攻直接 resolve_basic_skill）
+            pass  # 索引失败不阻断（N1 普攻直接 resolve_basic_skill）
+
+    def _index_skills(self):
+        """构造期技能索引：遍历 sides 逐 actor 建（单个 actor 走 _index_one_actor）。"""
+        for _acts in self.sides.values():
+            for _a in _acts:
+                self._index_one_actor(_a)
 
     # ============================================================
     # 查询
@@ -169,6 +181,33 @@ class Battle:
         """有存活 actor 的阵营名列表。"""
         return [sn for sn, acts in self.sides.items()
                 if any(actor_alive(_a) for _a in acts)]
+
+    # ============================================================
+    # 运行期 actor 注册（召唤 / 援军 / 变身）
+    # ============================================================
+
+    def add_actor(self, actor: dict, side: str, front: bool = False) -> dict:
+        """向战斗注册一个新 actor（召唤 / 援军 / 变身）。
+
+        - 入 self.sides[side]；front=True 插队首（前排挡刀——存活序列第一名即
+          新单位，AI 默认目标先打它；对齐 boss_script M-W2s 口径），默认 append 尾部。
+        - 建 actor["_skill_index"]（复用 _index_one_actor——不建则 auto_act 技能
+          查不到技能 dict 而静默空放）。
+        - 播种 ct（复用 _seed_ct_one——不播种则 CTB 排序异常）。
+        - 返回 actor（调用方拿引用做日志 / 上限记账 / uid 登记）。
+
+        引擎零游戏知识：不认识"随从 / 召唤 / 亡灵 / 援军"，只做注册 + 索引 + 排程。
+        sides 是普通 dict，调度（schedule.py）与序列化（serialize.py）均动态遍历
+        sides，故新 actor 自动参与行动与存档，无需额外同步。
+        """
+        acts = self.sides.setdefault(side, [])
+        if front:
+            acts.insert(0, actor)
+        else:
+            acts.append(actor)
+        self._index_one_actor(actor)
+        self._seed_ct_one(actor)
+        return actor
 
     # ============================================================
     # 行动入口
