@@ -74,8 +74,8 @@ def do_skill(battle, ctx) -> list:
         return []
     kind = info.get("kind", "")
     logs = []
-    # ---- 1. 技能存在/学习校验（res_cost 不足时 logs 已写拦截文案，直接返回展示）----
-    if actor.get("class_name") and not _skill_usable(battle, actor, info, logs):
+    # ---- 1. 技能可用性校验（冷却：全 actor 一视同仁；资源：职业 actor）----
+    if not _skill_usable(battle, actor, info, logs):
         return logs
     # ---- 2. 消耗扣除（蓝/核心资源） ----
     _spend_skill_cost(actor, info)
@@ -118,8 +118,28 @@ def do_skill(battle, ctx) -> list:
     return logs
 
 
+def _cd_left_of(battle, actor: dict, info: dict) -> float:
+    """技能剩余冷却（刻）：actor.cooldown 表 = {技能名: 绝对到期时刻}。
+
+    绝对时刻制（v152 起）：值 = 施放时刻 + cd；比较 battle 当前绝对时刻 `_now`
+    （旧引擎 Battle._skill_on_cd / _tick_cooldowns 同款语义）。顺手清理到期条目
+    （旧 _tick_cooldowns 惰性清除；避免冷却表随战斗无限增长）。
+    """
+    from .battle import _now_of
+    now = float(_now_of(battle))
+    tbl = actor.get("cooldown")
+    if not isinstance(tbl, dict) or not tbl:
+        return 0.0
+    for _k in [k for k, v in tbl.items() if float(v or 0) <= now]:
+        tbl.pop(_k, None)
+    nm = info.get("name") or ""
+    if not nm or nm not in tbl:
+        return 0.0
+    return max(0.0, float(tbl.get(nm, 0) or 0) - now)
+
+
 def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
-    """技能可用性（学习/蓝/核心资源/冷却）检查——通用规则，引擎零职业知识。
+    """技能可用性（冷却 / 核心资源）检查——通用规则，引擎零职业知识。
 
     v181.M-R1c：res_cost 前置拦截——技能声明 res_cost 扣 effects[key].stacks；
     effects 已有该 key 条目且 stacks < 需求 → 资源不足不可施放（返回 False 并把
@@ -128,20 +148,41 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
 
     v181.M-bonus：预检消耗 = _skill_pay_of 折算值（bonus.cost 消耗修正后），
     与 _spend_skill_cost 扣费同源（同一折算函数——足额边界按折后值判）。
+
+    2026-09-11 ★冷却强制补装（N10 重写丢失的消费点）：
+    - 症状：do_skill 写 actor["cooldown"]，但全仓库只有 AI 的 cd_ok 谓词读它 →
+      玩家侧零拦截，242/305 个带 cd 的技能可无限连放（tools/probe_cooldown_enforcement.py）。
+    - 依据：设计 docs/REFACTOR_v181P4_N5B_monster_ai_design.md:129「冷却消费点若不存在
+      → P1 盘点后决定补」；旧引擎已实现（_skill_on_cd 拦截，tests/_retired_old_engine/
+      test_stage5_cooldown.py「再施放被 CD 拦截」）；数值模型 scripts/numeric_lib/player.py:385-387
+      按「CD 未结束只能普攻」折算 —— 缺此检查则实机 DPS 比数值模型高 3~5 倍。
+    - 范围：**不分身份**（旧引擎在通用技能路径拦截；actor 一视同仁，怪也受同一规则约束）。
     """
+    # ---- 1. 冷却（先于资源：冷却中不重复提示资源文案）----
+    left = _cd_left_of(battle, actor, info)
+    if left > 0:
+        if logs is not None:
+            logs.append(f"⏳ 【{info.get('name') or '技能'}】冷却中：还需 {left:.1f} 刻！")
+        return False
+    # ---- 2. 核心资源（仅职业 actor 参与核心资源体系；怪无 res_cost）----
+    if not actor.get("class_name"):
+        return True
     pay = _skill_pay_of(actor, info)
     res_cost = pay.get("res") or {}
-    if res_cost and logs is not None:
-        ef = actor.get("effects") or {}
-        for rk, rv in res_cost.items():
-            entry = ef.get(rk)
-            if not isinstance(entry, dict):
-                continue  # 无条目（资源渠道未装配/非本资源技能）→ 不拦，保持历史行为
-            # v181.M-R2e B3：float 读（faith 衰减层 9.3 ≥ 3 足额判定保真）
-            cur = float(entry.get("stacks", 0) or 0)
-            if cur < float(rv or 0):
+    # 2026-09-11 ★静默探测保真：判据与文案解耦——logs=None 时仍必须返回正确判据
+    # （原先 `if res_cost and logs is not None:` 把整个检查短路成「恒可用」，
+    #  ai._skill_castable 拿不到真实结论 → 资源不足的招仍被选中 → 活锁未修）。
+    ef = actor.get("effects") or {}
+    for rk, rv in res_cost.items():
+        entry = ef.get(rk)
+        if not isinstance(entry, dict):
+            continue  # 无条目（资源渠道未装配/非本资源技能）→ 不拦，保持历史行为
+        # v181.M-R2e B3：float 读（faith 衰减层 9.3 ≥ 3 足额判定保真）
+        cur = float(entry.get("stacks", 0) or 0)
+        if cur < float(rv or 0):
+            if logs is not None:
                 logs.append(f"⚡ 核心资源不足：需要 {rv:g} {rk}，当前 {cur:g}！")
-                return False
+            return False
     return True
 
 

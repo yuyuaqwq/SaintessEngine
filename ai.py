@@ -7,6 +7,8 @@
 - 选择器：priority（条件表第一个命中）/ weighted（命中 moves 按权重随机 +
   skill_chance 概率回落 fallback）。
 - 决策顺序（actor_auto）：导演演出刻 → actor.auto_act 显式 → 本决策器 → 普攻。
+- 可执行性过滤（2026-09-11）：命中的 move 若技能此刻放不出（冷却/资源/索引不到）
+  跳过 → 全部不可用则回落普攻；决策器语义 = 「选一个现在真能执行的动作」。
 - 旧格式翻译：MONSTER_MODS ai {skill_chance, weights} → 新格式（幂等，写回
   actor["ai"]），bridge 原样透传后在此归一。
 
@@ -113,6 +115,40 @@ def _cd_remaining(battle, actor: dict, skill: str) -> float:
     return 0.0
 
 
+def _skill_castable(battle, actor: dict, skill_ref: str) -> bool:
+    """某技能引用此刻是否可执行（与 do_skill 前置校验同源，不产生文案）。
+
+    三段判据（任一不满足 → 不可执行）：
+    1. **索引得到** —— _skill_index 无该键 → 不可执行。do_skill 拿 info={} 会
+       `if not info: return []`（静默空放、白耗一回合）；N10 后引擎唯一技能解析源
+       就是 _skill_index（ActCtx.__post_init__ 同源）。
+    2. **不在冷却** —— 与 actions._cd_left_of 同一判据。
+    3. **资源足额** —— 与 actions._skill_usable 同一函数（logs=None 静默）。
+    """
+    idx = actor.get("_skill_index")
+    info = idx.get(skill_ref) if isinstance(idx, dict) else None
+    if not isinstance(info, dict) or not info:
+        return False
+    try:
+        from .actions import _skill_usable
+        return bool(_skill_usable(battle, actor, info, None))
+    except Exception:
+        return False
+
+
+def _move_castable(battle, actor: dict, move: dict) -> bool:
+    """move 的 then 动作此刻是否可执行（非技能动作恒可执行）。"""
+    then = (move or {}).get("then")
+    if not isinstance(then, dict):
+        return False
+    if str(then.get("type") or "attack") != "skill":
+        return True          # 普攻/防御/道具… → act() 各自兜底，不在此过滤
+    sk = then.get("skill")
+    if not sk:
+        return False         # action=skill 无技能名 → do_skill 空转
+    return _skill_castable(battle, actor, str(sk))
+
+
 def eval_when(battle, actor: dict, when: dict) -> bool:
     """守卫评估：when 全部键满足（AND）；空 dict = 恒真。"""
     try:
@@ -154,6 +190,12 @@ def resolve_ai_move(battle, actor: dict):
     priority：moves 从上到下第一个 when 全满足。
     weighted：when 命中的 moves 按 weight 随机；ai.skill_chance<1 时先 roll
     （rand > chance → None 回落 fallback——旧 skill_chance 语义）。
+
+    2026-09-11 ★可执行性过滤（修「AI 活锁」）：when 命中但技能此刻放不出的 move
+    直接跳过（冷却中 / 资源不足 / 技能索引不到，判据见 _move_castable）——
+    否则 do_skill 前置校验返回空动作 → 白耗一回合，且冷却不被写入 → cd_ok 恒真 →
+    每回合重试同一个永远放不出的技能（0 输出直到被打死；第三方接入实测出过 defeat）。
+    过滤后无 move 可用 → None → 调用方回落普攻（与「when 不命中」同一出口）。
     """
     ai = normalize_ai(actor)
     if not ai:
@@ -168,7 +210,8 @@ def resolve_ai_move(battle, actor: dict):
         if chance < 1.0 and _rnd.random() > chance:
             return None
         pool = [(m.get("weight", 1.0), m) for m in moves
-                if isinstance(m, dict) and eval_when(battle, actor, m.get("when") or {})]
+                if isinstance(m, dict) and eval_when(battle, actor, m.get("when") or {})
+                and _move_castable(battle, actor, m)]
         if not pool:
             return None
         try:
@@ -184,6 +227,6 @@ def resolve_ai_move(battle, actor: dict):
     for m in moves:
         if not isinstance(m, dict):
             continue
-        if eval_when(battle, actor, m.get("when") or {}):
+        if eval_when(battle, actor, m.get("when") or {}) and _move_castable(battle, actor, m):
             return m.get("then")
     return None

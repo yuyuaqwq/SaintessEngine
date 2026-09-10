@@ -148,6 +148,29 @@ class Battle:
         except Exception:
             pass  # 索引失败不阻断（N1 普攻直接 resolve_basic_skill）
 
+    def refresh_skill_index(self, actor: dict) -> None:
+        """保证 actor 的技能索引覆盖当前 actor["skills"]（幂等，快路径零开销）。
+
+        2026-09-11 ★运行期换招索引失效修复：`_skill_index` 原先只在 Battle 构造期
+        与 add_actor 建一次，而运行期会往 actor["skills"] 追加技能（Boss 剧本转阶段
+        add_skills、变身/获得技能）。追加后索引不含新键 → ActCtx.__post_init__ 取
+        info={} → do_skill 直接 return []：**转阶段后 Boss 的 auto_act 主技能静默空放**
+        （tools/probe_phase_skill_index.py 实跑：4/4 阶段新招均不在索引、ActCtx.info={}）。
+
+        索引一致性归引擎（内容侧换招不必记得调索引）：本方法在每次行动决策前调用，
+        skills 全在索引 → 只做 len(skills) 次 dict 成员判断即返回。
+        """
+        idx = actor.get("_skill_index")
+        if not isinstance(idx, dict):
+            idx = actor["_skill_index"] = {}
+        try:
+            for sk in (actor.get("skills") or []):
+                if sk not in idx:
+                    self._index_one_actor(actor)
+                    return
+        except Exception:
+            pass  # 索引失败不阻断（_index_one_actor 内部同语义容错）
+
     def _index_skills(self):
         """构造期技能索引：遍历 sides 逐 actor 建（单个 actor 走 _index_one_actor）。"""
         for _acts in self.sides.values():
@@ -233,6 +256,9 @@ class Battle:
             return ["没有可行动的玩家！"], False, None
         if self.result:
             return ["战斗已结束！"], True, None
+        # 决策前刷新技能索引（运行期换招/获得技能后索引可能落后于 actor.skills；
+        # 必须在 ActCtx 构造前——ActCtx.__post_init__ 是技能 dict 的唯一解析时机）
+        self.refresh_skill_index(caster)
         ctx = ActCtx(caster=caster, action=action, skill_name=skill_name,
                      target=target, target_side=target_side)
         logs, ended = self.act(ctx)
@@ -312,6 +338,9 @@ class Battle:
                     return _hook_logs, False
             except Exception:
                 pass  # 导演异常不阻断怪行动（回落默认行动）
+        # 决策前刷新技能索引（导演帧刚可能 add_skills 换招 → 索引落后于 actor.skills；
+        # 必须在下面读 auto_act / resolve_ai_move 之前——ActCtx.__post_init__ 只解析一次）
+        self.refresh_skill_index(caster)
         action = "attack"
         skill_name = None
         aa = caster.get("auto_act") or {}
@@ -333,6 +362,17 @@ class Battle:
                     # 无 picker/未知 hint → 回落默认仇恨目标，尾部清理防残留
                     if _mv.get("target_hint"):
                         caster["_target_hint"] = _mv["target_hint"]
+            except Exception:
+                pass
+        # 2026-09-11 ★可执行性兜底：显式 auto_act 指定了此刻放不出的技能（冷却中/
+        # 资源不足/索引不到）→ 回落普攻，避免白耗一回合（与 ai 决策器过滤同一判据；
+        # 人控路径不适用——玩家显式选择仍由 do_skill 回拦截文案展示，行为不变）。
+        if action == "skill":
+            try:
+                from .ai import _skill_castable
+                if not _skill_castable(self, caster, str(skill_name or "")):
+                    action = "attack"
+                    skill_name = None
             except Exception:
                 pass
         if ctx_target is None and self.target_picker is not None:
