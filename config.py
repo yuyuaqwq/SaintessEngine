@@ -52,6 +52,15 @@ _HOOKS = {
     "mech_cfg_fn": None,
     # S3 通用件（battle_bars）：挂敌身条键前缀 fn() -> str（内容侧 BAR_STATE_PREFIX）
     "bar_prefix_fn": None,
+    # ---- S5 注入面：game/battle2/formulas.py 的表读点（引擎零内容 import）----
+    # 公式骨架参数表 fn() -> dict（内容侧 FORMULA_SKELETON）
+    "formula_skeleton_fn": None,
+    # 技能基础值常量表 fn() -> dict（内容侧 SKILL_FLAT_BASE / _PER_PLAYER_LV / _PER_SKILL_LV）
+    "skill_flat_fn": None,
+    # 技能升级配置查询 fn(info) -> dict（内容侧 SKILL_UP，见 content_rules.skills._skill_up）
+    "skill_up_fn": None,
+    # 技能等级查询 fn(player, skill_name) -> int（内容侧 content_rules.skills.skill_level_of）
+    "skill_level_of_fn": None,
 }
 
 # R8：无挂载静默降级开关。
