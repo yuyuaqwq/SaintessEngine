@@ -26,14 +26,38 @@ from . import config as _cfg
 SKILL_MAX_LEVEL = 5
 
 
+# 未装配时的中性骨架参数（与 _NullFormulas 同语义：零效应，不产生额外数值）。
+# 为何需要：本模块 docstring 承诺「未装配时各 getter 返回中性值（{} / 1 级兜底）…不炸」，
+# 但下游直接索引 _skeleton()["skill_growth"] / float(_flat.get(...)) —— 空 dict 会
+# KeyError / float(None) TypeError，使第三方接入（只挂部分 hook）首战即崩。
+# 与 config.get_hook 的关系：strict=True 时 get_hook 先抛 EngineNotConfigured（配置错误
+# 可被严格模式捕获），strict=False（默认）下落到此中性表 —— 两级语义互补。
+# 生产路径（游戏侧 game/bootstrap.py 已挂 formula_skeleton_fn/skill_flat_fn）取值完全不变。
+_NEUTRAL_SKELETON = {
+    "skill_growth": {
+        "power_per_lv_divisor": 1,      # p 缺省 0 → 0/1 = 0 → 倍率恒 1.0（无成长）
+        "buff_turns_base": 3,           # 与 skill_buff_turns 签名默认一致
+        "buff_turns_per_lv": 1,         # 每级 +1 刻（模块 doc 口径）
+        "cond_default": 0,              # 条件倍率无成长（保持 cond.mult）
+        "mech_default_div": 2,          # 默认每 2 级 +1 层；兼防除零
+        "lifesteal_default": 0.0,       # 无吸血
+        "lifesteal_per_lv_divisor": 1,  # 兼防除零（l 缺省 0 → 无成长）
+    },
+    "skill_learn_cost": {"divisor": 1, "base": 0},
+}
+
+
 # ============================================================
 # 注入面读取（内容侧装配；未装配 → 中性值）
 # ============================================================
 
 def _skeleton() -> dict:
-    """公式骨架参数表（内容侧注入 `formula_skeleton_fn`；未装配 → {}）。"""
+    """公式骨架参数表（内容侧注入 `formula_skeleton_fn`；未装配 → 中性骨架）。
+
+    中性骨架保证下游 `_skeleton()["skill_growth"][...]` 索引可用（见 _NEUTRAL_SKELETON）。
+    """
     fn = _cfg.get_hook("formula_skeleton_fn")
-    return (fn() if fn is not None else None) or {}
+    return (fn() if fn is not None else None) or _NEUTRAL_SKELETON
 
 
 def _skill_flat_cfg() -> dict:
@@ -127,9 +151,11 @@ def skill_flat_value(player_lv: int, skill_lv: int, info: dict | None = None) ->
     _flat = _skill_flat_cfg()
     lv = max(1, min(skill_lv, skill_max_level(info)))
     up = _skill_up(info)
-    base = float(up.get("flat_base", _flat.get("SKILL_FLAT_BASE")))
-    per_lv = float(up.get("flat_per_lv", _flat.get("SKILL_FLAT_PER_PLAYER_LV")))
-    per_skill = float(up.get("flat_per_skill", _flat.get("SKILL_FLAT_PER_SKILL_LV")))
+    # 中性兜底：未装配 skill_flat_fn 时 _flat 为 {} → .get(...) 得 None → float(None) 崩。
+    # 与 _skeleton()/_NullFormulas 同语义（零效应），且 strict=True 时 get_hook 已先行抛错。
+    base = float(up.get("flat_base", _flat.get("SKILL_FLAT_BASE")) or 0)
+    per_lv = float(up.get("flat_per_lv", _flat.get("SKILL_FLAT_PER_PLAYER_LV")) or 0)
+    per_skill = float(up.get("flat_per_skill", _flat.get("SKILL_FLAT_PER_SKILL_LV")) or 0)
     return int(base + player_lv * per_lv + lv * per_skill)
 
 
