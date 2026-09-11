@@ -37,7 +37,7 @@
 | **B3** | `effects.py:369` | `if key == "reduce":` | 特殊处理"减伤"这一**通道**（区别于普通叠层面板） | 契约词汇（同名 key 在内容侧 `EFFECT_ACTIONS` 也走 reduce 通道） |
 | **B4** | `effects.py:305`、`schedule.py:268,272` | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | "Boss" 是**通用战斗角色概念**（与 `player` 同级）；值是内容侧数据标签 | 契约词汇。第三方用别的标签 → §三 |
 | **B5** | `battle.py:170,515` | `sides["player"]` | 引擎需要**一个默认焦点侧**来找命令层焦点 actor（`human_controlled`） | 契约词汇：约定焦点侧名 = `"player"`。多焦点/改名 → §三 `focus_side` |
-| **B6** | `effects.py:249-253` | `_is_stack_resource` 判据关键词含**无消费方**字段（`debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct`） | 这是"死字段但**活判据**"：字段**存在与否会改变分派结果**（有 `debuff_scale` → 走 `apply op=add` 叠层；没有 → 走 `EFFECT_ACTIONS` 名词翻译） | ⚠️ **清理时必须同时考虑分派影响**——内容侧清理这些死字段前，先跑叠层分派回归 |
+| **B6** | `effects.py:249-253` | `_is_stack_resource` 判据关键词含**无消费方**字段（`dot` / `on_threshold` / `guard_hp_pct`；`debuff_scale` 已于 2026-09-11 接线，但仍留在判据列表里） | 这是"死字段但**活判据**"：字段**存在与否会改变分派结果**（有 `debuff_scale` → 走 `apply op=add` 叠层；没有 → 走 `EFFECT_ACTIONS` 名词翻译） | ⚠️ **清理时必须同时考虑分派影响**——内容侧清理这些死字段前，先跑叠层分派回归 |
 
 ### 二·补：2026-09-11 新增的契约字段
 

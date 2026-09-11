@@ -134,7 +134,7 @@ actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:
 landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduce, element)
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ 1. amount <= 0 → 0                                                       │
-│ 2. _lv_pressure(battle, source, target, dmg)          landing.py:176     │
+│ 2. _lv_pressure(battle, source, target, dmg)          landing.py:197     │
 │      btype == "pvp" → 不压；任一方无 level → 不压                          │
 │      低打高：前 3 级 ×0.95，之后 ×0.90，封顶 ×0.30                         │
 │      高打低：每级 ×1.02 连乘（封顶 50 级）                                 │
@@ -145,18 +145,18 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 │ 4. ⚡ fire("taken_calc", {actor: target, dmg, mult: 1.0})   landing.py:75-84 │
 │      → 读回 mult → dmg *= mult                                            │
 │ 5. target["_dmg_taken_mult"] > 1 → dmg *= 它           landing.py:86-91    │
-│ 6. _roll_dodge(battle, target, logs)                   landing.py:208     │
+│ 6. _roll_dodge(battle, target, logs)                   landing.py:229     │
 │      dodge 面板 cap 0.40 → 命中则 return 0（整个伤害免掉）                 │
-│ 7. defending → dmg *= (1 - defend_reduce or 0.5)       landing.py:132-138  │
-│ 8. _apply_taken_reductions(dmg_kind)                   landing.py:232     │
+│ 7. defending → dmg *= (1 - defend_reduce or 0.5)       landing.py:153-159  │
+│ 8. _apply_taken_reductions(dmg_kind)                   landing.py:253     │
 │      phys → phys_reduce cap 0.40；magi → magic_reduce cap 0.40            │
 │      block 概率 cap 0.40 → 减半                                          │
-│ 9. effects 有 "sleep" → pop（打醒）+ 日志              landing.py:147-149  │
-│10. charging 有 skill → 清 + ⚡ fire("interrupt")        landing.py:151-121  │
-│11. _apply_damage(battle, target, dmg, logs, source)    landing.py:300     │
+│ 9. effects 有 "sleep" → pop（打醒）+ 日志              landing.py:168-170  │
+│10. charging 有 skill → 清 + ⚡ fire("interrupt")        landing.py:172-121  │
+│11. _apply_damage(battle, target, dmg, logs, source)    landing.py:321     │
 │      ├─ 护盾吸收（遍历 shields，按 value 扣减，耗尽即 pop）                 │
 │      ├─ hp 扣减                                                          │
-│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:267     │
+│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:288     │
 │      │     effects["death_guard"].stacks > 0 → hp 拉回 guard_hp_pct      │
 │      │     （+heal_pct 额外治疗，走 heal_actor）→ 层 -1                    │
 │      ├─ 仍 <= 0 → Battle._on_actor_dead(...)           battle.py:533       │
@@ -164,13 +164,13 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 │      │     ⚡ fire("on_death", {actor, target})                            │
 │      │     source 非 None → ⚡ fire("on_kill", {actor: source, ...})       │
 │      └─ 否则：日志「受到 N 点伤害」                                        │
-│12. 未死 → ⚡ fire("on_taken", {actor, target, source, dmg})   landing.py:169 │
+│12. 未死 → ⚡ fire("on_taken", {actor, target, source, dmg})   landing.py:190 │
 └──────────────────────────────────────────────────────────────────────────┘
 返回 real（实际扣血）
 ```
 
 ⚠️ 第 6 步（闪避）的位置有注释明确说明：**「位置在 defending 前（对齐旧顺序：
-闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）」**（`landing.py:124`）。
+闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）」**（`landing.py:145`）。
 改顺序会改变「闪避是否省下防御姿态/是否打断读条」这类语义。
 
 ## 展开 4：事件在链上的位置（一次普攻）

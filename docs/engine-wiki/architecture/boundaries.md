@@ -104,11 +104,11 @@
 | # | 瑕疵 | 位置 | 影响 |
 |---|---|---|---|
 | B1 | `kinds/` 的枚举值写死中文（`PHYS = "物理"` …） | `kinds/__init__.py:33-40` | 与 `config.kind_of` 注入面**两套 kind 词表**；非中文 kind 的游戏用不了 `is_kind` / `is_damage_kind` / `seg_of` |
-| B2 | `landing._apply_death_guard` / `heal_actor` / `stats` 里硬编码 key：`"death_guard"`、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`、`"sleep"` | `landing.py:147,237,373-396` | 「濒死保护」「禁疗/受疗增幅」「睡眠打醒」四类机制**只认固定 key 名**。要换名只能改引擎（或复用这些名字） |
-| B3 | `effects.act_apply` 里 `if key == "reduce":` 写 `holder["reduce_left"]` | `effects.py:377-378` | 引擎里出现了内容 key 字面量 |
+| B2 | `landing._apply_death_guard` / `heal_actor` / `stats` 里硬编码 key：`"death_guard"`、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`、`"sleep"` | `landing.py:168,237,373-396` | 「濒死保护」「禁疗/受疗增幅」「睡眠打醒」四类机制**只认固定 key 名**。要换名只能改引擎（或复用这些名字） |
+| B3 | `effects.act_apply` 里 `if key == "reduce":` 写 `holder["reduce_left"]` | `effects.py:393-394` | 引擎里出现了内容 key 字面量 |
 | B4 | `schedule._settle_time_effects` 里 `pct_boss` / `is_boss` / `role == "boss"` | `schedule.py:264,272` | 「Boss」这个内容概念进了引擎（作为数据字段处理，尚可接受，但它是**唯一**被引擎认识的身份标签） |
 | B5 | `effects.act_apply` 里 `if holder.get("is_boss") or holder.get("role") == "boss"` | `effects.py:313` | 同上（控制时长减半） |
-| B6 | `effects._mech_to_effect` 的 `_is_stack_resource` 判据关键词含 `debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct` | `effects.py:249-253` | 这些字段**没有消费者**，但它们的**存在与否改变分派结果** —— 声明了 `debuff_scale` 会意外让 mech 走叠层路径 |
+| B6 | `effects._mech_to_effect` 的 `_is_stack_resource` 判据关键词含 `debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct` | `effects.py:249-253` | 这些字段**没有消费者**（`debuff_scale` 已于 2026-09-11 接线），但它们的**存在与否改变分派结果** —— 声明了 `debuff_scale` 会意外让 mech 走叠层路径 |
 | B7 | `battle.py` 里 `"player"` 阵营名硬编码 | `battle.py:567`（`_check_side_end`）、`:170`（`focus`） | 你的游戏若不叫 `player` 就得改引擎或用 `hostile_map` 绕过 |
 | B8 | `B6` 的反面：`stats._monster_base_stats` 的 `crit` 兜底 0.05 与 `make_actor` 播种 0.0 不一致 | `stats.py:122` vs `actors.py:98` | 同一种 actor 在不同路径下暴击率不同 |
 

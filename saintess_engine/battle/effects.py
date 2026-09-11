@@ -323,6 +323,22 @@ def act_apply(battle, caster, target, params, logs):
     holder = caster if on == "caster" else (target or caster)
     if not holder:
         return
+    # N-B11 异常免疫查询点（2026-09-11 接线）：DOT 类状态（EFFECT_RULES[key].period.dir
+    #   == "damage"）落地前先查持有者的免疫名单 —— 与上方 `cc_immune` 同款「读态名不认
+    #   来源」：引擎只读**类型名**列表（`immune_dots: ["burn"]`，属引擎固定词汇表契约，
+    #   不是游戏名词），不认「哪个怪天生免毒」。名单在 = 本次不施加（不叠层、不消耗）。
+    #   数据侧缺省（无 immune_dots 键）→ 空名单 → 行为与接线前完全一致。
+    try:
+        _per = (state_def(key) or {}).get("period")
+        if isinstance(_per, dict) and str(_per.get("dir") or "") == "damage":
+            _imm = holder.get("immune_dots")
+            if _imm is None:
+                _imm = getattr(battle, "immune_dots", None)
+            if _imm and key in list(_imm):
+                logs.append(f"🚫 {holder.get('name', '目标')} 免疫【{key}】，异常未生效")
+                return
+    except Exception:
+        pass  # 免疫查询异常不阻断施加
     ef = holder.setdefault("effects", {})
     now = _now_of(battle)
     # ---------- 叠层加/置（原 act_state_add/state_set；op 字段仅在无 stat 时是叠层操作，

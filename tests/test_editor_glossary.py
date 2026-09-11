@@ -101,9 +101,14 @@ def main() -> int:
     check("每条词典都有注脚（没文档出处的也不留空）", not hollow, f"空注脚：{hollow[:8]}")
 
     # 4. 「静默不生效」类字段被标注（这批字段最坑，必须显式提示）
+    #    2026-09-11：debuff_scale / period.dmg_type 已接线（标注转 ✅）→ 从名单移除。
+    #    名单 = 当前**仍未接线**的死字段；接线一个就从这里删一个、发现新的就加进来。
+    _KNOWN_DEAD = ["on_threshold", "period.per_layer", "period.type", "wake_on_hit"]
     deadish = [k for k, e in G.GLOSSARY["effect_rules"].items()
                if "无消费者" in (e.get("note") or "")]
-    check(f"死字段已标注（{len(deadish)} 个：{', '.join(sorted(deadish))}）", len(deadish) >= 6)
+    check(f"死字段已标注（{len(deadish)} 个：{', '.join(sorted(deadish))}）",
+          sorted(deadish) == sorted(_KNOWN_DEAD),
+          f"实际={sorted(deadish)} 期待={sorted(_KNOWN_DEAD)}")
 
     # 5. 报错翻译：原始形态 + dict 形态
     f1 = G.friendly("skills", ["desc: '' should be non-empty"])

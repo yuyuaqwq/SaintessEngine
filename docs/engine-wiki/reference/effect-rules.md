@@ -20,19 +20,19 @@
 | `cap` | int | ✅ `effects._cap_of`（`effects.py:58-75`） | 叠层上限基数。**收敛点唯一**：`apply op=add/set`、`schedule` gain、内容侧渠道攒取都走它。缺声明（0）→ **999999（不设限）** |
 | `name` | str | ⚠️ 引擎不读 | 展示名。内容侧做日志/UI 标签（`class_mech_proc.py:1895`） |
 | `stat_scale` | `{stat: 每层系数}` | ✅ `stats._apply_effects`（`stats.py:61-68`） | 每层面板修正。`st[stat] *= (1 + n×系数)`；特殊 stat：`dmg_mult`（写 `st["_state_dmg_mult"]`，伤害乘区读它）、`reduce`（写 `st["reduce"]`，⚠️ 见「已知死字段」） |
-| `debuff_scale` | `{stat: 每层系数}` | ⚠️ **无消费者** | 只在 `effects._is_stack_resource` 的判据关键词列表里出现（`effects.py:249`）。**「每层承伤 +N%」实际不生效** |
-| `panel` | `{"stat","op","mult"}` | ✅ `effects.act_apply` 快照分支（`effects.py:384-396`） | 静态面板增益的默认值（动作参数缺省时查表）。`op`：`mul`（乘）/ `add`（加）；`op="reduce"` 特殊（见 `stats.py:76-77`） |
+| `debuff_scale` | `{stat: 每层系数}` | ✅ **引擎消费**（2026-09-11） | `landing.deal_damage` 遍历持有者状态：Σ(系数 × stacks) → 伤害 ×(1+Σ)。与 `stat_scale` 对称；层数上限由数据侧 `cap` 给。另仍是 `effects._is_stack_resource` 的判据关键词（`effects.py:249`，分派用） |
+| `panel` | `{"stat","op","mult"}` | ✅ `effects.act_apply` 快照分支（`effects.py:400-412`） | 静态面板增益的默认值（动作参数缺省时查表）。`op`：`mul`（乘）/ `add`（加）；`op="reduce"` 特殊（见 `stats.py:76-77`） |
 | `consume` | `{"mode": ...}` | ✅ `effects.act_apply`（`effects.py:293-296`）+ `Battle.act`（`battle.py:435-458`） | 控制型条目的消费模式：`"skip"`（整跳行动）/ `"no_skill"`（技能转普攻） |
 | `period` | dict | ✅ `schedule._settle_time_effects`（`schedule.py:235-243`） | 周期结算声明（见下） |
-| `cleanse` | bool | ✅ `effects.act_cleanse`（`effects.py:506`） | `True` = 可被净化 |
-| `on` | `"caster"` \| `"target"` | ✅ `effects.act_cleanse`（`effects.py:506`，`on=="target"` 也清）；内容侧 `_mech_to_effect` 判 `on_target`（`effects.py:219`） | 效果的默认作用对象。`"target"` = 对敌标记类 |
+| `cleanse` | bool | ✅ `effects.act_cleanse`（`effects.py:522`） | `True` = 可被净化 |
+| `on` | `"caster"` \| `"target"` | ✅ `effects.act_cleanse`（`effects.py:522`，`on=="target"` 也清）；内容侧 `_mech_to_effect` 判 `on_target`（`effects.py:219`） | 效果的默认作用对象。`"target"` = 对敌标记类 |
 | `negative` | bool | ⚠️ 引擎不读 | 「负面」标记。内容侧用它数「负面种数」（`class_mech_proc.py:767`，`target_debuff_kinds` judge） |
 | `tag` | str | ⚠️ 引擎不读 | 旧 CLEANSE_TAGS 时代的标记。`act_apply` 读的是 **params** 的 `tag`（作为 `key` 的兜底，`effects.py:287`），不是 `cfg["tag"]` |
 | `cd_mult` | float | ✅ `actions.do_skill`（`actions.py:89-97`） | 冷却倍率（`0.8` = CD −20%）。多态并存时**取最小**（最速） |
-| `on_threshold` | `{层数: {...}}` | ⚠️ **无消费者** | 「满 N 层触发什么」。`threshold` **事件**有引擎点位（`effects.py:357`），但**这张映射表没被读**。目前要靠内容侧监听 `threshold` 自己实现 |
-| `guard_hp_pct` | float | ✅ `landing._apply_death_guard`（`landing.py:288`） | 濒死保护触发后保底到的最大生命比例（缺省 0.10） |
-| `heal_pct` | float | ✅ 同上（`landing.py:291`） | 濒死保护触发时额外回复的最大生命比例 |
-| `wake_on_hit` | bool | ⚠️ **无消费者** | 声明在 `sleep` 上。实际「受击打醒」由 `landing.py:147` 的**硬编码 key 判断**实现（`if target.get("effects", {}).get("sleep")`），与这个字段无关 |
+| `on_threshold` | `{层数: {...}}` | ⚠️ **无消费者** | 「满 N 层触发什么」。`threshold` **事件**有引擎点位（`effects.py:373`），但**这张映射表没被读**。目前要靠内容侧监听 `threshold` 自己实现 |
+| `guard_hp_pct` | float | ✅ `landing._apply_death_guard`（`landing.py:309`） | 濒死保护触发后保底到的最大生命比例（缺省 0.10） |
+| `heal_pct` | float | ✅ 同上（`landing.py:312`） | 濒死保护触发时额外回复的最大生命比例 |
+| `wake_on_hit` | bool | ⚠️ **无消费者** | 声明在 `sleep` 上。实际「受击打醒」由 `landing.py:168` 的**硬编码 key 判断**实现（`if target.get("effects", {}).get("sleep")`），与这个字段无关 |
 | `start_full` | bool | ⚠️ 引擎不读（内容侧装配器读：`class_mech_proc.py:2225`） | 开局满额 |
 | `start_classes` | `[职业 id]` | ⚠️ 引擎不读（内容侧读：`class_mech_proc.py:1892/2228/2256`） | **归属过滤**。⚠️ 不声明 = 不装配某些内容侧钩子（详见下「归属门」） |
 | `channels` | `{时机: 值}` | ⚠️ 引擎不读（内容侧读：`class_mech_proc.py:1889`） | 攒取渠道，见 [channels.md](channels.md) |
@@ -57,7 +57,7 @@
 |---|---|---|---|
 | `dir` | str | `"damage"` | ✅ `:246`。四向：`damage` / `heal` / `mana` / `gain` |
 | `interval` | float | `1.0` | ✅ `:251`。间隔刻数（**绝对时刻**，非「每 tick」） |
-| `turns` | int | `0` | ✅ `:252`。限跳次数，跳到就清层（`0` = 无限）。计数器 `actor["dot_jumps"]`，`schedule.py:351-359` |
+| `turns` | int | `0` | ✅ `:252`。限跳次数，跳到就清层（`0` = 无限）。计数器 `actor["dot_jumps"]`，`schedule.py:355-361` |
 | `cap` | int | 0 → 回落 `_cap_of` | ✅ `:341`（仅 `gain` 向）。**可覆盖** `EFFECT_RULES.cap` |
 | `amount` | float | 0 | ✅ `:340`（仅 `gain` 向）。每刻加/减量，**负值也走**（衰减），clamp 下限 0 |
 | `pct_max_hp` | float | 0 | ✅ `:264`（`damage` 向）。每层每跳的最大生命比例 |
@@ -68,7 +68,7 @@
 | `mana_pct` | float | 0 | ✅ `:311/323`（`heal` 与 `mana` 向）。每跳回复最大魔力比例 |
 | `type` | str | — | ⚠️ **无消费者**（参考实现里 `bleed` 写了 `"type": "flat"`） |
 | `per_layer` | int | — | ⚠️ **无消费者**（参考实现里 `bleed` 写了 `"per_layer": 0`） |
-| `dmg_type` | str | — | ⚠️ **无消费者**（参考实现里 `corros` 写了 `"dmg_type": "true"`）。DOT 落地统一调 `deal_damage(battle, None, a, dmg, logs)`（`schedule.py:288`，**不传 `dmg_kind`**）→ 所以吃不到类型免伤与格挡，是因为 `dmg_kind` 为空，不是因为声明了真伤 |
+| `dmg_type` | str | — | ✅ **引擎消费**（2026-09-11）：DOT 结算透传为落地 `dmg_kind`（`schedule.py:294`）。`"true"` = 真伤（物免/魔免/格挡全跳过，`landing` 内 `"true" not in kd` 守卫）；空/缺省 = 不减免（与接线前一致） |
 
 **`damage` 向的兜底**：两个 pct 都 <= 0 时 `dmg = max(1, n)`（层数当伤害，`schedule.py:272`）。
 所以一个只声明 `dir/interval` 的 DOT 每跳掉「层数」点血。
@@ -84,7 +84,7 @@
 |---|---|---|
 | 每层面板加成 | `stat_scale` | ✅ |
 | 静态面板增益 | `panel` | ✅（动作参数缺省时） |
-| 每层受击增伤 | `debuff_scale` | ❌ 用 `taken_calc` 乘区代替 |
+| 每层受击增伤 | `debuff_scale` | ✅ 引擎直读（2026-09-11 接线）；`taken_calc` 仍可用于**条件**减伤 |
 | 每刻掉血 | `period.dir="damage"` | ✅ |
 | 每刻回资源 | `period.dir="gain"` | ✅ |
 | 事件型攒资源 | `channels` | ❌ 内容侧装配器读 |

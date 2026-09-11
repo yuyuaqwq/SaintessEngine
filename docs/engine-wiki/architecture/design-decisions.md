@@ -61,7 +61,7 @@
 **代价**：
 - 写错 key = **静默 no-op**（没有任何提示）。这是真实的税：
   参考实现（游戏仓 / 奥兰迪亚侧）现有 20 个 `effect=` 名词没有映射（[_selfcheck.md](../_selfcheck.md)）
-- 表的字段可能有「声明了但无人读」的死字段（`on_threshold` / `debuff_scale` / …）
+- 表的字段可能有「声明了但无人读」的死字段（`on_threshold` / `wake_on_hit` / …）；`debuff_scale` / `period.dmg_type` 原属此类，2026-09-11 已接线转为活字段
 - 表与动作之间是**约定耦合**：动作必须认识声明里的 `judge.kind`
 
 **痕迹**：
@@ -108,7 +108,7 @@
 （`taken_calc` 的 `mult`）。
 
 **痕迹**：`landing.py:8-13` 原文（「为什么必须统一收口」）；
-`effects.act_damage` 也只做「读参数 → 调 `landing.deal_damage`」（`effects.py:578-605`）。
+`effects.act_damage` 也只做「读参数 → 调 `landing.deal_damage`」（`effects.py:594-621`）。
 
 ---
 

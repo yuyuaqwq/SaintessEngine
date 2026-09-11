@@ -285,7 +285,14 @@ def _settle_time_effects(battle, logs: list):
                                     dmg = max(1, int(dmg * _m))
                             except Exception:
                                 pass  # 修正钩子异常不阻断 DOT 落地
-                            deal_damage(battle, None, a, dmg, logs)
+                            # N-B10 伤害类型透传（2026-09-11 接线）：period.dmg_type 原先是
+                            #   死字段（声明了没人读）——真伤 DOT 与普通 DOT 落地完全同路。
+                            #   透传给 landed 的 dmg_kind 后，`_apply_taken_reductions` 的
+                            #   `"true" not in kd` 守卫使真伤**不减免**（物免/魔免/格挡全跳过），
+                            #   与旧行为一致；非真伤 DOT 仍是空 kind（同样不减免）。
+                            #   收益：类型免伤轴对 DOT 通道不再缺失，数据声明即语义。
+                            deal_damage(battle, None, a, dmg, logs,
+                                        dmg_kind=str(period.get("dmg_type") or ""))
                             logs.append(f"🔥 {a.get('name', '目标')} 受 {key} {n} 层影响，损失 {dmg} 生命")
                             # N8 事件：DOT 每跳
                             try:

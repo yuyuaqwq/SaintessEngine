@@ -141,7 +141,11 @@ def main():
     check("GET /api/glossary 200", st == 200 and j.get("ok"), f"{st}")
     check("词典覆盖 7 域 + 通用（含 effect_rules 死字段标注）",
           {"*", "skills", "effect_rules", "passive_proc"} <= set(doms)
-          and "无消费者" in (doms.get("effect_rules", {}).get("debuff_scale", {}).get("note") or ""),
+          # 断言改为「词典能给死字段打标注」的存在性检查：debuff_scale/dmg_type 已于
+          # 2026-09-11 接线（标注变 ✅），挂在具体字段上会随接线再次变红。
+          and any("无消费者" in (v.get("note") or "")
+                  for v in (doms.get("effect_rules") or {}).values()
+                  if isinstance(v, dict)),
           f"{sorted(doms)[:9]}")
     check("词典条目带中文名 + wiki 深链",
           bool(doms["effect_rules"]["cap"]["zh"]) and doms["effect_rules"]["cap"]["wiki"].startswith("wiki:"))

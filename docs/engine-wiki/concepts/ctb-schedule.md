@@ -124,7 +124,7 @@ fire(battle, "time_advance", {"dt": dt, "now": battle._now}, logs)   # ③ 广�
 `damage` 方向的周期跳在落地前会先 `fire("dot_calc", {"target", "dot_key", "dmg", "mult"})`
 （`schedule.py:281`，**不带 `actor` 键** → 广播给所有人，因为施毒者不在承伤者身上；
 效果侧用 `ctx["dot_key"]` 自己过滤）。落地后 `fire("dot_tick", {"actor", "target", "key", "dmg"})`
-（`schedule.py:293`）。
+（`schedule.py:300`）。
 
 ## 行动耗时表（`action_base_of`，`schedule.py:54`）
 

@@ -58,7 +58,7 @@ Battle(btype="monster", sides=None, title_bonus=None, dmg_mult=1.0, pet=None,
 
 | 参数 | 语义 | 引擎内消费者 |
 |---|---|---|
-| `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:185`） |
+| `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:206`） |
 | `sides` | `{阵营名: [actor]}`，**唯一入口** | 全引擎 |
 | `title_bonus` | 面板增幅 dict（整场一份） | `stats._player_base_stats`：`actor.bonus.panel or battle.title_bonus or {}`（`stats.py:96-97`） |
 | `hostile_map` | `{side: [敌对 side]}` | `actors.hostile_sides`（`actors.py:200-202`）；缺省 = 除自己外全部阵营 |
@@ -130,7 +130,7 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 | `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:98/117/151` | 仅引擎内 |
 | `_do_defend` / `_do_flee` | `battle.py:505/458` | 仅引擎内 |
 | `_ensure_battle_started` | `battle.py:518` | 仅引擎内 |
-| `_on_actor_dead(actor, logs=None)` | `battle.py:533` | `landing._apply_damage` 调（`landing.py:339`） |
+| `_on_actor_dead(actor, logs=None)` | `battle.py:533` | `landing._apply_damage` 调（`landing.py:360`） |
 | `_check_side_end` | `battle.py:551` | 仅引擎内 |
 
 ### 序列化
@@ -181,7 +181,7 @@ Battle.from_state(st) -> Battle       # battle.py:584（classmethod）→ serial
 deal_damage(battle, source, target, amount, logs, dmg_kind="", defend_reduce=None, element="") -> int
 # landing.py:23
 heal_actor(battle, target, amount, logs, source=None, label="") -> int
-# landing.py:358
+# landing.py:379
 ```
 
 两个都是**落地唯一收口**。内部子函数（无外部引用）：`_lv_pressure`（`:146`）、

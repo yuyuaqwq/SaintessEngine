@@ -119,6 +119,27 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             dmg = max(1, int(dmg * _dtm))
     except Exception:
         pass
+    # N-B9 状态承伤放大（2026-09-11 接线）：持有者身上**状态声明的「每层承伤 +N%」**——
+    #   对称 `stat_scale`（stats.py 那边的每层面板折算，一个改面板、一个改承伤）。
+    #   引擎零知识：读通用字段 `EFFECT_RULES[key].debuff_scale.dmg_taken`，逐状态 × stacks
+    #   累加成乘区；数值/层数上限全在数据侧（cap 决定最大放大，引擎不另设帽）。
+    #   消费场景：对敌标记（猎印/魂印/骨噬诅咒——烙在**敌人**身上，谁打都吃）。
+    try:
+        from .state_effects import state_def as _sdef
+        _bscale = 0.0
+        for _k, _e in (target.get("effects") or {}).items():
+            if not isinstance(_e, dict):
+                continue
+            _n = float(_e.get("stacks", 0) or 0)
+            if _n <= 0:
+                continue
+            _sc = ((_sdef(_k) or {}).get("debuff_scale") or {}).get("dmg_taken")
+            if _sc:
+                _bscale += float(_sc) * _n
+        if _bscale > 0:
+            dmg = max(1, int(dmg * (1.0 + _bscale)))
+    except Exception:
+        pass  # 状态乘区异常不阻断落地
     # N10-B6 闪避（actor 承伤 roll）：dodge 面板值 cap40%，闪避成功 → 本次承伤免伤。
     # 引擎零知识：dodge 是面板数值字段；乘算合成上限与旧 _roll_dodge 对齐。
     # 位置在 defending 前（对齐旧顺序：闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）。
