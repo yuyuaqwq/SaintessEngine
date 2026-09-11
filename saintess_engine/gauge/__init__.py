@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
-"""通用件 - battle_bars.py（v181 通用挂敌身条 / 蓄力三律）
+"""通用件 - gauge（v181 通用挂敌身资源条）
 
-把《云海猎团》职业融合提炼的 2 个通用机制实现为纯函数模块：
-1. enemy_bar  挂敌身资源条（bar_key 与显示名由内容侧声明）
+把《云海猎团》职业融合提炼的通用机制实现为纯函数模块：
+  enemy_bar  挂敌身资源条（bar_key 与显示名由内容侧声明）
    —— 积蓄挂在敌方身上，**容器 = actor.effects（V 系列统一单容器）**，
       键 = `data/battle_rules.BAR_STATE_PREFIX + bar_key`（如 `bar:shaken`）；
       独立于异常免疫，阈值递增防无限控、触发后免疫窗口、
       阶段转换保留部分进度
-2. charge     蓄力三律（游侠电荷 / 弓手 / 时咒）
-   —— 边攒边打出伤、打断仅 -1 阶不清零（P3）、满阶强制释放
+
+历史（2026-09-11 死代码清理）：本模块原有第二节「蓄力三律（charge）」共 7 个
+函数（读技能电荷配置 / 状态 / 起蓄 / 跳刻 / 命中 / 释放威力 / 清除）已删除——
+它是《云海猎团》弓手·时咒的职业机制，随 v151/v153 职业体系重做与
+core_resources.py（v181.M-R2c）退役，**全仓零消费方**（内容侧从未有技能声明
+电荷配置字段）。设计口径与数值留档
+docs/REFACTOR_v181_CLASS_MECH_ASSEMBLY.md『v139 形态层设计留档』章
++ git 历史；要恢复请按「内容动作 + 引擎 config 查表」的插件形态重写，别复活本段。
 
 时间制（v181 改造）：
 - 积蓄/衰减**按刻连续结算**（`bar_settle(host, key, now)`：dt × decay_per_turn，
@@ -19,7 +25,7 @@
 
 数据驱动铁律：
 - 不写任何职业特判（不出现 class_name 字符串比较）
-- 所有数值从 battle_config ENEMY_BAR_CFG / CHARGE_CFG 读（或调用方传入）
+- 所有数值从 battle_config ENEMY_BAR_CFG 读（或调用方传入）
 - 无配置 = 默认不启用
 - 状态存 actor.effects 命名空间键（随战斗序列化）
 
@@ -209,115 +215,3 @@ def bar_preserve(enemy: dict, bar_key: str, pct: float | None = None) -> None:
     bs = bar_state(enemy, bar_key)
     p = float(pct if pct is not None else bd.get("phase_preserve_pct", 0.5) or 0.5)
     bs["val"] = float(int(float(bs.get("val", 0.0) or 0.0) * p))
-
-
-# ============================================================
-# 二、charge 蓄力三律
-# ============================================================
-
-def charge_def(skill_info: dict) -> dict:
-    """读取技能电荷配置（charge dict / charge_cfg dict），无则 {}。
-
-    v139：数据层统一用 charge_cfg 字段（云海弓手三律翻译），charge 保留旧蓄力 int。
-    charge_def 优先读 charge（dict 才读），回退读 charge_cfg。
-    """
-    if not isinstance(skill_info, dict):
-        return {}
-    c = skill_info.get("charge")
-    if isinstance(c, dict):
-        return c
-    cc = skill_info.get("charge_cfg")
-    if isinstance(cc, dict) and cc:
-        return cc
-    return {}
-
-
-def charge_state(player: dict) -> dict:
-    """玩家电荷状态：{"stages": 0, "skill": str|None, "max": int}"""
-    st = player.get("v139_charge")
-    if not isinstance(st, dict):
-        st = {"stages": 0, "skill": None, "max": 0}
-        player["v139_charge"] = st
-    return st
-
-
-def charge_start(player: dict, skill_info: dict, logs: list | None = None) -> bool:
-    """开始蓄力：设置电荷 0 阶。返回是否成功（技能有 charge 配置）。"""
-    cd = charge_def(skill_info)
-    if not cd:
-        return False
-    mx = int(cd.get("max", _cfg(_battle_cfg("charge"), "max", 3)) or 3)
-    st = charge_state(player)
-    st["stages"] = 0
-    st["skill"] = skill_info.get("name")
-    st["max"] = mx
-    if logs is not None:
-        sname = skill_info.get("name", "蓄力")
-        logs.append(f"⏳ 开始蓄力【{sname}】(0/{mx} 阶)…")
-    return True
-
-
-def charge_tick(player: dict, skill_info: dict, logs: list | None = None) -> dict:
-    """蓄力刻：+1 阶 + 边攒边打出伤。
-
-    返回 {"staged": int, "dmg_mult": float, "released": bool}：
-      staged    当前阶数
-      dmg_mult  本刻边攒边打的伤害倍率（0.7/1.3/1.9 按阶）
-      released  是否满阶强制释放（调用方执行释放逻辑）
-    """
-    cd = charge_def(skill_info)
-    if not cd:
-        return {"staged": 0, "dmg_mult": 0.0, "released": False}
-    st = charge_state(player)
-    mx = int(st.get("max", _cfg(_battle_cfg("charge"), "max", 3)) or 3)
-    # v139：首次蓄力记录技能名（供受击打断/满阶释放识别），切技能自动重置阶数
-    cur_skill = st.get("skill")
-    if cur_skill and cur_skill != skill_info.get("name"):
-        st["stages"] = 0
-        st["max"] = mx
-    st["skill"] = skill_info.get("name")
-    st["stages"] = min(mx, int(st.get("stages", 0) or 0) + 1)
-    stages = st["stages"]
-    dmg_list = cd.get("dmg_per_stage", _cfg(_battle_cfg("charge"), "dmg_per_stage", [0.7, 1.3, 1.9]))
-    dmg = float(dmg_list[min(stages - 1, len(dmg_list) - 1)]) if dmg_list else 0.0
-    if logs is not None:
-        sname = skill_info.get("name", "蓄力")
-        logs.append(f"⚡ 蓄力【{sname}】{stages}/{mx} 阶，边攒边打出 ×{dmg}！")
-    released = False
-    if stages >= mx:
-        released = bool(cd.get("force_release", _cfg(_battle_cfg("charge"), "force_release", True)))
-        if logs is not None and released:
-            logs.append(f"💥 蓄力满阶！【{sname}】强制释放！")
-    return {"staged": stages, "dmg_mult": dmg, "released": released}
-
-
-def charge_on_hit(player: dict, skill_info: dict, logs: list | None = None) -> bool:
-    """受击：打断仅 -1 阶不清零（P3）。返回是否仍处于蓄力（stages > 0）。"""
-    cd = charge_def(skill_info)
-    if not cd:
-        return False
-    st = charge_state(player)
-    if int(st.get("stages", 0) or 0) <= 0:
-        return False
-    pen = int(cd.get("interrupt_penalty", _cfg(_battle_cfg("charge"), "interrupt_penalty", 1)) or 1)
-    st["stages"] = max(0, int(st.get("stages", 0) or 0) - pen)
-    if logs is not None:
-        sname = skill_info.get("name", "蓄力")
-        logs.append(f"🔨 蓄力【{sname}】被打断！(剩 {st['stages']} 阶，不清零)")
-    return int(st.get("stages", 0) or 0) > 0
-
-
-def charge_release_power(skill_info: dict) -> dict:
-    """满阶释放威力配置。返回 {"power": float, "extra": dict}。"""
-    cd = charge_def(skill_info)
-    if not cd:
-        return {"power": 1.0, "extra": {}}
-    return {
-        "power": float(cd.get("release_power", _cfg(_battle_cfg("charge"), "release_power", 2.8)) or 1.0),
-        "extra": cd.get("release_extra", _cfg(_battle_cfg("charge"), "release_extra", {}) or {}),
-    }
-
-
-def charge_clear(player: dict) -> None:
-    """清除电荷状态（释放后/战斗结束）。"""
-    player["v139_charge"] = {"stages": 0, "skill": None, "max": 0}

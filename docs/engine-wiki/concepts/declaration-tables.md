@@ -104,8 +104,8 @@ hit（dict）                           →  {stacks:1, expire, hit}      出手
 | `stat_scale` | `stats._apply_effects`（`stats.py:61`）面板折算 |
 | `debuff_scale` | ⚠️ **无消费者**（全仓 grep 只在 `effects._is_stack_resource` 的判据关键词里出现，`effects.py:249`）。声明了「每层承伤 +N%」的 `hunt_mark`/`soul_mark`/`curse` 实际**不生效**；真正生效的承伤乘区是 `target["_dmg_taken_mult"]`（`landing.py:86-91`，由上层直写） |
 | `panel` | `effects.act_apply` 快照分支（`effects.py:376-388`） |
-| `consume.mode` | `effects.act_apply` 控制分支（`effects.py:293-296`）+ `Battle.act` 的控制消费（`battle.py:423-446`） |
-| `period` | `schedule._settle_time_effects`（`schedule.py:239-247`） |
+| `consume.mode` | `effects.act_apply` 控制分支（`effects.py:293-296`）+ `Battle.act` 的控制消费（`battle.py:413-436`） |
+| `period` | `schedule._settle_time_effects`（`schedule.py:235-243`） |
 | `cleanse` / `period` / `on=="target"` | `effects.act_cleanse`（`effects.py:496-500`） |
 | `cd_mult` | `actions.do_skill` 冷却设置（`actions.py:89-97`，取多态最小） |
 | `negative` | **内容侧**负面种数计数（`class_mech_proc.py:767`），引擎不读 |

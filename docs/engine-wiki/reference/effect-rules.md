@@ -22,8 +22,8 @@
 | `stat_scale` | `{stat: 每层系数}` | ✅ `stats._apply_effects`（`stats.py:61-68`） | 每层面板修正。`st[stat] *= (1 + n×系数)`；特殊 stat：`dmg_mult`（写 `st["_state_dmg_mult"]`，伤害乘区读它）、`reduce`（写 `st["reduce"]`，⚠️ 见「已知死字段」） |
 | `debuff_scale` | `{stat: 每层系数}` | ⚠️ **无消费者** | 只在 `effects._is_stack_resource` 的判据关键词列表里出现（`effects.py:249`）。**「每层承伤 +N%」实际不生效** |
 | `panel` | `{"stat","op","mult"}` | ✅ `effects.act_apply` 快照分支（`effects.py:376-388`） | 静态面板增益的默认值（动作参数缺省时查表）。`op`：`mul`（乘）/ `add`（加）；`op="reduce"` 特殊（见 `stats.py:76-77`） |
-| `consume` | `{"mode": ...}` | ✅ `effects.act_apply`（`effects.py:293-296`）+ `Battle.act`（`battle.py:423-446`） | 控制型条目的消费模式：`"skip"`（整跳行动）/ `"no_skill"`（技能转普攻） |
-| `period` | dict | ✅ `schedule._settle_time_effects`（`schedule.py:239-247`） | 周期结算声明（见下） |
+| `consume` | `{"mode": ...}` | ✅ `effects.act_apply`（`effects.py:293-296`）+ `Battle.act`（`battle.py:413-436`） | 控制型条目的消费模式：`"skip"`（整跳行动）/ `"no_skill"`（技能转普攻） |
+| `period` | dict | ✅ `schedule._settle_time_effects`（`schedule.py:235-243`） | 周期结算声明（见下） |
 | `cleanse` | bool | ✅ `effects.act_cleanse`（`effects.py:498`） | `True` = 可被净化 |
 | `on` | `"caster"` \| `"target"` | ✅ `effects.act_cleanse`（`effects.py:498`，`on=="target"` 也清）；内容侧 `_mech_to_effect` 判 `on_target`（`effects.py:219`） | 效果的默认作用对象。`"target"` = 对敌标记类 |
 | `negative` | bool | ⚠️ 引擎不读 | 「负面」标记。内容侧用它数「负面种数」（`class_mech_proc.py:767`，`target_debuff_kinds` judge） |
@@ -68,15 +68,15 @@
 | `mana_pct` | float | 0 | ✅ `:311/323`（`heal` 与 `mana` 向）。每跳回复最大魔力比例 |
 | `type` | str | — | ⚠️ **无消费者**（参考实现里 `bleed` 写了 `"type": "flat"`） |
 | `per_layer` | int | — | ⚠️ **无消费者**（参考实现里 `bleed` 写了 `"per_layer": 0`） |
-| `dmg_type` | str | — | ⚠️ **无消费者**（参考实现里 `corros` 写了 `"dmg_type": "true"`）。DOT 落地统一调 `deal_damage(battle, None, a, dmg, logs)`（`schedule.py:292`，**不传 `dmg_kind`**）→ 所以吃不到类型免伤与格挡，是因为 `dmg_kind` 为空，不是因为声明了真伤 |
+| `dmg_type` | str | — | ⚠️ **无消费者**（参考实现里 `corros` 写了 `"dmg_type": "true"`）。DOT 落地统一调 `deal_damage(battle, None, a, dmg, logs)`（`schedule.py:288`，**不传 `dmg_kind`**）→ 所以吃不到类型免伤与格挡，是因为 `dmg_kind` 为空，不是因为声明了真伤 |
 
-**`damage` 向的兜底**：两个 pct 都 <= 0 时 `dmg = max(1, n)`（层数当伤害，`schedule.py:276`）。
+**`damage` 向的兜底**：两个 pct 都 <= 0 时 `dmg = max(1, n)`（层数当伤害，`schedule.py:272`）。
 所以一个只声明 `dir/interval` 的 DOT 每跳掉「层数」点血。
 
 **首跳延迟**：某 key 第一次被结算时只登记 `dot_next[key] = now + interval`
 （`schedule.py:254-257`），不在当刻跳。这是对齐旧引擎的语义。
 
-**补跳上限**：一次 `_settle_time_effects` 最多补 20 跳（`guard < 20`，`schedule.py:261`）。
+**补跳上限**：一次 `_settle_time_effects` 最多补 20 跳（`guard < 20`，`schedule.py:257`）。
 
 ## 三种「声明驱动」的对照组（便于理解哪个字段谁读）
 

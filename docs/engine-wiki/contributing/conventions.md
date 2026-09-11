@@ -52,7 +52,7 @@ if pct <= 0:
 ## 3. 落地只能走 `landing`
 
 **任何模块自己扣 `hp` 都是 bug。** 引擎自己的 DOT 也走 `landing.deal_damage`
-（`schedule.py:292`）。自己的动词也必须走：
+（`schedule.py:288`）。自己的动词也必须走：
 
 ```python
 from saintess_engine.landing import deal_damage, heal_actor
@@ -103,13 +103,13 @@ from saintess_engine.landing import deal_damage, heal_actor
 # v181.M-R2：dir=gain（资源自然回）不依赖现有层数——0 层也要回
 # （游侠 energy 耗到 0 若被 n<=0 拦截将永远回不了，卡死）
 ```
-（`schedule.py:247-248`）
+（`schedule.py:243-244`）
 
 ```python
 # 事件主体过滤（N9 修正）：ctx.actor = 该事件的主体 actor——只处理主体 actor
 # 自己声明的 triggers，避免旁观者（同阵营其他带装备 actor）效果被全局广播误触发。
 ```
-（`effect_triggers.py:74-76`）
+（`effect_triggers.py:78-80`）
 
 要写的四类内容：
 

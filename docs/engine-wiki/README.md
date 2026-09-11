@@ -74,10 +74,10 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
 |---|---|---|
 | **全同构 actor** | 玩家/怪/召唤物/变身是同一个 dict 模型，无身份分派 | `make_actor`（`actors.py:58`） |
 | **单 effects 容器** | 增益/减益/DOT/控制/标记/资源全部是 `actor.effects[key]` 一个容器 | `effects.py` 的 `act_apply` |
-| **事件总线** | 26 个引擎事件名（`EVENTS`）+ `fire()`；效果声明挂 `actor.triggers` | `effect_triggers.py:48/57` |
+| **事件总线** | 26 个引擎事件名（`EVENTS`）+ `fire()`；效果声明挂 `actor.triggers` | `effect_triggers.py:52/57` |
 | **声明表驱动** | 效果行为查 `EFFECT_RULES`；名词→动词查 `EFFECT_ACTIONS` | `game/data/battle_rules.py`（游戏仓侧） |
 | **动词注册制** | 8 个引擎动词 + `register_action` 任意扩展（内容侧已扩到 70+） | `effects.py:95` |
-| **CTB 绝对时刻制** | `ct` = 下次可行动时刻；耗时 = 基准 × `sqrt(50/spd)` | `schedule.py:32` |
+| **CTB 绝对时刻制** | `ct` = 下次可行动时刻；耗时 = 基准 × `sqrt(50/spd)` | `schedule.py:28` |
 | **零默认值** | 未声明即无行为（`strict=False` 静默 / `strict=True` 抛错两档） | `config.py:71` |
 | **存档/续战** | sides-only JSON，`to_state` / `from_state`，旧档字段迁移 | `serialize.py:36/59` |
 | **注入式边界** | 引擎不 import 游戏；游戏把公式/面板/技能表 mount 进来 | `config.py:129` |
@@ -145,6 +145,8 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
 - `effects["reduce"]` 由 `stats.py` 写入面板，但**伤害路径不消费**它。
 - 技能级 `accuracy`（`game/data/skills.py:1466,2284` 两处）与技能级 `crit` 字段**无引擎消费方**。
 - `game/data/skills.py` 里有 **20 个** `effect=` 名词既不在 `EFFECT_ACTIONS` 也不是引擎动词 → **静默 no-op**。
-- `Battle.dmg_mult` / `Battle.pet` / `Battle._cast_ctx` / `Battle._target_ctx` / `Battle._events` /
-  `Battle.__init__(st=…)` / `schedule.HOT_INTERVAL` / `schedule.CAST_ITEM` / `Battle.DEFAULT_CT_WAIT`
-  全部**只写不读**。
+- ~~`Battle.dmg_mult` / `Battle.pet` / `Battle._cast_ctx` / `Battle._target_ctx` / `Battle._events` /
+  `Battle.__init__(st=…)` / `schedule.HOT_INTERVAL` / `schedule.CAST_ITEM` / `Battle.DEFAULT_CT_WAIT`~~
+  —— **2026-09-11 已全部删除**。⚠️ 但 `dmg_mult` / `pet` 不是死字段：它们是
+  **「调用方在写、引擎没读」的静默失效功能**（世界 Boss GM 伤害倍率 / 宠物参战），
+  处置见 [_selfcheck.md §0.4](_selfcheck.md)。

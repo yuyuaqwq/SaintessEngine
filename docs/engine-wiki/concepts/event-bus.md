@@ -6,7 +6,7 @@
 把 `actor["triggers"][event]` 里的效果声明交给效果系统执行。
 **事件名是引擎协议（封闭集合 `EVENTS`），事件里挂什么是你的游戏名词。**
 
-入口：`effect_triggers.fire`（`effect_triggers.py:57`）；事件名全集：`EVENTS`（`effect_triggers.py:48`）。
+入口：`effect_triggers.fire`（`effect_triggers.py:61`）；事件名全集：`EVENTS`（`effect_triggers.py:52`）。
 
 ## 为什么要有事件总线
 
@@ -54,7 +54,7 @@ for acts in battle.sides.values():
         if not actor_alive(a) and a is not subject:
             continue
 ```
-（`effect_triggers.py:77` 与 `:83-90`）
+（`effect_triggers.py:81` 与 `:83-90`）
 
 **为什么**：如果不过滤，同阵营其他人身上挂的装备特效会被全局广播误触发。
 `None` = 无主体事件（典型：`battle_start` 全体触发）。
@@ -64,14 +64,14 @@ for acts in battle.sides.values():
 - **主体死亡也执行**：`on_death` 的死者自己的声明照样跑（死亡遗言类效果）。
   判据是 `a is subject` 那一支。
 - **有些事件故意不带 `actor`**：`act_done` 只放 `ctx["acted"]`，让效果侧自己判敌我
-  （`battle.py:477-479` 注释：`randuin`/`ice_vein` 靠它监听「敌对 actor 行动」叠减速）。
+  （`battle.py:467-469` 注释：`randuin`/`ice_vein` 靠它监听「敌对 actor 行动」叠减速）。
 
 ### 4. `_owner` 注入
 
 ```python
 _e2 = dict(_e); _e2.setdefault("_owner", a)
 ```
-（`effect_triggers.py:99-102`）
+（`effect_triggers.py:103-106`）
 
 每个效果 dict 的**副本**里被塞进 `_owner = 声明者**。扩展动词可以用它自查归属
 （例：`passive_counter` 用 `params.get("_owner")` 找反击的宿主，
@@ -84,7 +84,7 @@ _e2 = dict(_e); _e2.setdefault("_owner", a)
 ctx.setdefault("_event", event)
 battle._fire_ctx = ctx
 ```
-（`effect_triggers.py:81-82`）
+（`effect_triggers.py:85-86`）
 
 这是**乘区型扩展动作改数值的通道**：内容侧动作把 `battle._fire_ctx["mult"]` 乘一下，
 引擎在该事件的 fire 返回后读回：
@@ -96,9 +96,9 @@ if _m != 1.0:
     total = max(1, int(total * _m))
 ```
 （`actions.py:416-422`，同款出现在 `landing.py:75-84` 的 `taken_calc`、
-`actions.py:642-702` 的 `heal_calc`、`schedule.py:281-291` 的 `dot_calc`）
+`actions.py:638-698` 的 `heal_calc`、`schedule.py:281-291` 的 `dot_calc`）
 
-⚠️ **它是单槽、覆盖式、不落盘**（`effect_triggers.py:79-80` 注释）：
+⚠️ **它是单槽、覆盖式、不落盘**（`effect_triggers.py:83-84` 注释）：
 单线程同步 fire 所以成立；**别在异步/多线程里依赖它**。`dot_calc` 广播后
 `_fire_ctx` 会被后续 fire 覆盖——所以读 `mult` 必须**紧跟在自己的 fire 之后**。
 
@@ -130,7 +130,7 @@ battle._fire_ctx = _prev_ctx        # ← 广播后还原，否则同批次后�
 |---|---|
 | `actor` | **事件主体**（`on_death`=死者；`dot_tick`=受跳者；`buff_expire`=buff 持有者；`turn_start`/`act_begin`/`act_cast`=行动者；`skill_hit`/`attack_hit`/`crit`/`dmg_calc`=攻击者；`on_taken`/`on_heal`/`taken_calc`/`heal_calc`=承伤者/被治疗者） |
 | `target` | **效果的作用目标**（`skill_hit`=被打者；`on_taken`=受击者；`on_heal`=被治疗者） |
-| `caster` | 效果的施放方。**缺省 = 声明者自己**（`effect_triggers.py:70-72, 105`） |
+| `caster` | 效果的施放方。**缺省 = 声明者自己**（`effect_triggers.py:74-76, 105`） |
 | `info` | 技能 dict（可选） |
 | `dmg` / `amount` / `real` / `overflow` | 数值（可选，各事件不同） |
 | `source` | 攻击方（`on_taken` / `taken_calc` / `interrupt` 有） |
@@ -140,7 +140,7 @@ battle._fire_ctx = _prev_ctx        # ← 广播后还原，否则同批次后�
 
 **关键推理**：「caster 缺省 = 声明者自己」使「受击自我强化」这类效果不需要显式施放方。
 `fire` 调用时是 `apply_effects(battle, caster if caster is not None else a, target, ...)`
-（`effect_triggers.py:105`）——`a` 就是声明者。
+（`effect_triggers.py:109`）——`a` 就是声明者。
 
 各事件的完整 ctx 字段表 → [../reference/events.md](../reference/events.md)。
 

@@ -18,9 +18,6 @@ from .actors import ActCtx, actor_alive, actor_dead
 from . import actions
 from .. import config as _cfg
 
-# 旧 battle 常量（对外兼容读）
-DEFAULT_CT_WAIT = 2.0  # CTB 基础行动间隔（N4 schedule 细化）
-
 
 def _now_of(battle) -> float:
     """battle 当前绝对时刻（schedule 未接入时 = 0；CD 以此刻为基准）。"""
@@ -33,8 +30,7 @@ now_of = _now_of
 
 class Battle:
     def __init__(self, btype: str = "monster", sides: Optional[dict] = None,
-                 title_bonus: Optional[dict] = None, dmg_mult: float = 1.0,
-                 pet: Optional[dict] = None, st: Optional[dict] = None,
+                 title_bonus: Optional[dict] = None,
                  hostile_map: Optional[dict] = None,
                  target_picker=None, on_event=None, action_override=None,
                  script_hook=None, seed_ct: bool = True, **kwargs):
@@ -57,8 +53,6 @@ class Battle:
         """
         self.btype = btype
         self.title_bonus = title_bonus or {}
-        self.dmg_mult = dmg_mult
-        self.pet = pet or {}
         self.target_picker = target_picker
         self.on_event = on_event
         self.action_override = action_override
@@ -69,9 +63,6 @@ class Battle:
             self.sides[sn] = list(acts or [])
         # 敌对关系（可覆盖）
         self.hostile_map = hostile_map or {}
-        # 行动上下文（N2 起用）
-        self._cast_ctx: Optional[dict] = None
-        self._target_ctx: Optional[dict] = None
         # 结果
         self.result: Optional[str] = None      # None | victory | defeat | fled
         self.winner_side: Optional[str] = None
@@ -79,7 +70,6 @@ class Battle:
         # CTB 绝对时刻（N4 schedule）
         self._now: float = 0.0
         self._p_acts: int = 0
-        self._events: list = []
         # 开战事件已触发标记（N8：battle_start 整场一次；from_state 恢复 = True）
         self._started: bool = False
         # 技能索引：actor.skills key 列表 → 技能 dict（从 data 桥读取）

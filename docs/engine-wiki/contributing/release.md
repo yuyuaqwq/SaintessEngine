@@ -47,12 +47,12 @@
       `battle_bars` / `formation` / `formula_expr` / `skill_kinds` 等已归位框架仓
       （现 `saintess_engine/{expr,gauge,formation,kinds}/`））
 - [ ] **语义残留未清**（门禁只是 import 门禁）。未清的 4 项：
-  - `kinds/` 的中文枚举值（`kind_meta` 表，`kinds/__init__.py:27-34`）→ 应改为
+  - `kinds/` 的中文枚举值（`kind_meta` 表，`kinds/__init__.py:33-40`）→ 应改为
     从 `config.kind_of` 注入，或明确标为「参考实现专用」
   - `landing` / `stats` 里的固定效果 key（`death_guard` · `heal_amp_pct` · `heal_down` ·
     `_anti_heal_pct` · `sleep`）
   - `effects.act_apply` 里的 `if key == "reduce"`
-  - `battle._check_side_end` 里的 `"player"` 阵营名（`battle.py:555`）
+  - `battle._check_side_end` 里的 `"player"` 阵营名（`battle.py:545`）
   （完整表见 [../architecture/boundaries.md](../architecture/boundaries.md) 的「边界瑕疵」）
 - [ ] **缺失消费方的声明清理**（`on_threshold` / `debuff_scale` / `wake_on_hit` /
       `tag` / `period.type` / `period.per_layer` / `period.dmg_type`）——

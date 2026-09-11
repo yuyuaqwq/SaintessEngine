@@ -77,12 +77,12 @@
 | R2 | `actions.py:17` → `game.core.constants` | 死 import |
 | R3 | `actions.py:35` → `game.content`（`C.CLASSES` 直读） | 内容表直读 |
 | R4 | `actions.py:337` → `game.core.formation` | 合规（通用纯函数，层级归属错） |
-| R5 | `actions.py:720` → `game.core.formula_expr` | 合规（通用解释器） |
-| R6 | `actions.py:767` → `game.engine.skill_buff_turns` | 反向边 |
+| R5 | `actions.py:716` → `game.core.formula_expr` | 合规（通用解释器） |
+| R6 | `actions.py:763` → `game.engine.skill_buff_turns` | 反向边 |
 | R7 | `actions.py:766` → `game.core.constants` | 死 import |
-| R8 | `actions.py:799` → `game.engine.skill_mech_val` | 反向边 |
-| R9 | `battle.py:120` → `game.engine`（技能表查询） | 反向边 |
-| R10 | `battle.py:121` → `game.content.MONSTER_SKILLS` | 内容表直读 |
+| R8 | `actions.py:795` → `game.engine.skill_mech_val` | 反向边 |
+| R9 | `battle.py:110` → `game.engine`（技能表查询） | 反向边 |
+| R10 | `battle.py:111` → `game.content.MONSTER_SKILLS` | 内容表直读 |
 | R11 | `stats.py:16` → `game.engine.player_final_stats` | **最重的一条**（玩家面板全算） |
 | R12 | `config.py:38` → `game.data.battle_rules` | 位置不合规（装配逻辑落在引擎包内） |
 | R13 | `stats.py:97` → 字面量 `"战士"` | 内容名侵入 |
@@ -103,13 +103,13 @@
 
 | # | 瑕疵 | 位置 | 影响 |
 |---|---|---|---|
-| B1 | `kinds/` 的枚举值写死中文（`PHYS = "物理"` …） | `kinds/__init__.py:27-34` | 与 `config.kind_of` 注入面**两套 kind 词表**；非中文 kind 的游戏用不了 `is_kind` / `is_damage_kind` / `seg_of` |
+| B1 | `kinds/` 的枚举值写死中文（`PHYS = "物理"` …） | `kinds/__init__.py:33-40` | 与 `config.kind_of` 注入面**两套 kind 词表**；非中文 kind 的游戏用不了 `is_kind` / `is_damage_kind` / `seg_of` |
 | B2 | `landing._apply_death_guard` / `heal_actor` / `stats` 里硬编码 key：`"death_guard"`、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`、`"sleep"` | `landing.py:117,237,373-396` | 「濒死保护」「禁疗/受疗增幅」「睡眠打醒」四类机制**只认固定 key 名**。要换名只能改引擎（或复用这些名字） |
 | B3 | `effects.act_apply` 里 `if key == "reduce":` 写 `holder["reduce_left"]` | `effects.py:369-370` | 引擎里出现了内容 key 字面量 |
-| B4 | `schedule._settle_time_effects` 里 `pct_boss` / `is_boss` / `role == "boss"` | `schedule.py:268,272` | 「Boss」这个内容概念进了引擎（作为数据字段处理，尚可接受，但它是**唯一**被引擎认识的身份标签） |
+| B4 | `schedule._settle_time_effects` 里 `pct_boss` / `is_boss` / `role == "boss"` | `schedule.py:264,272` | 「Boss」这个内容概念进了引擎（作为数据字段处理，尚可接受，但它是**唯一**被引擎认识的身份标签） |
 | B5 | `effects.act_apply` 里 `if holder.get("is_boss") or holder.get("role") == "boss"` | `effects.py:305` | 同上（控制时长减半） |
 | B6 | `effects._mech_to_effect` 的 `_is_stack_resource` 判据关键词含 `debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct` | `effects.py:249-253` | 这些字段**没有消费者**，但它们的**存在与否改变分派结果** —— 声明了 `debuff_scale` 会意外让 mech 走叠层路径 |
-| B7 | `battle.py` 里 `"player"` 阵营名硬编码 | `battle.py:555`（`_check_side_end`）、`:170`（`focus`） | 你的游戏若不叫 `player` 就得改引擎或用 `hostile_map` 绕过 |
+| B7 | `battle.py` 里 `"player"` 阵营名硬编码 | `battle.py:545`（`_check_side_end`）、`:170`（`focus`） | 你的游戏若不叫 `player` 就得改引擎或用 `hostile_map` 绕过 |
 | B8 | `B6` 的反面：`stats._monster_base_stats` 的 `crit` 兜底 0.05 与 `make_actor` 播种 0.0 不一致 | `stats.py:122` vs `actors.py:98` | 同一种 actor 在不同路径下暴击率不同 |
 
 **结论**：引擎的 import 边界是干净的（机器可验），但**语义边界还没完全干净**：
@@ -206,7 +206,7 @@ def apply_game_content(actor: dict, ctx: dict | None = None) -> dict:   # game/c
 | `game/content_rules/{skills,panel,gameplay}.py` | 技能表 / 面板公式 / 游戏规则（S5 从 `engine.py` 拆出） |
 
 ⚠️ **一个已核实的重要内容侧缺口**：技能数据的 `cond`（条件倍率）在引擎里是死字段 ——
-`actions._do_heal` 里 `cond_mult = 1.0  # N2b 补，恒 1.0 起步`（`actions.py:679`）。
+`actions._do_heal` 里 `cond_mult = 1.0  # N2b 补，恒 1.0 起步`（`actions.py:675`）。
 内容侧用 `battle_cond_procs.py` 把它接回乘区（「**引擎零改动**，走既有装配层扩展动作模式」，
 游戏仓 `battle_cond_procs.py:5-11`）。第三方要 `cond` 就得自己写这个装配器。
 

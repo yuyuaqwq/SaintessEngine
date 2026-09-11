@@ -6,32 +6,32 @@
 
 ```
 命令层
-  └─ Battle.human_act(action, skill_name, actor, target)        battle.py:244
+  └─ Battle.human_act(action, skill_name, actor, target)        battle.py:234
        ├─ ActCtx(caster, action, skill_name, target, ...)       actors.py:20
-       ├─ Battle.act(ctx)                                       battle.py:398
-       │    ├─ _ensure_battle_started()                         battle.py:506   ⚡ battle_start
-       │    ├─ fire("turn_start")                               battle.py:418   ⚡
-       │    ├─ 控制消费（mode=skip → 早退；no_skill → 技能转普攻） battle.py:423-446 ⚡ on_act_consume
-       │    ├─ fire("act_begin")                                battle.py:448   ⚡
-       │    ├─ _p_acts += 1                                     battle.py:410
+       ├─ Battle.act(ctx)                                       battle.py:388
+       │    ├─ _ensure_battle_started()                         battle.py:496   ⚡ battle_start
+       │    ├─ fire("turn_start")                               battle.py:408   ⚡
+       │    ├─ 控制消费（mode=skip → 早退；no_skill → 技能转普攻） battle.py:413-436 ⚡ on_act_consume
+       │    ├─ fire("act_begin")                                battle.py:438   ⚡
+       │    ├─ _p_acts += 1                                     battle.py:400
        │    ├─ 分派：
        │    │    attack → actions.do_attack                      actions.py:49
        │    │    skill  → actions.do_skill                       actions.py:62
-       │    │    defend → Battle._do_defend                      battle.py:493
-       │    │    flee   → Battle._do_flee                        battle.py:498
-       │    │    其他   → Battle.action_override 注入点           battle.py:465
-       │    ├─ fire("act_done")                                 battle.py:482   ⚡
-       │    └─ _check_side_end()                                battle.py:539
+       │    │    defend → Battle._do_defend                      battle.py:483
+       │    │    flee   → Battle._do_flee                        battle.py:488
+       │    │    其他   → Battle.action_override 注入点           battle.py:455
+       │    ├─ fire("act_done")                                 battle.py:472   ⚡
+       │    └─ _check_side_end()                                battle.py:529
        └─ 若未结束且 action ∈ {attack, skill, defend} 或 override 被消费：
-            ├─ schedule._after_act(battle, caster, action)      schedule.py:143  推 ct
-            └─ Battle.advance(logs)                             battle.py:293
-                 └─ schedule.advance（推时钟 + 自动 actor 行动）  schedule.py:71
+            ├─ schedule._after_act(battle, caster, action)      schedule.py:139  推 ct
+            └─ Battle.advance(logs)                             battle.py:283
+                 └─ schedule.advance（推时钟 + 自动 actor 行动）  schedule.py:67
 ```
 
 ## 展开 1：`advance` 的循环
 
 ```
-schedule.advance(battle, logs, max_steps=200)                     schedule.py:71
+schedule.advance(battle, logs, max_steps=200)                     schedule.py:67
   while battle.result is None and guard < 200:
     fp   = _next_player_due(battle)     # ct 最小的 human_controlled 存活者   :113
     auto = _next_auto_due(battle)       # ct 最小的自动 actor                :128
@@ -42,17 +42,17 @@ schedule.advance(battle, logs, max_steps=200)                     schedule.py:71
     else:
         _advance_time(battle, auto[1] - battle._now, logs)
         logs.append("—— {name} 行动 ——")
-        battle.actor_auto(actor)                                       battle.py:318
+        battle.actor_auto(actor)                                       battle.py:308
 ```
 
-`_advance_time(battle, dt, logs)`（`schedule.py:156`）内部：
+`_advance_time(battle, dt, logs)`（`schedule.py:152`）内部：
 
 ```
 battle._now += dt
-_settle_time_effects(battle, logs)                                  schedule.py:175
+_settle_time_effects(battle, logs)                                  schedule.py:171
    ├─ for 每个存活 actor:
-   │    ├─ effects 到期 → pop + ⚡ buff_expire                        schedule.py:202-212
-   │    ├─ shields 到期（expire_at <= now）→ pop                      schedule.py:215-225
+   │    ├─ effects 到期 → pop + ⚡ buff_expire                        schedule.py:198-208
+   │    ├─ shields 到期（expire_at <= now）→ pop                      schedule.py:211-221
    │    └─ 周期跳（period）:
    │         首次 → dot_next[key] = now + interval（不跳）             schedule.py:254-257
    │         到点 → while now >= dot_next（最多 20 跳）:
@@ -61,7 +61,7 @@ _settle_time_effects(battle, logs)                                  schedule.py:
    │             dir=mana   → 直接加 mp                                :321-330
    │             dir=gain   → effects[key].stacks ±= amount（clamp，静默） :331-350
    │             限时（turns）→ 跳够清层                                :351-359
-fire("time_advance", {"dt": dt, "now": battle._now})                schedule.py:170 ⚡
+fire("time_advance", {"dt": dt, "now": battle._now})                schedule.py:166 ⚡
 ```
 
 ## 展开 2：`do_attack` → `do_skill` → 伤害管线
@@ -118,9 +118,9 @@ actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:
   7. total *= _st_mult；total *= hit_buffs.dmg_mult
   8. ⚡ fire("dmg_calc", {actor, target, dmg, is_crit, info, mult:1.0})  actions.py:416-422
        └─ 读回 battle._fire_ctx["mult"] → total *= mult
-  9. _deal_hit(battle, actor, target, total, defend_reduce, element)   actions.py:566
+  9. _deal_hit(battle, actor, target, total, defend_reduce, element)   actions.py:562
        └─ landing.deal_damage(...)                                  landing.py:23
- 10. _settle_lifesteal(...)（非 AOE）                               actions.py:603
+ 10. _settle_lifesteal(...)（非 AOE）                               actions.py:599
        └─ rate = min(lifesteal 类面板, 0.30)，真伤不吸，mortal_wound ×0.5
           → landing.heal_actor → on_heal ⚡
  11. bonus_atk_pct > 0 → 再 _deal_hit 一段附伤
@@ -159,7 +159,7 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 │      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:237     │
 │      │     effects["death_guard"].stacks > 0 → hp 拉回 guard_hp_pct      │
 │      │     （+heal_pct 额外治疗，走 heal_actor）→ 层 -1                    │
-│      ├─ 仍 <= 0 → Battle._on_actor_dead(...)           battle.py:521       │
+│      ├─ 仍 <= 0 → Battle._on_actor_dead(...)           battle.py:511       │
 │      │       killed_actors.append / 清 defending+charging                 │
 │      │     ⚡ fire("on_death", {actor, target})                            │
 │      │     source 非 None → ⚡ fire("on_kill", {actor: source, ...})       │
@@ -186,7 +186,7 @@ turn_start ─→ act_begin ─→ act_cast ─→ dmg_calc
              …（advance 期间）… buff_expire / dot_calc / dot_tick / time_advance
 ```
 
-`caster` 缺省 = 声明者本人（`effect_triggers.py:105`），所以 `on_taken` 里的
+`caster` 缺省 = 声明者本人（`effect_triggers.py:109`），所以 `on_taken` 里的
 `on=caster` 效果作用于**受击者自己**；要作用于攻击者请用 `ctx["source"]`。
 
 ## 五条「读代码时最容易看错」的细节
@@ -195,8 +195,8 @@ turn_start ─→ act_begin ─→ act_cast ─→ dmg_calc
 |---|---|---|
 | 普攻不是独立的伤害路径 | 它把自己改写成一次 `action="skill"` 的施放 | `actions.py:56-59` |
 | 技能索引进 `_skill_index` 且**失败不阻断** | 索引空 → 技能静默空放 | `battle.py:126-149` |
-| `act_done` 不带 `actor` 键 | 所以它是全员广播；行动者放在 `ctx["acted"]` | `battle.py:477-482` |
-| 被控跳过时 `act()` **提前 return**，`act_done` 不 fire | 推 ct 由调用方做 | `battle.py:439-446` |
+| `act_done` 不带 `actor` 键 | 所以它是全员广播；行动者放在 `ctx["acted"]` | `battle.py:467-472` |
+| 被控跳过时 `act()` **提前 return**，`act_done` 不 fire | 推 ct 由调用方做 | `battle.py:429-436` |
 | `_fire_ctx` 会被嵌套 fire 覆盖 | 需要 save/restore | `game/services/class_mech_proc.py:238-244`（游戏仓侧） |
 
 ## 相关

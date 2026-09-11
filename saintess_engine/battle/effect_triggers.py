@@ -21,7 +21,9 @@ ctx 语义（插桩点统一约定）：
 执行语义：对每个存活 actor，查自身 triggers[event] → 以 ctx.caster/ctx.target
 为默认施放方/目标执行（effect dict 可带 on 覆盖作用对象）。
 
-# 事件全集（DESIGN_effect_system_v2.md §3.3 19 时机 + N9.13 dmg_calc/taken_calc + act_done）：
+# 事件全集（V181 实证：26 个 = DESIGN_effect_system_v2.md §3.3 的 19 时机
+#   + N9.13 dmg_calc/taken_calc/heal_calc + act_done + N9 追加 dot_calc/interrupt
+#   + 上层驱动 phase/player_low/pv_broken/time_advance）：
 #    battle_start 开战（词条/套装/仪式）   turn_start actor 回合开始
 #    act_begin 行动前（读条前）            act_cast 行动施放瞬间（耗蓝/读条后）
 #    skill_hit 技能命中后                  attack_hit 普攻命中后
@@ -37,13 +39,15 @@ ctx 语义（插桩点统一约定）：
 
 N9 起：phase/player_low/pv_broken 无引擎自然点位（Boss 机制上层驱动），
 由上层按需调 fire()（EVENTS 已声明全集）。引擎已插桩自然点位 = 除
-phase/player_low/pv_broken 外 16 个（battle/actions/landing/schedule/effects）。
+phase/player_low/pv_broken 外 **23 个**（battle/actions/landing/schedule/effects；
+20 个字面 fire 点位 + skill_hit/attack_hit 走变量事件名 + time_advance/dot_calc/
+interrupt = 23；扫描脚本见 docs/engine-wiki/_selfcheck.md §6）。
 """
 from __future__ import annotations
 
 from .actors import actor_alive
 
-# 19 时机事件全集（必须单行定义——cov 按行 trace，多行续行会永久漏记；
+# 26 事件全集（必须单行定义——cov 按行 trace，多行续行会永久漏记；
 # 中文语义见模块 docstring）
 EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "attack_hit", "crit", "on_taken", "on_heal", "on_kill", "on_death", "dot_tick", "dot_calc", "on_act_consume", "on_hit_consume", "buff_expire", "threshold", "dmg_calc", "taken_calc", "heal_calc", "act_done", "phase", "player_low", "pv_broken", "interrupt", "time_advance")
 

@@ -358,15 +358,15 @@ def _deal_aoe(battle, actor: dict, target: dict, info: dict, total: int) -> list
         targets = enemies
     if not targets:
         return logs
-    falloff = float(info.get("aoe_falloff", 1.0) or 1.0)
+    # ⚠️ `info["aoe_falloff"]`（后排衰减）**本引擎不实现**（2026-09-11 取证：原代码读了它、
+    #   转手调一个原样返回的占位函数 `_aoe_falloff_apply` → 声明了完全不生效，属误导性半接线）。
+    #   已删掉那条假路径（连同占位函数）：数据里写了 aoe_falloff 时**不会有任何效果**，
+    #   第三方若需要请在内容侧用 `dmg_calc` 触发器按 rank 自行乘算。
     for t in targets:
         if not actor_alive(t):
             continue
         logs.extend(_single_target_pipeline(battle, actor, t, info, _skill_lv_of(battle, actor),
                                             _no_lifesteal=True))  # N10-B1：AOE 不吸血（旧语义）
-        # rank>1 目标 aoe_falloff：简化——falloff!=1.0 时按比例补算（见 _aoe_falloff_apply）
-        if falloff != 1.0 and int(t.get("rank", 1) or 1) > 1:
-            logs = _aoe_falloff_apply(logs)
     return logs
 
 
@@ -520,10 +520,6 @@ def _apply_hit_effects(battle, actor: dict, target: dict, info: dict, lv: int, l
 def _skill_lv_of(battle, actor: dict) -> int:
     return _cfg.formulas().skill_level_of(actor, "") if actor.get("class_name") else 0
 
-
-def _aoe_falloff_apply(logs):
-    """AOE falloff 标记（占位——N5 命令层接入时按需精确实现）。"""
-    return logs
 
 
 def _skill_seg_damage(battle, actor, target, st, est, info, lv,

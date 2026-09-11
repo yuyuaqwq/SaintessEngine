@@ -22,11 +22,7 @@ from .effects import _cap_of as _stack_cap_of
 CAST_ATK = 1.0
 CAST_SKILL = 1.6
 CAST_DEFEND = 0.6
-CAST_ITEM = 1.0
 SPD_REF = 50.0
-# hot 周期恢复间隔（对齐旧引擎 ACT_TICK=1 游戏秒一拍；正向持续恢复的墙钟节奏，
-# 与 actor 出手快慢无关——v179 P3 拍板语义：N 刻 = N 秒）
-HOT_INTERVAL = 1.0
 
 
 def action_time(spd: int, base: float = CAST_ATK) -> float:

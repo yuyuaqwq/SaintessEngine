@@ -8,6 +8,62 @@
 > - **`注释≠代码`** = 注释/文档的陈述与代码当前行为不一致
 > - **`未取证`** = 我没有做足够的验证就写进 wiki（一律标出）
 
+## 0. 2026-09-11 处置结果（**先读这一节，再看下面的原始清单**）
+
+写这份清单时（拆仓当天）引擎工作区正被并行改动，所以本页保留了**取证当时的原貌**。
+2026-09-11 收尾轮把清单逐条复跑（**用当前仓库状态重跑，不信历史结论**）并处置如下。
+
+### 0.1 已删除（零消费方代码）
+
+| 项 | 处置 |
+|---|---|
+| `gauge.charge_*`（6 函数 + 蓄力三律整节） | **已删**。它是《云海猎团》弓手/时咒的**职业机制**残留（内容侧从未有技能声明电荷配置），与「引擎零内容知识」冲突。设计口径留档游戏仓 `docs/REFACTOR_v181_CLASS_MECH_ASSEMBLY.md『v139 形态层设计留档』` + git 历史 |
+| `Battle.dmg_mult` / `pet` / `st`（构造参数 + 字段） | **已删**。⚠️ 其中 `dmg_mult` 不是「遗留待删」而是「传了不读」的**活功能** → 见 §0.4 |
+| `Battle._cast_ctx` / `_target_ctx` / `_events` | **已删**（只初始化、零读） |
+| `DEFAULT_CT_WAIT` | **已删**（常量零消费） |
+| `schedule.CAST_ITEM` / `HOT_INTERVAL` | **已删**（零消费；游戏仓 `game/core/constants.py` 自己有同值常量） |
+| `actions._aoe_falloff_apply` + AOE falloff 假路径 | **已删**。原代码读了 `info["aoe_falloff"]` 却调一个原样返回的占位函数 → 「声明了不生效」的误导性半接线。现明确：**本引擎不实现 AOE falloff**；第三方请用 `dmg_calc` 触发器按 rank 自行乘算 |
+
+### 0.2 已修正（注释 ≠ 代码）
+
+C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**游戏仓**
+`game/data/battle_rules.py` 已加取证纠正注释（`debuff_scale` / `period.dmg_type` /
+`finisher.crit_at` / MECH_CASH 的 `heal_clear`·`bonus_clear` 两个 mode 装配器不分派）。
+
+### 0.3 已定案（原「待确认 / 未取证」）
+
+| # | 原问题 | 定案 |
+|---|---|---|
+| Q1 | 最低 Python 版本 | 未声明；实机跑过 3.11/3.12 → **发布前必须在元数据/README 声明**（v0.1 遗留项） |
+| Q2 | 分发形态 | **submodule 已采用**（游戏仓 `.gitmodules`）；是否再发 PyPI 未定 |
+| Q3 | commit message 约定 | 未取证 → **不引入新规范**，按现有 `feat/fix/chore(scope):` 惯例 |
+| Q4 | 引擎独立 CHANGELOG / 版本号 | `saintess_engine/version.py` 已有版本常量（编辑器/模拟器 fail-closed 校验）；CHANGELOG 未建 |
+| Q5 | `Battle.dmg_mult` / `pet` / `st` 是遗留还是预留 | ⚠️ **都不是** —— `dmg_mult`/`pet` 是**调用方在用、引擎没读**（静默失效的活功能）。见 §0.4 |
+| Q6 | `charge_*` 是将来接入还是已废弃 | **已废弃** → 已删（§0.1） |
+| Q8 | 20 个未映射 `effect=` 是「待实现」还是「废弃数据」 | **待实现**（玩家可见的静默 no-op）→ 游戏仓 `docs/REFACTOR_v181_team_effects_plan.md` |
+| Q9 | `bleed` 的 `type` / `per_layer` 是否曾被消费 | 无历史消费痕迹；与 `period.dmg_type` 同批处置 |
+| Q10 | 行号漂移 | 已有门禁 `tests/test_wiki_refs.py`（drift 必须 0）+ 工具 `tools/remap_wiki_refs.py`（内容锚定位移） |
+| — | §4 的 B1-B6「引擎里的内容知识」 | **定案为引擎公开词汇表契约** → [../engine-vocabulary-contract.md](../engine-vocabulary-contract.md) |
+
+### 0.4 ★ 本轮最重要的取证：`dmg_mult` 不是死字段
+
+`Battle(dmg_mult=…)` 在**游戏仓 `game/commands/combat.py` 的世界 Boss 构造处是活调用**：
+
+```python
+# 旧引擎：_boss_dmg_filter 里 dmg = int(dmg * self.dmg_mult)（GM「gm_伤害」倍率）
+# battle2：Battle.__init__ 只存 self.dmg_mult，全仓零读取 → GM 倍率静默失效
+```
+
+⇒ 教训：**「字段只写不读」要分两种** ——
+① 谁都写的遗留字段（删）；② **调用方在写、引擎没读**（= 静默失效的活功能，修，不能删）。
+
+本轮修法（**零引擎改动**）：内容侧 `game/services/battle_worldboss_procs.py` 走
+`taken_calc` 承伤乘区挂到 Boss actor；测试 `tests/test_v181_worldboss_gm_dmg.py` **13/13**。
+同一条判定还救了 `pet=`：宠物传了但引擎不读 → 归「随从 actor 工厂」线
+（游戏仓 `docs/REFACTOR_v181_companion_line.md`）。
+
+---
+
 ## 1. 声明了但无消费方（`缺消费方`）
 
 ### 1.1 `EFFECT_RULES` 字段
@@ -29,31 +85,31 @@
 |---|---|
 | `type` | **无消费方**（参考实现 `bleed` 写了 `"type": "flat"`） |
 | `per_layer` | **无消费方**（同上 `"per_layer": 0`） |
-| `dmg_type` | **无消费方**（参考实现 `corros` 写了 `"dmg_type": "true"` 并注释「真伤 DOT」）。DOT 落地统一 `deal_damage(battle, None, a, dmg, logs)` **不传 `dmg_kind`**（`schedule.py:292`）→ 吃不到类型免伤/格挡是因为 kind 为空，**不是因为声明了真伤** |
+| `dmg_type` | **无消费方**（参考实现 `corros` 写了 `"dmg_type": "true"` 并注释「真伤 DOT」）。DOT 落地统一 `deal_damage(battle, None, a, dmg, logs)` **不传 `dmg_kind`**（`schedule.py:288`）→ 吃不到类型免伤/格挡是因为 kind 为空，**不是因为声明了真伤** |
 
 ### 1.3 引擎 API / 常量
 
 | 名称 | 位置 | 结论 |
 |---|---|---|
-| `Battle.dmg_mult` | `battle.py:60` | 只赋值，**零消费者** |
-| `Battle.pet` | `battle.py:61` | 只赋值，**零消费者**（docstring 也没解释它） |
-| `Battle.__init__(st=...)` | `battle.py:37` | **签名里有、函数体从未引用**；全仓 0 处调用点传它 |
-| `Battle._cast_ctx` / `_target_ctx` | `battle.py:73-74` | 只初始化，零使用 |
-| `Battle._events` | `battle.py:82` | 只初始化，零使用 |
-| `DEFAULT_CT_WAIT = 2.0` | `battle.py:22` | 常量零消费 |
-| `schedule.CAST_ITEM = 1.0` | `schedule.py:25` | 引擎内零消费（内容侧 `battle_item_use.py` 自己定义了同值常量） |
-| `schedule.HOT_INTERVAL = 1.0` | `schedule.py:29` | 零消费 |
-| `schedule.next_ct` | `schedule.py:46` | 有定义、无调用方（实际推进走 `_after_act`） |
+| ~~`Battle.dmg_mult`~~ | ~~`battle.py:60`~~ | **已删**（2026-09-11）——⚠️ 实为『调用方在用、引擎没读』的静默失效功能，见 §0.4 |
+| ~~`Battle.pet`~~ | ~~`battle.py:61`~~ | **已删**（2026-09-11）——同上（宠物参战归随从线，见 §0.4） |
+| ~~`Battle.__init__(st=...)`~~ | ~~`battle.py:37`~~ | **已删**（2026-09-11，全仓 0 处传参） |
+| ~~`Battle._cast_ctx` / `_target_ctx`~~ | ~~`battle.py:73-74`~~ | **已删**（2026-09-11） |
+| ~~`Battle._events`~~ | ~~`battle.py:82`~~ | **已删**（2026-09-11） |
+| ~~`DEFAULT_CT_WAIT = 2.0`~~ | ~~`battle.py:22`~~ | **已删**（2026-09-11） |
+| ~~`schedule.CAST_ITEM = 1.0`~~ | ~~`schedule.py:25`~~ | **已删**（2026-09-11） |
+| ~~`schedule.HOT_INTERVAL = 1.0`~~ | ~~`schedule.py:29`~~ | **已删**（2026-09-11） |
+| `schedule.next_ct` | `schedule.py:42` | 有定义、无调用方（实际推进走 `_after_act`） |
 | `state_effects.stat_scale_of` | `state_effects.py:18` | 仅测试引用 |
 | `actions._aoe_falloff_apply` | `actions.py:524` | **占位实现**（原样返回 logs）。`info["aoe_falloff"]` 在 `actions.py:361` 被读取但随后被丢弃 → AOE falloff 实际未生效 |
-| `formation.reachable_units` | `formation/__init__.py:28` | 零外部引用 |
-| `expr.expr_or` | `expr/__init__.py:208` | 零外部引用 |
+| `formation.reachable_units` | `formation/__init__.py:34` | 零外部引用 |
+| `expr.expr_or` | `expr/__init__.py:214` | 零外部引用 |
 | `gauge.charge_*`（6 个） | `gauge/__init__.py:244-321` | **全部零外部引用** —— 蓄力三律无消费者 |
 | `support.battle_bars.bar_should_trigger` / `bar_preserve` | `:164` / `:204` | 仅内部/单点引用（`bar_preserve` 被命令层 Boss 脚本用 1 处） |
 | `effects.effects_from_skill(..., caster_side_is_player=True)` | `effects.py:188` | **第三个参数在函数体里从未使用** |
 | `config.set_hook` | `config.py:123` | 零外部引用（都走 `mount`） |
 | `serialize.to_state` 的 `flags` | `serialize.py:49` | 恒写入 `{}`；**没有读取方**，也没有写入方 |
-| `Battle.auto_run(max_steps=500)` | `battle.py:302` | 全仓调用点**只在 `tests/`**（游戏仓 `test_battle_add_actor.py:159`、游戏仓 `test_battle_bridge.py:154`、游戏仓 `test_battle_bar_procs.py:240` 等），内容侧零调用 —— 实质是**测试/AI 模式辅助**，不是生产路径（生产走 `human_act` + `advance`） |
+| `Battle.auto_run(max_steps=500)` | `battle.py:292` | 全仓调用点**只在 `tests/`**（游戏仓 `test_battle_add_actor.py:159`、游戏仓 `test_battle_bridge.py:154`、游戏仓 `test_battle_bar_procs.py:240` 等），内容侧零调用 —— 实质是**测试/AI 模式辅助**，不是生产路径（生产走 `human_act` + `advance`） |
 
 ### 1.4 `EFFECT_ACTIONS` / 技能数据侧的静默 no-op
 
@@ -69,10 +125,10 @@
 | 项 | 结论 |
 |---|---|
 | `actor["_content_applied"]`（bool） | S7 的 `apply_game_content` 幂等标记（游戏仓 `game/content_rules/apply.py:81`）。**会随 actor 全量落进战斗存档 / PVP 状态**（引擎 `serialize._STRIP_KEYS` 只剥 `_skill_index`）。原文自记「无任何数值/读取语义依赖它，S9 若要清掉需改引擎 `serialize.py`」（游戏仓 `apply.py:55-58`） |
-| `actor["dot_next"]` / `actor["dot_jumps"]`（dict） | 引擎周期结算的运行期辅助（`schedule.py:228-229` 惰性建），**同样落盘**。这是「续战能对上」的原因，但字段名与内容无关 |
+| `actor["dot_next"]` / `actor["dot_jumps"]`（dict） | 引擎周期结算的运行期辅助（`schedule.py:224-225` 惰性建），**同样落盘**。这是「续战能对上」的原因，但字段名与内容无关 |
 | `actor["_dmg_taken_mult"]`（float） | 承伤乘区（`landing.py:86-91` 读）。由上层直写（例 游戏仓 `commands/boss_script.py:684`）；**同样落盘** |
 | `actor["reduce_left"]` / `reduce_all_left` | `effects.act_apply` 写（`effects.py:370`）+ 内容侧 bridge 透传/播种；**无消费者**（见 §1.3） |
-| `actor["act_count"]` | `actor_auto` 每动 +1（`battle.py:391`），AI 的 `round_mod` 谓词读它；落盘 |
+| `actor["act_count"]` | `actor_auto` 每动 +1（`battle.py:381`），AI 的 `round_mod` 谓词读它；落盘 |
 
 ## 2. 事件点位
 
@@ -104,11 +160,11 @@
 
 | # | 瑕疵 | 位置 |
 |---|---|---|
-| B1 | `kinds/` 枚举值写死中文（`PHYS = "物理"` …） | `kinds/__init__.py:27-34` |
+| B1 | `kinds/` 枚举值写死中文（`PHYS = "物理"` …） | `kinds/__init__.py:33-40` |
 | B2 | 固定效果 key：`"sleep"`（打醒）、`"death_guard"`（濒死保护）、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`（受疗修正） | `landing.py:117, 237, 373-396` |
 | B3 | `effects.act_apply` 里 `if key == "reduce":` | `effects.py:369` |
-| B4 | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | `effects.py:305` · `schedule.py:268,272` |
-| B5 | `battle.py` 里 `"player"` 阵营名 | `battle.py:170, 515` |
+| B4 | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | `effects.py:305` · `schedule.py:264,272` |
+| B5 | `battle.py` 里 `"player"` 阵营名 | `battle.py:160, 515` |
 | B6 | `_is_stack_resource` 的判据关键词含无消费方的字段（`debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct`） | `effects.py:249-253` |
 
 B6 值得单列说明：这些字段**没有消费者**，但它们**存在与否会改变 `mech` 的分派结果**

@@ -66,7 +66,7 @@ for k, v in 映射动作.items():
 | 来源 | 说明 |
 |---|---|
 | `eff["chance"]` | `apply_effects` 的通用概率 roll（`effects.py:155-161`）。`None` = 恒触发；`0.4` = 40% 才执行 |
-| `_owner` | 事件总线注入的**声明者**（`effect_triggers.py:99-102`）。`params.get("_owner")` 拿宿主 —— 「谁带的这个装备」用它 |
+| `_owner` | 事件总线注入的**声明者**（`effect_triggers.py:103-106`）。`params.get("_owner")` 拿宿主 —— 「谁带的这个装备」用它 |
 
 事件数值（`dmg` / `heal` / `amount` / `is_crit` / `overflow` / `source`）**不在 params 里**，
 在 `battle._fire_ctx`：
@@ -86,7 +86,7 @@ attacker = ctx.get("source")
 |---|---|---|---|
 | `dmg_calc` | 攻击方总伤 | ×mult 增伤 | `actions.py:416-422` |
 | `taken_calc` | 承伤前 | ×mult 减伤（<1）或增伤（>1） | `landing.py:75-84` |
-| `heal_calc` | 治疗量落地前 | ×mult 治疗增幅 | `actions.py:642-702` |
+| `heal_calc` | 治疗量落地前 | ×mult 治疗增幅 | `actions.py:638-698` |
 | `dot_calc` | DOT 每跳 | ×mult DOT 增伤 | `schedule.py:281-291` |
 
 写法（实测可用的最小骨架）：
@@ -144,7 +144,7 @@ def my_cond_mult(battle, caster, target, params, logs):
 |---|---|---|
 | 开战前（按已学技能/已装备） | 命令层开战仪式调你的装配函数，写 `actor["triggers"]` | `apply_class_mech(actor)`（`class_mech_proc.py:2201`） |
 | 战斗中途（某个效果生效时） | 在动词里直接改 `triggers`（会立刻生效，因为 fire 每次都现读） | 内容侧「进入守护姿态时挂反击 trigger」 |
-| 一次性行动 | `Battle.action_override`（`battle.py:465`） | `use_item` 类自定义行动 |
+| 一次性行动 | `Battle.action_override`（`battle.py:455`） | `use_item` 类自定义行动 |
 
 装配器的最简形态（实测跑通）：
 

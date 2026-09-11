@@ -38,8 +38,8 @@
 | `skill_up_fn` | `fn(info) -> dict` | `formulas._skill_up` | `{}` = 无成长配置 |
 | `skill_level_of_fn` | `fn(player, name) -> int` | `formulas.skill_level_of` | 返回 `1`（未升级兜底） |
 | `panel_fn` | `fn(class_name, level, equipment, tier, attributes, evolve_path, title_bonus, race) -> dict` | `stats._player_base_stats`（`stats.py:98-110`） | `{}`（空面板） |
-| `skill_lookup` | 对象（需 `.skill_info(cls, key)` / `.skill_by_key(key)`） | `battle._index_one_actor`（`battle.py:134,137`） | 返回 `None` → 技能索引空 |
-| `monster_skill_fn` | `fn(key) -> dict\|None` | `battle._index_one_actor`（`battle.py:142`） | `None` |
+| `skill_lookup` | 对象（需 `.skill_info(cls, key)` / `.skill_by_key(key)`） | `battle._index_one_actor`（`battle.py:124,137`） | 返回 `None` → 技能索引空 |
+| `monster_skill_fn` | `fn(key) -> dict\|None` | `battle._index_one_actor`（`battle.py:132`） | `None` |
 | `basic_skill_fn` | `fn(class_name) -> dict\|None` | `actions.resolve_basic_skill`（`actions.py:36`） | 回落 `basic_fallback` |
 | `basic_fallback` | dict | 同上（`actions.py:42`） | 结构化兜底 `{"name": "", "kind": "", "exprs": ["atk*1.0"]}` |
 | `kinds` | dict | `config.kind_of`（`config.py:235`）→ `actions._kind` | `""`（kind 比较全不成立） |
@@ -151,7 +151,7 @@ config.register_hook_provider(my_lazy_mount)   # config.py:94
 它们的表读点也走 config：
 
 ```python
-def _battle_cfg(name):                  # gauge/__init__.py:42
+def _battle_cfg(name):                  # gauge/__init__.py:48
     return _cfg.mech_cfg(name)
 
 def _skeleton():                        # formulas.py:54

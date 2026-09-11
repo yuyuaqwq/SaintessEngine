@@ -8,7 +8,7 @@
 
 S2 固化（`docs/ENGINE_CONTENT_SPLIT_PLAN.md` §5）：把内容层**实际消费的 26 个符号**
 全量 re-export，并保留模块级 `config` / `effects` / `stats`
-（`saintess_engine/__init__.py:30-47`）。
+（`saintess_engine/__init__.py:36-53`）。
 
 ```python
 # Actor / 战斗主体
@@ -43,9 +43,9 @@ from_state · to_state
 | `actions` | `heal_amount` | `_heal_amount` |
 | `actions` | `skill_pay_of` | `_skill_pay_of` |
 
-（别名赋值处：`effects.py:80-81`、`battle.py:31`、`actions.py:305`、`actions.py:763`）
+（别名赋值处：`effects.py:80-81`、`battle.py:28`、`actions.py:305`、`actions.py:759`）
 
-## 2. `Battle`（`battle.py:34`）
+## 2. `Battle`（`battle.py:31`）
 
 ### 构造
 
@@ -54,7 +54,7 @@ Battle(btype="monster", sides=None, title_bonus=None, dmg_mult=1.0, pet=None,
        st=None, hostile_map=None, target_picker=None, on_event=None,
        action_override=None, script_hook=None, seed_ct=True, **kwargs)
 ```
-（`battle.py:35-40`）
+（`battle.py:32-36`）
 
 | 参数 | 语义 | 引擎内消费者 |
 |---|---|---|
@@ -65,11 +65,11 @@ Battle(btype="monster", sides=None, title_bonus=None, dmg_mult=1.0, pet=None,
 | `dmg_mult` | 全局伤害倍率 | ⚠️ **仅赋值，无消费方**（`battle.py:60`） |
 | `pet` | 宠物数据 | ⚠️ **仅赋值，无消费方**（`battle.py:61`） |
 | `st` | （旧参数） | ⚠️ **仅存在于签名，函数体从未引用** |
-| `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:378-382`） |
-| `on_event` | `callable(battle, event, ctx, logs)`，事件总线尾部观察者 | `effect_triggers.fire`（`effect_triggers.py:112-117`） |
-| `action_override` | `callable(battle, action, actor, skill_name, target) -> (logs, cast)`；接管非内置行动 | `Battle.act`（`battle.py:465-472`） |
-| `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:333-340`） |
-| `seed_ct` | `True` = 播种初始 ct；`from_state` 传 `False` | `battle.py:91-94` |
+| `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:368-372`） |
+| `on_event` | `callable(battle, event, ctx, logs)`，事件总线尾部观察者 | `effect_triggers.fire`（`effect_triggers.py:116-121`） |
+| `action_override` | `callable(battle, action, actor, skill_name, target) -> (logs, cast)`；接管非内置行动 | `Battle.act`（`battle.py:455-462`） |
+| `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:323-330`） |
+| `seed_ct` | `True` = 播种初始 ct；`from_state` 传 `False` | `battle.py:81-84` |
 | `**kwargs` | **静默吞掉未知参数** | — |
 
 构造期做三件事：拷贝 sides（`:66-69`）→ 建技能索引（`_index_skills`，`:151`）→
@@ -77,37 +77,38 @@ Battle(btype="monster", sides=None, title_bonus=None, dmg_mult=1.0, pet=None,
 
 **普通属性**（可直接读写）：`sides`（dict）、`hostile_map`、`result`（`None|"victory"|"defeat"|"fled"`）、
 `winner_side`、`killed_actors`（list）、`_now`、`_p_acts`、`_started`、`_fire_ctx`。
-另有 `_cast_ctx` / `_target_ctx` / `_events` 三个**只初始化、无消费方**的字段
-（`battle.py:73-74, 82`）。
+（`_cast_ctx` / `_target_ctx` / `_events` 三个只初始化、无消费方的字段已于 2026-09-11 删除；
+`dmg_mult` / `pet` / `st` 三个构造参数同期删除——注意 `dmg_mult` 是「调用方在用、引擎没读」的
+静默失效功能，不是死字段，见 `_selfcheck.md` §0.4。）
 
 ### 查询
 
 | 方法 | 位置 | 返回 |
 |---|---|---|
-| `sides_of(side)` | `battle.py:184` | 该阵营 actor 列表（**拷贝**，改它不影响战斗） |
-| `hostile_of(side)` | `battle.py:187` | `actors.hostile_actors` 的结果（敌对存活 actor） |
-| `focus()` | `battle.py:191` | `sides["player"]` 里第一个 `human_controlled` 存活 actor；兜底找 `kind == "player"` 的存活者；无则 `None` |
-| `alive_actors()` | `battle.py:202` | 全阵营存活 actor |
-| `alive_sides()` | `battle.py:208` | 有存活 actor 的阵营名列表 |
+| `sides_of(side)` | `battle.py:174` | 该阵营 actor 列表（**拷贝**，改它不影响战斗） |
+| `hostile_of(side)` | `battle.py:177` | `actors.hostile_actors` 的结果（敌对存活 actor） |
+| `focus()` | `battle.py:181` | `sides["player"]` 里第一个 `human_controlled` 存活 actor；兜底找 `kind == "player"` 的存活者；无则 `None` |
+| `alive_actors()` | `battle.py:192` | 全阵营存活 actor |
+| `alive_sides()` | `battle.py:198` | 有存活 actor 的阵营名列表 |
 
 ### 运行期注册
 
 ```python
-add_actor(actor: dict, side: str, front: bool = False) -> dict      # battle.py:217
+add_actor(actor: dict, side: str, front: bool = False) -> dict      # battle.py:207
 ```
 入 sides（`front=True` 插队首）→ 建技能索引 → 播种 ct → 返回 actor。
 用于召唤 / 援军 / 变身。原文强调「引擎零游戏知识：不认识随从/召唤/亡灵/援军，
-只做注册 + 索引 + 排程」（`battle.py:227`）。
+只做注册 + 索引 + 排程」（`battle.py:217`）。
 
 ### 行动入口
 
 ```python
 human_act(action, skill_name, actor=None, target=None, target_side=None)
-    -> (logs: list, ended: bool, who: dict | None)                   # battle.py:244
-advance(logs: list) -> dict | None                                   # battle.py:293
-auto_run(logs: list, max_steps: int = 500) -> None                    # battle.py:302
-actor_auto(actor: dict, ctx_target=None) -> (logs, ended)             # battle.py:318
-act(ctx: ActCtx) -> (logs, ended)                                     # battle.py:398
+    -> (logs: list, ended: bool, who: dict | None)                   # battle.py:234
+advance(logs: list) -> dict | None                                   # battle.py:283
+auto_run(logs: list, max_steps: int = 500) -> None                    # battle.py:292
+actor_auto(actor: dict, ctx_target=None) -> (logs, ended)             # battle.py:308
+act(ctx: ActCtx) -> (logs, ended)                                     # battle.py:388
 ```
 
 - `human_act`：命令层唯一入口。`actor` 缺省用 `focus()`。战斗已结束 → `(["战斗已结束！"], True, None)`。
@@ -126,17 +127,17 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 
 | 方法 | 位置 | 内容层引用数（全仓 grep） |
 |---|---|---|
-| `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:100/117/151` | 仅引擎内 |
-| `_do_defend` / `_do_flee` | `battle.py:493/458` | 仅引擎内 |
-| `_ensure_battle_started` | `battle.py:506` | 仅引擎内 |
-| `_on_actor_dead(actor, logs=None)` | `battle.py:521` | `landing._apply_damage` 调（`landing.py:309`） |
-| `_check_side_end` | `battle.py:539` | 仅引擎内 |
+| `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:90/117/151` | 仅引擎内 |
+| `_do_defend` / `_do_flee` | `battle.py:483/458` | 仅引擎内 |
+| `_ensure_battle_started` | `battle.py:496` | 仅引擎内 |
+| `_on_actor_dead(actor, logs=None)` | `battle.py:511` | `landing._apply_damage` 调（`landing.py:309`） |
+| `_check_side_end` | `battle.py:529` | 仅引擎内 |
 
 ### 序列化
 
 ```python
-to_state() -> dict                    # battle.py:566 → serialize.to_state
-Battle.from_state(st) -> Battle       # battle.py:572（classmethod）→ serialize.from_state
+to_state() -> dict                    # battle.py:556 → serialize.to_state
+Battle.from_state(st) -> Battle       # battle.py:562（classmethod）→ serialize.from_state
 ```
 
 ## 3. 模块级公开函数
@@ -200,9 +201,8 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 | `_advance_time(battle, dt, logs)` | `:156` | 加时钟 → 结算 → 广播 `time_advance` |
 | `_settle_time_effects(battle, logs)` | `:175` | effects 到期 / shields 到期 / 周期跳 |
 
-常量：`CAST_ATK=1.0`（`:22`）· `CAST_SKILL=1.6`（`:23`）· `CAST_DEFEND=0.6`（`:24`）·
-`CAST_ITEM=1.0`（`:25`，⚠️ 无消费者）· `SPD_REF=50.0`（`:26`）·
-`HOT_INTERVAL=1.0`（`:29`，⚠️ 无消费者）。
+常量：`CAST_ATK=1.0` · `CAST_SKILL=1.6` · `CAST_DEFEND=0.6` · `SPD_REF=50.0`
+（`CAST_ITEM` / `HOT_INTERVAL` 已删——零消费，2026-09-11）。
 
 ### `stats.py`
 
@@ -231,7 +231,7 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 ### `effect_triggers.py`
 
 ```python
-EVENTS: tuple        # effect_triggers.py:48 —— 26 个事件名
+EVENTS: tuple        # effect_triggers.py:52 —— 26 个事件名
 fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 ```
 
@@ -348,7 +348,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 `is_damage_kind(kind)`（`:77`）· `is_kind(kind, target)`（`:88`）· `seg_of(kind)`（`:97`）·
 `lifesteal_channel_of(kind)`（`:110`）。
 
-⚠️ 这个模块的枚举值**写死了中文**（`PHYS = "物理"` … `TAUNT = "嘲讽"`，`kinds/__init__.py:27-34`），
+⚠️ 这个模块的枚举值**写死了中文**（`PHYS = "物理"` … `TAUNT = "嘲讽"`，`kinds/__init__.py:33-40`），
 而引擎主路径已改用 `config.kind_of(name)` 注入（`config.py:235`）。
 两者是**两套 kind 词表**，若你的内容用别的语言/词表，`skill_kinds` 的 `is_kind` /
 `is_damage_kind` / `seg_of` 就不适用于你的数据。第三方可只用 `config.kind_of`。
@@ -367,16 +367,12 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 | `bar_should_trigger(enemy, bar_key, now=None)` | `:164` | 是否该触发 |
 | `bar_trigger(enemy, bar_key, logs=None, ...)` | `:175` | 触发（写 `trigger_count` / `immune_until`） |
 | `bar_preserve(enemy, bar_key, pct=None)` | `:204` | 阶段转换保留条 |
-| `charge_def(skill_info)` | `:218` | 蓄力配置 |
-| `charge_state(player)` | `:235` | 蓄力状态 |
-| `charge_start(player, skill_info, logs=None)` | `:244` | 起蓄力 |
-| `charge_tick(player, skill_info, logs=None)` | `:260` | 蓄力推进 |
-| `charge_on_hit(player, skill_info, logs=None)` | `:294` | 命中时（若配） |
-| `charge_release_power(skill_info)` | `:310` | 释放倍率 |
-| `charge_clear(player)` | `:321` | 清蓄力 |
+（`charge_def` / `charge_state` / `charge_start` / `charge_tick` / `charge_on_hit` /
+`charge_release_power` / `charge_clear` **已于 2026-09-11 全部删除**——「蓄力三律」是
+《云海猎团》弓手/时咒的职业机制，全仓零消费方，与「引擎零内容知识」冲突。
+设计口径留档游戏仓 `docs/REFACTOR_v181_CLASS_MECH_ASSEMBLY.md`。）
 
-⚠️ **6 个 `charge_*` 函数全部零外部引用**（全仓 grep）——「蓄力三律」在这套引擎里
-没有实际消费者。条状态存在 `actor.effects[config.bar_prefix() + key]`，
+条状态存在 `actor.effects[config.bar_prefix() + key]`，
 所以它随存档序列化、并能被 `EFFECT_RULES` 声明折算。
 
 ## 5. 声明表与扩展点（不是引擎 API，但第三方最常用）
@@ -399,17 +395,17 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 
 | 名称 | 位置 | 状态 |
 |---|---|---|
-| `schedule.next_ct` | `schedule.py:46` | 有定义、无调用方 |
+| `schedule.next_ct` | `schedule.py:42` | 有定义、无调用方 |
 | `state_effects.stat_scale_of` | `state_effects.py:18` | 仅测试引用 |
-| `formation.reachable_units` | `formation/__init__.py:28` | 零外部引用 |
-| `expr.expr_or` | `expr/__init__.py:208` | 零外部引用 |
-| `gauge.charge_*`（6 个） | `gauge/__init__.py:244-321` | 零外部引用 |
-| `actions._aoe_falloff_apply` | `actions.py:524` | 占位实现（原样返回 logs） |
+| `formation.reachable_units` | `formation/__init__.py:34` | 零外部引用 |
+| `expr.expr_or` | `expr/__init__.py:214` | 零外部引用 |
+| ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
+| ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 本引擎不实现） |
 | `config.set_hook` | `config.py:123` | 零外部引用（都走 `mount`） |
 | `effects.resolve_actions` | `effects.py:107` | 零外部引用（引擎内部调用） |
 | `ai.eval_when` | `ai.py:152` | 零外部引用（`resolve_ai_move` 内部调） |
-| `Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events` | `battle.py:60-82` | 只写不读 |
-| `Battle.DEFAULT_CT_WAIT` | `battle.py:22` | 常量无消费者 |
-| `schedule.CAST_ITEM` / `HOT_INTERVAL` | `schedule.py:25/29` | 常量无消费者 |
+| ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |
+| ~~`Battle.DEFAULT_CT_WAIT`~~ | — | **已删**（2026-09-11） |
+| ~~`schedule.CAST_ITEM` / `HOT_INTERVAL`~~ | — | **已删**（2026-09-11） |
 
 完整缺口（含声明表里的死字段）→ [../_selfcheck.md](../_selfcheck.md)。
