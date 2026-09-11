@@ -15,6 +15,15 @@
 - 支持 `def`/`class`/赋值 三类符号；同名多处 → 取离引用行最近的一处。
 - 文件按 basename 解析，同名多份（engine 与 content 都有 skills.py 等）用 basename
   索引 + 目录偏好（saintess_engine/ 优先），找不到 → 报 unresolved 而不猜。
+
+   四级输出（2026-09-11 定）：
+     ① drift        确定性失效（越界/空行/符号区间不符）→ **阻断**（exit 1）
+     ② unresolved   文件不在框架仓 且 未标跨仓 →
+        wiki 写 `游戏仓 xxx.py:NN`（在引用前加「游戏仓」二字）即归入 ③，
+        避免把"本来就该在别的仓"的引用误报成问题
+     ③ crossrepo    显式标注的跨仓引用 → 只提示（预期）
+     ④ unverified   行号有效但语义无法自动判定（行区间/触发点/装饰器行等）
+        → 只报告。2026-09-11 已人工逐条核实全部正确（14 处）
 """
 import os
 import re
@@ -26,6 +35,25 @@ WIKI = os.path.join(ROOT, "docs", "engine-wiki")
 FIX_ALLOW = set()
 
 REF_RE = re.compile(r"([\w/]+\.py):(\d+)(?:-(\d+))?")
+# 跨仓标记：wiki 里在引用前写「游戏仓」/「游戏侧」即声明该文件不在框架仓
+CROSSREPO_RE = re.compile(r"(游戏仓|游戏侧)")
+
+# 声明式「游戏仓路径」清单（**不是猜**：这些路径/文件名在框架仓不可能存在，
+# 只属于参考实现（奥兰迪亚）那个仓）。未解析且命中 → 归入「跨仓」提示。
+# 新增条目请显式加在这里（宁可报出来让人确认，也不要静默吞掉）。
+GAME_REPO_PATH_PREFIXES = ("game/", "scripts/", "services/", "commands/")
+GAME_REPO_FILES = {
+    "run_all_tests.py", "run_numeric_tests.py", "conftest.py",
+    "battle2_rules.py", "class_mech_proc.py", "boss_script.py",
+    "combat.py", "economy.py", "content_rules/apply.py",
+}
+
+
+def _is_game_repo_ref(base: str) -> bool:
+    b = base.lstrip("./").replace("\\", "/")
+    if any(b.startswith(pf) for pf in GAME_REPO_PATH_PREFIXES):
+        return True
+    return os.path.basename(b) in GAME_REPO_FILES or b in GAME_REPO_FILES
 # 文档行里的候选符号名：反引号内、或后随 ( 的标识符
 CAND_IDENT_RE = re.compile(r"`([A-Za-z_][\w\.]{2,})`")
 CAND_CALL_RE = re.compile(r"\b([A-Za-z_][\w]{2,})\s*\(")
@@ -134,6 +162,7 @@ def main() -> int:
     index = _build_index()
     symcache = {}
     drifts, unresolved, unverified, checked = [], [], [], 0
+    crossrepo = []   # 显式标注「游戏仓」的引用：本仓解析不到属预期，只提示
     for root, dirs, fs in os.walk(WIKI):
         for f in sorted(fs):
             if not f.endswith(".md"):
@@ -163,7 +192,13 @@ def main() -> int:
                         else:
                             target = cands[0]
                     if not target:
-                        unresolved.append((wrel, ln, base, n, "文件未找到"))
+                        # 显式标注跨仓的引用（wiki 里写 `游戏仓 xxx.py:NN`）：
+                        # 本仓解析不到属**预期**，归入 crossrepo 提示而非"文件未找到"。
+                        if CROSSREPO_RE.search(text[:m.start()] + " " + text[m.start():m.start() + 24]) \
+                                or _is_game_repo_ref(base):
+                            crossrepo.append((wrel, ln, base, n))
+                        else:
+                            unresolved.append((wrel, ln, base, n, "文件未找到"))
                         continue
                     if target not in symcache:
                         symcache[target] = _symbol_spans(target)
@@ -208,9 +243,9 @@ def main() -> int:
                     unverified.append((wrel, ln, f"{base}:{n}", names[0], txt.strip()[:70]))
                     continue
     print(f"wiki 行号引用自检：可判定 {checked} 处 → drift {len(drifts)} 处"
-          f"；语义存疑 {len(unverified)} 处；未解析文件 {len(unresolved)} 处")
+          f"；语义存疑 {len(unverified)} 处；跨仓 {len(crossrepo)} 处；未解析 {len(unresolved)} 处")
     if unresolved:
-        print("\n-- 未解析文件（basename 不在仓库） --")
+        print("\n-- 未解析文件（basename 不在仓库，且非已知游戏仓路径 → 建议核对） --")
         for r in unresolved[:15]:
             print(f"  {r[0]}:{r[1]} → {r[2]}:{r[3]}  ({r[4]})")
     if drifts:
@@ -219,6 +254,11 @@ def main() -> int:
             print(f"  {d[0]}:{d[1]}  {d[2]} → {d[3]} 区间 :{d[4]}   | {d[5]}")
     else:
         print("\n无确定性 drift ✅（行号均未越界/指向空行）")
+    if crossrepo:
+        print(f"\n-- 跨仓引用（游戏仓文件，本仓解析不到属预期）{len(crossrepo)} 处 --")
+        for wrel, ln, base, n in crossrepo:
+            print(f"  {wrel}:{ln} → {base}:{n}")
+
     if unverified:
         print(f"\n-- 语义存疑（行号有效，但检查器无法自动判定它是否在讲该符号）"
               f"{len(unverified)} 处 --")

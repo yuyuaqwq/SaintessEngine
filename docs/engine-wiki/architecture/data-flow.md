@@ -7,7 +7,7 @@
 ```
 命令层
   └─ Battle.human_act(action, skill_name, actor, target)        battle.py:244
-       ├─ ActCtx(caster, action, skill_name, target, ...)       actors.py:19
+       ├─ ActCtx(caster, action, skill_name, target, ...)       actors.py:20
        ├─ Battle.act(ctx)                                       battle.py:398
        │    ├─ _ensure_battle_started()                         battle.py:506   ⚡ battle_start
        │    ├─ fire("turn_start")                               battle.py:418   ⚡

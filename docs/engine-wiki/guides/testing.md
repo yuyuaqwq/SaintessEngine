@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
 > ⚠️ **归属**：上面的样板是**游戏仓（AstrBot 插件）**的测试外壳 —— `PLUGIN_DIR` / `QQBOT_DIR` /
 > `GWEN_GAME_DB` / `GWEN_TEST_MODE` 都是那个插件的环境约定，`framework/` 是拆仓后挂进来的
-> 引擎 submodule（真实样例见 `tests/test_battle2_n4_schedule.py:18,33`）。
+> 引擎 submodule（真实样例见 游戏仓 `tests/test_battle2_n4_schedule.py:18,33`）。
 > **框架仓自身的测试不需要这些**：`tests/run_all.py` 用纯标准库 python 跑 `tests/test_*.py`。
 
 要点：

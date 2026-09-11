@@ -66,9 +66,21 @@ def main() -> int:
     try:
         from saintess_engine import Battle, make_actor
         from saintess_engine import config as CFG
+        from saintess_engine import version as _V
     except Exception:
         return _emit({"ok": False, "stage": "engine", "message": "引擎 import 失败",
                       "traceback": traceback.format_exc()}) or 0
+
+    # ---- 版本门禁（设计约定：不满足要显式报错，不静默降级）----
+    _req = ""
+    try:
+        with open(os.path.join(pkg_dir, "game.json"), encoding="utf-8") as _f:
+            _req = str((json.load(_f) or {}).get("engine") or "")
+    except Exception:                                     # 清单缺失/损坏：不拦（编辑器另有校验）
+        _req = ""
+    _ok, _note = _V.check(_req)
+    if not _ok:
+        return _emit({"ok": False, "stage": "version", "message": _note}) or 0
 
     skill = payload.get("skill") or {}
     skill_lv = int(payload.get("skill_lv") or 1)

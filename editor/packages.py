@@ -297,7 +297,25 @@ def package_overview(pkg_dir: str) -> dict:
     doms = m.get("domains") or list(DOMAINS)
     return {
         "manifest": m,
+        "engine_check": engine_check(m),
         "domains": [{"id": d, **{k: DOMAINS[d][k] for k in ("label", "icon", "kind")},
                      **domain_status(pkg_dir, d)}
                     for d in doms if d in DOMAINS],
     }
+
+
+def engine_check(manifest: dict) -> dict:
+    """校验 game.json 声明的 `engine` 版本要求（设计约定：不满足要显式报错，不静默降级）。
+
+    框架不在 sys.path 时（例如纯文件操作场景）返回 {ok: None}，不阻断。
+    """
+    req = str((manifest or {}).get("engine") or "")
+    try:
+        _root = FRAMEWORK_ROOT
+        if _root not in os.sys.path:
+            os.sys.path.insert(0, _root)
+        from saintess_engine import version as V          # noqa: PLC0415
+    except Exception as e:                                # noqa: BLE001
+        return {"ok": None, "requirement": req, "version": "", "note": f"未加载框架版本：{e}"}
+    ok, note = V.check(req)
+    return {"ok": ok, "requirement": req, "version": V.__version__, "note": note}

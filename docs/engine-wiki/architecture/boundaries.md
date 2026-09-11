@@ -103,7 +103,7 @@
 
 | # | 瑕疵 | 位置 | 影响 |
 |---|---|---|---|
-| B1 | `support/skill_kinds.py` 的枚举值写死中文（`PHYS = "物理"` …） | `skill_kinds.py:27-34` | 与 `config.kind_of` 注入面**两套 kind 词表**；非中文 kind 的游戏用不了 `is_kind` / `is_damage_kind` / `seg_of` |
+| B1 | `kinds/` 的枚举值写死中文（`PHYS = "物理"` …） | `kinds/__init__.py:27-34` | 与 `config.kind_of` 注入面**两套 kind 词表**；非中文 kind 的游戏用不了 `is_kind` / `is_damage_kind` / `seg_of` |
 | B2 | `landing._apply_death_guard` / `heal_actor` / `stats` 里硬编码 key：`"death_guard"`、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`、`"sleep"` | `landing.py:117,237,373-396` | 「濒死保护」「禁疗/受疗增幅」「睡眠打醒」四类机制**只认固定 key 名**。要换名只能改引擎（或复用这些名字） |
 | B3 | `effects.act_apply` 里 `if key == "reduce":` 写 `holder["reduce_left"]` | `effects.py:369-370` | 引擎里出现了内容 key 字面量 |
 | B4 | `schedule._settle_time_effects` 里 `pct_boss` / `is_boss` / `role == "boss"` | `schedule.py:268,272` | 「Boss」这个内容概念进了引擎（作为数据字段处理，尚可接受，但它是**唯一**被引擎认识的身份标签） |
@@ -208,7 +208,7 @@ def apply_game_content(actor: dict, ctx: dict | None = None) -> dict:   # game/c
 ⚠️ **一个已核实的重要内容侧缺口**：技能数据的 `cond`（条件倍率）在引擎里是死字段 ——
 `actions._do_heal` 里 `cond_mult = 1.0  # N2b 补，恒 1.0 起步`（`actions.py:679`）。
 内容侧用 `battle2_cond_procs.py` 把它接回乘区（「**引擎零改动**，走既有装配层扩展动作模式」，
-`battle2_cond_procs.py:5-11`）。第三方要 `cond` 就得自己写这个装配器。
+游戏仓 `battle2_cond_procs.py:5-11`）。第三方要 `cond` 就得自己写这个装配器。
 
 ## 相关
 

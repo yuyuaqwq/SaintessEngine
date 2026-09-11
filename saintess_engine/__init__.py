@@ -32,6 +32,10 @@ from .battle.serialize import from_state, to_state
 from .battle.state_effects import all_state_effects, state_def
 from .battle.stats import actor_stats
 
+# ---- 版本 / 兼容性 ----
+from .version import __version__, VERSION_INFO  # noqa: F401
+from . import version  # noqa: F401
+
 # ---- 子模块（`from saintess_engine import <模块>` 形态消费）----
 from . import config  # noqa: F401
 from .battle import (  # noqa: F401
@@ -43,6 +47,8 @@ from . import (  # noqa: F401
 )
 
 __all__ = [
+    # 版本
+    "__version__", "VERSION_INFO", "version",
     # Actor / 战斗主体
     "Battle", "ActCtx", "make_actor", "actor_ext", "actor_alive",
     # 伤害落地 / 治疗

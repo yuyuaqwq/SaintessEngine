@@ -699,8 +699,22 @@ function updateStatusbar() {
   $('sbDirty').className = 'sb-item' + (dn ? ' warn' : '');
   $('sbBad').textContent = bad ? `⚠ ${bad} 条待修` : '';
   $('sbBad').className = 'sb-item' + (bad ? ' bad' : '');
+  // 引擎版本：显示框架版本 + 需求，不匹配时标红（设计约定：不静默降级）
+  const ec = (S.pkg && S.pkg.engine_check) || {};
   const eng = ((S.pkg && S.pkg.manifest) || {}).engine || '';
-  $('sbEngine').textContent = eng ? `引擎 ${eng}` : '';
+  const el2 = $('sbEngine');
+  if (ec.ok === false) {
+    el2.textContent = `⚠ 引擎 ${ec.version || '?'} 不满足要求 ${eng}`;
+    el2.className = 'sb-item bad';
+    el2.title = ec.note || '';
+  } else if (ec.ok === true) {
+    el2.textContent = `引擎 ${ec.version}${eng ? ' · 要求 ' + eng : ''}`;
+    el2.className = 'sb-item mono dim';
+    el2.title = ec.note || '';
+  } else {
+    el2.textContent = eng ? `要求 引擎 ${eng}` : '';
+    el2.className = 'sb-item mono dim';
+  }
   $('sbPath').textContent = (S.pkg && S.pkg.dir) || $('sbPath').textContent;
 }
 

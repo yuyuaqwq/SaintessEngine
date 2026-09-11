@@ -151,7 +151,7 @@ config.register_hook_provider(my_lazy_mount)   # config.py:94
 它们的表读点也走 config：
 
 ```python
-def _battle_cfg(name):                  # support/battle_bars.py:42
+def _battle_cfg(name):                  # gauge/__init__.py:42
     return _cfg.mech_cfg(name)
 
 def _skeleton():                        # formulas.py:54

@@ -8,7 +8,7 @@
 
 S2 固化（`docs/ENGINE_CONTENT_SPLIT_PLAN.md` §5）：把内容层**实际消费的 26 个符号**
 全量 re-export，并保留模块级 `config` / `effects` / `stats`
-（`__init__.py:30-43`）。
+（`saintess_engine/__init__.py:30-47`）。
 
 ```python
 # Actor / 战斗主体
@@ -31,7 +31,7 @@ heal_amount · skill_pay_of
 from_state · to_state
 ```
 
-`__all__` 就是上面这份（`__init__.py:45-66`）。门禁
+`__all__` 就是上面这份（`saintess_engine/__init__.py:49-72`）。门禁
 `tests/test_engine_purity.py` 会逐个断言这些符号存在，并断言 **5 个私有符号
 已升公开且旧下划线名是同一对象别名**：
 
@@ -348,7 +348,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 `is_damage_kind(kind)`（`:77`）· `is_kind(kind, target)`（`:88`）· `seg_of(kind)`（`:97`）·
 `lifesteal_channel_of(kind)`（`:110`）。
 
-⚠️ 这个模块的枚举值**写死了中文**（`PHYS = "物理"` … `TAUNT = "嘲讽"`，`skill_kinds.py:27-34`），
+⚠️ 这个模块的枚举值**写死了中文**（`PHYS = "物理"` … `TAUNT = "嘲讽"`，`kinds/__init__.py:27-34`），
 而引擎主路径已改用 `config.kind_of(name)` 注入（`config.py:235`）。
 两者是**两套 kind 词表**，若你的内容用别的语言/词表，`skill_kinds` 的 `is_kind` /
 `is_damage_kind` / `seg_of` 就不适用于你的数据。第三方可只用 `config.kind_of`。
@@ -401,9 +401,9 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 |---|---|---|
 | `schedule.next_ct` | `schedule.py:46` | 有定义、无调用方 |
 | `state_effects.stat_scale_of` | `state_effects.py:18` | 仅测试引用 |
-| `support.formation.reachable_units` | `formation.py:28` | 零外部引用 |
-| `support.formula_expr.expr_or` | `formula_expr.py:208` | 零外部引用 |
-| `support.battle_bars.charge_*`（6 个） | `battle_bars.py:244-321` | 零外部引用 |
+| `formation.reachable_units` | `formation/__init__.py:28` | 零外部引用 |
+| `expr.expr_or` | `expr/__init__.py:208` | 零外部引用 |
+| `gauge.charge_*`（6 个） | `gauge/__init__.py:244-321` | 零外部引用 |
 | `actions._aoe_falloff_apply` | `actions.py:524` | 占位实现（原样返回 logs） |
 | `config.set_hook` | `config.py:123` | 零外部引用（都走 `mount`） |
 | `effects.resolve_actions` | `effects.py:107` | 零外部引用（引擎内部调用） |
