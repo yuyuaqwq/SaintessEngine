@@ -259,10 +259,10 @@ def _settle_time_effects(battle, logs: list):
                         if direction == "damage":
                             pct = float(period.get("pct_max_hp", 0) or 0)
                             pct_cur = float(period.get("pct_cur_hp", 0) or 0)
-                            # 条目级覆盖（旧引擎语义：数据显式写 entry["pct"] 时替代表的 hp 系数，
-                            #   如「灼烧每刻 1.5%」类词条改写）
+                            # 条目级覆盖（旧引擎语义：数据显式写 entry["pct"] 时**替代**表的 hp 系数，
+                            #   如「灼烧每刻 1.5%」类词条改写）——无条件生效，即使表里 pct=0
                             _dpct = entry.get("pct")
-                            if _dpct is not None and pct > 0:
+                            if _dpct is not None:
                                 pct = float(_dpct)
                             _boss_like = bool(a.get("is_boss") or a.get("role") == "boss"
                                               or a.get("is_elite"))
