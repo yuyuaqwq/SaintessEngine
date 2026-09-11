@@ -32,7 +32,7 @@ def _emit(obj: dict) -> None:
 
 
 def _setup_paths(pkg_dir: str) -> None:
-    """框架根（battle2 所在）+ 游戏包根（它的 content 包）+ 包目录本身。"""
+    """框架根（saintess_engine 所在）+ 游戏包根（它的 content 包）+ 包目录本身。"""
     for p in (os.path.join(pkg_dir, "content"), pkg_dir, FW_ROOT):
         if p and os.path.isdir(p) and p not in sys.path:
             sys.path.insert(0, p)
@@ -64,8 +64,8 @@ def main() -> int:
 
     # ---- 引擎 ----
     try:
-        from battle2 import Battle, make_actor
-        from battle2 import config as CFG
+        from saintess_engine import Battle, make_actor
+        from saintess_engine import config as CFG
     except Exception:
         return _emit({"ok": False, "stage": "engine", "message": "引擎 import 失败",
                       "traceback": traceback.format_exc()}) or 0
@@ -127,7 +127,7 @@ def main() -> int:
 
     events = []
     try:
-        from battle2 import effect_triggers as ET
+        from saintess_engine import effect_triggers as ET
         _orig = ET.fire
 
         def _spy(battle, ev, ctx, logs=None):

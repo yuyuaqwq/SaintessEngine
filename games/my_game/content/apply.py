@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import os
 
-import battle2.config as config   # 引擎公开注入面
+import saintess_engine.config as config   # 引擎公开注入面
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _MOUNTED = False
@@ -38,7 +38,7 @@ def install_engine() -> None:
     global _MOUNTED
     if _MOUNTED:
         return
-    import battle2.formulas as formulas
+    import saintess_engine.formulas as formulas
 
     config.register_hook_provider(_lazy_mount)
     config.mount(

@@ -463,7 +463,7 @@
             "proc"
           ],
           "additionalProperties": true,
-          "description": "proc 指向被动处理器 id；须在 battle2 PASSIVE_PROC 或 core/passive_procs 注册。",
+          "description": "proc 指向被动处理器 id；须在 saintess_engine PASSIVE_PROC 或 core/passive_procs 注册。",
           "properties": {
             "proc": {
               "type": "string",

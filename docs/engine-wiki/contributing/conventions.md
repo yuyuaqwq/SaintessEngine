@@ -38,7 +38,7 @@ if pct <= 0:
 | 允许 | 形式 | 例 |
 |---|---|---|
 | **别名指向同一对象** | `new = old` | `cap_of = _cap_of`（`effects.py:81`）、`EFFECT_HANDLERS = ACTION_HANDLERS`（`effects.py:89`） |
-| **兼容 shim 委托到新实现** | 一个函数体只有一次转发调用 | 引擎侧已不留这类 shim —— 旧的 `config.load_game_defaults` 随拆仓从引擎删净（`battle2/config.py` 里 `strict` 附近有原话：框架不认识「默认配置」是什么）；拆仓前它有 52 个测试调用点 |
+| **兼容 shim 委托到新实现** | 一个函数体只有一次转发调用 | 引擎侧已不留这类 shim —— 旧的 `config.load_game_defaults` 随拆仓从引擎删净（`saintess_engine/config.py` 里 `strict` 附近有原话：框架不认识「默认配置」是什么）；拆仓前它有 52 个测试调用点 |
 
 不允许：把旧逻辑复制一份留在原地、在引擎读源路径上做「旧字段也读一下」的回落。
 存档迁移是唯一例外，而且**只允许一处**（`serialize._deserialize_actor`，
@@ -55,7 +55,7 @@ if pct <= 0:
 （`schedule.py:292`）。自己的动词也必须走：
 
 ```python
-from battle2.landing import deal_damage, heal_actor
+from saintess_engine.landing import deal_damage, heal_actor
 ```
 （`landing.py:8-13` 原文：「若每个机制自己写扣血，会出现旧引擎那种『某技能绕过护盾
 直接扣血』的 bug」）

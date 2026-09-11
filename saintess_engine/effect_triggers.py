@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v181.P4 battle2 引擎——事件总线（effect_triggers.py，N8）。
+"""v181.P4 saintess_engine 引擎——事件总线（effect_triggers.py，N8）。
 
 按 docs/DESIGN_effect_system_v2.md Part 3.3/4：
 - 效果系统 v2 提供统一触发总线：所有"事件匹配触发"型效果声明何时触发，

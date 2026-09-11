@@ -3,7 +3,7 @@
 「机制」= **引擎不认识的一个游戏名词**，被翻译成引擎认识的动词，或挂到引擎事件上执行。
 本页做一个最小但完整的机制：**血契 —— 每次普攻命中后，攻击者回复 5% 最大生命**。
 
-下面三段代码在本仓库（框架仓，`import battle2`）**当场跑通**（实测日志见文末）。它演示了加机制的完整三段式：
+下面三段代码在本仓库（框架仓，`import saintess_engine`）**当场跑通**（实测日志见文末）。它演示了加机制的完整三段式：
 
 ```
 ① 写动词（能力）        ② 写名词声明（翻译）        ③ 装配到 actor（触发条件）
@@ -22,11 +22,11 @@ register_action       config.set_config           actor["triggers"]
 - 抛异常会被 `apply_effects` 吞掉并跳过该动作（`effects.py:172-176`），不会中断战斗
 
 ```python
-from battle2 import register_action
+from saintess_engine import register_action
 
 @register_action("pact_heal")
 def pact_heal(battle, caster, target, params, logs):
-    from battle2.landing import heal_actor
+    from saintess_engine.landing import heal_actor
     holder = target if params.get("on") == "target" else caster
     pct = float(params.get("pct") or 0)
     if holder is None or pct <= 0:
@@ -47,7 +47,7 @@ def pact_heal(battle, caster, target, params, logs):
 （`config.py:82`）。
 
 ```python
-from battle2 import config
+from saintess_engine import config
 
 config.set_config("effect_actions", {
     **config.get_effect_actions(),                       # 保留已挂的（合并而非覆盖）

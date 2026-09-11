@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""battle2 引擎 support 子包（S3 通用件归位）。
+"""saintess_engine 引擎 support 子包（S3 通用件归位）。
 
 迁入的通用件（原 game/core/，零游戏知识/参数化）：
 - formula_expr.py  安全表达式解释器（纯数学）

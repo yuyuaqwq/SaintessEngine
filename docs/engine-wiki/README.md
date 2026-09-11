@@ -1,11 +1,11 @@
-# battle2 —— 零游戏知识的通用 CTB 战斗引擎
+# saintess_engine —— 零游戏知识的通用 CTB 战斗引擎
 
 > 纯 Python、零第三方依赖、零游戏名词的**声明驱动**回合制（CTB）战斗引擎。
 > 引擎只提供**机制**（行动、落地、事件总线、效果容器、时间轴、存档）；**游戏内容**
 > （技能数值、状态名词、职业资源、被动 proc）全部由使用方通过 `config` 注入。
 > **换一套配置 = 新游戏，引擎代码零改动。**
 
-本 wiki 是 **`battle2` 框架自己的文档**，住在**框架独立仓 `framework-engine`** 的
+本 wiki 是 **`saintess_engine` 框架自己的文档**，住在**框架独立仓 `framework-engine`** 的
 `docs/engine-wiki/`。面向**第三方插件的战斗系统开发者**：想用一个已经跑通、
 经过大量战斗回归的引擎骨架，而不是从零写伤害链与时间轴的人。
 
@@ -14,7 +14,7 @@
 > 它是本框架的**参考实现 + 压力测试**，不是本框架的一部分。
 > 下方未显式标注「游戏仓」的路径，均指**框架仓**。
 
-- 引擎目录：`battle2/`（14 个模块 + `support/` 4 个通用件，共 18 个 `.py` / **5 202 行**）
+- 引擎目录：`saintess_engine/`（14 个模块 + `support/` 4 个通用件，共 18 个 `.py` / **5 202 行**）
 - 纯度门禁：`tests/test_engine_purity.py`（AST 静态断言：引擎零「引擎→内容」import 边）
 - 参考实现（**游戏仓 `dragonfall` 侧**）：《奥兰迪亚》内容侧（`game/data/battle2_rules.py` + `game/services/`）
   —— 本 wiki **不**把它当规范，只当「可粘贴的真实声明样例」的来源
@@ -29,9 +29,9 @@
 [reference/api.md](reference/api.md) 的「未装配行为」节。
 
 ```python
-import battle2
-from battle2 import Battle, make_actor, config
-from battle2 import formulas as F          # 引擎自带的纯数值公式模块
+import saintess_engine
+from saintess_engine import Battle, make_actor, config
+from saintess_engine import formulas as F          # 引擎自带的纯数值公式模块
 
 # ① 挂最小配置（引擎不内置任何数值/名词；这三样是"能打出伤害"的下界）
 config.mount(

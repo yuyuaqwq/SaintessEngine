@@ -28,7 +28,7 @@
 见 tests/test_numeric_bar_decay.py 容器安全断言。
 
 S3 通用件归位（docs/ENGINE_CONTENT_SPLIT_PLAN.md §6.5 / §7-S3）：
-本体自 game/core/battle_bars.py 迁入引擎（battle2/support/），**读点改 config
+本体自 game/core/battle_bars.py 迁入引擎（saintess_engine/support/），**读点改 config
 注入面**——`config.mech_cfg(name)` / `config.bar_prefix()` 由内容侧装配
 （game/bootstrap.py）注入，引擎零 game.data import（门禁 test_engine_no_content.py）。
 （S3 前这里是 importlib 延迟直读 data.battle_config/data.battle2_rules——

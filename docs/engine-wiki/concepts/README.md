@@ -9,7 +9,7 @@
 flowchart TD
     G["你的游戏内容<br/>（技能表 / 状态名词 / 职业资源 / 被动）"] -->|"config.mount / set_config"| C["config 注入面"]
     G -->|"构造 actor 时写 triggers / skills / auto_act"| A["actor dict<br/>（全同构）"]
-    C --> E["battle2 引擎"]
+    C --> E["saintess_engine 引擎"]
     A --> B["Battle(sides=...)"]
     B -->|"human_act / actor_auto / advance"| ACT["act(ctx)"]
     ACT --> P["actions 结算链"]

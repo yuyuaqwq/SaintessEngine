@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""沙箱试跑（父进程侧）—— 只起子进程，**绝不 import battle2**。
+"""沙箱试跑（父进程侧）—— 只起子进程，**绝不 import saintess_engine**。
 
 为什么必须子进程（与 dragonfall 编辑器同款理由，别改成直接 import）：
-1. 装配副作用：`battle2.config.mount()` 会把 hook 挂到引擎**进程级全局**面，跑一次
+1. 装配副作用：`saintess_engine.config.mount()` 会把 hook 挂到引擎**进程级全局**面，跑一次
    就污染编辑器进程本身。
 2. 隔离兜底：第三方游戏包的 apply.py 可能有异常/死循环 → 子进程超时可掐死，
    编辑器永不崩。

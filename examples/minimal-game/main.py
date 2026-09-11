@@ -5,9 +5,9 @@ import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)                                                  # import content
-sys.path.insert(0, os.path.dirname(os.path.dirname(_HERE)))  # 框架根（battle2 所在）
+sys.path.insert(0, os.path.dirname(os.path.dirname(_HERE)))  # 框架根（saintess_engine 所在）
 
-from battle2 import Battle                                  # noqa: E402
+from saintess_engine import Battle                                  # noqa: E402
 from content import apply_game_content                           # noqa: E402
 from content.data.classes import build_player                    # noqa: E402
 from content.data.monsters import build_monster                  # noqa: E402

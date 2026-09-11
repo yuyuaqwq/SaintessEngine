@@ -4,7 +4,7 @@
 
 ```python
 state = battle.to_state()            # → 纯 JSON 可序列化 dict（sides-only）
-battle2 = Battle.from_state(state)   # ← 重建 Battle / sides / actors / 时刻 / 胜负
+saintess_engine = Battle.from_state(state)   # ← 重建 Battle / sides / actors / 时刻 / 胜负
 ```
 
 入口：`serialize.to_state`（`serialize.py:36`）/ `serialize.from_state`（`serialize.py:59`），
@@ -144,8 +144,8 @@ get 兜底；新档 actor 已带 bonus 容器则原样」**（`serialize.py:90-9
 3. **绝不改引擎的读源路径做兼容** —— 那会让「零默认值」失效并永久拖欠技术债
 4. 补一个「旧档 JSON → `from_state` → 断言新形态」的测试
 
-引擎包 `battle2/` 之外，游戏仓侧也有一个例子可以照抄：`tests/test_legacy_schema_migration.py`。
-它测的是 DB schema 迁移（不是 battle2 存档），但迁移测试的写法一样。
+引擎包 `saintess_engine/` 之外，游戏仓侧也有一个例子可以照抄：`tests/test_legacy_schema_migration.py`。
+它测的是 DB schema 迁移（不是 saintess_engine 存档），但迁移测试的写法一样。
 
 ## 循环引用：为什么击杀记录存 uid
 
@@ -159,7 +159,7 @@ get 兜底；新档 actor 已带 bonus 容器则原样」**（`serialize.py:90-9
 `battle_state.state` 字段」：
 
 ```python
-from battle2.serialize import state_to_json, json_to_state
+from saintess_engine.serialize import state_to_json, json_to_state
 
 raw = state_to_json(battle.to_state())      # serialize.py:117
 ...

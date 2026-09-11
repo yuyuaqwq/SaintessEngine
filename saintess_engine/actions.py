@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v181.P4 battle2 引擎——行动结算链（actions.py）。
+"""v181.P4 saintess_engine 引擎——行动结算链（actions.py）。
 
 按 docs/REFACTOR_v181P4_FULL_PLAN.md Part 2.2：
 - 全部结算显式 ctx/caster/target，不摸隐式全局目标

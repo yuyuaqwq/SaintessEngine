@@ -59,7 +59,7 @@ mech/actions.py            data/rules.py                      apply.py
 ```
 
 - **① 动词**：`mech/actions.py` 的 `heat_vent`（普攻命中后按「炉温」层数追加贯穿伤害并耗层）、
-  `res_gain`（资源渠道攒层）、`backdraft`（受击反击）。全部只 import `battle2` 的公开 API。
+  `res_gain`（资源渠道攒层）、`backdraft`（受击反击）。全部只 import `saintess_engine` 的公开 API。
 - **② 声明**：`rules.py` 四张表。其中 `EFFECT_ACTIONS`（名词→动词）与 `EFFECT_RULES`
   （cap / stat_scale / period / consume）**引擎直接消费**；`MECH_CASH` / `PASSIVE_PROC`
   **引擎不读**，由本包的装配器翻成 triggers（这就是"第三方自己定装配约定"）。
@@ -80,14 +80,14 @@ mech/actions.py            data/rules.py                      apply.py
 
 ## 4. 为什么这样设计
 
-1. **方向只有一个：内容 → 引擎。** 本包 `import battle2`（引擎公开 API），
+1. **方向只有一个：内容 → 引擎。** 本包 `import saintess_engine`（引擎公开 API），
    引擎不 import 本包。挂配置只走 `config.mount()` / `config.load_game_rules()`，
    拿事件数值走 `actor["triggers"]` + `battle._fire_ctx`，改状态走引擎动词。
 2. **引擎需要 12 项装配**（不是文档里「最小 5 项」，那是"能打出普攻伤害"的下界）：
    `formulas` / `kinds` / `panel_fn` / `skill_lookup` / `monster_skill_fn` / `basic_skill_fn` /
    `basic_fallback` / `formula_skeleton_fn` / `skill_flat_fn` / `skill_up_fn` /
    `skill_level_of_fn` + 两张规则表。写成 `install_engine()` 一处、幂等。
-3. **必须自己接管注入面。** 本仓库 `import battle2` 会触发 `game/__init__.py` 登记
+3. **必须自己接管注入面。** 本仓库 `import saintess_engine` 会触发 `game/__init__.py` 登记
    《奥兰迪亚》的惰性装配器；若第三方不覆盖，第一次读 hook 就会把整份奥兰迪亚内容拉起来。
    所以 `install_engine()` 首要动作是 `config.register_hook_provider(自己的装配器)`。
    骨架在 `content/__init__.py` 里 **import 即 install**，让"接管"先于一切引擎使用。

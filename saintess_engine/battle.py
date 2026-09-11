@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v181.P4 battle2 引擎——Battle 主类（battle.py）。
+"""v181.P4 saintess_engine 引擎——Battle 主类（battle.py）。
 
 按 docs/REFACTOR_v181P4_FULL_PLAN.md Part 2：
 - 构造：sides = {side名: [actor, ...]}（唯一入口，无 player/enemy 参数）
@@ -137,7 +137,7 @@ class Battle:
                     info = _cfg.skill_by_key(sk)
                 if not info:
                     # N5B 怪技能源（ms_* 表——旧引擎 7666 同款：先怪表后玩家表；
-                    # battle2 此前只查玩家源 → 怪技能索引空 → 技能静默空放）
+                    # saintess_engine 此前只查玩家源 → 怪技能索引空 → 技能静默空放）
                     try:
                         info = _cfg.monster_skill_of(sk)
                     except Exception:

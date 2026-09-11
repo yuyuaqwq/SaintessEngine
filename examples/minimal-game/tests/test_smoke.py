@@ -20,17 +20,17 @@ import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _EXAMPLE = os.path.dirname(_HERE)                              # examples/minimal-game
-_REPO = os.path.dirname(os.path.dirname(_EXAMPLE))             # 框架根（battle2 所在）
+_REPO = os.path.dirname(os.path.dirname(_EXAMPLE))             # 框架根（saintess_engine 所在）
 sys.path.insert(0, _EXAMPLE)
 sys.path.insert(0, _REPO)
 
-from battle2 import ActCtx, Battle, deal_damage               # noqa: E402
+from saintess_engine import ActCtx, Battle, deal_damage               # noqa: E402
 from content import apply_game_content                          # noqa: E402
 from content.data.classes import build_player                   # noqa: E402
 from content.data.monsters import build_monster                 # noqa: E402
 
 # 骨架不得依赖的**任何其他游戏包**（第三方视角的纯度契约）：
-# 只准依赖 `battle2`（框架）+ 自己的 `content` + 标准库。
+# 只准依赖 `saintess_engine`（框架）+ 自己的 `content` + 标准库。
 # 原奥兰迪亚内容包在 `game.*` 命名空间下 —— 整根禁掉，比逐个子包点禁更严也更持久。
 FORBIDDEN = ("game",)
 
@@ -141,7 +141,7 @@ def test_passive_proc():
 
 def test_engine_mounts():
     """装配自检：引擎的 hook 是「写错名字静默忽略」的，所以要自己点名核对。"""
-    from battle2 import config
+    from saintess_engine import config
     names = ("formulas", "kinds", "panel_fn", "skill_lookup", "monster_skill_fn",
              "basic_skill_fn", "basic_fallback", "formula_skeleton_fn",
              "skill_flat_fn", "skill_up_fn", "skill_level_of_fn")

@@ -1,6 +1,6 @@
 # 参考：事件全集
 
-> **本页的 `EVENTS` 元组是从代码逐字抄的**（`battle2/effect_triggers.py:48`），
+> **本页的 `EVENTS` 元组是从代码逐字抄的**（`saintess_engine/effect_triggers.py:48`），
 > 不是凭记忆或文档转述。核对方式：打开该文件搜 `EVENTS = (`。
 
 ## 元组原文（26 个）
@@ -67,7 +67,7 @@ _fire(battle, ev, {...}, logs)
 `fire()` 是公开 API（`__init__.py` re-export，门面表内），所以上层可以直接调：
 
 ```python
-from battle2 import fire
+from saintess_engine import fire
 
 # 例：你的命令层在每次行动后检查玩家血量
 if player_actor["hp"] < int(player_actor["max_hp"] * 0.3):

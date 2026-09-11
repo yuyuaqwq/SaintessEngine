@@ -40,7 +40,7 @@ _STAT_FIELDS = ("hp", "max_hp", "atk", "matk", "def", "mdef", "spd", "crit", "do
 
 def build_monster(key, uid, side="enemy"):
     """造一个怪物 actor（不挂内容装配 —— 由调用方显式 apply_game_content）。"""
-    from battle2 import make_actor
+    from saintess_engine import make_actor
 
     m = MONSTERS.get(key)
     if not m:

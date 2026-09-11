@@ -67,7 +67,7 @@ def class_panel(class_name, level=1, equipment=None, tier=0, attributes=None,
 
 def build_player(class_name, uid, name, level=1, side="player"):
     """造一个玩家 actor（面板由 class_panel 决定；技能 key 来自技能表）。"""
-    from battle2 import make_actor
+    from saintess_engine import make_actor
     from . import skills as S
 
     panel = class_panel(class_name, level)

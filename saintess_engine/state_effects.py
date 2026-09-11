@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""battle2 效果规则查询（薄封装）——数据来自 config 挂载的游戏配置。
+"""saintess_engine 效果规则查询（薄封装）——数据来自 config 挂载的游戏配置。
 
 V 系列统一：规则表 = EFFECT_RULES（cap/panel/stat_scale/period/consume/cleanse 全声明）。
 引擎不内置规则表；游戏层通过 config.load_game_rules() 注入。

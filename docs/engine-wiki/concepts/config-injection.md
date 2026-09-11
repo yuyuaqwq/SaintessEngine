@@ -6,11 +6,11 @@
 和规则表 `mount` 进引擎的 `config`。引擎需要什么就问 `config` 要，要不到就按
 「零默认值」处理。
 
-入口模块：`battle2/config.py`（**框架仓 `framework-engine`**）。本页出现的 `game/...` 一律指**游戏仓 `dragonfall`**（《奥兰迪亚》参考实现）侧。
+入口模块：`saintess_engine/config.py`（**框架仓 `framework-engine`**）。本页出现的 `game/...` 一律指**游戏仓 `dragonfall`**（《奥兰迪亚》参考实现）侧。
 
 ## 为什么必须这样
 
-旧引擎的反向依赖问题被量化过：`battle2/` 里 **4 个文件（`actions`/`battle`/`stats`/`config`）
+旧引擎的反向依赖问题被量化过：`saintess_engine/` 里 **4 个文件（`actions`/`battle`/`stats`/`config`）
 持有 15 条指向内容层的 import 边**（**游戏仓侧** `docs/ENGINE_CONTENT_SPLIT_PLAN.md` §3.2）。
 后果：
 
@@ -19,7 +19,7 @@
 - 引擎单测必须拉起整个游戏内容包
 
 现在有一条机器可验的门禁盯着这件事：
-`tests/test_engine_purity.py`（AST 静态分析）断言 `battle2/**` 的**每一条绝对 import
+`tests/test_engine_purity.py`（AST 静态分析）断言 `saintess_engine/**` 的**每一条绝对 import
 都是标准库**（相对导入不限），且零 `importlib.import_module` / `__import__` 动态穿透。
 
 > 门禁是**方向**的保证，不是「引擎绝对不用游戏东西」的保证。
@@ -98,7 +98,7 @@ config.strict = True    # 开发/测试环境建议打开（config.py:71）
 ### ① 直接赋值（最省事，但绕过名单检查）
 
 ```python
-from battle2 import config
+from saintess_engine import config
 config._HOOKS["formulas"] = my_formulas     # ⚠️ 私有字段，不推荐
 ```
 
@@ -133,7 +133,7 @@ config.register_hook_provider(my_lazy_mount)   # config.py:94
 `load_game_defaults` 的收敛点），hook 与规则表经 `game/bootstrap.py`
 （`mount_engine_hooks` / `load_engine_config`）挂进来。
 
-⚠️ **惰性装配的触发（拆仓后）**：引擎自身零 `game` import，`import battle2`
+⚠️ **惰性装配的触发（拆仓后）**：引擎自身零 `game` import，`import saintess_engine`
 不会拉进任何内容（门禁见上）。惰性装配器只由**内容侧**注册；一旦注册，
 **第一次读未装配 hook** 就会调用它，可能把整份内容包 import 进来（进 `sys.modules`）。
 所以第三方项目要**自己接管注入面**——照框架仓的 `examples/minimal-game/content/apply.py`

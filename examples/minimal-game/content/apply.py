@@ -9,12 +9,12 @@
 方向只有一个：**内容 → 引擎**。引擎不 import 本包，也不认识本包的表；
 它只在需要时问 config 要 hook（要不到就按「零默认值」处理）。
 
-⚠️ 本文件只 import `battle2`（引擎公开 API）与自己的 content；
+⚠️ 本文件只 import `saintess_engine`（引擎公开 API）与自己的 content；
 不碰 game.data / game.services / game.content_rules / game.content（那是奥兰迪亚）。
 """
 from __future__ import annotations
 
-from battle2 import config
+from saintess_engine import config
 
 from .data import classes as C
 from .data import monsters as M
@@ -47,7 +47,7 @@ def install_engine() -> None:
     global _MOUNTED
     if _MOUNTED:
         return
-    from battle2 import formulas as _formulas
+    from saintess_engine import formulas as _formulas
 
     # 引擎只认「hook 惰性装配器」这一个回调（内容 → 引擎方向）。
     # 框架**不提供** load_game_defaults 之类游戏概念 API：本游戏的配置入口

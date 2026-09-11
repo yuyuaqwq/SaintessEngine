@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v181.P4 新战斗引擎包（battle2）—— 公开 API 门面（S2 固化）。
+"""v181.P4 新战斗引擎包（saintess_engine）—— 公开 API 门面（S2 固化）。
 
 旧 battle.py（11000+ 行，v100+ 补丁叠加）保留可跑；本包独立实现，完成后切换 import 并删旧。
 
@@ -39,7 +39,7 @@ from .serialize import from_state, to_state
 from .state_effects import all_state_effects, state_def
 from .stats import actor_stats
 
-# 模块级符号（内容层以 `from battle2 import stats` 形态消费）
+# 模块级符号（内容层以 `from saintess_engine import stats` 形态消费）
 from . import config, effects, stats  # noqa: F401
 
 __all__ = [

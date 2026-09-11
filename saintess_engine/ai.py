@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""battle2 通用怪 AI 决策器（条件优先级表 / 极简 utility）。
+"""saintess_engine 通用怪 AI 决策器（条件优先级表 / 极简 utility）。
 
 设计 docs/REFACTOR_v181P4_N5B_monster_ai_design.md：
 - actor.ai 纯数据（select/fallback/moves[{when, then, weight}]），引擎零名词——

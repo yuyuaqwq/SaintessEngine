@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v181.P4 battle2 引擎——序列化（serialize.py）。
+"""v181.P4 saintess_engine 引擎——序列化（serialize.py）。
 
 按 docs/REFACTOR_v181P4_FULL_PLAN.md Part 4.2：
 - to_state 输出 sides-only JSON 结构（battle_state.state 存）

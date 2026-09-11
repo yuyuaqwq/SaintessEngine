@@ -14,7 +14,7 @@
 - 只对「文档行里出现符号名」的引用做判定；纯行号无符号名 → 跳过（无法判定）。
 - 支持 `def`/`class`/赋值 三类符号；同名多处 → 取离引用行最近的一处。
 - 文件按 basename 解析，同名多份（engine 与 content 都有 skills.py 等）用 basename
-  索引 + 目录偏好（battle2/ 优先），找不到 → 报 unresolved 而不猜。
+  索引 + 目录偏好（saintess_engine/ 优先），找不到 → 报 unresolved 而不猜。
 """
 import os
 import re
@@ -37,7 +37,7 @@ _SKIP_DIRS = {"__pycache__", ".git", "_archive_unused"}
 
 
 def _build_index():
-    """basename → [相对路径...]（battle2/ 优先，tests/ 排除）。"""
+    """basename → [相对路径...]（saintess_engine/ 优先，tests/ 排除）。"""
     idx = {}
     for root, dirs, fs in os.walk(ROOT):
         dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
@@ -45,7 +45,7 @@ def _build_index():
             if f.endswith(".py"):
                 idx.setdefault(f, []).append(os.path.relpath(os.path.join(root, f), ROOT))
     for k in idx:
-        idx[k].sort(key=lambda p: (0 if "battle2" in p else 1, len(p)))
+        idx[k].sort(key=lambda p: (0 if "saintess_engine" in p else 1, len(p)))
     return idx
 
 
@@ -150,7 +150,7 @@ def main() -> int:
                     # basename。否则 `game/content_rules/apply.py`（游戏仓文件，不属本仓）
                     # 会被 basename 糊到框架仓 `examples/minimal-game/content/apply.py`
                     # → 行号越界 → 误报「确定性 drift」（实测 4 处假阳性全因此）。
-                    # 而 `battle2/support/skill_kinds.py` / `support/skill_kinds.py`
+                    # 而 `saintess_engine/support/skill_kinds.py` / `support/skill_kinds.py`
                     # 这类真·引擎引用仍能被尾部匹配正确解析。
                     target = None
                     if cands:

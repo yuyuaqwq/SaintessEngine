@@ -8,7 +8,7 @@
 `cd_ok`——写进去没人查，玩家侧等于零冷却。
 
 > **归属**：本页的引擎侧实现（`do_skill` / `_skill_usable` / `refresh_skill_index` / `ai.py`）
-> 属**框架仓（`battle2/`）**；`combat.py`（命令层）、`boss_script` / `MONSTER_MODS` / `INSTANCES`，
+> 属**框架仓（`saintess_engine/`）**；`combat.py`（命令层）、`boss_script` / `MONSTER_MODS` / `INSTANCES`，
 > 以及本页出现的 `tests/` · `tools/` 路径，均在**游戏仓 / 奥兰迪亚侧**
 >（框架仓自身的测试跑法：`python tests/run_all.py`）。
 

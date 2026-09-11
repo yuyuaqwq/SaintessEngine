@@ -4,7 +4,7 @@
 
 14 个引擎模块 + 4 个通用件；**依赖方向严格单向**：`support` ← 基础层 ← 结算层 ← 调度层。
 没有循环依赖，没有「引擎→内容」边（门禁 `tests/test_engine_purity.py` 机器验证）。
-这是独立仓 `framework-engine` 的引擎包 `battle2/`（游戏仓以 `git submodule framework/` 引用）。
+这是独立仓 `framework-engine` 的引擎包 `saintess_engine/`（游戏仓以 `git submodule framework/` 引用）。
 
 ## 模块依赖图
 
@@ -57,7 +57,7 @@ flowchart TD
 
 图例：实线 = 模块级 import；`（延迟 import）` = 函数内 import，用来打断环。
 
-**实测的 import 拓扑**（AST 扫描 `battle2/**`，本次文档编写期）：
+**实测的 import 拓扑**（AST 扫描 `saintess_engine/**`，本次文档编写期）：
 
 - **模块级（top-level）import 是一个 DAG** —— 无模块级环。唯一两条模块级内部边是
   `schedule → actors, effects` 与 `battle → actors`。

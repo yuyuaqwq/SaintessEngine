@@ -230,7 +230,7 @@ def main(argv=None):
     gd = PK.ensure_games_dir(GAMES_DIR)
     pkgs = PK.list_packages(GAMES_DIR)
     print("=" * 68)
-    print("  框架编辑器 · battle2 —— 选项卡式「造游戏」工具")
+    print("  框架编辑器 · saintess_engine —— 选项卡式「造游戏」工具")
     print("=" * 68)
     print(f"  本地地址   : http://{args.host}:{args.port}/")
     print(f"  游戏包目录 : {gd}")

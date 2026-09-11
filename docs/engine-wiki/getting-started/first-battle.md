@@ -1,6 +1,6 @@
 # 手把手：起一场战斗
 
-本页所有代码块都在本仓库（框架仓 `framework-engine/`，引擎包是顶层 `battle2/`）**当场跑过**。
+本页所有代码块都在本仓库（框架仓 `framework-engine/`，引擎包是顶层 `saintess_engine/`）**当场跑过**。
 目标：读完之后你能自己构造 sides、
 驱动一次出手、读到日志，并知道每一步在引擎里的落点（带 `文件:行号` 与函数名）。
 
@@ -9,9 +9,9 @@
 引擎零游戏知识，所以第一件事是告诉它「数值怎么算」。最小可伤害装配集是 5 项：
 
 ```python
-import battle2
-from battle2 import Battle, make_actor, config
-from battle2 import formulas as F
+import saintess_engine
+from saintess_engine import Battle, make_actor, config
+from saintess_engine import formulas as F
 
 config.mount(
     formulas=F,                                   # ① 数值公式对象（引擎自带纯公式模块）

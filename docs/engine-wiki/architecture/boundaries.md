@@ -1,7 +1,7 @@
 # 引擎与内容的物理边界
 
 本页是**框架仓与游戏仓的边界现状快照**。引擎已物理分离为独立仓 `framework-engine`
-（引擎包 `battle2/`），游戏仓（奥兰迪亚）以 `git submodule framework/` 引用它；
+（引擎包 `saintess_engine/`），游戏仓（奥兰迪亚）以 `git submodule framework/` 引用它；
 方案与迁移细节引用游戏仓内部文档 `docs/ENGINE_CONTENT_SPLIT_PLAN.md`
 （该文档不进本 wiki 的门面）。
 
@@ -25,7 +25,7 @@
 │                  │ 构造 actor + Battle(sides=...)         │
 │                  ↓                                       │
 │  ┌────────────────────────────────────────┐              │
-│  │  引擎  battle2/（零游戏知识）            │              │
+│  │  引擎  saintess_engine/（零游戏知识）            │              │
 │  │                                        │              │
 │  │  actors · battle · actions · effects · │              │
 │  │  effect_triggers · landing · schedule ·│              │
@@ -41,7 +41,7 @@
 **判断某个东西该放哪边**（`game/content_rules/__init__.py:10` 的判据）：
 
 > **凡读游戏表或职业名 → 内容侧。** 引擎不得 import 内容包；
-> 需要数值时经 `battle2.config` 注入 hook 取。
+> 需要数值时经 `saintess_engine.config` 注入 hook 取。
 
 三条自查问句：
 
@@ -55,12 +55,12 @@
 
 | # | 断言 | 位置（`tests/test_engine_purity.py`） |
 |---|---|---|
-| 1 | `battle2/**/*.py` 的**每一条绝对 import 都是标准库**（相对导入不限）—— 比旧的「零指向 `game.*` 的边」更强的**可分发性**闸门 | `STDLIB` 判据（`:28`/`:96-102`），断言 `:116` |
+| 1 | `saintess_engine/**/*.py` 的**每一条绝对 import 都是标准库**（相对导入不限）—— 比旧的「零指向 `game.*` 的边」更强的**可分发性**闸门 | `STDLIB` 判据（`:28`/`:96-102`），断言 `:116` |
 | 2 | 零动态 import 穿透（`importlib.import_module` / `__import__` 指向外部包） | `:103-106`，断言 `:118` |
 | 3 | `actions.py` 不再持有 kind 中文字面量常量（`K_PHYS`/`K_MAGI`/`K_TRUE`/`K_HEAL`/`K_BUFF`） | `:121-128` |
 | 4 | 注入面存在（7 个 hook 名在 `config.py` 里） | `:130-134` |
 | 5 | 包门面 re-export 26 个符号，且 5 个私有符号的旧别名是同一对象 | `:136-152` |
-| 6 | （游戏仓侧）内容层零 `battle2.*._私有符号` 引用 —— 框架仓无内容层，此项不在框架门禁内 | 属游戏仓约束 |
+| 6 | （游戏仓侧）内容层零 `saintess_engine.*._私有符号` 引用 —— 框架仓无内容层，此项不在框架门禁内 | 属游戏仓约束 |
 
 跑法：框架仓 `python tests/run_all.py`（引擎全量 `tests/` + 示例游戏冒烟，exit=0 全绿）；
 也可单跑 `python tests/test_engine_purity.py`。门禁另含「存档兼容：`Battle.from_state` /
@@ -95,7 +95,7 @@
 对应做法：`E.*` 调用改走 `config.formulas()`；`C.CLASSES` / `C.MONSTER_SKILLS` 改走
 `skill_lookup` / `monster_skill_fn` hook；kind 字面量与 `"攻击"` 改走 `config.kind_of` /
 `basic_fallback`；`"战士"` 默认值拆除；`formula_expr` / `formation` / `skill_kinds` /
-`battle_bars` 四个通用件搬进 `battle2/support/`。
+`battle_bars` 四个通用件搬进 `saintess_engine/support/`。
 
 ## 当前的边界瑕疵（诚实清单）
 
@@ -130,7 +130,7 @@ B1/B2/B6/B7 属于拆仓时一并带进框架仓的残留，需要在「彻底�
 > **一句话**：先做「断反向边 + 固 API + 通用件归位」，再谈 submodule 物理分离；
 > 直接 `git mv` 会带着 15 条反向 import 边一起进 submodule，等于把耦合换个地方放。
 
-**以上是拆仓前的判断，已被执行完毕**：S1–S3 落地后即做了物理拆分 —— 引擎包 `battle2/`
+**以上是拆仓前的判断，已被执行完毕**：S1–S3 落地后即做了物理拆分 —— 引擎包 `saintess_engine/`
 已成为独立仓 `framework-engine`，游戏仓（奥兰迪亚）以 `git submodule framework/`
 引用本仓的固定 commit。
 
@@ -140,15 +140,15 @@ B1/B2/B6/B7 属于拆仓时一并带进框架仓的残留，需要在「彻底�
 |---|---|---|
 | S1 | 断 15 条反向依赖边（`d5e323e`） | ✅ 已完成（门禁可验） |
 | S2 | 固化公开 API 面 | ✅ 已完成 |
-| S3 | 通用件归位 `→ battle2/support/` | ✅ 已完成 |
-| S4 | 引擎包改名 `battle2 → engine` | ❌ **已废止**（随拆仓定案：包名**保持 `battle2`**，不再改中性名） |
-| S5' | 拆 `game/engine.py` → `battle2/formulas.py` + `content_rules/*`（`5eae164`） | ✅ 已完成（旧 `game/engine.py` shim 已随 S9-2 删除） |
+| S3 | 通用件归位 `→ saintess_engine/support/` | ✅ 已完成 |
+| S4 | 引擎包改名 `saintess_engine → engine` | ❌ **已废止**（随拆仓定案：包名**保持 `saintess_engine`**，不再改中性名） |
+| S5' | 拆 `game/engine.py` → `saintess_engine/formulas.py` + `content_rules/*`（`5eae164`） | ✅ 已完成（旧 `game/engine.py` shim 已随 S9-2 删除） |
 | S6' | 内容层重组快照 | ✅ 已完成 |
 | S7 | 单一装配入口 `apply_game_content`（`50eb8dc`） | ✅ 已完成（见下） |
 | S8 | 拆仓库 / submodule | ✅ **已完成**（引擎独立为 `framework-engine`；游戏仓 `git submodule framework/` 引用本仓固定 commit） |
 | S9 | 收口清理过渡 shim | ✅ **已完成**（S9-2 已删 `game/engine.py` 与 `game/core/*` 过渡件） |
 
-所以**引擎的物理形态已经是独立仓 `framework-engine` 里的 `battle2/` 包**（可整包拷走、
+所以**引擎的物理形态已经是独立仓 `framework-engine` 里的 `saintess_engine/` 包**（可整包拷走、
 零外部依赖），游戏仓（奥兰迪亚）以 `git submodule framework/` 引用它。
 「反向边 + 公开 API + 通用件 + 单一装配入口」四件事在拆仓前已完成，
 本 wiki 描述的 API 面就是当前状态。

@@ -4,7 +4,7 @@
 本页给签名与语义；原理见 [../concepts/](../concepts/README.md)，任务怎么做见
 [../guides/](../guides/write-a-mechanic.md)。本页不重复那两处的内容。
 
-## 1. 包门面：`battle2/__init__.py`
+## 1. 包门面：`saintess_engine/__init__.py`
 
 S2 固化（`docs/ENGINE_CONTENT_SPLIT_PLAN.md` §5）：把内容层**实际消费的 26 个符号**
 全量 re-export，并保留模块级 `config` / `effects` / `stats`

@@ -160,7 +160,7 @@ PASSIVE_PROC["my_proc"] = {
 }
 
 # ② 内容侧动作（game/services/my_procs.py）——若已有动作族可复用
-from battle2.effects import register_action
+from saintess_engine.effects import register_action
 
 @register_action("passive_dmg_mult")   # 已存在则不要重复注册
 def _reuse_existing(): ...

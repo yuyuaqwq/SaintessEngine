@@ -23,7 +23,7 @@ os.environ.setdefault("GWEN_TEST_MODE", "1")
 sys.path.insert(0, QQBOT_DIR)
 sys.path.insert(0, PLUGIN_DIR)
 
-from battle2 import Battle as BT, make_actor, config as _b2config
+from saintess_engine import Battle as BT, make_actor, config as _b2config
 from game.content_rules.apply import ensure_engine_configured
 ensure_engine_configured()              # 内容侧规则表装配（引擎已删 load_game_defaults shim）
 
@@ -104,7 +104,7 @@ def _battle(hero_hp=200, wolf_hp=300):
 周期效果不要靠 `advance` 跑，直接拨时钟：
 
 ```python
-from battle2.schedule import _settle_time_effects as _ste
+from saintess_engine.schedule import _settle_time_effects as _ste
 
 b = _battle()
 b.human_act("skill", "施加燃烧")        # 或直接写 effects

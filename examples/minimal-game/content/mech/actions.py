@@ -10,11 +10,11 @@
   4. 日志就是 logs.append(...)
 
 只用引擎公开 API：register_action / apply_effects / deal_damage /
-actor_alive / actor_stats（都在 battle2.__all__ 里）。
+actor_alive / actor_stats（都在 saintess_engine.__all__ 里）。
 """
 from __future__ import annotations
 
-from battle2 import (
+from saintess_engine import (
     actor_alive, actor_stats, apply_effects, deal_damage, register_action,
 )
 

@@ -16,7 +16,7 @@
   改写前后**行文本逐字相同** → 每条位移都可自证。
 
 用法：
-    python tools/remap_wiki_refs.py --check --files=framework/battle2/actions.py,...
+    python tools/remap_wiki_refs.py --check --files=framework/saintess_engine/actions.py,...
     python tools/remap_wiki_refs.py --files=... [--rev=HEAD] [--window=120]
     python tools/remap_wiki_refs.py --files=... --exclude=reference/xxx.md
 """

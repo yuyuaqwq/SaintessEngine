@@ -46,7 +46,7 @@
 
 注释里的 **注①** 是这套引擎最典型的一类坑，原文见 `game/data/battle2_rules.py:218-224`：
 
-> ① 「每核 减伤 +3%」经 `stat_scale.reduce` 声明——battle2 伤害路径**不消费** `st["reduce"]`
+> ① 「每核 减伤 +3%」经 `stat_scale.reduce` 声明——saintess_engine 伤害路径**不消费** `st["reduce"]`
 > （stats 只写、instance 仅展示），故装配层（`class_mech_proc.apply_class_mech`）按本声明挂
 > `taken_calc` 乘区钩子（`passive_taken_reduce` per_core 段）落地；`st["reduce"]` 冗余写入无害。
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v181.P4 battle2 引擎——落地接口层（landing.py）。
+"""v181.P4 saintess_engine 引擎——落地接口层（landing.py）。
 
 所有"造成伤害 / 治疗回血"统一收口在这里：
 - deal_damage：伤害落地（等级压制 → defending 减伤 → 睡眠/蓄力 → 护盾 → 扣血 → 死亡）

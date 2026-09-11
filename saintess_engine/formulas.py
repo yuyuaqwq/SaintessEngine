@@ -6,7 +6,7 @@
 
 拆分前这些函数住在 `game/engine.py`，直接读 `data/formula_skeleton.py`、
 `data/skill_up.py` 与内容侧 `SKILL_UP` 表 / 技能等级 —— 那是「引擎 → 内容」反向依赖。
-现一律走 `battle2/config` 的注入面（S1 建立的 hook 面，方向：内容 → 引擎）：
+现一律走 `saintess_engine/config` 的注入面（S1 建立的 hook 面，方向：内容 → 引擎）：
 
     formula_skeleton_fn() -> dict            FORMULA_SKELETON（公式骨架参数表）
     skill_flat_fn()       -> dict            SKILL_FLAT_BASE / _PER_PLAYER_LV / _PER_SKILL_LV
@@ -217,7 +217,7 @@ def skill_learn_cost(need_lv: int) -> int:
 def skill_level_of(player: dict, skill_name: str) -> int:
     """技能等级查询（内容侧注入 `skill_level_of_fn`）。
 
-    引擎侧只保留签名/转发位（battle2.actions 经 config.formulas() 消费）；实体在
+    引擎侧只保留签名/转发位（saintess_engine.actions 经 config.formulas() 消费）；实体在
     `game/content_rules/skills.py: skill_level_of`（读 player.skill_levels + 技能 id resolve）。
     未装配 → 1（未升级 Lv.1 兜底，与原「查不到按未升级 Lv.1」一致）。
     """
@@ -399,11 +399,11 @@ def resolve_formula(formula, stats, target_def, target_mdef, is_crit=False,
 def skill_mp_pay_of(actor_or_player: dict, info: dict) -> int:
     """技能实际 mp 消耗（命令层施放预检同源折算，v181.M-smallfix 薄封装）。
 
-    与 battle2 引擎 actions._skill_pay_of 同一折算点：actor bonus.cost 域
+    与 saintess_engine 引擎 actions._skill_pay_of 同一折算点：actor bonus.cost 域
     （mp_pct/mp_flat + when 判据 element/mech_prefix/name_contains）折扣 →
     floor 取整 + 保底 1（玩家受益方向）——即引擎施放时实际会扣的 mp 值。
     dict 无 bonus.cost 容器/域 → 声明费直通（读源兜底铁律，与引擎行为一致）。
-    命令层不便直接 import battle2 引擎内部函数 → 引擎层薄封装，battle2 核心零改动。
+    命令层不便直接 import saintess_engine 引擎内部函数 → 引擎层薄封装，saintess_engine 核心零改动。
     """
     try:
         from .actions import skill_pay_of

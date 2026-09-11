@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v181.P4 battle2 引擎——面板计算（薄封装旧 engine.py 数值函数，不重写公式）。
+"""v181.P4 saintess_engine 引擎——面板计算（薄封装旧 engine.py 数值函数，不重写公式）。
 
 按 docs/REFACTOR_v181P4_FULL_PLAN.md 7.3 stats.py：
 - actor 有 class_name → E.player_final_stats（玩家职业公式：装备/等级/转职全算）

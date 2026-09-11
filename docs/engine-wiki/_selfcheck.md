@@ -127,7 +127,7 @@ B6 值得单列说明：这些字段**没有消费者**，但它们**存在与�
   侦察期检测到并行 agent 正在改 `game/data/battle2_rules.py` 与
   `game/services/class_mech_proc.py`，行号已漂移（`apply_class_mech` L2041→L2201）。
   本次写文档期间，`git log` 又前进了 4 个 commit（S5'/S6'/S7 落地）。
-  **引擎侧（`battle2/*`）的锚点在这些 commit 里未变**，但内容侧一定在动。
+  **引擎侧（`saintess_engine/*`）的锚点在这些 commit 里未变**，但内容侧一定在动。
   → **引用时以符号名检索为准，行号只作快速定位**。
 
 | # | 问题 | 我的把握程度 |
@@ -142,7 +142,7 @@ B6 值得单列说明：这些字段**没有消费者**，但它们**存在与�
 | Q8 | `game/data/skills.py` 的 20 个未映射 `effect=` 是「待实现」还是「已废弃数据」 | 只能证明「当前静默无效」，无法证明意图 |
 | Q9 | `EFFECT_RULES` 里 `bleed` 的 `"type": "flat", "per_layer": 0` 是否曾被某版消费 | 当前无消费方；历史未知 |
 | Q10 | 本 wiki 的行号在并发改动下会漂移多少 | `docs/ENGINE_CONTENT_SPLIT_PLAN.md` 自己记录过：侦察期检测到并行 agent 在改
-`battle2_rules.py` 与 `class_mech_proc.py`，行号已漂移。**引擎侧（`battle2/*`）锚点当时未变**，但本 wiki 写作期间这两个内容侧文件仍在被改 |
+`battle2_rules.py` 与 `class_mech_proc.py`，行号已漂移。**引擎侧（`saintess_engine/*`）锚点当时未变**，但本 wiki 写作期间这两个内容侧文件仍在被改 |
 
 ### 未取证的写作（明确标注）
 
@@ -161,11 +161,11 @@ B6 值得单列说明：这些字段**没有消费者**，但它们**存在与�
 写文档期间在仓库外跑的只读探针（**不改仓库**）：
 
 1. **最小可跑性实验** — 裸引擎 / 逐项摘 hook → 定位「能打出伤害的最小装配集」；
-   在 `game.` 上下文与「拷贝成顶层包 `battle2`」两种形态下都跑通
+   在 `game.` 上下文与「拷贝成顶层包 `saintess_engine`」两种形态下都跑通
 2. **`first-mechanic` 示例实测** — 注册动词 + 名词声明 + `triggers` 装配，
    实测伤害与回血日志；另跑两个反例（未声明名词、缺参数）确认静默 no-op
 3. **`EVENTS` 抄全核对** — 从 `effect_triggers.py` 正则抽出元组内容，得 26 项
-4. **fire 点位扫描** — 对 `battle2/**` 逐行匹配 `_fire(battle, "..."` 与
+4. **fire 点位扫描** — 对 `saintess_engine/**` 逐行匹配 `_fire(battle, "..."` 与
    `fire(self, "..."`，得出 23 个自然点位 + 3 个无点位 + `skill_hit`/`attack_hit` 的变量形式
 5. **声明表结构化解析** — `ast` 解析 `battle2_rules.py`，得 `EFFECT_ACTIONS` 51 条、
    `EFFECT_RULES` 78 条、`MECH_CASH` 9 条、`PASSIVE_PROC` 42 条，
@@ -173,7 +173,7 @@ B6 值得单列说明：这些字段**没有消费者**，但它们**存在与�
 6. **消费方 grep** — 对 `debuff_scale` / `on_threshold` / `wake_on_hit` / `tag` / `dot` /
    `period.type` / `period.per_layer` / `period.dmg_type` / `reduce` / `reduce_left` /
    `st["reduce"]` 逐项全仓检索
-7. **零外部引用 API 扫描** — `ast` 收集 `battle2/**` 全部模块级函数，
+7. **零外部引用 API 扫描** — `ast` 收集 `saintess_engine/**` 全部模块级函数，
    对全仓（排除定义文件）统计引用数
 8. **import 拓扑 AST 扫描** — 区分模块级与函数内 import，检出 2 对双向互指
 9. **`strict=True` 实测** — 确认未装配 hook 抛 `EngineNotConfigured` 且消息点名 hook

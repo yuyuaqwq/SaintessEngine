@@ -14,7 +14,7 @@
 **为什么 JSON 为源**：编辑器要稳定读写；py dict 回写会毁注释与排版（见 EDITOR_SPEC
 的方案 A）。`apply.py` 仍然可以是 py —— 那是「代码」，不是「数据」。
 
-本模块**只做文件 IO 与结构校验**，不 import `battle2`（编辑器主进程零引擎副作用；
+本模块**只做文件 IO 与结构校验**，不 import `saintess_engine`（编辑器主进程零引擎副作用；
 真正跑战斗在子进程里，见 simulate.py）。
 """
 from __future__ import annotations
@@ -176,7 +176,7 @@ from __future__ import annotations
 import json
 import os
 
-import battle2.config as config   # 引擎公开注入面
+import saintess_engine.config as config   # 引擎公开注入面
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _MOUNTED = False
@@ -201,7 +201,7 @@ def install_engine() -> None:
     global _MOUNTED
     if _MOUNTED:
         return
-    import battle2.formulas as formulas
+    import saintess_engine.formulas as formulas
 
     config.register_hook_provider(_lazy_mount)
     config.mount(

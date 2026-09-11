@@ -11,8 +11,8 @@
 |---|---|
 | 插件版本 | `metadata.yaml` 的 `version: 0.105.0`（**游戏仓 / 奥兰迪亚侧**的插件元数据，不是引擎的） |
 | 引擎版本 | **无独立版本号**。拆仓前引擎的变更以插件版本 + 文档文件名里的编号体现（如 `REFACTOR_v181P4_*`） |
-| 仓库 | **已拆仓**：引擎在独立仓 `framework-engine`（顶层 `battle2/`），游戏内容在游戏仓 `dragonfall`（`game/data/`、`game/services/` 等）—— 两者不再同仓 |
-| 分发形态 | 已落地为 **git submodule 源码分发**：游戏仓 `dragonfall` 以 `framework/` submodule（固定 commit）引用框架仓；第三方可直接 clone 框架仓或只拷 `battle2/`。拆仓方案与历史见**游戏仓**文档 `dragonfall/docs/ENGINE_CONTENT_SPLIT_PLAN.md` §6/§7 |
+| 仓库 | **已拆仓**：引擎在独立仓 `framework-engine`（顶层 `saintess_engine/`），游戏内容在游戏仓 `dragonfall`（`game/data/`、`game/services/` 等）—— 两者不再同仓 |
+| 分发形态 | 已落地为 **git submodule 源码分发**：游戏仓 `dragonfall` 以 `framework/` submodule（固定 commit）引用框架仓；第三方可直接 clone 框架仓或只拷 `saintess_engine/`。拆仓方案与历史见**游戏仓**文档 `dragonfall/docs/ENGINE_CONTENT_SPLIT_PLAN.md` §6/§7 |
 | CHANGELOG | **无** |
 | 兼容性承诺 | **无**（没有 semver 约定、没有弃用期策略） |
 
@@ -20,11 +20,11 @@
 
 | 形态 | 做法 | 适合 |
 |---|---|---|
-| **拷目录** | 复制框架仓顶层的 `battle2/` 进你的项目（包名保持 `battle2`） | 只需一份、不跟上游 |
+| **拷目录** | 复制框架仓顶层的 `saintess_engine/` 进你的项目（包名保持 `saintess_engine`） | 只需一份、不跟上游 |
 | **git submodule** | 挂框架独立仓 `framework-engine`（**已是游戏仓 `dragonfall` 的现用形态**） | 跟上游更新 / 提 PR |
 | **PyPI 包** | 需要先加 `pyproject.toml` 与 `__version__` | 公共复用 |
 
-前两种**已是现实**（框架仓本身就是"顶层 `battle2/` 可分发包"的形态，拷贝已实测跑通：见
+前两种**已是现实**（框架仓本身就是"顶层 `saintess_engine/` 可分发包"的形态，拷贝已实测跑通：见
 [../getting-started/installation.md](../getting-started/installation.md)）；
 第三种需要先补下面「分发前清单」的第 1、2 项。
 
@@ -35,16 +35,16 @@
 - [x] **反向依赖已断**（原 15 条 `引擎→内容` import 边）—— 门禁
       `tests/test_engine_purity.py`（**框架仓**；加强版：每条绝对 import 都断言是标准库）可验（S1 起点 commit `d5e323e`）
 - [x] **公开 API 面已固化**（26 符号 re-export + 5 个私有符号升公开保别名，S2）
-- [x] **通用件已归位**（`formula_expr` / `formation` / `skill_kinds` / `battle_bars` → `battle2/support/`，S3）
+- [x] **通用件已归位**（`formula_expr` / `formation` / `skill_kinds` / `battle_bars` → `saintess_engine/support/`，S3）
 - [x] **`game/engine.py` 已拆**（S5'，commit `5eae164`）—— 过渡 shim 已随拆仓删净
       （S9-2）；**游戏仓 / 奥兰迪亚侧**的装配入口是 `game/content_rules/apply.py`
 - [x] **内容侧单一装配入口已收敛**（S7，commit `50eb8dc`：`apply_game_content`，**游戏仓侧**）
 - [x] **引擎包改名**（S4 曾议 `game/battle2` → `game/engine`）—— **已随拆仓定案：不改名**，
-      包名保持 `battle2`，物理位置 = 框架仓顶层 `battle2/`
+      包名保持 `saintess_engine`，物理位置 = 框架仓顶层 `saintess_engine/`
 - [x] **拆仓库 / submodule**（S8）—— **已完成**：引擎独立为 `framework-engine`；游戏仓
       `dragonfall/.gitmodules` 的 `framework` → 框架仓（固定 commit）
 - [x] **收口清理过渡 shim**（S9）—— 已完成（S9-2 删净：`game/engine.py` 已删；
-      `battle_bars` / `formation` / `formula_expr` / `skill_kinds` 等已归位框架仓 `battle2/support/`）
+      `battle_bars` / `formation` / `formula_expr` / `skill_kinds` 等已归位框架仓 `saintess_engine/support/`）
 - [ ] **语义残留未清**（门禁只是 import 门禁）。未清的 4 项：
   - `support/skill_kinds.py` 的中文枚举值（`skill_kinds.py:27-34`）→ 应改为
     从 `config.kind_of` 注入，或明确标为「参考实现专用」
@@ -59,7 +59,7 @@
 
 ### B. 可分发工程性
 
-- [ ] **加版本号**：`battle2/__init__.py` 里加 `__version__`，
+- [ ] **加版本号**：`saintess_engine/__init__.py` 里加 `__version__`，
       或框架仓的 `pyproject.toml`
 - [ ] **加元数据**：Python 版本要求（当前未声明）、许可证、仓库地址
 - [x] **拆出可独立运行的测试**：框架仓已有「零内容」的引擎自测集 —— 门禁

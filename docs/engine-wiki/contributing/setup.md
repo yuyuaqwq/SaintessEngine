@@ -1,9 +1,9 @@
 # 贡献指南：开发环境与跑测试
 
-本页面向**改 `battle2` 引擎的人**（不是用引擎的人）。用引擎请从
+本页面向**改 `saintess_engine` 引擎的人**（不是用引擎的人）。用引擎请从
 [../getting-started/installation.md](../getting-started/installation.md) 开始。
 
-**归属先读**：本页默认你站在**框架仓 `framework-engine/`** 里 —— 读 `battle2/` 的源码、
+**归属先读**：本页默认你站在**框架仓 `framework-engine/`** 里 —— 读 `saintess_engine/` 的源码、
 跑框架仓自己的测试。文中凡标「**游戏仓 / 奥兰迪亚侧**」的段落（AstrBot 的 uv python、
 `tests/conftest.py`、`scripts/run_all_tests.py`、245 个测试文件、`tests/shim_astrbot` 等），
 讲的都是**参考实现那一侧**的环境与工具，不是改引擎的必需条件：改引擎只需纯标准库 python。
@@ -12,7 +12,7 @@
 
 | 项 | 值 | 出处 |
 |---|---|---|
-| 解释器（**框架仓全量测试**） | 任意 **Python 3.11/3.12**（引擎只用标准库） | `battle2/__pycache__/` 里并存 `cpython-311` / `cpython-312` |
+| 解释器（**框架仓全量测试**） | 任意 **Python 3.11/3.12**（引擎只用标准库） | `saintess_engine/__pycache__/` 里并存 `cpython-311` / `cpython-312` |
 | 解释器（**游戏仓 / 奥兰迪亚侧全量回归**） | **必须** AstrBot 的 uv python（带 `pypinyin`）：<br/>`C:/Users/yuyu/AppData/Roaming/uv/tools/astrbot/Scripts/python.exe` | 游戏仓 `scripts/run_all_tests.py:52` |
 | 第三方依赖（引擎） | **零** | 见 [../getting-started/installation.md](../getting-started/installation.md) |
 | 静态检查配置 | **无**（无 flake8/ruff/black/mypy/pyproject/setup.py） | `ls` 核实 |
@@ -38,7 +38,7 @@ python tests/test_engine_purity.py           # 任选：tests/ 下每个 test_*.
 > `python tests/test_battle2_n4_schedule.py`，典型输出：
 >
 > ```
-> === N4 battle2 CTB 调度测试 ===
+> === N4 saintess_engine CTB 调度测试 ===
 >   ✅ dot_next 登记 1.0
 > ...
 > === 结果 PASS=42 FAIL=0 ===
@@ -109,7 +109,7 @@ python scripts/run_all_tests.py [--file tests/test_xxx.py] [--fail-fast]
 **游戏仓 / 奥兰迪亚侧**（参考实现的回归集，规模大得多）：
 
 - `tests/test_*.py` 共 **245** 个文件
-- 其中 battle2 相关 **28** 个（`tests/test_battle2_*.py`）
+- 其中 saintess_engine 相关 **28** 个（`tests/test_battle2_*.py`）
 - 引擎专项：`test_engine_no_content.py`（门禁，**旧名** —— 已随拆仓迁入框架仓并改名为
   `tests/test_engine_purity.py`，游戏仓 `tests/` 里不再有这个文件）· `test_battle2_coverage.py`（覆盖）
   · `test_battle2_n3_effects.py`（效果系统）· `test_battle2_n4_schedule.py`（调度）
@@ -119,7 +119,7 @@ python scripts/run_all_tests.py [--file tests/test_xxx.py] [--fail-fast]
 ## 测试脚手架（`tests/conftest.py`）—— 游戏仓 / 奥兰迪亚侧
 
 ⚠️ 本节属于**参考实现那一侧**的测试基建。框架仓的 `tests/` **没有** `conftest.py`，
-也不需要一个：每个测试文件自己 `sys.path.insert(0, FW_ROOT)` 后裸 `import battle2`。
+也不需要一个：每个测试文件自己 `sys.path.insert(0, FW_ROOT)` 后裸 `import saintess_engine`。
 下面这些（`GWEN_GAME_DB` / `GWEN_TEST_MODE` / astrbot shim）只在写**奥兰迪亚**的测试时才用得上。
 
 **新测试请从 conftest 复用，不要手抄模板**（游戏仓 `conftest.py:2-6` 原文）：
@@ -142,15 +142,15 @@ from conftest import FakeEvent, run, clean_db, make_player, TEST_DB, PLUGIN_DIR
 
 ## 引擎单测的最小写法（零内容）
 
-引擎可以**零内容**跑 —— 在框架仓里，`battle2/` 是自洽的，不需要任何游戏包：
+引擎可以**零内容**跑 —— 在框架仓里，`saintess_engine/` 是自洽的，不需要任何游戏包：
 
 ```python
 import os, sys, random
 FW_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # 框架仓根
 sys.path.insert(0, FW_ROOT)
 
-from battle2 import Battle, make_actor, config
-from battle2 import formulas as F
+from saintess_engine import Battle, make_actor, config
+from saintess_engine import formulas as F
 
 # 最小装配（否则伤害恒 0 —— 见 getting-started/first-battle.md）
 config.mount(formulas=F, kinds={...}, basic_fallback={...},
@@ -161,7 +161,7 @@ random.seed(1234)      # 伤害有 ±15% 波动，精确断言必须定种子
 
 > ⚠️ 对照（**游戏仓 / 奥兰迪亚侧**）：那边 `import game` 会触发 `game/__init__.py` 的
 > 惰性装配登记（`game/bootstrap.py:196` 的 `install()`），首次读 hook 就把 `game.content`
-> 拉进来 —— 那是游戏仓的接线。框架仓里没有 `game/` 包，裸 `import battle2` 就是
+> 拉进来 —— 那是游戏仓的接线。框架仓里没有 `game/` 包，裸 `import saintess_engine` 就是
 > **真正的零内容**（框架仓 `tests/test_engine_neutral_fallback.py` 正是这条契约的回归）。
 
 ## 改引擎的流程

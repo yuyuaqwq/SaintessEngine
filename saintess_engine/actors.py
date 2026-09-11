@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""v181.P4 battle2 引擎——actor 模型层（纯数据，无逻辑）。
+"""v181.P4 saintess_engine 引擎——actor 模型层（纯数据，无逻辑）。
 
 按 docs/REFACTOR_v181P4_FULL_PLAN.md Part 1/2 实现：
 - actor = 全同构 dict（无身份逻辑；class_name 只选面板公式，side 只分组）

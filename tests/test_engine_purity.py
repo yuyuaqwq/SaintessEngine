@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""引擎纯度门禁（框架契约）—— `battle2/**` 只依赖「相对导入 + 标准库」。
+"""引擎纯度门禁（框架契约）—— `saintess_engine/**` 只依赖「相对导入 + 标准库」。
 
 这是**可分发性**的核心闸门：任何一条指向外部包的绝对 import，都会让框架
 无法脱离原游戏单独分发（第三方 clone 后 import 即失败）。
@@ -20,8 +20,8 @@ import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 FW_ROOT = os.path.dirname(_HERE)
-PKG_DIR = os.path.join(FW_ROOT, "battle2")
-PKG_NAME = "battle2"
+PKG_DIR = os.path.join(FW_ROOT, "saintess_engine")
+PKG_NAME = "saintess_engine"
 
 # 标准库集合（3.10+ 自带；旧解释器回落一个保守白名单）
 try:
@@ -108,7 +108,7 @@ def scan():
 
 
 def main():
-    print("== 框架纯度门禁：battle2/** 只依赖「相对导入 + 标准库」==")
+    print("== 框架纯度门禁：saintess_engine/** 只依赖「相对导入 + 标准库」==")
     check("引擎包目录存在", os.path.isdir(PKG_DIR), PKG_DIR)
 
     bad, dyn, n = scan()

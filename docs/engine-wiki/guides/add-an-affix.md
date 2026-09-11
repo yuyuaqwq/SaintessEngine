@@ -2,7 +2,7 @@
 
 ## 先明确一件事：引擎没有「词条」概念
 
-`battle2/` 里没有 `affix`、没有 `equip`、没有 `proc_stack`。
+`saintess_engine/` 里没有 `affix`、没有 `equip`、没有 `proc_stack`。
 引擎只有三样东西：
 
 1. `actor["triggers"]`（事件 → 效果声明）

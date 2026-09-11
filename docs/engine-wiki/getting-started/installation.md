@@ -5,7 +5,7 @@
 引擎是**源码级的纯 Python 包**，不是 PyPI 发行包。它住在**框架独立仓 `framework-engine/` 的顶层**：
 
 ```
-battle2/
+saintess_engine/
 ├── __init__.py           公开 API 门面（26 符号 re-export）
 ├── actors.py             actor 模型 / 工厂 / Sides 容器 / ActCtx
 ├── battle.py             Battle 主类（构造 / act / human_act / actor_auto / 胜负）
@@ -28,29 +28,29 @@ battle2/
 
 | 方式 | 适用 | 做法 |
 |---|---|---|
-| **拷贝目录** | 你的项目里只用一份、不改引擎 | 把 `battle2/` 整个目录复制进你的项目（包名就是 `battle2`；S4 改名议题已随拆仓定案：**不再改中性名**），`import` 路径随之调整 |
+| **拷贝目录** | 你的项目里只用一份、不改引擎 | 把 `saintess_engine/` 整个目录复制进你的项目（包名就是 `saintess_engine`；S4 改名议题已随拆仓定案：**不再改中性名**），`import` 路径随之调整 |
 | **git submodule** | 想跟随上游更新、想给上游提 PR | 把**框架独立仓 `framework-engine`** 作为 submodule 挂在你的项目下 —— 这已是现实：游戏仓 `dragonfall` 就是这么接的（`.gitmodules` 里 `framework/` → 框架仓，固定 commit）；当年为拆仓准备的迁移方案见**游戏仓**文档 `dragonfall/docs/ENGINE_CONTENT_SPLIT_PLAN.md` §6/§7 |
 
-⚠️ **实测结论（重要）**：框架仓本身就是「拷出来的独立包」形态 —— 顶层就是 `battle2/`，
+⚠️ **实测结论（重要）**：框架仓本身就是「拷出来的独立包」形态 —— 顶层就是 `saintess_engine/`，
 `import` 正常、`Battle` 可构造、可跑完一场战斗（本次文档编写期间实测通过）。
 但**如果你的项目里同时还挂着游戏仓（奥兰迪亚侧）的 `game/` 包**，情况不同：
 `game/__init__.py` 在 import 期登记了引擎的「hook 惰性装配器」，引擎首次读取 hook 时
 会把 `game.content`（整份《奥兰迪亚》内容）拉进来（登记点在 `game/__init__.py:17-19` →
 `game/bootstrap.py:196-207` 的 `install()`）。那是**游戏仓**的接线；框架仓里没有 `game/` 包，
-`import battle2` 干净无副作用（由 `tests/test_engine_purity.py` 保证）。
-第三方项目请**直接使用框架仓（或从中拷出的）独立包 `battle2/`**，不要依赖 `game` 包的 `__init__` 副作用。
+`import saintess_engine` 干净无副作用（由 `tests/test_engine_purity.py` 保证）。
+第三方项目请**直接使用框架仓（或从中拷出的）独立包 `saintess_engine/`**，不要依赖 `game` 包的 `__init__` 副作用。
 
 ## Python 版本
 
 - 引擎代码使用 `from __future__ import annotations` + 现代类型标注（`dict | None`、`list[str]`），
   在 **Python 3.9+** 语义下即可运行；框架仓的字节码缓存里同时存在 `cpython-311` 与 `cpython-312`
-  目录（`battle2/__pycache__/`），即实机在 **3.11 / 3.12** 上跑过。
+  目录（`saintess_engine/__pycache__/`），即实机在 **3.11 / 3.12** 上跑过。
 - 没有 `setup.py` / `pyproject.toml`，没有声明 `python_requires`。**具体的最低版本要求未取证**，
   见 [_selfcheck.md](../_selfcheck.md)。
 
 ## 第三方依赖：零
 
-`battle2/**` 的**全部** import 都是标准库或引擎内部相对导入。本次核实到的完整集合：
+`saintess_engine/**` 的**全部** import 都是标准库或引擎内部相对导入。本次核实到的完整集合：
 
 ```
 __future__(annotations) · dataclasses · typing · enum ·
