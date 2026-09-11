@@ -39,7 +39,7 @@ from .serialize import from_state, to_state
 from .state_effects import all_state_effects, state_def
 from .stats import actor_stats
 
-# 模块级符号（内容层以 `from game.battle2 import stats` 形态消费）
+# 模块级符号（内容层以 `from battle2 import stats` 形态消费）
 from . import config, effects, stats  # noqa: F401
 
 __all__ = [

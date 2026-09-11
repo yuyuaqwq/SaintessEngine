@@ -2,7 +2,7 @@
 """battle2 引擎——配置挂载点（引擎零游戏知识）。
 
 引擎不内置任何游戏名词/数值规则。游戏层启动时把配置表挂进来：
-    from game.battle2 import config
+    from battle2 import config
     config.state_effects = {...}   # 或 config.load_game_rules(module)
 
 引擎内部所有"查表"都走 config 提供的接口，自身不认识表内容。
@@ -52,7 +52,7 @@ _HOOKS = {
     "mech_cfg_fn": None,
     # S3 通用件（battle_bars）：挂敌身条键前缀 fn() -> str（内容侧 BAR_STATE_PREFIX）
     "bar_prefix_fn": None,
-    # ---- S5 注入面：game/battle2/formulas.py 的表读点（引擎零内容 import）----
+    # ---- S5 注入面：battle2/formulas.py 的表读点（引擎零内容 import）----
     # 公式骨架参数表 fn() -> dict（内容侧 FORMULA_SKELETON）
     "formula_skeleton_fn": None,
     # 技能基础值常量表 fn() -> dict（内容侧 SKILL_FLAT_BASE / _PER_PLAYER_LV / _PER_SKILL_LV）

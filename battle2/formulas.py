@@ -6,7 +6,7 @@
 
 拆分前这些函数住在 `game/engine.py`，直接读 `data/formula_skeleton.py`、
 `data/skill_up.py` 与内容侧 `SKILL_UP` 表 / 技能等级 —— 那是「引擎 → 内容」反向依赖。
-现一律走 `game/battle2/config` 的注入面（S1 建立的 hook 面，方向：内容 → 引擎）：
+现一律走 `battle2/config` 的注入面（S1 建立的 hook 面，方向：内容 → 引擎）：
 
     formula_skeleton_fn() -> dict            FORMULA_SKELETON（公式骨架参数表）
     skill_flat_fn()       -> dict            SKILL_FLAT_BASE / _PER_PLAYER_LV / _PER_SKILL_LV
@@ -406,7 +406,7 @@ def skill_mp_pay_of(actor_or_player: dict, info: dict) -> int:
     命令层不便直接 import battle2 引擎内部函数 → 引擎层薄封装，battle2 核心零改动。
     """
     try:
-        from game.battle2.actions import skill_pay_of
+        from .actions import skill_pay_of
         return int(skill_pay_of(actor_or_player or {}, info or {}).get("mp") or 0)
     except Exception:
         return int((info or {}).get("mp", 0) or 0)
