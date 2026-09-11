@@ -13,7 +13,7 @@ from __future__ import annotations
 import random
 from typing import Optional
 
-from . import config as _cfg
+from .. import config as _cfg
 from . import stats as S
 from .actors import actor_alive
 
@@ -342,7 +342,7 @@ def _deal_aoe(battle, actor: dict, target: dict, info: dict, total: int) -> list
     实现：_attack_damage_pipeline 的 AOE 变体——多段循环在单目标上已完成
     （total 是主目标总伤）；这里对每个目标重算单段伤害之和。
     """
-    from .support import formation as _fm
+    from .. import formation as _fm
     from .actors import actor_alive, hostile_sides
     logs = []
     scope = "all" if info.get("aoe") is True else str(info.get("aoe") or "all")
@@ -725,7 +725,7 @@ def _heal_amount(st: dict, actor: dict, info: dict, lv: int) -> int:
             lvx = max(1, min(int(lv or 1), len(hf_raw)))
             hf = hf_raw[lvx - 1]
         try:
-            from .support.formula_expr import compile_expr, eval_expr, build_vars
+            from ..expr import compile_expr, eval_expr, build_vars
             st2 = dict(st)
             st2["_player_lv"] = int(actor.get("level", 1) or 1)
             st2["_skill_lv"] = lv

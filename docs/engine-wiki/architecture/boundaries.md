@@ -95,7 +95,7 @@
 对应做法：`E.*` 调用改走 `config.formulas()`；`C.CLASSES` / `C.MONSTER_SKILLS` 改走
 `skill_lookup` / `monster_skill_fn` hook；kind 字面量与 `"攻击"` 改走 `config.kind_of` /
 `basic_fallback`；`"战士"` 默认值拆除；`formula_expr` / `formation` / `skill_kinds` /
-`battle_bars` 四个通用件搬进 `saintess_engine/support/`。
+`battle_bars` 四个通用件搬进 `saintess_engine/support/`（**模块化重排后**为顶层并列子包 `expr/` · `gauge/` · `formation/` · `kinds/`）。
 
 ## 当前的边界瑕疵（诚实清单）
 
@@ -140,9 +140,9 @@ B1/B2/B6/B7 属于拆仓时一并带进框架仓的残留，需要在「彻底�
 |---|---|---|
 | S1 | 断 15 条反向依赖边（`d5e323e`） | ✅ 已完成（门禁可验） |
 | S2 | 固化公开 API 面 | ✅ 已完成 |
-| S3 | 通用件归位 `→ saintess_engine/support/` | ✅ 已完成 |
+| S3 | 通用件归位（`→ saintess_engine/support/`，后重排为顶层子包） | ✅ 已完成 |
 | S4 | 引擎包改名 `saintess_engine → engine` | ❌ **已废止**（随拆仓定案：包名**保持 `saintess_engine`**，不再改中性名） |
-| S5' | 拆 `game/engine.py` → `saintess_engine/formulas.py` + `content_rules/*`（`5eae164`） | ✅ 已完成（旧 `game/engine.py` shim 已随 S9-2 删除） |
+| S5' | 拆 `game/engine.py` → `saintess_engine/battle/formulas.py` + `content_rules/*`（`5eae164`） | ✅ 已完成（旧 `game/engine.py` shim 已随 S9-2 删除） |
 | S6' | 内容层重组快照 | ✅ 已完成 |
 | S7 | 单一装配入口 `apply_game_content`（`50eb8dc`） | ✅ 已完成（见下） |
 | S8 | 拆仓库 / submodule | ✅ **已完成**（引擎独立为 `framework-engine`；游戏仓 `git submodule framework/` 引用本仓固定 commit） |

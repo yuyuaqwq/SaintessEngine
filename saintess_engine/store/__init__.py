@@ -12,7 +12,7 @@
 
 典型用法::
 
-    from saintess_kit.store import Database, ensure_columns
+    from saintess_engine.store import Database, ensure_columns
 
     db = Database("/path/to/game.db")
     db.register_schema("core", "CREATE TABLE IF NOT EXISTS players (...);")

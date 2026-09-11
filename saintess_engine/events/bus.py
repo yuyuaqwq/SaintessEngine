@@ -160,5 +160,5 @@ class EventBus:
             return
         import logging
         if self._fallback_log is None:
-            self._fallback_log = logging.getLogger("saintess_kit.events")
+            self._fallback_log = logging.getLogger("saintess_engine.events")
         self._fallback_log.warning(msg, *args)

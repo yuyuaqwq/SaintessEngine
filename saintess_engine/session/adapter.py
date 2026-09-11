@@ -3,7 +3,7 @@
 
 背景
 ----
-命令层骨架（`saintess_kit.command`）一直**鸭子类型**地用宿主事件：
+命令层骨架（`saintess_engine.command`）一直**鸭子类型**地用宿主事件：
 `event.get_message_str()` / `event.plain_result(text)` / `event.get_group_id()` …
 契约是隐式的 —— 新宿主实现者只能去读框架源码反推。本模块把它**显式化**：
 

@@ -191,4 +191,4 @@ class LazyTimers:
             self._logger.warning(msg, *args)
             return
         import logging
-        logging.getLogger("saintess_kit.clock").warning(msg, *args)
+        logging.getLogger("saintess_engine.clock").warning(msg, *args)

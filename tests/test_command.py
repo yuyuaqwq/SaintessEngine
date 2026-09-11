@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""命令层骨架（`saintess_kit.command`）契约测试 —— 用**假宿主**驱动。
+"""命令层骨架（`saintess_engine.command`）契约测试 —— 用**假宿主**驱动。
 
 锁死的契约：
 1. 分页/页码：越界夹取、空列表、非数字参数
@@ -25,11 +25,11 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 FW_ROOT = os.path.dirname(_HERE)
 sys.path.insert(0, FW_ROOT)
 
-from saintess_kit.command import (  # noqa: E402
+from saintess_engine.command import (  # noqa: E402
     CommandBase, HandlerHit, PatternSet, matches_any, page_items, parse_page,
     pick_tip, require_battle, require_player, strip_command,
 )
-from saintess_kit.command.text import strip_at_prefix  # noqa: E402
+from saintess_engine.command.text import strip_at_prefix  # noqa: E402
 
 PASS = 0
 FAIL = 0
@@ -307,7 +307,7 @@ check("无 stop_event 属性不抛", True)
 # ================================================================ 10. 零依赖
 print("== 10. 零宿主 / 零游戏依赖 ==")
 banned = []
-src = os.path.join(FW_ROOT, "saintess_kit", "command")
+src = os.path.join(FW_ROOT, "saintess_engine", "command")
 for dirpath, dirs, fs in os.walk(src):
     dirs[:] = [d for d in dirs if d != "__pycache__"]
     for f in fs:

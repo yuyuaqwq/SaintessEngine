@@ -1,6 +1,6 @@
 # 参考：事件全集
 
-> **本页的 `EVENTS` 元组是从代码逐字抄的**（`saintess_engine/effect_triggers.py:48`），
+> **本页的 `EVENTS` 元组是从代码逐字抄的**（`saintess_engine/battle/effect_triggers.py:48`），
 > 不是凭记忆或文档转述。核对方式：打开该文件搜 `EVENTS = (`。
 
 ## 元组原文（26 个）

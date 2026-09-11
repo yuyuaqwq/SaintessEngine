@@ -109,7 +109,7 @@ def resolve_actions(name: str) -> list:
 
     找不到映射时按"本身就是动词"处理（动作名直通执行器）。
     """
-    from . import config
+    from .. import config
     table = config.get_effect_actions()
     mapped = table.get(name)
     if isinstance(mapped, list):

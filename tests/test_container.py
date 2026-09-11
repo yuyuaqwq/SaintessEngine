@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""容器骨架（`saintess_kit.container`）契约测试。
+"""容器骨架（`saintess_engine.container`）契约测试。
 
 锁死的契约：
 1. 载入容错：坏 JSON / 非列表 / None → 空容器（不炸）
@@ -19,7 +19,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 FW_ROOT = os.path.dirname(_HERE)
 sys.path.insert(0, FW_ROOT)
 
-from saintess_kit.container import Slots, make_entry  # noqa: E402
+from saintess_engine.container import Slots, make_entry  # noqa: E402
 
 PASS = 0
 FAIL = 0
@@ -110,7 +110,7 @@ check("clear 清空", len(z2) == 0)
 
 print("== 7. 零宿主 / 零游戏依赖 ==")
 banned = []
-src = os.path.join(FW_ROOT, "saintess_kit", "container")
+src = os.path.join(FW_ROOT, "saintess_engine", "container")
 for dirpath, dirs, fs in os.walk(src):
     dirs[:] = [d for d in dirs if d != "__pycache__"]
     for f in fs:

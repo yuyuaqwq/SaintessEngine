@@ -1,19 +1,25 @@
 # -*- coding: utf-8 -*-
-"""框架纯度门禁（框架契约）—— 两个包只依赖「相对导入 + 标准库」。
+"""框架纯度门禁（框架契约）—— 包 `saintess_engine` 的每个模块只依赖「相对导入 + 标准库」。
 
-**被守的包（2026-09-11 起）**：`saintess_engine/`（协议层）+ `saintess_kit/`（运行时骨架层）。
-两个包的纯度契约相同 —— 都可整包拷进第三方项目。
+**被守的包（2026-09-11 模块化重排后）**：`saintess_engine/` —— 单一包、多模块并列：
+
+  基础      config.py
+  战斗域    battle/（12 模块）
+  通用原语  expr/ gauge/ formation/ kinds/
+  运行时    store/ command/ events/ clock/ container/ session/
+
+纯度契约对**全部子模块一致** —— 整包可拷进第三方项目、可独立分发。
 
 这是**可分发性**的核心闸门：任何一条指向外部包的绝对 import，都会让框架
 无法脱离原游戏单独分发（第三方 clone 后 import 即失败）。
 
 断言（AST 静态分析，不做运行时 import）：
-  1. 两个包 .py 的 **每一条绝对 import 都是标准库**（相对导入不限）
+  1. 包内 .py 的 **每一条绝对 import 都是标准库**（相对导入不限）
      —— 覆盖 `import x` / `import x.y` / `from x.y import z`
   2. 零动态导入穿透：`importlib.import_module("外部包")` / `__import__("外部包")`
-  3. 公开 API 面完整（包门面 re-export 全量符号）—— 引擎专项
-  4. 存档兼容：`Battle.from_state` / `to_state` 在 API 面内 —— 引擎专项
-  5. `actions.py` 零 kind 中文字面量常量（机制/名词不得进引擎）—— 引擎专项
+  3. 公开 API 面完整（包门面 re-export 全量符号）
+  4. 存档兼容：`Battle.from_state` / `to_state` 在 API 面内
+  5. `battle/actions.py` 零 kind 中文字面量常量（机制/名词不得进框架）
 
 运行：python tests/test_engine_purity.py（exit=0 全绿）
 """
@@ -24,14 +30,12 @@ import sys
 _HERE = os.path.dirname(os.path.abspath(__file__))
 FW_ROOT = os.path.dirname(_HERE)
 
-# 被守的包（2026-09-11 起两个：引擎=协议层；kit=运行时骨架层）
-# 两个包的纯度契约完全相同：只允许「相对导入 + 标准库」。
+# 被守的包：单一包（模块化重排后，全部能力都是它的并列子模块）
 ENGINE_DIR = os.path.join(FW_ROOT, "saintess_engine")
 ENGINE_NAME = "saintess_engine"
-KIT_DIR = os.path.join(FW_ROOT, "saintess_kit")
-PKG_DIRS = (ENGINE_DIR, KIT_DIR)
+PKG_DIRS = (ENGINE_DIR,)
 
-# 兼容旧引用名（引擎专项断言沿用）
+# 兼容旧引用名
 PKG_DIR = ENGINE_DIR
 PKG_NAME = ENGINE_NAME
 
@@ -52,13 +56,27 @@ API_SYMBOLS = [
     "norm_stack", "effects", "heal_amount", "skill_pay_of", "make_actor",
     "get_effect_rules", "get_effect_actions",
 ]
-# 私有 → 公开的 5 个符号（旧下划线名保别名：模块 → (公开名, 私有名)）
+# 私有 → 公开的 5 个符号（旧下划线名保别名：模块全路径 → (公开名, 私有名)）
+# 注意：模块化重排后取自**真实模块**（`saintess_engine.battle.battle`），
+# 不能用包门面属性名（`pkg.battle` 现在是子包，不是 battle 模块）。
 PROMOTED_ALIASES = [
-    ("effects", "cap_of", "_cap_of"),
-    ("effects", "norm_stack", "_norm_stack"),
-    ("battle", "now_of", "_now_of"),
-    ("actions", "heal_amount", "_heal_amount"),
-    ("actions", "skill_pay_of", "_skill_pay_of"),
+    ("battle.effects", "cap_of", "_cap_of"),
+    ("battle.effects", "norm_stack", "_norm_stack"),
+    ("battle.battle", "now_of", "_now_of"),
+    ("battle.actions", "heal_amount", "_heal_amount"),
+    ("battle.actions", "skill_pay_of", "_skill_pay_of"),
+]
+# 模块化重排：门面转出的子模块名（`getattr(包, 名)` 取到对应模块）
+MODULE_ATTRS = [
+    ("battle", "battle"), ("actions", "battle.actions"), ("actors", "battle.actors"),
+    ("ai", "battle.ai"), ("effect_triggers", "battle.effect_triggers"),
+    ("effects", "battle.effects"), ("formulas", "battle.formulas"),
+    ("landing", "battle.landing"), ("schedule", "battle.schedule"),
+    ("serialize", "battle.serialize"), ("state_effects", "battle.state_effects"),
+    ("stats", "battle.stats"),
+    ("expr", "expr"), ("gauge", "gauge"), ("formation", "formation"), ("kinds", "kinds"),
+    ("store", "store"), ("command", "command"), ("events", "events"),
+    ("clock", "clock"), ("container", "container"), ("session", "session"),
 ]
 
 passed = failed = 0
@@ -90,15 +108,14 @@ def _root_of(dotted: str) -> str:
 
 
 def scan():
-    """返回 (非标准库绝对 import 列表, 动态导入违规列表, 扫描文件数)。
-
-    遍历 `PKG_DIRS` 里的**全部包**（引擎 + kit）—— 两个包的纯度契约相同。
-    """
+    """返回 (非标准库绝对 import 列表, 动态导入违规列表, 扫描文件数)。"""
     bad, dyn, n = [], [], 0
     for pkg_dir in PKG_DIRS:
         if not os.path.isdir(pkg_dir):
             continue
         for root, _dirs, files in os.walk(pkg_dir):
+            if "__pycache__" in root:
+                continue
             for fn in sorted(files):
                 if not fn.endswith(".py"):
                     continue
@@ -126,25 +143,24 @@ def scan():
 
 
 def main():
-    print("== 框架纯度门禁：saintess_engine/** + saintess_kit/** 只依赖「相对导入 + 标准库」==")
+    print("== 框架纯度门禁：saintess_engine/**（含全部子模块）只依赖「相对导入 + 标准库」==")
     for pkg_dir in PKG_DIRS:
         check(f"包目录存在：{os.path.basename(pkg_dir)}", os.path.isdir(pkg_dir), pkg_dir)
 
     bad, dyn, n = scan()
-    # 引擎 14 文件 + kit 5 文件；留一点余量防漏扫
-    check("扫描到两个包的 .py 文件（≥18）", n >= 18, f"n={n}")
+    check("扫描到包内 .py 文件（≥30）", n >= 30, f"n={n}")
     check("零非标准库绝对 import（可分发性闸门）", not bad,
           "\n      " + "\n      ".join(bad))
     check("零动态导入穿透（importlib/__import__ 指向外部包）", not dyn,
           "\n      " + "\n      ".join(dyn))
 
-    # actions.py 不得持有游戏 kind 中文字面量常量
-    act = os.path.join(PKG_DIR, "actions.py")
+    # battle/actions.py 不得持有游戏 kind 中文字面量常量
+    act = os.path.join(PKG_DIR, "battle", "actions.py")
     tree = ast.parse(open(act, encoding="utf-8").read(), filename=act)
     consts = {t.id for node in tree.body if isinstance(node, ast.Assign)
               for t in node.targets if isinstance(t, ast.Name)}
     KINDS = {"K_PHYS", "K_MAGI", "K_TRUE", "K_HEAL", "K_BUFF"}
-    check("actions.py 零 kind 中文字面量常量", not (KINDS & consts),
+    check("battle/actions.py 零 kind 中文字面量常量", not (KINDS & consts),
           f"残留={sorted(KINDS & consts)}")
 
     # 注入面存在（内容侧装配契约）
@@ -163,13 +179,26 @@ def main():
           f"missing={missing}")
     alias_bad = []
     for mod_name, pub, priv in PROMOTED_ALIASES:
-        mod = getattr(_B2, mod_name, None)
+        mod = _B2 if mod_name is None else importlib.import_module(f"{PKG_NAME}.{mod_name}")
         if not (hasattr(_B2, pub) and mod is not None and hasattr(mod, pub)
                 and hasattr(mod, priv)
                 and getattr(mod, priv) is getattr(mod, pub, None)):
             alias_bad.append(f"{mod_name}:{pub}/{priv}")
     check("5 私有符号已升公开且旧下划线名为同一对象别名", not alias_bad,
           f"bad={alias_bad}")
+
+    # 门面转出全部子模块（模块化重排：`from saintess_engine import <模块>` 可用）
+    mod_bad = []
+    for attr, dotted in MODULE_ATTRS:
+        if not hasattr(_B2, attr):
+            mod_bad.append(attr)
+            continue
+        sub = importlib.import_module(f"{PKG_NAME}.{dotted}")
+        if getattr(_B2, attr) is not sub:
+            mod_bad.append(f"{attr}!={dotted}")
+    check(f"门面转出全部 {len(MODULE_ATTRS)} 个子模块（属性即模块对象）", not mod_bad,
+          f"bad={mod_bad}")
+
     check("存档兼容：Battle.from_state / to_state 在 API 面内",
           hasattr(_B2.Battle, "from_state") and hasattr(_B2.Battle, "to_state")
           and hasattr(_B2, "from_state") and hasattr(_B2, "to_state"))

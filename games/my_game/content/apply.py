@@ -38,7 +38,7 @@ def install_engine() -> None:
     global _MOUNTED
     if _MOUNTED:
         return
-    import saintess_engine.formulas as formulas
+    import saintess_engine.battle.formulas as formulas
 
     config.register_hook_provider(_lazy_mount)
     config.mount(

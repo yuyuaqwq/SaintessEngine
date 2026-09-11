@@ -20,7 +20,7 @@
 """
 import random
 
-from . import config as _cfg
+from .. import config as _cfg
 
 # 技能等级上限（v27；内容侧 SKILL_UP 条目的 max 字段优先，见 skill_max_level）
 SKILL_MAX_LEVEL = 5
@@ -240,7 +240,7 @@ def skill_expr_preview(info: dict | None, level: int, stats: dict | None = None)
     if not info:
         return 0.0
     lv = max(1, min(int(level or 1), skill_max_level(info)))
-    from .support.formula_expr import compile_expr, eval_expr, build_vars
+    from ..expr import compile_expr, eval_expr, build_vars
     _expr = skill_formula_expr(info, lv)
     if not _expr:
         # 治疗逐级（heal_formula 字符串数组 / heal_exprs）
@@ -349,7 +349,7 @@ def resolve_formula(formula, stats, target_def, target_mdef, is_crit=False,
         _expr = skill_formula_expr_for_seg(seg, int(stats.get("_skill_lv", 1) or 1))
         if _expr:
             try:
-                from .support.formula_expr import compile_expr, eval_expr, build_vars
+                from ..expr import compile_expr, eval_expr, build_vars
                 _vars = build_vars(stats, player_lv=int(stats.get("_player_lv", 0) or 0),
                                    skill_lv=int(stats.get("_skill_lv", 0) or 0),
                                    target_max_hp=target_max_hp,

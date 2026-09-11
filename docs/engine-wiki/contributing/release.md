@@ -35,7 +35,7 @@
 - [x] **反向依赖已断**（原 15 条 `引擎→内容` import 边）—— 门禁
       `tests/test_engine_purity.py`（**框架仓**；加强版：每条绝对 import 都断言是标准库）可验（S1 起点 commit `d5e323e`）
 - [x] **公开 API 面已固化**（26 符号 re-export + 5 个私有符号升公开保别名，S2）
-- [x] **通用件已归位**（`formula_expr` / `formation` / `skill_kinds` / `battle_bars` → `saintess_engine/support/`，S3）
+- [x] **通用件已归位**（`formula_expr` / `formation` / `skill_kinds` / `battle_bars` → **模块化重排后**为顶层并列子包 `expr/` · `gauge/` · `formation/` · `kinds/`，S3）
 - [x] **`game/engine.py` 已拆**（S5'，commit `5eae164`）—— 过渡 shim 已随拆仓删净
       （S9-2）；**游戏仓 / 奥兰迪亚侧**的装配入口是 `game/content_rules/apply.py`
 - [x] **内容侧单一装配入口已收敛**（S7，commit `50eb8dc`：`apply_game_content`，**游戏仓侧**）
@@ -44,9 +44,10 @@
 - [x] **拆仓库 / submodule**（S8）—— **已完成**：引擎独立为 `framework-engine`；游戏仓
       `dragonfall/.gitmodules` 的 `framework` → 框架仓（固定 commit）
 - [x] **收口清理过渡 shim**（S9）—— 已完成（S9-2 删净：`game/engine.py` 已删；
-      `battle_bars` / `formation` / `formula_expr` / `skill_kinds` 等已归位框架仓 `saintess_engine/support/`）
+      `battle_bars` / `formation` / `formula_expr` / `skill_kinds` 等已归位框架仓
+      （现 `saintess_engine/{expr,gauge,formation,kinds}/`））
 - [ ] **语义残留未清**（门禁只是 import 门禁）。未清的 4 项：
-  - `support/skill_kinds.py` 的中文枚举值（`skill_kinds.py:27-34`）→ 应改为
+  - `kinds/` 的中文枚举值（`kind_meta` 表，`kinds/__init__.py:27-34`）→ 应改为
     从 `config.kind_of` 注入，或明确标为「参考实现专用」
   - `landing` / `stats` 里的固定效果 key（`death_guard` · `heal_amp_pct` · `heal_down` ·
     `_anti_heal_pct` · `sleep`）

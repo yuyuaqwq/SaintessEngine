@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from . import config as _cfg
+from .. import config as _cfg
 
 
 def actor_stats(battle, actor: dict) -> dict:

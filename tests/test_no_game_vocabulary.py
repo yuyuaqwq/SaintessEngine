@@ -20,7 +20,7 @@
 A. **结构性**（零假阳性）：`schemas/*.json` 任何 `enum` 的取值不得含非 ASCII 字符
    —— 中文枚举值基本等同「某个游戏的内容分类」。
 B. **词表**：下列文件集不得出现 `GAME_TERMS` 里的词
-   —— `saintess_engine/` `schemas/` `editor/` `examples/` `games/`
+   —— `saintess_engine/`（含全部子模块） `schemas/` `editor/` `examples/` `games/`
    （**不含** `docs/`：引擎 wiki 会以「参考实现」的身份正当地提到那只游戏；
      **不含** `tests/`：本文件自身持有词表）
 C. `schemas/*.json` 的 `$id` 不得含游戏名。
@@ -42,7 +42,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
-SCAN_DIRS = ("saintess_engine", "saintess_kit", "schemas", "editor", "examples", "games")
+SCAN_DIRS = ("saintess_engine", "schemas", "editor", "examples", "games")
 SCAN_EXT = (".py", ".json", ".js", ".html")
 
 # 游戏身份词（反查自游戏侧数据；框架层不得出现）

@@ -16,7 +16,7 @@ from typing import Optional
 
 from .actors import ActCtx, actor_alive, actor_dead
 from . import actions
-from . import config as _cfg
+from .. import config as _cfg
 
 # 旧 battle 常量（对外兼容读）
 DEFAULT_CT_WAIT = 2.0  # CTB 基础行动间隔（N4 schedule 细化）

@@ -256,7 +256,7 @@ return False
 ```python
 import ast, re
 rules = ...  # 读 game/data/battle2_rules.py 的 EFFECT_ACTIONS
-verbs = set(re.findall(r'@register_action\("([^"]+)"\)', open('saintess_engine/effects.py').read()))
+verbs = set(re.findall(r'@register_action\("([^"]+)"\)', open('saintess_engine/battle/effects.py').read()))
 effs = set(re.findall(r'[\'"]effect[\'"]\s*:\s*[\'"]([^\'"]+)[\'"]', open('game/data/skills.py').read()))
 print(sorted(e for e in effs if e not in rules and e not in verbs))
 ```

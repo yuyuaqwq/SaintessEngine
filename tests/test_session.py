@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""会话骨架（`saintess_kit.session`）契约测试 —— **用假宿主端到端跑通一条命令**。
+"""会话骨架（`saintess_engine.session`）契约测试 —— **用假宿主端到端跑通一条命令**。
 
 锁死的契约：
 1. `PlainEvent` 满足命令层骨架用到的全部访问点（含可写 `message_str`）
@@ -19,8 +19,8 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 FW_ROOT = os.path.dirname(_HERE)
 sys.path.insert(0, FW_ROOT)
 
-from saintess_kit.command import CommandBase, require_player  # noqa: E402
-from saintess_kit.session import PlainEvent, PlainResult, SessionAdapter  # noqa: E402
+from saintess_engine.command import CommandBase, require_player  # noqa: E402
+from saintess_engine.session import PlainEvent, PlainResult, SessionAdapter  # noqa: E402
 
 PASS = 0
 FAIL = 0
@@ -153,7 +153,7 @@ check("★ 转发后恢复原文", ev2.message_str == "宝箱", ev2.message_str)
 
 print("== 4. 零宿主 / 零游戏依赖 ==")
 banned = []
-src = os.path.join(FW_ROOT, "saintess_kit", "session")
+src = os.path.join(FW_ROOT, "saintess_engine", "session")
 for dirpath, dirs, fs in os.walk(src):
     dirs[:] = [d for d in dirs if d != "__pycache__"]
     for f in fs:

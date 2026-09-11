@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""领域事件总线 + 懒计时器骨架的契约测试（`saintess_kit.events` / `saintess_kit.clock`）。
+"""领域事件总线 + 懒计时器骨架的契约测试（`saintess_engine.events` / `saintess_engine.clock`）。
 
 锁死的契约：
 1. EventBus：注册序 = 执行序 = 输出行序；段落空行策略；未知事件「注册严 / 发布宽」；
@@ -19,8 +19,8 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 FW_ROOT = os.path.dirname(_HERE)
 sys.path.insert(0, FW_ROOT)
 
-from saintess_kit.clock import LazyTimers  # noqa: E402
-from saintess_kit.events import EventBus   # noqa: E402
+from saintess_engine.clock import LazyTimers  # noqa: E402
+from saintess_engine.events import EventBus   # noqa: E402
 
 PASS = 0
 FAIL = 0
@@ -271,7 +271,7 @@ check("on_expire 抛异常不影响清理", tolerant_ok)
 print("== 9. 零游戏 / 零宿主依赖 ==")
 banned = []
 for sub in ("events", "clock"):
-    for dirpath, dirs, fs in os.walk(os.path.join(FW_ROOT, "saintess_kit", sub)):
+    for dirpath, dirs, fs in os.walk(os.path.join(FW_ROOT, "saintess_engine", sub)):
         dirs[:] = [d for d in dirs if d != "__pycache__"]
         for f in fs:
             if not f.endswith(".py"):

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""通用存储骨架（`saintess_kit.store`）契约测试。
+"""通用存储骨架（`saintess_engine.store`）契约测试。
 
 锁死的契约（每条都是「换游戏后照样得成立」的性质）：
 1. 建表：注册序执行 / `init()` 幂等 / 同名注册覆盖
@@ -23,8 +23,8 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 FW_ROOT = os.path.dirname(_HERE)
 sys.path.insert(0, FW_ROOT)
 
-from saintess_kit.store import Database, Repository, columns_of, ensure_columns  # noqa: E402
-from saintess_kit.store.migrate import _check_ident, missing_columns  # noqa: E402
+from saintess_engine.store import Database, Repository, columns_of, ensure_columns  # noqa: E402
+from saintess_engine.store.migrate import _check_ident, missing_columns  # noqa: E402
 
 PASS = 0
 FAIL = 0
@@ -261,7 +261,7 @@ check("基类未声明 table 即拒", base_rejected)
 
 # ------------------------------------------------------------------ 6. 零依赖
 print("== 6. 零游戏 / 零宿主依赖 ==")
-src_root = os.path.join(FW_ROOT, "saintess_kit")
+src_root = os.path.join(FW_ROOT, "saintess_engine")
 banned_imports = []
 for dirpath, dirs, fs in os.walk(src_root):
     dirs[:] = [d for d in dirs if d != "__pycache__"]

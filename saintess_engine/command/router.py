@@ -24,7 +24,7 @@ from typing import Any, Callable, NamedTuple, Optional, Sequence
 
 __all__ = ["HandlerHit", "find_static", "matches_any", "run_shortcut", "PatternSet"]
 
-_log = logging.getLogger("saintess_kit.command")
+_log = logging.getLogger("saintess_engine.command")
 
 
 class HandlerHit(NamedTuple):
@@ -136,7 +136,7 @@ async def run_shortcut(owner: Any, event: Any, text: str, finder: Callable[[str]
             if r:
                 yield r
     except Exception as e:  # noqa: BLE001
-        lg.warning("[saintess_kit.command] 快捷转发失败 %s: %s", text, e)
+        lg.warning("[saintess_engine.command] 快捷转发失败 %s: %s", text, e)
         yield event.plain_result(f"{error_prefix}{e}")
     finally:
         if orig is not None:

@@ -1,46 +1,46 @@
 # -*- coding: utf-8 -*-
-"""v181.P4 新战斗引擎包（saintess_engine）—— 公开 API 门面（S2 固化）。
+"""saintess_engine —— 通用游戏框架包（多模块并列，依赖自下而上）。
 
-旧 battle.py（11000+ 行，v100+ 补丁叠加）保留可跑；本包独立实现，完成后切换 import 并删旧。
+模块布局（全部平级）：
 
-S2（docs/ENGINE_CONTENT_SPLIT_PLAN.md §5 / §7-S2）：把内容层实际消费的符号
-**全量 re-export**，内容层不再依赖引擎内部结构（submodule 化前的必要固化）：
-- 25（实为 26）个被消费符号：deal_damage / state_def / heal_actor / Battle /
-  actor_alive / act_apply / cap_of / actor_stats / apply_effects / now_of /
-  stats / register_action / config / fire / all_state_effects / action_time /
-  initial_ct / hostile_sides / act_shield / norm_stack / effects / heal_amount /
-  skill_pay_of / make_actor / get_effect_rules / get_effect_actions
-- 5 个下划线私有符号已提升为公开（cap_of / now_of / norm_stack / heal_amount /
-  skill_pay_of），**旧下划线名保留为别名**（内容层/测试仍在用，不得删）
-- 存档兼容（§8-R11）：`Battle.from_state` / `Battle.to_state`（类方法）与模块级
-  `serialize.from_state` / `to_state` 都在本 API 面内
+  基础      config      引擎注入面（内容侧装配 hook 的唯一入口）
+  战斗域    battle/      CTB 调度 / 行动结算 / 效果叠层 / 落地 / 存档 / AI / 面板公式
+  通用原语  expr/        表达式求值器（数值公式自定义）
+            gauge/       计量条（累积/衰减/阈值/免疫窗口）
+            formation/   站位与目标选择几何
+            kinds/       技能 / 伤害类别域
+  运行时    store/       SQLite 骨架（连接/锁/事务/迁移/Repository）
+            command/     命令层骨架（注册/路由/分页/守卫/提示）
+            events/      领域事件总线
+            clock/       懒计时器
+            container/   容量受限格子容器
+            session/     宿主会话适配
 
-引擎零内容 import（门禁 tests/test_engine_no_content.py）。
-
-包结构：
-- actors.py    Actor 模型/工厂 + Sides 容器 + ActCtx + actor 序列化
-- battle.py    Battle 主类（构造、act/human_act/actor_auto、结果判定）
-- actions.py   行动结算链（_do_skill/_do_attack/_deal_hit/_damage_actor）
-- effects.py   效果系统（EFFECT_HANDLERS 单表 + handler 注册）——N3
-- stats.py     面板计算（薄封装，公式走 config 注入面，不重写公式）
-- schedule.py  CTB 时间轴/事件队列——N4
-- serialize.py to_state/from_state（sides-only）——N5
-- config.py    配置/hook 挂载点（引擎零游戏知识；S1 断链后唯一注入面）
+本文件是**包门面**：外部只需 `from saintess_engine import X`。
+包内模块一律相对导入，不反向依赖门面（纯度门禁 tests/test_engine_purity.py）。
 """
-from .actors import ActCtx, actor_alive, actor_ext, hostile_sides, make_actor
-from .actions import heal_amount, skill_pay_of
-from .battle import Battle, now_of
+# ---- 战斗域公开符号（门面转出，外部零改动）----
+from .battle.actors import ActCtx, actor_alive, actor_ext, hostile_sides, make_actor
+from .battle.actions import heal_amount, skill_pay_of
+from .battle.battle import Battle, now_of
 from .config import get_effect_actions, get_effect_rules
-from .effect_triggers import fire
-from .effects import act_apply, act_shield, apply_effects, cap_of, norm_stack, register_action
-from .landing import deal_damage, heal_actor
-from .schedule import action_time, initial_ct
-from .serialize import from_state, to_state
-from .state_effects import all_state_effects, state_def
-from .stats import actor_stats
+from .battle.effect_triggers import fire
+from .battle.effects import act_apply, act_shield, apply_effects, cap_of, norm_stack, register_action
+from .battle.landing import deal_damage, heal_actor
+from .battle.schedule import action_time, initial_ct
+from .battle.serialize import from_state, to_state
+from .battle.state_effects import all_state_effects, state_def
+from .battle.stats import actor_stats
 
-# 模块级符号（内容层以 `from saintess_engine import stats` 形态消费）
-from . import config, effects, stats  # noqa: F401
+# ---- 子模块（`from saintess_engine import <模块>` 形态消费）----
+from . import config  # noqa: F401
+from .battle import (  # noqa: F401
+    actions, actors, ai, effect_triggers, effects, formulas,
+    landing, schedule, serialize, state_effects, stats,
+)
+from . import (  # noqa: F401
+    clock, command, container, events, expr, formation, gauge, kinds, session, store,
+)
 
 __all__ = [
     # Actor / 战斗主体
@@ -61,6 +61,11 @@ __all__ = [
     "hostile_sides",
     # 行动结算工具
     "heal_amount", "skill_pay_of",
-    # 序列化（存档兼容：§8-R11）
+    # 序列化（存档兼容：拆仓方案 §8-R11）
     "from_state", "to_state",
+    # 子模块
+    "battle", "actions", "actors", "ai", "effect_triggers", "effects", "formulas",
+    "landing", "schedule", "serialize", "state_effects",
+    "expr", "gauge", "formation", "kinds",
+    "store", "command", "events", "clock", "container", "session",
 ]

@@ -39,7 +39,7 @@ class CommandBase:
     register_hint: str = DEFAULT_REGISTER_HINT
     battle_none_hint: str = DEFAULT_BATTLE_HINT
     tip_fallback: Sequence[str] = (DEFAULT_TIP,)
-    logger_name: str = "saintess_kit.command"
+    logger_name: str = "saintess_engine.command"
 
     # ---------- 可覆盖：指令别名（剥参数时用） ----------
     command_aliases: Sequence[str] = ()
@@ -91,7 +91,7 @@ class CommandBase:
 
     # ============================================================ 日志
     def _logger(self) -> logging.Logger:
-        return logging.getLogger(getattr(self, "logger_name", "saintess_kit.command"))
+        return logging.getLogger(getattr(self, "logger_name", "saintess_engine.command"))
 
     def _warn(self, msg: str, *args, **kwargs) -> None:
         self._logger().warning(msg, *args, **kwargs)
@@ -144,8 +144,8 @@ class CommandBase:
         try:
             stop()
         except Exception:
-            logging.getLogger("saintess_kit.command").warning(
-                "[saintess_kit.command] stop_event 调用失败（已忽略）", exc_info=True)
+            logging.getLogger("saintess_engine.command").warning(
+                "[saintess_engine.command] stop_event 调用失败（已忽略）", exc_info=True)
 
     # ============================================================ handler 路由
     @classmethod
