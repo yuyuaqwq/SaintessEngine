@@ -321,59 +321,97 @@ input[type=checkbox]{width:15px;height:15px;height:auto;padding:0;accent-color:v
 .settings-form label{display:flex;flex-direction:column;gap:var(--sp2);font-size:12px;color:var(--fg-2)}
 .settings-form label input{height:30px;font-size:13px;color:var(--fg-0)}
 
-/* ─────────────── 7. 表单（schema_form.js 契约类名） ─────────────── */
-.schema-form{display:flex;flex-direction:column;gap:var(--sp5)}
+/* ─────────────── 7. 表单（schema_form.js 契约类名） ───────────────
+   排版策略：**网格自动排布**（短字段一行 2~4 个，宽字段占满整行）。
+   配合 :has() 按「控件类型」自动决定跨列 —— schema_form.js 一行未改。
+   ──────────────────────────────────────────────────────────────── */
+.schema-form{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:var(--sp3) var(--sp5);align-items:start;
+}
 fieldset.grp{
-  margin:0;padding:var(--sp4) var(--sp5) var(--sp6);
+  grid-column:1/-1;margin:0;padding:var(--sp4) var(--sp5) var(--sp5);
   background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-lg);
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+  gap:var(--sp3) var(--sp5);align-items:start;
 }
 fieldset.grp>legend{
-  padding:0 var(--sp2);margin-left:-var(--sp2);
-  color:var(--accent);font-size:12px;font-weight:600;letter-spacing:.3px;
+  grid-column:1/-1;padding:0 var(--sp2);color:var(--accent);
+  font-size:12px;font-weight:600;letter-spacing:.3px;
 }
-.field{display:flex;flex-direction:column;gap:var(--sp2);padding:var(--sp3) 0;
-  border-top:1px solid var(--line)}
-.field:first-of-type{border-top:none;padding-top:var(--sp2)}
-.field>.f-label{display:flex;align-items:center;gap:var(--sp2);font-size:12.5px;color:var(--fg-1)}
-.field>.f-label .f-title{color:var(--fg-0);font-weight:500}
+
+/* 字段单元 */
+.field{display:flex;flex-direction:column;gap:3px;min-width:0;padding:0}
+.field>.f-label{
+  display:flex;align-items:baseline;gap:var(--sp2);
+  font-size:11.5px;line-height:1.4;color:var(--fg-2);
+}
+.field>.f-label .f-title{color:var(--fg-1);font-weight:500;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .field>.f-label .req{color:var(--err);font-weight:700}
-.field .help{font-size:11.5px;color:var(--fg-3);line-height:1.6}
-.field.has-error{border-left:3px solid var(--err);margin-left:calc(-1 * var(--sp3));padding-left:var(--sp3)}
+.field .help{font-size:10.5px;line-height:1.5;color:var(--fg-3);
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+
+/* 宽控件 / 复合字段 → 占满整行
+   （数组 / 文本域 / 额外字段 / 键值对 / 嵌套分组表单：anyOf 复合字段内部是 fieldset.grp） */
+.field:has(textarea),
+.field:has(.array-rows),
+.field:has(.array-row),
+.field:has(.kv-row),
+.field:has(details.extra),
+.field:has(.schema-form),
+.field:has(fieldset.grp),
+.field:has(fieldset){grid-column:1/-1}
+
+/* 嵌套分组（复合字段内部）：留一点视觉从属感 */
+.field>fieldset.grp{margin-top:2px;background:color-mix(in srgb,var(--bg-2) 62%,var(--bg-1))}
+
+.field.has-error{border-left:3px solid var(--err);padding-left:var(--sp3);margin-left:calc(-1 * var(--sp3))}
 .field.has-error>.f-label .f-title{color:var(--err)}
 .field.has-error .ctl{border-color:var(--err)}
+
+/* 控件 */
 .ctl{
-  width:100%;max-width:640px;height:30px;padding:0 var(--sp3);
+  width:100%;max-width:none;height:28px;padding:0 var(--sp3);
   background:var(--bg-3);color:var(--fg-0);border:1px solid var(--line);
-  border-radius:var(--r-sm);font:13px/1 var(--ui);
+  border-radius:var(--r-sm);font:12.5px/1 var(--ui);
   transition:border-color var(--t),background var(--t);
 }
 .ctl:hover{border-color:var(--line-2)}
 .ctl:focus{outline:none;border-color:var(--accent);background:var(--bg-2)}
 .ctl.bad{border-color:var(--err)}
+.ctl:disabled{opacity:.55}
 select.ctl{cursor:pointer;padding-right:var(--sp5);appearance:none;
   background-image:linear-gradient(45deg,transparent 50%,var(--fg-2) 50%),linear-gradient(135deg,var(--fg-2) 50%,transparent 50%);
-  background-position:calc(100% - 13px) 13px,calc(100% - 9px) 13px;
+  background-position:calc(100% - 13px) 12px,calc(100% - 9px) 12px;
   background-size:4px 4px,4px 4px;background-repeat:no-repeat}
-span.ctl{display:inline-flex;align-items:center;color:var(--fg-2);background:transparent;border-color:transparent}
+span.ctl{display:inline-flex;align-items:center;color:var(--fg-2);background:transparent;border-color:transparent;padding:0}
 input[type=checkbox].ctl{width:15px;height:15px;padding:0;accent-color:var(--accent)}
-textarea.ctl{height:auto;min-height:120px;max-width:640px;padding:var(--sp3);resize:vertical;
-  font-family:var(--mono);font-size:12.5px;line-height:1.6}
-.array-rows{display:flex;flex-direction:column;gap:var(--sp2);max-width:640px}
+textarea.ctl{height:auto;min-height:104px;padding:var(--sp3);resize:vertical;
+  font-family:var(--mono);font-size:12px;line-height:1.6}
+
+/* 数组编辑器 */
+.array-rows{display:flex;flex-direction:column;gap:var(--sp2)}
 .array-row{display:flex;align-items:center;gap:var(--sp2)}
 .array-row .ctl{flex:1}
-.array-row .btn{padding:0 var(--sp3);height:28px}
-.addbtn{align-self:flex-start;height:26px;padding:0 var(--sp4);font-size:12px;margin-top:var(--sp1);
+.array-row .btn{padding:0 var(--sp3);height:28px;flex:0 0 auto}
+.addbtn{align-self:flex-start;height:26px;padding:0 var(--sp4);font-size:11.5px;margin-top:2px;
   background:transparent;border:1px dashed var(--line-2);color:var(--fg-2);border-radius:var(--r-sm);cursor:pointer}
 .addbtn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
-.kv-row{display:flex;align-items:center;gap:var(--sp2);max-width:640px;margin-bottom:var(--sp2)}
+.kv-row{display:flex;align-items:center;gap:var(--sp2);margin-bottom:var(--sp2)}
 .kv-row .ctl{flex:1}
-.kv-row .ctl.k{flex:0 0 220px}
-details.extra{margin-top:var(--sp1)}
-details.extra>summary{cursor:pointer;color:var(--fg-3);font-size:11.5px;list-style:none;padding:var(--sp1) 0}
+.kv-row .ctl.k{flex:0 0 200px}
+details.extra{margin-top:2px}
+details.extra>summary{cursor:pointer;color:var(--fg-3);font-size:11px;list-style:none;padding:2px 0}
 details.extra>summary::-webkit-details-marker{display:none}
-details.extra>summary::before{content:"▸ ";color:var(--fg-3)}
+details.extra>summary::before{content:"▸ "}
 details.extra[open]>summary::before{content:"▾ "}
 details.extra>summary:hover{color:var(--accent)}
+
+/* 窄屏：退回单/双列 */
+@media (max-width:920px){
+  .schema-form,fieldset.grp{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+}
 
 /* ─────────────── 8. 变更预览 ─────────────── */
 .diff-host{padding:0}
@@ -580,3 +618,77 @@ html.theming .preset-card,html.theming .theme-dialog,html.theming .issues,html.t
   transition:background-color 140ms ease-out,border-color 140ms ease-out,color 140ms ease-out;
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ─────────────── 14. 壁纸层 ───────────────
+   有壁纸时（html[data-wall="1"]）面板改用**半透明底**，让壁纸透出来；
+   壁纸上是「压暗层」，保证前景文字对比度。
+   ────────────────────────────────────────── */
+#wall{position:fixed;inset:0;z-index:0;pointer-events:none;display:none;
+  background-image:var(--wall);background-size:cover;background-position:center;
+  background-repeat:no-repeat;opacity:var(--wall-op,1);
+  filter:blur(var(--wall-blur,0px)) saturate(var(--wall-sat,1));
+  transform:scale(1.06)}
+#wall::after{content:"";position:absolute;inset:0;background:var(--wall-scrim,transparent)}
+html[data-wall="1"] #wall{display:block}
+.app{position:relative;z-index:1}
+
+/* 半透明面板 —— 仅在启用壁纸时生效（否则保持原来的实色，视觉零变化）
+   ⚠️ backdrop-filter 很吃 GPU：**只用在细条与浮层**（顶栏/状态栏/对话框/面板），
+   大面积的三栏用提高不透明度的方式代替（视觉接近，帧率差别很大）。 */
+html[data-wall="1"] .topbar{background:color-mix(in srgb,var(--bg-2) 80%,transparent);backdrop-filter:blur(6px)}
+html[data-wall="1"] .statusbar{background:color-mix(in srgb,var(--bg-2) 80%,transparent);backdrop-filter:blur(6px)}
+html[data-wall="1"] .rail{background:color-mix(in srgb,var(--bg-1) 86%,transparent)}
+html[data-wall="1"] .list-pane{background:color-mix(in srgb,var(--bg-1) 88%,transparent)}
+html[data-wall="1"] .editor-pane{background:color-mix(in srgb,var(--bg-1) 90%,transparent)}
+html[data-wall="1"] .sim-drawer{background:color-mix(in srgb,var(--bg-1) 90%,transparent)}
+html[data-wall="1"] .editor-head{background:transparent}
+html[data-wall="1"] .pane-head{background:transparent}
+html[data-wall="1"] fieldset.grp{background:color-mix(in srgb,var(--bg-2) 72%,transparent)}
+html[data-wall="1"] .entry-row:hover{background:color-mix(in srgb,var(--bg-2) 72%,transparent)}
+html[data-wall="1"] .entry-row.on{background:color-mix(in srgb,var(--bg-3) 78%,transparent)}
+html[data-wall="1"] .segmented{background:color-mix(in srgb,var(--bg-2) 70%,transparent)}
+html[data-wall="1"] .theme-dialog,
+html[data-wall="1"] .palette{background:color-mix(in srgb,var(--bg-2) 95%,transparent);backdrop-filter:blur(10px)}
+html[data-wall="1"] .preset-card,
+html[data-wall="1"] .btn,
+html[data-wall="1"] .chip.kind,
+html[data-wall="1"] .kbd{background:color-mix(in srgb,var(--bg-3) 78%,transparent)}
+html[data-wall="1"] .ctl,
+html[data-wall="1"] .json-host{background:color-mix(in srgb,var(--bg-3) 82%,transparent)}
+html[data-wall="1"] .json-host,
+html[data-wall="1"] textarea.ctl{background:color-mix(in srgb,var(--bg-0) 72%,transparent)}
+
+/* 壁纸控件（外观对话框内） */
+.wall-preview{
+  position:relative;height:78px;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--bg-3);background-size:cover;background-position:center;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+}
+.wall-preview.empty{background-image:none}
+.wall-preview .ph{font-size:11.5px;color:var(--fg-3)}
+.wall-btns{display:flex;flex-wrap:wrap;gap:var(--sp2);align-items:center;margin-top:var(--sp3)}
+.wall-btns label.btn{cursor:pointer}
+.wall-btns input[type=file]{display:none}
+.slider-row{display:flex;align-items:center;gap:var(--sp3);margin-top:var(--sp2)}
+.slider-row span{font-size:11.5px;color:var(--fg-2);flex:0 0 92px}
+.slider-row output{font-size:11px;color:var(--fg-3);font-family:var(--mono);flex:0 0 42px;text-align:right}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;flex:1;height:20px;background:transparent;cursor:pointer;
+}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--bg-4)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;margin-top:-5px;border-radius:50%;
+  background:var(--accent);border:2px solid var(--bg-2);box-shadow:var(--sh1);
+}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--bg-4)}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--bg-2)}
+
+/* 壁纸预设（深色/浅色各备几条底色渐变，省得自己找图） */
+.wall-swatches{display:flex;gap:var(--sp2);flex-wrap:wrap;margin-top:var(--sp3)}
+.wall-sw{
+  width:56px;height:36px;padding:0;border-radius:var(--r-sm);cursor:pointer;
+  border:1px solid var(--line-2);background-size:cover;background-position:center;
+  transition:transform var(--t),box-shadow var(--t);
+}
+.wall-sw:hover{transform:translateY(-1px);box-shadow:var(--sh1)}
+.wall-sw.on{box-shadow:0 0 0 2px var(--bg-2),0 0 0 3px var(--accent)}

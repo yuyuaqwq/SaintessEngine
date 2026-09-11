@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/app.css">
 </head>
 <body>
+<div id="wall"></div>
 <div class="app">
 
   <!-- ═══════════ 顶栏 ═══════════ -->
@@ -227,6 +228,22 @@
             <input type="color" id="accentColor"><span>自定义</span>
           </label>
         </div>
+      </div>
+
+      <div class="th-sec">
+        <span class="th-label">壁纸</span>
+        <div class="wall-preview" id="wallPreview"></div>
+        <div class="wall-btns">
+          <label class="btn sm"><input type="file" id="wallFile" accept="image/*"><span class="btn-ico">🖼</span>上传图片</label>
+          <button class="btn sm" id="btnWallUrl"><span class="btn-ico">🔗</span>用网址</button>
+          <button class="btn sm danger" id="btnWallClear">清除</button>
+          <span class="dim" style="font-size:11px" id="wallInfo"></span>
+        </div>
+        <div class="wall-swatches" id="wallSwatches"></div>
+        <div class="slider-row"><span>不透明度</span><input type="range" id="wallOp" min="0.2" max="1" step="0.05"><output id="wallOpV"></output></div>
+        <div class="slider-row"><span>模糊</span><input type="range" id="wallBlur" min="0" max="24" step="1"><output id="wallBlurV"></output></div>
+        <div class="slider-row"><span>压暗</span><input type="range" id="wallDim" min="0" max="0.9" step="0.05"><output id="wallDimV"></output></div>
+        <div class="slider-row"><span>饱和度</span><input type="range" id="wallSat" min="0" max="1.6" step="0.05"><output id="wallSatV"></output></div>
       </div>
 
       <div class="th-sec">

@@ -318,6 +318,8 @@ function renderForm() {
       onRerender: () => renderEntry(),
     });
     host.appendChild(h.el);
+    // 帮助文字可能因网格窄而被 clamp → 补 title 提示（schema_form.js 不动）
+    els('.help', host).forEach((n) => { if (!n.title) n.title = n.textContent.trim(); });
     if (S.validationErrors.length) window.SchemaForm.markErrors(host, S.validationErrors);
   } catch (e) {
     host.innerHTML = `<p class="dim" style="padding:16px">表单渲染失败（${esc(e.message)}）—— 请用「JSON」档。</p>`;
@@ -773,6 +775,41 @@ function renderThemeDialog() {
     ? `跟随系统：当前系统为${TH().sysLight() ? '浅色' : '深色'}`
     : `配色保存在本机浏览器（localStorage），换设备不跟随`;
   $('themeIco').textContent = st.mode === 'light' ? '☀️' : '🌙';
+
+  renderWallpaper();
+}
+
+/* ── 壁纸区渲染 ── */
+function renderWallpaper() {
+  const T = TH();
+  const img = T.wallImage();
+  const pv = $('wallPreview');
+  pv.classList.toggle('empty', !img);
+  pv.style.backgroundImage = img || 'none';
+  pv.innerHTML = img ? '' : '<span class="ph">未启用壁纸 —— 上传图片、填网址，或选下面的内置款</span>';
+
+  const size = T.wallSize();
+  $('wallInfo').textContent = size ? `占用约 ${(size / 1048576).toFixed(1)}MB（存在本机）` : '';
+
+  // 内置渐变壁纸
+  $('wallSwatches').innerHTML = T.WALL_PRESETS.filter((x) => x.id !== 'none').map((x) =>
+    `<button class="wall-sw ${T.wall().preset === x.id ? 'on' : ''}" data-wall-preset="${x.id}"
+       title="${esc(x.name)}" style="background-image:${x.css}"></button>`).join('');
+  els('#wallSwatches .wall-sw').forEach((b) => (b.onclick = () => {
+    T.setWall({ preset: b.dataset.wallPreset === T.wall().preset ? 'none' : b.dataset.wallPreset });
+    renderWallpaper();
+  }));
+
+  // 滑杆
+  const w = T.wall();
+  const bind = (id, val, out, fmt) => {
+    $(id).value = val;
+    $(out).textContent = fmt(val);
+  };
+  bind('wallOp', w.op, 'wallOpV', (v) => Math.round(v * 100) + '%');
+  bind('wallBlur', w.blur, 'wallBlurV', (v) => v + 'px');
+  bind('wallDim', w.dim, 'wallDimV', (v) => Math.round(v * 100) + '%');
+  bind('wallSat', w.sat, 'wallSatV', (v) => Math.round(v * 100) + '%');
 }
 
 /* 主题按钮图标随系统变化（跟随模式下） */
@@ -888,6 +925,40 @@ window.addEventListener('DOMContentLoaded', () => {
     renderThemeDialog();
   }));
   $('accentColor').oninput = () => TH().update({ accentHex: $('accentColor').value });
+  // 壁纸
+  $('wallFile').onchange = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    if (!/^image\//.test(f.type)) { toast('请选择图片文件', 'bad'); return; }
+    if (f.size > TH().WALL_MAX * 0.75) {
+      toast(`图片 ${(f.size / 1048576).toFixed(1)}MB 偏大（存储上限约 ${(TH().WALL_MAX / 1048576).toFixed(1)}MB）—— 可改用「网址」引用`, 'warn');
+    }
+    const rd = new FileReader();
+    rd.onload = () => {
+      const r = TH().setWall({ dataUrl: rd.result });
+      if (!r.ok) { toast(r.reason, 'bad'); return; }
+      toast('壁纸已应用', 'ok');
+      renderWallpaper();
+    };
+    rd.readAsDataURL(f);
+    e.target.value = '';
+  };
+  $('btnWallUrl').onclick = () => {
+    const u = prompt('图片网址（http/https，或本机文件的 file:// 路径）：');
+    if (!u) return;
+    TH().setWall({ url: u });
+    toast('壁纸已应用', 'ok');
+    renderWallpaper();
+  };
+  $('btnWallClear').onclick = () => { TH().setWall({ clear: true }); renderWallpaper(); toast('壁纸已清除', ''); };
+  [['wallOp', 'op'], ['wallBlur', 'blur'], ['wallDim', 'dim'], ['wallSat', 'sat']].forEach(([id, key]) => {
+    const out = $(id + 'V');
+    $(id).oninput = () => {
+      const v = +$(id).value;
+      out.textContent = key === 'blur' ? v + 'px' : Math.round(v * 100) + '%';
+      TH().setWall({ [key]: v });
+    };
+  });
   $('accentColor').onchange = () => renderThemeDialog();
   $('btnResetCustom').onclick = () => {
     TH().update({ resetCustom: true, presetId: TH().state().mode === 'light' ? 'latte' : 'mocha' });

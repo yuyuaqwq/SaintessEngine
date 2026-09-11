@@ -165,6 +165,10 @@
     accent: 'fe.accent',            // 快选 key 或 'custom'
     accentHex: 'fe.accent.hex',     // 自定义强调色
     custom: 'fe.custom',            // {"dark":{tokens},"light":{tokens}}
+    wall: 'fe.wall',                // 壁纸：data URL 或远程 URL（空 = 无）
+    wallPreset: 'fe.wall.preset',   // 内置渐变壁纸 id
+    wallOp: 'fe.wall.op', wallBlur: 'fe.wall.blur',
+    wallSat: 'fe.wall.sat', wallDim: 'fe.wall.dim',
   };
   const get = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
   const set = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* 隐私模式 */ } };
@@ -243,6 +247,94 @@
     };
   }
 
+
+  /* ══════════ 壁纸 ══════════
+     存 localStorage（data URL 或远程 URL）。体积守卫：data URL > 3.5MB 拒绝
+     （localStorage 配额约 5MB，且与主题设置共用）。
+     内置 4 条纯 CSS 渐变壁纸，用户不找图也能试。 */
+  const WALL_MAX = 3.5 * 1024 * 1024;
+
+  const WALL_PRESETS = [
+    { id: 'none',  name: '无',     css: '' },
+    { id: 'aurora', name: '极光',  css: 'radial-gradient(1200px 700px at 18% 8%,#2b3a67 0%,transparent 60%),radial-gradient(1000px 800px at 82% 92%,#3d2b5c 0%,transparent 55%),linear-gradient(160deg,#0b1020,#131a2b 60%,#0d1424)' },
+    { id: 'dawn',   name: '晨雾',  css: 'radial-gradient(900px 600px at 25% 20%,rgba(255,190,150,.55),transparent 62%),radial-gradient(800px 700px at 80% 85%,rgba(150,190,255,.5),transparent 58%),linear-gradient(160deg,#2b2333,#3a2f3f 55%,#241f2e)' },
+    { id: 'deep',   name: '深海',  css: 'radial-gradient(1000px 700px at 70% 15%,#0e3b4a 0%,transparent 62%),radial-gradient(900px 800px at 20% 90%,#123040 0%,transparent 58%),linear-gradient(150deg,#06121a,#0a1c26 60%,#05101a)' },
+    { id: 'ember',  name: '余烬',  css: 'radial-gradient(900px 600px at 78% 82%,rgba(220,120,60,.42),transparent 60%),radial-gradient(800px 600px at 22% 18%,rgba(120,60,80,.4),transparent 58%),linear-gradient(150deg,#1a1210,#241a15 55%,#160f0d)' },
+    { id: 'paper',  name: '素纸',  css: 'radial-gradient(1000px 700px at 30% 10%,rgba(255,255,255,.85),transparent 60%),linear-gradient(160deg,#e8e4dc,#f2eee6 55%,#ded9cf)' },
+  ];
+
+  /* 壁纸设置（函数式，避免「导出对象被当函数调用」的坑） */
+  function wall() {
+    return {
+      src: get(LS.wall, ''),                       // '' = 无
+      preset: get(LS.wallPreset, 'none'),
+      op: Number(get(LS.wallOp, '1')),
+      blur: Number(get(LS.wallBlur, '0')),
+      sat: Number(get(LS.wallSat, '1')),
+      dim: Number(get(LS.wallDim, '0.45')),
+    };
+  }
+
+  const wallActive = () => { const w = wall(); return !!(w.src || w.preset !== 'none'); };
+
+  /* 生成 --wall 的 CSS 值 */
+  function wallImage() {
+    const w = wall();
+    if (w.src) return `url("${w.src.replace(/"/g, '\\"')}")`;
+    const pr = WALL_PRESETS.find((x) => x.id === w.preset);
+    return pr && pr.css ? pr.css : '';
+  }
+
+  function applyWall() {
+    const root = document.documentElement;
+    const img = wallImage();
+    if (!img) { root.removeAttribute('data-wall'); root.style.removeProperty('--wall'); return; }
+    const st = state();
+    const dark = st.mode === 'dark';
+    // 压暗层：深色主题压得更狠，浅色主题用白雾
+    const d = wall().dim;
+    const scrim = dark
+      ? `linear-gradient(rgba(0,0,0,${d}),rgba(0,0,0,${Math.min(1, d + 0.12)}))`
+      : `linear-gradient(rgba(255,255,255,${d}),rgba(255,255,255,${Math.min(1, d + 0.08)}))`;
+    root.style.setProperty('--wall', img);
+    const w = wall();
+    root.style.setProperty('--wall-op', String(w.op));
+    root.style.setProperty('--wall-blur', w.blur + 'px');
+    root.style.setProperty('--wall-sat', String(w.sat));
+    root.style.setProperty('--wall-scrim', scrim);
+    root.setAttribute('data-wall', '1');
+  }
+
+  /* 来源设置（data URL / 远程 URL / 内置预设） */
+  function setWall(o) {
+    if (o.clear) {
+      set(LS.wall, ''); set(LS.wallPreset, 'none');
+    }
+    if (o.preset !== undefined) { set(LS.wallPreset, o.preset); set(LS.wall, ''); }
+    if (o.url) {
+      const u = String(o.url).trim();
+      if (u) { set(LS.wall, u); set(LS.wallPreset, 'none'); }
+    }
+    if (o.dataUrl) {
+      const d = String(o.dataUrl);
+      if (d.length > WALL_MAX) return { ok: false, reason: `图片过大（${(d.length / 1048576).toFixed(1)}MB，上限 ${(WALL_MAX / 1048576).toFixed(1)}MB）。换小一点，或用「网址」引用。` };
+      set(LS.wall, d); set(LS.wallPreset, 'none');
+    }
+    if (o.op !== undefined) set(LS.wallOp, String(o.op));
+    if (o.blur !== undefined) set(LS.wallBlur, String(o.blur));
+    if (o.sat !== undefined) set(LS.wallSat, String(o.sat));
+    if (o.dim !== undefined) set(LS.wallDim, String(o.dim));
+    applyWall();
+    return { ok: true };
+  }
+
+  /* 估算当前壁纸占用（给界面显示） */
+  function wallSize() {
+    const s = wall().src;
+    if (!s) return 0;
+    return s.startsWith('data:') ? s.length : 0;
+  }
+
   let _themeTimer = null;
 
   /* animate=true 时挂 140ms 的颜色过渡（仅切换瞬间，不常驻） */
@@ -258,6 +350,7 @@
     Object.keys(map).forEach((k) => root.style.setProperty(k, map[k]));
     root.setAttribute('data-theme', st.mode);          // 仅作语义标记（配色已内联）
     root.style.colorScheme = st.mode;
+    applyWall();
   }
 
   /* ── 对外设置入口 ── */
@@ -298,6 +391,7 @@
     }
     if (patch.resetAll) {
       Object.values(LS).forEach((k) => { try { localStorage.removeItem(k); } catch (e) { /* noop */ } });
+      applyWall();
     }
     apply();
     return state();
@@ -318,8 +412,10 @@
 
   window.SETheme = {
     MODE_BASE, PRESETS, ACCENT_CHOICES, EDITABLE, LS,
+    WALL_PRESETS, WALL_MAX,
     state, tokens, varMap, apply, update, watchSystem,
     normHex, mix, readableOn, sysLight,
+    wall, wallActive, wallImage, wallSize, setWall,
   };
 
   /* head 同步执行：首屏前定色，避免闪白（不动画） */
