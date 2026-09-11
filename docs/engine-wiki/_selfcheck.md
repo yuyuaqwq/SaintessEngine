@@ -72,7 +72,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 |---|---|---|
 | `debuff_scale` | 全仓 `grep -rn "debuff_scale"` → **2026-09-11 已接线**：`landing.deal_damage` 逐状态累加乘区（对称 `stat_scale`） | ✅ **已消费**。`hunt_mark`（+8%/层 cap3）/ `soul_mark`（+6%/层 cap3）/ `curse`（+20% cap1）现已生效 |
 | `on_threshold` | 全仓 grep → 只有 `effects.py:211/244/250` 的判据关键词 + `battle_rules.py:27` 的声明 | **无消费方**。`threshold` **事件**有引擎点位（`effects.py:373`），但这张映射表没被读 |
-| `wake_on_hit` | 全仓 grep → 只有 `battle_rules.py:400` 的声明 | **无消费方**。打醒睡眠由 `landing.py:168` 的硬编码 key 判断实现 |
+| `wake_on_hit` | 原只有 `battle_rules.py:400` 的声明 | ✅ **2026-09-11 已接线**：`landing.deal_damage:167-179` 遍历承伤者状态读该字段（同时删掉 landing 内硬编码的 `sleep` 游戏名词 —— 见 B2 表） |
 | `tag` | grep `state_def(...).get("tag")` / `cfg.get("tag")` → 空 | **无消费方**。`act_apply` 读的是 params 的 `tag`（作 key 兜底，`effects.py:287`） |
 | `dot` | 全仓 grep → 只有 `effects.py:249` 判据；78 个 key 里无一使用 | **无消费方**（V5 后 DOT 统一走 `period`） |
 | `name` | 引擎无读取（内容侧读） | 引擎不读，**符合设计**（展示名属内容侧） |
@@ -161,7 +161,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | # | 瑕疵 | 位置 |
 |---|---|---|
 | B1 | `kinds/` 枚举值写死中文（`PHYS = "物理"` …） | `kinds/__init__.py:33-40` |
-| B2 | 固定效果 key：`"sleep"`（打醒）、`"death_guard"`（濒死保护）、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`（受疗修正） | `landing.py:168, 237, 373-396` |
+| B2 | 固定效果 key：`"death_guard"`（濒死保护）、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`（受疗修正）。（原含 `"sleep"` 打醒 —— **2026-09-11 已数据化**移除，改读 `wake_on_hit` 字段） | `landing.py:167-179, 248, 384-407` |
 | B3 | `effects.act_apply` 里 `if key == "reduce":` | `effects.py:393` |
 | B4 | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | `effects.py:313` · `schedule.py:264,272` |
 | B5 | `battle.py` 里 `"player"` 阵营名 | `battle.py:168, 515` |

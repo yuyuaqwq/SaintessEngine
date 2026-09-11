@@ -31,7 +31,7 @@ def my_verb(battle, caster, target, params, logs):
 
 1. **落地一定走 `landing`**
    - 伤害：`landing.deal_damage(battle, source, target, amount, logs, dmg_kind=..., defend_reduce=..., element=...)`（`landing.py:23`）
-   - 治疗：`landing.heal_actor(battle, target, amount, logs, source=None, label="")`（`landing.py:379`）
+   - 治疗：`landing.heal_actor(battle, target, amount, logs, source=None, label="")`（`landing.py:390`）
    - 自己 `target["hp"] -= dmg` 会丢掉护盾吸收、死亡判定、濒死保护、`on_taken`/`on_kill` 事件
 2. **缺字段 = 无行为**（零默认值）。所有参数用 `params.get(...)`，判 `<= 0` 就 `return`。
    不要写 `params.get("pct", 0.1)` 这种「贴心默认」——参考实现（游戏仓内容侧）里所有扩展动作都没这么干

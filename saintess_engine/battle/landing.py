@@ -164,10 +164,21 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             dmg = _apply_taken_reductions(battle, target, dmg, dmg_kind, logs)
         except Exception:
             pass  # 免伤异常不阻断落地
-    # 睡眠被打醒（主动伤害打醒睡眠；sleep 效果条目在 effects 容器）
-    if target.get("effects", {}).get("sleep"):
-        target["effects"].pop("sleep", None)
-        logs.append("💥 目标被攻击惊醒！")
+    # N-B12 「受击打醒」数据化（2026-09-11 接线）：原实现**硬编码 key="sleep"**
+    #   ——游戏名词进了引擎（违反「引擎零内容知识」），而数据侧的 `wake_on_hit: True`
+    #   声明**无人读**（死字段）。现改为遍历承伤者 states，读通用字段
+    #   `EFFECT_RULES[key].wake_on_hit` → 命中即移除该状态。
+    #   引擎只认「布尔字段」不认态名；数据侧缺省（无该键）= 行为与接线前一致。
+    try:
+        from .state_effects import state_def as _sdef_w
+        _ef_wake = target.get("effects")
+        if isinstance(_ef_wake, dict):
+            for _wk in list(_ef_wake.keys()):
+                if isinstance(_ef_wake.get(_wk), dict) and (_sdef_w(_wk) or {}).get("wake_on_hit"):
+                    _ef_wake.pop(_wk, None)
+                    logs.append("💥 目标被攻击惊醒！")
+    except Exception:
+        pass  # 打醒异常不阻断落地
     # 蓄力打断（主动伤害打断读条；DOT wake_sleep=False 不打）
     if target.get("charging") and target["charging"].get("skill"):
         target["charging"] = None

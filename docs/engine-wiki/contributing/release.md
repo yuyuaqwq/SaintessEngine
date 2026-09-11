@@ -54,7 +54,7 @@
   - `effects.act_apply` 里的 `if key == "reduce"`
   - `battle._check_side_end` 里的 `"player"` 阵营名（`battle.py:567`）
   （完整表见 [../architecture/boundaries.md](../architecture/boundaries.md) 的「边界瑕疵」）
-- [ ] **缺失消费方的声明清理**（`on_threshold` / `wake_on_hit` /
+- [ ] **缺失消费方的声明清理**（`on_threshold` /
       `tag` / `period.type` / `period.per_layer` / `period.dmg_type`）——
       要么实现消费，要么从参考实现的数据里删掉（现在它们会让第三方误以为可用）
 

@@ -47,7 +47,7 @@ actor["effects"] = {
 | `stat` / `op` / `mult` | `act_apply` 快照分支 | `stats._apply_effects`（`stats.py:70-81`） | 面板增益快照 |
 | `hit` | `act_apply` hit 子键 | `actions._consume_hit_buffs`（`actions.py:470`） | 出手消费型（`dmg_mult` / `guaranteed_crit` / `bonus_atk_pct`） |
 | `period` | **内容侧**直接写入 | `schedule._settle_time_effects`（`schedule.py:235-243`） | 动态周期声明（条目自带优先，回落表声明） |
-| `value` | 内容侧（`heal_amp_pct` 等） | `landing._apply_heal_mods`（`landing.py:449`） | 附加数值袋（形态自定，消费方自己解释） |
+| `value` | 内容侧（`heal_amp_pct` 等） | `landing._apply_heal_mods`（`landing.py:460`） | 附加数值袋（形态自定，消费方自己解释） |
 
 ### `v` 字段的消费缺口
 

@@ -104,7 +104,7 @@
 | # | 瑕疵 | 位置 | 影响 |
 |---|---|---|---|
 | B1 | `kinds/` 的枚举值写死中文（`PHYS = "物理"` …） | `kinds/__init__.py:33-40` | 与 `config.kind_of` 注入面**两套 kind 词表**；非中文 kind 的游戏用不了 `is_kind` / `is_damage_kind` / `seg_of` |
-| B2 | `landing._apply_death_guard` / `heal_actor` / `stats` 里硬编码 key：`"death_guard"`、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`、`"sleep"` | `landing.py:168,237,373-396` | 「濒死保护」「禁疗/受疗增幅」「睡眠打醒」四类机制**只认固定 key 名**。要换名只能改引擎（或复用这些名字） |
+| B2 | `landing._apply_death_guard` / `heal_actor` / `stats` 里硬编码 key：`"death_guard"`、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"` | `landing.py:248,384-407` | 「濒死保护」「禁疗/受疗增幅」三类机制**只认固定 key 名**。要换名只能改引擎（或复用这些名字）。（原「睡眠打醒」硬编码 `"sleep"` —— **2026-09-11 已数据化**为 `wake_on_hit` 字段，不再属本表） |
 | B3 | `effects.act_apply` 里 `if key == "reduce":` 写 `holder["reduce_left"]` | `effects.py:393-394` | 引擎里出现了内容 key 字面量 |
 | B4 | `schedule._settle_time_effects` 里 `pct_boss` / `is_boss` / `role == "boss"` | `schedule.py:264,272` | 「Boss」这个内容概念进了引擎（作为数据字段处理，尚可接受，但它是**唯一**被引擎认识的身份标签） |
 | B5 | `effects.act_apply` 里 `if holder.get("is_boss") or holder.get("role") == "boss"` | `effects.py:313` | 同上（控制时长减半） |

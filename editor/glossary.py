@@ -245,7 +245,7 @@ _EFFECT_RULES = {
                      "ref": ("reference/effect-rules.md", "guard_hp_pct")},
     "heal_pct": {"zh": "濒死回复比例", "note": "✅ 同上：触发时额外回复的最大生命比例。", "ref": ("reference/effect-rules.md", "heal_pct")},
     "overload_heal_pct": {"zh": "过载回复比例", "note": "⚠ 引擎不读，内容侧读：过载触发的全队回复比例。", "ref": ("reference/effect-rules.md", "overload_heal_pct")},
-    "wake_on_hit": {"zh": "受击打醒", "note": "⚠ **当前无消费者**：实际「打醒」是 landing 里对 key=sleep 的硬编码判断，与本字段无关。",
+    "wake_on_hit": {"zh": "受击打醒", "note": "✅ 引擎消费（`landing.deal_damage`，2026-09-11 接线）：承伤时遍历持有者状态，带该字段的态即被移除。接线前是 landing 内**硬编码 `sleep`**（游戏名词进引擎）——本字段生效后引擎零内容知识。",
                     "ref": ("reference/effect-rules.md", "wake_on_hit")},
 }
 
