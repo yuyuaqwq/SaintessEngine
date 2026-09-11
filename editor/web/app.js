@@ -73,9 +73,10 @@ async function boot() {
   await loadPackages();
   renderRail();
   await loadWikiTree();
-  routeFromHash();                 // #/wiki/xxx 深链（字段注脚 → 文档）
   if (S.pkgs.length) await selectPkg(S.pkgs[0].id);
   else showEmptyPkg();
+  routeFromHash();                 // ★ 放在选包之后：selectPkg 会切域（顺手隐藏文档面板），
+                                   //   深链 #/wiki/... 若先跑就会被盖掉，刷新后跳不回那一页
 }
 
 /* ═══════════════════════════ 字段词典 ═══════════════════════════
