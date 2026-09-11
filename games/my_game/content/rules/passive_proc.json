@@ -1,1 +1,15 @@
-{}
+{
+  "demo_echo": {
+    "event": "on_taken",
+    "action": "demo_echo",
+    "chance": 0.25,
+    "pct": 0.5,
+    "tag": "回响"
+  },
+  "demo_mark": {
+    "event": "skill_hit",
+    "action": "demo_echo",
+    "mark_key": "dm_test",
+    "stacks": 3
+  }
+}

@@ -22,6 +22,9 @@ API
     DELETE /api/package/<id>/d/<dom>/<key>      → 删除
     POST   /api/package/<id>/validate           → 全包校验
     GET    /api/schema/<dom>              → 域 schema 原文
+    GET    /api/actions                   → 机制动作清单（AST 扫源码；引擎内置 + 包内）
+    GET    /api/actions?pkg=<id>          → 同上，额外扫该游戏包的动作
+    GET    /api/actions?fresh=1           → 跳过缓存重扫（改了 mech/ 代码后立刻可见）
     POST   /api/package/<id>/simulate     → 沙箱试跑（子进程跑引擎，见 simulate.py）
 
 安全：只绑 127.0.0.1；只读写游戏包目录；静态文件做路径逃逸防护。
@@ -39,6 +42,7 @@ from urllib.parse import unquote, urlparse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from editor import actions as AC     # noqa: E402
 from editor import packages as PK    # noqa: E402
 from editor import validate as VD    # noqa: E402
 
@@ -83,6 +87,7 @@ class H(BaseHTTPRequestHandler):
     # ---------- 路由 ----------
     def do_GET(self):
         p = urlparse(self.path)
+        self._query = p.query                      # 供 _api_get 读查询串
         parts = [unquote(x) for x in p.path.strip("/").split("/") if x]
         try:
             if not parts:
@@ -119,6 +124,13 @@ class H(BaseHTTPRequestHandler):
         if len(parts) == 3 and parts[0] == "schema":
             s = VD.load_schema(parts[1])
             return self._send(200, {"ok": bool(s), "schema": s})
+        if parts == ["actions"]:
+            from urllib.parse import parse_qs
+            q = parse_qs(getattr(self, "_query", ""))
+            pkg_id = (q.get("pkg") or [""])[0]
+            fresh = (q.get("fresh") or ["0"])[0] not in ("", "0", "false")
+            pkg_dir = PK.resolve_package(pkg_id, GAMES_DIR) if pkg_id else None
+            return self._send(200, AC.inventory(pkg_dir, use_cache=not fresh))
         if len(parts) >= 4 and parts[0] == "package" and parts[2] == "d":
             d = PK.resolve_package(parts[1], GAMES_DIR)
             if not d:

@@ -692,3 +692,53 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 }
 .wall-sw:hover{transform:translateY(-1px);box-shadow:var(--sh1)}
 .wall-sw.on{box-shadow:0 0 0 2px var(--bg-2),0 0 0 3px var(--accent)}
+
+/* ─────────────── 15. 机制动作（E4：动作联想 + 参数提示） ─────────────── */
+.fh-tip{font-size:10.5px;color:var(--fg-3);font-weight:400}
+
+.action-hint{
+  margin-top:var(--sp2);padding:var(--sp2) var(--sp3);
+  background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r-sm);
+  font-size:11.5px;display:flex;flex-direction:column;gap:5px;
+}
+.action-hint.empty{background:transparent;border-style:dashed}
+.action-hint.ok{border-left:3px solid var(--accent)}
+.action-hint.miss{background:var(--err-dim);border-color:var(--err-soft);border-left:3px solid var(--err)}
+.ah-dim{color:var(--fg-3)}
+.ah-warn{color:var(--err)}
+.ah-warn b{font-family:var(--mono)}
+.ah-head{display:flex;align-items:center;gap:var(--sp2);flex-wrap:wrap}
+.ah-src{
+  font-size:10px;padding:1px var(--sp2);border-radius:var(--r-full);
+  border:1px solid var(--line-2);color:var(--fg-2);
+}
+.ah-src.eng{border-color:var(--accent-soft);color:var(--accent-hi);background:var(--accent-dim)}
+.ah-src.pkg{border-color:var(--ok-soft);color:var(--ok);background:var(--ok-dim)}
+.ah-doc{color:var(--fg-2);line-height:1.5}
+.ah-sub{color:var(--fg-3);font-size:10.5px}
+.ah-rows{display:flex;flex-direction:column;gap:4px}
+.ah-row{
+  display:grid;grid-template-columns:minmax(88px,auto) 1fr auto;
+  align-items:center;gap:var(--sp2);
+}
+.ah-row.req .ah-key b{color:var(--err)}
+.ah-key{
+  font-family:var(--mono);font-size:11px;color:var(--fg-1);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:help;
+}
+.ah-input{
+  height:24px;font-family:var(--mono);font-size:11px;
+  background:var(--bg-3);border:1px solid var(--line);border-radius:var(--r-sm);
+  color:var(--fg-0);padding:0 var(--sp2);min-width:0;
+}
+.ah-input:focus{outline:none;border-color:var(--accent);background:var(--bg-2)}
+.ah-input.filled{border-color:var(--accent-soft);color:var(--accent-hi)}
+.ah-input::placeholder{color:var(--fg-3);font-size:10px}
+.ah-goto{
+  justify-self:start;height:22px;padding:0 var(--sp2);font-size:10.5px;
+  background:transparent;border:1px dashed var(--line-2);border-radius:var(--r-sm);
+  color:var(--fg-2);cursor:pointer;
+}
+.ah-goto:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.ah-type{font-size:9.5px;color:var(--fg-3);font-family:var(--mono)}
+.action-hint .btn{align-self:flex-start;margin-top:2px}

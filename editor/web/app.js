@@ -27,6 +27,8 @@ const S = {
   dirtyKeys: new Set(),          // 有未保存改动的条目 key（当前域）
   kb: -1,                        // 键盘焦点索引
   pkgOpen: false,
+  actions: [],                   // 机制动作清单（AST 扫源码；引擎内置 + 包内）
+  actionByName: {},              // name → 动作
 };
 
 /* ───────────────────────── API ───────────────────────── */
@@ -128,6 +130,7 @@ async function selectPkg(id) {
   S.dirtyKeys.clear();
   renderPkgMenu(); renderRail(); renderSettingsForm(); updateStatusbar();
   closeEntry();
+  await loadActions(false);          // 动作清单随包（包内可有 mech/）
   await loadDomain(S.dom);
 }
 
@@ -320,6 +323,7 @@ function renderForm() {
     host.appendChild(h.el);
     // 帮助文字可能因网格窄而被 clamp → 补 title 提示（schema_form.js 不动）
     els('.help', host).forEach((n) => { if (!n.title) n.title = n.textContent.trim(); });
+    enhanceActionFields();          // E4：动作名联想 + 参数提示
     if (S.validationErrors.length) window.SchemaForm.markErrors(host, S.validationErrors);
   } catch (e) {
     host.innerHTML = `<p class="dim" style="padding:16px">表单渲染失败（${esc(e.message)}）—— 请用「JSON」档。</p>`;
@@ -329,6 +333,163 @@ function renderForm() {
 function primaryOf() {
   const d = S.domains.find((x) => x.id === S.dom);
   return d ? (d.primary || '') : '';
+}
+
+/* ═══════════════════════════ 机制动作（E4：动作联表 + 参数提示） ═══════════════════════════
+   设计：**用 datalist 增强既有 input，而不是替换元素** —— schema_form.js 的事件链
+   （onChange/onRerender）一行不动，联想只是给 input 加 `list` 属性。
+   选中动作后，在其下方显示「该动作实际消费的参数」（AST 从实现反推，不会漂移）。
+   ══════════════════════════════════════════════════════════════════════════════ */
+const FIELD_HINT = {
+  action:  '机制动作（动词执行器）—— 从已注册的真实动作里选',
+};
+
+async function loadActions(fresh) {
+  if (!S.pkgId && !fresh) return;
+  const q = `?pkg=${encodeURIComponent(S.pkgId || '')}${fresh ? '&fresh=1' : ''}`;
+  const r = await api('GET', '/api/actions' + q);
+  const j = r.json || {};
+  S.actions = j.actions || [];
+  S.actionByName = {};
+  S.actions.forEach((a) => { S.actionByName[a.name] = a; });
+  if (fresh) toast(`动作清单已刷新（${S.actions.length} 个）`, 'ok');
+}
+
+/* 把某个字段的 input 变成「带联想的输入框」（不改元素、不动事件） */
+function attachDatalist(fieldEl, listId, values) {
+  const inp = fieldEl.querySelector('input.ctl, textarea.ctl');
+  if (!inp) return null;
+  let dl = document.getElementById(listId);
+  if (!dl) {
+    dl = document.createElement('datalist');
+    dl.id = listId;
+    document.body.appendChild(dl);
+  }
+  dl.innerHTML = values.map((v) => `<option value="${esc(v)}"></option>`).join('');
+  inp.setAttribute('list', listId);
+  return inp;
+}
+
+/* 表单渲染后的「动作字段」增强 */
+function enhanceActionFields() {
+  const host = $('formHost');
+  if (!host || !S.actions.length) return;
+  els('.field', host).forEach((f) => {
+    const path = f.dataset.path || '';
+    const leaf = path.split('.').pop();
+    // ① 动作名字段：加联想
+    if (leaf === 'action' || leaf === 'actions') {
+      const inp = attachDatalist(f, 'fwActionNames', S.actions.map((a) => a.name));
+      if (inp) {
+        f._lastAction = inp.value.trim();
+        renderActionHint(f, inp.value);
+        // ⚠️ 只在**动作名真的变了**时重渲染参数区 —— 否则每次按键都重建 DOM 会
+        //   打断用户正在参数框里的输入（实测焦点被抢）。参数框输入本身不重渲染。
+        inp.addEventListener('input', () => {
+          if (f._lastAction === inp.value.trim()) return;
+          f._lastAction = inp.value.trim();
+          renderActionHint(f, inp.value);
+        });
+      }
+    }
+    // ② 其它已知字段：补一条说明
+    else if (FIELD_HINT[leaf]) {
+      const lab = f.querySelector('.f-label');
+      if (lab && !lab.querySelector('.fh-tip')) {
+        const tip = document.createElement('span');
+        tip.className = 'fh-tip';
+        tip.textContent = 'ⓘ ' + FIELD_HINT[leaf];
+        lab.appendChild(tip);
+      }
+    }
+  });
+}
+
+/* 动作参数区 —— **可直接编辑**（关键：动作参数多数不在 schema 里，
+   schema_form 渲染不到它们；若只在提示里列名字，补的键就成了看不见的幽灵数据） */
+function renderActionHint(fieldEl, name) {
+  let box = fieldEl.querySelector('.action-hint');
+  if (!box) {
+    box = document.createElement('div');
+    box.className = 'action-hint';
+    fieldEl.appendChild(box);
+  }
+  const a = S.actionByName[(name || '').trim()];
+  if (!a) {
+    box.className = 'action-hint' + (name ? ' miss' : ' empty');
+    box.innerHTML = name
+      ? `<span class="ah-warn">✕ 未找到动作 <b>${esc(name)}</b> —— 检查拼写，或确认它已在代码里注册</span>`
+      : '<span class="ah-dim">从已注册动作里选一个（支持输入过滤）</span>';
+    return;
+  }
+  const ps = a.params || [];
+  box.className = 'action-hint ok';
+  box.innerHTML = `
+    <div class="ah-head">
+      <span class="ah-src ${a.source === 'engine' ? 'eng' : 'pkg'}">${a.source === 'engine' ? '框架内置' : '本包动作'}</span>
+      <span class="mono dim">${esc(a.file)}:${a.line}</span>
+    </div>
+    ${a.doc ? `<div class="ah-doc">${esc(a.doc)}</div>` : ''}
+    ${ps.length ? `<div class="ah-sub">读这些参数${ps.some((x) => !inSchema(x.key)) ? '（不在 schema 里，下方直接填）' : ''}</div>
+      <div class="ah-rows">${ps.map((x) => paramRow(a, x)).join('')}</div>` 
+      : '<div class="ah-dim">该动作不读配置参数</div>'}`;
+
+  // 绑定参数输入（写回 entryData）
+  els('.ah-input', box).forEach((inp) => {
+    inp.addEventListener('input', () => {
+      const k = inp.dataset.key;
+      const raw = inp.value;
+      (S.entryData || {})[k] = coerce(raw, inp.dataset.type);
+      markDirty();
+      inp.classList.toggle('filled', raw !== '');
+    });
+    inp.addEventListener('change', () => {
+      // 失去焦点时把推断类型的值回显（如 "1.50" → 1.5）
+      const k = inp.dataset.key;
+      const v = (S.entryData || {})[k];
+      if (v !== undefined && v !== '') inp.value = typeof v === 'string' ? v : JSON.stringify(v);
+    });
+  });
+  // 「见上方字段」跳转
+  els('.ah-goto', box).forEach((el2) => (el2.onclick = () => {
+    const f = el(`#formHost .field[data-path="${el2.dataset.path}"]`);
+    if (f) { f.scrollIntoView({ block: 'center', behavior: 'smooth' }); f.style.transition = 'background 400ms'; f.style.background = 'var(--accent-dim)'; setTimeout(() => { f.style.background = ''; }, 900); }
+  }));
+}
+
+/* 该键是否由 schema 渲染了（是则不在参数区重复给输入框） */
+function inSchema(key) {
+  return !!el(`#formHost .field[data-path="${String(key).replace(/"/g, '\\"')}"]`);
+}
+
+/* 用户输入 → 值（按推断类型收敛；空串保持空串，不猜） */
+function coerce(raw, type) {
+  if (raw === '') return '';
+  if (type === 'number' || type === 'float') { const n = Number(raw); return Number.isFinite(n) ? n : raw; }
+  if (type === 'int') { const n = parseInt(raw, 10); return Number.isFinite(n) ? n : raw; }
+  if (type === 'bool') return !/^(false|0|no|否)$/i.test(raw.trim());
+  if (type === 'array' || type === 'object') {
+    try { return JSON.parse(raw); } catch (e) { return raw; }
+  }
+  return raw;
+}
+
+function paramRow(a, x) {
+  const has = inSchema(x.key);
+  const cur = (S.entryData || {})[x.key];
+  const filled = cur !== undefined && cur !== null && cur !== '';
+  const show = filled ? (typeof cur === 'string' ? cur : JSON.stringify(cur)) : '';
+  const ph = x.default !== null && x.default !== undefined
+    ? `默认 ${JSON.stringify(x.default)}` : (x.type === 'unknown' ? '值' : x.type);
+  return `<div class="ah-row ${x.required ? 'req' : ''}">
+    <span class="ah-key" title="${esc(x.hint || '')}">${esc(x.key)}${x.required ? '<b>*</b>' : ''}</span>
+    ${has
+      ? `<button class="ah-goto" data-path="${esc(x.key)}" title="该键由上方表单字段编辑">↗ 见上方字段</button>`
+      : `<input class="ah-input ${filled ? 'filled' : ''}" data-key="${esc(x.key)}"
+              data-type="${esc(x.type)}" value="${esc(show)}" placeholder="${esc(ph)}"
+              spellcheck="false" autocomplete="off">`}
+    <span class="ah-type">${esc(x.type)}</span>
+  </div>`;
 }
 
 /* ═══════════════════════════ 变更预览（客户端 diff） ═══════════════════════════ */
