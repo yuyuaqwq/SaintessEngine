@@ -24,7 +24,7 @@ actor["effects"] = {
 合并成一个容器后（`actors.py:46-48` 的原文：`V 系列统一：四容器 → 单 effects 容器`）：
 
 - 到期只有一处（`schedule._settle_time_effects`，`schedule.py:192-209`）
-- 净化只有一处（`effects.act_cleanse`，`effects.py:520-524`）
+- 净化只有一处（`effects.act_cleanse`，`effects.py:552-556`）
 - 面板折算只有一处（`stats._apply_effects`，`stats.py:40`）
 - 序列化天然覆盖（`serialize._serialize_actor` 全字段带走，`serialize.py:53`）
 - 「这个效果属于哪一类」不再需要回答——**行为由声明给，不由容器给**
@@ -36,11 +36,11 @@ actor["effects"] = {
 ## 条目字段全谱
 
 条目是 **dict**（引擎只读 dict 形态条目，非 dict 会被跳过 ——
-例 `schedule.py:196`、`stats.py:55`、`effects.py:400`）。
+例 `schedule.py:196`、`stats.py:55`、`effects.py:431`）。
 
 | 字段 | 谁写 | 谁读 | 含义 |
 |---|---|---|---|
-| `stacks` | `act_apply`（`effects.py:364/429`）/ `act_consume` / 周期 gain | `_cap_of` clamp、`stats` 折算、`schedule` 周期跳、`_apply_death_guard` | 层数。**允许 float**（小数刻度，如信仰每刻 −0.7） |
+| `stacks` | `act_apply`（`effects.py:394/429`）/ `act_consume` / 周期 gain | `_cap_of` clamp、`stats` 折算、`schedule` 周期跳、`_apply_death_guard` | 层数。**允许 float**（小数刻度，如信仰每刻 −0.7） |
 | `expire` | `act_apply` | `schedule._settle_time_effects`（`schedule.py:198-202`）、`Battle.act` 控制过期兜底（`battle.py:452-454`）、`actions._consume_hit_buffs` | **绝对时刻**；`None` = 永不到期 |
 | `mode` | `act_apply` 控制分支 | `Battle.act` 控制消费（`battle.py:435-458`） | `"skip"` = 整跳行动 / `"no_skill"` = 技能转普攻 |
 | `v` | `act_apply` value 型 | **无引擎消费者**（☞ 见下） | 值型数值（如减伤 0.45） |
@@ -51,8 +51,8 @@ actor["effects"] = {
 
 ### `v` 字段的消费缺口
 
-`act_apply` 的值型分支会写 `{"v": 0.45}`（`effects.py:390-392`），并给 `reduce` 额外写
-`holder["reduce_left"]`（`effects.py:393-394`）。但：
+`act_apply` 的值型分支会写 `{"v": 0.45}`（`effects.py:421-423`），并给 `reduce` 额外写
+`holder["reduce_left"]`（`effects.py:424-425`）。但：
 
 - `effects["reduce"]["v"]` **没有消费者**（全仓 grep 见 [_selfcheck.md](../_selfcheck.md)）
 - `actor["reduce_left"]` 也没有消费者
@@ -74,8 +74,8 @@ actor["effects"] = {
 | `_fmt_stack(v)`（`effects.py:37`） | 日志显示：整值去掉 `.0`（`9.3` 显示成 `9.3`，`10.0` 显示成 `10`） |
 
 **为什么需要 float**：资源可以有非整数速率（信仰每刻 −0.7、磐核每刻 +0.4）。
-`apply` 的叠层分支读 `float()`（`effects.py:352`）、`consume` 读 `float()`
-（`effects.py:442`）、`schedule` 的 gain 分支 `round(..., 6)`（`schedule.py:349`）。
+`apply` 的叠层分支读 `float()`（`effects.py:382`）、`consume` 读 `float()`
+（`effects.py:474`）、`schedule` 的 gain 分支 `round(..., 6)`（`schedule.py:406`）。
 读侧全用 `float()` 保真，写侧统一过 `norm_stack` 保持「int 资源看起来还是 int」。
 
 ## cap 的唯一收敛点
@@ -95,8 +95,8 @@ def _cap_of(actor, key):                       # effects.py:58，S2 公开别名
 - 声明了 → `基础 cap + actor.bonus.cap[key]`（额外上限，被动 proc 的 `domain: "cap"` 写它）
 - `bonus` 为负数时按 0 处理（`max(0, bonus)`）——**只增不减**
 
-读它的地方（都是叠层 clamp）：`act_apply` 叠层分支（`effects.py:353`）、
-`schedule` 周期 gain 分支（`schedule.py:346`，且**表声明可被 `period.cap` 覆盖**）。
+读它的地方（都是叠层 clamp）：`act_apply` 叠层分支（`effects.py:383`）、
+`schedule` 周期 gain 分支（`schedule.py:403`，且**表声明可被 `period.cap` 覆盖**）。
 内容侧的渠道攒取也走它（`class_mech_proc.py` 的 `class_res_channel_gain`）。
 
 ## 周期结算（`period`）
@@ -108,11 +108,11 @@ def _cap_of(actor, key):                       # effects.py:58，S2 公开别名
    （`schedule.py:254-257`，对齐旧引擎的「首跳延迟」）
 2. **到点补跳**：`while now >= dot_next[key]`，一次最多补 20 跳（`guard < 20`）防死循环
 3. **`dir` 四向**：`damage`（掉血）/ `heal`（回血 + 可选 mana_pct）/ `mana`（回蓝）/ `gain`（给自身叠层加/减，**静默**、clamp `[0, cap]`）
-4. **`turns` 限跳**：跳够 `turns` 次就清层（计数器 `dot_jumps`，`schedule.py:355-361`）
+4. **`turns` 限跳**：跳够 `turns` 次就清层（计数器 `dot_jumps`，`schedule.py:412-418`）
 5. **`dir="gain"` 不需要 `stacks > 0`**：0 层也要回（游侠精力耗到 0 若被拦将永远回不了，
    `schedule.py:247-250` 注释）
 6. **boss 档**：`is_boss` 或 `role == "boss"` 时读 `pct_boss` / `pct_cur_boss`
-   （`schedule.py:264` / `:272`）
+   （`schedule.py:267` / `:286`）
 
 ⚠️ `dot_next` / `dot_jumps` 是 actor 上的运行期辅助字段，会**随存档落盘**（不在
 `_STRIP_KEYS` 里）——这是续战行为能对上的原因，但如果你是手写存档要注意它们。

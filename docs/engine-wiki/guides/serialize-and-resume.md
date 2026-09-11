@@ -69,7 +69,7 @@ _STRIP_KEYS = {"_skill_index"}      # serialize.py:33 —— 运行时索引，�
 | `dot_next` / `dot_jumps` | 引擎周期结算辅助（`schedule.py:224-225`） | 落盘是**续战能对上**的原因，别手删 |
 | `_dmg_taken_mult` | 上层直写（例 `commands/boss_script.py:684`） | 承伤乘区（`landing.py:86-91` 读） |
 | `act_count` | `actor_auto` 每动 +1（`battle.py:403`） | AI `round_mod` 谓词读它 |
-| `reduce_left` | `effects.act_apply`（`effects.py:394`） | ⚠️ 无消费者 |
+| `reduce_left` | `effects.act_apply`（`effects.py:425`） | ⚠️ 无消费者 |
 
 ## 恢复时的三个隐式决定
 

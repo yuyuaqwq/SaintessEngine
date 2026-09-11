@@ -16,7 +16,7 @@
 - 序列化不需要按类型分派（`serialize._serialize_actor` 对任何 actor 一视同仁，`serialize.py:53`）
 
 代价：**身份信息全靠字段**。要表达「这是 Boss」就写 `is_boss=True` 或 `role="boss"`
-（引擎真读这两个的地方：控制时长减半 `effects.py:313`、DOT 的 `pct_boss` 档 `schedule.py:264`、
+（引擎真读这两个的地方：控制时长减半 `effects.py:342`、DOT 的 `pct_boss` / `boss_pct_mult` 档 `schedule.py:267`、
 `is_boss`/`role` 也在部分内容侧判定里被读）。
 
 ## 字段全集

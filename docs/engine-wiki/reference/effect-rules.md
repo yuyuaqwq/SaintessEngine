@@ -21,15 +21,15 @@
 | `name` | str | ⚠️ 引擎不读 | 展示名。内容侧做日志/UI 标签（`class_mech_proc.py:1895`） |
 | `stat_scale` | `{stat: 每层系数}` | ✅ `stats._apply_effects`（`stats.py:61-68`） | 每层面板修正。`st[stat] *= (1 + n×系数)`；特殊 stat：`dmg_mult`（写 `st["_state_dmg_mult"]`，伤害乘区读它）、`reduce`（写 `st["reduce"]`，⚠️ 见「已知死字段」） |
 | `debuff_scale` | `{stat: 每层系数}` | ✅ **引擎消费**（2026-09-11） | `landing.deal_damage` 遍历持有者状态：Σ(系数 × stacks) → 伤害 ×(1+Σ)。与 `stat_scale` 对称；层数上限由数据侧 `cap` 给。另仍是 `effects._is_stack_resource` 的判据关键词（`effects.py:249`，分派用） |
-| `panel` | `{"stat","op","mult"}` | ✅ `effects.act_apply` 快照分支（`effects.py:400-412`） | 静态面板增益的默认值（动作参数缺省时查表）。`op`：`mul`（乘）/ `add`（加）；`op="reduce"` 特殊（见 `stats.py:76-77`） |
-| `consume` | `{"mode": ...}` | ✅ `effects.act_apply`（`effects.py:293-296`）+ `Battle.act`（`battle.py:435-458`） | 控制型条目的消费模式：`"skip"`（整跳行动）/ `"no_skill"`（技能转普攻） |
+| `panel` | `{"stat","op","mult"}` | ✅ `effects.act_apply` 快照分支（`effects.py:431-443`） | 静态面板增益的默认值（动作参数缺省时查表）。`op`：`mul`（乘）/ `add`（加）；`op="reduce"` 特殊（见 `stats.py:76-77`） |
+| `consume` | `{"mode": ...}` | ✅ `effects.act_apply`（`effects.py:322-325`）+ `Battle.act`（`battle.py:435-458`） | 控制型条目的消费模式：`"skip"`（整跳行动）/ `"no_skill"`（技能转普攻） |
 | `period` | dict | ✅ `schedule._settle_time_effects`（`schedule.py:235-243`） | 周期结算声明（见下） |
-| `cleanse` | bool | ✅ `effects.act_cleanse`（`effects.py:522`） | `True` = 可被净化 |
-| `on` | `"caster"` \| `"target"` | ✅ `effects.act_cleanse`（`effects.py:522`，`on=="target"` 也清）；内容侧 `_mech_to_effect` 判 `on_target`（`effects.py:219`） | 效果的默认作用对象。`"target"` = 对敌标记类 |
+| `cleanse` | bool | ✅ `effects.act_cleanse`（`effects.py:554`） | `True` = 可被净化 |
+| `on` | `"caster"` \| `"target"` | ✅ `effects.act_cleanse`（`effects.py:554`，`on=="target"` 也清）；内容侧 `_mech_to_effect` 判 `on_target`（`effects.py:219`） | 效果的默认作用对象。`"target"` = 对敌标记类 |
 | `negative` | bool | ⚠️ 引擎不读 | 「负面」标记。内容侧用它数「负面种数」（`class_mech_proc.py:767`，`target_debuff_kinds` judge） |
-| `tag` | str | ⚠️ 引擎不读 | 旧 CLEANSE_TAGS 时代的标记。`act_apply` 读的是 **params** 的 `tag`（作为 `key` 的兜底，`effects.py:287`），不是 `cfg["tag"]` |
+| `tag` | str | ⚠️ 引擎不读 | 旧 CLEANSE_TAGS 时代的标记。`act_apply` 读的是 **params** 的 `tag`（作为 `key` 的兜底，`effects.py:316`），不是 `cfg["tag"]` |
 | `cd_mult` | float | ✅ `actions.do_skill`（`actions.py:89-97`） | 冷却倍率（`0.8` = CD −20%）。多态并存时**取最小**（最速） |
-| `on_threshold` | `{层数: {...}}` | ⚠️ **无消费者** | 「满 N 层触发什么」。`threshold` **事件**有引擎点位（`effects.py:373`），但**这张映射表没被读**。目前要靠内容侧监听 `threshold` 自己实现 |
+| `on_threshold` | `{层数: {...}}` | ⚠️ **无消费者** | 「满 N 层触发什么」。`threshold` **事件**有引擎点位（`effects.py:404`），但**这张映射表没被读**。目前要靠内容侧监听 `threshold` 自己实现 |
 | `guard_hp_pct` | float | ✅ `landing._apply_death_guard`（`landing.py:320`） | 濒死保护触发后保底到的最大生命比例（缺省 0.10） |
 | `heal_pct` | float | ✅ 同上（`landing.py:323`） | 濒死保护触发时额外回复的最大生命比例 |
 | `wake_on_hit` | bool | ✅ **引擎消费**（2026-09-11） | `landing.deal_damage:167-179`：承伤时遍历持有者状态，带该字段的态即被移除。数据侧声明在 `sleep` 上；接线前是 landing 内**硬编码 `"sleep"`**（游戏名词进引擎），现已数据化（引擎只认布尔字段） |
@@ -57,21 +57,48 @@
 |---|---|---|---|
 | `dir` | str | `"damage"` | ✅ `:246`。四向：`damage` / `heal` / `mana` / `gain` |
 | `interval` | float | `1.0` | ✅ `:251`。间隔刻数（**绝对时刻**，非「每 tick」） |
-| `turns` | int | `0` | ✅ `:252`。限跳次数，跳到就清层（`0` = 无限）。计数器 `actor["dot_jumps"]`，`schedule.py:355-361` |
+| `turns` | int | `0` | ✅ `:252`。限跳次数，跳到就清层（`0` = 无限）。计数器 `actor["dot_jumps"]`，`schedule.py:412-418` |
 | `cap` | int | 0 → 回落 `_cap_of` | ✅ `:341`（仅 `gain` 向）。**可覆盖** `EFFECT_RULES.cap` |
 | `amount` | float | 0 | ✅ `:340`（仅 `gain` 向）。每刻加/减量，**负值也走**（衰减），clamp 下限 0 |
-| `pct_max_hp` | float | 0 | ✅ `:264`（`damage` 向）。每层每跳的最大生命比例 |
-| `pct_boss` | float | — | ✅ `:268`（`damage` 向）。Boss 档（`is_boss` / `role=="boss"`）覆盖 `pct_max_hp` |
-| `pct_cur_hp` | float | 0 | ✅ `:265`。每层每跳的**当前**生命比例 |
-| `pct_cur_boss` | float | — | ✅ `:272`。Boss 档覆盖 `pct_cur_hp` |
+| `pct_max_hp` | float | 0 | ✅ `:283`（`damage` 向）。每层每跳的最大生命比例 |
+| `pct_boss` | float | — | ✅ `:275`（`damage` 向）。Boss/精英档**精确覆盖** `pct_max_hp`（与 `boss_pct_mult` 二者取一，**不叠乘**） |
+| `pct_cur_hp` | float | 0 | ✅ `:287`。每层每跳的**当前**生命比例 |
+| `pct_cur_boss` | float | — | ✅ `:286`。Boss 档覆盖 `pct_cur_hp` |
+| `atk` | float | 0 | ✅ **2026-09-11（DOT 混合公式）**：`schedule.py:299-303`。乘**施法者强度快照**的 atk 系数（快照见 `entry["src"]` / `effects.note_dot_source`） |
+| `matk` | float | 0 | ✅ 同上。乘施法者快照 matk 的系数 |
+| `pct_cap` | float | — | ✅ `:280-282`。**单层**百分比上限（`pct` 被 `min` 到该值）；也用于 `atk/matk` 型 DOT（防极端叠层） |
+| `boss_pct_mult` | float | — | ✅ `:277`。Boss/精英的 pct 段折扣系数（`pct_boss` 未声明时才用） |
+| `double_low_hp_pct` | float | — | ✅ `:312-314`。目标当前生命 < `max_hp×该值` → 本刻伤害 ×2（流血处决线） |
+| `resist_cap` | float | — | ✅ `:316-327`。声明即启用「总抗」段：`总抗 = min(resist_cap, actor.dot_res + actor.adapt[key])`，伤害 ×`(1−总抗)` |
+| `entry.pct`（条目级） | float | — | ✅ `:264-266`。**条目**上的 `pct` 覆盖表里的 `pct_max_hp`（旧引擎同款语义） |
 | `heal_pct` | float | 0 | ✅ `:304`（`heal` 向）。每跳回复最大生命比例 |
 | `mana_pct` | float | 0 | ✅ `:311/323`（`heal` 与 `mana` 向）。每跳回复最大魔力比例 |
 | `type` | str | — | ⚠️ **无消费者**（参考实现里 `bleed` 写了 `"type": "flat"`） |
 | `per_layer` | int | — | ⚠️ **无消费者**（参考实现里 `bleed` 写了 `"per_layer": 0`） |
-| `dmg_type` | str | — | ✅ **引擎消费**（2026-09-11）：DOT 结算透传为落地 `dmg_kind`（`schedule.py:294`）。`"true"` = 真伤（物免/魔免/格挡全跳过，`landing` 内 `"true" not in kd` 守卫）；空/缺省 = 不减免（与接线前一致） |
+| `dmg_type` | str | — | ✅ **引擎消费**（2026-09-11）：DOT 结算透传为落地 `dmg_kind`（`schedule.py:351`）。`"true"` = 真伤（物免/魔免/格挡全跳过，`landing` 内 `"true" not in kd` 守卫）；空/缺省 = 不减免（与接线前一致） |
 
-**`damage` 向的兜底**：两个 pct 都 <= 0 时 `dmg = max(1, n)`（层数当伤害，`schedule.py:272`）。
+**`damage` 向的兜底**：两个 pct 都 <= 0 且**未声明 atk/matk 系数**时 `dmg = max(1, n)`（层数当伤害，`schedule.py:291`）；声明了系数（系数型 DOT，如 poison=atk×0.8）则基线为 0，伤害全部来自系数段。
 所以一个只声明 `dir/interval` 的 DOT 每跳掉「层数」点血。
+
+### DOT 混合公式（2026-09-11 接线，权威 = 下游游戏的数值设计文档）
+
+新引擎先前只读 `pct_max_hp`／`pct_cur_hp`，**丢了 atk/matk 系数段与总抗段**。现补齐为：
+
+```
+每层每刻 = ( src_atk×period.atk + src_matk×period.matk
+             + max_hp×pct_max_hp×(boss折扣) )            ← 系数段 + 百分比段（同为「每层」）
+           × 层数
+           × (1 − 总抗)                                      ← 总抗 = min(resist_cap, dot_res + adapt[key])
+```
+
+- **施法者强度快照**（`src`）：挂 DOT 时由 `effects.note_dot_source()` 记录施法者面板；
+  tick 端只读快照 → 「伤害跟**挂毒的人**，不跟当前谁在结算」。快照缺失 = 系数段为 0
+  （老档／手工构造条目不崩，本刻 0 伤害不造假值）。
+- **登记快照的时机**：引擎 `act_apply`（叠层/快照分支）与内容侧 `_add_stacks(battle=…, caster=…)`
+  都调同一个 `note_dot_source`——两处入口，一份实现。
+- **零变化保证**：未声明 `atk`/`matk` 系数 → 系数段恒 0；未声明 `resist_cap` → 总抗段跳过。
+  既有只写 `pct_max_hp`+`pct_boss` 的条目（裂伤/烬燃等）行为逐字不变。
+- **boss 折扣优先级**：条目级 `pct_boss`（精确值）> `boss_pct_mult`（折扣系数），二者取一。
 
 **首跳延迟**：某 key 第一次被结算时只登记 `dot_next[key] = now + interval`
 （`schedule.py:254-257`），不在当刻跳。这是对齐旧引擎的语义。
@@ -94,8 +121,11 @@
 ## 已知死字段速查（写测试时优先覆盖）
 
 ```
-debuff_scale · on_threshold · wake_on_hit · tag · dot · name   ← EFFECT_RULES 层
-period.type · period.per_layer · period.dmg_type               ← period 层
+on_threshold · wake_on_hit · tag · dot · name                 ← EFFECT_RULES 层
+period.type · period.per_layer                                 ← period 层
+
+（2026-09-11 起从死字段转活：debuff_scale · period.dmg_type · period.atk/matk/pct_cap/
+  boss_pct_mult/double_low_hp_pct/resist_cap · wake_on_hit）
 ```
 
 它们的共同特征：**声明了不报错、不生效**。

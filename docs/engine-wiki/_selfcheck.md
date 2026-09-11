@@ -45,6 +45,20 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | Q10 | 行号漂移 | 已有门禁 `tests/test_wiki_refs.py`（drift 必须 0）+ 工具 `tools/remap_wiki_refs.py`（内容锚定位移） |
 | — | §4 的 B1-B6「引擎里的内容知识」 | **定案为引擎公开词汇表契约** → [../engine-vocabulary-contract.md](../engine-vocabulary-contract.md) |
 
+### 0.35 ★ 2026-09-11 第二波：DOT 混合公式补齐（另 3 个「重构丢功能」）
+
+`dmg_mult` 同类问题在 DOT 通道上还有两处，同批修掉（权威 = 下游游戏 `32_数值设计.md` §DOT_DEFS）：
+
+| 项 | 症状 | 处置 |
+|---|---|---|
+| **atk/matk 系数段** | 新引擎 `_settle_time_effects` 只读 `pct_max_hp`/`pct_cur_hp`，权威公式的 `atk×a + matk×m` 段丢失 → 依赖攻击力成长的 DOT（毒/流血/腐蚀）实机偏弱 | ✅ 接线：`period.atk`/`period.matk` × **施法者强度快照**（`entry["src"]`，`note_dot_source` 记录） |
+| **总抗段 `(1−总抗)`** | 权威公式含 `× (1−总抗)`（`总抗=min(resist_cap, dot_res+adapt)`）；新引擎整段丢失 → `dot_res`/`adapt` 成死字段（**它们是「重构丢功能」，不是遗留冗余**） | ✅ 接线：`period.resist_cap` 声明即启用；未声明 = 行为不变 |
+| **低血翻倍 / 单层上限 / boss 折扣** | 旧引擎的「放血 ×2」「pct_cap 1%/层」「boss pct×0.5」在新引擎缺失或只做了 per-entry `pct_boss` | ✅ 接线：`double_low_hp_pct` / `pct_cap` / `boss_pct_mult`（条目级 `pct_boss` 优先、不叠乘） |
+
+**结论**：DOT 板块的真正问题不是「有死字段」，而是**权威公式在新引擎里只落了一半**。
+接线后下游游戏把 4 个 DOT 的系数改为**生成自 DOT_DEFS**（单一字面源），
+使数值门禁（模拟器读 DOT_DEFS）与实机公式重新一致。
+
 ### 0.4 ★ 本轮最重要的取证：`dmg_mult` 不是死字段
 
 `Battle(dmg_mult=…)` 在**游戏仓 `game/commands/combat.py` 的世界 Boss 构造处是活调用**：
@@ -71,9 +85,9 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | 字段 | 核实方法 | 结论 |
 |---|---|---|
 | `debuff_scale` | 全仓 `grep -rn "debuff_scale"` → **2026-09-11 已接线**：`landing.deal_damage` 逐状态累加乘区（对称 `stat_scale`） | ✅ **已消费**。`hunt_mark`（+8%/层 cap3）/ `soul_mark`（+6%/层 cap3）/ `curse`（+20% cap1）现已生效 |
-| `on_threshold` | 全仓 grep → 只有 `effects.py:211/244/250` 的判据关键词 + `battle_rules.py:27` 的声明 | **无消费方**。`threshold` **事件**有引擎点位（`effects.py:373`），但这张映射表没被读 |
+| `on_threshold` | 全仓 grep → 只有 `effects.py:211/244/250` 的判据关键词 + `battle_rules.py:27` 的声明 | **无消费方**。`threshold` **事件**有引擎点位（`effects.py:404`），但这张映射表没被读 |
 | `wake_on_hit` | 原只有 `battle_rules.py:400` 的声明 | ✅ **2026-09-11 已接线**：`landing.deal_damage:167-179` 遍历承伤者状态读该字段（同时删掉 landing 内硬编码的 `sleep` 游戏名词 —— 见 B2 表） |
-| `tag` | grep `state_def(...).get("tag")` / `cfg.get("tag")` → 空 | **无消费方**。`act_apply` 读的是 params 的 `tag`（作 key 兜底，`effects.py:287`） |
+| `tag` | grep `state_def(...).get("tag")` / `cfg.get("tag")` → 空 | **无消费方**。`act_apply` 读的是 params 的 `tag`（作 key 兜底，`effects.py:316`） |
 | `dot` | 全仓 grep → 只有 `effects.py:249` 判据；78 个 key 里无一使用 | **无消费方**（V5 后 DOT 统一走 `period`） |
 | `name` | 引擎无读取（内容侧读） | 引擎不读，**符合设计**（展示名属内容侧） |
 | `negative` | 引擎无读取（内容侧 `class_mech_proc.py:767` 读） | 引擎不读，**但它是内容侧约定的关键字段** |
@@ -85,7 +99,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 |---|---|
 | `type` | **无消费方**（参考实现 `bleed` 写了 `"type": "flat"`） |
 | `per_layer` | **无消费方**（同上 `"per_layer": 0`） |
-| `dmg_type` | **2026-09-11 已接线**：DOT 落地改传 `dmg_kind=period.get("dmg_type")`（`schedule.py:294`） | ✅ **已消费**。`corros` 的「真伤 DOT」声明现成立（真伤 → 物免/魔免/格挡全跳过）；非真伤 DOT 仍空 kind，行为与接线前一致 |
+| `dmg_type` | **2026-09-11 已接线**：DOT 落地改传 `dmg_kind=period.get("dmg_type")`（`schedule.py:351`） | ✅ **已消费**。`corros` 的「真伤 DOT」声明现成立（真伤 → 物免/魔免/格挡全跳过）；非真伤 DOT 仍空 kind，行为与接线前一致 |
 
 ### 1.3 引擎 API / 常量
 
@@ -127,7 +141,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | `actor["_content_applied"]`（bool） | S7 的 `apply_game_content` 幂等标记（游戏仓 `game/content_rules/apply.py:81`）。**会随 actor 全量落进战斗存档 / PVP 状态**（引擎 `serialize._STRIP_KEYS` 只剥 `_skill_index`）。原文自记「无任何数值/读取语义依赖它，S9 若要清掉需改引擎 `serialize.py`」（游戏仓 `apply.py:55-58`） |
 | `actor["dot_next"]` / `actor["dot_jumps"]`（dict） | 引擎周期结算的运行期辅助（`schedule.py:224-225` 惰性建），**同样落盘**。这是「续战能对上」的原因，但字段名与内容无关 |
 | `actor["_dmg_taken_mult"]`（float） | 承伤乘区（`landing.py:86-91` 读）。由上层直写（例 游戏仓 `commands/boss_script.py:684`）；**同样落盘** |
-| `actor["reduce_left"]` / `reduce_all_left` | `effects.act_apply` 写（`effects.py:394`）+ 内容侧 bridge 透传/播种；**无消费者**（见 §1.3） |
+| `actor["reduce_left"]` / `reduce_all_left` | `effects.act_apply` 写（`effects.py:425`）+ 内容侧 bridge 透传/播种；**无消费者**（见 §1.3） |
 | `actor["act_count"]` | `actor_auto` 每动 +1（`battle.py:403`），AI 的 `round_mod` 谓词读它；落盘 |
 
 ## 2. 事件点位
@@ -162,8 +176,8 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 |---|---|---|
 | B1 | `kinds/` 枚举值写死中文（`PHYS = "物理"` …） | `kinds/__init__.py:33-40` |
 | B2 | 固定效果 key：`"death_guard"`（濒死保护）、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`（受疗修正）。（原含 `"sleep"` 打醒 —— **2026-09-11 已数据化**移除，改读 `wake_on_hit` 字段） | `landing.py:167-179, 248, 384-407` |
-| B3 | `effects.act_apply` 里 `if key == "reduce":` | `effects.py:393` |
-| B4 | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | `effects.py:313` · `schedule.py:264,272` |
+| B3 | `effects.act_apply` 里 `if key == "reduce":` | `effects.py:424` |
+| B4 | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | `effects.py:342` · `schedule.py:267,286` |
 | B5 | `battle.py` 里 `"player"` 阵营名 | `battle.py:168, 515` |
 | B6 | `_is_stack_resource` 的判据关键词含无消费方的字段（`debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct`） | `effects.py:249-253` |
 

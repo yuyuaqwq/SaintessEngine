@@ -259,17 +259,73 @@ def _settle_time_effects(battle, logs: list):
                         if direction == "damage":
                             pct = float(period.get("pct_max_hp", 0) or 0)
                             pct_cur = float(period.get("pct_cur_hp", 0) or 0)
+                            # 条目级覆盖（旧引擎语义：数据显式写 entry["pct"] 时替代表的 hp 系数，
+                            #   如「灼烧每刻 1.5%」类词条改写）
+                            _dpct = entry.get("pct")
+                            if _dpct is not None and pct > 0:
+                                pct = float(_dpct)
+                            _boss_like = bool(a.get("is_boss") or a.get("role") == "boss"
+                                              or a.get("is_elite"))
+                            # ★ N-B13 DOT 混合公式系数（先读，供下方兜底分支判断）
+                            _atk_c = float(period.get("atk", 0) or 0)
+                            _matk_c = float(period.get("matk", 0) or 0)
                             if pct > 0:
-                                # boss 档（数据标签 is_boss/role 选 pct_boss）
-                                if (a.get("is_boss") or a.get("role") == "boss") and period.get("pct_boss"):
+                                # boss 档：条目级 `pct_boss`（精确值）优先；否则用数据给的
+                                #   `boss_pct_mult`（折扣系数）——两者取一，**不叠乘**（防双重折扣）
+                                if _boss_like and period.get("pct_boss"):
                                     pct = float(period["pct_boss"])
+                                elif _boss_like and period.get("boss_pct_mult"):
+                                    pct = pct * float(period["boss_pct_mult"])
+                                # 单层上限：每层每刻 ≤ max_hp × pct_cap（防极端叠层爆炸）
+                                _cap = float(period.get("pct_cap", 0) or 0)
+                                if _cap > 0:
+                                    pct = min(pct, _cap)
                                 dmg = max(1, int(a.get("max_hp", 1) * pct * n))
                             elif pct_cur > 0:
-                                if (a.get("is_boss") or a.get("role") == "boss") and period.get("pct_cur_boss"):
+                                if _boss_like and period.get("pct_cur_boss"):
                                     pct_cur = float(period["pct_cur_boss"])
                                 dmg = max(1, int(a.get("hp", 0) * pct_cur * n))
                             else:
-                                dmg = max(1, n)
+                                # 兜底：系数型 DOT（如毒=atk×0.8 flat，无 pct 段）基线为 0，
+                                #   伤害完全来自系数段；纯百分比/无系数条目维持旧兜底 max(1, n)
+                                dmg = 0 if (_atk_c or _matk_c) else max(1, n)
+                            # ★ N-B13 DOT 混合公式（2026-09-11 接线，权威 = 游戏仓
+                            #   `design/new_world/32_数值设计.md` §DOT_DEFS / 27 章 §七）：
+                            #     每层每刻 = (atk×a + matk×m + max_hp×h×boss折扣) × 层数 × mult × (1−总抗)
+                            #   引擎零知识：只读数据给的两个系数（period.atk / period.matk）
+                            #   乘**施法者强度快照**（挂 DOT 时由 `note_dot_source` 记录在条目 `src`；
+                            #   旧引擎语义「伤害跟挂毒的人，不跟当前谁在结算」）。
+                            #   系数缺省 0 / 快照缺失 → 本段恒为 0 → 既有纯百分比 DOT 行为逐字不变。
+                            if _atk_c or _matk_c:
+                                _src = entry.get("src") or {}
+                                _flat = (float(_src.get("atk", 0) or 0) * _atk_c
+                                         + float(_src.get("matk", 0) or 0) * _matk_c)
+                                if _flat > 0:
+                                    dmg = max(1, dmg + int(_flat * n))
+                            # ★ 低血翻倍（旧引擎「放血」：目标当前生命 < max_hp×阈值 → ×2）
+                            #   数据给的 `double_low_hp_pct`（如流血 0.30 处决线）
+                            _dl = float(period.get("double_low_hp_pct", 0) or 0)
+                            if _dl > 0 and int(a.get("hp", 0) or 0) < int(a.get("max_hp", 1) or 1) * _dl:
+                                dmg = max(1, dmg * 2)
+                            # ★ 总抗（权威公式的 (1−总抗)）：总抗 = min(数据给的 resist_cap,
+                            #   actor.dot_res + actor.adapt[key])。引擎零知识：两个都是承伤方
+                            #   的数值字段；未声明 resist_cap → 本段跳过（行为不变）。
+                            _rcap = period.get("resist_cap")
+                            if _rcap is not None:
+                                try:
+                                    _res = float(a.get("dot_res", 0) or 0)
+                                    _adapt = a.get("adapt") or {}
+                                    if isinstance(_adapt, dict):
+                                        _res += float(_adapt.get(key, 0) or 0)
+                                    _res = min(float(_rcap), _res)
+                                except Exception:
+                                    _res = 0.0
+                                if _res > 0:
+                                    dmg = max(1, int(dmg * (1.0 - _res)))
+                            if dmg <= 0:
+                                # 无伤害来源（系数型 DOT 且无施法者快照）→ 本刻不落地、不出日志，
+                                #   循环推进照常（dnext 在分支末尾自增，不能 continue 否则卡死）
+                                dmg = 0
                             from .landing import deal_damage
                             # N9.14 dot_calc：DOT 伤害落地前乘区钩子（对齐 dmg_calc 模式）。
                             # broadcast（无 actor 主体键）——施毒者被动（万毒归宗等）在施放方
@@ -291,9 +347,10 @@ def _settle_time_effects(battle, logs: list):
                             #   `"true" not in kd` 守卫使真伤**不减免**（物免/魔免/格挡全跳过），
                             #   与旧行为一致；非真伤 DOT 仍是空 kind（同样不减免）。
                             #   收益：类型免伤轴对 DOT 通道不再缺失，数据声明即语义。
-                            deal_damage(battle, None, a, dmg, logs,
-                                        dmg_kind=str(period.get("dmg_type") or ""))
-                            logs.append(f"🔥 {a.get('name', '目标')} 受 {key} {n} 层影响，损失 {dmg} 生命")
+                            if dmg > 0:
+                                deal_damage(battle, None, a, dmg, logs,
+                                            dmg_kind=str(period.get("dmg_type") or ""))
+                                logs.append(f"🔥 {a.get('name', '目标')} 受 {key} {n} 层影响，损失 {dmg} 生命")
                             # N8 事件：DOT 每跳
                             try:
                                 from .effect_triggers import fire as _fire

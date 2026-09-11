@@ -52,7 +52,7 @@ if pct <= 0:
 ## 3. 落地只能走 `landing`
 
 **任何模块自己扣 `hp` 都是 bug。** 引擎自己的 DOT 也走 `landing.deal_damage`
-（`schedule.py:294`）。自己的动词也必须走：
+（`schedule.py:351`）。自己的动词也必须走：
 
 ```python
 from saintess_engine.landing import deal_damage, heal_actor

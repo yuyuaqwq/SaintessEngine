@@ -266,6 +266,35 @@ def _is_stack_resource(cfg: dict) -> bool:
 #   op=set     → 叠层置（stacks = amount，cap 查 EFFECT_RULES）
 #   否则快照型 → 写 effects[key] = {stacks, expire, ...数值快照}（value 型/stat 增益/纯状态/hit）
 
+def note_dot_source(battle, holder, key: str, caster) -> None:
+    """记录「持续伤害强度快照」：把**施法者面板**存进条目 `src`（引擎通用）。
+
+    权威语义（旧引擎 `_apply_dot`）：「伤害跟挂毒的人，不跟当前谁在结算」——
+    每层每刻的 atk/matk 段取**挂上那一刻**的施法者面板。
+
+    引擎零知识：仅当数据（EFFECT_RULES[key].period）声明了 atk / matk 系数时才记录
+    （否则**不写**任何字段，条目形态与接线前逐字一致）；atk / matk 是通用 actor 面板键。
+    holder 缺省不写；caster 缺失或取面板失败 → 不写（tick 端按 0 处理，纯百分比 DOT 不受影响）。
+    """
+    if not isinstance(holder, dict) or not key:
+        return
+    try:
+        per = (state_def(key) or {}).get("period")
+        if not isinstance(per, dict):
+            return
+        if not (float(per.get("atk", 0) or 0) or float(per.get("matk", 0) or 0)):
+            return
+        entry = (holder.get("effects") or {}).get(key)
+        if not isinstance(entry, dict) or not caster:
+            return
+        from . import stats as _S
+        st = _S.actor_stats(battle, caster) if battle is not None else (caster or {})
+        entry["src"] = {"atk": int(st.get("atk", 0) or 0),
+                        "matk": int(st.get("matk", 0) or 0)}
+    except Exception:
+        pass  # 快照失败不阻断施加（tick 端按 0 段处理）
+
+
 @register_action("apply")
 def act_apply(battle, caster, target, params, logs):
     """统一效果写入动词（V4 动词收敛——旧 control/buff/state_add/state_set 合流）。
@@ -345,6 +374,7 @@ def act_apply(battle, caster, target, params, logs):
     # 面板增益的 op 是 mul/add 面板算子且必带 stat，走快照分支）----------
     op = params.get("op")
     if op in ("add", "set") and not params.get("stat"):
+        # DOT 强度快照（数据声明了 period.atk/matk 才写；见 note_dot_source）
         # v181.M-R2e B3：amount/cur float 读（stacks 允许小数刻度——小数衰减等）；
         # cap 收敛 _cap_of（方案 A：EFFECT_RULES 基础 cap + actor.bonus.cap 动态，
         # v181.M-bonus 分域——旧 actor cap_bonus 键已全清）。
@@ -362,6 +392,7 @@ def act_apply(battle, caster, target, params, logs):
         if not isinstance(entry, dict):
             entry = ef[key] = {}
         entry["stacks"] = _norm_stack(n)
+        note_dot_source(battle, holder, key, caster)
         if op == "add":
             cap_txt = f"/{cap}" if cap < 999999 else ""
             logs.append(f"✦ {key} {_fmt_stack(n)}{cap_txt}（+{_fmt_stack(amount)}）")
@@ -412,6 +443,7 @@ def act_apply(battle, caster, target, params, logs):
         logs.append(f"✦ {key} 提升（{o or 'mul'}×{mult}，持续 {turns} 刻）")
         return
     # 无 stat 的纯状态 buff（免疫/一次性/标记等）：只记录到期，不折算面板
+    note_dot_source(battle, holder, key, caster)
     hit_params = params.get("hit")
     old = ef.get(key)
     old_exp = float(old.get("expire", 0) or 0) if isinstance(old, dict) else 0.0
