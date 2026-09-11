@@ -3,89 +3,196 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>⚔ 框架编辑器 · saintess_engine</title>
-<link rel="stylesheet" href="/style.css">
+<title>SaintessEngine 工作室</title>
 <link rel="stylesheet" href="/app.css">
 </head>
 <body>
-<header>
-  <div class="brand">⚔ 框架编辑器 <span class="sub">saintess_engine · 造游戏</span></div>
-  <div class="pkgbar">
-    <label>游戏包</label>
-    <select id="pkgSelect"></select>
-    <button id="btnNew">＋ 新建包</button>
-    <button id="btnValidate">✓ 全包校验</button>
-    <span id="pkgInfo" class="muted"></span>
-  </div>
-</header>
+<div class="app">
 
-<nav id="tabs" class="tabs"></nav>
+  <!-- ═══════════ 顶栏 ═══════════ -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">⚔</span>
+      <span class="brand-text"><b>SaintessEngine</b><i>工作室</i></span>
+    </div>
 
-<main>
-  <!-- 域编辑（技能/职业/怪物/…） -->
-  <section id="view-domain" class="view">
-    <aside class="list-pane">
-      <div class="list-tools">
-        <input id="search" type="search" placeholder="搜索条目…">
-        <button id="btnAdd" class="primary">＋ 新建条目</button>
+    <div class="pkg-switch">
+      <button class="pkg-btn" id="btnPkgMenu" title="切换游戏包">
+        <span class="pkg-name" id="pkgName">—</span>
+        <span class="pkg-id mono" id="pkgIdLabel"></span>
+        <span class="pkg-chev">▾</span>
+      </button>
+      <div class="pkg-menu hidden" id="pkgMenu"></div>
+    </div>
+
+    <span class="spacer"></span>
+
+    <div class="topbar-actions">
+      <button class="btn ghost" id="btnPalette" title="快速跳转 / 执行动作">
+        <span class="btn-ico">🔍</span><span>跳转</span><span class="kbd">Ctrl</span><span class="kbd">K</span>
+      </button>
+      <button class="btn ghost" id="btnValidate" title="校验整个游戏包"><span class="btn-ico">✓</span><span>校验</span></button>
+      <button class="btn ghost icon" id="btnSettings" title="包设置"><span class="btn-ico">⚙</span></button>
+    </div>
+  </header>
+
+  <!-- ═══════════ 工作台 ═══════════ -->
+  <div class="workbench">
+
+    <!-- 域栏 -->
+    <nav class="rail" id="rail"></nav>
+    <div class="splitter" id="sp1" title="拖动调整"></div>
+
+    <!-- 条目列表 -->
+    <aside class="list-pane" id="listPane">
+      <div class="pane-head">
+        <div class="pane-title">
+          <span id="listTitle">技能</span>
+          <span class="count mono" id="listCount">0</span>
+        </div>
+        <div class="search-wrap">
+          <span class="search-ico">🔍</span>
+          <input id="search" type="search" placeholder="搜索条目…" autocomplete="off" spellcheck="false">
+          <span class="kbd search-hint">/</span>
+        </div>
+        <div class="filter-row" id="filterRow">
+          <button class="chip on" data-filter="all">全部</button>
+          <button class="chip" data-filter="bad">⚠ 待修</button>
+          <button class="chip" data-filter="dirty">● 未保存</button>
+          <span class="spacer"></span>
+          <button class="btn ghost icon sm" id="btnSort" title="切换排序">⇅</button>
+        </div>
       </div>
-      <div id="entryList" class="entry-list"></div>
+
+      <div class="entry-list" id="entryList" tabindex="0"></div>
+
+      <div class="pane-foot">
+        <button class="btn primary block" id="btnAdd">＋ 新建条目</button>
+      </div>
     </aside>
-    <div class="edit-pane">
-      <div id="entryHead" class="entry-head"><span class="muted">← 选一个条目开始编辑</span></div>
-      <div class="viewtabs">
-        <button data-mode="form" class="active">表单</button>
-        <button data-mode="json">原始 JSON</button>
-        <button id="btnSim" title="用这个条目跑一场沙箱战斗">⚔ 试跑</button>
-        <span class="spacer"></span>
-        <button id="btnDel" class="danger">删除</button>
-        <button id="btnSave" class="primary">保存</button>
-      </div>
-      <div id="errors" class="errors hidden"></div>
-      <div id="formHost" class="form-host"></div>
-      <textarea id="jsonHost" class="json-host hidden" spellcheck="false"></textarea>
-    </div>
-  </section>
+    <div class="splitter" id="sp2" title="拖动调整"></div>
 
-  <!-- 试跑 -->
-  <section id="view-sim" class="view hidden">
-    <div class="sim-form">
-      <h3>⚔ 沙箱试跑</h3>
-      <p class="muted">子进程真跑引擎 + 本游戏包；不写任何文件。技能直接取当前 tab 的条目（含未保存改动）。</p>
-      <label>技能来源
-        <select id="simDomain"></select>
-      </label>
-      <label>技能
-        <select id="simSkill"></select>
-      </label>
-      <div class="row">
-        <label>职业 <input id="simClass" value="战士"></label>
-        <label>等级 <input id="simLevel" type="number" value="20"></label>
-        <label>技能等级 <input id="simSkillLv" type="number" value="1"></label>
-        <label>随机种子 <input id="simSeed" type="number" value="1"></label>
-      </div>
-      <div class="row">
-        <label>目标防御 <input id="simDef" type="number" value="80"></label>
-        <label>目标魔防 <input id="simMdef" type="number" value="80"></label>
-        <label>目标血量 <input id="simHp" type="number" value="10000000"></label>
-      </div>
-      <button id="btnRunSim" class="primary">▶ 跑一场</button>
-      <div id="simOut" class="sim-out"></div>
-    </div>
-  </section>
+    <!-- 编辑器 -->
+    <section class="editor-pane" id="editorPane">
 
-  <!-- 包设置 -->
-  <section id="view-pkg" class="view hidden">
-    <div class="sim-form">
-      <h3>📦 包设置</h3>
-      <div id="pkgForm"></div>
-      <button id="btnSavePkg" class="primary">保存包清单</button>
-      <p class="muted" id="pkgPath"></p>
-    </div>
-  </section>
-</main>
+      <div class="empty-state" id="editorEmpty">
+        <div class="empty-art">⚔</div>
+        <div class="empty-title">选一个条目开始编辑</div>
+        <div class="empty-sub">或用 <span class="kbd">Ctrl</span><span class="kbd">K</span> 快速跳转</div>
+      </div>
 
-<div id="toast" class="toast hidden"></div>
+      <div class="editor hidden" id="editor">
+        <header class="editor-head">
+          <div class="editor-title">
+            <h1 id="entryName">—</h1>
+            <div class="editor-meta">
+              <span class="chip kind hidden" id="entryKind"></span>
+              <span class="mono dim" id="entryKey"></span>
+              <span class="dirty-flag hidden" id="dirtyFlag">● 未保存</span>
+            </div>
+          </div>
+          <div class="segmented" id="modeSwitch">
+            <button data-mode="form" class="on">表单</button>
+            <button data-mode="json">JSON</button>
+            <button data-mode="diff">变更</button>
+          </div>
+        </header>
+
+        <div class="issues hidden" id="issues"></div>
+
+        <div class="editor-body">
+          <div class="form-host" id="formHost"></div>
+          <textarea class="json-host mono hidden" id="jsonHost" spellcheck="false"></textarea>
+          <div class="diff-host hidden" id="diffHost"></div>
+        </div>
+
+        <footer class="actionbar">
+          <span class="save-status" id="saveStatus"></span>
+          <span class="spacer"></span>
+          <button class="btn ghost" id="btnSim"><span class="btn-ico">⚔</span>试跑</button>
+          <button class="btn danger" id="btnDel"><span class="btn-ico">🗑</span>删除</button>
+          <button class="btn primary" id="btnSave" disabled>保存<span class="kbd">Ctrl</span><span class="kbd">S</span></button>
+        </footer>
+      </div>
+
+      <!-- 包设置 -->
+      <div class="settings hidden" id="settings">
+        <header class="editor-head">
+          <div class="editor-title">
+            <h1>包设置</h1>
+            <div class="editor-meta"><span class="mono dim" id="pkgDir"></span></div>
+          </div>
+        </header>
+        <div class="editor-body">
+          <div class="settings-form" id="pkgForm"></div>
+        </div>
+        <footer class="actionbar">
+          <span class="spacer"></span>
+          <button class="btn primary" id="btnSavePkg">保存包清单</button>
+        </footer>
+      </div>
+    </section>
+
+    <!-- 试跑抽屉 -->
+    <aside class="sim-drawer hidden" id="simDrawer">
+      <header class="drawer-head">
+        <span class="drawer-ico">⚔</span>
+        <span class="drawer-title">试跑</span>
+        <span class="drawer-sub mono" id="simSub"></span>
+        <button class="btn ghost icon sm" id="btnSimClose" title="关闭 (Esc)">✕</button>
+      </header>
+
+      <div class="drawer-controls">
+        <label class="mini">域<select id="simDomain"></select></label>
+        <label class="mini wide">条目<select id="simSkill"></select></label>
+        <label class="mini">职业<input id="simClass" value="战士"></label>
+        <label class="mini">等级<input id="simLevel" type="number" value="20"></label>
+        <label class="mini">技能Lv<input id="simSkillLv" type="number" value="1"></label>
+        <label class="mini">种子<input id="simSeed" type="number" value="1"></label>
+        <details class="adv">
+          <summary>目标参数</summary>
+          <div class="adv-grid">
+            <label class="mini">防御<input id="simDef" type="number" value="80"></label>
+            <label class="mini">魔防<input id="simMdef" type="number" value="80"></label>
+            <label class="mini">血量<input id="simHp" type="number" value="10000000"></label>
+          </div>
+        </details>
+        <button class="btn primary block" id="btnRunSim"><span class="btn-ico">▶</span>跑一场</button>
+      </div>
+
+      <div class="drawer-body" id="simOut">
+        <div class="sim-idle">选好条目后点「跑一场」<br><span class="dim">子进程真跑引擎 + 本游戏包，不写任何文件</span></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ═══════════ 状态栏 ═══════════ -->
+  <footer class="statusbar">
+    <span class="mono dim clamp" id="sbPath"></span>
+    <span class="spacer"></span>
+    <span id="sbDirty" class="sb-item"></span>
+    <span id="sbBad" class="sb-item"></span>
+    <span id="sbEngine" class="sb-item mono dim"></span>
+  </footer>
+</div>
+
+<!-- ═══════════ 命令面板 ═══════════ -->
+<div class="palette-overlay hidden" id="paletteOverlay">
+  <div class="palette" role="dialog" aria-label="命令面板">
+    <div class="palette-input-wrap">
+      <span class="palette-ico">⌘</span>
+      <input id="paletteInput" placeholder="跳转到条目，或输入动作…" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="palette-list" id="paletteList"></div>
+    <div class="palette-foot">
+      <span><span class="kbd">↑</span><span class="kbd">↓</span> 选择</span>
+      <span><span class="kbd">Enter</span> 确认</span>
+      <span><span class="kbd">Esc</span> 关闭</span>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
 <script src="/schema_form.js"></script>
 <script src="/app.js"></script>
 </body>

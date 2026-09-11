@@ -63,7 +63,10 @@ def main():
     check(f"域齐全（{len(j.get('domains') or [])} 个）", len(j.get("domains") or []) >= 7)
     r = urllib.request.urlopen(base + "/", timeout=10)
     html = r.read().decode("utf-8")
-    check("GET / 返回单页应用", r.status == 200 and "tabs" in html)
+    # 单页应用外壳：域栏（工作台导航）+ 命令面板 + 样式表接线
+    check("GET / 返回单页应用（工作台外壳）",
+          r.status == 200 and 'id="rail"' in html and 'id="paletteOverlay"' in html
+          and "/app.css" in html)
 
     # 2. 建档（脚手架）
     st, j = req(base, "POST", "/api/packages", {"id": "t_game", "name": "测试游戏",
