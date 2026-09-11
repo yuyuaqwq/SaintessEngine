@@ -23,36 +23,36 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 
 | # | 事件 | 引擎 fire 点位（`文件:行号`） | `ctx` 字段 | subject | 时机语义 |
 |---|---|---|---|---|---|
-| 1 | `battle_start` | `battle.py:507`（`_ensure_battle_started`） | `{}` | **无**（全体触发） | 首个 actor 行动前，**整场一次**（`_started` 守卫） |
-| 2 | `turn_start` | `battle.py:408`（`act`） | `actor` | 行动者 | 回合开始，**先于控制检查**（所以「回合开始回蓝」被晕也触发） |
-| 3 | `act_begin` | `battle.py:438`（`act`） | `actor`, `target` | 行动者 | 控制通过、行动执行前 |
+| 1 | `battle_start` | `battle.py:529`（`_ensure_battle_started`） | `{}` | **无**（全体触发） | 首个 actor 行动前，**整场一次**（`_started` 守卫） |
+| 2 | `turn_start` | `battle.py:430`（`act`） | `actor` | 行动者 | 回合开始，**先于控制检查**（所以「回合开始回蓝」被晕也触发） |
+| 3 | `act_begin` | `battle.py:460`（`act`） | `actor`, `target` | 行动者 | 控制通过、行动执行前 |
 | 4 | `act_cast` | `actions.py:104`（`do_skill`） | `actor`, `target`, `info` | 施法者 | 扣费与冷却之后、结算之前 |
 | 5 | `skill_hit` | `actions.py:415-417`（`_single_target_pipeline`） | `actor`, `target`, `info`, `dmg` | 攻击者 | 技能命中后（伤害已落地）；AOE 每目标各触发一次 |
 | 6 | `attack_hit` | 同上（`info["_basic"]` 为真时选它） | 同上 | 攻击者 | 普攻命中后 |
 | 7 | `crit` | `actions.py:460-458` | `actor`, `target`, `info`, `dmg` | 攻击者 | 暴击命中（`skill_hit`/`attack_hit` 的子集，**紧跟其后**） |
-| 8 | `on_taken` | `landing.py:139`（`deal_damage`） | `actor`, `target`, `source`, `dmg` | 受击者 | 承伤落地后；**死者不触发**（走 `on_death`） |
-| 9 | `on_heal` | `landing.py:359`（`heal_actor`） | `actor`, `target`, `source`, `amount`, `overflow` | 被治疗者 | 实际回血 > 0 时 |
-| 10 | `on_kill` | `landing.py:315`（`_apply_damage`） | `actor`, `target`, `dmg` | **击杀者** | 致死伤害落地后；`source is None`（DOT/环境杀）不触发 |
-| 11 | `on_death` | `battle.py:525`（`_on_actor_dead`） | `actor`, `target` | 死者 | 所有死亡路径统一在此；**死者的声明仍会执行**（subject 例外） |
+| 8 | `on_taken` | `landing.py:169`（`deal_damage`） | `actor`, `target`, `source`, `dmg` | 受击者 | 承伤落地后；**死者不触发**（走 `on_death`） |
+| 9 | `on_heal` | `landing.py:411`（`heal_actor`） | `actor`, `target`, `source`, `amount`, `overflow` | 被治疗者 | 实际回血 > 0 时 |
+| 10 | `on_kill` | `landing.py:345`（`_apply_damage`） | `actor`, `target`, `dmg` | **击杀者** | 致死伤害落地后；`source is None`（DOT/环境杀）不触发 |
+| 11 | `on_death` | `battle.py:547`（`_on_actor_dead`） | `actor`, `target` | 死者 | 所有死亡路径统一在此；**死者的声明仍会执行**（subject 例外） |
 | 12 | `dot_tick` | `schedule.py:293`（`_settle_time_effects`） | `actor`, `target`, `key`, `dmg` | 受跳者 | DOT 每一跳 |
 | 13 | `dot_calc` | `schedule.py:281`（同上） | `target`, `dot_key`, `dmg`, `mult` | **无**（广播） | DOT 伤害落地**前**的乘区钩子 |
-| 14 | `on_act_consume` | `battle.py:433`（`act`） | `actor`, `tag` | 行动者 | 被控跳过行动（`mode="skip"`）时 |
-| 15 | `on_hit_consume` | `actions.py:505`（`_consume_hit_buffs`） | `actor`, `key` | 出手者 | 一次性出手 buff 被消费时 |
+| 14 | `on_act_consume` | `battle.py:455`（`act`） | `actor`, `tag` | 行动者 | 被控跳过行动（`mode="skip"`）时 |
+| 15 | `on_hit_consume` | `actions.py:508`（`_consume_hit_buffs`） | `actor`, `key` | 出手者 | 一次性出手 buff 被消费时 |
 | 16 | `buff_expire` | `schedule.py:206`（`_settle_time_effects`） | `actor`, `target`, `key` | 条目持有者 | `effects` 条目到期被删时（原 `buff_expire` 名保留兼容） |
-| 17 | `threshold` | `effects.py:349`（`act_apply` 叠层分支） | `actor`, `key`, `value` | 条目持有者 | 叠层数值变化后（「战意满 10 → 狂暴」类） |
+| 17 | `threshold` | `effects.py:357`（`act_apply` 叠层分支） | `actor`, `key`, `value` | 条目持有者 | 叠层数值变化后（「战意满 10 → 狂暴」类） |
 | 18 | `dmg_calc` | `actions.py:420`（`_single_target_pipeline`） | `actor`, `target`, `dmg`, `is_crit`, `info`, `mult` | 攻击者 | 伤害算出后、落地前（攻击方乘区） |
-| 19 | `taken_calc` | `landing.py:79`（`deal_damage`） | `actor`, `target`, `source`, `dmg`, `mult` | 承伤者 | 承伤修正（承伤方乘区） |
-| 20 | `heal_calc` | `actions.py:693`（`_do_heal`） | `actor`, `target`, `heal`, `info`, `mult` | 施法者 | 治疗量算出后、落地前 |
-| 21 | `act_done` | `battle.py:472`（`act` 尾部） | `acted`（**不是** `actor`） | **无**（全员广播） | 行动完成；被控跳过不触发 |
+| 19 | `taken_calc` | `landing.py:106`（`deal_damage`） | `actor`, `target`, `source`, `dmg`, `mult` | 承伤者 | 承伤修正（承伤方乘区） |
+| 20 | `heal_calc` | `actions.py:696`（`_do_heal`） | `actor`, `target`, `heal`, `info`, `mult` | 施法者 | 治疗量算出后、落地前 |
+| 21 | `act_done` | `battle.py:494`（`act` 尾部） | `acted`（**不是** `actor`） | **无**（全员广播） | 行动完成；被控跳过不触发 |
 | 22 | `phase` | ⚠️ **无引擎点位** | — | — | Boss 阶段转换（上层驱动） |
 | 23 | `player_low` | ⚠️ **无引擎点位** | — | — | 玩家低血量（上层驱动） |
 | 24 | `pv_broken` | ⚠️ **无引擎点位** | — | — | 破防（上层驱动） |
-| 25 | `interrupt` | `landing.py:127`（伤害打断蓄力）/ `effects.py:564`（`act_interrupt` 动词） | `actor`, `target`, `source` | 被打断者 | 读条被打断 |
+| 25 | `interrupt` | `landing.py:157`（伤害打断蓄力）/ `effects.py:572`（`act_interrupt` 动词） | `actor`, `target`, `source` | 被打断者 | 读条被打断 |
 | 26 | `time_advance` | `schedule.py:166`（`_advance_time`） | `dt`, `now` | **无**（广播） | 时钟推进（结算**之后**广播） |
 
 ### 关于 `skill_hit` / `attack_hit` 的「静态 grep 不到」
 
-`actions.py:456` 是：
+`actions.py:459` 是：
 
 ```python
 ev = "attack_hit" if info.get("_basic") else "skill_hit"
@@ -93,7 +93,7 @@ ctx.setdefault("_event", event)
 battle._fire_ctx = ctx            # effect_triggers.py:85-86 —— 单槽覆盖
 ```
 
-引擎读回（例 `landing.py:79-83`）：
+引擎读回（例 `landing.py:106-98`）：
 
 ```python
 _fire(battle, "taken_calc", _fctx, logs)
@@ -126,7 +126,7 @@ Battle(on_event=lambda battle, event, ctx, logs: ...)
 | 异常 | 被吞掉（观察者容错，`effect_triggers.py:116-117`） |
 | 调用次数 | 每个事件一次（**不是**每个 actor 一次） |
 
-内容侧用法（`battle.py:46-48` 注释）：命令层记账 / 团队技能广播 / 存活同步。
+内容侧用法（`battle.py:47-49` 注释）：命令层记账 / 团队技能广播 / 存活同步。
 
 ## 事件顺序：一次普攻命中时的 fire 时序
 
@@ -153,7 +153,7 @@ act()                        → turn_start
                              → _check_side_end
 ```
 
-（`actions.py:339-423` + `landing.py:23-143` + `battle.py:388-477`）
+（`actions.py:339-423` + `landing.py:23-143` + `battle.py:410-499`）
 
 另外的时间线事件：`_advance_time` → `_settle_time_effects`
 （`buff_expire` × n → `dot_calc` → `deal_damage` → `dot_tick` × n）→ `time_advance`

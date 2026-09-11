@@ -84,11 +84,11 @@ def map_event(old_ev):
 （`game/services/battle_equip_proc.py:47-51`）
 
 **为什么 `hit` 要展开成两个事件**：引擎把「普攻命中」(`attack_hit`) 与「技能命中」
-(`skill_hit`) 分成两个事件（`actions.py:456` 按 `info["_basic"]` 选）。
+(`skill_hit`) 分成两个事件（`actions.py:459` 按 `info["_basic"]` 选）。
 你的数据表只写「命中」时，得同时挂两个。
 
 **为什么 `enemy_act` 映射到 `act_done`**：`act_done` 是**不带 subject 的广播事件**
-（`ctx["acted"]` 才是行动者，`battle.py:467-472`），所以「敌方行动后我叠减速」
+（`ctx["acted"]` 才是行动者，`battle.py:489-494`），所以「敌方行动后我叠减速」
 这类特效要在动作里**自己判敌我**（例：`we_act_done_slow`）。
 
 ## 词条的三种数值通道

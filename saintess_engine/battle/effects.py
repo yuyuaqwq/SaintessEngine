@@ -301,6 +301,14 @@ def act_apply(battle, caster, target, params, logs):
         turns = int(params.get("turns", 0) or 0)
         if turns <= 0:
             return
+        # N-B7 免疫控制查询点（2026-09-11 接线）：控制类效果（mode != None）落地前
+        # 先查持有者是否带免疫态 —— 引擎只读**态名**（`cc_immune`，属引擎固定词汇表
+        # 契约，不是游戏名词），不认「哪个技能给的免疫」。内容侧写态（含刻数，
+        # 引擎按 expire 自动清理）；态在 = 本次控制不施加（不消耗、不叠层）。
+        _im = (holder.get("effects") or {}).get("cc_immune")
+        if isinstance(_im, dict) and float(_im.get("expire", 0) or 0) > _now_of(battle):
+            logs.append(f"🛡️ {holder.get('name', '目标')} 免疫控制：{key} 未生效")
+            return
         # Boss 控制减半（对齐旧 _boss_ctrl_dur）
         if holder.get("is_boss") or holder.get("role") == "boss":
             turns = max(1, turns // 2)

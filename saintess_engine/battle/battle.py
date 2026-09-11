@@ -33,7 +33,8 @@ class Battle:
                  title_bonus: Optional[dict] = None,
                  hostile_map: Optional[dict] = None,
                  target_picker=None, on_event=None, action_override=None,
-                 script_hook=None, seed_ct: bool = True, **kwargs):
+                 script_hook=None, redirect_hook=None, seed_ct: bool = True,
+                 **kwargs):
         """构造战斗。
 
         sides: dict[str, list[actor]] —— 唯一入口。sides["player"] 第一个
@@ -46,6 +47,11 @@ class Battle:
         on_event: （N5b4-5E 战斗级注入钩子）callable(battle, evt_name, ctx, logs) -> None。
           事件总线 fire() 尾部通知外部观察者（命令层记账/团队技能广播/存活同步）；
           只读 ctx 或调引擎动词改状态，不返回影响结算。与 actor.triggers 声明效果正交。
+        redirect_hook: （N-B8 承伤转移钩子，2026-09-11）callable(battle, victim, guard,
+          amount, dmg_kind) -> bool。目标 actor 上有 `guard_uid` 指向的保护者时，引擎问
+          内容侧「这次是否真的由他替你挡」（概率/次数/反伤由内容侧决定）；返回 True 则
+          本次伤害改由保护者承受（递归深度 1，不链式）。引擎零游戏知识：只读字段 +
+          调回调。治疗侧同款见 `heal_redirect_hook`（faith_share 用）。
         script_hook: （N5B5c P1 剧本导演钩子）callable(battle, actor, logs) -> bool。
           自动 actor（actor_auto）行动前调用——命令层 Boss 剧本导演在此检查血量阈值/
           刻计数 → 触发剧本动作（转阶段演出/换招/召唤等）。返回 True = 拦截本刻行动
@@ -57,6 +63,8 @@ class Battle:
         self.on_event = on_event
         self.action_override = action_override
         self.script_hook = script_hook
+        self.redirect_hook = redirect_hook
+        self.heal_redirect_hook = None
         # 阵营容器（唯一）
         self.sides: dict = {}
         for sn, acts in (sides or {}).items():
@@ -170,6 +178,20 @@ class Battle:
     # ============================================================
     # 查询
     # ============================================================
+
+    def find_actor(self, uid) -> Optional[dict]:
+        """按 uid 查 actor（跨阵营只读；找不到 = None）。
+
+        N-B8（2026-09-11）：承伤/治疗转移（挡刀 / faith_share）需要从 uid 找到保护者。
+        引擎只做查找；「谁是保护者」由内容侧写在 actor 的 `guard_uid` 字段上。
+        """
+        if not uid:
+            return None
+        for acts in self.sides.values():
+            for a in acts:
+                if isinstance(a, dict) and a.get("uid") == uid:
+                    return a
+        return None
 
     def sides_of(self, side: str) -> list:
         return list(self.sides.get(side) or [])

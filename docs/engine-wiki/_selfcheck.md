@@ -71,8 +71,8 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | 字段 | 核实方法 | 结论 |
 |---|---|---|
 | `debuff_scale` | 全仓 `grep -rn "debuff_scale"` → 只命中 `effects.py:249` 的**判据关键词列表**与数据表注释 | **无任何折算消费方**。声明了「每层承伤 +N%」的 `hunt_mark` / `soul_mark` / `curse` 实际不生效 |
-| `on_threshold` | 全仓 grep → 只有 `effects.py:211/244/250` 的判据关键词 + `battle_rules.py:27` 的声明 | **无消费方**。`threshold` **事件**有引擎点位（`effects.py:349`），但这张映射表没被读 |
-| `wake_on_hit` | 全仓 grep → 只有 `battle_rules.py:400` 的声明 | **无消费方**。打醒睡眠由 `landing.py:117` 的硬编码 key 判断实现 |
+| `on_threshold` | 全仓 grep → 只有 `effects.py:211/244/250` 的判据关键词 + `battle_rules.py:27` 的声明 | **无消费方**。`threshold` **事件**有引擎点位（`effects.py:357`），但这张映射表没被读 |
+| `wake_on_hit` | 全仓 grep → 只有 `battle_rules.py:400` 的声明 | **无消费方**。打醒睡眠由 `landing.py:147` 的硬编码 key 判断实现 |
 | `tag` | grep `state_def(...).get("tag")` / `cfg.get("tag")` → 空 | **无消费方**。`act_apply` 读的是 params 的 `tag`（作 key 兜底，`effects.py:287`） |
 | `dot` | 全仓 grep → 只有 `effects.py:249` 判据；78 个 key 里无一使用 | **无消费方**（V5 后 DOT 统一走 `period`） |
 | `name` | 引擎无读取（内容侧读） | 引擎不读，**符合设计**（展示名属内容侧） |
@@ -91,11 +91,11 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 
 | 名称 | 位置 | 结论 |
 |---|---|---|
-| ~~`Battle.dmg_mult`~~ | ~~`battle.py:60`~~ | **已删**（2026-09-11）——⚠️ 实为『调用方在用、引擎没读』的静默失效功能，见 §0.4 |
-| ~~`Battle.pet`~~ | ~~`battle.py:61`~~ | **已删**（2026-09-11）——同上（宠物参战归随从线，见 §0.4） |
-| ~~`Battle.__init__(st=...)`~~ | ~~`battle.py:37`~~ | **已删**（2026-09-11，全仓 0 处传参） |
-| ~~`Battle._cast_ctx` / `_target_ctx`~~ | ~~`battle.py:73-74`~~ | **已删**（2026-09-11） |
-| ~~`Battle._events`~~ | ~~`battle.py:82`~~ | **已删**（2026-09-11） |
+| ~~`Battle.dmg_mult`~~ | ~~`battle.py:68`~~ | **已删**（2026-09-11）——⚠️ 实为『调用方在用、引擎没读』的静默失效功能，见 §0.4 |
+| ~~`Battle.pet`~~ | ~~`battle.py:69`~~ | **已删**（2026-09-11）——同上（宠物参战归随从线，见 §0.4） |
+| ~~`Battle.__init__(st=...)`~~ | ~~`battle.py:38`~~ | **已删**（2026-09-11，全仓 0 处传参） |
+| ~~`Battle._cast_ctx` / `_target_ctx`~~ | ~~`battle.py:81-82`~~ | **已删**（2026-09-11） |
+| ~~`Battle._events`~~ | ~~`battle.py:90`~~ | **已删**（2026-09-11） |
 | ~~`DEFAULT_CT_WAIT = 2.0`~~ | ~~`battle.py:22`~~ | **已删**（2026-09-11） |
 | ~~`schedule.CAST_ITEM = 1.0`~~ | ~~`schedule.py:25`~~ | **已删**（2026-09-11） |
 | ~~`schedule.HOT_INTERVAL = 1.0`~~ | ~~`schedule.py:29`~~ | **已删**（2026-09-11） |
@@ -109,7 +109,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | `effects.effects_from_skill(..., caster_side_is_player=True)` | `effects.py:188` | **第三个参数在函数体里从未使用** |
 | `config.set_hook` | `config.py:123` | 零外部引用（都走 `mount`） |
 | `serialize.to_state` 的 `flags` | `serialize.py:49` | 恒写入 `{}`；**没有读取方**，也没有写入方 |
-| `Battle.auto_run(max_steps=500)` | `battle.py:292` | 全仓调用点**只在 `tests/`**（游戏仓 `test_battle_add_actor.py:159`、游戏仓 `test_battle_bridge.py:154`、游戏仓 `test_battle_bar_procs.py:240` 等），内容侧零调用 —— 实质是**测试/AI 模式辅助**，不是生产路径（生产走 `human_act` + `advance`） |
+| `Battle.auto_run(max_steps=500)` | `battle.py:314` | 全仓调用点**只在 `tests/`**（游戏仓 `test_battle_add_actor.py:159`、游戏仓 `test_battle_bridge.py:154`、游戏仓 `test_battle_bar_procs.py:240` 等），内容侧零调用 —— 实质是**测试/AI 模式辅助**，不是生产路径（生产走 `human_act` + `advance`） |
 
 ### 1.4 `EFFECT_ACTIONS` / 技能数据侧的静默 no-op
 
@@ -127,15 +127,15 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | `actor["_content_applied"]`（bool） | S7 的 `apply_game_content` 幂等标记（游戏仓 `game/content_rules/apply.py:81`）。**会随 actor 全量落进战斗存档 / PVP 状态**（引擎 `serialize._STRIP_KEYS` 只剥 `_skill_index`）。原文自记「无任何数值/读取语义依赖它，S9 若要清掉需改引擎 `serialize.py`」（游戏仓 `apply.py:55-58`） |
 | `actor["dot_next"]` / `actor["dot_jumps"]`（dict） | 引擎周期结算的运行期辅助（`schedule.py:224-225` 惰性建），**同样落盘**。这是「续战能对上」的原因，但字段名与内容无关 |
 | `actor["_dmg_taken_mult"]`（float） | 承伤乘区（`landing.py:86-91` 读）。由上层直写（例 游戏仓 `commands/boss_script.py:684`）；**同样落盘** |
-| `actor["reduce_left"]` / `reduce_all_left` | `effects.act_apply` 写（`effects.py:370`）+ 内容侧 bridge 透传/播种；**无消费者**（见 §1.3） |
-| `actor["act_count"]` | `actor_auto` 每动 +1（`battle.py:381`），AI 的 `round_mod` 谓词读它；落盘 |
+| `actor["reduce_left"]` / `reduce_all_left` | `effects.act_apply` 写（`effects.py:378`）+ 内容侧 bridge 透传/播种；**无消费者**（见 §1.3） |
+| `actor["act_count"]` | `actor_auto` 每动 +1（`battle.py:403`），AI 的 `round_mod` 谓词读它；落盘 |
 
 ## 2. 事件点位
 
 | 事件 | 结论 |
 |---|---|
 | `phase` / `player_low` / `pv_broken` | **在 `EVENTS` 里但引擎零 fire 点位**（设计如此，由上层驱动 —— `effect_triggers.py:38-40`） |
-| `skill_hit` / `attack_hit` | **有点位但静态 grep 不到**：`actions.py:456` 用变量选事件名（`ev = "attack_hit" if info.get("_basic") else "skill_hit"`）。文档若按 grep 结果断言「无点位」会是错的 |
+| `skill_hit` / `attack_hit` | **有点位但静态 grep 不到**：`actions.py:459` 用变量选事件名（`ev = "attack_hit" if info.get("_basic") else "skill_hit"`）。文档若按 grep 结果断言「无点位」会是错的 |
 | `EVENTS` 实际条目数 | **26**（不是 docstring 说的「19 时机」）。引擎插桩自然点位 **23** 个（不是注释说的「16 个」） |
 
 ## 3. `注释 ≠ 代码`（发现了 6 处）
@@ -161,10 +161,10 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | # | 瑕疵 | 位置 |
 |---|---|---|
 | B1 | `kinds/` 枚举值写死中文（`PHYS = "物理"` …） | `kinds/__init__.py:33-40` |
-| B2 | 固定效果 key：`"sleep"`（打醒）、`"death_guard"`（濒死保护）、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`（受疗修正） | `landing.py:117, 237, 373-396` |
-| B3 | `effects.act_apply` 里 `if key == "reduce":` | `effects.py:369` |
-| B4 | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | `effects.py:305` · `schedule.py:264,272` |
-| B5 | `battle.py` 里 `"player"` 阵营名 | `battle.py:160, 515` |
+| B2 | 固定效果 key：`"sleep"`（打醒）、`"death_guard"`（濒死保护）、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`（受疗修正） | `landing.py:147, 237, 373-396` |
+| B3 | `effects.act_apply` 里 `if key == "reduce":` | `effects.py:377` |
+| B4 | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | `effects.py:313` · `schedule.py:264,272` |
+| B5 | `battle.py` 里 `"player"` 阵营名 | `battle.py:168, 515` |
 | B6 | `_is_stack_resource` 的判据关键词含无消费方的字段（`debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct`） | `effects.py:249-253` |
 
 B6 值得单列说明：这些字段**没有消费者**，但它们**存在与否会改变 `mech` 的分派结果**

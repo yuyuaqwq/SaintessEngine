@@ -18,7 +18,7 @@ register_action       config.set_config           actor["triggers"]
 
 - `battle` 是战斗实例；`logs` 是 list，直接 `append` 就是玩家看到的日志
 - **不要自己扣血/加血** —— 落地必须走 `landing.heal_actor` / `landing.deal_damage`
-  （`landing.py:328` / `:23`）。绕过落地会丢掉护盾、死亡判定、濒死保护、`on_heal` 事件
+  （`landing.py:358` / `:23`）。绕过落地会丢掉护盾、死亡判定、濒死保护、`on_heal` 事件
 - 抛异常会被 `apply_effects` 吞掉并跳过该动作（`effects.py:172-176`），不会中断战斗
 
 ```python
@@ -82,7 +82,7 @@ def equip_blood_pact(actor):
 引擎在固定点位 `fire(事件名, ctx, logs)`，总线遍历所有存活 actor 找 `triggers[事件名]`，
 逐个交给 `apply_effects` 翻译执行（`effect_triggers.fire`，`effect_triggers.py:61`）。
 
-`attack_hit` 的触发点在 `_single_target_pipeline` 尾部（`actions.py:456`）：
+`attack_hit` 的触发点在 `_single_target_pipeline` 尾部（`actions.py:459`）：
 **普攻命中且伤害管线跑完之后**，`ctx = {"actor": 攻击者, "target": 挨打者, "info": 技能, "dmg": 总伤}`。
 
 ## 跑起来
@@ -125,7 +125,7 @@ hero hp: 65
 
 上面走的是「事件触发」路子。另一条路是**技能数据驱动**：技能 dict 里的 `mech`
 字段经 `effects_from_skill`（`effects.py:188`）转成 effect 列表，在命中后由
-`_apply_hit_effects`（`actions.py:512`）执行。分派判据见 `_mech_to_effect`
+`_apply_hit_effects`（`actions.py:515`）执行。分派判据见 `_mech_to_effect`
 （`effects.py:207`）——「叠层资源型」走 `apply op=add`，否则保留名词走 `EFFECT_ACTIONS`。
 
 更完整的机制写法（judge 谓词 / 乘区钩子 / 计数器）见

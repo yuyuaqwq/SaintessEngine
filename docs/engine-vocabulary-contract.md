@@ -39,6 +39,22 @@
 | **B5** | `battle.py:170,515` | `sides["player"]` | 引擎需要**一个默认焦点侧**来找命令层焦点 actor（`human_controlled`） | 契约词汇：约定焦点侧名 = `"player"`。多焦点/改名 → §三 `focus_side` |
 | **B6** | `effects.py:249-253` | `_is_stack_resource` 判据关键词含**无消费方**字段（`debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct`） | 这是"死字段但**活判据**"：字段**存在与否会改变分派结果**（有 `debuff_scale` → 走 `apply op=add` 叠层；没有 → 走 `EFFECT_ACTIONS` 名词翻译） | ⚠️ **清理时必须同时考虑分派影响**——内容侧清理这些死字段前，先跑叠层分派回归 |
 
+### 二·补：2026-09-11 新增的契约字段
+
+| # | 字段 | 位置 | 语义 | 谁写 / 谁读 |
+|---|---|---|---|---|
+| **B7** | `actor["cc_immune"]` | `effects.act_apply` 控制分支 | **免疫控制**：控制类效果（`mode != None`）落地前，持有者带未过期的该态 → 本次控制不施加（不消耗、不叠层） | 内容侧写（带刻数，引擎按 `expire` 自动清理）；引擎读 |
+| **B8** | `actor["guard_uid"]` | `landing.deal_damage` 最前 | **挡刀**：承伤转移——该字段指向保护者 uid，伤害改由保护者承受（递归深度 1）。是否真的转移由 `battle.redirect_hook(battle, victim, guard, amount, dmg_kind)` 决定（未设 hook = 默认转移） | 内容侧写（`team_guard`，到期清）；引擎读 |
+| **B9** | `actor["heal_share_uid"]` | `landing.heal_actor` 最前 | **治疗分担**（faith_share）：治疗改由该 uid 承受；`battle.heal_redirect_hook` 决定是否转移 | 内容侧写；引擎读 |
+
+> B7-B9 都是「引擎只读**字段名** + 调**内容侧回调**」的形态：引擎不认识「哪个技能给的免疫/谁在挡刀」，
+> 只做通用的落地决策。与既有的 `target_picker` / `on_event` / `script_hook` / `redirect_hook`
+> 一起构成引擎的**决策注入面**。
+>
+> ⚠️ 配套的真 bug 修复（同批）：`landing` / `actions` 里 3 处 `float(...get("mult", 1.0) or 1.0)`
+> —— `0.0` 是 falsy，被 `or 1.0` 吞成 1.0 → **0 乘区永远失效**（格挡/无敌帧类效果做不出来）。
+> 已改为「仅 `None` 回落 1.0」。
+
 ---
 
 ## 三、v0.2 backlog（可注入化 —— 不阻塞 v0.1 分发）

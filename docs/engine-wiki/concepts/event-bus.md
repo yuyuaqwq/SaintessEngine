@@ -64,7 +64,7 @@ for acts in battle.sides.values():
 - **主体死亡也执行**：`on_death` 的死者自己的声明照样跑（死亡遗言类效果）。
   判据是 `a is subject` 那一支。
 - **有些事件故意不带 `actor`**：`act_done` 只放 `ctx["acted"]`，让效果侧自己判敌我
-  （`battle.py:467-469` 注释：`randuin`/`ice_vein` 靠它监听「敌对 actor 行动」叠减速）。
+  （`battle.py:489-491` 注释：`randuin`/`ice_vein` 靠它监听「敌对 actor 行动」叠减速）。
 
 ### 4. `_owner` 注入
 
@@ -96,7 +96,7 @@ if _m != 1.0:
     total = max(1, int(total * _m))
 ```
 （`actions.py:416-422`，同款出现在 `landing.py:75-84` 的 `taken_calc`、
-`actions.py:638-698` 的 `heal_calc`、`schedule.py:281-291` 的 `dot_calc`）
+`actions.py:641-704` 的 `heal_calc`、`schedule.py:281-291` 的 `dot_calc`）
 
 ⚠️ **它是单槽、覆盖式、不落盘**（`effect_triggers.py:83-84` 注释）：
 单线程同步 fire 所以成立；**别在异步/多线程里依赖它**。`dot_calc` 广播后
@@ -168,7 +168,7 @@ actor["triggers"][event]
 | **引擎有 fire 点位（23）** | `battle_start` `turn_start` `act_begin` `act_cast` `skill_hit`※ `attack_hit`※ `crit` `on_taken` `on_heal` `on_kill` `on_death` `dot_tick` `dot_calc` `on_act_consume` `on_hit_consume` `buff_expire` `threshold` `dmg_calc` `taken_calc` `heal_calc` `act_done` `interrupt` `time_advance` |
 | **⚠️ 引擎无点位（3，必须上层驱动）** | `phase` `player_low` `pv_broken` |
 
-※ `skill_hit` / `attack_hit` 的 fire 点位用变量选事件名（`actions.py:456`：
+※ `skill_hit` / `attack_hit` 的 fire 点位用变量选事件名（`actions.py:459`：
 `ev = "attack_hit" if info.get("_basic") else "skill_hit"`），静态 grep 不到字面量。
 
 精确点位（`文件:行号`）与每个事件的 ctx 字段见 [../reference/events.md](../reference/events.md)。

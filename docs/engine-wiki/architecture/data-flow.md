@@ -6,25 +6,25 @@
 
 ```
 命令层
-  └─ Battle.human_act(action, skill_name, actor, target)        battle.py:234
+  └─ Battle.human_act(action, skill_name, actor, target)        battle.py:256
        ├─ ActCtx(caster, action, skill_name, target, ...)       actors.py:20
-       ├─ Battle.act(ctx)                                       battle.py:388
-       │    ├─ _ensure_battle_started()                         battle.py:496   ⚡ battle_start
-       │    ├─ fire("turn_start")                               battle.py:408   ⚡
-       │    ├─ 控制消费（mode=skip → 早退；no_skill → 技能转普攻） battle.py:413-436 ⚡ on_act_consume
-       │    ├─ fire("act_begin")                                battle.py:438   ⚡
-       │    ├─ _p_acts += 1                                     battle.py:400
+       ├─ Battle.act(ctx)                                       battle.py:410
+       │    ├─ _ensure_battle_started()                         battle.py:518   ⚡ battle_start
+       │    ├─ fire("turn_start")                               battle.py:430   ⚡
+       │    ├─ 控制消费（mode=skip → 早退；no_skill → 技能转普攻） battle.py:435-458 ⚡ on_act_consume
+       │    ├─ fire("act_begin")                                battle.py:460   ⚡
+       │    ├─ _p_acts += 1                                     battle.py:422
        │    ├─ 分派：
        │    │    attack → actions.do_attack                      actions.py:49
        │    │    skill  → actions.do_skill                       actions.py:62
-       │    │    defend → Battle._do_defend                      battle.py:483
-       │    │    flee   → Battle._do_flee                        battle.py:488
-       │    │    其他   → Battle.action_override 注入点           battle.py:455
-       │    ├─ fire("act_done")                                 battle.py:472   ⚡
-       │    └─ _check_side_end()                                battle.py:529
+       │    │    defend → Battle._do_defend                      battle.py:505
+       │    │    flee   → Battle._do_flee                        battle.py:510
+       │    │    其他   → Battle.action_override 注入点           battle.py:477
+       │    ├─ fire("act_done")                                 battle.py:494   ⚡
+       │    └─ _check_side_end()                                battle.py:551
        └─ 若未结束且 action ∈ {attack, skill, defend} 或 override 被消费：
             ├─ schedule._after_act(battle, caster, action)      schedule.py:139  推 ct
-            └─ Battle.advance(logs)                             battle.py:283
+            └─ Battle.advance(logs)                             battle.py:305
                  └─ schedule.advance（推时钟 + 自动 actor 行动）  schedule.py:67
 ```
 
@@ -42,7 +42,7 @@ schedule.advance(battle, logs, max_steps=200)                     schedule.py:67
     else:
         _advance_time(battle, auto[1] - battle._now, logs)
         logs.append("—— {name} 行动 ——")
-        battle.actor_auto(actor)                                       battle.py:308
+        battle.actor_auto(actor)                                       battle.py:330
 ```
 
 `_advance_time(battle, dt, logs)`（`schedule.py:152`）内部：
@@ -103,7 +103,7 @@ actions._attack_damage_pipeline(battle, actor, target, info, lv)    actions.py:3
   else → _single_target_pipeline(...)                               actions.py:373
 
 actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:373
-  1. _consume_hit_buffs(battle, actor, logs)                        actions.py:467
+  1. _consume_hit_buffs(battle, actor, logs)                        actions.py:470
        └─ 遍历 effects 里带 "hit" 子键的条目 → 累积 dmg_mult/guaranteed_crit/bonus_atk_pct
           → ⚡ on_hit_consume → pop 条目
   2. st  = stats.actor_stats(battle, actor)                          stats.py:19
@@ -118,13 +118,13 @@ actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:
   7. total *= _st_mult；total *= hit_buffs.dmg_mult
   8. ⚡ fire("dmg_calc", {actor, target, dmg, is_crit, info, mult:1.0})  actions.py:416-422
        └─ 读回 battle._fire_ctx["mult"] → total *= mult
-  9. _deal_hit(battle, actor, target, total, defend_reduce, element)   actions.py:562
+  9. _deal_hit(battle, actor, target, total, defend_reduce, element)   actions.py:565
        └─ landing.deal_damage(...)                                  landing.py:23
- 10. _settle_lifesteal(...)（非 AOE）                               actions.py:599
+ 10. _settle_lifesteal(...)（非 AOE）                               actions.py:602
        └─ rate = min(lifesteal 类面板, 0.30)，真伤不吸，mortal_wound ×0.5
           → landing.heal_actor → on_heal ⚡
  11. bonus_atk_pct > 0 → 再 _deal_hit 一段附伤
- 12. _apply_hit_effects(...) → effects_from_skill(info, lv) → apply_effects   actions.py:512
+ 12. _apply_hit_effects(...) → effects_from_skill(info, lv) → apply_effects   actions.py:515
  13. ⚡ fire("attack_hit"|"skill_hit")，然后若是暴击 ⚡ fire("crit")    actions.py:416-458
 ```
 
@@ -134,43 +134,43 @@ actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:
 landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduce, element)
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ 1. amount <= 0 → 0                                                       │
-│ 2. _lv_pressure(battle, source, target, dmg)          landing.py:146     │
+│ 2. _lv_pressure(battle, source, target, dmg)          landing.py:176     │
 │      btype == "pvp" → 不压；任一方无 level → 不压                          │
 │      低打高：前 3 级 ×0.95，之后 ×0.90，封顶 ×0.30                         │
 │      高打低：每级 ×1.02 连乘（封顶 50 级）                                 │
-│ 3. 元素免疫 / 弱点 / 元素抗性（仅 element 非空）        landing.py:50-72     │
+│ 3. 元素免疫 / 弱点 / 元素抗性（仅 element 非空）        landing.py:77-99     │
 │      element_immune 含该元素 → 直接 return 0                              │
 │      element_weak[el] > 1 → ×倍率                                        │
 │      elem_res / abyss_res（dark 吃 abyss_res）cap 0.5 → 减伤              │
 │ 4. ⚡ fire("taken_calc", {actor: target, dmg, mult: 1.0})   landing.py:75-84 │
 │      → 读回 mult → dmg *= mult                                            │
 │ 5. target["_dmg_taken_mult"] > 1 → dmg *= 它           landing.py:86-91    │
-│ 6. _roll_dodge(battle, target, logs)                   landing.py:178     │
+│ 6. _roll_dodge(battle, target, logs)                   landing.py:208     │
 │      dodge 面板 cap 0.40 → 命中则 return 0（整个伤害免掉）                 │
-│ 7. defending → dmg *= (1 - defend_reduce or 0.5)       landing.py:102-108  │
-│ 8. _apply_taken_reductions(dmg_kind)                   landing.py:202     │
+│ 7. defending → dmg *= (1 - defend_reduce or 0.5)       landing.py:132-138  │
+│ 8. _apply_taken_reductions(dmg_kind)                   landing.py:232     │
 │      phys → phys_reduce cap 0.40；magi → magic_reduce cap 0.40            │
 │      block 概率 cap 0.40 → 减半                                          │
-│ 9. effects 有 "sleep" → pop（打醒）+ 日志              landing.py:117-119  │
-│10. charging 有 skill → 清 + ⚡ fire("interrupt")        landing.py:121-130  │
-│11. _apply_damage(battle, target, dmg, logs, source)    landing.py:270     │
+│ 9. effects 有 "sleep" → pop（打醒）+ 日志              landing.py:147-149  │
+│10. charging 有 skill → 清 + ⚡ fire("interrupt")        landing.py:151-121  │
+│11. _apply_damage(battle, target, dmg, logs, source)    landing.py:300     │
 │      ├─ 护盾吸收（遍历 shields，按 value 扣减，耗尽即 pop）                 │
 │      ├─ hp 扣减                                                          │
-│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:237     │
+│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:267     │
 │      │     effects["death_guard"].stacks > 0 → hp 拉回 guard_hp_pct      │
 │      │     （+heal_pct 额外治疗，走 heal_actor）→ 层 -1                    │
-│      ├─ 仍 <= 0 → Battle._on_actor_dead(...)           battle.py:511       │
+│      ├─ 仍 <= 0 → Battle._on_actor_dead(...)           battle.py:533       │
 │      │       killed_actors.append / 清 defending+charging                 │
 │      │     ⚡ fire("on_death", {actor, target})                            │
 │      │     source 非 None → ⚡ fire("on_kill", {actor: source, ...})       │
 │      └─ 否则：日志「受到 N 点伤害」                                        │
-│12. 未死 → ⚡ fire("on_taken", {actor, target, source, dmg})   landing.py:139 │
+│12. 未死 → ⚡ fire("on_taken", {actor, target, source, dmg})   landing.py:169 │
 └──────────────────────────────────────────────────────────────────────────┘
 返回 real（实际扣血）
 ```
 
 ⚠️ 第 6 步（闪避）的位置有注释明确说明：**「位置在 defending 前（对齐旧顺序：
-闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）」**（`landing.py:94`）。
+闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）」**（`landing.py:124`）。
 改顺序会改变「闪避是否省下防御姿态/是否打断读条」这类语义。
 
 ## 展开 4：事件在链上的位置（一次普攻）
@@ -195,8 +195,8 @@ turn_start ─→ act_begin ─→ act_cast ─→ dmg_calc
 |---|---|---|
 | 普攻不是独立的伤害路径 | 它把自己改写成一次 `action="skill"` 的施放 | `actions.py:56-59` |
 | 技能索引进 `_skill_index` 且**失败不阻断** | 索引空 → 技能静默空放 | `battle.py:126-149` |
-| `act_done` 不带 `actor` 键 | 所以它是全员广播；行动者放在 `ctx["acted"]` | `battle.py:467-472` |
-| 被控跳过时 `act()` **提前 return**，`act_done` 不 fire | 推 ct 由调用方做 | `battle.py:429-436` |
+| `act_done` 不带 `actor` 键 | 所以它是全员广播；行动者放在 `ctx["acted"]` | `battle.py:489-494` |
+| 被控跳过时 `act()` **提前 return**，`act_done` 不 fire | 推 ct 由调用方做 | `battle.py:451-458` |
 | `_fire_ctx` 会被嵌套 fire 覆盖 | 需要 save/restore | `game/services/class_mech_proc.py:238-244`（游戏仓侧） |
 
 ## 相关

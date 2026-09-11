@@ -22,7 +22,7 @@ from typing import Optional
 
 def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
                 logs: list, dmg_kind: str = "", defend_reduce: Optional[float] = None,
-                element: str = "") -> int:
+                element: str = "", _no_redirect: bool = False) -> int:
     """伤害落地主链。返回实际扣血。
 
     source: 攻击方 actor（等级压制基准；None = 无来源不压制）
@@ -39,6 +39,33 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     """
     if not target or amount <= 0:
         return 0
+    # N-B8 承伤转移钩子（2026-09-11）：「挡刀」——target 身上的 `guard_uid` 指向保护者，
+    # 由他替 target 承受这次伤害。语义位置：**先于一切减免结算**（连乘区/闪避/护盾都算在
+    # 保护者身上，与「这一刀砍在谁身上」的一致语义相符）。
+    # 引擎零游戏知识：只读字段 + 调内容侧回调（是否转移/反伤由内容侧决定）；
+    # `_no_redirect` 保证递归深度 1（不链式、不成环）。
+    if not _no_redirect:
+        _guid = target.get("guard_uid")
+        if _guid:
+            try:
+                _guard = battle.find_actor(_guid)
+            except Exception:
+                _guard = None
+            if (_guard is not None and _guard is not target
+                    and int(_guard.get("hp", 0) or 0) > 0):
+                _ok = True
+                _hook = getattr(battle, "redirect_hook", None)
+                if _hook is not None:
+                    try:
+                        _ok = bool(_hook(battle, target, _guard, amount, dmg_kind))
+                    except Exception:
+                        _ok = False
+                if _ok:
+                    logs.append(f"🛡️ 【{_guard.get('name', '守护者')}】替"
+                                f"【{target.get('name', '目标')}】挡下了这一击！")
+                    return deal_damage(battle, source, _guard, amount, logs,
+                                       dmg_kind=dmg_kind, defend_reduce=defend_reduce,
+                                       element=element, _no_redirect=True)
     # 等级压制（v136 双向曲线：低打高削/高打低增；PVP 不压）
     dmg = _lv_pressure(battle, source, target, amount)
     if dmg <= 0:
@@ -77,7 +104,10 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
         _fctx = {"actor": target, "target": target, "source": source,
                  "dmg": dmg, "mult": 1.0}
         _fire(battle, "taken_calc", _fctx, logs)
-        _m = float((getattr(battle, "_fire_ctx", {}) or {}).get("mult", 1.0) or 1.0)
+        # ⚠️ 不可写 `... or 1.0`（2026-09-11 修）：乘区值 **0.0 是合法值**（完全免伤——
+        #   格挡/无敌帧），而 `0.0 or 1.0` 会被吞成 1.0 → 0 乘区永远失效。None 才回落 1.0。
+        _raw_m = (getattr(battle, "_fire_ctx", {}) or {}).get("mult")
+        _m = 1.0 if _raw_m is None else float(_raw_m)
         if _m != 1.0:
             dmg = max(1, int(dmg * _m))
     except Exception:
@@ -326,7 +356,8 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
 # ============================================================
 
 def heal_actor(battle, target: dict, amount: int, logs: list,
-               source: Optional[dict] = None, label: str = "") -> int:
+               source: Optional[dict] = None, label: str = "",
+               _no_redirect: bool = False) -> int:
     """治疗落地核心（actor-agnostic，统一收口）。
 
     - 禁疗修正（target.state/buffs 的 heal_down / _anti_heal_pct，后续扩展）
@@ -337,6 +368,27 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
         return 0
     if target.get("hp") is None:
         return 0  # 无 hp 容器不可被治疗落地
+    # N-B8b 治疗转移钩子（2026-09-11）：`heal_share_uid` 指向的 actor 分担/承受这次治疗
+    # （faith_share「治疗伤害分担」）。同 deal_damage 的转移语义：只读字段 + 调内容侧回调。
+    if not _no_redirect:
+        _sid = target.get("heal_share_uid")
+        if _sid:
+            try:
+                _share = battle.find_actor(_sid)
+            except Exception:
+                _share = None
+            if _share is not None and _share is not target:
+                _ok = True
+                _hook = getattr(battle, "heal_redirect_hook", None)
+                if _hook is not None:
+                    try:
+                        _ok = bool(_hook(battle, target, _share, amount, label))
+                    except Exception:
+                        _ok = False
+                if _ok:
+                    logs.append(f"✨ 治疗由【{_share.get('name', '分担者')}】分担")
+                    return heal_actor(battle, _share, amount, logs, source=source,
+                                      label=label, _no_redirect=True)
     heal = max(0, int(amount))
     if heal <= 0:
         return 0

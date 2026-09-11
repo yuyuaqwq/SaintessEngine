@@ -34,13 +34,13 @@ EFFECT_ACTIONS = {
 | 动词 | 注册行 | 参数要点 |
 |---|---|---|
 | `apply` | `effects.py:269` | 五形态按参数分流：`mode`→控制 / `op=add\|set`+无 `stat`→叠层 / `value`\|`pct_from_mech_val`→值型 / `stat`+`mult`→面板快照 / `hit`→出手消费 / 无→纯状态 |
-| `consume` | `effects.py:406` | `key` + `amount`（不足则**不扣**并写提示，`effects.py:424-426`） |
-| `shield` | `effects.py:433` | `key`（缺省 `"buff"`）/ `value` \| `pct` \| 缺省 20% max_hp / `turns`（缺省 3；`>=999` 或 `forever` = 永久）/ `halve` |
-| `cleanse` | `effects.py:479` | 遍历目标 `effects`，按 `EFFECT_RULES[key]` 的 `period` \| `on=="target"` \| `cleanse` 三判据清 |
-| `cleanse_all` | `effects.py:507` | 同上，`target or caster` |
-| `heal` | `effects.py:515` | `pct`（max_hp 比例）/ `missing_pct`（已损比例）/ `value`；`info.hp_pct` 兜底 |
-| `interrupt` | `effects.py:552` | 清 `target["charging"]`，fire `interrupt` |
-| `damage` | `effects.py:570` | `value` / `pct`（`pct_max_hp` 别名）/ `kind`；`on=target`（缺省）或 `on=caster`（自伤/反伤） |
+| `consume` | `effects.py:414` | `key` + `amount`（不足则**不扣**并写提示，`effects.py:424-426`） |
+| `shield` | `effects.py:441` | `key`（缺省 `"buff"`）/ `value` \| `pct` \| 缺省 20% max_hp / `turns`（缺省 3；`>=999` 或 `forever` = 永久）/ `halve` |
+| `cleanse` | `effects.py:487` | 遍历目标 `effects`，按 `EFFECT_RULES[key]` 的 `period` \| `on=="target"` \| `cleanse` 三判据清 |
+| `cleanse_all` | `effects.py:515` | 同上，`target or caster` |
+| `heal` | `effects.py:523` | `pct`（max_hp 比例）/ `missing_pct`（已损比例）/ `value`；`info.hp_pct` 兜底 |
+| `interrupt` | `effects.py:560` | 清 `target["charging"]`，fire `interrupt` |
+| `damage` | `effects.py:578` | `value` / `pct`（`pct_max_hp` 别名）/ `kind`；`on=target`（缺省）或 `on=caster`（自伤/反伤） |
 
 已删除的旧动词（V4 收敛）：`control` / `buff` / `state_add` / `state_spend` / `state_set`
 → 并入 `apply` / `consume`。**表里再出现这些名字 = 静默 no-op**（原文警告见 `effects.py:17-18`）。
@@ -146,7 +146,7 @@ grep -rho 'register_action("[^"]*")' game/services/*.py | sort -u | wc -l
 "stealth":        [{"action": "apply", "key": "stealth",       "hit": {"guaranteed_crit": True}}],
 ```
 
-`hit` 子键由 `actions._consume_hit_buffs` 消费（`actions.py:467-509`），
+`hit` 子键由 `actions._consume_hit_buffs` 消费（`actions.py:470-512`），
 出手时**消费并删除**该条目。
 
 ### 战斗核心（治疗 / 置值 / 打断 / 减伤 / 盾 / 净化）
@@ -165,8 +165,8 @@ grep -rho 'register_action("[^"]*")' game/services/*.py | sort -u | wc -l
 ```
 
 ⚠️ **参数故意缺省**：`stacks_set` 没给 `key`（靠调用方 `mech`/`tag` 兜底，
-`effects.py:287`）；`heal_self` 没给 `pct`（靠 `info.hp_pct`，`effects.py:536`）；
-`shield` 没给 `value`（缺省取 `max_hp × 20%`，`effects.py:454`）。
+`effects.py:287`）；`heal_self` 没给 `pct`（靠 `info.hp_pct`，`effects.py:544`）；
+`shield` 没给 `value`（缺省取 `max_hp × 20%`，`effects.py:462`）。
 这些是「零默认值 + 调用方优先」的取舍：**能省的都省，但缺了就是无行为**。
 
 ### 三个映射到内容侧扩展动词
@@ -217,6 +217,25 @@ return False
 > —— 否则恒 `turns=0` 覆盖默认致控制 0 刻不施加（盾击·誓「眩晕 1 刻」bug）
 
 ## 缺口：20 个 `effect=` 名词没有映射（静默 no-op）
+
+> ## ⚠️ 2026-09-11 收尾：**已全部处置**（本节保留为取证原貌）
+>
+> 当天逐项复跑后处置结果：
+>
+> - **19 项已实装**（映射补齐 + 内容侧装配层 `game/services/battle_team_procs.py`）：
+>   `shield_all` / `shield_block` / `shield_all_reduce` / `reduce_shield_all` / `arcane_shield` /
+>   `reduce_all` / `dodge_reduce_all` / `arcane_matrix` / `hunt_team_dmg` / `star_lock` / `vuln` /
+>   `all_stat_cc` / `stealth_cc` / `disengage_dodge` / `protect` / `block_reflect` /
+>   `element_switch` / `arcane_field` / **`def_up`**（只需补一行映射）。
+> - **1 项是误报**：`taunt`（嘲讽）**早已实装** —— 命令层 `game/commands/instance_router.py:260-273`
+>   直读技能配置（`hate_taunt_mult` / `hate_lock_turns`）实现仇恨×N + 强制锁 N 刻，
+>   不走 `EFFECT_ACTIONS`。原判据只看本表，属**单通道判定**的误报。
+> - ★ 修复过程中发现两个**引擎侧真问题**（均已修 + 出 diff）：
+>   ① 引擎增益管线 `actions._do_buff` 把 `effect=` 只作用于**施法者自己** →
+>      「全队」技能在多人副本/PVP 下与 desc 不符（内容侧用 `team_apply` 面幅解决，引擎零改动）；
+>   ② `landing`/`actions` 里 3 处 `.get("mult", 1.0) or 1.0` —— `0.0` 是 falsy 被吞成 `1.0`，
+>      **0 乘区永远失效**（格挡/无敌帧类效果做不出来），已改为「仅 `None` 回落 1.0」。
+> - 详见游戏仓 `docs/REFACTOR_v181_team_effects_plan.md` §七（落地记录 + 口径 + 验收 47/47）。
 
 `game/data/skills.py`（玩家技能表）里出现但这些名词**既不在 `EFFECT_ACTIONS`
 也不是引擎动词** → `resolve_actions` 返回 `[]` → `apply_effects` 静默跳过：
