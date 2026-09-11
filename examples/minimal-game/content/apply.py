@@ -10,7 +10,7 @@
 它只在需要时问 config 要 hook（要不到就按「零默认值」处理）。
 
 ⚠️ 本文件只 import `saintess_engine`（引擎公开 API）与自己的 content；
-不碰 game.data / game.services / game.content_rules / game.content（那是奥兰迪亚）。
+不碰 game.data / game.services / game.content_rules / game.content（那是游戏侧内容包）。
 """
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ _CHANNEL_EVENTS = {
 def _lazy_mount():
     """引擎首次读未装配 hook 时的自举。
 
-    ⚠️ 必须覆盖 game 包登记的那套装配器（它会把整份《奥兰迪亚》拉起来）——
+    ⚠️ 必须覆盖 game 包登记的那套装配器（它会把整份游戏内容包拉起来）——
     这正是「第三方自己接管注入面」的示范。
     """
     install_engine()

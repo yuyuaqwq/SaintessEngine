@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""奥兰迪亚·余烬纪年核心层 - battle_bars.py（v181 通用挂敌身条 / 蓄力三律）
+"""通用件 - battle_bars.py（v181 通用挂敌身条 / 蓄力三律）
 
 把《云海猎团》职业融合提炼的 2 个通用机制实现为纯函数模块：
-1. enemy_bar  挂敌身资源条（拳师破绽 shaken / 暗影神谕诅咒 curse）
+1. enemy_bar  挂敌身资源条（bar_key 与显示名由内容侧声明）
    —— 积蓄挂在敌方身上，**容器 = actor.effects（V 系列统一单容器）**，
       键 = `data/battle2_rules.BAR_STATE_PREFIX + bar_key`（如 `bar:shaken`）；
       独立于异常免疫，阈值递增防无限控、触发后免疫窗口、
@@ -10,7 +10,7 @@
 2. charge     蓄力三律（游侠电荷 / 弓手 / 时咒）
    —— 边攒边打出伤、打断仅 -1 阶不清零（P3）、满阶强制释放
 
-时间制（v181 破绽改造）：
+时间制（v181 改造）：
 - 积蓄/衰减**按刻连续结算**（`bar_settle(host, key, now)`：dt × decay_per_turn，
   val 内部小数、展示取整），不再「每个宿主行动扣一次」
 - 免疫窗口 = **绝对时刻**（`immune_until`）：期内不积蓄、不触发，到期即可再触发
@@ -137,7 +137,7 @@ def bar_gain(enemy: dict, bar_key: str, amount: float, logs: list | None = None,
     """积蓄注入：val += amount（封顶 max），返回新值。
 
     - 传 now → 先结算到当刻；免疫窗口内不积蓄（策划案「触发后 2 刻内不再积蓄」）
-    - 触发当帧注入 = 0（`_no_inject_at` 帧戳，防「晕→追颅→又满→再晕」自锁）
+    - 触发当帧注入 = 0（`_no_inject_at` 帧戳，防「控制→积蓄→又满→再控」自锁）
     """
     bd = bar_def(bar_key)
     if not bd:
@@ -157,7 +157,7 @@ def bar_gain(enemy: dict, bar_key: str, amount: float, logs: list | None = None,
         add = 0.0
     bs["val"] = min(mx, float(bs.get("val", 0.0) or 0.0) + add)
     if logs is not None:
-        logs.append(f"💥 破绽积蓄 +{int(add)}（{int(bs['val'])}/{int(mx)}）")
+        logs.append(f"💥 {bar_key} 积蓄 +{int(add)}（{int(bs['val'])}/{int(mx)}）")
     return bs["val"]
 
 

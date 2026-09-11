@@ -6,7 +6,7 @@
 - 纯怪（无 class_name）→ 直接读 actor 字段 + 简单 buff 修正（对齐旧 _enemy_stats）
 - 战斗内聚合面板 = 基础 + buffs 修正（buffs 键 → 属性加成）
 
-⚠️ 旧 _player_stats 有极多战斗侧被动/符文/条件消费（v64 被动/词条/旋律等）。
+⚠️ 旧 _player_stats 有极多战斗侧被动/符文/条件消费（v64 被动/词条/内容机制等）。
    N1 只做无被动场景对齐；被动/条件消费随 N2/N3 逐步迁移（每个消费点单独对齐）。
 """
 from __future__ import annotations

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dragonfall.local/schema/skill.schema.json",
-  "title": "Dragonfall 技能（skills.py）",
+  "$id": "https://saintessengine.local/schema/skill.schema.json",
+  "title": "技能（skills）—— 框架模板，取值语义由内容侧定义",
   "$defs": {
     "skill": {
       "type": "object",
@@ -24,19 +24,8 @@
           "minLength": 1
         },
         "kind": {
-          "enum": [
-            "召唤",
-            "嘲讽",
-            "增益",
-            "治疗",
-            "物理",
-            "真伤",
-            "被动",
-            "魔法",
-            "魔法·冰",
-            "魔法·火",
-            "魔法·雷"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "lv": {
           "type": "integer",
@@ -81,41 +70,8 @@
           "type": "string"
         },
         "mech": {
-          "enum": [
-            "arcane",
-            "arcane_burst",
-            "bleed",
-            "bone_rush",
-            "burn",
-            "corros",
-            "curse",
-            "curse_refresh",
-            "element_burst",
-            "element_burst_3",
-            "element_burst_all",
-            "element_multi_mark",
-            "faith_unload",
-            "finisher",
-            "fire_mark",
-            "guard_core_burst",
-            "hunt_mark",
-            "ice_mark",
-            "lian_duan",
-            "melody",
-            "melody_chant",
-            "poison",
-            "poison_burst",
-            "poison_burst_finisher",
-            "sacrifice",
-            "silence",
-            "soul_mark",
-            "spd_down",
-            "stun",
-            "thunder_mark",
-            "zhan_yi",
-            "zhan_yi_cash",
-            "zhan_yi_fury"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "mech_val": {
           "type": "number"
@@ -126,58 +82,15 @@
           "maximum": 1
         },
         "mech2": {
-          "enum": [
-            "all_down",
-            "atk_down",
-            "def_down",
-            "silence",
-            "spd_down",
-            "stun"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "mech2_val": {
           "type": "number"
         },
         "effect": {
-          "enum": [
-            "all_stat_cc",
-            "arcane_field",
-            "arcane_matrix",
-            "arcane_shield",
-            "atk_all",
-            "atk_matk_all",
-            "block_reflect",
-            "cc_immune",
-            "cleanse",
-            "cleanse_all",
-            "crit_all",
-            "crit_hit_buff",
-            "def_up",
-            "disengage_dodge",
-            "dodge_buff",
-            "dodge_reduce_all",
-            "element_switch",
-            "guard_stance",
-            "hunt_team_dmg",
-            "matk_all",
-            "protect",
-            "reduce",
-            "reduce_all",
-            "reduce_shield_all",
-            "shadow_dance",
-            "shield_all",
-            "shield_all_reduce",
-            "shield_block",
-            "shield_self",
-            "spd_all",
-            "spd_buff",
-            "stance_guard",
-            "star_lock",
-            "stealth",
-            "stealth_cc",
-            "taunt",
-            "vuln"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "buff_turns": {
           "type": "integer",
@@ -199,25 +112,16 @@
           ]
         },
         "element": {
-          "enum": [
-            "fire",
-            "ice",
-            "thunder"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "summon": {
-          "enum": [
-            "fire_elemental",
-            "skeleton",
-            "thunder_elemental",
-            "treant",
-            "vine_guard"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "team": {
-          "enum": [
-            "heal_all"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "pierce": {
           "type": "boolean"
@@ -235,20 +139,16 @@
           "type": "boolean"
         },
         "stance": {
-          "enum": [
-            "counter"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "auto": {
-          "enum": [
-            "fury_append",
-            "taunt_fail"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "kind_override": {
-          "enum": [
-            "真伤"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "hate_mult": {
           "type": "number"
@@ -277,135 +177,16 @@
         "charge": {
           "type": "number"
         },
-        "faith": {
-          "type": "integer"
-        },
-        "shaken_gain": {
-          "type": "integer"
-        },
         "res_cost": {
           "type": "object",
           "minProperties": 1,
           "propertyNames": {
-            "enum": [
-              "affix_bleed",
-              "arcane",
-              "atk_up",
-              "atk_up_big",
-              "atk_up_small",
-              "blaze",
-              "bleed",
-              "blood_trace",
-              "burn",
-              "chi",
-              "corros",
-              "cp",
-              "crit_up",
-              "crit_up_big",
-              "crit_up_small",
-              "curse",
-              "death_guard",
-              "def_up",
-              "dodge_up",
-              "dragon_mark",
-              "element",
-              "ember",
-              "energy",
-              "eternal_codex",
-              "faith",
-              "fire_mark",
-              "food_atk_up",
-              "food_crit_up",
-              "food_def_up",
-              "food_matk_up",
-              "food_spd_up",
-              "food_spd_up_small",
-              "freeze",
-              "fury",
-              "guard_core",
-              "guard_stance",
-              "heal_down",
-              "holy_weaken",
-              "hunt_mark",
-              "ice_mark",
-              "ice_vein",
-              "lian_duan",
-              "matk_up",
-              "matk_up_pot",
-              "matk_up_strong",
-              "melody_atk",
-              "melody_atk_matk",
-              "melody_def",
-              "melody_e_all",
-              "melody_e_atk",
-              "melody_e_fin_all",
-              "melody_e_fin_atk",
-              "melody_e_fin_spd",
-              "melody_e_spd",
-              "melody_e_spd_hit",
-              "melody_finale_atk",
-              "melody_finale_crit",
-              "melody_spd",
-              "poison",
-              "rage",
-              "randuin_weary",
-              "reduce",
-              "rune_amp",
-              "sage_amp",
-              "shadow_dance",
-              "shield",
-              "silence",
-              "sleep",
-              "soul_mark",
-              "spd_down",
-              "spd_up",
-              "spd_up_small",
-              "stun",
-              "thunder_mark",
-              "thunder_weave",
-              "time_staff",
-              "wind_mark",
-              "zhan_yi"
-            ]
+            "type": "string",
+            "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
           },
           "additionalProperties": {
             "type": "integer"
           }
-        },
-        "melody": {
-          "enum": [
-            "all",
-            "atk",
-            "atk_matk",
-            "def",
-            "e_all",
-            "e_atk",
-            "e_silence",
-            "e_spd",
-            "e_spd_hit",
-            "spd"
-          ]
-        },
-        "melody_pct": {
-          "type": "integer"
-        },
-        "finale": {
-          "enum": [
-            "all",
-            "atk",
-            "crit",
-            "e_all",
-            "e_atk",
-            "e_spd",
-            "silence",
-            "stun"
-          ]
-        },
-        "melody_fin_pct": {
-          "type": "integer"
-        },
-        "melody_fin_turns": {
-          "type": "number"
         },
         "kill": {
           "type": "object"
@@ -418,29 +199,8 @@
           "additionalProperties": true,
           "properties": {
             "type": {
-              "enum": [
-                "enemy_broken",
-                "enemy_cursed",
-                "enemy_debuff",
-                "enemy_def_high",
-                "enemy_hp_low",
-                "enemy_hunt_full",
-                "enemy_hunt_mark",
-                "enemy_low_hp",
-                "enemy_mark_full",
-                "enemy_marks",
-                "enemy_shaken_ratio",
-                "enemy_shaken_scale",
-                "faith_full",
-                "faith_lt",
-                "melody_buff",
-                "melody_stacks",
-                "player_first",
-                "player_mech_stacks",
-                "revenge",
-                "speed_ratio",
-                "stealth"
-              ]
+              "type": "string",
+              "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
             },
             "mult": {
               "type": "number"
@@ -498,12 +258,12 @@
           "mp": 6,
           "power": 0.82,
           "cast": 0.45,
-          "mech": "zhan_yi",
+          "mech": "example_mech",
           "mech_val": 1,
           "exprs": [
             "atk*1 + 20 + player_lv*5.0 + skill_lv*12"
           ],
-          "desc": "长剑划出利落的弧光——造成 100% 物理攻击（成长），命中积攒 1 点战意"
+          "desc": "示例：造成一次攻击（随等级成长），命中时叠加 1 层由内容侧声明的机制标记"
         },
         {
           "name": "淬血",
@@ -513,10 +273,10 @@
           "power": 1.0,
           "cast": "None",
           "passive": {
-            "proc": "zhan_yi_lifesteal",
+            "proc": "example_proc",
             "per_layer": 0.015
           },
-          "desc": "每层战意额外提供 1.5% 吸血"
+          "desc": "示例：每层该机制标记额外提供 1.5% 吸血（数值由内容侧声明）"
         }
       ]
     },
@@ -524,16 +284,8 @@
       "type": "object",
       "title": "PLAYER_SKILLS：{职业id: {name, skills:{技能id: 技能}}}",
       "propertyNames": {
-        "enum": [
-          "cls_ci_ke",
-          "cls_fa_shi",
-          "cls_mu_shi",
-          "cls_novice",
-          "cls_shi_ren",
-          "cls_wu_seng",
-          "cls_you_xia",
-          "cls_zhan_shi"
-        ]
+        "type": "string",
+        "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
       },
       "additionalProperties": {
         "type": "object",
@@ -559,16 +311,8 @@
       "type": "object",
       "title": "BRANCH_SKILLS：{职业id: {name, branches:{转职阶:{线名:{技能名: 技能}}}}}（技能 key 是中文名，不是 sk_*）",
       "propertyNames": {
-        "enum": [
-          "cls_ci_ke",
-          "cls_fa_shi",
-          "cls_mu_shi",
-          "cls_novice",
-          "cls_shi_ren",
-          "cls_wu_seng",
-          "cls_you_xia",
-          "cls_zhan_shi"
-        ]
+        "type": "string",
+        "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
       },
       "additionalProperties": {
         "type": "object",
@@ -604,16 +348,8 @@
       "type": "object",
       "title": "TUTOR_SKILLS：{职业id: {技能id: 技能}}",
       "propertyNames": {
-        "enum": [
-          "cls_ci_ke",
-          "cls_fa_shi",
-          "cls_mu_shi",
-          "cls_novice",
-          "cls_shi_ren",
-          "cls_wu_seng",
-          "cls_you_xia",
-          "cls_zhan_shi"
-        ]
+        "type": "string",
+        "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
       },
       "additionalProperties": {
         "type": "object",

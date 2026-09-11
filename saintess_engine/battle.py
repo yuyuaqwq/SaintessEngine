@@ -475,7 +475,7 @@ class Battle:
             if not getattr(ctx, "_override_consumed", False):
                 logs = [f"未知行动类型：{action}"]
         # N9A-2 事件：行动完成（全员广播——不带 actor 键避免主体过滤拦截旁观者；
-        # 刚行动的 actor 放 ctx["acted"]，效果侧自己 if 敌我判断，如 randuin/ice_vein
+        # 刚行动的 actor 放 ctx["acted"]，效果侧自己 if 敌我判断，如按敌我自判的效果
         # 监听敌对 actor 行动叠减速）。被控跳过（skip）早退 return 不触发。
         try:
             from .effect_triggers import fire as _fire

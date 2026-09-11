@@ -82,7 +82,7 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             dmg = max(1, int(dmg * _m))
     except Exception:
         pass  # 修正钩子异常不阻断落地
-    # N7.5a 承伤乘区（vulnerable 破绽：被打更疼）——target["_dmg_taken_mult"]>1 生效
+    # N7.5a 承伤乘区（易伤：被打更疼）——target["_dmg_taken_mult"]>1 生效
     try:
         _dtm = float(target.get("_dmg_taken_mult", 0) or 0)
         if _dtm > 1.0:
@@ -121,7 +121,7 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     if target.get("charging") and target["charging"].get("skill"):
         target["charging"] = None
         logs.append(f"🔨 {target.get('name', '目标')} 的蓄力被打破了！")
-        # N5B5c P5：打断事件（on_interrupt 剧本联动：Boss 读条被断 → 反噬/破绽）
+        # N5B5c P5：打断事件（on_interrupt 剧本联动：读条被断 → 反噬/易伤）
         try:
             from .effect_triggers import fire as _fire
             _fire(battle, "interrupt", {"actor": target, "target": target,

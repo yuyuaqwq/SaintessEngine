@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """条目校验 —— JSON Schema 校验（有 jsonschema 用它，没有则内置最小校验器）。
 
-与 dragonfall 的 `schema/validate.py` 的区别：那个是**全量表审计**（ast 解析 py 表 +
-跨表引用完整性，绑死奥兰迪亚数据）；这里是**编辑器用**的单条校验（吃 JSON dict，
+与游戏仓 `schema/validate.py` 的区别：那个是**全量表审计**（ast 解析 py 表 +
+跨表引用完整性，绑死该游戏自己的数据）；这里是**编辑器用**的单条校验（吃 JSON dict，
 按域 schema 的 primary def 校验）。第三方游戏可以替换 `schemas/` 下的 schema。
 
 对外接口：

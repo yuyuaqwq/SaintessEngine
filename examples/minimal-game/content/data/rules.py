@@ -9,7 +9,7 @@
     PASSIVE_PROC     引擎不读 —— 由本游戏的装配器（apply.py）翻成 actor["triggers"]
 
 另外两张「公式参数表」是本游戏给引擎 formulas 模块的参数（S5 注入面）：
-FORMULA_SKELETON / SKILL_FLAT。数值全是本游戏自己编的，与奥兰迪亚无关。
+FORMULA_SKELETON / SKILL_FLAT。数值全是本示例自己编的，与任何游戏包无关。
 """
 from __future__ import annotations
 

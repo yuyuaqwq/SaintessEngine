@@ -157,7 +157,7 @@ def _advance_time(battle, dt: float, logs: list):
     """推进全局时刻 dt（期间结算到期事件：DOT/时效 + 时钟事件广播）。
 
     N4：DOT/时效结算（state_effects dot 规则 + buff 到期）接入点。
-    v181 破绽时间化：尾部广播 time_advance（通用「时钟推进」事件）——挂敌身条等
+    v181 资源条时间化：尾部广播 time_advance（通用「时钟推进」事件）——挂敌身条等
     按刻连续结算的内容层声明订阅此事件，读点永远拿到当刻值（不再「谁读谁记得结算」）。
     """
     if dt <= 0:
@@ -331,7 +331,7 @@ def _settle_time_effects(battle, logs: list):
                         elif direction == "gain":
                             # v181.M-R2e：资源自然回/衰减（声明级，引擎零职业知识）——
                             # 给自身 effects[key] 加/减层 clamp [0, cap]（游侠 energy 每刻
-                            # +18 专注流量制；牧师 faith 每刻 -0.7 慢衰减 = B3 float 通用层，
+                            # +18 专注流量制；内容侧「每刻 -0.7 慢衰减」的资源 = B3 float 通用层，
                             # amount 负值也走，clamp 下限 0 不归负）。cap 取 period.cap 或
                             # _stack_cap_of（方案 A 收敛：EFFECT_RULES 基础 + actor.bonus.cap
                             # 动态——v181.M-bonus 分域，旧 actor cap_bonus 键已全清）。

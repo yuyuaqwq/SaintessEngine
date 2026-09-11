@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dragonfall.local/schema/affix.schema.json",
-  "title": "Dragonfall 词条（affixes.py）",
+  "$id": "https://saintessengine.local/schema/affix.schema.json",
+  "title": "词条（affixes）—— 框架模板，取值语义由内容侧定义",
   "$defs": {
     "affix": {
       "type": "object",
@@ -124,19 +124,19 @@
       "examples": [
         {
           "blue": [
-            "bleed",
-            "armor_break",
-            "combo",
-            "crit_up"
+            "example_affix_a",
+            "example_affix_b",
+            "example_affix_c",
+            "example_affix_d"
           ],
           "purple": [
-            "execute",
-            "lifesteal",
-            "crit_dmg"
+            "example_affix_e",
+            "example_affix_f",
+            "example_affix_g"
           ],
           "orange": [
-            "element_fire",
-            "element_ice"
+            "example_affix_h",
+            "example_affix_i"
           ]
         }
       ]

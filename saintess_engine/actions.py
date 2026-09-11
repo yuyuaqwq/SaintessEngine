@@ -177,7 +177,7 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
         entry = ef.get(rk)
         if not isinstance(entry, dict):
             continue  # 无条目（资源渠道未装配/非本资源技能）→ 不拦，保持历史行为
-        # v181.M-R2e B3：float 读（faith 衰减层 9.3 ≥ 3 足额判定保真）
+        # v181.M-R2e B3：float 读（资源带小数衰减层时，9.3 ≥ 3 这类足额判定需保真）
         cur = float(entry.get("stacks", 0) or 0)
         if cur < float(rv or 0):
             if logs is not None:
@@ -202,7 +202,7 @@ def _spend_skill_cost(actor: dict, info: dict):
         ef = actor.setdefault("effects", {})
         for rk, rv in res_cost.items():
             entry = ef.get(rk)
-            # v181.M-R2e B3：float 读/写（faith 9.3 扣 3 → 6.3 保真；int 资源归一不变）
+            # v181.M-R2e B3：float 读/写（9.3 扣 3 → 6.3 保真；int 资源归一不变）
             cur = float(entry.get("stacks", 0) or 0) if isinstance(entry, dict) else 0.0
             if cur <= 0:
                 continue
@@ -222,7 +222,7 @@ def _spend_skill_cost(actor: dict, info: dict):
 # ============================================================
 # actor["bonus"]["cost"] 形态与写入约定见 services/battle2_equip_proc.py
 # _apply_cost_bonus（词条装配翻译器）——引擎只读不写：
-#   {"mp_pct": 0.10, "mp_flat": 5, "res": {"energy": 0.05},
+#   {"mp_pct": 0.10, "mp_flat": 5, "res": {"<资源名>": 0.05},
 #    "when": [{"mp_pct": ..., "judge": {...}}]}
 # 取整策略（v181.M-bonus 定稿，测试锁死）：
 #   pay = max(1, floor(声明 × (1 - Σpct)) - Σflat)
@@ -381,7 +381,7 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
     hit_buffs = _consume_hit_buffs(battle, actor, logs)
     st = S.actor_stats(battle, actor)
     est = S.actor_stats(battle, target)
-    # state 声明伤害倍率（state_effects 表 dmg_mult：如 rage 狂暴层）
+    # state 声明伤害倍率（state_effects 表 dmg_mult：如某状态提供的乘区层）
     _st_mult = float(st.get("_state_dmg_mult", 1.0) or 1.0)
     crit_pct = float(st.get("crit", 0) or 0)
     is_crit = hit_buffs["guaranteed_crit"] or (random.random() < crit_pct)
@@ -687,7 +687,7 @@ def _do_heal(battle, ctx, actor, info, logs) -> list:
     except Exception:
         pass
     # v181.M-R2e B2：heal_calc 乘区钩子（对齐 dmg_calc N9.13 模式）——装配层乘区
-    # 扩展动作改 battle._fire_ctx["mult"] 累乘（牧师 faith 负载档位 heal_mult 等）。
+    # 扩展动作改 battle._fire_ctx["mult"] 累乘（内容侧按资源档位挂 heal_mult 等乘区）。
     # fire 后该 ctx 仍是本次事件的（乘区动作同步改，无并发）；只挂施法者自己声明的
     # triggers（subject=actor 过滤）→ 非牧师无钩子 = 恒 1.0 零行为。
     try:
@@ -816,7 +816,7 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
                 _eff_params["halve"] = True
         apply_effects(battle, actor, actor, [_eff_params], logs)
     # mech（目标向效果）：增益技也可带 mech——法术反制（silence 沉默目标）/守护姿态
-    # （zhan_yi 攒给自己，on=caster 不受 target 影响）。走 effects_from_skill 同攻击命中。
+    # （资源类机制常攒给自己：on=caster 不受 target 影响）。走 effects_from_skill 同攻击命中。
     mech = info.get("mech")
     if mech:
         try:

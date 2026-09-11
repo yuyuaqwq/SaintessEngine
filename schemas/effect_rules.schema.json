@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dragonfall.local/schema/effect_rules.schema.json",
-  "title": "Dragonfall 声明表（battle2_rules.py：EFFECT_RULES / EFFECT_ACTIONS / MECH_CASH）",
+  "$id": "https://saintessengine.local/schema/effect_rules.schema.json",
+  "title": "声明表（EFFECT_RULES / EFFECT_ACTIONS / MECH_CASH）—— 框架协议",
   "$defs": {
     "effect_rule": {
       "type": "object",
@@ -20,16 +20,8 @@
           "type": "object",
           "minProperties": 1,
           "propertyNames": {
-            "enum": [
-              "atk",
-              "crit",
-              "def",
-              "dmg_mult",
-              "matk",
-              "mdef",
-              "reduce",
-              "spd"
-            ]
+            "type": "string",
+            "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
           },
           "additionalProperties": {
             "type": "number"
@@ -130,14 +122,8 @@
           "type": "boolean"
         },
         "tag": {
-          "enum": [
-            "freeze",
-            "holy_weaken",
-            "silence",
-            "sleep",
-            "spd_down",
-            "stun"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "cd_mult": {
           "type": "number"
@@ -148,16 +134,8 @@
         "start_classes": {
           "type": "array",
           "items": {
-            "enum": [
-              "cls_ci_ke",
-              "cls_fa_shi",
-              "cls_mu_shi",
-              "cls_novice",
-              "cls_shi_ren",
-              "cls_wu_seng",
-              "cls_you_xia",
-              "cls_zhan_shi"
-            ]
+            "type": "string",
+            "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
           }
         },
         "load_tiers": {
@@ -197,14 +175,14 @@
       },
       "examples": [
         {
-          "name": "战意",
+          "name": "example_resource",
           "cap": 10,
           "stat_scale": {
             "atk": 0.04
           },
           "on_threshold": {
             "10": {
-              "form": "fury"
+              "form": "example_form"
             }
           }
         },
@@ -300,18 +278,18 @@
       },
       "examples": [
         {
-          "stun": [
+          "example_state_a": [
             {
               "action": "apply",
-              "key": "stun",
+              "key": "example_state",
               "on": "target",
               "turns": 1
             }
           ],
-          "slow": [
+          "example_state_b": [
             {
               "action": "apply",
-              "key": "spd_down",
+              "key": "example_state",
               "on": "target",
               "turns": 2,
               "mode": "skip"
@@ -340,13 +318,8 @@
             "minLength": 1
           },
           "mode": {
-            "enum": [
-              "dmg_mult_clear",
-              "dmg_mult_clear_target",
-              "fury_enter",
-              "heal_clear",
-              "per_system_clear_target"
-            ]
+            "type": "string",
+            "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
           },
           "key": {
             "anyOf": [
@@ -404,13 +377,13 @@
       },
       "examples": [
         {
-          "finisher": {
-            "name": "终结技",
+          "example_cash": {
+            "name": "示例兑现",
             "mode": "dmg_mult_clear",
-            "key": "lian_duan",
+            "key": "example_state",
             "per_layer": 0.1,
             "clear": true,
-            "layer_label": "连段",
+            "layer_label": "example_layer",
             "unit": "段",
             "icon": "🔪"
           }

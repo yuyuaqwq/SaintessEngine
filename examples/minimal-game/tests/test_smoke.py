@@ -31,7 +31,7 @@ from content.data.monsters import build_monster                 # noqa: E402
 
 # 骨架不得依赖的**任何其他游戏包**（第三方视角的纯度契约）：
 # 只准依赖 `saintess_engine`（框架）+ 自己的 `content` + 标准库。
-# 原奥兰迪亚内容包在 `game.*` 命名空间下 —— 整根禁掉，比逐个子包点禁更严也更持久。
+# 游戏内容包在 `game.*` 命名空间下 —— 整根禁掉，比逐个子包点禁更严也更持久。
 FORBIDDEN = ("game",)
 
 passed = 0
@@ -184,7 +184,7 @@ def _imports_of(path):
 
 
 def test_purity():
-    """★ 纯度自检：骨架零奥兰迪亚依赖（静态 AST + 运行期 sys.modules 双查）。"""
+    """★ 纯度自检：骨架零游戏包依赖（静态 AST + 运行期 sys.modules 双查）。"""
     files = list(_iter_py(_EXAMPLE))
     bad = []
     for p in files:

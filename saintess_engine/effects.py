@@ -29,7 +29,7 @@ from .state_effects import state_def
 # ============================================================
 # stacks 数值口径（v181.M-R2e B3：effects float 通用层）
 # ============================================================
-# 引擎零语义：stacks 允许 float（增量能力：faith 每刻 -0.7 衰减等小数刻度），
+# 引擎零语义：stacks 允许 float（增量能力：内容侧每刻 -0.7 这类小数衰减），
 # 但 int 资源保持 int 观感——写回统一走 _norm_stack 归一（整值落 int）。
 # 消费/展示侧审计：读 stacks 的点用 float() 保真或 int() floor（见各处注释）。
 
@@ -321,7 +321,7 @@ def act_apply(battle, caster, target, params, logs):
     # 面板增益的 op 是 mul/add 面板算子且必带 stat，走快照分支）----------
     op = params.get("op")
     if op in ("add", "set") and not params.get("stat"):
-        # v181.M-R2e B3：amount/cur float 读（stacks 允许小数刻度——faith 衰减等）；
+        # v181.M-R2e B3：amount/cur float 读（stacks 允许小数刻度——小数衰减等）；
         # cap 收敛 _cap_of（方案 A：EFFECT_RULES 基础 cap + actor.bonus.cap 动态，
         # v181.M-bonus 分域——旧 actor cap_bonus 键已全清）。
         # amount<=0 仍不加（负向消费走 consume / schedule period，apply 只增/置）。
@@ -343,7 +343,7 @@ def act_apply(battle, caster, target, params, logs):
             logs.append(f"✦ {key} {_fmt_stack(n)}{cap_txt}（+{_fmt_stack(amount)}）")
         else:
             logs.append(f"✦ {key} 置为 {_fmt_stack(n)}")
-        # N8 事件：状态阈值（层数变化后广播——"战意满 10 → 狂暴"由上层声明匹配）
+        # N8 事件：状态阈值（层数变化后广播——"某资源满 10 → 触发某形态"由上层声明匹配）
         try:
             from .effect_triggers import fire as _fire
             _fire(battle, "threshold", {"actor": holder, "key": key, "value": n}, logs)
@@ -414,7 +414,7 @@ def act_consume(battle, caster, target, params, logs):
     if not holder:
         return
     key = params.get("key") or params.get("mech")
-    # v181.M-R2e B3：cur float 读（消费 float 层保真——faith 衰减后 9.3 扣 3 → 6.3）
+    # v181.M-R2e B3：cur float 读（消费 float 层保真——小数衰减后 9.3 扣 3 → 6.3）
     amount = float(params.get("amount", params.get("stacks", 0)) or 0)
     if not key or amount <= 0:
         return

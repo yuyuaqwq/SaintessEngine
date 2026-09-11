@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dragonfall.local/schema/monster.schema.json",
-  "title": "Dragonfall 怪物（monsters.py / subareas.py / instances.py / hidden_monsters.py）",
+  "$id": "https://saintessengine.local/schema/monster.schema.json",
+  "title": "怪物（monsters / subareas / instances / hidden_monsters）—— 框架模板",
   "$defs": {
     "monster_skill": {
       "type": "object",
@@ -22,12 +22,8 @@
           "minLength": 1
         },
         "kind": {
-          "enum": [
-            "增益",
-            "治疗",
-            "物理",
-            "魔法"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "power": {
           "type": "number",
@@ -63,34 +59,16 @@
           }
         },
         "element": {
-          "enum": [
-            "abyss",
-            "dark",
-            "fire",
-            "ice",
-            "nature",
-            "thunder"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "effect": {
-          "enum": [
-            "atk_up",
-            "atk_up_strong",
-            "def_up",
-            "heal_self",
-            "shield",
-            "spd_up",
-            "summon"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "mech": {
-          "enum": [
-            "freeze",
-            "interrupt",
-            "silence",
-            "slow",
-            "stun"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "mech_val": {
           "type": "integer"
@@ -281,14 +259,8 @@
           "minimum": 1
         },
         "cond": {
-          "enum": [
-            "any",
-            "forest",
-            "forest_night",
-            "night_any",
-            "ruin",
-            "water"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "chance": {
           "type": "number",

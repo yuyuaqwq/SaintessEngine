@@ -31,7 +31,7 @@ ctx 语义（插桩点统一约定）：
 #    on_act_consume 行动级消费点（控制跳过） on_hit_consume 出手消费点（一次性）
 #    buff_expire buff 到期钩子             threshold 状态阈值（层数变化后）
 #    dmg_calc 伤害算出后（攻击方乘区）      taken_calc 承伤修正（承伤方乘区）
-#    act_done 行动完成（全员广播——效果侧自判敌我，randuin/ice_vein 用）
+#    act_done 行动完成（全员广播——效果侧自判敌我，由效果侧自判敌我的场合用）
 #    phase Boss 阶段转换（N9 上层）        player_low 玩家低血量（N9 上层）
 #    pv_broken 破防（N9 上层）
 
@@ -50,7 +50,7 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 # N9.13 数值修正钩子（伤害/承伤乘区——装配层乘区扩展动作改 _fire_ctx["mult"] 累乘）：
 #   dmg_calc  = 伤害算出后落地前（攻击者视角条件乘区：处决低血增伤/破魔/叠层放大器）
 #   taken_calc = 承伤修正（承伤者视角减伤乘区：沸血全减伤/death_dance 减伤）
-#   heal_calc = 治疗算出后落地前（施法者视角乘区——v181.M-R2e B2：faith 负载档位
+#   heal_calc = 治疗算出后落地前（施法者视角乘区——v181.M-R2e B2：内容侧负载档位
 #               heal_mult；subject=施法者，只处理施法者自己声明的 triggers）
 
 

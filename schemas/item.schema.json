@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://dragonfall.local/schema/item.schema.json",
-  "title": "Dragonfall 物品（items.py）",
+  "$id": "https://saintessengine.local/schema/item.schema.json",
+  "title": "物品（items）—— 框架模板，取值语义由内容侧定义",
   "$defs": {
     "item": {
       "type": "object",
@@ -26,31 +26,8 @@
           "minimum": 0
         },
         "type": {
-          "enum": [
-            "任务道具",
-            "传说",
-            "元素",
-            "兽材",
-            "图纸",
-            "垃圾",
-            "宝物",
-            "宝石",
-            "工具",
-            "收藏",
-            "收藏品",
-            "木材",
-            "杂物",
-            "材料",
-            "消耗品",
-            "矿石",
-            "符文",
-            "精华",
-            "织物",
-            "草药",
-            "食材",
-            "鱼",
-            "鱼王"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "quality": {
           "enum": [
@@ -62,95 +39,8 @@
           ]
         },
         "effect": {
-          "enum": [
-            "anchor",
-            "apply_mark",
-            "armor_break_pot",
-            "bag_expand",
-            "bait_blood",
-            "bait_dough",
-            "bait_glow",
-            "battle_start_resource",
-            "block_pot",
-            "buff_atk",
-            "buff_atk_big",
-            "buff_atk_big_def",
-            "buff_atk_def",
-            "buff_atk_food",
-            "buff_atk_small",
-            "buff_crit",
-            "buff_crit_big",
-            "buff_crit_food",
-            "buff_crit_small",
-            "buff_def",
-            "buff_def_food",
-            "buff_extend",
-            "buff_matk",
-            "buff_matk_crit",
-            "buff_matk_food",
-            "buff_matk_strong",
-            "buff_phys_next",
-            "buff_spd",
-            "buff_spd_food",
-            "buff_spd_small",
-            "cc_immune",
-            "clear_red",
-            "collection",
-            "compass",
-            "crit_dmg_pot",
-            "dodge_pot",
-            "dot_amp",
-            "enhance_boost",
-            "execute_pot",
-            "firework",
-            "fish_net",
-            "food_spd_up_small",
-            "full_tension",
-            "garden_slot",
-            "grapple",
-            "harvest_boost",
-            "heal_up",
-            "holy_shield",
-            "invuln",
-            "lantern",
-            "lifesteal_pot",
-            "lucky",
-            "magic_resist",
-            "mail",
-            "mana_cost_down",
-            "mana_restore",
-            "morph",
-            "next_atk_up",
-            "open_chest",
-            "open_rune_chest",
-            "pene_magi_pot",
-            "pene_pot",
-            "pet_rename",
-            "phoenix",
-            "purify",
-            "purify_immune",
-            "re_roll_affix",
-            "reaction",
-            "reforge",
-            "rename",
-            "reset_voucher",
-            "resource_amp",
-            "resource_charge",
-            "restore_resource",
-            "restore_resource_full",
-            "return_vila",
-            "rock_shield",
-            "scout",
-            "seed_planter",
-            "shield_big",
-            "steal_buff",
-            "summon",
-            "teleport_portal",
-            "thorns_pot",
-            "toy_form",
-            "trap",
-            "vuln"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "effect_data": {
           "type": "object",
@@ -158,27 +48,8 @@
           "additionalProperties": true
         },
         "food_effect": {
-          "enum": [
-            "armor_break",
-            "aurora_guard",
-            "bleed",
-            "charge",
-            "combo",
-            "counter",
-            "dawn_crown",
-            "dragon_tongue",
-            "element_fire",
-            "element_ice",
-            "execute",
-            "lifesteal",
-            "meditate",
-            "pierce",
-            "precise",
-            "regen",
-            "shield",
-            "static",
-            "thorns"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "heal": {
           "type": "number",
@@ -230,16 +101,8 @@
           "minLength": 1
         },
         "require_class": {
-          "enum": [
-            "cls_ci_ke",
-            "cls_fa_shi",
-            "cls_mu_shi",
-            "cls_novice",
-            "cls_shi_ren",
-            "cls_wu_seng",
-            "cls_you_xia",
-            "cls_zhan_shi"
-          ]
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
         },
         "rune_pool": {
           "type": "string"
