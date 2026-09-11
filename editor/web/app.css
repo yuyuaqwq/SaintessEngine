@@ -883,3 +883,35 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 .issues .issue-note code,.field .gl-note-text code{font-family:var(--mono);background:var(--bg-3);
   padding:0 3px;border-radius:var(--r-sm);font-size:11px}
 .issues .issue-note strong,.field .gl-note-text strong{color:var(--fg-0);font-weight:600}
+
+/* ═══════════════ 表单字段分组（分类分块 + 可折叠） ═══════════════
+   由 schema_form.js 的 groups 选项渲染（不传 groups = 旧平铺行为）。
+   一个分组 = 一个 fieldset.cat，沿用 .grp 的内层网格；组内字段照旧渲染。 */
+.schema-form:has(>fieldset.cat){row-gap:var(--sp4)}
+fieldset.cat{
+  padding:0 var(--sp5) var(--sp5);
+  background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-lg);
+}
+fieldset.cat>.cat-legend{
+  grid-column:1/-1;display:flex;align-items:center;gap:var(--sp2);
+  margin:0 0 var(--sp4);padding:var(--sp3) var(--sp2);
+  border-bottom:1px solid var(--line);cursor:pointer;user-select:none;
+  font-size:12px;font-weight:600;letter-spacing:.3px;color:var(--accent);
+}
+fieldset.cat>.cat-legend:hover{color:var(--accent-hi)}
+fieldset.cat>.cat-legend::before{
+  content:'▾';flex:0 0 auto;font-size:10px;color:var(--fg-3);transition:transform var(--t);
+}
+fieldset.cat.collapsed>.cat-legend::before{content:'▸'}
+fieldset.cat>.cat-legend .cat-ico{font-size:12px;line-height:1}
+fieldset.cat>.cat-legend .cat-name{flex:0 0 auto}
+fieldset.cat>.cat-legend .cat-n{
+  margin-left:auto;flex:0 0 auto;font-family:var(--mono);font-size:10px;
+  color:var(--fg-3);background:var(--bg-3);border-radius:var(--r-full);padding:1px 7px;
+}
+fieldset.cat.collapsed{padding-bottom:var(--sp4)}
+fieldset.cat.collapsed>.cat-legend{margin-bottom:0;border-bottom:0}
+fieldset.cat.collapsed>*:not(.cat-legend){display:none}
+/* 组内嵌套对象（cond / passive / period …）已有自己的 .grp 卡片，这里压一层底色做区分 */
+fieldset.cat fieldset.grp{background:var(--bg-1);border-color:var(--line-2)}
+fieldset.cat>*>.gl-note,fieldset.cat>.gl-note{grid-column:1/-1}

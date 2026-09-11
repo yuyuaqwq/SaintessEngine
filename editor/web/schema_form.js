@@ -16,6 +16,15 @@
  *   const handle = SchemaForm.render(rootSchema, rootValue, {onChange});
  *   // 控件直接写回 rootValue（同一对象引用），onChange 用于标脏
  *   SchemaForm.markErrors(container, [{path:'$.kind', message:'...'}]);
+ *
+ * 可选：分组渲染（**按语义把字段分块**，不传则与旧行为完全一致）
+ *   SchemaForm.render(def, value, {
+ *     groups: [{id:'cost', label:'消耗与节奏', icon:'⚡', fields:['mp','cd']}],
+ *     groupKey: 'skills',                    // 折叠状态的命名前缀（一般传域 id）
+ *     collapsed: (key) => bool,              // key = groupKey + '#' + g.id
+ *     onToggleGroup: (key, collapsed) => {}, // 折叠状态由调用方记住（重渲染不丢）
+ *   });
+ *   未出现在任何组里的字段 → 归入「未分组」（**不丢字段**，漏了就看得见）。
  */
 window.SchemaForm = (function () {
   'use strict';
@@ -384,6 +393,40 @@ window.SchemaForm = (function () {
   }
 
   // -------------------------------------------------------------- public
+  /* 分组：把 [{id,label,icon,fields}] 规整成可用形态（无有效组 → null = 平铺渲染） */
+  function normalizeGroups(groups, keys) {
+    if (!Array.isArray(groups) || !groups.length) return null;
+    const out = (groups || []).map(function (g) {
+      return {
+        id: String((g && g.id) || ''),
+        label: String((g && g.label) || (g && g.id) || ''),
+        icon: String((g && g.icon) || ''),
+        fields: ((g && g.fields) || []).filter(function (k) { return keys.indexOf(k) >= 0; }),
+      };
+    }).filter(function (g) { return g.fields.length > 0; });
+    return out.length ? out : null;
+  }
+
+  function catGroup(g, ctx, mkField, opts, container) {
+    const fs = elem('fieldset', 'grp cat');
+    fs.dataset.group = g.id;
+    const lg = elem('legend', 'cat-legend');
+    lg.appendChild(elem('span', 'cat-ico', g.icon || '•'));
+    lg.appendChild(elem('span', 'cat-name', g.label));
+    lg.appendChild(elem('span', 'cat-n', String(g.fields.length)));
+    lg.title = '点击折叠 / 展开这一组';
+    fs.appendChild(lg);
+    g.fields.forEach(function (k) { fs.appendChild(mkField(k)); });
+    const key = ((opts && opts.groupKey) || '') + '#' + g.id;
+    if (opts && opts.collapsed && opts.collapsed(key)) fs.classList.add('collapsed');
+    lg.addEventListener('click', function () {
+      fs.classList.toggle('collapsed');
+      if (opts && opts.onToggleGroup) opts.onToggleGroup(key, fs.classList.contains('collapsed'));
+    });
+    container.appendChild(fs);
+    return fs;
+  }
+
   function render(rootSchema, rootValue, opts) {
     const ctx = {
       root: rootValue,
@@ -393,10 +436,27 @@ window.SchemaForm = (function () {
     const container = elem('div', 'schema-form');
     const fields = rootSchema.properties || {};
     const required = rootSchema.required || [];
-    // 根对象：直接铺字段（不套 fieldset），额外字段用 JSON 兜底
-    Object.keys(fields).forEach(function (k) {
-      container.appendChild(field(fields[k], k, [k], ctx, { required: required.indexOf(k) >= 0 }));
-    });
+    const keys = Object.keys(fields);
+    const mkField = function (k) {
+      return field(fields[k], k, [k], ctx, { required: required.indexOf(k) >= 0 });
+    };
+    const groups = normalizeGroups(opts && opts.groups, keys);
+    // 根对象：无分组 → 直接铺字段（旧行为）；有分组 → 每组一个 fieldset（沿用 .grp 样式）
+    if (!groups) {
+      keys.forEach(function (k) { container.appendChild(mkField(k)); });
+    } else {
+      const placed = {};
+      groups.forEach(function (g) {
+        const rel = g.fields.filter(function (k) { return !placed[k]; });
+        if (!rel.length) return;
+        rel.forEach(function (k) { placed[k] = true; });
+        catGroup({ id: g.id, label: g.label, icon: g.icon, fields: rel }, ctx, mkField, opts, container);
+      });
+      const rest = keys.filter(function (k) { return !placed[k]; });
+      if (rest.length) {
+        catGroup({ id: '_rest', label: '未分组', icon: '❓', fields: rest }, ctx, mkField, opts, container);
+      }
+    }
     if (rootValue && typeof rootValue === 'object') {
       const extra = Object.keys(rootValue).filter(function (k) { return !has(fields, k); });
       if (extra.length) {

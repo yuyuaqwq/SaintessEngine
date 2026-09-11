@@ -130,6 +130,10 @@
           <div class="settings-form" id="pkgForm"></div>
         </div>
         <footer class="actionbar">
+          <button class="btn ghost" id="btnExport" title="打包成 zip（解压即用，含自检脚本）">
+            <span class="btn-ico">📦</span>导出 zip</button>
+          <button class="btn ghost" id="btnImport" title="从 zip 导入游戏包">
+            <span class="btn-ico">⬆</span>导入 zip</button>
           <span class="spacer"></span>
           <button class="btn primary" id="btnSavePkg">保存包清单</button>
         </footer>
@@ -287,6 +291,9 @@
 </div>
 
 <div class="toasts" id="toasts"></div>
+
+<!-- 导入游戏包 zip（隐藏的 file input，由包菜单 / 设置页触发） -->
+<input type="file" id="pkgZipFile" accept=".zip,application/zip" class="hidden">
 
 <!-- 源码片段（文档里的 `file.py:NNN` 点开看真实源码） -->
 <div class="code-overlay hidden" id="codeOverlay">

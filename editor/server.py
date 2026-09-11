@@ -30,8 +30,12 @@ API
     GET    /api/wiki/page?path=<rel>      → 渲染后的文档页（md → html + 目录）
     GET    /api/wiki/search?q=<词>        → 跨页搜词（配字段时找语义）
     GET    /api/wiki/code?ref=x.py:NN     → 文档里的 `file.py:NNN` → 真实源码片段
+    GET    /api/package/<id>/export       → 导出游戏包 zip（分发；附 DIST_README/DIST_smoke）
+    GET    /api/dist/inspect?path=<zip>   → 看 zip 里有什么（不导入、不写盘）
     POST   /api/package/<id>/simulate     → 沙箱试跑（子进程跑引擎，见 simulate.py）
     POST   /api/package/<id>/d/<dom>/check → **只校验不写盘**（新建草稿用；带中文可读报错）
+    POST   /api/packages/import?overwrite=1&force=1
+                                          → 导入 zip（裸字节流；四道闸见 editor/dist.py）
 
 安全：只绑 127.0.0.1；只读写游戏包目录；静态文件做路径逃逸防护。
 """
@@ -49,6 +53,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from editor import actions as AC     # noqa: E402
+from editor import dist as DIST      # noqa: E402
 from editor import glossary as GL    # noqa: E402
 from editor import packages as PK    # noqa: E402
 from editor import validate as VD    # noqa: E402
@@ -57,6 +62,7 @@ from editor import wiki as WK        # noqa: E402
 EDITOR_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(EDITOR_DIR, "web")
 GAMES_DIR = None                      # --games-dir 覆盖
+MAX_UPLOAD = 64 * 1024 * 1024         # 导入 zip 上限（防 OOM）
 
 _CT = {".html": "text/html; charset=utf-8", ".js": "application/javascript; charset=utf-8",
        ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8",
@@ -70,15 +76,22 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, fmt, *a):
         sys.stderr.write("  · " + (fmt % a) + "\n")
 
-    def _send(self, code: int, body, ctype="application/json; charset=utf-8"):
+    def _send(self, code: int, body, ctype="application/json; charset=utf-8", headers=None):
         if not isinstance(body, (bytes, bytearray)):
             body = json.dumps(body, ensure_ascii=False).encode("utf-8")
-        self.send_response(code)
-        self.send_header("Content-Type", ctype)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            for k, v in (headers or {}).items():
+                self.send_header(k, v)
+            self.end_headers()
+            self.wfile.write(body)
+        except (ConnectionError, OSError):
+            # 客户端提前断开（刷新 / 超时 / 下载取消 / 导入中途取消）—— 不是服务器错误，
+            # 否则会在日志里冒成 500 噪声，也会掩盖真正的异常。
+            pass
 
     def _err(self, code: int, msg: str, **extra):
         self._send(code, {"ok": False, "message": msg, **extra})
@@ -91,6 +104,20 @@ class H(BaseHTTPRequestHandler):
             return json.loads(self.rfile.read(n).decode("utf-8"))
         except (ValueError, UnicodeDecodeError):
             return {}
+
+    def _raw_body(self, limit: int = MAX_UPLOAD):
+        """裸字节流请求体（导入 zip 用）。超限 / 空体 → None。"""
+        n = int(self.headers.get("Content-Length") or 0)
+        if n <= 0 or n > limit:
+            return None
+        buf, left = b"", n
+        while left > 0:
+            chunk = self.rfile.read(min(left, 1 << 16))
+            if not chunk:
+                break
+            buf += chunk
+            left -= len(chunk)
+        return buf or None
 
     # ---------- 路由 ----------
     def do_GET(self):
@@ -129,6 +156,24 @@ class H(BaseHTTPRequestHandler):
             if not d:
                 return self._err(404, f"包不存在：{parts[1]}")
             return self._send(200, {"ok": True, "dir": d, **PK.package_overview(d)})
+        # 导出 zip（分发用；浏览器直接下载）
+        if len(parts) == 3 and parts[0] == "package" and parts[2] == "export":
+            d = PK.resolve_package(parts[1], GAMES_DIR)
+            if not d:
+                return self._err(404, f"包不存在：{parts[1]}")
+            data, fn = DIST.export_bytes(d)
+            if data is None:
+                return self._err(500, fn)
+            return self._send(200, data, "application/zip",
+                              {"Content-Disposition": f'attachment; filename="{fn}"',
+                               "X-Export-Bytes": str(len(data))})
+        # 看一眼 zip 里有什么（不导入、不写盘）
+        # ⚠ 用 /api/dist/inspect 而不是 /api/package/inspect —— 后者会和「把 inspect 当包 id」
+        #   的 /api/package/<id> 路由撞车（包名是合法的，不能占）。
+        if len(parts) == 2 and parts[0] == "dist" and parts[1] == "inspect":
+            from urllib.parse import parse_qs
+            q = parse_qs(getattr(self, "_query", ""))
+            return self._send(200, {"ok": True, **DIST.inspect_zip((q.get("path") or [""])[0])})
         if len(parts) in (2, 3) and parts[0] == "schema":
             # GET /api/schema/<dom>  （历史上这里写成 `len(parts)==3` → 该路由**从未匹配上**，
             # 因为没人调用所以一直没暴露；新建草稿要按 domain 取 schema，故修成 2 段可达）
@@ -142,7 +187,8 @@ class H(BaseHTTPRequestHandler):
             pkg_dir = PK.resolve_package(pkg_id, GAMES_DIR) if pkg_id else None
             return self._send(200, AC.inventory(pkg_dir, use_cache=not fresh))
         if parts == ["glossary"]:
-            return self._send(200, {"ok": True, "domains": GL.all_entries()})
+            return self._send(200, {"ok": True, "domains": GL.all_entries(),
+                                    "groups": GL.all_groups()})
         if len(parts) >= 2 and parts[0] == "wiki":
             from urllib.parse import parse_qs
             q = parse_qs(getattr(self, "_query", ""))
@@ -182,9 +228,41 @@ class H(BaseHTTPRequestHandler):
 
     def _mutate(self, method: str):
         p = urlparse(self.path)
+        self._query = p.query                      # 供查询串（overwrite / force）
         parts = [unquote(x) for x in p.path.strip("/").split("/") if x]
-        body = self._body()
         try:
+            # ⚠️ 导入是**裸字节流**端点，必须在 `_body()` 之前处理 ——
+            #    `_body()` 会按 Content-Length 把请求体读空，之后 `_raw_body()` 永远等不到数据
+            #    （实测：不这么写，导入请求会挂到客户端超时）。
+            #    四道闸见 editor/dist.py：zip slip / zip bomb / 清单合规 / 引擎版本。
+            if method == "POST" and parts == ["api", "packages", "import"]:
+                from urllib.parse import parse_qs
+                import tempfile
+                q = parse_qs(self._query or "")
+                raw = self._raw_body()
+                if not raw:
+                    return self._err(400, "请求体需为 zip 字节流（Content-Type: application/zip，"
+                                          f"且不超过 {MAX_UPLOAD // 1048576}MB）")
+                fd, tmp = tempfile.mkstemp(prefix="fw_import_", suffix=".zip")
+                try:
+                    with os.fdopen(fd, "wb") as f:
+                        f.write(raw)
+                    rep = DIST.import_zip(
+                        tmp, GAMES_DIR,
+                        overwrite=(q.get("overwrite") or ["0"])[0] not in ("", "0", "false"),
+                        force=(q.get("force") or ["0"])[0] not in ("", "0", "false"))
+                finally:
+                    try:
+                        os.remove(tmp)
+                    except OSError:
+                        pass
+                if rep.get("ok"):
+                    return self._send(200, rep)
+                code = {"exists": 409, "engine_mismatch": 422,
+                        "bad_zip": 400, "no_manifest": 400,
+                        "bad_manifest": 400, "bad_id": 400, "unsafe": 400}.get(rep.get("code"), 400)
+                return self._send(code, rep)
+            body = self._body()
             if method == "POST" and parts == ["api", "packages"]:
                 try:
                     r = PK.create_package(body.get("id", ""), body.get("name", ""),

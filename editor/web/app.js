@@ -30,6 +30,8 @@ const S = {
   actions: [],                   // 机制动作清单（AST 扫源码；引擎内置 + 包内）
   actionByName: {},              // name → 动作
   glossary: { '*': {} },         // 字段词典：域 → {字段: {zh, note, wiki}}
+  glossaryGroups: {},            // 表单分组：域 → [{id,label,icon,fields}]
+  collapsed: new Set(),          // 折叠的分组（key = 域#组id；跨重渲染与切换保留）
   isNew: false,                  // 当前条目是「新建草稿」（还没落盘）
   friendly: [],                  // 服务端返回的中文可读报错（保存/新建被拦时）
 };
@@ -86,7 +88,12 @@ async function boot() {
 async function loadGlossary() {
   const r = await api('GET', '/api/glossary');
   S.glossary = (r.json && r.json.domains) || { '*': {} };
+  S.glossaryGroups = (r.json && r.json.groups) || {};
 }
+
+/* 该域的字段分组（无分组 → 平铺，与旧版一致） */
+const groupsOf = (dom) => (S.glossaryGroups || {})[dom] || null;
+const grpKey = (gid) => `${S.dom}#${gid}`;
 
 /* 字段 → 词典条目（域内精确 → 域内叶名 → 通用叶名） */
 function gloss(path) {
@@ -150,11 +157,17 @@ function renderPkgMenu() {
        <span class="pl-ico">📦</span><span>${esc(p.name || p.id)}</span>
        <span class="pm-id">${esc(p.id)}</span></div>`).join('')
     + '<div class="pm-sep"></div>'
-    + '<div class="pm-item pm-new" data-new="1"><span class="pl-ico">＋</span><span>新建游戏包…</span></div>';
+    + '<div class="pm-item pm-new" data-new="1"><span class="pl-ico">＋</span><span>新建游戏包…</span></div>'
+    + `<div class="pm-item" data-export="1" title="打包成 zip（解压即用；内含 DIST_smoke.py 自检）">
+         <span class="pl-ico">📦</span><span>导出此包 zip</span></div>`
+    + '<div class="pm-item" data-import="1" title="从 zip 导入游戏包（含四道安全闸）">'
+    + '<span class="pl-ico">⬆</span><span>导入 zip…</span></div>';
   els('#pkgMenu [data-pkg]').forEach((n) => (n.onclick = () => {
     closePkgMenu(); selectPkg(n.dataset.pkg);
   }));
   el('#pkgMenu [data-new]').onclick = () => { closePkgMenu(); newPackage(); };
+  el('#pkgMenu [data-export]').onclick = () => { closePkgMenu(); exportPkg(); };
+  el('#pkgMenu [data-import]').onclick = () => { closePkgMenu(); $('pkgZipFile').click(); };
 }
 
 const openPkgMenu = () => { S.pkgOpen = true; $('pkgMenu').classList.remove('hidden'); };
@@ -191,6 +204,74 @@ async function newPackage() {
 function showEmptyPkg() {
   $('entryList').innerHTML = '<div class="list-empty">还没有游戏包<br>点左上角包名 → 新建游戏包</div>';
   $('listCount').textContent = '0';
+}
+
+/* ═══════════════════════════ 导出 / 导入（E5 分发） ═══════════════════════════
+   导出物 = 解压即用的游戏包（game.json 在 zip 根）+ DIST_README.md + DIST_smoke.py，
+   第三方 `python DIST_smoke.py` 一条命令就能自检跑通。
+   导入有四道闸（zip slip / zip bomb / 清单合规 / 引擎版本），细节在 editor/dist.py。 */
+async function exportPkg() {
+  if (!S.pkgId) { toast('先选一个游戏包', 'warn'); return; }
+  toast('打包中…', '');
+  try {
+    const r = await fetch(`/api/package/${encodeURIComponent(S.pkgId)}/export`);
+    if (!r.ok) {
+      let j = null; try { j = await r.json(); } catch (e) { /* 非 JSON */ }
+      toast((j && j.message) || `导出失败（HTTP ${r.status}）`, 'bad');
+      return;
+    }
+    const blob = await r.blob();
+    const cd = r.headers.get('Content-Disposition') || '';
+    const m = /filename="?([^";]+)"?/.exec(cd);
+    const name = (m && m[1]) || `${S.pkgId}.zip`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast(`已导出 ${name}（${(blob.size / 1024).toFixed(1)} KB）—— 解压即用，含 DIST_smoke.py 自检`, 'ok');
+  } catch (e) {
+    toast('导出失败：' + e.message, 'bad');
+  }
+}
+
+async function importPkg(file) {
+  if (!file) return;
+  toast(`导入 ${file.name}…`, '');
+  let buf;
+  try { buf = await file.arrayBuffer(); } catch (e) { toast('读文件失败：' + e.message, 'bad'); return; }
+  const post = (qs) => fetch('/api/packages/import' + (qs || ''), {
+    method: 'POST', headers: { 'Content-Type': 'application/zip' }, body: buf,
+  });
+  const flags = [];
+  let j = null, r = null;
+  for (let i = 0; i < 3; i++) {
+    r = await post(flags.length ? '?' + flags.join('&') : '');
+    j = null; try { j = await r.json(); } catch (e) { /* 非 JSON */ }
+    const code = (j || {}).code;
+    if (r.status === 409 && code === 'exists') {
+      if (!confirm(`已存在同名包「${j.id}」—— 覆盖它？\n（原包目录会被删除，不可撤销）`)) return;
+      flags.push('overwrite=1');
+      continue;
+    }
+    if (r.status === 422 && code === 'engine_mismatch') {
+      if (!confirm(`${j.message}\n\n仍要强制导入？（编辑器状态栏会标红提示）`)) return;
+      flags.push('force=1');
+      continue;
+    }
+    break;
+  }
+  if (!r || !r.ok || !(j || {}).ok) {
+    toast('导入失败：' + ((j || {}).message || `HTTP ${r ? r.status : '?'}`), 'bad');
+    return;
+  }
+  const rep = j.report || {};
+  const warn = (j.warnings || []).length ? `（${(j.warnings || []).join('；')}）` : '';
+  toast(`已导入 ${j.id}：${rep.domains || 0} 域 / ${rep.entries || 0} 条${warn}`, 'ok');
+  await loadPackages();
+  await selectPkg(j.id);
 }
 
 /* ═══════════════════════════ 域切换 ═══════════════════════════ */
@@ -304,6 +385,9 @@ function closeEntry() {
   $('editor').classList.add('hidden');
   $('editorEmpty').classList.remove('hidden');
   $('issues').classList.add('hidden');
+  $('formHost').innerHTML = '';        // 清掉上一个条目的表单 —— 否则切域后留着「隐藏的旧表单」，
+                                       // 各种 querySelector('.field[data-path=...]') 会命中它（踩过）
+  $('diffHost').innerHTML = '';
   $('saveStatus').textContent = '';
   renderList();
 }
@@ -366,6 +450,11 @@ function renderForm() {
     const h = window.SchemaForm.render(def, S.entryData, {
       onChange: () => markDirty(),
       onRerender: () => renderEntry(),
+      // 字段按语义分组（分块折叠，不用扫 40+ 个字段）；折叠状态记在 S.collapsed，重渲染不丢
+      groups: groupsOf(S.dom),
+      groupKey: S.dom,
+      collapsed: (key) => S.collapsed.has(key),
+      onToggleGroup: (key, col) => { col ? S.collapsed.add(key) : S.collapsed.delete(key); },
     });
     host.appendChild(h.el);
     // 帮助文字可能因网格窄而被 clamp → 补 title 提示（schema_form.js 不动）
@@ -666,12 +755,27 @@ function jumpToPath(p) {
   if (S.mode !== 'form') { S.mode = 'form'; renderEntry(); }
   const node = el(`.field[data-path="${String(p).replace(/"/g, '\\"')}"]`, $('formHost'));
   if (!node) { toast('该字段没在表单里渲染（可能在「其他字段」折叠区）：' + p, 'warn'); return; }
+  // 目标若在折叠的分组里 → 先展开，否则「定位」等于把用户带到一块看不见的地方
+  const collapsedAnc = node.closest('fieldset.cat.collapsed');
+  if (collapsedAnc) {
+    collapsedAnc.classList.remove('collapsed');
+    S.collapsed.delete(grpKey(collapsedAnc.dataset.group));
+  }
   node.scrollIntoView({ block: 'center', behavior: 'smooth' });
   node.style.transition = 'background 400ms';
   node.style.background = 'var(--err-dim)';
   setTimeout(() => { node.style.background = ''; }, 900);
   const inp = node.querySelector('input,select,textarea');
   if (inp) inp.focus({ preventScroll: true });
+}
+
+/* 分组折叠：一次性展开 / 折叠当前域的全部分组 */
+function setAllGroups(collapsed) {
+  const gs = groupsOf(S.dom) || [];
+  if (!gs.length) { toast('该域没有分组', ''); return; }
+  gs.forEach((g) => { collapsed ? S.collapsed.add(grpKey(g.id)) : S.collapsed.delete(grpKey(g.id)); });
+  renderEntry();
+  toast(collapsed ? `已折叠 ${gs.length} 个分组` : '已展开全部分组', '');
 }
 
 function jumpToFirstError() {
@@ -750,7 +854,16 @@ async function add() {
   const r = await api('GET', `/api/schema/${S.dom}`);
   if (!r.ok) { toast('该域没有 schema，无法新建', 'bad'); return; }
   S.entryKey = key;
-  S.entryData = { name, kind: (S.dom === 'skills' ? '物理' : ''), lv: 1, desc: '' };
+  /* 初始值**按 schema 给**：域里没有的字段（如声明表没有 desc/kind/lv）就不塞进去 ——
+     否则草稿会带一堆 schema 未声明的幽灵键（渲染成「其他字段」，还会误导必填体检）。
+     实测：effect_rules 域曾因此多出 desc/kind/lv 三个无用键。 */
+  const primary = (r.json.schema && r.json.schema['x-primary']) || primaryOf();
+  const def = (r.json.schema && r.json.schema.$defs && r.json.schema.$defs[primary]) || {};
+  const props = def.properties || {};
+  S.entryData = { name };
+  if ('desc' in props) S.entryData.desc = '';
+  if ('kind' in props) S.entryData.kind = (S.dom === 'skills' ? '物理' : '');
+  if ('lv' in props) S.entryData.lv = 1;
   S.entryOrig = null;
   S.schema = r.json.schema;
   S.validationErrors = [];
@@ -1135,7 +1248,11 @@ function buildPalette() {
     { ico: '⚔', name: '试跑当前条目', meta: 'simulate', run: () => openSim().then(() => S.entryKey && ($('simSkill').value = S.entryKey)) },
     { ico: '↻', name: '重新读取当前域', meta: S.dom, run: () => loadDomain(S.dom) },
     { ico: '📖', name: '打开引擎文档', meta: 'wiki', run: () => openWiki() },
+    { ico: '⤵', name: '折叠全部分组', meta: S.dom, run: () => setAllGroups(true) },
+    { ico: '⤴', name: '展开全部分组', meta: S.dom, run: () => setAllGroups(false) },
     { ico: '⚙', name: '打开包设置', meta: 'settings', run: openSettings },
+    { ico: '📦', name: '导出当前包 zip', meta: S.pkgId || '—', run: exportPkg },
+    { ico: '⬆', name: '导入游戏包 zip', meta: 'import', run: () => $('pkgZipFile').click() },
   ];
   const domItems = S.domains.map((d) => ({
     ico: d.icon || '•', name: '切换到 ' + d.label, meta: d.id, run: () => switchDomain(d.id),
@@ -1535,6 +1652,13 @@ window.addEventListener('DOMContentLoaded', () => {
   $('btnRunSim').onclick = runSim;
   $('btnSimClose').onclick = () => $('simDrawer').classList.add('hidden');
   $('btnSavePkg').onclick = savePkg;
+  $('btnExport').onclick = exportPkg;
+  $('btnImport').onclick = () => $('pkgZipFile').click();
+  $('pkgZipFile').onchange = (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';                 // 允许连续导入同一个文件
+    if (f) importPkg(f);
+  };
 
   // 文档（引擎 wiki）
   $('btnCodeClose').onclick = () => $('codeOverlay').classList.add('hidden');

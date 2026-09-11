@@ -300,6 +300,100 @@ GLOSSARY = {
     "passive_proc": _PASSIVE_PROC,
 }
 
+# ───────────────────────────────────────────── 表单分组（字段按语义分块，别平铺 56 个）
+# 每条：id / label / icon / fields（**顶层字段名**，嵌套对象的子键在它自己的分组里渲染）。
+# 硬规矩（`tests/test_editor_glossary.py` 断言）：
+#   ① 顶层字段**一个不漏、一个不重**地分到组里（漏了会露出「其他」组 = 分类没做完）
+#   ② 组里列的名字必须真在 schema 里（防拼错）
+#   ③ 顺序即界面顺序（把最常改的放前面）
+GROUPS = {
+    "skills": [
+        {"id": "base", "label": "基础", "icon": "📌",
+         "fields": ["name", "desc", "kind", "kind_override", "lv"]},
+        {"id": "cost", "label": "消耗与节奏", "icon": "⚡",
+         "fields": ["mp", "no_mp", "cd", "cast", "charge", "res_cost"]},
+        {"id": "dmg", "label": "伤害与命中", "icon": "💥",
+         "fields": ["power", "exprs", "formula", "hits", "aoe", "target",
+                    "pierce", "crit", "accuracy", "element"]},
+        {"id": "heal", "label": "治疗与减伤", "icon": "🩹",
+         "fields": ["heal_formula", "lifesteal", "hp_pct", "reduce_all", "reduce_pct"]},
+        {"id": "mech", "label": "状态与机制", "icon": "🌀",
+         "fields": ["effect", "buff_turns", "sleep", "mech", "mech_val", "mech_chance",
+                    "mech2", "mech2_val", "summon", "team", "stance", "auto", "kill"]},
+        {"id": "hate", "label": "仇恨与嘲讽", "icon": "🎯",
+         "fields": ["hate_mult", "hate_taunt_mult", "hate_lock_turns"]},
+        {"id": "cond", "label": "条件与被动", "icon": "🔗",
+         "fields": ["cond", "passive"]},
+    ],
+    "monsters": [
+        {"id": "base", "label": "基础", "icon": "📌",
+         "fields": ["name", "desc", "kind", "id", "role", "lv_off"]},
+        {"id": "dmg", "label": "招式与伤害", "icon": "💥",
+         "fields": ["power", "formula", "element", "aoe", "hits", "multi",
+                    "hp_pct", "defend_reduce", "reach", "basic"]},
+        {"id": "mech", "label": "机制与行为", "icon": "🌀",
+         "fields": ["effect", "mech", "mech_val", "summon", "charge", "cast",
+                    "recovery", "pdot", "cond", "chance"]},
+        {"id": "world", "label": "出现与掉落", "icon": "🗺",
+         "fields": ["skills", "drops", "gold_mult", "tag", "flavor", "maps"]},
+    ],
+    "affixes": [
+        {"id": "base", "label": "基础", "icon": "📌",
+         "fields": ["name", "desc", "kind", "line"]},
+        {"id": "trigger", "label": "触发与效果", "icon": "⚡",
+         "fields": ["trigger", "chance", "effect"]},
+        {"id": "drop", "label": "品质与唯一性", "icon": "💠",
+         "fields": ["qualities", "unique"]},
+    ],
+    "items": [
+        {"id": "base", "label": "基础", "icon": "📌",
+         "fields": ["name", "desc", "price", "type", "quality"]},
+        {"id": "use", "label": "使用效果", "icon": "🧪",
+         "fields": ["effect", "effect_data", "food_effect", "heal", "mana", "hot",
+                    "hot_turns", "hot_mana", "stamina", "cast", "food", "battle_ok"]},
+        {"id": "special", "label": "特殊用途", "icon": "🗝",
+         "fields": ["key_item", "blueprint_for", "roster_id", "learn_skill",
+                    "require_class", "rune_pool", "weapon_pick", "pick_options"]},
+    ],
+    "effect_rules": [
+        {"id": "base", "label": "基础与归属", "icon": "📌",
+         "fields": ["name", "tag", "on", "negative", "cleanse"]},
+        {"id": "stack", "label": "叠层与面板", "icon": "🔢",
+         "fields": ["cap", "stat_scale", "debuff_scale", "panel"]},
+        {"id": "period", "label": "周期结算（DOT / HoT）", "icon": "⏳",
+         "fields": ["period"]},
+        {"id": "cooldown", "label": "冷却与开局", "icon": "🧊",
+         "fields": ["cd_mult", "start_full", "start_classes", "load_tiers"]},
+        {"id": "guard", "label": "濒死保护", "icon": "🛡",
+         "fields": ["guard_hp_pct", "heal_pct", "overload_heal_pct", "wake_on_hit"]},
+        {"id": "ctrl", "label": "控制与渠道", "icon": "🌀",
+         "fields": ["consume", "channels", "on_threshold"]},
+    ],
+    "passive_proc": [
+        {"id": "hook", "label": "事件钩子", "icon": "⚡",
+         "fields": ["event", "action", "also", "agg"]},
+        {"id": "domain", "label": "静态域（上限 / 消耗）", "icon": "🗂",
+         "fields": ["domain", "cap_key"]},
+        {"id": "judge", "label": "判据与条件", "icon": "🔍",
+         "fields": ["judge", "when", "mech_prefix", "ctrl_any", "gap"]},
+        {"id": "res", "label": "资源与计数", "icon": "📦",
+         "fields": ["res", "buff_key", "left_key", "left_init", "used_key",
+                    "cost_field", "gain_field", "bar_field"]},
+        {"id": "act", "label": "动作参数", "icon": "🎛",
+         "fields": ["mode", "form", "spd_pct", "def_pct", "hold"]},
+    ],
+}
+
+
+def groups_for(dom: str) -> list:
+    """该域的表单分组（深拷贝，调用方随便改）。"""
+    return [dict(g, fields=list(g.get("fields") or [])) for g in GROUPS.get(dom, [])]
+
+
+def all_groups() -> dict:
+    """给前端：{域: [{id,label,icon,fields}]}。"""
+    return {d: groups_for(d) for d in GROUPS}
+
 # 域 → schema 文件（与 packages.DOMAINS 对应；classes 无 schema）
 DOMAIN_SCHEMA = {
     "skills": "skill.schema.json", "monsters": "monster.schema.json",
