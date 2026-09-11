@@ -70,12 +70,11 @@ _HOOKS = {
 # 调用 game.bootstrap.load_engine_config() 后可按需打开。
 strict = False
 
-# 内容侧注册的"本游戏默认配置"装载器（旧 load_game_defaults 的实体）。
-# 引擎只持有回调，不认识内容 —— 内容 → 引擎方向注入。
-_defaults_loader = None
 # 内容侧注册的"惰性装配器"：首次访问未装配 hook 时自动完成装配（见 get_hook）。
-# 必要性：本仓库并存两种 import 路径（`game.*` 与 `data.plugins.dragonfall.game.*`
-# = 同一份文件的两个模块树，plan §8-R2）——每个模块树各自装配自己的 config。
+# 引擎只持有回调，不认识内容 —— 内容 → 引擎方向注入。
+# 注意：这只是**惰性兜底**。引擎不得提供「加载本游戏默认配置」这类**游戏概念** API
+# （S8 拆仓前的 `load_game_defaults()` 即此类 shim，已删 —— 游戏的配置装配是游戏
+#  自己的入口，框架不认识「默认配置」是什么）。
 _hook_provider = None
 _hook_provider_running = False
 
@@ -92,28 +91,10 @@ def load_game_rules(module) -> None:
     set_config("effect_rules", getattr(module, "EFFECT_RULES", {}))
 
 
-def register_defaults_loader(fn) -> None:
-    """内容侧注册「本游戏默认配置装载器」（引擎只存回调，不认识内容）。"""
-    global _defaults_loader
-    _defaults_loader = fn
-
-
 def register_hook_provider(fn) -> None:
     """内容侧注册「hook 惰性装配器」：首次访问未装配 hook 时调用一次。"""
     global _hook_provider
     _hook_provider = fn
-
-
-def load_game_defaults() -> None:
-    """加载本游戏默认配置 —— **兼容 shim**（旧名/旧位置保留，52 个测试调用点）。
-
-    S1 前本体在引擎包内（`from game.data import battle2_rules` = 反向边）；
-    现委托给内容侧注册的装载器 `game.bootstrap.load_engine_config`
-    （装配规则表 + 公式/面板/技能查询/kind hook，幂等）。
-    未注册装载器时（纯引擎、无内容场景）静默为空。
-    """
-    if _defaults_loader is not None:
-        _defaults_loader()
 
 
 def get_effect_actions() -> dict:

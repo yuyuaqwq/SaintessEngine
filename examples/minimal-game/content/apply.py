@@ -49,7 +49,9 @@ def install_engine() -> None:
         return
     from battle2 import formulas as _formulas
 
-    config.register_defaults_loader(install_engine)
+    # 引擎只认「hook 惰性装配器」这一个回调（内容 → 引擎方向）。
+    # 框架**不提供** load_game_defaults 之类游戏概念 API：本游戏的配置入口
+    # 就是 install_engine()，由游戏自己（或它的 apply_game_content）调用。
     config.register_hook_provider(_lazy_mount)
     config.mount(
         formulas=_formulas,                                # 引擎自带纯公式模块
