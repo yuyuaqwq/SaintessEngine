@@ -145,8 +145,28 @@ def main():
           f"{sorted(doms)[:9]}")
     check("词典条目带中文名 + wiki 深链",
           bool(doms["effect_rules"]["cap"]["zh"]) and doms["effect_rules"]["cap"]["wiki"].startswith("wiki:"))
+    wid = j.get("widgets") or {}
+    check("词典带控件形态（desc → textarea / mech_chance → pct）",
+          (wid.get("skills") or {}).get("desc", {}).get("widget") == "textarea"
+          and (wid.get("skills") or {}).get("mech_chance", {}).get("widget") == "pct",
+          f"{wid.get('skills', {}).get('desc')}")
+    check("词典带面板键候选（框架协议）", bool(j.get("panel_keys")), f"{j.get('panel_keys')}")
 
     # 11. 编辑器内文档（wiki 页 / 搜索 / 源码直链）
+    #     先写一条探针（前面几步把条目删干净了，联想需要有数据才有意义）
+    req(base, "PUT", "/api/package/t_game/d/skills/sk_hint_probe",
+        {"data": {"name": "探针技", "kind": "魔法", "lv": 1, "desc": "联想用。"}})
+    st, j = req(base, "GET", "/api/package/t_game/hints")
+    check("GET hints（联想数据源）200", st == 200 and j.get("ok"), f"{st}")
+    check("hints.refs 给跨域真 key（skills 里有刚写的 sk_hint_probe）",
+          "sk_hint_probe" in ((j.get("refs") or {}).get("skills") or []), f"{(j.get('refs') or {}).get('skills')}")
+    check("hints.fields 给包内已有取值（skills.kind = 魔法）",
+          ((j.get("fields") or {}).get("skills") or {}).get("kind", {}).get("v") == ["魔法"],
+          f"{((j.get('fields') or {}).get('skills') or {}).get('kind')}")
+    st, j2 = req(base, "GET", "/api/package/nope/hints")
+    check("hints：包不存在 → 404", st == 404, f"{st}")
+    req(base, "DELETE", "/api/package/t_game/d/skills/sk_hint_probe")
+
     st, j = req(base, "GET", "/api/wiki/tree")
     check(f"GET /api/wiki/tree 页清单（{len(j.get('pages') or [])} 页）",
           st == 200 and len(j.get("pages") or []) >= 30, f"{st}")

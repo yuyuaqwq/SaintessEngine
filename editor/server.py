@@ -26,6 +26,7 @@ API
     GET    /api/actions?pkg=<id>          → 同上，额外扫该游戏包的动作
     GET    /api/actions?fresh=1           → 跳过缓存重扫（改了 mech/ 代码后立刻可见）
     GET    /api/glossary                  → 字段词典（中文名 / 注脚 / wiki 深链）
+    GET    /api/package/<id>/hints        → 编辑提示（跨域引用候选 + 包内已有取值/键，供联想）
     GET    /api/wiki/tree                 → 文档页清单（左导航）
     GET    /api/wiki/page?path=<rel>      → 渲染后的文档页（md → html + 目录）
     GET    /api/wiki/search?q=<词>        → 跨页搜词（配字段时找语义）
@@ -55,6 +56,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from editor import actions as AC     # noqa: E402
 from editor import dist as DIST      # noqa: E402
 from editor import glossary as GL    # noqa: E402
+from editor import hints as HN       # noqa: E402
 from editor import packages as PK    # noqa: E402
 from editor import validate as VD    # noqa: E402
 from editor import wiki as WK        # noqa: E402
@@ -174,6 +176,12 @@ class H(BaseHTTPRequestHandler):
             from urllib.parse import parse_qs
             q = parse_qs(getattr(self, "_query", ""))
             return self._send(200, {"ok": True, **DIST.inspect_zip((q.get("path") or [""])[0])})
+        # 编辑提示：跨域引用候选 + 包内已有取值/键（联想数据源，内容驱动、无框架词汇）
+        if len(parts) == 3 and parts[0] == "package" and parts[2] == "hints":
+            d = PK.resolve_package(parts[1], GAMES_DIR)
+            if not d:
+                return self._err(404, f"包不存在：{parts[1]}")
+            return self._send(200, {"ok": True, **HN.flatten_for_ui(HN.build(d))})
         if len(parts) in (2, 3) and parts[0] == "schema":
             # GET /api/schema/<dom>  （历史上这里写成 `len(parts)==3` → 该路由**从未匹配上**，
             # 因为没人调用所以一直没暴露；新建草稿要按 domain 取 schema，故修成 2 段可达）
@@ -188,7 +196,9 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, AC.inventory(pkg_dir, use_cache=not fresh))
         if parts == ["glossary"]:
             return self._send(200, {"ok": True, "domains": GL.all_entries(),
-                                    "groups": GL.all_groups()})
+                                    "groups": GL.all_groups(),
+                                    "widgets": GL.all_widgets(),
+                                    "panel_keys": GL.PANEL_KEYS})
         if len(parts) >= 2 and parts[0] == "wiki":
             from urllib.parse import parse_qs
             q = parse_qs(getattr(self, "_query", ""))

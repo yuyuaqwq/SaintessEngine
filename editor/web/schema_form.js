@@ -2,12 +2,13 @@
  *
  * 渲染规则（EDITOR_SPEC.md「表单渲染规则」）：
  *   string + enum            → <select>
- *   string                   → <input type=text>
+ *   string                   → <input type=text>（可挂联想 datalist）
  *   number / integer         → <input type=number>（带 min/max/step）
  *   boolean                  → <checkbox>
  *   object（有 properties）   → 折叠分组（递归渲染）
  *   object（仅 additionalProperties schema）→ 键值行编辑器（键为 propertyNames.enum 时用 select）
  *   array（元素为标量）        → 可增删的行列表
+ *   array（元素为 enum）       → 多选标签 chips（原先是 JSON 兜底）
  *   array/formula 等复杂项     → JSON 兜底编辑框
  *   const / anyOf            → 常量显示 / 联合输入框
  *   description / $comment   → 字段下方灰字帮助
@@ -25,6 +26,14 @@
  *     onToggleGroup: (key, collapsed) => {}, // 折叠状态由调用方记住（重渲染不丢）
  *   });
  *   未出现在任何组里的字段 → 归入「未分组」（**不丢字段**，漏了就看得见）。
+ *
+ * 可选：控件形态与联想（**数据驱动**，由调用方按字段语义给）
+ *   SchemaForm.render(def, value, {
+ *     widget:     (path, schema) => 'textarea'|'lines'|'chips'|'pct'|null,
+ *     suggest:    (path, schema) => ['候选值', ...],      // 文本/数字 → datalist
+ *     suggestKey: (path, schema) => ['候选键', ...],      // 对象 → 键的 datalist
+ *   });
+ *   也认 schema 自带的 `x-widget`。
  */
 window.SchemaForm = (function () {
   'use strict';
@@ -62,6 +71,43 @@ window.SchemaForm = (function () {
   }
   function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
 
+  /* 字段路径（丢掉数组下标，联想按「字段」而不是「第几个元素」算） */
+  function fieldPath(path) {
+    return (path || []).filter(function (p) { return typeof p !== 'number'; });
+  }
+  function widgetOf(schema, path, ctx) {
+    if (schema && schema['x-widget']) return schema['x-widget'];
+    if (ctx && ctx.widget) {
+      try { return ctx.widget(fieldPath(path).join('.'), schema) || null; } catch (e) { return null; }
+    }
+    return null;
+  }
+  function suggestList(schema, path, ctx, keyMode) {
+    const fn = keyMode ? (ctx && ctx.suggestKey) : (ctx && ctx.suggest);
+    if (!fn) return [];
+    try {
+      const out = fn(fieldPath(path).join('.'), schema) || [];
+      return Array.isArray(out) ? out : [];
+    } catch (e) { return []; }
+  }
+  /* 给控件挂联想（datalist 复用：同一 id 的 datalist 只建一次） */
+  function attachList(inp, values, uid) {
+    const vals = (values || []).filter(function (v) { return v !== undefined && v !== null && v !== ''; });
+    if (!vals.length) return inp;
+    const id = 'dl-' + uid;
+    let dl = document.getElementById(id);
+    if (!dl) {
+      dl = elem('datalist');
+      dl.id = id;
+      document.body.appendChild(dl);
+    }
+    dl.innerHTML = vals.map(function (v) { return '<option value="' + String(v).replace(/"/g, '&quot;') + '"></option>'; }).join('');
+    inp.setAttribute('list', id);
+    return inp;
+  }
+  let _uid = 0;
+  const nextUid = function () { return 'f' + (++_uid) + '-' + Math.random().toString(36).slice(2, 6); };
+
   function kindOf(schema) {
     if (!schema || typeof schema !== 'object') return 'any';
     if (schema.$ref) return 'any';                     // 本仓 schema 未用 $ref 指向其他字段
@@ -87,11 +133,177 @@ window.SchemaForm = (function () {
   }
 
   // ---------------------------------------------------------------- widgets
+  /* 长文案 → 多行输入框（随内容长高，不用在小格子里横着滚） */
+  function wTextarea(schema, path, ctx) {
+    const ta = elem('textarea', 'ctl ta');
+    ta.spellcheck = false;
+    ta.rows = (schema && schema.rows) || 3;
+    const v = getIn(ctx.root, path);
+    ta.value = (v === undefined || v === null) ? '' : String(v);
+    const minLength = schema && schema.minLength;
+    /* 自适应高度：内容多了自己长高（上限 320px 后内部滚动） */
+    const autosize = function () {
+      if (typeof ta.scrollHeight !== 'number' || !isFinite(ta.scrollHeight)) return;
+      const h = Math.min(320, Math.max((ta.rows || 3) * 19 + 12, ta.scrollHeight + 6));
+      ta.style.height = h + 'px';
+    };
+    ta.autosize = autosize;
+    autosize();
+    ta.addEventListener('input', function () {
+      ta.classList.toggle('bad', !!(minLength && ta.value.length < minLength));
+      setIn(ctx.root, path, ta.value);
+      ctx.onChange();
+      autosize();
+    });
+    return ta;
+  }
+
+  /* 字符串数组 → 「一行一条」的多行输入（公式列表 / 名字列表的顺手写法） */
+  function wLines(schema, path, ctx) {
+    const wrap = elem('div', 'lines-wrap');
+    const ta = elem('textarea', 'ctl ta lines');
+    ta.spellcheck = false;
+    ta.rows = (schema && schema.rows) || 4;
+    const count = elem('span', 'lines-n', '');
+    const item = (schema && schema.items) || {};
+    const hints = suggestList(item, path, ctx);
+    const arr0 = getIn(ctx.root, path);
+    if (Array.isArray(arr0)) {
+      ta.value = arr0.map(function (x) { return typeof x === 'string' ? x : JSON.stringify(x); }).join('\n');
+    } else {
+      ta.value = (arr0 === undefined || arr0 === null) ? '' : String(arr0);
+    }
+    const refresh = function () {
+      const n = (Array.isArray(getIn(ctx.root, path)) ? getIn(ctx.root, path) : []).length;
+      count.textContent = n ? n + ' 条' : '（空）';
+    };
+    refresh();
+    ta.addEventListener('input', function () {
+      const arr = ta.value.split('\n').map(function (s) { return s.trim(); })
+        .filter(function (s) { return s !== ''; });
+      if (arr.length) setIn(ctx.root, path, arr);
+      else delIn(ctx.root, path);
+      ctx.onChange();
+      refresh();
+    });
+    if (hints.length) {
+      const dlId = nextUid();
+      const dl = elem('datalist');
+      dl.id = dlId;
+      dl.innerHTML = hints.map(function (v) {
+        return '<option value="' + String(v).replace(/"/g, '&quot;') + '"></option>';
+      }).join('');
+      wrap.appendChild(dl);
+      ta.setAttribute('list', dlId);
+    }
+    wrap.appendChild(ta);
+    const foot = elem('div', 'lines-foot');
+    foot.appendChild(count);
+    foot.appendChild(elem('span', 'lines-tip', '一行一条 · 空行忽略'));
+    wrap.appendChild(foot);
+    return wrap;
+  }
+
+  /* 枚举数组 → 多选标签（勾一个加一项，取消就移除） */
+  function wChips(schema, path, ctx) {
+    const items = (schema && schema.items) || {};
+    const opts = (items.enum || []).slice();
+    const wrap = elem('div', 'chips-wrap');
+    function draw() {
+      wrap.innerHTML = '';
+      const cur = getIn(ctx.root, path);
+      const arr = Array.isArray(cur) ? cur : [];
+      opts.forEach(function (val) {
+        const on = arr.some(function (x) { return String(x) === String(val); });
+        const b = elem('button', 'chip-pick' + (on ? ' on' : ''));
+        b.type = 'button';
+        b.textContent = String(val);
+        b.addEventListener('click', function () {
+          const now = getIn(ctx.root, path);
+          let a = Array.isArray(now) ? now.slice() : [];
+          const hit = a.findIndex(function (x) { return String(x) === String(val); });
+          if (hit >= 0) a.splice(hit, 1);
+          else a.push(val);
+          if (a.length) setIn(ctx.root, path, a);
+          else delIn(ctx.root, path);
+          ctx.onChange();
+          draw();
+        });
+        wrap.appendChild(b);
+      });
+      const cur2 = getIn(ctx.root, path);
+      const extra = (Array.isArray(cur2) ? cur2 : []).filter(function (x) {
+        return !opts.some(function (o) { return String(o) === String(x); });
+      });
+      extra.forEach(function (x) {
+        const b = elem('button', 'chip-pick on bad');
+        b.type = 'button';
+        b.textContent = String(x) + ' ✕';
+        b.title = '不在允许取值内（点击移除）';
+        b.addEventListener('click', function () {
+          const now = getIn(ctx.root, path) || [];
+          const a = now.filter(function (y) { return String(y) !== String(x); });
+          if (a.length) setIn(ctx.root, path, a); else delIn(ctx.root, path);
+          ctx.onChange();
+          draw();
+        });
+        wrap.appendChild(b);
+      });
+    }
+    draw();
+    const box = elem('div');
+    box.appendChild(wrap);
+    return box;
+  }
+
+  /* 0~1 的比值 → 数字 + 滑杆联动（裸小数看不出「0.35 算高还是低」） */
+  function wPct(schema, path, ctx) {
+    const wrap = elem('div', 'pct-wrap');
+    const lo = (schema && has(schema, 'minimum')) ? schema.minimum : 0;
+    const hi = (schema && has(schema, 'maximum')) ? schema.maximum : 1;
+    const num = elem('input', 'ctl pct-num');
+    num.type = 'number';
+    num.step = '0.01';
+    num.min = lo; num.max = hi;
+    const rng = elem('input', 'ctl pct-rng');
+    rng.type = 'range';
+    rng.min = lo; rng.max = hi; rng.step = '0.01';
+    const out = elem('output', 'pct-out');
+    const v0 = getIn(ctx.root, path);
+    const fmt = function (v) { return (v === undefined || v === null || v === '') ? '—' : Math.round(Number(v) * 100) + '%'; };
+    num.value = (v0 === undefined || v0 === null) ? '' : v0;
+    rng.value = (v0 === undefined || v0 === null || v0 === '') ? lo : v0;
+    out.textContent = fmt(v0);
+    const push = function (raw, from) {
+      if (raw === '' || raw === null || raw === undefined) {
+        delIn(ctx.root, path); out.textContent = '—';
+        if (from !== 'num') num.value = '';
+        ctx.onChange();
+        return;
+      }
+      const n = Number(raw);
+      if (Number.isNaN(n)) { num.classList.add('bad'); return; }
+      num.classList.remove('bad');
+      setIn(ctx.root, path, n);
+      out.textContent = fmt(n);
+      if (from !== 'num') num.value = n;
+      if (from !== 'rng') rng.value = n;
+      ctx.onChange();
+    };
+    num.addEventListener('input', function () { push(num.value, 'num'); });
+    rng.addEventListener('input', function () { push(rng.value, 'rng'); });
+    wrap.appendChild(num);
+    wrap.appendChild(rng);
+    wrap.appendChild(out);
+    return wrap;
+  }
+
   function wString(schema, path, ctx) {
     const inp = elem('input', 'ctl');
     inp.type = 'text';
     const v = getIn(ctx.root, path);
     inp.value = (v === undefined || v === null) ? '' : String(v);
+    attachList(inp, suggestList(schema, path, ctx), nextUid());
     const minLength = schema && schema.minLength;
     inp.addEventListener('input', function () {
       inp.classList.toggle('bad', !!(minLength && inp.value.length < minLength));
@@ -227,7 +439,9 @@ window.SchemaForm = (function () {
     const scalar = items && (items.type === 'string' || items.type === 'number' ||
                              items.type === 'integer' || items.type === 'boolean');
     const wrap = elem('div');
-    if (!scalar || items.enum) {
+    // 枚举数组 → 多选标签（比「JSON 兜底编辑」好用得多：勾一下就是一项）
+    if (items && items.enum) return wChips(schema, path, ctx);
+    if (!scalar) {
       wrap.appendChild(elem('div', 'help', '复杂数组 → JSON 兜底编辑'));
       wrap.appendChild(jsonEditor(getIn(ctx.root, path), function (v) {
         setIn(ctx.root, path, v); ctx.onChange(); ctx.rerender();
@@ -241,6 +455,10 @@ window.SchemaForm = (function () {
         const row = elem('div', 'array-row');
         const sub = renderControl(items, path.concat([i]), ctx);
         row.appendChild(sub);
+        // 标量行也给联想（如 monsters.skills 每行都是真技能 key）
+        if (sub && sub.tagName === 'INPUT' && sub.type === 'text') {
+          attachList(sub, suggestList(items, path, ctx), nextUid());
+        }
         const del = elem('button', null, '✕');
         del.title = '删除该项';
         del.addEventListener('click', function () {
@@ -270,6 +488,7 @@ window.SchemaForm = (function () {
   function kvEditor(schema, path, ctx) {
     const ap = schema.additionalProperties;
     const keyEnum = (schema.propertyNames && schema.propertyNames.enum) || null;
+    const keyHints = suggestList(schema, path, ctx, true);
     const wrap = elem('div');
     const rows = elem('div');
     function draw() {
@@ -284,6 +503,7 @@ window.SchemaForm = (function () {
           kc.value = k;
         } else {
           kc = elem('input', 'ctl k'); kc.type = 'text'; kc.value = k;
+          attachList(kc, keyHints, nextUid());          // 键名也联想（channels / stat_scale / judge …）
         }
         const vc = renderControl(ap, path.concat([k]), ctx);
         kc.addEventListener('change', function () {
@@ -317,6 +537,18 @@ window.SchemaForm = (function () {
 
   // ------------------------------------------------------------ dispatch
   function renderControl(schema, path, ctx) {
+    // ① 调用方指定的控件形态（按字段语义：长文案 / 一行一条 / 比值 / 多选）
+    const w = widgetOf(schema, path, ctx);
+    if (w === 'textarea') return wTextarea(schema, path, ctx);
+    if (w === 'lines' && kindOf(schema) === 'array') return wLines(schema, path, ctx);
+    if (w === 'chips' && kindOf(schema) === 'array') return wChips(schema, path, ctx);
+    if (w === 'pct' && (kindOf(schema) === 'number' || kindOf(schema) === 'integer')) {
+      return wPct(schema, path, ctx);
+    }
+    // ② schema 自带的长文本启发（maxLength 很大 = 明显是文案，不是代号）
+    if (kindOf(schema) === 'string' && schema && schema.maxLength >= 120) {
+      return wTextarea(schema, path, ctx);
+    }
     switch (kindOf(schema)) {
       case 'enum': return wEnum(schema, path, ctx);
       case 'const': return wConst(schema, path, ctx);
@@ -431,7 +663,11 @@ window.SchemaForm = (function () {
     const ctx = {
       root: rootValue,
       onChange: (opts && opts.onChange) || function () {},
-      rerender: function () { if (opts && opts.onRerender) opts.onRerender(); }
+      rerender: function () { if (opts && opts.onRerender) opts.onRerender(); },
+      // 控件形态 + 联想（透传给每个控件；不传 = 全部按 schema 类型默认渲染）
+      widget: (opts && opts.widget) || null,
+      suggest: (opts && opts.suggest) || null,
+      suggestKey: (opts && opts.suggestKey) || null
     };
     const container = elem('div', 'schema-form');
     const fields = rootSchema.properties || {};

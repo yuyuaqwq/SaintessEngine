@@ -155,10 +155,52 @@
           }
         },
         "channels": {
-          "type": "object"
+          "type": "object",
+          "description": "攒取渠道：{时机: 值}。值两种形态 —— 数值（无条件）或 {gain, when, per_dt}（带条件）。",
+          "propertyNames": {
+            "type": "string",
+            "description": "时机名（由内容侧声明；对应引擎事件的触发点）"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "形态 A：每触发一次攒多少层（必须 > 0）"
+              },
+              {
+                "type": "object",
+                "description": "形态 B：{gain, when, per_dt}",
+                "additionalProperties": true,
+                "properties": {
+                  "gain": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "when": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  },
+                  "per_dt": {
+                    "type": "boolean",
+                    "description": "按间隔时长缩放（随 time_advance 结算）"
+                  }
+                }
+              }
+            ]
+          }
         },
         "debuff_scale": {
-          "type": "object"
+          "type": "object",
+          "description": "⚠ 当前无消费者（写了不生效）：{面板键: 每层系数}。要「每层承伤 +N%」请用 taken_calc 乘区。",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
         },
         "guard_hp_pct": {
           "type": "number"

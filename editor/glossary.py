@@ -394,6 +394,84 @@ def all_groups() -> dict:
     """给前端：{域: [{id,label,icon,fields}]}。"""
     return {d: groups_for(d) for d in GROUPS}
 
+
+# ───────────────────────────────────────────────────────── 控件形态（用对控件，别全靠文本框）
+# 依据：**字段语义**（长文案 / 公式列表 / 百分比 / 跨域引用），不是某个游戏的取值。
+# 取值一律不写死：自由串走「包内已有值联想」（editor/hints.py），引用走目标域真 key。
+#
+#   textarea  长文案（描述/风味/公式串）→ 大输入框
+#   lines     字符串数组当「一行一条」编辑（表达式 / 引用名列表）
+#   pct       0~1 的比值 → 数字 + 滑杆联动（比裸数字直观）
+#   chips     枚举数组 → 可多选标签（原先是 JSON 兜底，最容易被吐槽的那种）
+WIDGETS = {
+    # 长文案
+    "desc": "textarea", "flavor": "textarea", "heal_formula": "textarea",
+    "line": "textarea", "food_effect": "textarea", "effect_data": "textarea",
+    # 一行一条的字符串数组
+    "exprs": "lines", "maps": "lines", "qualities": "chips",
+    # 0~1 的比值
+    "chance": "pct", "mech_chance": "pct", "lifesteal": "pct",
+    "guard_hp_pct": "pct", "heal_pct": "pct", "overload_heal_pct": "pct",
+}
+
+# 跨域引用：该字段填的应当是**另一个域的真 key**（编辑器据此给真候选，防拼错）
+REF_DOMAINS = {
+    "skills": "skills",        # monsters.skills —— 招式池
+    "drops": "items",          # monsters.drops —— 掉落
+    "blueprint_for": "items",  # items.blueprint_for —— 图纸产出
+    "learn_skill": "skills",   # items.learn_skill —— 使用后学会的技能
+    "start_classes": "classes",   # effect_rules.start_classes —— 归属职业
+    "buff_key": "effect_rules",   # passive_proc.buff_key —— 效果 key
+    "cap_key": "effect_rules",    # passive_proc.cap_key —— 资源上限 key
+    "res": "effect_rules",        # passive_proc.res —— 资源 key
+}
+
+# 引擎面板键（**框架协议**，出自 `saintess_engine/battle/stats.py:117-122` 的 actor 面板读取）
+# —— 给 stat_scale / panel.stat 这类字段做候选；与任何具体游戏无关。
+PANEL_KEYS = ["atk", "def", "matk", "mdef", "spd", "crit", "dodge", "max_hp", "max_mp",
+              "hp", "mp", "dmg_mult", "reduce"]
+_PANEL_PATHS = {"stat_scale", "panel.stat", "debuff_scale", "stat"}
+
+
+def widget_for(dom: str, path: str) -> str | None:
+    """字段该用哪种控件（None = 按 schema 类型默认渲染）。"""
+    e = (GLOSSARY.get(dom) or {}).get(path) or (GLOSSARY.get(dom) or {}).get(str(path).split(".")[-1])
+    if e and e.get("widget"):
+        return e["widget"]
+    leaf = str(path).split(".")[-1]
+    return WIDGETS.get(leaf)
+
+
+def ref_domain_for(dom: str, path: str) -> str | None:
+    """该字段引用哪个域的 key（None = 不是跨域引用）。"""
+    leaf = str(path).split(".")[-1]
+    if str(path) in ("start_classes", "mask", "cap_key", "buff_key"):
+        return REF_DOMAINS.get(str(path))
+    return REF_DOMAINS.get(leaf)
+
+
+def suggest_meta(dom: str, path: str) -> dict:
+    """给前端一条「怎么联想」的说明（前端只管取候选）。"""
+    key = str(path)
+    return {
+        "widget": widget_for(dom, path),
+        "ref": ref_domain_for(dom, path),
+        "panel": key in _PANEL_PATHS,
+    }
+
+
+def all_widgets() -> dict:
+    """给前端：{域: {字段: {widget, ref, panel}}}（含叶名回退，前端一次查表）。"""
+    out = {}
+    for dom in DOMAIN_SCHEMA:
+        tbl = {}
+        for key in list(GLOSSARY.get(dom, {})) + sorted(WIDGETS) + sorted(REF_DOMAINS):
+            meta = suggest_meta(dom, key)
+            if meta["widget"] or meta["ref"] or meta["panel"]:
+                tbl[key] = meta
+        out[dom] = tbl
+    return out
+
 # 域 → schema 文件（与 packages.DOMAINS 对应；classes 无 schema）
 DOMAIN_SCHEMA = {
     "skills": "skill.schema.json", "monsters": "monster.schema.json",

@@ -17,6 +17,15 @@ const esc = (s) => String(s == null ? '' : s)
   .replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clone = (o) => JSON.parse(JSON.stringify(o == null ? null : o));
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+/* 搜索命中高亮（先转义再插 <mark>，避免把用户输入当 HTML） */
+function hlMatch(text, q) {
+  const safe = esc(text);
+  const t = String(q || '').trim();
+  if (!t) return safe;
+  const idx = safe.toLowerCase().indexOf(esc(t).toLowerCase());
+  if (idx < 0) return safe;
+  return safe.slice(0, idx) + '<mark>' + safe.slice(idx, idx + t.length) + '</mark>' + safe.slice(idx + t.length);
+}
 
 /* ───────────────────────── 状态 ───────────────────────── */
 const S = {
@@ -31,6 +40,9 @@ const S = {
   actionByName: {},              // name → 动作
   glossary: { '*': {} },         // 字段词典：域 → {字段: {zh, note, wiki}}
   glossaryGroups: {},            // 表单分组：域 → [{id,label,icon,fields}]
+  glossaryWidgets: {},           // 控件形态：域 → {字段: {widget, ref, panel}}
+  panelKeys: [],                 // 引擎面板键（框架协议，给 stat_scale 之类做候选）
+  hints: { fields: {}, refs: {} },   // 包内联想：已有取值 / 键名 / 跨域 key
   collapsed: new Set(),          // 折叠的分组（key = 域#组id；跨重渲染与切换保留）
   isNew: false,                  // 当前条目是「新建草稿」（还没落盘）
   friendly: [],                  // 服务端返回的中文可读报错（保存/新建被拦时）
@@ -89,11 +101,63 @@ async function loadGlossary() {
   const r = await api('GET', '/api/glossary');
   S.glossary = (r.json && r.json.domains) || { '*': {} };
   S.glossaryGroups = (r.json && r.json.groups) || {};
+  S.glossaryWidgets = (r.json && r.json.widgets) || {};
+  S.panelKeys = (r.json && r.json.panel_keys) || [];
 }
 
 /* 该域的字段分组（无分组 → 平铺，与旧版一致） */
 const groupsOf = (dom) => (S.glossaryGroups || {})[dom] || null;
 const grpKey = (gid) => `${S.dom}#${gid}`;
+
+/* ═══════════════════════ 控件形态 + 联想（数据驱动） ═══════════════════════
+   控件形态：长文案 → 大输入框；一行一条 → 多行；0~1 比值 → 数字+滑杆；枚举数组 → 多选标签。
+   候选项：**全部来自包自己的数据**（跨域引用取目标域真 key；自由串取同域已有取值），
+   框架不写任何游戏词汇（`tests/test_no_game_vocabulary.py` 守着这条）。
+   ══════════════════════════════════════════════════════════════════════════ */
+async function loadHints() {
+  if (!S.pkgId) { S.hints = { fields: {}, refs: {} }; return; }
+  const r = await api('GET', `/api/package/${encodeURIComponent(S.pkgId)}/hints`);
+  S.hints = (r.ok && r.json) || { fields: {}, refs: {} };
+}
+
+function widgetMeta(path) {
+  const p = String(path || '');
+  const leaf = p.split('.').pop();
+  const tbl = (S.glossaryWidgets || {})[S.dom] || {};
+  return tbl[p] || tbl[leaf] || null;
+}
+
+/* 该字段的候选值（去重、截断；找不到就空数组 = 纯手填） */
+function suggestFor(path) {
+  const p = String(path || '');
+  if (!p) return [];
+  // `name` / `id` 是身份字段：给「别的条目叫什么」做候选只会诱导重名，不如不联
+  const leaf = p.split('.').pop();
+  if (leaf === 'name' || leaf === 'id' || leaf === 'tag') return [];
+  const meta = widgetMeta(p) || {};
+  const refs = (S.hints && S.hints.refs) || {};
+  if (meta.ref && refs[meta.ref]) return refs[meta.ref].slice(0, 200);   // 跨域引用 → 目标域真 key
+  const fields = ((S.hints && S.hints.fields) || {})[S.dom] || {};
+  const slot = fields[p] || fields[p.split('.').pop()] || {};
+  if (meta.panel) return S.panelKeys || [];                             // 面板键（框架协议）
+  return (slot.v || []).slice(0, 60);                                   // 包内已有取值
+}
+
+/* 对象型字段的候选键（channels / stat_scale / judge … 用过的键） */
+function suggestKeysFor(path) {
+  const p = String(path || '');
+  const fields = ((S.hints && S.hints.fields) || {})[S.dom] || {};
+  const slot = fields[p] || fields[p.split('.').pop()] || {};
+  const meta = widgetMeta(p) || {};
+  if (meta.panel) return S.panelKeys || [];
+  return (slot.k || []).slice(0, 60);
+}
+
+/* 该字段该用哪种控件（None = 按 schema 类型默认） */
+function widgetFor(path) {
+  const meta = widgetMeta(path);
+  return meta && meta.widget ? meta.widget : null;
+}
 
 /* 字段 → 词典条目（域内精确 → 域内叶名 → 通用叶名） */
 function gloss(path) {
@@ -183,6 +247,7 @@ async function selectPkg(id) {
   renderPkgMenu(); renderRail(); renderSettingsForm(); updateStatusbar();
   closeEntry();
   await loadActions(false);          // 动作清单随包（包内可有 mech/）
+  await loadHints();                 // 联想数据随包（跨域 key + 已有取值）
   await loadDomain(S.dom);
 }
 
@@ -327,6 +392,7 @@ function visibleEntries() {
 function renderList() {
   const rows = visibleEntries();
   const bad = (S.status.invalid || []).length;
+  const q = ($('search').value || '').trim();
 
   // 筛选 chip 计数
   els('#filterRow .chip').forEach((c) => {
@@ -353,11 +419,17 @@ function renderList() {
       html += `<div class="entry-group">${esc(e.kind || '未分类')}</div>`;
       lastKind = e.kind;
     }
+    // 搜索时高亮命中片段（跟命令面板一致的手感）
+    const nm = q ? hlMatch(String(e.name), q) : esc(e.name);
+    const meta = [
+      e.lv !== undefined && e.lv !== null && e.lv !== '' ? `Lv ${esc(e.lv)}` : '',
+      e.summary ? esc(e.summary) : '',
+    ].filter(Boolean).join(' · ');
     html += `<div class="entry-row ${e.key === S.entryKey ? 'on' : ''} ${isBad(e.key) ? 'is-bad' : ''} ${i === S.kb ? 'kb-focus' : ''}"
-      data-key="${esc(e.key)}" data-idx="${i}">
+      data-key="${esc(e.key)}" data-idx="${i}" title="${esc(meta || e.key)}">
       <div class="er-main">
-        <div class="er-name">${esc(e.name)}</div>
-        <div class="er-key">${esc(e.key)}</div>
+        <div class="er-name">${nm}</div>
+        <div class="er-key">${esc(e.key)}${e.lv !== undefined && e.lv !== null && e.lv !== '' ? ` <span class="er-lv">Lv${esc(e.lv)}</span>` : ''}</div>
       </div>
       <div class="er-tail">
         ${e.kind ? `<span class="chip kind ${kindClass(e.kind)}">${esc(e.kind)}</span>` : ''}
@@ -428,6 +500,8 @@ async function openEntry(key) {
 function renderEntry() {
   els('#modeSwitch button').forEach((b) => b.classList.toggle('on', b.dataset.mode === S.mode));
   const isForm = S.mode === 'form', isJson = S.mode === 'json';
+  // 只有表单档且该域有分组时才显示「分组折叠」按钮
+  $('groupCtl').classList.toggle('hidden', !isForm || !(groupsOf(S.dom) || []).length);
   $('formHost').classList.toggle('hidden', !isForm);
   $('jsonHost').classList.toggle('hidden', !isJson);
   $('diffHost').classList.toggle('hidden', isForm || isJson);
@@ -455,6 +529,10 @@ function renderForm() {
       groupKey: S.dom,
       collapsed: (key) => S.collapsed.has(key),
       onToggleGroup: (key, col) => { col ? S.collapsed.add(key) : S.collapsed.delete(key); },
+      // 控件形态 + 联想（长文案给大框、比值给滑杆、引用给真候选；详见 loadHints 段注释）
+      widget: (path) => widgetFor(path),
+      suggest: (path) => suggestFor(path),
+      suggestKey: (path) => suggestKeysFor(path),
     });
     host.appendChild(h.el);
     // 帮助文字可能因网格窄而被 clamp → 补 title 提示（schema_form.js 不动）
@@ -822,7 +900,7 @@ async function save() {
   $('saveStatus').className = 'save-status ok';
   renderIssues();
   toast((wasNew ? '已新建 ' : '已保存 ') + S.entryKey, 'ok');
-  await refreshPkg(); await loadDomain(S.dom);
+  await refreshPkg(); await loadDomain(S.dom); await loadHints();   // 值变了 → 联想候选跟着更新
 }
 
 async function del() {
@@ -833,7 +911,31 @@ async function del() {
   if (!r.ok) { toast('删除失败', 'bad'); return; }
   toast('已删除 ' + S.entryKey, 'ok');
   closeEntry();
-  await refreshPkg(); await loadDomain(S.dom);
+  await refreshPkg(); await loadDomain(S.dom); await loadHints();
+}
+
+/* 复制条目（同一份数据换个 key 存 —— 做「同款不同数值」时省一遍手填） */
+async function duplicate() {
+  if (!S.entryKey) return;
+  if (S.isNew || S.dirty) { toast('先把当前改动保存（或放弃）再复制', 'warn'); return; }
+  const base = S.entryKey;
+  let key = prompt(`复制 ${base} 为（新 key）：`, base + '_copy');
+  if (!key) return;
+  key = key.trim();
+  if (!key) return;
+  if (S.entries.some((e) => e.key === key)) { toast(`已存在同 key 条目：${key}`, 'bad'); return; }
+  const data = clone(S.entryData || {});
+  if (data.name) data.name = String(data.name) + ' 副本';
+  const r = await api('PUT', `${dPath(S.dom)}/${encodeURIComponent(key)}`, { data });
+  if (r.status === 422) {
+    S.friendly = ((r.json || {}).validation || {}).friendly || [];
+    toast('复制失败 —— ' + ((S.friendly[0] || {}).display || '校验未通过'), 'bad');
+    return;
+  }
+  if (!r.ok) { toast('复制失败：' + ((r.json || {}).message || ''), 'bad'); return; }
+  toast(`已复制为 ${key}`, 'ok');
+  await refreshPkg(); await loadDomain(S.dom); await loadHints();
+  await openEntry(key);
 }
 
 async function add() {
@@ -1245,6 +1347,7 @@ function buildPalette() {
     { ico: '💾', name: '保存当前条目', meta: 'Ctrl+S', run: save, need: () => !!S.entryKey && S.dirty },
     { ico: '✓', name: '全包校验', meta: 'validate', run: validateAll },
     { ico: '＋', name: '新建条目', meta: S.dom, run: add },
+    { ico: '⧉', name: '复制当前条目', meta: 'Ctrl+D', need: () => !!S.entryKey, run: duplicate },
     { ico: '⚔', name: '试跑当前条目', meta: 'simulate', run: () => openSim().then(() => S.entryKey && ($('simSkill').value = S.entryKey)) },
     { ico: '↻', name: '重新读取当前域', meta: S.dom, run: () => loadDomain(S.dom) },
     { ico: '📖', name: '打开引擎文档', meta: 'wiki', run: () => openWiki() },
@@ -1521,7 +1624,9 @@ function initKeys() {
 
     if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); paletteOpen() ? closePalette() : openPalette(); return; }
     if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); if (S.entryKey && S.dirty) save(); return; }
+    if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicate(); return; }
     if (mod && e.key === 'Enter') { e.preventDefault(); openSim(); return; }
+    if (mod && e.key === '\\') { e.preventDefault(); setAllGroups(!((groupsOf(S.dom) || []).length && (groupsOf(S.dom) || []).every((g) => S.collapsed.has(grpKey(g.id))))); return; }
     if (e.key === 'Escape') {
       if (paletteOpen()) return closePalette();
       if (codeOpen()) return $('codeOverlay').classList.add('hidden');
@@ -1647,7 +1752,10 @@ window.addEventListener('DOMContentLoaded', () => {
   }));
   $('jsonHost').oninput = markDirty;
   $('btnSave').onclick = save;
+  $('btnDup').onclick = duplicate;
   $('btnDel').onclick = del;
+  $('btnGroupsOpen').onclick = () => setAllGroups(false);
+  $('btnGroupsClose').onclick = () => setAllGroups(true);
   $('btnSim').onclick = openSim;
   $('btnRunSim').onclick = runSim;
   $('btnSimClose').onclick = () => $('simDrawer').classList.add('hidden');

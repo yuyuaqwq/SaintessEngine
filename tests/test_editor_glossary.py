@@ -19,6 +19,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, ROOT)
 
 from editor import glossary as G          # noqa: E402
+from editor import packages as PK         # noqa: E402
 
 PASS = 0
 FAIL = 0
@@ -167,6 +168,33 @@ def main() -> int:
           (lambda a: (a[0]["fields"].append("__x__"), "__x__" not in G.groups_for("skills")[0]["fields"])[1])(
               G.groups_for("skills")))
     check("all_groups 覆盖 6 个有 schema 的域", set(G.all_groups()) == set(G.DOMAIN_SCHEMA))
+
+    # 10. 控件形态与跨域引用（长文案给大框 / 比值给滑杆 / 引用取真 key）
+    ALLOWED = {"textarea", "lines", "chips", "pct"}
+    bad_w = [f"{d}.{k}={w}" for d, tbl in G.all_widgets().items()
+             for k, m in tbl.items() if m.get("widget") and m["widget"] not in ALLOWED]
+    check(f"控件形态取值合法（{sorted(ALLOWED)}）", not bad_w, f"{bad_w[:5]}")
+    check("长文案字段给大框（desc / flavor / heal_formula）",
+          all(G.widget_for(d, k) == "textarea"
+              for d, f in G.DOMAIN_SCHEMA.items()
+              for k in top_keys(f) if k in ("desc", "flavor", "heal_formula")),
+          {d: [k for k in top_keys(f) if G.widget_for(d, k) == "textarea"]
+           for d, f in G.DOMAIN_SCHEMA.items()})
+    check("表达式列表给「一行一条」", G.widget_for("skills", "exprs") == "lines")
+    check("0~1 比值给滑杆", all(G.widget_for("skills", k) == "pct"
+                                for k in ("mech_chance", "lifesteal"))
+          and G.widget_for("effect_rules", "guard_hp_pct") == "pct")
+    check("枚举数组给多选标签", G.widget_for("affixes", "qualities") == "chips")
+    bad_ref = [f"{k}→{v}" for k, v in G.REF_DOMAINS.items() if v not in PK.DOMAINS]
+    check("跨域引用指向的域都真实存在", not bad_ref, f"{bad_ref}")
+    check("引用类字段解析出目标域（monsters.skills → skills / start_classes → classes）",
+          G.ref_domain_for("monsters", "skills") == "skills"
+          and G.ref_domain_for("effect_rules", "start_classes") == "classes"
+          and G.ref_domain_for("passive_proc", "cap_key") == "effect_rules")
+    check("非引用字段不误判（skills.kind 不是引用）", G.ref_domain_for("skills", "kind") is None)
+    check("面板键候选存在且都是框架协议名（ASCII）",
+          G.PANEL_KEYS and all(str(k).isascii() for k in G.PANEL_KEYS), f"{G.PANEL_KEYS}")
+    check("stat_scale 标记 panel（用面板键做候选）", G.suggest_meta("effect_rules", "stat_scale")["panel"])
 
     print(f"\n{'-' * 46}\n通过 {PASS} / 失败 {FAIL}")
     for f in FAILURES:

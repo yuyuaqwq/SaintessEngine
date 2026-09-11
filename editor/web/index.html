@@ -99,6 +99,10 @@
             <button data-mode="json">JSON</button>
             <button data-mode="diff">变更</button>
           </div>
+          <div class="segmented groups-ctl hidden" id="groupCtl" role="group" aria-label="分组折叠">
+            <button id="btnGroupsOpen" title="展开全部分组">⤴ 展开</button>
+            <button id="btnGroupsClose" title="折叠全部分组">⤵ 折叠</button>
+          </div>
         </header>
 
         <div class="issues hidden" id="issues"></div>
@@ -113,6 +117,7 @@
           <span class="save-status" id="saveStatus"></span>
           <span class="spacer"></span>
           <button class="btn ghost" id="btnSim"><span class="btn-ico">⚔</span>试跑</button>
+          <button class="btn ghost" id="btnDup"><span class="btn-ico">⧉</span>复制</button>
           <button class="btn danger" id="btnDel"><span class="btn-ico">🗑</span>删除</button>
           <button class="btn primary" id="btnSave" disabled>保存<span class="kbd">Ctrl</span><span class="kbd">S</span></button>
         </footer>

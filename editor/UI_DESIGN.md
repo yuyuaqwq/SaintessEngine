@@ -129,3 +129,82 @@ tests/test_editor_glossary  25 断言（新增分组门禁：155 字段零漏零
 ```
 E1-E3 造包 MVP ✅ · E4 机制挂接 ✅ · 字段词典 + 文档页 ✅ · 字段分组 ✅ · E5 导出分发 ✅
 ```
+
+---
+
+## 9. 实施记录：控件形态 + 联想（细节扫一遍，2026-09-11 第四轮）
+
+鱼鱼口径：「还有很多可以优化的点，你全部扫一遍，比如描述你是可以用比较大的框，
+kind之类的是可以用列表框的吧？这种细节也优化一下」。
+
+### 9.1 控件形态：按**字段语义**指派控件（不是全靠文本框）
+
+| 字段语义 | 控件 | 覆盖的字段 |
+|---|---|---|
+| 长文案 | **多行大框**（自适应长高，上限 320px） | `desc` · `flavor` · `heal_formula` · `food_effect` |
+| 一行一条的字符串数组 | **多行框**（一行一条 · 空行忽略 · 条数读数） | `exprs` · `maps` |
+| 0~1 的比值 | **数字 + 滑杆联动**（带百分比读数） | `chance` · `mech_chance` · `lifesteal` · `guard_hp_pct` · `heal_pct` · `overload_heal_pct` |
+| 枚举数组 | **多选标签 chips**（原先掉进 JSON 兜底） | `qualities` |
+| 对象型字段 | **键值行 + 键联想**（原先 `channels`/`debuff_scale` 是裸 JSON） | `channels` · `stat_scale` · `debuff_scale` · `judge` · `effect_data` |
+
+实现：`schema_form.js` 新增**可选** `widget/suggest/suggestKey` 三个回调（不传 = 旧行为），
+或 schema 自带 `x-widget`；另有通用启发（`maxLength ≥ 120` 的长字符串自动给大框）。
+枚举数组→chips 是**内置**改进（原先无论谁调用都是 JSON 兜底）。
+
+### 9.2 联想：**全部来自包自己的数据**（框架零游戏词汇）
+
+`editor/hints.py`（新增）扫包内已有条目，产出三类候选：
+
+```
+refs   {域: [真 key]}          跨域引用候选（技能 / 物品 / 职业 / 效果 key）
+values {域: {字段: [已有取值]}}  自由串候选（kind / element / effect / mech …）
+keys   {域: {字段: [用过的键]}}  对象字段的键（channels 的时机名 / stat_scale 的面板键 …）
+```
+
+为什么不用枚举写死：`tests/test_no_game_vocabulary.py` 明令框架层不得出现游戏词汇 ——
+「技能的种类有：物理/魔法」写进 schema 就是把某个游戏的知识写进框架。用包内数据做候选，
+第三方做什么游戏，候选就跟着变；而且候选**一定真实存在**（拼错当场避免，引擎那边是静默空放）。
+
+`kind` 的处理正是这条：**输入框 + 联想（datalist）**而不是死 `<select>` ——
+框架里 `kind` 的取值由内容侧声明，枚举不出来；能选已有值、也能敲新值才是对的。
+真枚举（`aoe` / `target` / `role` / `trigger` / `quality`）**本来就是下拉**。
+
+细节：`name` / `id` / `tag` 是身份字段，**不给联想**（候选只会诱导重名）。
+
+### 9.3 顺带扫出来的其它细节
+
+| 项 | 改动 |
+|---|---|
+| 列表看不清 | 每行加 `Lv` 标记 + 悬浮显示「Lv · 描述摘要」 |
+| 搜索 | 命中处 `<mark>` 高亮（与命令面板一致） |
+| 造相似条目 | **复制条目**（`⧉ 复制` 按钮 / 命令面板 / **Ctrl+D**），名字自动加「副本」 |
+| 折叠 | 编辑器头加「⤴ 展开 / ⤵ 折叠」按钮；**Ctrl+\** 一键全折叠/全展开 |
+| 长表单定位 | 分组标题**吸顶**（滚到中段也知道自己在哪一组） |
+| 身份字段乱联想 | `name`/`id`/`tag` 不联想 |
+| `channels` / `debuff_scale` 是裸 JSON | 按 wiki 事实补 schema（值形态 number \| {gain,when,per_dt}；每层系数 number）→ 变成键值编辑器 |
+
+### 9.4 扫描结果：一个**设计问题**要鱼鱼定
+
+`schema/monster.schema.json` 里有 5 个 `$defs`，但**只有 `monster_skill`（21 字段）有入口**
+（域注册表 `primary: monster_skill`）。另一个有字段的 def 是 **`hidden_monster`（12 字段：
+id / role / lv_off / skills / drops / gold_mult / cond / chance / tag / flavor / maps）——
+编辑器没有域指向它**（其余 def 都是 0 字段的整表壳）。
+
+建议：要么给它开一个域（编辑器里就能配「怪物的技能池 / 掉落 / 出现地图」），
+要么从框架模板 schema 里删掉（它是**奥兰迪亚的叫法**，直接拿来当框架域会污染中立性 ——
+命名得先定，如 `monster_spawn` / `monster_template`）。**待拍板，未擅自加。**
+
+### 9.5 验收
+
+```
+tests/js/form_widgets_test.js          33 断言（Node 打桩真跑渲染器：控件形态 / 联想 / 不回归）
+  ↳ tests/test_editor_schemaform.py      调度器（无 node 则显式跳过，不算失败）
+tests/test_editor_hints.py             16 断言（候选真来自包内数据 / 频次排序 / 空包不炸）
+tests/test_editor_glossary.py          35 断言（新增：控件形态合法性 / 长文案映射 / 跨域引用目标存在）
+tests/test_editor_api.py               45 断言（新增：hints 接口）
+框架全量                               18 文件 18 绿
+浏览器实测                             6 域逐项过：desc 大框 · kind 输入+联想 · exprs 一行一条 ·
+                                      chance/guard_hp_pct 滑杆 · qualities 标签×3 ·
+                                      channels/debuff_scale 键值编辑器 · start_classes/buff_key 跨域真 key ·
+                                      搜索高亮 · 复制条目 · 全折叠 0 / 全展开 56
+```
