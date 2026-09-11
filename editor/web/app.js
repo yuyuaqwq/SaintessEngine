@@ -58,6 +58,8 @@ function toast(msg, kind) {
 
 /* ═══════════════════════════ 启动 ═══════════════════════════ */
 async function boot() {
+  TH().apply();
+  refreshThemeIcon();
   restoreLayout();
   const d = await api('GET', '/api/domains');
   S.domains = (d.json && d.json.domains) || [];
@@ -700,6 +702,86 @@ function updateStatusbar() {
   $('sbPath').textContent = (S.pkg && S.pkg.dir) || $('sbPath').textContent;
 }
 
+/* ═══════════════════════════ 外观（主题系统，实现在 theme.js） ═══════════════════════════ */
+const TH = () => window.SETheme;
+
+const themeOpen = () => !$('themeOverlay').classList.contains('hidden');
+const closeTheme = () => $('themeOverlay').classList.add('hidden');
+function openTheme() { closePkgMenu(); renderThemeDialog(); $('themeOverlay').classList.remove('hidden'); }
+
+/* 单个预设卡（色块条预览 + 名称 + 模式标签） */
+function presetCard(pr, curId) {
+  const base = TH().MODE_BASE[pr.mode];
+  const t = Object.assign({}, base, pr.tokens);
+  const sw = [t.bg1, t.bg3, t.accent, t.fg1, t.err].map((c) => `<i style="background:${c}"></i>`).join('');
+  const custom = pr.id === 'custom';
+  const on = curId === pr.id;
+  const label = custom ? `${pr.name}` : pr.name;
+  const tags = custom ? '你自己的' : (pr.tags || '');
+  return `<div class="preset-card ${on ? 'on' : ''}" data-preset="${esc(pr.id)}" title="${esc(tags)}">
+      <div class="preset-swatches">${sw}</div>
+      <div class="preset-name">${esc(label)}<span class="preset-mode">${custom ? '✎' : (pr.mode === 'light' ? '☀' : '🌙')}</span></div>
+    </div>`;
+}
+
+function renderThemeDialog() {
+  const st = TH().state();
+  const dark = TH().PRESETS.filter((p) => p.mode === 'dark');
+  const light = TH().PRESETS.filter((p) => p.mode === 'light');
+
+  // 模式 seg
+  els('#themeModeSwitch button').forEach((b) => {
+    const on = b.dataset.follow ? st.follow : (!st.follow && (b.dataset.mode === st.modePref));
+    b.classList.toggle('on', !!on);
+  });
+
+  // 预设卡（每个模式一组，末尾各放一张「自定义」）
+  $('presetDark').innerHTML = dark.map((p) => presetCard(p, st.presetDark)).join('')
+    + presetCard({ id: 'custom', name: '自定义', mode: 'dark' }, st.presetDark);
+  $('presetLight').innerHTML = light.map((p) => presetCard(p, st.presetLight)).join('')
+    + presetCard({ id: 'custom', name: '自定义', mode: 'light' }, st.presetLight);
+  els('#presetDark .preset-card').forEach((n) => n.onclick = () => { TH().update({ presetId: n.dataset.preset }); renderThemeDialog(); });
+  els('#presetLight .preset-card').forEach((n) => n.onclick = () => { TH().update({ presetId: n.dataset.preset }); renderThemeDialog(); });
+
+  // 强调色快选
+  const acc = TH().ACCENT_CHOICES;
+  $('accentPicker').innerHTML =
+    `<button class="chip ${st.accent === 'preset' ? 'on' : ''}" data-accent="preset" title="用当前预设自带的强调色">随主题</button>`
+    + Object.keys(acc).map((k) =>
+      `<button class="ap-dot ${st.accent === k ? 'on' : ''}" data-accent="${k}" title="${esc(acc[k].name)}"
+         style="--dot:${acc[k][st.mode]}"></button>`).join('');
+  els('#accentPicker [data-accent]').forEach((d) => d.onclick = () => {
+    TH().update({ accent: d.dataset.accent }); renderThemeDialog();
+  });
+  $('accentColor').value = TH().normHex(st.accentHex) || TH().normHex(TH().tokens().accent);
+
+  // 自定义字段（当前生效值）
+  const tk = TH().tokens();
+  $('customGrid').innerHTML = TH().EDITABLE.map((f) =>
+    `<div class="th-field"><span title="${esc(f.label)}">${esc(f.label)}</span>
+      <input type="color" data-token="${f.k}" value="${TH().normHex(tk[f.k]) || '#000000'}"></div>`).join('');
+  els('#customGrid input[data-token]').forEach((inp) => {
+    inp.oninput = () => TH().update({ token: { k: inp.dataset.token, v: inp.value } });
+    inp.onchange = () => renderThemeDialog();
+  });
+
+  // 标题 / 提示
+  const p = TH().PRESETS.find((x) => x.id === st.presetId);
+  const pname = st.presetId === 'custom' ? '自定义' : (p ? p.name : st.presetId);
+  $('themeNow').textContent = `${st.mode === 'light' ? '浅色' : '深色'} · ${pname}${st.follow ? ' · 跟随系统' : ''}`;
+  $('themeHint').textContent = st.follow
+    ? `跟随系统：当前系统为${TH().sysLight() ? '浅色' : '深色'}`
+    : `配色保存在本机浏览器（localStorage），换设备不跟随`;
+  $('themeIco').textContent = st.mode === 'light' ? '☀️' : '🌙';
+}
+
+/* 主题按钮图标随系统变化（跟随模式下） */
+function refreshThemeIcon() {
+  const st = TH().state();
+  const ico = $('themeIco');
+  if (ico) ico.textContent = st.mode === 'light' ? '☀️' : '🌙';
+}
+
 /* ═══════════════════════════ 可拖拽分栏 ═══════════════════════════ */
 function restoreLayout() {
   const w = +localStorage.getItem('fe.listW');
@@ -755,6 +837,7 @@ function initKeys() {
     if (mod && e.key === 'Enter') { e.preventDefault(); openSim(); return; }
     if (e.key === 'Escape') {
       if (paletteOpen()) return closePalette();
+      if (themeOpen()) return closeTheme();
       if (S.pkgOpen) return closePkgMenu();
       if (simOpen()) return $('simDrawer').classList.add('hidden');
       if (inField) return e.target.blur();
@@ -788,10 +871,34 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // 顶栏
   $('btnPkgMenu').onclick = (e) => { e.stopPropagation(); S.pkgOpen ? closePkgMenu() : openPkgMenu(); };
-  document.addEventListener('click', (e) => { if (S.pkgOpen && !e.target.closest('.pkg-switch')) closePkgMenu(); });
+  document.addEventListener('click', (e) => {
+    if (S.pkgOpen && !e.target.closest('.pkg-switch')) closePkgMenu();
+  });
   $('btnPalette').onclick = openPalette;
   $('btnValidate').onclick = validateAll;
   $('btnSettings').onclick = openSettings;
+
+  // 外观（主题系统）
+  $('btnAppearance').onclick = openTheme;
+  $('btnThemeClose').onclick = closeTheme;
+  $('themeOverlay').onclick = (e) => { if (e.target === $('themeOverlay')) closeTheme(); };
+  els('#themeModeSwitch button').forEach((b) => (b.onclick = () => {
+    if (b.dataset.follow) TH().update({ follow: true });
+    else TH().update({ follow: false, modePref: b.dataset.mode });
+    renderThemeDialog();
+  }));
+  $('accentColor').oninput = () => TH().update({ accentHex: $('accentColor').value });
+  $('accentColor').onchange = () => renderThemeDialog();
+  $('btnResetCustom').onclick = () => {
+    TH().update({ resetCustom: true, presetId: TH().state().mode === 'light' ? 'latte' : 'mocha' });
+    renderThemeDialog();
+    toast('已恢复该模式的预设配色', 'ok');
+  };
+  $('btnResetAll').onclick = () => {
+    TH().update({ resetAll: true });
+    renderThemeDialog();
+    toast('已恢复默认外观', 'ok');
+  };
 
   // 列表
   $('search').oninput = () => { S.kb = -1; renderList(); };

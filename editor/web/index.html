@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SaintessEngine 工作室</title>
+<script src="/theme.js"></script>
 <link rel="stylesheet" href="/app.css">
 </head>
 <body>
@@ -32,6 +33,7 @@
         <span class="btn-ico">🔍</span><span>跳转</span><span class="kbd">Ctrl</span><span class="kbd">K</span>
       </button>
       <button class="btn ghost" id="btnValidate" title="校验整个游戏包"><span class="btn-ico">✓</span><span>校验</span></button>
+      <button class="btn ghost icon" id="btnAppearance" title="外观（主题 / 配色）"><span class="btn-ico" id="themeIco">🌙</span></button>
       <button class="btn ghost icon" id="btnSettings" title="包设置"><span class="btn-ico">⚙</span></button>
     </div>
   </header>
@@ -189,6 +191,59 @@
       <span><span class="kbd">Enter</span> 确认</span>
       <span><span class="kbd">Esc</span> 关闭</span>
     </div>
+  </div>
+</div>
+
+<!-- ═══════════ 外观（主题系统） ═══════════ -->
+<div class="theme-overlay hidden" id="themeOverlay">
+  <div class="theme-dialog" role="dialog" aria-label="外观">
+    <header class="theme-head">
+      <span class="theme-title">外观 <small id="themeNow"></small></span>
+      <button class="btn ghost icon sm" id="btnThemeClose" title="关闭 (Esc)">✕</button>
+    </header>
+
+    <div class="theme-body">
+      <div class="th-sec">
+        <span class="th-label">模式</span>
+        <span class="segmented" id="themeModeSwitch">
+          <button data-mode="dark">🌙 深色</button>
+          <button data-mode="light">☀️ 浅色</button>
+          <button data-follow="1">🖥 跟随系统</button>
+        </span>
+      </div>
+
+      <div class="th-sec">
+        <span class="th-label">预设主题</span>
+        <div class="preset-grid" id="presetDark"></div>
+        <div style="height:12px"></div>
+        <div class="preset-grid" id="presetLight"></div>
+      </div>
+
+      <div class="th-sec">
+        <span class="th-label">强调色</span>
+        <div class="accent-row">
+          <span class="ap-dots" id="accentPicker"></span>
+          <label class="color-input" title="自定义强调色">
+            <input type="color" id="accentColor"><span>自定义</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="th-sec">
+        <details class="th-custom" id="customBox">
+          <summary>自定义配色（改任意一项即切到「自定义」）</summary>
+          <div class="th-grid" id="customGrid"></div>
+          <div style="margin-top:12px">
+            <button class="btn ghost sm" id="btnResetCustom">恢复此模式的预设配色</button>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <footer class="theme-foot">
+      <span class="hint" id="themeHint"></span>
+      <button class="btn ghost sm" id="btnResetAll">全部恢复默认</button>
+    </footer>
   </div>
 </div>
 
