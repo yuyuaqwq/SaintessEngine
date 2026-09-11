@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>⚔ 框架编辑器 · battle2</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header>
+  <div class="brand">⚔ 框架编辑器 <span class="sub">battle2 · 造游戏</span></div>
+  <div class="pkgbar">
+    <label>游戏包</label>
+    <select id="pkgSelect"></select>
+    <button id="btnNew">＋ 新建包</button>
+    <button id="btnValidate">✓ 全包校验</button>
+    <span id="pkgInfo" class="muted"></span>
+  </div>
+</header>
+
+<nav id="tabs" class="tabs"></nav>
+
+<main>
+  <!-- 域编辑（技能/职业/怪物/…） -->
+  <section id="view-domain" class="view">
+    <aside class="list-pane">
+      <div class="list-tools">
+        <input id="search" type="search" placeholder="搜索条目…">
+        <button id="btnAdd" class="primary">＋ 新建条目</button>
+      </div>
+      <div id="entryList" class="entry-list"></div>
+    </aside>
+    <div class="edit-pane">
+      <div id="entryHead" class="entry-head"><span class="muted">← 选一个条目开始编辑</span></div>
+      <div class="viewtabs">
+        <button data-mode="form" class="active">表单</button>
+        <button data-mode="json">原始 JSON</button>
+        <button id="btnSim" title="用这个条目跑一场沙箱战斗">⚔ 试跑</button>
+        <span class="spacer"></span>
+        <button id="btnDel" class="danger">删除</button>
+        <button id="btnSave" class="primary">保存</button>
+      </div>
+      <div id="errors" class="errors hidden"></div>
+      <div id="formHost" class="form-host"></div>
+      <textarea id="jsonHost" class="json-host hidden" spellcheck="false"></textarea>
+    </div>
+  </section>
+
+  <!-- 试跑 -->
+  <section id="view-sim" class="view hidden">
+    <div class="sim-form">
+      <h3>⚔ 沙箱试跑</h3>
+      <p class="muted">子进程真跑引擎 + 本游戏包；不写任何文件。技能直接取当前 tab 的条目（含未保存改动）。</p>
+      <label>技能来源
+        <select id="simDomain"></select>
+      </label>
+      <label>技能
+        <select id="simSkill"></select>
+      </label>
+      <div class="row">
+        <label>职业 <input id="simClass" value="战士"></label>
+        <label>等级 <input id="simLevel" type="number" value="20"></label>
+        <label>技能等级 <input id="simSkillLv" type="number" value="1"></label>
+        <label>随机种子 <input id="simSeed" type="number" value="1"></label>
+      </div>
+      <div class="row">
+        <label>目标防御 <input id="simDef" type="number" value="80"></label>
+        <label>目标魔防 <input id="simMdef" type="number" value="80"></label>
+        <label>目标血量 <input id="simHp" type="number" value="10000000"></label>
+      </div>
+      <button id="btnRunSim" class="primary">▶ 跑一场</button>
+      <div id="simOut" class="sim-out"></div>
+    </div>
+  </section>
+
+  <!-- 包设置 -->
+  <section id="view-pkg" class="view hidden">
+    <div class="sim-form">
+      <h3>📦 包设置</h3>
+      <div id="pkgForm"></div>
+      <button id="btnSavePkg" class="primary">保存包清单</button>
+      <p class="muted" id="pkgPath"></p>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/schema_form.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

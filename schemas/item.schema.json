@@ -1,0 +1,311 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonfall.local/schema/item.schema.json",
+  "title": "Dragonfall 物品（items.py）",
+  "$defs": {
+    "item": {
+      "type": "object",
+      "title": "物品（ITEMS 一条）",
+      "required": [
+        "name",
+        "price",
+        "desc"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "desc": {
+          "type": "string",
+          "minLength": 1
+        },
+        "price": {
+          "type": "number",
+          "minimum": 0
+        },
+        "type": {
+          "enum": [
+            "任务道具",
+            "传说",
+            "元素",
+            "兽材",
+            "图纸",
+            "垃圾",
+            "宝物",
+            "宝石",
+            "工具",
+            "收藏",
+            "收藏品",
+            "木材",
+            "杂物",
+            "材料",
+            "消耗品",
+            "矿石",
+            "符文",
+            "精华",
+            "织物",
+            "草药",
+            "食材",
+            "鱼",
+            "鱼王"
+          ]
+        },
+        "quality": {
+          "enum": [
+            "blue",
+            "green",
+            "orange",
+            "purple",
+            "white"
+          ]
+        },
+        "effect": {
+          "enum": [
+            "anchor",
+            "apply_mark",
+            "armor_break_pot",
+            "bag_expand",
+            "bait_blood",
+            "bait_dough",
+            "bait_glow",
+            "battle_start_resource",
+            "block_pot",
+            "buff_atk",
+            "buff_atk_big",
+            "buff_atk_big_def",
+            "buff_atk_def",
+            "buff_atk_food",
+            "buff_atk_small",
+            "buff_crit",
+            "buff_crit_big",
+            "buff_crit_food",
+            "buff_crit_small",
+            "buff_def",
+            "buff_def_food",
+            "buff_extend",
+            "buff_matk",
+            "buff_matk_crit",
+            "buff_matk_food",
+            "buff_matk_strong",
+            "buff_phys_next",
+            "buff_spd",
+            "buff_spd_food",
+            "buff_spd_small",
+            "cc_immune",
+            "clear_red",
+            "collection",
+            "compass",
+            "crit_dmg_pot",
+            "dodge_pot",
+            "dot_amp",
+            "enhance_boost",
+            "execute_pot",
+            "firework",
+            "fish_net",
+            "food_spd_up_small",
+            "full_tension",
+            "garden_slot",
+            "grapple",
+            "harvest_boost",
+            "heal_up",
+            "holy_shield",
+            "invuln",
+            "lantern",
+            "lifesteal_pot",
+            "lucky",
+            "magic_resist",
+            "mail",
+            "mana_cost_down",
+            "mana_restore",
+            "morph",
+            "next_atk_up",
+            "open_chest",
+            "open_rune_chest",
+            "pene_magi_pot",
+            "pene_pot",
+            "pet_rename",
+            "phoenix",
+            "purify",
+            "purify_immune",
+            "re_roll_affix",
+            "reaction",
+            "reforge",
+            "rename",
+            "reset_voucher",
+            "resource_amp",
+            "resource_charge",
+            "restore_resource",
+            "restore_resource_full",
+            "return_vila",
+            "rock_shield",
+            "scout",
+            "seed_planter",
+            "shield_big",
+            "steal_buff",
+            "summon",
+            "teleport_portal",
+            "thorns_pot",
+            "toy_form",
+            "trap",
+            "vuln"
+          ]
+        },
+        "effect_data": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": true
+        },
+        "food_effect": {
+          "enum": [
+            "armor_break",
+            "aurora_guard",
+            "bleed",
+            "charge",
+            "combo",
+            "counter",
+            "dawn_crown",
+            "dragon_tongue",
+            "element_fire",
+            "element_ice",
+            "execute",
+            "lifesteal",
+            "meditate",
+            "pierce",
+            "precise",
+            "regen",
+            "shield",
+            "static",
+            "thorns"
+          ]
+        },
+        "heal": {
+          "type": "number",
+          "minimum": 0
+        },
+        "mana": {
+          "type": "number",
+          "minimum": 0
+        },
+        "hot": {
+          "type": "number",
+          "minimum": 0
+        },
+        "hot_turns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hot_mana": {
+          "type": "number",
+          "minimum": 0
+        },
+        "stamina": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cast": {
+          "type": "number",
+          "minimum": 0
+        },
+        "food": {
+          "type": "boolean"
+        },
+        "battle_ok": {
+          "type": "boolean"
+        },
+        "key_item": {
+          "type": "boolean"
+        },
+        "blueprint_for": {
+          "type": "string",
+          "minLength": 1
+        },
+        "roster_id": {
+          "type": "string",
+          "pattern": "^eq_[a-z0-9_]+$"
+        },
+        "learn_skill": {
+          "type": "string",
+          "minLength": 1
+        },
+        "require_class": {
+          "enum": [
+            "cls_ci_ke",
+            "cls_fa_shi",
+            "cls_mu_shi",
+            "cls_novice",
+            "cls_shi_ren",
+            "cls_wu_seng",
+            "cls_you_xia",
+            "cls_zhan_shi"
+          ]
+        },
+        "rune_pool": {
+          "type": "string"
+        },
+        "weapon_pick": {
+          "type": "boolean"
+        },
+        "pick_options": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "rid",
+              "desc"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "rid": {
+                "type": "string"
+              },
+              "desc": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "examples": [
+        {
+          "price": 120,
+          "name": "亡影铠甲片",
+          "type": "兽材",
+          "desc": "百族战将·亡影身上剥落的暗色铠甲残片，铁匠铺与炼金坊都愿意出价收购"
+        },
+        {
+          "price": 110,
+          "name": "裂鬃獠牙图纸",
+          "type": "图纸",
+          "blueprint_for": "裂鬃獠牙",
+          "roster_id": "eq_lie_zong_liao_ya",
+          "desc": "野猪王·裂鬃的锻造图纸，学习后可锻造【裂鬃獠牙】(Lv.30 匕首)"
+        },
+        {
+          "name": "珍珠明目水",
+          "price": 100,
+          "effect": "buff_crit_small",
+          "desc": "战斗中使用，暴击率 + 15%(3 刻)，湖珍珠磨粉调制的灵水"
+        }
+      ]
+    },
+    "item_table": {
+      "type": "object",
+      "title": "ITEMS 整表：{物品id: 物品}（条目本体见 $defs/item）",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  },
+  "x-primary": "item"
+}

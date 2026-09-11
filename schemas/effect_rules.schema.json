@@ -1,0 +1,422 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonfall.local/schema/effect_rules.schema.json",
+  "title": "Dragonfall 声明表（battle2_rules.py：EFFECT_RULES / EFFECT_ACTIONS / MECH_CASH）",
+  "$defs": {
+    "effect_rule": {
+      "type": "object",
+      "title": "效果规则（EFFECT_RULES 一条）",
+      "minProperties": 1,
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "cap": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stat_scale": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "enum": [
+              "atk",
+              "crit",
+              "def",
+              "dmg_mult",
+              "matk",
+              "mdef",
+              "reduce",
+              "spd"
+            ]
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "panel": {
+          "type": "object",
+          "required": [
+            "stat",
+            "op",
+            "mult"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "stat": {
+              "type": "string"
+            },
+            "op": {
+              "enum": [
+                "add",
+                "mul"
+              ]
+            },
+            "mult": {
+              "type": "number"
+            }
+          }
+        },
+        "period": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": true,
+          "properties": {
+            "dir": {
+              "enum": [
+                "damage",
+                "gain"
+              ]
+            },
+            "interval": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "pct_max_hp": {
+              "type": "number"
+            },
+            "pct_cur_hp": {
+              "type": "number"
+            },
+            "pct_boss": {
+              "type": "number"
+            },
+            "pct_cur_boss": {
+              "type": "number"
+            },
+            "amount": {
+              "type": "number"
+            },
+            "type": {
+              "type": "string"
+            },
+            "dmg_type": {
+              "type": "string"
+            },
+            "per_layer": {
+              "type": "number"
+            },
+            "turns": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "consume": {
+          "type": "object",
+          "required": [
+            "mode"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "mode": {
+              "enum": [
+                "no_skill",
+                "skip"
+              ]
+            }
+          }
+        },
+        "on": {
+          "enum": [
+            "target"
+          ]
+        },
+        "negative": {
+          "type": "boolean"
+        },
+        "cleanse": {
+          "type": "boolean"
+        },
+        "tag": {
+          "enum": [
+            "freeze",
+            "holy_weaken",
+            "silence",
+            "sleep",
+            "spd_down",
+            "stun"
+          ]
+        },
+        "cd_mult": {
+          "type": "number"
+        },
+        "start_full": {
+          "type": "boolean"
+        },
+        "start_classes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "cls_ci_ke",
+              "cls_fa_shi",
+              "cls_mu_shi",
+              "cls_novice",
+              "cls_shi_ren",
+              "cls_wu_seng",
+              "cls_you_xia",
+              "cls_zhan_shi"
+            ]
+          }
+        },
+        "load_tiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "on_threshold": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[0-9]+$"
+          },
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "channels": {
+          "type": "object"
+        },
+        "debuff_scale": {
+          "type": "object"
+        },
+        "guard_hp_pct": {
+          "type": "number"
+        },
+        "heal_pct": {
+          "type": "number"
+        },
+        "overload_heal_pct": {
+          "type": "number"
+        },
+        "wake_on_hit": {
+          "type": "boolean"
+        }
+      },
+      "examples": [
+        {
+          "name": "战意",
+          "cap": 10,
+          "stat_scale": {
+            "atk": 0.04
+          },
+          "on_threshold": {
+            "10": {
+              "form": "fury"
+            }
+          }
+        },
+        {
+          "cap": 5,
+          "on": "target",
+          "period": {
+            "dir": "damage",
+            "interval": 1.0,
+            "pct_max_hp": 0.02
+          }
+        }
+      ]
+    },
+    "effect_rules_table": {
+      "type": "object",
+      "title": "EFFECT_RULES 整表：{状态key: 规则}（条目本体见 $defs/effect_rule）",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "effect_actions": {
+      "type": "object",
+      "title": "EFFECT_ACTIONS：{效果键: [动作...]}（技能 effect 的落地动作表）",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "required": [
+            "action"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "action": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            },
+            "on": {
+              "type": "string"
+            },
+            "turns": {
+              "type": "number"
+            },
+            "mode": {
+              "type": "string"
+            },
+            "op": {
+              "type": "string"
+            },
+            "hit": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object"
+                }
+              ]
+            },
+            "halve": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "pct_from_mech_val": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "examples": [
+        {
+          "stun": [
+            {
+              "action": "apply",
+              "key": "stun",
+              "on": "target",
+              "turns": 1
+            }
+          ],
+          "slow": [
+            {
+              "action": "apply",
+              "key": "spd_down",
+              "on": "target",
+              "turns": 2,
+              "mode": "skip"
+            }
+          ]
+        }
+      ]
+    },
+    "mech_cash": {
+      "type": "object",
+      "title": "MECH_CASH：{机制兑现键: 兑现规则}",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "name",
+          "mode"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mode": {
+            "enum": [
+              "dmg_mult_clear",
+              "dmg_mult_clear_target",
+              "fury_enter",
+              "heal_clear",
+              "per_system_clear_target"
+            ]
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "res": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "layer_label": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "per_layer": {
+            "type": "number"
+          },
+          "per_system": {
+            "type": "number"
+          },
+          "amount": {
+            "type": "integer"
+          },
+          "crit_at": {
+            "type": "integer"
+          },
+          "clear": {
+            "type": "boolean"
+          },
+          "clear_extra": {
+            "type": "array"
+          },
+          "upgrade": {
+            "type": "object"
+          }
+        }
+      },
+      "examples": [
+        {
+          "finisher": {
+            "name": "终结技",
+            "mode": "dmg_mult_clear",
+            "key": "lian_duan",
+            "per_layer": 0.1,
+            "clear": true,
+            "layer_label": "连段",
+            "unit": "段",
+            "icon": "🔪"
+          }
+        }
+      ]
+    }
+  },
+  "x-primary": "effect_rule"
+}

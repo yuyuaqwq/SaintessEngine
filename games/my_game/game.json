@@ -1,0 +1,17 @@
+{
+  "id": "my_game",
+  "name": "我的游戏",
+  "desc": "框架编辑器演示",
+  "engine": ">=0.1",
+  "domains": [
+    "skills",
+    "classes",
+    "monsters",
+    "affixes",
+    "items",
+    "effect_rules",
+    "passive_proc"
+  ],
+  "entry": "content/apply.py",
+  "created": "2026-09-11 10:37:01"
+}

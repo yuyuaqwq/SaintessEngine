@@ -1,0 +1,13 @@
+{
+  "sk_flame_burst": {
+    "name": "烈焰冲击",
+    "kind": "魔法",
+    "lv": 1,
+    "mp": 12,
+    "power": 1.8,
+    "exprs": [
+      "matk*1.8 + player_lv*4"
+    ],
+    "desc": "凝聚炎爆轰击单体目标。"
+  }
+}

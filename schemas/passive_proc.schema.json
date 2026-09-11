@@ -1,0 +1,282 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonfall.local/schema/passive_proc.schema.json",
+  "title": "Dragonfall 被动声明表（battle2_rules.py：PASSIVE_PROC）",
+  "$defs": {
+    "passive_proc": {
+      "type": "object",
+      "title": "被动声明（PASSIVE_PROC 一条）",
+      "description": "两种形态：(a) 事件驱动 {event, action, judge,...}；(b) 域声明 {domain: cap|cost,...}。",
+      "minProperties": 1,
+      "anyOf": [
+        {
+          "required": [
+            "event",
+            "action"
+          ],
+          "properties": {
+            "event": {
+              "enum": [
+                "act_cast",
+                "act_done",
+                "attack_hit",
+                "dmg_calc",
+                "dot_calc",
+                "heal_calc",
+                "on_death",
+                "on_kill",
+                "on_taken",
+                "skill_hit",
+                "taken_calc",
+                "time_advance",
+                "turn_start"
+              ]
+            },
+            "action": {
+              "enum": [
+                "passive_bar_decay_half",
+                "passive_bar_extend",
+                "passive_cc_break",
+                "passive_cc_clear",
+                "passive_cond_crit",
+                "passive_counter",
+                "passive_ctrl_extend",
+                "passive_dmg_mult",
+                "passive_dot_mult",
+                "passive_element_core_crit",
+                "passive_heal_overflow_shield",
+                "passive_kill_gain",
+                "passive_lian_duan_soft",
+                "passive_lifesteal_buff",
+                "passive_low_hp_core",
+                "passive_mark_enhance",
+                "passive_melody_duet",
+                "passive_overflow_shield",
+                "passive_poison_spread",
+                "passive_poison_weaken",
+                "passive_reflect_bar",
+                "passive_res_gain_turn",
+                "passive_revive_berserk",
+                "passive_revive_guard",
+                "passive_shadow_buff",
+                "passive_taken_reduce"
+              ]
+            }
+          }
+        },
+        {
+          "required": [
+            "domain"
+          ]
+        }
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "event": {
+          "enum": [
+            "act_cast",
+            "act_done",
+            "attack_hit",
+            "dmg_calc",
+            "dot_calc",
+            "heal_calc",
+            "on_death",
+            "on_kill",
+            "on_taken",
+            "skill_hit",
+            "taken_calc",
+            "time_advance",
+            "turn_start"
+          ]
+        },
+        "action": {
+          "enum": [
+            "passive_bar_decay_half",
+            "passive_bar_extend",
+            "passive_cc_break",
+            "passive_cc_clear",
+            "passive_cond_crit",
+            "passive_counter",
+            "passive_ctrl_extend",
+            "passive_dmg_mult",
+            "passive_dot_mult",
+            "passive_element_core_crit",
+            "passive_heal_overflow_shield",
+            "passive_kill_gain",
+            "passive_lian_duan_soft",
+            "passive_lifesteal_buff",
+            "passive_low_hp_core",
+            "passive_mark_enhance",
+            "passive_melody_duet",
+            "passive_overflow_shield",
+            "passive_poison_spread",
+            "passive_poison_weaken",
+            "passive_reflect_bar",
+            "passive_res_gain_turn",
+            "passive_revive_berserk",
+            "passive_revive_guard",
+            "passive_shadow_buff",
+            "passive_taken_reduce"
+          ]
+        },
+        "domain": {
+          "enum": [
+            "cap",
+            "cost"
+          ]
+        },
+        "judge": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": true
+        },
+        "also": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "event",
+              "action"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "event": {
+                "enum": [
+                  "act_cast",
+                  "act_done",
+                  "attack_hit",
+                  "dmg_calc",
+                  "dot_calc",
+                  "heal_calc",
+                  "on_death",
+                  "on_kill",
+                  "on_taken",
+                  "skill_hit",
+                  "taken_calc",
+                  "time_advance",
+                  "turn_start"
+                ]
+              },
+              "action": {
+                "enum": [
+                  "passive_bar_decay_half",
+                  "passive_bar_extend",
+                  "passive_cc_break",
+                  "passive_cc_clear",
+                  "passive_cond_crit",
+                  "passive_counter",
+                  "passive_ctrl_extend",
+                  "passive_dmg_mult",
+                  "passive_dot_mult",
+                  "passive_element_core_crit",
+                  "passive_heal_overflow_shield",
+                  "passive_kill_gain",
+                  "passive_lian_duan_soft",
+                  "passive_lifesteal_buff",
+                  "passive_low_hp_core",
+                  "passive_mark_enhance",
+                  "passive_melody_duet",
+                  "passive_overflow_shield",
+                  "passive_poison_spread",
+                  "passive_poison_weaken",
+                  "passive_reflect_bar",
+                  "passive_res_gain_turn",
+                  "passive_revive_berserk",
+                  "passive_revive_guard",
+                  "passive_shadow_buff",
+                  "passive_taken_reduce"
+                ]
+              }
+            }
+          }
+        },
+        "when": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "buff_key": {
+          "type": "string"
+        },
+        "cap_key": {
+          "type": "string"
+        },
+        "used_key": {
+          "type": "string"
+        },
+        "left_key": {
+          "type": "string"
+        },
+        "cost_field": {
+          "type": "string"
+        },
+        "gain_field": {
+          "type": "string"
+        },
+        "bar_field": {
+          "type": "string"
+        },
+        "mech_prefix": {
+          "type": "string"
+        },
+        "res": {
+          "type": "string"
+        },
+        "agg": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "form": {
+          "type": "string"
+        },
+        "left_init": {
+          "type": "integer"
+        },
+        "spd_pct": {
+          "type": "number"
+        },
+        "def_pct": {
+          "type": "number"
+        },
+        "hold": {
+          "type": "number"
+        },
+        "gap": {
+          "type": "number"
+        },
+        "ctrl_any": {
+          "type": "boolean"
+        }
+      },
+      "examples": [
+        {
+          "event": "dmg_calc",
+          "action": "passive_dmg_mult",
+          "judge": {
+            "kind": "mech",
+            "mech": "poison"
+          }
+        },
+        {
+          "domain": "cap",
+          "cap_key": "poison"
+        }
+      ]
+    },
+    "passive_proc_table": {
+      "type": "object",
+      "title": "PASSIVE_PROC 整表：{proc id: 被动声明}（条目本体见 $defs/passive_proc）",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  },
+  "x-primary": "passive_proc"
+}

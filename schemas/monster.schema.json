@@ -1,0 +1,347 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dragonfall.local/schema/monster.schema.json",
+  "title": "Dragonfall 怪物（monsters.py / subareas.py / instances.py / hidden_monsters.py）",
+  "$defs": {
+    "monster_skill": {
+      "type": "object",
+      "title": "怪物技能（MONSTER_SKILLS）",
+      "required": [
+        "name",
+        "kind",
+        "desc"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "desc": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "增益",
+            "治疗",
+            "物理",
+            "魔法"
+          ]
+        },
+        "power": {
+          "type": "number",
+          "minimum": 0
+        },
+        "formula": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "stat",
+              "mult",
+              "type"
+            ],
+            "additionalProperties": true,
+            "properties": {
+              "stat": {
+                "enum": [
+                  "atk",
+                  "matk"
+                ]
+              },
+              "mult": {
+                "type": "number"
+              },
+              "type": {
+                "enum": [
+                  "magi",
+                  "phys"
+                ]
+              }
+            }
+          }
+        },
+        "element": {
+          "enum": [
+            "abyss",
+            "dark",
+            "fire",
+            "ice",
+            "nature",
+            "thunder"
+          ]
+        },
+        "effect": {
+          "enum": [
+            "atk_up",
+            "atk_up_strong",
+            "def_up",
+            "heal_self",
+            "shield",
+            "spd_up",
+            "summon"
+          ]
+        },
+        "mech": {
+          "enum": [
+            "freeze",
+            "interrupt",
+            "silence",
+            "slow",
+            "stun"
+          ]
+        },
+        "mech_val": {
+          "type": "integer"
+        },
+        "aoe": {
+          "enum": [
+            "all"
+          ]
+        },
+        "summon": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "charge": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "hits": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "multi": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "hp_pct": {
+          "type": "number"
+        },
+        "defend_reduce": {
+          "type": "number"
+        },
+        "reach": {
+          "type": "integer"
+        },
+        "basic": {
+          "type": "boolean"
+        },
+        "cast": {
+          "type": "number",
+          "minimum": 0
+        },
+        "recovery": {
+          "type": "number",
+          "minimum": 0
+        },
+        "pdot": {
+          "type": "object"
+        }
+      },
+      "examples": [
+        {
+          "name": "攻击",
+          "kind": "物理",
+          "basic": true,
+          "formula": [
+            {
+              "stat": "atk",
+              "mult": 1.0,
+              "type": "phys"
+            }
+          ],
+          "power": 1.0,
+          "cast": 1.0,
+          "recovery": 0.0,
+          "desc": "普攻，基础物理攻击"
+        }
+      ]
+    },
+    "monster_skill_table": {
+      "type": "object",
+      "title": "MONSTER_SKILLS 整表：{ms_*: 怪物技能}（条目本体见 $defs/monster_skill）",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "monster_template": {
+      "title": "怪物模板六元组（subareas / instances 的 monsters/elite/boss/minions）",
+      "description": "[id, 中文名, role, lv, [怪物技能id...], [掉落物名...]]",
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "prefixItems": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "enum": [
+            "boss",
+            "caster",
+            "dps",
+            "elite",
+            "healer",
+            "speedster",
+            "tank"
+          ]
+        },
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ],
+      "items": false,
+      "examples": [
+        [
+          "m_slime",
+          "绿史莱姆",
+          "tank",
+          1,
+          [
+            "ms_zhuang_ji"
+          ],
+          [
+            "史莱姆黏液",
+            "史莱姆徽章"
+          ]
+        ]
+      ]
+    },
+    "hidden_monster": {
+      "type": "object",
+      "title": "隐藏怪物（HIDDEN_MONSTERS）",
+      "required": [
+        "id",
+        "name",
+        "role",
+        "lv_off",
+        "skills",
+        "drops",
+        "gold_mult",
+        "cond",
+        "chance",
+        "tag",
+        "flavor"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "enum": [
+            "elite"
+          ]
+        },
+        "lv_off": {
+          "type": "integer"
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "drops": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "gold_mult": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cond": {
+          "enum": [
+            "any",
+            "forest",
+            "forest_night",
+            "night_any",
+            "ruin",
+            "water"
+          ]
+        },
+        "chance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "tag": {
+          "type": "string"
+        },
+        "flavor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "maps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": [
+        {
+          "id": "e_gold_slime",
+          "name": "黄金史莱姆",
+          "role": "elite",
+          "lv_off": 2,
+          "skills": [
+            "ms_du_ya"
+          ],
+          "drops": [
+            "琥珀精华"
+          ],
+          "gold_mult": 80,
+          "cond": "any",
+          "chance": 0.004,
+          "tag": "✨ 隐藏",
+          "flavor": "一只通体金黄的史莱姆，在阳光下闪闪发光！"
+        }
+      ]
+    },
+    "elite_equip_drop": {
+      "type": "object",
+      "title": "精英专属装备掉落表（ELITE_EQUIP_DROP）：{精英中文名: 名册装备id}",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^eq_[a-z0-9_]+$"
+      },
+      "examples": [
+        {
+          "峡谷巨魔": "eq_ju_mo_liao_ya_zhui"
+        }
+      ]
+    }
+  },
+  "x-primary": "monster_skill"
+}
