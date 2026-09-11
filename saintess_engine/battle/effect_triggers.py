@@ -70,7 +70,13 @@ def fire(battle, event: str, ctx: dict, logs: list) -> None:
     if logs is None or not getattr(battle, "sides", None):
         # logs 必须显式传（可为空列表）；无 sides = 非战斗上下文空转安全
         return
-    ctx = dict(ctx or {})
+    # ⚠️ 不复制 ctx（2026-09-11 修）：乘区钩子（dmg_calc/taken_calc/heal_calc）的设计是
+    #    「handler 原地改 ctx["mult"]，**调用方读同一个对象**」——此前 `ctx = dict(ctx or {})`
+    #    让 handler 改的是副本，调用方只能去读 `battle._fire_ctx`；而 `_fire_ctx` 是共享单例，
+    #    handler 内部再触发 nested fire（如打断/反伤/转移落地）就会被覆盖 → 本次乘区静默丢失。
+    #    现在：ctx 直接透传 + 见下方栈式恢复，嵌套安全。
+    ctx = ctx if isinstance(ctx, dict) else {}
+    _prev_ctx = getattr(battle, "_fire_ctx", None)
     # caster 缺省 = 声明者自己（battle_start 起手效果/受击自我强化等无显式
     # 施放方的场景）；target 保持事件目标（可由插桩点显式给）。
     caster = ctx.get("caster")
@@ -119,3 +125,8 @@ def fire(battle, event: str, ctx: dict, logs: list) -> None:
             _obs(battle, event, ctx, logs)
         except Exception:
             pass
+    # `_fire_ctx` 保持指向**本次** ctx（不恢复 _prev_ctx）——兼容既有读法
+    #（大量内容侧代码/测试在 fire 之后读 `battle._fire_ctx` 取乘区结果）。
+    # 嵌套安全由「ctx 不复制 + 调用方读自己的 ctx 对象」保证（见上方注释与
+    # actions/landing 的 3 处读取点）：外层调用方拿的是自己的对象，不受嵌套影响。
+    battle._fire_ctx = ctx
