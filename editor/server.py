@@ -25,7 +25,13 @@ API
     GET    /api/actions                   → 机制动作清单（AST 扫源码；引擎内置 + 包内）
     GET    /api/actions?pkg=<id>          → 同上，额外扫该游戏包的动作
     GET    /api/actions?fresh=1           → 跳过缓存重扫（改了 mech/ 代码后立刻可见）
+    GET    /api/glossary                  → 字段词典（中文名 / 注脚 / wiki 深链）
+    GET    /api/wiki/tree                 → 文档页清单（左导航）
+    GET    /api/wiki/page?path=<rel>      → 渲染后的文档页（md → html + 目录）
+    GET    /api/wiki/search?q=<词>        → 跨页搜词（配字段时找语义）
+    GET    /api/wiki/code?ref=x.py:NN     → 文档里的 `file.py:NNN` → 真实源码片段
     POST   /api/package/<id>/simulate     → 沙箱试跑（子进程跑引擎，见 simulate.py）
+    POST   /api/package/<id>/d/<dom>/check → **只校验不写盘**（新建草稿用；带中文可读报错）
 
 安全：只绑 127.0.0.1；只读写游戏包目录；静态文件做路径逃逸防护。
 """
@@ -43,8 +49,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from editor import actions as AC     # noqa: E402
+from editor import glossary as GL    # noqa: E402
 from editor import packages as PK    # noqa: E402
 from editor import validate as VD    # noqa: E402
+from editor import wiki as WK        # noqa: E402
 
 EDITOR_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(EDITOR_DIR, "web")
@@ -121,7 +129,9 @@ class H(BaseHTTPRequestHandler):
             if not d:
                 return self._err(404, f"包不存在：{parts[1]}")
             return self._send(200, {"ok": True, "dir": d, **PK.package_overview(d)})
-        if len(parts) == 3 and parts[0] == "schema":
+        if len(parts) in (2, 3) and parts[0] == "schema":
+            # GET /api/schema/<dom>  （历史上这里写成 `len(parts)==3` → 该路由**从未匹配上**，
+            # 因为没人调用所以一直没暴露；新建草稿要按 domain 取 schema，故修成 2 段可达）
             s = VD.load_schema(parts[1])
             return self._send(200, {"ok": bool(s), "schema": s})
         if parts == ["actions"]:
@@ -131,6 +141,25 @@ class H(BaseHTTPRequestHandler):
             fresh = (q.get("fresh") or ["0"])[0] not in ("", "0", "false")
             pkg_dir = PK.resolve_package(pkg_id, GAMES_DIR) if pkg_id else None
             return self._send(200, AC.inventory(pkg_dir, use_cache=not fresh))
+        if parts == ["glossary"]:
+            return self._send(200, {"ok": True, "domains": GL.all_entries()})
+        if len(parts) >= 2 and parts[0] == "wiki":
+            from urllib.parse import parse_qs
+            q = parse_qs(getattr(self, "_query", ""))
+            if parts[1] == "tree":
+                return self._send(200, {"ok": True, "pages": WK.tree(),
+                                        "groups": [{"id": g, "label": l} for g, l in WK.GROUPS]})
+            if parts[1] == "page":
+                rel = (q.get("path") or [""])[0]
+                pg = WK.page(rel)
+                if not pg:
+                    return self._err(404, f"文档不存在：{rel}")
+                return self._send(200, {"ok": True, **pg})
+            if parts[1] == "search":
+                return self._send(200, {"ok": True, "hits": WK.search((q.get("q") or [""])[0])})
+            if parts[1] == "code":
+                return self._send(200, {"ok": True, **WK.code_ref((q.get("ref") or [""])[0])})
+            return self._err(404, "未知 wiki 接口")
         if len(parts) >= 4 and parts[0] == "package" and parts[2] == "d":
             d = PK.resolve_package(parts[1], GAMES_DIR)
             if not d:
@@ -189,6 +218,18 @@ class H(BaseHTTPRequestHandler):
                 if len(parts) == 4 and parts[3] == "simulate" and method == "POST":
                     from editor import simulate as SIM
                     return self._send(200, SIM.run(d, body))
+                # /api/package/<id>/d/<dom>/[<key>]/check  —— 只校验、不写盘（新建草稿用）
+                if len(parts) in (6, 7) and parts[3] == "d" and parts[-1] == "check" and method == "POST":
+                    dom = parts[4]
+                    if dom not in PK.DOMAINS:
+                        return self._err(404, f"未知域：{dom}")
+                    data = body.get("data")
+                    if not isinstance(data, dict):
+                        return self._err(400, "请求体需为 {\"data\": {...}}")
+                    rep = _check_report(dom, data)
+                    if len(parts) == 7:
+                        rep["key"] = parts[5]
+                    return self._send(200, rep)
                 # /api/package/<id>/d/<dom>/[key]
                 if len(parts) >= 5 and parts[3] == "d":
                     dom = parts[4]
@@ -204,7 +245,9 @@ class H(BaseHTTPRequestHandler):
                         errs = VD.validate_entry(dom, data)
                         if errs:
                             return self._err(422, "校验未通过，未写入",
-                                             validation={"key": key, "errors": errs})
+                                             validation={"key": key, "errors": errs,
+                                                         "friendly": GL.friendly(dom, errs),
+                                                         "missing": _missing(dom, data)})
                         PK.put_entry(d, dom, key, data)
                         return self._send(200, {"ok": True, "key": key,
                                                 "domain": dom,
@@ -228,6 +271,22 @@ class H(BaseHTTPRequestHandler):
         ct = _CT.get(os.path.splitext(path)[1], "application/octet-stream")
         with open(path, "rb") as f:
             self._send(200, f.read(), ct)
+
+
+def _missing(dom: str, data: dict) -> list:
+    """必填项体检（schema.required + 空值；与业务规则无关）。"""
+    schema, name = VD.primary_def(dom)
+    if not schema or not name:
+        return []
+    target = (schema.get("$defs") or {}).get(name) or {}
+    return GL.missing_required(dom, data, target)
+
+
+def _check_report(dom: str, data: dict) -> dict:
+    """只校验不写盘：原始报错 + 中文可读 + 必填体检。"""
+    errs = VD.validate_entry(dom, data)
+    return {"ok": not errs, "domain": dom, "errors": errs,
+            "friendly": GL.friendly(dom, errs), "missing": _missing(dom, data)}
 
 
 def main(argv=None):

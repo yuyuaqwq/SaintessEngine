@@ -134,6 +134,28 @@
           <button class="btn primary" id="btnSavePkg">保存包清单</button>
         </footer>
       </div>
+
+      <!-- 文档（引擎 wiki，编辑器内可读 + 可跳转） -->
+      <div class="wiki hidden" id="wiki">
+        <header class="editor-head">
+          <div class="editor-title">
+            <h1 id="wikiTitle">文档</h1>
+            <div class="editor-meta">
+              <span class="mono dim" id="wikiPath"></span>
+              <span class="chip kind" id="wikiGroup"></span>
+            </div>
+          </div>
+          <div class="wiki-search">
+            <span class="search-ico">🔍</span>
+            <input id="wikiSearch" type="search" placeholder="搜文档（cap / period / cd …）" autocomplete="off" spellcheck="false">
+          </div>
+        </header>
+        <div class="wiki-body">
+          <nav class="wiki-nav" id="wikiNav"></nav>
+          <article class="wiki-content" id="wikiContent"></article>
+          <aside class="wiki-toc" id="wikiToc"></aside>
+        </div>
+      </div>
     </section>
 
     <!-- 试跑抽屉 -->
@@ -265,6 +287,20 @@
 </div>
 
 <div class="toasts" id="toasts"></div>
+
+<!-- 源码片段（文档里的 `file.py:NNN` 点开看真实源码） -->
+<div class="code-overlay hidden" id="codeOverlay">
+  <div class="code-dialog" role="dialog" aria-label="源码片段">
+    <header class="code-head">
+      <span class="mono code-ref" id="codeRef">—</span>
+      <span class="dim" id="codeNote"></span>
+      <span class="spacer"></span>
+      <button class="btn ghost icon sm" id="btnCodeClose" title="关闭 (Esc)">✕</button>
+    </header>
+    <div class="code-body" id="codeBody"></div>
+  </div>
+</div>
+
 <script src="/schema_form.js"></script>
 <script src="/app.js"></script>
 </body>

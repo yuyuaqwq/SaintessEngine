@@ -29,6 +29,9 @@ const S = {
   pkgOpen: false,
   actions: [],                   // 机制动作清单（AST 扫源码；引擎内置 + 包内）
   actionByName: {},              // name → 动作
+  glossary: { '*': {} },         // 字段词典：域 → {字段: {zh, note, wiki}}
+  isNew: false,                  // 当前条目是「新建草稿」（还没落盘）
+  friendly: [],                  // 服务端返回的中文可读报错（保存/新建被拦时）
 };
 
 /* ───────────────────────── API ───────────────────────── */
@@ -66,10 +69,39 @@ async function boot() {
   const d = await api('GET', '/api/domains');
   S.domains = (d.json && d.json.domains) || [];
   S.dom = (S.domains[0] || {}).id || 'skills';
+  await loadGlossary();
   await loadPackages();
   renderRail();
+  await loadWikiTree();
+  routeFromHash();                 // #/wiki/xxx 深链（字段注脚 → 文档）
   if (S.pkgs.length) await selectPkg(S.pkgs[0].id);
   else showEmptyPkg();
+}
+
+/* ═══════════════════════════ 字段词典 ═══════════════════════════
+   schema 只说类型，说不清「谁读 / 写了会不会静默不生效」。词典把每个字段补成
+   中文名 + 注脚 + 文档直链；注脚里带 ⚠ 的（无消费者/未核实）在表单里显式标出来。
+   ═══════════════════════════════════════════════════════════════════ */
+async function loadGlossary() {
+  const r = await api('GET', '/api/glossary');
+  S.glossary = (r.json && r.json.domains) || { '*': {} };
+}
+
+/* 字段 → 词典条目（域内精确 → 域内叶名 → 通用叶名） */
+function gloss(path) {
+  const p = String(path || '');
+  if (!p) return null;
+  const leaf = p.split('.').pop();
+  const tbl = S.glossary || {};
+  const dom = tbl[S.dom] || {};
+  return dom[p] || dom[leaf] || (tbl['*'] || {})[leaf] || null;
+}
+const glossZh = (k) => { const g = gloss(k); return g && g.zh ? g.zh : ''; };
+const glossIsWarn = (g) => !!(g && /无消费者|未核实|不生效/.test(g.note || ''));
+/* 词典注脚里带轻量 markdown（**加粗** / `代码`）—— 先转义再转标签，避免把记号当字面量显示 */
+function mdInline(s) {
+  return esc(s).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+               .replace(/`([^`]+)`/g, '<code>$1</code>');
 }
 
 /* ═══════════════════════════ 域栏 ═══════════════════════════ */
@@ -87,10 +119,16 @@ function renderRail() {
   }).join('');
   $('rail').innerHTML = items
     + '<div class="rail-sep"></div>'
+    + `<button class="rail-item ${isWiki() ? 'on' : ''}" data-nav="wiki" title="引擎文档（wiki）">
+         <span class="ri-icon">📖</span><span class="ri-label">文档</span></button>`
     + `<button class="rail-item ${isSettings() ? 'on' : ''}" data-nav="settings" title="包设置">
          <span class="ri-icon">⚙</span><span class="ri-label">设置</span></button>`;
   els('#rail .rail-item').forEach((b) => {
-    b.onclick = () => (b.dataset.nav === 'settings' ? openSettings() : switchDomain(b.dataset.dom));
+    b.onclick = () => {
+      if (b.dataset.nav === 'settings') return openSettings();
+      if (b.dataset.nav === 'wiki') return openWiki();
+      switchDomain(b.dataset.dom);
+    };
   });
 }
 
@@ -160,8 +198,10 @@ async function switchDomain(dom) {
   if (S.dirty && !confirmLeave()) return;
   S.dom = dom;
   $('settings').classList.add('hidden');
-  $('editor').classList.add('hidden');
-  $('editorEmpty').classList.remove('hidden');
+  $('wiki').classList.add('hidden');
+  // ⚠️ 必须走 closeEntry()（它会清 S.entryKey）—— 曾经的 bug：切域只隐藏面板、
+  //    不清 entryKey，切回来后点原来那条会被 openEntry 的「同一条」短路掉，毫无反馈。
+  closeEntry();
   renderRail();
   const d = S.domains.find((x) => x.id === dom) || {};
   $('listTitle').textContent = d.label || dom;
@@ -258,6 +298,7 @@ function confirmLeave() {
 
 function closeEntry() {
   S.entryKey = null; S.entryData = null; S.entryOrig = null; S.dirty = false;
+  S.isNew = false; S.friendly = [];
   S.validationErrors = [];
   $('editor').classList.add('hidden');
   $('editorEmpty').classList.remove('hidden');
@@ -267,7 +308,10 @@ function closeEntry() {
 }
 
 async function openEntry(key) {
-  if (key === S.entryKey) return;
+  // ⚠️ 判据必须是「面板真的在显示同一条」——只看 S.entryKey 会在
+  //    「切域 / 开设置后再回来」时把点击短路掉（点了没任何反应）。
+  if (key === S.entryKey && !$('editor').classList.contains('hidden')) return;
+  if (key === S.entryKey && S.isNew) return;      // 新建草稿正在编辑，重新载入会丢输入
   if (S.dirty && !confirmLeave()) return;
   const r = await api('GET', `${dPath(S.dom)}/${encodeURIComponent(key)}`);
   if (!r.ok) { toast((r.json && r.json.message) || '读取条目失败', 'bad'); return; }
@@ -276,6 +320,8 @@ async function openEntry(key) {
   S.entryOrig = clone(r.json.data);
   S.schema = r.json.schema;
   S.validationErrors = r.json.errors || [];
+  S.isNew = false;
+  S.friendly = [];
   S.dirty = false;
 
   $('editorEmpty').classList.add('hidden');
@@ -323,6 +369,7 @@ function renderForm() {
     host.appendChild(h.el);
     // 帮助文字可能因网格窄而被 clamp → 补 title 提示（schema_form.js 不动）
     els('.help', host).forEach((n) => { if (!n.title) n.title = n.textContent.trim(); });
+    enhanceFields();                // 字段词典：中文名 + 注脚 + 文档直链
     enhanceActionFields();          // E4：动作名联想 + 参数提示
     if (S.validationErrors.length) window.SchemaForm.markErrors(host, S.validationErrors);
   } catch (e) {
@@ -542,6 +589,9 @@ function markDirty() {
   $('dirtyFlag').classList.remove('hidden');
   $('btnSave').disabled = false;
   refreshDirtyUI();
+  // 必填体检实时跟着填：用户补上一个字段，清单里那一行立刻消失
+  // （否则「到底还差什么」要等到按保存才知道 —— 这正是原来「不知道什么规则」的来源）
+  if (!$('issues').classList.contains('hidden') || computeMissing().length) renderIssues();
 }
 
 /* 轻量刷新「未保存」相关 UI（不做整表重渲染，避免大列表逐键卡顿） */
@@ -561,35 +611,72 @@ function refreshDirtyUI() {
   updateStatusbar();
 }
 
+/* 必填项体检（客户端，**只**按 schema.required + 空值判 —— 不猜业务规则） */
+function primaryDefSchema() {
+  const primary = (S.schema && S.schema['x-primary']) || primaryOf();
+  return (S.schema && S.schema.$defs && S.schema.$defs[primary]) || null;
+}
+function computeMissing() {
+  const def = primaryDefSchema();
+  if (!def) return [];
+  return (def.required || []).filter((k) => {
+    const v = (S.entryData || {})[k];
+    return v === undefined || v === null || (typeof v === 'string' && v.trim() === '');
+  }).map((k) => ({ k, zh: glossZh(k), g: gloss(k) }));
+}
+
 function renderIssues() {
   const box = $('issues');
   const errs = S.validationErrors || [];
-  if (!errs.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+  const missing = computeMissing();
+  if (!errs.length && !missing.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
   box.className = 'issues';
-  box.innerHTML = `
-    <div class="issues-head">
-      <b>⚠ ${errs.length} 个校验问题</b>
-      <span class="dim">保存会被拦下</span>
-      <button class="btn ghost sm" id="btnFixFirst">定位到第一个 ▸</button>
-    </div>
-    <ul>${errs.map((e) => `<li>${esc(e)}</li>`).join('')}</ul>`;
+
+  let html = '';
+  if (missing.length) {
+    html += `<div class="issues-head"><b>⚠ 必填还没填（${missing.length} 项）</b>
+      <span class="dim">保存会被拦下 —— 这就是「未通过」的规则</span></div>
+      <ul class="issue-list">${missing.map((m) => `<li>
+        <button class="btn ghost sm issue-jump" data-path="${esc(m.k)}">定位 ▸</button>
+        <code>${esc(m.k)}</code>${m.zh ? ` <span class="gl-zh">${esc(m.zh)}</span>` : ''}
+        <span class="issue-note">${m.g && m.g.note ? mdInline(m.g.note) : 'schema 必填项，不能为空'}</span></li>`).join('')}</ul>`;
+  }
+  if (errs.length) {
+    const rows = S.friendly.length
+      ? S.friendly
+      : errs.map((e) => ({ path: String(e).split(':')[0].trim(), display: String(e) }));
+    html += `<div class="issues-head"><b>⚠ schema 报错（${rows.length} 项）</b>
+      <span class="dim">保存会被拦下</span></div>
+      <ul class="issue-list">${rows.map((r) => `<li>
+        ${r.path ? `<button class="btn ghost sm issue-jump" data-path="${esc(r.path)}">定位 ▸</button>` : ''}
+        ${esc(r.display || r.raw || '')}
+        ${r.wiki ? `<a class="issue-wiki" href="${esc(r.wiki)}" title="打开文档">📖 说明</a>` : ''}</li>`).join('')}</ul>`;
+  }
+  box.innerHTML = html;
+  els('.issue-jump', box).forEach((b) => (b.onclick = () => jumpToPath(b.dataset.path)));
+  els('.issue-wiki', box).forEach((a) => (a.onclick = (e) => {
+    e.preventDefault(); openWikiRef(a.getAttribute('href'));
+  }));
   box.classList.remove('hidden');
-  $('btnFixFirst').onclick = jumpToFirstError;
+}
+
+function jumpToPath(p) {
+  if (!p) return;
+  if (S.mode !== 'form') { S.mode = 'form'; renderEntry(); }
+  const node = el(`.field[data-path="${String(p).replace(/"/g, '\\"')}"]`, $('formHost'));
+  if (!node) { toast('该字段没在表单里渲染（可能在「其他字段」折叠区）：' + p, 'warn'); return; }
+  node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  node.style.transition = 'background 400ms';
+  node.style.background = 'var(--err-dim)';
+  setTimeout(() => { node.style.background = ''; }, 900);
+  const inp = node.querySelector('input,select,textarea');
+  if (inp) inp.focus({ preventScroll: true });
 }
 
 function jumpToFirstError() {
-  if (S.mode !== 'form') { S.mode = 'form'; renderEntry(); }
-  const p = String((S.validationErrors[0] || '').split(':')[0] || '').replace(/^\./, '');
-  if (!p) return;
-  const node = el(`.field[data-path="${p.replace(/"/g, '\\"')}"]`, $('formHost'));
-  if (node) {
-    node.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    node.style.transition = 'background 400ms';
-    node.style.background = 'var(--err-dim)';
-    setTimeout(() => { node.style.background = ''; }, 900);
-  } else {
-    toast('该字段未在表单中渲染，请用 JSON 档检查：' + p, 'warn');
-  }
+  const p = (S.friendly[0] || {}).path
+    || String((S.validationErrors[0] || '').split(':')[0] || '').replace(/^\./, '');
+  jumpToPath(p);
 }
 
 /* ═══════════════════════════ 保存 / 删除 / 新建 ═══════════════════════════ */
@@ -602,12 +689,16 @@ async function save() {
   $('saveStatus').textContent = '保存中…';
   const r = await api('PUT', `${dPath(S.dom)}/${encodeURIComponent(S.entryKey)}`, { data: S.entryData });
   if (r.status === 422) {
-    S.validationErrors = ((r.json.validation || {}).errors) || [];
+    const v = (r.json || {}).validation || {};
+    S.validationErrors = v.errors || [];
+    S.friendly = v.friendly || [];            // 服务端翻好的中文（带字段中文名）
     renderIssues();
     if (S.mode === 'form') window.SchemaForm.markErrors($('formHost'), S.validationErrors);
     $('saveStatus').textContent = '校验未通过，未写入';
     $('saveStatus').className = 'save-status bad';
-    toast('校验未通过，未写入', 'bad');
+    const first = S.friendly[0] || {};
+    toast('未写入 —— ' + (first.display || '校验未通过（看编辑器上方的问题清单）'), 'bad');
+    jumpToFirstError();
     return;
   }
   if (!r.ok) {
@@ -616,19 +707,22 @@ async function save() {
     toast((r.json && r.json.message) || '保存失败', 'bad');
     return;
   }
-  S.dirty = false; S.entryOrig = clone(S.entryData); S.validationErrors = [];
+  const wasNew = S.isNew;
+  S.dirty = false; S.entryOrig = clone(S.entryData); S.validationErrors = []; S.friendly = [];
+  S.isNew = false;
   S.dirtyKeys.delete(S.entryKey);
   $('dirtyFlag').classList.add('hidden');
   $('btnSave').disabled = true;
   $('saveStatus').textContent = '已保存 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false });
   $('saveStatus').className = 'save-status ok';
   renderIssues();
-  toast('已保存 ' + S.entryKey, 'ok');
+  toast((wasNew ? '已新建 ' : '已保存 ') + S.entryKey, 'ok');
   await refreshPkg(); await loadDomain(S.dom);
 }
 
 async function del() {
   if (!S.entryKey) return;
+  if (S.isNew) { closeEntry(); toast('已放弃草稿 ' + S.entryKey, ''); return; }   // 草稿没落盘，直接丢
   if (!confirm(`删除条目 ${S.entryKey}？\n此操作直接改 JSON 文件，不可撤销。`)) return;
   const r = await api('DELETE', `${dPath(S.dom)}/${encodeURIComponent(S.entryKey)}`);
   if (!r.ok) { toast('删除失败', 'bad'); return; }
@@ -638,18 +732,46 @@ async function del() {
 }
 
 async function add() {
+  if (!S.pkgId) { toast('先在左上角选/新建一个游戏包', 'warn'); return; }
+  if (S.dirty && !confirmLeave()) return;
   const key = prompt('新条目的 key（英文/下划线，如 sk_fire_ball）：');
   if (!key) return;
+  if (S.entries.some((e) => e.key === key)) { toast(`已存在同 key 条目：${key}`, 'bad'); return; }
   const name = prompt('显示名（name）：', key) || key;
-  const data = { name, kind: (S.dom === 'skills' ? '物理' : ''), lv: 1, desc: '' };
-  const r = await api('PUT', `${dPath(S.dom)}/${encodeURIComponent(key)}`, { data });
-  if (!r.ok) {
-    S.validationErrors = ((r.json || {}).validation || {}).errors || [];
-    toast('新建失败：' + ((r.json || {}).message || ''), 'bad');
-    return;
-  }
-  toast('已新建 ' + key, 'ok');
-  await refreshPkg(); await loadDomain(S.dom); await openEntry(key);
+
+  /* ★ 不再「直接写盘」。
+     旧做法：PUT 一条 desc:"" 的数据 → schema 的 minLength 把它拦下（422），
+     前端却只弹一句「新建失败」，真实原因（desc 不能为空）被吞掉 ——
+     用户只知道「一直未通过，不知道什么规则」。实测报错原文：
+         desc: '' should be non-empty
+     新做法：**草稿模式** —— 先把条目开在编辑器里，必填缺什么当场列出来，
+     补全后按 Ctrl+S 才落盘（PUT 本身就是创建）。 */
+  const r = await api('GET', `/api/schema/${S.dom}`);
+  if (!r.ok) { toast('该域没有 schema，无法新建', 'bad'); return; }
+  S.entryKey = key;
+  S.entryData = { name, kind: (S.dom === 'skills' ? '物理' : ''), lv: 1, desc: '' };
+  S.entryOrig = null;
+  S.schema = r.json.schema;
+  S.validationErrors = [];
+  S.friendly = [];
+  S.isNew = true;
+  S.mode = 'form';
+  $('settings').classList.add('hidden');
+  $('wiki').classList.add('hidden');
+  $('editorEmpty').classList.add('hidden');
+  $('editor').classList.remove('hidden');
+  $('entryName').textContent = name;
+  $('entryKey').textContent = `${S.dom} · ${key}（新草稿）`;
+  const kc = $('entryKind');
+  kc.className = 'chip kind ' + kindClass(S.entryData.kind) + (S.entryData.kind ? '' : ' hidden');
+  kc.textContent = S.entryData.kind || '';
+  markDirty();
+  $('saveStatus').textContent = '新建草稿 —— 补全下方必填项后 Ctrl+S 保存';
+  $('saveStatus').className = 'save-status';
+  renderIssues();
+  renderEntry();
+  renderList();
+  toast('已开草稿：先把必填项补齐，再 Ctrl+S 落盘', '');
 }
 
 /* ═══════════════════════════ 包设置 ═══════════════════════════ */
@@ -659,6 +781,7 @@ function openSettings() {
   if (S.dirty && !confirmLeave()) return;
   $('editor').classList.add('hidden');
   $('editorEmpty').classList.add('hidden');
+  $('wiki').classList.add('hidden');
   $('settings').classList.remove('hidden');
   renderSettingsForm();
   renderRail();
@@ -762,6 +885,235 @@ function renderSimError(j) {
     </div>`;
 }
 
+/* ═══════════════════════════ 字段词典增强（翻译 + 注脚 + 文档直链） ═══════════════════════════
+   schema 表单只给「类型 + 一句 description」。这里给每个字段补三样：
+     ① 中文名（挂在 label 后）
+     ② ⓘ 注脚（谁读这个字段 / 写了会不会静默不生效 / 单位与坑）
+     ③ 📖 文档直链（跳到 wiki 对应那处并高亮）
+   注脚里带「无消费者 / 未核实」的字段，整块**标黄**：这类字段最坑（声明了不报错、不生效）。
+   ══════════════════════════════════════════════════════════════════════════════════════ */
+function enhanceFields() {
+  const host = $('formHost');
+  if (!host) return;
+  els('.field', host).forEach((f) => {
+    if (f.tagName === 'FIELDSET') return;              // 对象分组不挂
+    const path = f.dataset.path || '';
+    const g = gloss(path);
+    if (!g) return;
+    if (glossIsWarn(g)) f.classList.add('gl-warn');
+    const lab = f.querySelector('.f-label');
+    if (lab && g.zh && !lab.querySelector('.gl-zh')) {
+      const s = document.createElement('span');
+      s.className = 'gl-zh';
+      s.textContent = '· ' + g.zh;
+      lab.appendChild(s);
+    }
+    if (g.note && !f.querySelector('.gl-note')) {
+      const tip = document.createElement('button');
+      tip.type = 'button';
+      tip.className = 'gl-tip';
+      tip.textContent = 'ⓘ';
+      tip.title = '字段注脚（语义 / 消费者 / 坑）';
+      if (lab) lab.appendChild(tip);
+      const box = document.createElement('div');
+      box.className = 'gl-note hidden';
+      box.innerHTML = `<div class="gl-note-text">${mdInline(g.note)}</div>
+        ${g.wiki
+          ? `<a class="gl-wiki" href="${esc(g.wiki)}">📖 打开文档：${esc((g.wiki.split('#')[0] || '').replace('wiki:', ''))}</a>`
+          : '<span class="dim">该字段暂无可引用的文档页（注脚来自 schema / 源码核实）</span>'}`;
+      tip.onclick = (e) => { e.preventDefault(); box.classList.toggle('hidden'); };
+      f.appendChild(box);
+      els('.gl-wiki', box).forEach((a) => (a.onclick = (e) => {
+        e.preventDefault(); openWikiRef(a.getAttribute('href'));
+      }));
+    }
+  });
+}
+
+/* ═══════════════════════════ 文档（引擎 wiki，编辑器内可读） ═══════════════════════════ */
+const isWiki = () => !$('wiki').classList.contains('hidden');
+const WIKI = { tree: [], groups: [], cur: null, triedMermaid: false };
+const DEFAULT_PAGE = 'README.md';
+
+async function loadWikiTree() {
+  const r = await api('GET', '/api/wiki/tree');
+  WIKI.tree = (r.json && r.json.pages) || [];
+  WIKI.groups = (r.json && r.json.groups) || [];
+}
+
+function renderWikiNav() {
+  const box = $('wikiNav');
+  const q = ($('wikiSearch').value || '').trim();
+  if (q.length >= 2) return;                                  // 搜索态由 renderWikiSearch 接管
+  let html = '', last = null;
+  WIKI.tree.forEach((p) => {
+    if (p.group_label !== last) { html += `<div class="wk-group">${esc(p.group_label)}</div>`; last = p.group_label; }
+    html += `<button class="wk-page ${p.path === WIKI.cur ? 'on' : ''}" data-path="${esc(p.path)}"
+      title="${esc(p.path)}">${esc(p.title)}</button>`;
+  });
+  box.innerHTML = html;
+  els('.wk-page', box).forEach((b) => (b.onclick = () => openWiki(b.dataset.path)));
+}
+
+async function renderWikiSearch(q) {
+  const r = await api('GET', '/api/wiki/search?q=' + encodeURIComponent(q));
+  const hits = (r.json && r.json.hits) || [];
+  $('wikiNav').innerHTML = `<div class="wk-group">搜索「${esc(q)}」· ${hits.length} 处命中</div>`
+    + (hits.length ? hits.map((h) => `<button class="wk-hit" data-path="${esc(h.path)}" data-line="${h.line}">
+        <span class="wk-hit-page">${esc(h.title)}</span>
+        <span class="wk-hit-line mono">:${h.line}</span>
+        <span class="wk-hit-text mono">${esc(h.text)}</span></button>`).join('')
+      : '<div class="wk-empty">没有命中</div>');
+  els('.wk-hit', $('wikiNav')).forEach((b) => (b.onclick = async () => {
+    await openWiki(b.dataset.path);
+    jumpWikiText(q);          // ★ 用**搜索词**定位，不用命中行片段（片段含 markdown 记号，正文里不一定原样存在）
+  }));
+}
+
+function renderWikiToc(toc) {
+  const ps = (toc || []).filter((t) => t.level >= 2 && t.level <= 3);
+  $('wikiToc').innerHTML = ps.length
+    ? '<div class="wk-toc-title">本页目录</div>' + ps.map((t) =>
+        `<a class="wk-toc-l${t.level}" href="#${esc(t.id)}" data-id="${esc(t.id)}">${esc(t.text)}</a>`).join('')
+    : '';
+  els('#wikiToc a').forEach((a) => (a.onclick = (e) => {
+    e.preventDefault();
+    const n = document.getElementById(a.dataset.id);
+    if (n) n.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }));
+}
+
+async function openWiki(path, findTerm) {
+  const rel = path || WIKI.cur || DEFAULT_PAGE;
+  const r = await api('GET', '/api/wiki/page?path=' + encodeURIComponent(rel));
+  if (!r.ok) { toast((r.json && r.json.message) || '文档打开失败', 'bad'); return; }
+  const j = r.json;
+  WIKI.cur = j.path;
+  $('editor').classList.add('hidden');
+  $('editorEmpty').classList.add('hidden');
+  $('settings').classList.add('hidden');
+  $('wiki').classList.remove('hidden');
+  $('wikiTitle').textContent = j.title;
+  $('wikiPath').textContent = j.path;
+  $('wikiGroup').textContent = j.group_label || '';
+  $('wikiContent').innerHTML = `<nav class="wk-pager">
+      ${j.prev ? `<a data-path="${esc(j.prev)}">‹ ${esc(j.prev_title)}</a>` : '<span></span>'}
+      ${j.next ? `<a data-path="${esc(j.next)}" class="wk-next">${esc(j.next_title)} ›</a>` : '<span></span>'}
+    </nav>` + j.html;
+  renderWikiToc(j.toc);
+  renderWikiNav();
+  renderRail();
+  els('#wikiContent .wk-pager a').forEach((a) => (a.onclick = () => openWiki(a.dataset.path)));
+  els('#wikiContent a.wiki-link').forEach((a) => (a.onclick = (e) => {
+    const href = a.getAttribute('href') || '';
+    if (href.startsWith('#/wiki/')) { e.preventDefault(); openWiki(href.replace('#/wiki/', '')); }
+  }));
+  els('#wikiContent code.ref-code').forEach((c) => {
+    c.onclick = () => openCodeRef(c.dataset.ref);
+  });
+  const hash = `#/wiki/${j.path}` + (findTerm ? `?find=${encodeURIComponent(findTerm)}` : '');
+  if (location.hash !== hash) history.replaceState(null, '', hash);
+  $('wikiContent').scrollTop = 0;
+  window.scrollTo(0, 0);
+  renderMermaid();
+  if (findTerm) jumpWikiText(findTerm);
+}
+
+/* 在正文里找到第一处包含该词的节点 → 滚动 + 高亮（字段注脚的 deep link 用） */
+function jumpWikiText(term) {
+  const t = (term || '').trim();
+  if (t.length < 2) return;
+  const root = $('wikiContent');
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let node = null;
+  while (walker.nextNode()) {
+    const n = walker.currentNode;
+    if (n.nodeValue && n.nodeValue.includes(t) && n.parentElement
+        && !/^(SCRIPT|STYLE)$/.test(n.parentElement.tagName)) { node = n; break; }
+  }
+  if (!node) { toast('文档里没找到「' + t + '」（文档可能已改）', 'warn'); return; }
+  const host = node.parentElement.closest('td,li,p,tr,h2,h3,h4,pre') || node.parentElement;
+  host.classList.add('wk-flash');
+  host.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  setTimeout(() => host.classList.remove('wk-flash'), 2600);
+}
+
+/* mermaid：默认显示源码（离线可用）；能联网取到渲染器就画出来（渐进增强，失败静默回落） */
+function renderMermaid() {
+  const blocks = els('#wikiContent .mermaid');
+  if (!blocks.length) return;
+  blocks.forEach((b) => { b.innerHTML = `<pre class="code mermaid-src"><code>${esc(b.dataset.src || '')}</code></pre>`; });
+  if (WIKI.triedMermaid) return;
+  WIKI.triedMermaid = true;
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
+  s.onload = () => {
+    try {
+      const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+      window.mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default' });
+      els('#wikiContent .mermaid').forEach((b, i) => {
+        const src = b.dataset.src || '';
+        try {
+          window.mermaid.render('wk-mmd-' + i, src).then((out) => { b.innerHTML = out.svg; });
+        } catch (e) { /* 回落源码 */ }
+      });
+      toast('mermaid 图已渲染（联网）', '');
+    } catch (e) { /* 回落源码 */ }
+  };
+  document.head.appendChild(s);
+}
+
+/* `file.py:NNN` → 真实源码片段 */
+function openCodeRef(ref) {
+  const ov = $('codeOverlay');
+  $('codeRef').textContent = ref;
+  $('codeNote').textContent = '读取中…';
+  $('codeBody').innerHTML = '';
+  ov.classList.remove('hidden');
+  api('GET', '/api/wiki/code?ref=' + encodeURIComponent(ref)).then((r) => {
+    const j = r.json || {};
+    if (!j.ok) {
+      $('codeNote').textContent = '';
+      $('codeBody').innerHTML = `<div class="code-miss">读不到源码：${esc(j.reason || '')}</div>`;
+      return;
+    }
+    $('codeRef').textContent = `${j.file}:${j.line}`;
+    $('codeNote').textContent = `共 ${j.total} 行 · 显示 ${j.lo}–${j.hi}`;
+    $('codeBody').innerHTML = (j.lines || []).map((l) =>
+      `<div class="code-line ${l.hit ? 'hit' : ''}"><span class="code-n">${l.n}</span><span class="code-t">${esc(l.t)}</span></div>`).join('');
+    const hit = el('.code-line.hit', $('codeBody'));
+    if (hit) hit.scrollIntoView({ block: 'center' });
+  });
+}
+const codeOpen = () => !$('codeOverlay').classList.contains('hidden');
+
+/* 「wiki:页#find=词」 → 打开文档并定位（字段注脚 / 报错说明都走它） */
+function openWikiRef(href) {
+  if (!href) return;
+  const s = String(href).replace(/^wiki:/, '');
+  const [page, frag] = s.split('#');
+  const m = /find=([^&]+)/.exec(frag || '');
+  openWiki(decodeURIComponent(page), m ? decodeURIComponent(m[1]) : '');
+}
+
+/* #/wiki/<page>?find=<词> 深链（可分享、可刷新保留） */
+function routeFromHash() {
+  const h = decodeURIComponent(location.hash || '');
+  if (!h.startsWith('#/wiki/')) return false;
+  const [page, qs] = h.replace('#/wiki/', '').split('?');
+  const m = /find=([^&]+)/.exec(qs || '');
+  openWiki(page, m ? m[1] : '');
+  return true;
+}
+
+/* 离开文档 → 回到当前域的条目视图（Esc / 点域栏） */
+function closeWiki() {
+  $('wiki').classList.add('hidden');
+  $('editorEmpty').classList.remove('hidden');
+  if ((location.hash || '').startsWith('#/wiki/')) history.replaceState(null, '', location.pathname);
+  renderRail();
+}
+
 /* ═══════════════════════════ 命令面板 ═══════════════════════════ */
 let PL = { items: [], sel: 0 };
 
@@ -781,6 +1133,7 @@ function buildPalette() {
     { ico: '＋', name: '新建条目', meta: S.dom, run: add },
     { ico: '⚔', name: '试跑当前条目', meta: 'simulate', run: () => openSim().then(() => S.entryKey && ($('simSkill').value = S.entryKey)) },
     { ico: '↻', name: '重新读取当前域', meta: S.dom, run: () => loadDomain(S.dom) },
+    { ico: '📖', name: '打开引擎文档', meta: 'wiki', run: () => openWiki() },
     { ico: '⚙', name: '打开包设置', meta: 'settings', run: openSettings },
   ];
   const domItems = S.domains.map((d) => ({
@@ -790,10 +1143,14 @@ function buildPalette() {
     ico: '·', name: e.name || e.key, meta: `${S.dom} · ${e.key}`,
     html: true, kind: e.kind, run: () => openEntry(e.key),
   }));
+  const pages = (WIKI.tree || []).map((p) => ({
+    ico: '📖', name: p.title, meta: p.path, run: () => openWiki(p.path),
+  }));
   PL.all = [
     { g: '动作', items: acts.filter((a) => !a.need || a.need()) },
     { g: '切换域', items: domItems },
     { g: '条目 · ' + (S.domains.find((d) => d.id === S.dom) || {}).label, items: entries },
+    { g: '文档', items: pages },
   ];
   filterPalette('');
 }
@@ -1049,9 +1406,11 @@ function initKeys() {
     if (mod && e.key === 'Enter') { e.preventDefault(); openSim(); return; }
     if (e.key === 'Escape') {
       if (paletteOpen()) return closePalette();
+      if (codeOpen()) return $('codeOverlay').classList.add('hidden');
       if (themeOpen()) return closeTheme();
       if (S.pkgOpen) return closePkgMenu();
       if (simOpen()) return $('simDrawer').classList.add('hidden');
+      if (isWiki()) return closeWiki();
       if (inField) return e.target.blur();
       return;
     }
@@ -1175,6 +1534,18 @@ window.addEventListener('DOMContentLoaded', () => {
   $('btnRunSim').onclick = runSim;
   $('btnSimClose').onclick = () => $('simDrawer').classList.add('hidden');
   $('btnSavePkg').onclick = savePkg;
+
+  // 文档（引擎 wiki）
+  $('btnCodeClose').onclick = () => $('codeOverlay').classList.add('hidden');
+  $('codeOverlay').onclick = (e) => { if (e.target === $('codeOverlay')) $('codeOverlay').classList.add('hidden'); };
+  let wkTimer = null;
+  $('wikiSearch').oninput = () => {
+    const q = $('wikiSearch').value.trim();
+    clearTimeout(wkTimer);
+    if (q.length < 2) { renderWikiNav(); return; }
+    wkTimer = setTimeout(() => renderWikiSearch(q), 220);
+  };
+  window.addEventListener('hashchange', () => routeFromHash());
 
   // 命令面板
   $('paletteInput').oninput = () => filterPalette($('paletteInput').value);

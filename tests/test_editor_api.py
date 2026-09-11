@@ -5,6 +5,7 @@ import os
 import sys
 import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 from http.server import ThreadingHTTPServer
 
@@ -130,7 +131,55 @@ def main():
     st, j = req(base, "GET", "/api/package/t_game/d/skills")
     check("删除后条目数归零", j.get("count") == 0, f"{j}")
 
-    # 10. 路径逃逸防护
+    # 10. 字段词典（翻译 / 注脚 / 文档深链的数据源）
+    st, j = req(base, "GET", "/api/schema/skills")
+    check("GET /api/schema/<dom> 可达（该路由历史上写成 3 段，2 段永不匹配 → 修掉）",
+          st == 200 and j.get("ok") and bool((j.get("schema") or {}).get("$defs", {}).get("skill")),
+          f"{st}")
+    st, j = req(base, "GET", "/api/glossary")
+    doms = j.get("domains") or {}
+    check("GET /api/glossary 200", st == 200 and j.get("ok"), f"{st}")
+    check("词典覆盖 7 域 + 通用（含 effect_rules 死字段标注）",
+          {"*", "skills", "effect_rules", "passive_proc"} <= set(doms)
+          and "无消费者" in (doms.get("effect_rules", {}).get("debuff_scale", {}).get("note") or ""),
+          f"{sorted(doms)[:9]}")
+    check("词典条目带中文名 + wiki 深链",
+          bool(doms["effect_rules"]["cap"]["zh"]) and doms["effect_rules"]["cap"]["wiki"].startswith("wiki:"))
+
+    # 11. 编辑器内文档（wiki 页 / 搜索 / 源码直链）
+    st, j = req(base, "GET", "/api/wiki/tree")
+    check(f"GET /api/wiki/tree 页清单（{len(j.get('pages') or [])} 页）",
+          st == 200 and len(j.get("pages") or []) >= 30, f"{st}")
+    st, j = req(base, "GET", "/api/wiki/page?path=reference/effect-rules.md")
+    check("渲染文档页（表格 + 目录 + 标题）",
+          st == 200 and "<h1" in j.get("html", "") and "<table" in j.get("html", "") and len(j.get("toc") or []) > 3,
+          f"{st}")
+    check("文档里 `file.py:NNN` 变成可点源码链接", 'class="ref-code"' in j.get("html", ""))
+    st, j = req(base, "GET", "/api/wiki/search?q=debuff_scale")
+    check("文档搜词命中", st == 200 and any(h["path"] == "reference/effect-rules.md" for h in j.get("hits") or []))
+    st, j = req(base, "GET", "/api/wiki/code?ref=effects.py:270")
+    check("源码直链 → 真实片段", st == 200 and j.get("ok") and j.get("line") == 270, f"{j.get('reason')}")
+    st, j = req(base, "GET", "/api/wiki/code?ref=class_mech_proc.py:1895")
+    check("跨仓引用明确说「读不到」（不编源码）", st == 200 and not j.get("ok") and j.get("crossrepo"))
+    st, j = req(base, "GET", "/api/wiki/page?path=" + urllib.parse.quote("../README.md"))
+    check("文档路径逃逸被拦", st == 404 and not j.get("ok"), f"{st}")
+
+    # 12. 只校验不写盘（新建草稿的真实判据）+ 报错中文可读
+    st, j = req(base, "POST", "/api/package/t_game/d/skills/sk_draft/check",
+                {"data": {"name": "草稿", "kind": "魔法", "lv": 1, "desc": ""}})
+    check("check 接口拦下空 desc", st == 200 and not j.get("ok"), f"{st} {j}")
+    check("check 报错中文可读（带字段中文名与原因）",
+          "不能为空" in ((j.get("friendly") or [{}])[0].get("message") or "")
+          and "描述" in ((j.get("friendly") or [{}])[0].get("display") or ""),
+          f"{j.get('friendly')}")
+    check("check 同时给必填体检（missing 非空）", bool(j.get("missing")), f"{j.get('missing')}")
+    st, j = req(base, "GET", "/api/package/t_game/d/skills")
+    check("check **不写盘**（域里没多出条目）", j.get("count") == 0, f"{j.get('count')}")
+    st, jb = req(base, "PUT", "/api/package/t_game/d/skills/sk_bad2", {"data": {"kind": "魔法"}})
+    check("PUT 被拦时也带 friendly（前端不再只弹一句「失败」）",
+          st == 422 and bool((jb.get("validation") or {}).get("friendly")), f"{st}")
+
+    # 13. 路径逃逸防护
     st, j = req(base, "GET", "/api/../server.py")
     check("静态路径逃逸被拦", st in (403, 404), f"{st}")
 

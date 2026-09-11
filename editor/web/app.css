@@ -742,3 +742,144 @@ input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;bac
 .ah-goto:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
 .ah-type{font-size:9.5px;color:var(--fg-3);font-family:var(--mono)}
 .action-hint .btn{align-self:flex-start;margin-top:2px}
+
+/* ═══════════════ 字段词典（翻译 · 注脚 · 文档直链） ═══════════════
+   schema 只说类型；词典补中文名与注脚。带「无消费者 / 未核实」的字段整块标黄 ——
+   这类字段最坑：声明了不报错、也不生效。 */
+.field>.f-label .gl-zh{
+  color:var(--accent);font-weight:400;font-size:11px;
+  flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.field>.f-label .gl-tip{
+  margin-left:auto;flex:0 0 auto;width:15px;height:15px;line-height:13px;
+  padding:0;border-radius:var(--r-full);cursor:pointer;
+  background:transparent;border:1px solid var(--line-2);color:var(--fg-3);
+  font-size:10px;font-family:var(--mono);
+}
+.field>.f-label .gl-tip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.field .gl-note{
+  grid-column:1/-1;margin-top:2px;padding:var(--sp3) var(--sp4);
+  background:var(--bg-2);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:var(--r-sm);font-size:11.5px;line-height:1.6;color:var(--fg-1);
+}
+.field .gl-note-text{white-space:pre-wrap}
+.field .gl-wiki{
+  display:inline-block;margin-top:var(--sp2);font-size:11px;color:var(--accent);
+  text-decoration:none;border-bottom:1px dashed var(--accent-soft);cursor:pointer;
+}
+.field .gl-wiki:hover{color:var(--accent-hi);border-bottom-style:solid}
+.field.gl-warn>.f-label{color:var(--warn)}
+.field.gl-warn>.f-label .gl-zh{color:var(--warn)}
+.field.gl-warn{background:var(--warn-dim);border-radius:var(--r-sm);outline:1px dashed var(--warn-soft);outline-offset:3px}
+.field.gl-warn>.f-label .gl-tip{border-color:var(--warn-soft);color:var(--warn)}
+
+/* 问题清单：必填体检 + schema 报错 */
+.issues .issue-list{list-style:none;padding-left:0;font-family:var(--ui);font-size:12px}
+.issues .issue-list li{display:flex;align-items:baseline;gap:var(--sp2);flex-wrap:wrap;line-height:1.7}
+.issues .issue-list code{font-family:var(--mono);color:var(--fg-0);background:var(--bg-2);
+  padding:0 4px;border-radius:var(--r-sm)}
+.issues .issue-note{color:var(--fg-3);font-size:11px}
+.issues .issue-wiki{color:var(--accent);text-decoration:none;font-size:11px;margin-left:4px}
+
+/* ═══════════════ 文档（引擎 wiki） ═══════════════ */
+.wiki{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+.wiki-search{display:flex;align-items:center;gap:var(--sp2);flex:0 0 auto;position:relative}
+.wiki-search input{
+  width:240px;height:28px;padding:0 var(--sp4) 0 26px;font-size:12px;
+  background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-full);color:var(--fg-0);
+}
+.wiki-search input:focus{outline:none;border-color:var(--accent);background:var(--bg-1)}
+.wiki-search .search-ico{position:absolute;left:9px;font-size:11px;opacity:.6;pointer-events:none}
+.wiki-body{flex:1 1 auto;display:grid;grid-template-columns:236px minmax(0,1fr) 190px;min-height:0}
+.wiki-nav{
+  overflow-y:auto;padding:var(--sp4) var(--sp2) var(--sp8);border-right:1px solid var(--line);
+  background:var(--bg-1);
+}
+.wk-group{padding:var(--sp4) var(--sp4) var(--sp2);font-size:10.5px;letter-spacing:.6px;
+  color:var(--fg-3);text-transform:uppercase}
+.wk-page{
+  display:block;width:100%;text-align:left;padding:5px var(--sp4);margin:1px 0;
+  background:transparent;border:0;border-left:2px solid transparent;cursor:pointer;
+  color:var(--fg-1);font-size:12px;line-height:1.5;border-radius:0 var(--r-sm) var(--r-sm) 0;
+}
+.wk-page:hover{background:var(--bg-3);color:var(--fg-0)}
+.wk-page.on{background:var(--accent-dim);border-left-color:var(--accent);color:var(--accent-hi)}
+.wk-hit{
+  display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;cursor:pointer;
+  padding:var(--sp3) var(--sp4);margin:2px 0;background:transparent;border:0;
+  border-left:2px solid transparent;color:var(--fg-1);font-size:11.5px;
+}
+.wk-hit:hover{background:var(--bg-3)}
+.wk-hit-page{color:var(--accent);font-size:11.5px}
+.wk-hit-line{color:var(--fg-3);font-size:10px}
+.wk-hit-text{color:var(--fg-2);font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px}
+.wk-empty{padding:var(--sp4);color:var(--fg-3);font-size:12px}
+.wiki-content{overflow-y:auto;padding:var(--sp6) var(--sp7) 120px;font-size:13.5px;line-height:1.8;color:var(--fg-0)}
+.wiki-content h1{font-size:22px;margin:0 0 var(--sp5);border-bottom:1px solid var(--line);padding-bottom:var(--sp3)}
+.wiki-content h2{font-size:17px;margin:var(--sp7) 0 var(--sp4);padding-top:var(--sp2)}
+.wiki-content h3{font-size:14.5px;margin:var(--sp6) 0 var(--sp3);color:var(--accent)}
+.wiki-content h4{font-size:13px;margin:var(--sp5) 0 var(--sp2);color:var(--fg-1)}
+.wiki-content p{margin:var(--sp3) 0}
+.wiki-content a{color:var(--accent);text-decoration:none;border-bottom:1px dashed var(--accent-soft)}
+.wiki-content a:hover{color:var(--accent-hi);border-bottom-style:solid}
+.wiki-content code{font-family:var(--mono);font-size:12px;background:var(--bg-3);
+  padding:1px 4px;border-radius:var(--r-sm);color:var(--fg-0)}
+.wiki-content blockquote{
+  margin:var(--sp4) 0;padding:var(--sp3) var(--sp5);color:var(--fg-1);
+  background:var(--bg-1);border-left:3px solid var(--accent-soft);border-radius:0 var(--r) var(--r) 0;
+}
+.wiki-content blockquote p{margin:var(--sp2) 0}
+.wiki-content hr{border:0;border-top:1px solid var(--line);margin:var(--sp6) 0}
+.wiki-content ul.md-list,.wiki-content ol.md-list{margin:var(--sp3) 0;padding-left:var(--sp6)}
+.wiki-content li{margin:3px 0}
+.wiki-content pre.code{
+  margin:var(--sp4) 0;padding:var(--sp4) var(--sp5);overflow-x:auto;
+  background:var(--bg-0);border:1px solid var(--line);border-radius:var(--r);
+  font-family:var(--mono);font-size:12px;line-height:1.65;color:var(--fg-1);
+}
+.wiki-content pre.code code{background:none;padding:0;font-size:12px}
+.md-table-wrap{overflow-x:auto;margin:var(--sp4) 0}
+.md-table{border-collapse:collapse;width:100%;font-size:12px}
+.md-table th,.md-table td{
+  border:1px solid var(--line);padding:5px var(--sp4);text-align:left;vertical-align:top;
+}
+.md-table th{background:var(--bg-3);color:var(--fg-0);font-weight:600;white-space:nowrap}
+.md-table tr:nth-child(even) td{background:var(--bg-1)}
+.wiki-content code.ref-code{cursor:pointer;border-bottom:1px dotted var(--accent-soft)}
+.wiki-content code.ref-code:hover{background:var(--accent-dim);color:var(--accent-hi)}
+.wk-flash{background:var(--accent-dim);outline:2px solid var(--accent-soft);outline-offset:2px;
+  border-radius:var(--r-sm);transition:background 300ms}
+.wk-pager{display:flex;justify-content:space-between;gap:var(--sp4);margin-bottom:var(--sp5);font-size:12px}
+.wk-pager a{cursor:pointer;color:var(--fg-2)}
+.wk-toc{overflow-y:auto;padding:var(--sp5) var(--sp3) var(--sp8);border-left:1px solid var(--line)}
+.wk-toc-title{font-size:10.5px;letter-spacing:.6px;color:var(--fg-3);text-transform:uppercase;margin-bottom:var(--sp3)}
+.wk-toc a{display:block;padding:3px var(--sp3);color:var(--fg-2);font-size:11.5px;text-decoration:none;
+  border-left:2px solid transparent;line-height:1.5}
+.wk-toc a:hover{color:var(--accent);background:var(--bg-2)}
+.wk-toc-l3{padding-left:var(--sp5)!important;font-size:11px!important;color:var(--fg-3)!important}
+.mermaid-src-wrap{margin:var(--sp3) 0;font-size:11.5px}
+.mermaid-src-wrap summary{cursor:pointer;color:var(--fg-3)}
+.wiki-content .mermaid svg{max-width:100%}
+
+/* 源码片段弹层 */
+.code-overlay{
+  position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+  background:var(--scrim);backdrop-filter:blur(2px);
+}
+.code-dialog{
+  width:min(920px,92vw);max-height:82vh;display:flex;flex-direction:column;
+  background:var(--bg-1);border:1px solid var(--line-2);border-radius:var(--r-lg);box-shadow:var(--sh3);
+}
+.code-head{display:flex;align-items:center;gap:var(--sp3);padding:var(--sp4) var(--sp5);
+  border-bottom:1px solid var(--line);font-size:12px}
+.code-head .spacer{flex:1}
+.code-ref{color:var(--accent)}
+.code-body{overflow:auto;padding:var(--sp3) 0 var(--sp5);font-family:var(--mono);font-size:12px;line-height:1.6}
+.code-line{display:flex;white-space:pre;padding:0 var(--sp5)}
+.code-line.hit{background:var(--accent-dim);box-shadow:inset 3px 0 0 var(--accent)}
+.code-n{flex:0 0 48px;text-align:right;color:var(--fg-3);user-select:none;padding-right:var(--sp4)}
+.code-t{color:var(--fg-1)}
+.code-miss{padding:var(--sp6);color:var(--fg-2);font-size:12.5px;line-height:1.7}
+.issues .issue-note code,.field .gl-note-text code{font-family:var(--mono);background:var(--bg-3);
+  padding:0 3px;border-radius:var(--r-sm);font-size:11px}
+.issues .issue-note strong,.field .gl-note-text strong{color:var(--fg-0);font-weight:600}
