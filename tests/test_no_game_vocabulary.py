@@ -42,7 +42,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
-SCAN_DIRS = ("saintess_engine", "schemas", "editor", "examples", "games")
+SCAN_DIRS = ("saintess_engine", "saintess_kit", "schemas", "editor", "examples", "games")
 SCAN_EXT = (".py", ".json", ".js", ".html")
 
 # 游戏身份词（反查自游戏侧数据；框架层不得出现）
