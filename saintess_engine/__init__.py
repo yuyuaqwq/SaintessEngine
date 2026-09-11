@@ -10,7 +10,8 @@
             formation/   站位与目标选择几何
             kinds/       技能 / 伤害类别域
   运行时    store/       SQLite 骨架（连接/锁/事务/迁移/Repository）
-            command/     命令层骨架（注册/路由/分页/守卫/提示）
+            command/     命令层骨架（声明注册表/路由/分页/守卫/提示）
+            text/        文案模板表（输出侧文本：装载/渲染/缺失自检）
             events/      领域事件总线
             clock/       懒计时器
             container/   容量受限格子容器
@@ -43,8 +44,11 @@ from .battle import (  # noqa: F401
     landing, schedule, serialize, state_effects, stats,
 )
 from . import (  # noqa: F401
-    clock, command, container, events, expr, formation, gauge, kinds, session, store,
+    clock, command, container, events, expr, formation, gauge, kinds, session, store, text,
 )
+# 指令声明 / 文案表（声明驱动：可拔插，未装载 = 零行为）
+from .command import CommandRegistry, CommandSpec  # noqa: F401
+from .text import TextSpec, TextTable, safe_format  # noqa: F401
 
 __all__ = [
     # 版本
@@ -73,5 +77,7 @@ __all__ = [
     "battle", "actions", "actors", "ai", "effect_triggers", "effects", "formulas",
     "landing", "schedule", "serialize", "state_effects",
     "expr", "gauge", "formation", "kinds",
-    "store", "command", "events", "clock", "container", "session",
+    "store", "command", "events", "clock", "container", "session", "text",
+    # 声明驱动（指令 / 文案）
+    "CommandRegistry", "CommandSpec", "TextTable", "TextSpec", "safe_format",
 ]

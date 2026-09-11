@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/command.schema.json",
+  "title": "指令声明（commands）—— 框架模板，指令名/文案/守卫语义由内容侧定义",
+  "$defs": {
+    "command": {
+      "type": "object",
+      "title": "一条指令声明（CommandSpec）",
+      "required": [
+        "patterns"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "description": "指令标识。**表形态（{key: 声明}）里以对象 key 为准**，此处可省略；仅独立/数组存档形态需要显式写。装载后与 registry 的 key 一致。"
+        },
+        "patterns": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "命中正则；首条为主，其余为别名。行首锚定由内容侧负责"
+        },
+        "desc": {
+          "type": "string",
+          "description": "人读说明（帮助与编辑器用）"
+        },
+        "category": {
+          "type": "string",
+          "description": "分类（帮助分组；取值由内容侧定义）"
+        },
+        "usage": {
+          "type": "string",
+          "description": "用法示例文本"
+        },
+        "guards": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "守卫名列表（语义由内容侧实现；框架只记名字）"
+        },
+        "page_size": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "该指令列表输出的每页条数（0 = 不适用）"
+        },
+        "visible": {
+          "type": "boolean",
+          "description": "是否出现在帮助/目录"
+        },
+        "order": {
+          "type": "integer",
+          "description": "帮助排序（小在前；同值按注册序）"
+        },
+        "extra": {
+          "type": "object",
+          "description": "内容侧附加数据（框架不解释、原样带回）"
+        }
+      },
+      "examples": [
+        {
+          "key": "example_move",
+          "patterns": [
+            "^move(?:\\s+(\\w+))?$",
+            "^go$"
+          ],
+          "desc": "移动到目标地点",
+          "category": "navigation",
+          "usage": "move <place>",
+          "guards": [
+            "player"
+          ],
+          "page_size": 0,
+          "visible": true,
+          "order": 10
+        }
+      ]
+    },
+    "command_table": {
+      "type": "object",
+      "title": "指令整表：{key: 声明}（条目本体见 $defs/command）",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "description": "一条指令声明（见 $defs/command）。编辑器只认对象形态。"
+      },
+      "examples": [
+        {
+          "example_move": {
+            "patterns": [
+              "^move(?:\\s+(\\w+))?$"
+            ],
+            "desc": "移动到目标地点",
+            "category": "navigation"
+          }
+        }
+      ]
+    }
+  },
+  "x-primary": "command"
+}

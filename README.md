@@ -44,10 +44,11 @@ python editor/server.py
 | `formation/` | 站位与目标选择几何（层数 / 射程 / AoE 范围） |
 | `kinds/` | 技能与伤害类别域（类型元数据 / 前缀匹配） |
 | `store/` | SQLite 骨架：连接/锁/事务 + 建表注册 + 列迁移 + Repository |
-| `command/` | 命令层骨架：分页 / 文本剥离 / 守卫 / handler 路由 / 提示 / 基类 |
+| `command/` | 命令层骨架：分页 / 文本剥离 / 守卫 / handler 路由 / 提示 / 基类 / **指令声明注册表** |
 | `events/` | 领域事件总线：注册序执行 / 未知事件策略 / 异常容忍 |
 | `clock/` | 懒计时器：类型注册 + 惰性过期 + 回调不绕路（不跑后台定时器） |
 | `container/` | 容器骨架：容量受限的格子列表（仓库 / 邮件附件 / 公会仓库 同形） |
+| `text/` | 文案模板表：装载 / 渲染（未知槽原样保留）/ 缺失与死文案自检 |
 | `session/` | 会话骨架：宿主事件契约 + 参考实现(PlainEvent) + 会话标识适配点 |
 | `config` | 注入面：内容侧把公式 / 面板 / 查询函数挂进来的唯一入口 |
 
@@ -82,6 +83,24 @@ tests/              # 框架自身测试（纯度 + 中立性 + 行号 三门禁
 
 **② 想做一个新游戏** —— 用编辑器：`python editor/server.py` → 新建游戏包 →
 按域填数据（技能/职业/怪物…）→ 试跑 → 导出。不需要写框架代码。
+
+**②b 想用「声明驱动」管指令与文案**（可拔插，不用就零行为）
+
+```python
+from saintess_engine import CommandRegistry, TextTable
+
+# 指令：一份声明同时供 匹配 / 帮助目录 / 静态表 / 漂移自检
+reg = CommandRegistry.from_data(json.load(open("content/data/commands.json", encoding="utf-8")))
+reg.pattern_map()                  # → {key: 正则}（宿主 filter 用）
+reg.audit_handlers(handler_names)   # → 两个方向的漂移（漏登记 / 死声明）
+
+# 文案：key → 模板；未定义的 key 会计入 missing（迁移待办清单）
+text = TextTable(json.load(open("content/data/texts.json", encoding="utf-8")))
+text.render("battle.damage_taken", n=7)   # 未知占位符原样保留，不炸玩家输出
+text.missing(); text.unused(); text.validate()
+```
+
+两张表都能在**框架编辑器**里建与改（域 `commands` / `texts`，带 schema 校验 + 字段分组）。
 
 **③ 想给框架加通用能力**（别人也能用） —— 加到 `saintess_engine/` 下**对应的模块**
 （战斗语义 → `battle/`；通用原语 → 顶层子包；也可以按「模块」粒度新建一个平级子包），

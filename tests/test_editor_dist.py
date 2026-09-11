@@ -195,7 +195,8 @@ def main() -> int:
     same = open(os.path.join(pkg, "content", "data", "skills.json"), "rb").read() == \
         open(os.path.join(dest, "content", "data", "skills.json"), "rb").read()
     check("往返内容逐字节一致（skills.json）", same)
-    check("导入报告带域数 / 条目数", (r.get("report") or {}).get("domains") == 7
+    check(f"导入报告带域数 / 条目数（域数应为 {len(PK.DOMAINS)}）",
+      (r.get("report") or {}).get("domains") == len(PK.DOMAINS)
           and (r.get("report") or {}).get("entries") == 2, f"{r.get('report')}")
     check("导入后无临时目录残留",
           not [d for d in os.listdir(gd2) if d.startswith(".import_")], f"{os.listdir(gd2)}")

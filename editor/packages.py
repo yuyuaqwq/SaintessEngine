@@ -48,6 +48,13 @@ DOMAINS = {
     "passive_proc": {"label": "被动声明", "kind": "rules",
                      "schema": "passive_proc.schema.json", "primary": "passive_proc",
                      "icon": "🌀"},
+    # 声明驱动（可拔插）：指令与文案 —— 装载后由
+    # `saintess_engine.command.CommandRegistry` / `saintess_engine.text.TextTable` 消费；
+    # 不填这两张表 = 零行为（既有代码照旧）。
+    "commands": {"label": "指令",   "kind": "data",  "schema": "command.schema.json",
+                 "primary": "command", "icon": "⌨️"},
+    "texts":    {"label": "文案",   "kind": "data",  "schema": "text.schema.json",
+                 "primary": "text_entry", "icon": "💬"},
 }
 
 

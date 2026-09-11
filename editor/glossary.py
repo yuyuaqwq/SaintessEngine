@@ -296,8 +296,31 @@ _PASSIVE_PROC = {
                  "ref": ("reference/passive-proc.md", "ctrl_any")},
 }
 
+# ───────────────────────────────────────────────────────────────────── 声明驱动：指令 / 文案
+_COMMANDS = {
+    "key": {"zh": "指令标识", "note": "通常等于宿主 handler 名——漂移自检（CommandRegistry.audit_handlers）按它对齐声明与实际注册。"},
+    "patterns": {"zh": "命中正则", "note": "首条为主、其余为别名；行首锚定由内容侧负责。多条时宿主 filter 收合并串 `(?:a)|(?:b)`。"},
+    "desc": {"zh": "说明", "note": "帮助/编辑器用；不填则帮助里没有这条。"},
+    "category": {"zh": "分类", "note": "帮助分组用；取值由内容侧定义（框架不设枚举）。"},
+    "usage": {"zh": "用法", "note": "帮助里展示的用法示例文本。"},
+    "guards": {"zh": "守卫", "note": "守卫**名字**列表（如 player/battle）；语义由内容侧实现——框架只记名字，不认「角色」这类概念。"},
+    "page_size": {"zh": "每页条数", "note": "该指令列表输出的每页条数；0 = 不适用。"},
+    "visible": {"zh": "可见", "note": "是否出现在帮助/目录（默认 true）。"},
+    "order": {"zh": "排序", "note": "帮助排序，小在前；同值按注册序。"},
+    "extra": {"zh": "附加数据", "note": "内容侧自定义字段（如权限、限流、冷却）；框架不解释、原样带回。"},
+}
+
+_TEXTS = {
+    "key": {"zh": "文案标识", "note": "支持点分命名（如 battle.hit）；渲染时按它取模板，未定义会计入 missing 自检。"},
+    "category": {"zh": "分类", "note": "编辑器分组用；取值由内容侧定义（框架不设枚举）。"},
+    "value": {"zh": "模板串", "note": "用 {slot} 占位。未知槽渲染时**原样保留**（不抛），便于发现问题。"},
+    "params": {"zh": "占位符声明", "note": "声明的占位符名；缺省由模板自动抽取。声明后会与模板比对（多/少都报）。"},
+}
+
 GLOSSARY = {
     "*": _COMMON,
+    "commands": _COMMANDS,
+    "texts": _TEXTS,
     "skills": _SKILLS,
     "monsters": _MONSTERS,
     "affixes": _AFFIXES,
@@ -342,6 +365,24 @@ GROUPS = {
                     "recovery", "pdot", "cond", "chance"]},
         {"id": "world", "label": "出现与掉落", "icon": "🗺",
          "fields": ["skills", "drops", "gold_mult", "tag", "flavor", "maps"]},
+    ],
+    "commands": [
+        {"id": "base", "label": "基础", "icon": "📌",
+         "fields": ["key", "desc", "category", "usage"]},
+        {"id": "match", "label": "匹配与守卫", "icon": "🎯",
+         "fields": ["patterns", "guards"]},
+        {"id": "show", "label": "展示与排序", "icon": "🗂",
+         "fields": ["visible", "order", "page_size"]},
+        {"id": "ext", "label": "扩展", "icon": "🧩",
+         "fields": ["extra"]},
+    ],
+    "texts": [
+        {"id": "base", "label": "基础", "icon": "📌",
+         "fields": ["key", "value"]},
+        {"id": "doc", "label": "说明与分组", "icon": "🗂",
+         "fields": ["desc", "category"]},
+        {"id": "slots", "label": "占位符", "icon": "🧩",
+         "fields": ["params"]},
     ],
     "affixes": [
         {"id": "base", "label": "基础", "icon": "📌",
@@ -483,6 +524,7 @@ DOMAIN_SCHEMA = {
     "skills": "skill.schema.json", "monsters": "monster.schema.json",
     "affixes": "affix.schema.json", "items": "item.schema.json",
     "effect_rules": "effect_rules.schema.json", "passive_proc": "passive_proc.schema.json",
+    "commands": "command.schema.json", "texts": "text.schema.json",
 }
 
 # ───────────────────────────────────────────────────────────────────────── 查询

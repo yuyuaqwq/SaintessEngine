@@ -166,13 +166,14 @@ def main() -> int:
     check("分组里没有 schema 不存在的字段（防拼错）", not ghost, f"幽灵：{ghost[:8]}")
     check("分组 id 唯一且都有标签", not dup_ids and not no_label, f"{dup_ids[:4]} {no_label[:4]}")
     check("没有空分组", not empty, f"{empty}")
-    check("分组数与规模合理（6 域 ≥ 3 组/域）",
+    check(f"分组数与规模合理（{len(G.DOMAIN_SCHEMA)} 域 ≥ 3 组/域）",
           all(len(G.groups_for(d)) >= 3 for d in G.DOMAIN_SCHEMA), 
           {d: len(G.groups_for(d)) for d in G.DOMAIN_SCHEMA})
     check("groups_for 返回深拷贝（改调用方不污染全局）",
           (lambda a: (a[0]["fields"].append("__x__"), "__x__" not in G.groups_for("skills")[0]["fields"])[1])(
               G.groups_for("skills")))
-    check("all_groups 覆盖 6 个有 schema 的域", set(G.all_groups()) == set(G.DOMAIN_SCHEMA))
+    check(f"all_groups 覆盖 {len(G.DOMAIN_SCHEMA)} 个有 schema 的域",
+      set(G.all_groups()) == set(G.DOMAIN_SCHEMA))
 
     # 10. 控件形态与跨域引用（长文案给大框 / 比值给滑杆 / 引用取真 key）
     ALLOWED = {"textarea", "lines", "chips", "pct"}

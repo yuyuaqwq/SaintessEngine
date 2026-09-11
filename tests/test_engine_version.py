@@ -42,16 +42,34 @@ check("VERSION_INFO 是 3 元整数元组",
       and all(isinstance(x, int) for x in E.VERSION_INFO), E.VERSION_INFO)
 check("version 模块可从门面取到", hasattr(E, "version") and E.version is V)
 
-# 2. 比较语义
+# 2. 比较语义（★ 用例**版本相对**：从实际版本推导，升版不红）
+#    旧版把 0.1.0 的期望写死 → 版本一动（0.1.0→0.2.0）整片假红，与「门禁查语义」的初衷无关。
+MAJ, MIN, PAT = E.VERSION_INFO
+cur = f"{MAJ}.{MIN}.{PAT}"
+same_short = f"{MAJ}.{MIN}"           # 前缀补齐：0.2 == 0.2.0
+lower = f"{MAJ}.{max(0, MIN - 1)}"     # 低于当前（同主版本）
+next_minor = f"{MAJ}.{MIN + 1}"        # 高于当前（同主版本）
 CASES = [
-    (">=0.1", True), (">=0.1,<0.2", True), (">=0.1.0", True), ("==0.1.0", True),
-    ("==0.1", True), ("!=0.1", False), (">0.1", False), ("<0.1", False),
-    (">=9", False), (">=0.0.9", True), (">=v0.1", True), ("", True),
+    (f">={same_short}", True),                      # 前缀补齐也算满足
+    (f">={cur}", True),
+    (f"=={cur}", True),
+    (f"=={same_short}", True),                      # 0.2 == 0.2.0
+    (f"!={same_short}", False),
+    (f">{same_short}", False),                      # 不快于自身
+    (f"<{same_short}", False),
+    (f">={MAJ}.{MIN - 1 if MIN > 0 else 0},<{next_minor}", True),   # 区间含当前
+    (f">={MAJ + 1}", False),                        # 主版本超前 → 不满足
+    (f">=0.0.1", True),                             # 极老需求 → 满足
+    (f">=v{same_short}", True),                     # 允许 v 前缀
+    ("", True),                                     # 空需求 = 不约束
 ]
 bad = [(r, V.satisfies(r)) for r, want in CASES if V.satisfies(r) is not want]
-check(f"比较语义 {len(CASES)} 例（含前缀补齐 0.1 == 0.1.0）", not bad, f"bad={bad}")
+check(f"比较语义 {len(CASES)} 例（版本相对，含前缀补齐 {same_short} == {cur}）",
+      not bad, f"bad={bad}（当前 {cur}）")
 check("前缀补齐：'==0.1' 与 '==0.1.0' 等价",
       V.satisfies("==0.1", "0.1.0") and V.satisfies("==0.1.0", "0.1"))
+check("区间 '>=0.1,<0.2' 对 0.1.x 成立（与当前版本无关的固定语义）",
+      V.satisfies(">=0.1,<0.2", "0.1.0") is True)
 
 # 3. fail-closed
 ok, note = V.check("bogus")

@@ -2,7 +2,11 @@
 """版本与兼容性检查（框架契约的一部分）。
 
 包版本语义 `major.minor.patch`。**1.0 之前 API 面仍可能变动**：
-`__all__` 里的 26 个符号是稳定面，其余模块路径可能调整（调整会在 CHANGELOG 记录）。
+`__all__` 里的符号是稳定面，其余模块路径可能调整（调整会在 CHANGELOG 记录）。
+
+0.2.0（2026-09-11）：新增**声明驱动**两类能力 —— `command.CommandRegistry`
+（指令声明：装载/查询/匹配/派生/漂移自检）与 `text.TextTable`（文案模板：装载/
+渲染/缺失自检）。均为**可拔插**：不装载 = 零行为，不改变既有 API 语义。
 
 游戏包 → 框架的版本声明
 -----------------------
@@ -25,7 +29,7 @@ from __future__ import annotations
 
 import re
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 # 版本元组（便于程序比较）
 VERSION_INFO: tuple = tuple(int(x) for x in re.findall(r"\d+", __version__)[:3]) or (0,)
