@@ -81,7 +81,7 @@ if player_actor["hp"] < int(player_actor["max_hp"] * 0.3):
 - ⚠️ 阈值判断（「多少算低血」）是**游戏知识**，必须留在你的层。
   这也是引擎不给点位的原因（`effect_triggers.py:38-40`）
 - 内容侧的现实做法：不加事件，把判据挂到 `on_taken` / `act_done` 上每次自查
-  （例：`core_last_stand`，`game/data/battle2_rules.py:852-858`，
+  （例：`core_last_stand`，`game/data/battle_rules.py:852-858`，
   注释直写「引擎无低血量事件 player_low，缺口见动作 docstring」）
 
 ## `_fire_ctx`：乘区型事件的读写口径

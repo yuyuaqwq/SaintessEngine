@@ -4,7 +4,7 @@
 把《云海猎团》职业融合提炼的 2 个通用机制实现为纯函数模块：
 1. enemy_bar  挂敌身资源条（bar_key 与显示名由内容侧声明）
    —— 积蓄挂在敌方身上，**容器 = actor.effects（V 系列统一单容器）**，
-      键 = `data/battle2_rules.BAR_STATE_PREFIX + bar_key`（如 `bar:shaken`）；
+      键 = `data/battle_rules.BAR_STATE_PREFIX + bar_key`（如 `bar:shaken`）；
       独立于异常免疫，阈值递增防无限控、触发后免疫窗口、
       阶段转换保留部分进度
 2. charge     蓄力三律（游侠电荷 / 弓手 / 时咒）
@@ -31,7 +31,7 @@ S3 通用件归位（docs/ENGINE_CONTENT_SPLIT_PLAN.md §6.5 / §7-S3）：
 本体自 game/core/battle_bars.py 迁入引擎（saintess_engine/），**读点改 config
 注入面**——`config.mech_cfg(name)` / `config.bar_prefix()` 由内容侧装配
 （game/bootstrap.py）注入，引擎零 game.data import（门禁 test_engine_no_content.py）。
-（S3 前这里是 importlib 延迟直读 data.battle_config/data.battle2_rules——
+（S3 前这里是 importlib 延迟直读 data.battle_config/data.battle_rules——
 既为避 core ↔ data 循环导入，也是引擎反向依赖的一条边。）
 """
 from math import ceil, floor

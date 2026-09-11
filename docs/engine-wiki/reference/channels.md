@@ -98,19 +98,19 @@ if params.get("per_dt"):
 "tick": {"gain": 0.4, "per_dt": True,
          "when": [{"judge": {"kind": "has_effect", "key": "guard_stance"}}]},
 ```
-（`game/data/battle2_rules.py:238-239`）—— 「守御姿态下每刻 +0.4 磐核」。
+（`game/data/battle_rules.py:238-239`）—— 「守御姿态下每刻 +0.4 磐核」。
 
 ## 参考实现里的渠道使用情况
 
 `EFFECT_RULES` 78 个 key 中**只有 2 个**声明了 `channels`（本次核实）：
 
 ```python
-"faith": {                                    # game/data/battle2_rules.py:174
+"faith": {                                    # game/data/battle_rules.py:174
     "start_classes": ["cls_mu_shi"],
     "channels": {"heal_cast": 2, "taken": 1},
     ...
 }
-"guard_core": {                               # game/data/battle2_rules.py:230
+"guard_core": {                               # game/data/battle_rules.py:230
     "channels": {
         "skill_hit": 1,
         "taken": {"gain": 1, "when": [{"judge": {"kind": "has_effect",

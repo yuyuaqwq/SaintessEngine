@@ -70,7 +70,7 @@ grep -rho 'register_action("[^"]*")' game/services/*.py | sort -u | wc -l
 
 ## 参考实现的 51 个名词（可粘贴起点）
 
-以下全部来自 `game/data/battle2_rules.py:421-495`（真实键，非示例）。
+以下全部来自 `game/data/battle_rules.py:421-495`（真实键，非示例）。
 标注的含义：`→` 后是它映射到的动词。**除 `class_*` 三个外都是引擎动词**。
 
 ### 控制类（8）
@@ -255,7 +255,7 @@ return False
 
 ```python
 import ast, re
-rules = ...  # 读 game/data/battle2_rules.py 的 EFFECT_ACTIONS
+rules = ...  # 读 game/data/battle_rules.py 的 EFFECT_ACTIONS
 verbs = set(re.findall(r'@register_action\("([^"]+)"\)', open('saintess_engine/battle/effects.py').read()))
 effs = set(re.findall(r'[\'"]effect[\'"]\s*:\s*[\'"]([^\'"]+)[\'"]', open('game/data/skills.py').read()))
 print(sorted(e for e in effs if e not in rules and e not in verbs))

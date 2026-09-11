@@ -66,7 +66,7 @@
 - [x] **拆出可独立运行的测试**：框架仓已有「零内容」的引擎自测集 —— 门禁
       `tests/test_engine_purity.py`（加强版）+ `tests/test_engine_neutral_fallback.py`
       （中性兜底：未挂配置不崩），一条命令跑完：`python tests/run_all.py`（**纯标准库 python 即可**）。
-      （**游戏仓 / 奥兰迪亚侧**另有 28 个 `test_battle2_*.py`，其中仍有依赖内容侧
+      （**游戏仓 / 奥兰迪亚侧**另有 28 个 `test_battle_*.py`，其中仍有依赖内容侧
       （`config.load_game_defaults()`）的，那些留在游戏仓回归里。）
 - [x] **去掉对仓库路径的假设**：框架仓的测试与示例只按框架仓自身根目录定位
       （如 `tests/test_engine_purity.py` 的 `FW_ROOT`），**不依赖**任何游戏仓路径。

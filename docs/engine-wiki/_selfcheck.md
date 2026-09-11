@@ -15,8 +15,8 @@
 | 字段 | 核实方法 | 结论 |
 |---|---|---|
 | `debuff_scale` | 全仓 `grep -rn "debuff_scale"` → 只命中 `effects.py:249` 的**判据关键词列表**与数据表注释 | **无任何折算消费方**。声明了「每层承伤 +N%」的 `hunt_mark` / `soul_mark` / `curse` 实际不生效 |
-| `on_threshold` | 全仓 grep → 只有 `effects.py:211/244/250` 的判据关键词 + `battle2_rules.py:27` 的声明 | **无消费方**。`threshold` **事件**有引擎点位（`effects.py:349`），但这张映射表没被读 |
-| `wake_on_hit` | 全仓 grep → 只有 `battle2_rules.py:400` 的声明 | **无消费方**。打醒睡眠由 `landing.py:117` 的硬编码 key 判断实现 |
+| `on_threshold` | 全仓 grep → 只有 `effects.py:211/244/250` 的判据关键词 + `battle_rules.py:27` 的声明 | **无消费方**。`threshold` **事件**有引擎点位（`effects.py:349`），但这张映射表没被读 |
+| `wake_on_hit` | 全仓 grep → 只有 `battle_rules.py:400` 的声明 | **无消费方**。打醒睡眠由 `landing.py:117` 的硬编码 key 判断实现 |
 | `tag` | grep `state_def(...).get("tag")` / `cfg.get("tag")` → 空 | **无消费方**。`act_apply` 读的是 params 的 `tag`（作 key 兜底，`effects.py:287`） |
 | `dot` | 全仓 grep → 只有 `effects.py:249` 判据；78 个 key 里无一使用 | **无消费方**（V5 后 DOT 统一走 `period`） |
 | `name` | 引擎无读取（内容侧读） | 引擎不读，**符合设计**（展示名属内容侧） |
@@ -41,7 +41,7 @@
 | `Battle._cast_ctx` / `_target_ctx` | `battle.py:73-74` | 只初始化，零使用 |
 | `Battle._events` | `battle.py:82` | 只初始化，零使用 |
 | `DEFAULT_CT_WAIT = 2.0` | `battle.py:22` | 常量零消费 |
-| `schedule.CAST_ITEM = 1.0` | `schedule.py:25` | 引擎内零消费（内容侧 `battle2_item_use.py` 自己定义了同值常量） |
+| `schedule.CAST_ITEM = 1.0` | `schedule.py:25` | 引擎内零消费（内容侧 `battle_item_use.py` 自己定义了同值常量） |
 | `schedule.HOT_INTERVAL = 1.0` | `schedule.py:29` | 零消费 |
 | `schedule.next_ct` | `schedule.py:46` | 有定义、无调用方（实际推进走 `_after_act`） |
 | `state_effects.stat_scale_of` | `state_effects.py:18` | 仅测试引用 |
@@ -53,7 +53,7 @@
 | `effects.effects_from_skill(..., caster_side_is_player=True)` | `effects.py:188` | **第三个参数在函数体里从未使用** |
 | `config.set_hook` | `config.py:123` | 零外部引用（都走 `mount`） |
 | `serialize.to_state` 的 `flags` | `serialize.py:49` | 恒写入 `{}`；**没有读取方**，也没有写入方 |
-| `Battle.auto_run(max_steps=500)` | `battle.py:302` | 全仓调用点**只在 `tests/`**（游戏仓 `test_battle2_add_actor.py:159`、游戏仓 `test_battle2_bridge.py:154`、游戏仓 `test_battle2_bar_procs.py:240` 等），内容侧零调用 —— 实质是**测试/AI 模式辅助**，不是生产路径（生产走 `human_act` + `advance`） |
+| `Battle.auto_run(max_steps=500)` | `battle.py:302` | 全仓调用点**只在 `tests/`**（游戏仓 `test_battle_add_actor.py:159`、游戏仓 `test_battle_bridge.py:154`、游戏仓 `test_battle_bar_procs.py:240` 等），内容侧零调用 —— 实质是**测试/AI 模式辅助**，不是生产路径（生产走 `human_act` + `advance`） |
 
 ### 1.4 `EFFECT_ACTIONS` / 技能数据侧的静默 no-op
 
@@ -88,10 +88,10 @@
 |---|---|---|---|
 | C1 | `effect_triggers.py:24` | 「19 时机 + …」（# 事件全集） | `EVENTS` 实际 26 项 |
 | C2 | `effect_triggers.py:40` | 「引擎已插桩自然点位 = 除 phase/player_low/pv_broken 外 **16 个**」 | 实际 23 个 |
-| C3 | 游戏仓 `battle2_rules.py:696` | 「基础 8% 走 `debuff_scale` **引擎天然段**」 | `debuff_scale` **无消费方**（§1.1） |
-| C4 | 游戏仓 `battle2_rules.py:292` | `corros` 注释「**真伤** DOT」 | `period.dmg_type` 无消费方；实际不是真伤（§1.2） |
-| C5 | 游戏仓 `battle2_rules.py:531` | `finisher.crit_at: 4`「声明先行——crit roll 前钩子就绪后生效」 | **声明先行 = 当前不生效**；装配器不读 `crit_at`，也没有消费它的钩子（已核实的缺口） |
-| C6 | `battle2_rules.py:510` | `MECH_CASH` docstring 列 `bonus_clear` 模式 | 装配器 mode 分派里没有它（`class_mech_proc.py:2350` 只认 4 个 mode），注释也自承「R1b 未用」 |
+| C3 | 游戏仓 `battle_rules.py:696` | 「基础 8% 走 `debuff_scale` **引擎天然段**」 | `debuff_scale` **无消费方**（§1.1） |
+| C4 | 游戏仓 `battle_rules.py:292` | `corros` 注释「**真伤** DOT」 | `period.dmg_type` 无消费方；实际不是真伤（§1.2） |
+| C5 | 游戏仓 `battle_rules.py:531` | `finisher.crit_at: 4`「声明先行——crit roll 前钩子就绪后生效」 | **声明先行 = 当前不生效**；装配器不读 `crit_at`，也没有消费它的钩子（已核实的缺口） |
+| C6 | `battle_rules.py:510` | `MECH_CASH` docstring 列 `bonus_clear` 模式 | 装配器 mode 分派里没有它（`class_mech_proc.py:2350` 只认 4 个 mode），注释也自承「R1b 未用」 |
 
 另：`MECH_CASH` 声明了 `heal_clear`（`faith_unload`），装配器**不处理**该 mode
 （`class_mech_proc.py:2350` 的 `if mode not in (...)` 直接 continue）——
@@ -124,7 +124,7 @@ B6 值得单列说明：这些字段**没有消费者**，但它们**存在与�
 - 写文档时 `git status` 显示工作树**除本 `docs/engine-wiki/` 外无改动**，
   即本文所有行号对应的是那次 HEAD 的**已提交状态**
 - ⚠️ **行号会漂移**：`docs/ENGINE_CONTENT_SPLIT_PLAN.md` 自己记录过，
-  侦察期检测到并行 agent 正在改 `game/data/battle2_rules.py` 与
+  侦察期检测到并行 agent 正在改 `game/data/battle_rules.py` 与
   `game/services/class_mech_proc.py`，行号已漂移（`apply_class_mech` L2041→L2201）。
   本次写文档期间，`git log` 又前进了 4 个 commit（S5'/S6'/S7 落地）。
   **引擎侧（`saintess_engine/*`）的锚点在这些 commit 里未变**，但内容侧一定在动。
@@ -142,7 +142,7 @@ B6 值得单列说明：这些字段**没有消费者**，但它们**存在与�
 | Q8 | `game/data/skills.py` 的 20 个未映射 `effect=` 是「待实现」还是「已废弃数据」 | 只能证明「当前静默无效」，无法证明意图 |
 | Q9 | `EFFECT_RULES` 里 `bleed` 的 `"type": "flat", "per_layer": 0` 是否曾被某版消费 | 当前无消费方；历史未知 |
 | Q10 | 本 wiki 的行号在并发改动下会漂移多少 | `docs/ENGINE_CONTENT_SPLIT_PLAN.md` 自己记录过：侦察期检测到并行 agent 在改
-`battle2_rules.py` 与 `class_mech_proc.py`，行号已漂移。**引擎侧（`saintess_engine/*`）锚点当时未变**，但本 wiki 写作期间这两个内容侧文件仍在被改 |
+`battle_rules.py` 与 `class_mech_proc.py`，行号已漂移。**引擎侧（`saintess_engine/*`）锚点当时未变**，但本 wiki 写作期间这两个内容侧文件仍在被改 |
 
 ### 未取证的写作（明确标注）
 
@@ -167,7 +167,7 @@ B6 值得单列说明：这些字段**没有消费者**，但它们**存在与�
 3. **`EVENTS` 抄全核对** — 从 `effect_triggers.py` 正则抽出元组内容，得 26 项
 4. **fire 点位扫描** — 对 `saintess_engine/**` 逐行匹配 `_fire(battle, "..."` 与
    `fire(self, "..."`，得出 23 个自然点位 + 3 个无点位 + `skill_hit`/`attack_hit` 的变量形式
-5. **声明表结构化解析** — `ast` 解析 `battle2_rules.py`，得 `EFFECT_ACTIONS` 51 条、
+5. **声明表结构化解析** — `ast` 解析 `battle_rules.py`，得 `EFFECT_ACTIONS` 51 条、
    `EFFECT_RULES` 78 条、`MECH_CASH` 9 条、`PASSIVE_PROC` 42 条，
    及字段出现次数并集
 6. **消费方 grep** — 对 `debuff_scale` / `on_threshold` / `wake_on_hit` / `tag` / `dot` /

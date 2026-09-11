@@ -7,7 +7,7 @@
 **无条目 = 空 dict = 纯数值无规则**（`config.state_def`，`config.py:110-116`）——
 这是合法状态，不是错误。
 
-字段清单来自游戏仓参考实现（`game/data/battle2_rules.py`，78 个 key）的**实际使用并集**，
+字段清单来自游戏仓参考实现（`game/data/battle_rules.py`，78 个 key）的**实际使用并集**，
 加上引擎代码里被读取的字段。每个字段都标了消费者：
 
 - ✅ = 引擎消费
@@ -112,7 +112,7 @@ period.type · period.per_layer · period.dmg_type               ← period 层
     "on_threshold": {10: {"form": "fury"}},   # ⚠️ 无消费者
 },
 ```
-（`game/data/battle2_rules.py:23-28`）
+（`game/data/battle_rules.py:23-28`）
 
 ```python
 # 对敌 DOT：每层每刻掉 3% 最大生命（无限跳）
@@ -122,7 +122,7 @@ period.type · period.per_layer · period.dmg_type               ← period 层
     "period": {"dir": "damage", "interval": 1.0, "pct_max_hp": 0.03},
 },
 ```
-（`game/data/battle2_rules.py:274-278`）
+（`game/data/battle_rules.py:274-278`）
 
 ```python
 # 限时 DOT + Boss 档（3 跳后清层）
@@ -133,20 +133,20 @@ period.type · period.per_layer · period.dmg_type               ← period 层
                "pct_boss": 0.01, "turns": 3},
 },
 ```
-（`game/data/battle2_rules.py:313-317`）
+（`game/data/battle_rules.py:313-317`）
 
 ```python
 # 控制（消费模式进表 → 技能 mech 不必带 mode 参数）
 "stun": {"cap": 1, "consume": {"mode": "skip"}, "tag": "stun",
          "cleanse": True, "negative": True},
 ```
-（`game/data/battle2_rules.py:398`）
+（`game/data/battle_rules.py:398`）
 
 ```python
 # 静态面板增益（动作瘦身为 key-only，数值查表）
 "atk_up": {"cap": 1, "panel": {"stat": "atk", "op": "mul", "mult": 1.30}},
 ```
-（`game/data/battle2_rules.py:375`）
+（`game/data/battle_rules.py:375`）
 
 ## 相关
 

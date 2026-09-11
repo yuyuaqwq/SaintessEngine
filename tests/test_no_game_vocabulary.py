@@ -27,7 +27,7 @@ C. `schemas/*.json` 的 `$id` 不得含游戏名。
 
 词表出处（可复现）
 ------------------
-`GAME_TERMS` 由**游戏侧数据反查**得到（`dragonfall/game/data/{classes,battle2_rules}.py`
+`GAME_TERMS` 由**游戏侧数据反查**得到（`dragonfall/game/data/{classes,battle_rules}.py`
 的职业 id / EFFECT_RULES / MECH_CASH / PASSIVE_PROC 键），再剔掉框架合法词汇
 （引擎内置动词与字段名如 element/energy/shield/stun/reduce 等 —— 这些是框架协议，
 见 `docs/engine-wiki/concepts/declaration-tables.md`）。

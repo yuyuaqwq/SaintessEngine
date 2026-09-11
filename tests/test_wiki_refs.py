@@ -33,7 +33,7 @@
 已知边界（有意不阻断）
 ----------------------
 - **未解析文件**（basename 不在本仓）只报告不失败：wiki 会引用**游戏侧参考实现**
-  的文件（如 `class_mech_proc.py`、`battle2_rules.py`、`game/content_rules/apply.py`）；
+  的文件（如 `class_mech_proc.py`、`battle_rules.py`、`game/content_rules/apply.py`）；
   那些不在框架仓，属预期。带路径的引用按**尾部路径**解析，不退化到 basename
   （否则 `game/content_rules/apply.py` 会被糊到框架仓的示例包 → 误报越界）。
 - 纯行号无符号线索的引用跳过（无法判定，不猜）。

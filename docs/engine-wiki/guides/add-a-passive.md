@@ -4,7 +4,7 @@
 跑哪个动作、判据是什么。装配器开战时读它，翻译成 `actor["triggers"]`。
 
 **这整套是内容侧约定，不是引擎 API**。引擎只提供 `register_action` 与 `triggers`；
-`PASSIVE_PROC` 表 + 装配器都在内容侧（`game/data/battle2_rules.py:653` 的表、
+`PASSIVE_PROC` 表 + 装配器都在内容侧（`game/data/battle_rules.py:653` 的表、
 `game/services/class_mech_proc.py:1974` 的 `apply_class_passives`）。
 本页两个都讲，因为第三方最省力的做法就是照抄这套格式。
 
@@ -22,7 +22,7 @@
 
 ## 声明 schema
 
-一条真实的**双通道**被动（`game/data/battle2_rules.py:738-744`）：
+一条真实的**双通道**被动（`game/data/battle_rules.py:738-744`）：
 
 ```python
 "zhan_yi_full_reduce": {   # 坚城之姿：战意满 10 → 减伤 +10%、免疫眩晕
@@ -147,13 +147,13 @@ ctrl · ctrl_any · res · left_key · left_init · cost_field · buff_key
 
 **没有点位的事件**：`phase` / `player_low` / `pv_broken` —— 挂上去不会触发，
 除非你的上层自己 `fire`。做「血量 <30%」这类被动时，内容侧的实际做法是挂在
-`on_taken` 上每次自己判血量（例：`core_last_stand`，`game/data/battle2_rules.py:852-858`，
+`on_taken` 上每次自己判血量（例：`core_last_stand`，`game/data/battle_rules.py:852-858`，
 注释直写「引擎无低血量事件 player_low，缺口见动作 docstring」）。
 
 ## 完整可抄模板
 
 ```python
-# ① 内容侧声明（game/data/battle2_rules.py）
+# ① 内容侧声明（game/data/battle_rules.py）
 PASSIVE_PROC["my_proc"] = {
     "event": "dmg_calc", "action": "passive_dmg_mult",
     "judge": {"kind": "res_ge", "res": "my_res", "ge_field": "stacks"},

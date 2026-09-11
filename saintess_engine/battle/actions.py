@@ -220,7 +220,7 @@ def _spend_skill_cost(actor: dict, info: dict):
 # ============================================================
 # v181.M-bonus cost 域：技能消耗统一折算点（预检/扣费同源）
 # ============================================================
-# actor["bonus"]["cost"] 形态与写入约定见 services/battle2_equip_proc.py
+# actor["bonus"]["cost"] 形态与写入约定见 services/battle_equip_proc.py
 # _apply_cost_bonus（词条装配翻译器）——引擎只读不写：
 #   {"mp_pct": 0.10, "mp_flat": 5, "res": {"<资源名>": 0.05},
 #    "when": [{"mp_pct": ..., "judge": {...}}]}

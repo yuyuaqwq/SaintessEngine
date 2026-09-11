@@ -4,7 +4,7 @@
 框架/配置分离（鱼鱼拍板：换一套配置 = 新游戏）：
 - 引擎只提供【动词执行器】——能力，不含任何游戏内容判断
 - 游戏【名词效果】→ 动词动作序列 的映射在 config 挂载的游戏规则里
-  （game/data/battle2_rules.py EFFECT_ACTIONS）
+  （game/data/battle_rules.py EFFECT_ACTIONS）
 - 名词效果先经配置翻译成动词动作，再执行
 
 动词（引擎注册，全部通用；V4 收敛 8 个）：

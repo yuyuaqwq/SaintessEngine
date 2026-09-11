@@ -10,7 +10,7 @@
 3. `register_action`（你可以注册任意动词）
 
 **词条/装备特效是这三样的组合**。本页讲《奥兰迪亚》（游戏仓侧的参考实现）内容侧总结出的两种成熟形态
-（原文：`game/services/battle2_we_procs.py:1-4` 的「N9 形态 2」），
+（原文：`game/services/battle_we_procs.py:1-4` 的「N9 形态 2」），
 第三方可以直接照抄这套形态，也可以自己造。
 
 ## 形态 1：纯声明（能用引擎原生动词表达）
@@ -27,12 +27,12 @@ def equip_flat_affix(actor, affix_data):
 
 《奥兰迪亚》的第一批装备特效就是这么做的：「起手类纯动词 key（`proc_shield` 起手 2 +
 `proc_buff` 起手 6），验证『读表 → 事件映射 → triggers 装配 → 引擎 fire』管线」
-（`game/services/battle2_equip_proc.py:16-18`）。
+（`game/services/battle_equip_proc.py:16-18`）。
 
 ## 形态 2：族扩展动作（有分支逻辑时）
 
 有「条件/概率/多步副作用」的特效，注册一个 `we_xxx` 族动词
-（`game/services/battle2_we_procs.py:1-14` 的原文约定）：
+（`game/services/battle_we_procs.py:1-14` 的原文约定）：
 
 ```python
 @register_action("we_affix_dot")
@@ -45,10 +45,10 @@ def we_affix_dot(battle, caster, target, params, logs):
 
 | 约定 | 说明 | 出处 |
 |---|---|---|
-| 读事件数值用 `battle._fire_ctx` | `dmg` / `is_crit` / `overflow` / `source` 在那里 | `game/services/battle2_we_procs.py:10-11` |
-| 持久状态写 `actor["ext"]` | 「CD/次数/标记等持久状态写 `actor["ext"]`（引擎绝不读，扩展动作自管）」 | `game/services/battle2_we_procs.py:12` |
-| 数值全读 `params` | 「数值权威：全部读 params；缺字段 = 无此行为」 | `game/services/battle2_we_procs.py:14-15` |
-| 内部叠层用局部 helper | 例 `_add_stacks(actor, key, amount, cap)` 走 `effects[key].stacks` | `game/services/battle2_we_procs.py:49-55` |
+| 读事件数值用 `battle._fire_ctx` | `dmg` / `is_crit` / `overflow` / `source` 在那里 | `game/services/battle_we_procs.py:10-11` |
+| 持久状态写 `actor["ext"]` | 「CD/次数/标记等持久状态写 `actor["ext"]`（引擎绝不读，扩展动作自管）」 | `game/services/battle_we_procs.py:12` |
+| 数值全读 `params` | 「数值权威：全部读 params；缺字段 = 无此行为」 | `game/services/battle_we_procs.py:14-15` |
+| 内部叠层用局部 helper | 例 `_add_stacks(actor, key, amount, cap)` 走 `effects[key].stacks` | `game/services/battle_we_procs.py:49-55` |
 
 ⚠️ `actor["ext"]` 有一个**必须知道**的性质：它会**随存档落盘**
 （`serialize._serialize_actor` 不剥 `ext`，只剥 `_skill_index`，`serialize.py:33`）。
@@ -59,7 +59,7 @@ def we_affix_dot(battle, caster, target, params, logs):
 ## 事件映射：旧事件名 → 引擎事件名
 
 如果你的特效数据表用的是自己的事件词汇表，写一张映射表（照抄这张，
-`game/services/battle2_equip_proc.py:26-44`）：
+`game/services/battle_equip_proc.py:26-44`）：
 
 ```python
 _EVENT_MAP = {
@@ -81,7 +81,7 @@ _EVENT_MAP = {
 def map_event(old_ev):
     return _EVENT_MAP.get(old_ev, (old_ev,))       # 不在表内 = 假定已是引擎事件名，直通
 ```
-（`game/services/battle2_equip_proc.py:47-51`）
+（`game/services/battle_equip_proc.py:47-51`）
 
 **为什么 `hit` 要展开成两个事件**：引擎把「普攻命中」(`attack_hit`) 与「技能命中」
 (`skill_hit`) 分成两个事件（`actions.py:456` 按 `info["_basic"]` 选）。
@@ -148,7 +148,7 @@ EFFECT_ACTIONS["affix_bleed_hit"] = [
      "amount": 1, "chance": 0.2},
 ]
 ```
-（真实同款：`game/data/battle2_rules.py:366-370` 的 `affix_bleed`）
+（真实同款：`game/data/battle_rules.py:366-370` 的 `affix_bleed`）
 
 ```python
 # ③ 装配：命中事件 → 名词
@@ -177,7 +177,7 @@ actor.setdefault("bonus", {}).setdefault("panel", {})["my_affix_atk"] = 0.10
 `actor["effects"]["atk_up"] = {"stacks": 1, "expire": None, "stat": "atk", "op": "mul", "mult": 1.1}`
 —— `stats._apply_effects` 的快照分支会直接吃掉它（`stats.py:69-81`），
 不需要改 `panel_fn`。《奥兰迪亚》的开战祝福就是这么翻译的
-（`game/services/battle2_bridge._battle_boons_to_effects`，`game/services/battle2_bridge.py:49`）。
+（`game/services/battle_bridge._battle_boons_to_effects`，`game/services/battle_bridge.py:49`）。
 
 ## 相关
 

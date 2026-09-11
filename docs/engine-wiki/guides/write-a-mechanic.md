@@ -75,7 +75,7 @@ for k, v in 映射动作.items():
 ctx = getattr(battle, "_fire_ctx", None) or {}
 attacker = ctx.get("source")
 ```
-（`game/services/class_mech_proc.py:884` 与 `game/services/battle2_we_procs.py:38-46` 的用法）
+（`game/services/class_mech_proc.py:884` 与 `game/services/battle_we_procs.py:38-46` 的用法）
 
 ## 乘区型钩子：不改引擎就改数值
 
@@ -116,7 +116,7 @@ def my_cond_mult(battle, caster, target, params, logs):
 **声明化**的：`PASSIVE_PROC` 的 `judge` 字段 + 扩展动作里的 `judge.kind` 分派。
 
 ```python
-"zhan_yi_full_reduce": {                      # game/data/battle2_rules.py:738
+"zhan_yi_full_reduce": {                      # game/data/battle_rules.py:738
     "event": "taken_calc", "action": "passive_taken_reduce",
     "judge": {"kind": "res_ge", "res": "zhan_yi", "ge_field": "stacks"},
     "also": [{"event": "turn_start", "action": "passive_cc_clear",
@@ -167,7 +167,7 @@ def apply_my_mechanics(actor):
 
 - 内容侧的旋律装配把基础叠层**插到 `act_cast` 首位**，因为被动族吟唱后置段要读叠层后的强度
   （`class_mech_proc.py:2291-2293`）
-- 挂敌身条的「推条」必须早于「延长破防窗口」（`battle2_bar_procs.apply_bar_procs` 头部 insert 注释）
+- 挂敌身条的「推条」必须早于「延长破防窗口」（`battle_bar_procs.apply_bar_procs` 头部 insert 注释）
 
 如果你的动作依赖另一个动作的结果，**显式注释这个顺序依赖**，否则后人插一条就悄悄坏掉。
 

@@ -57,7 +57,7 @@ actor["effects"] = {
 - `effects["reduce"]["v"]` **没有消费者**（全仓 grep 见 [_selfcheck.md](../_selfcheck.md)）
 - `actor["reduce_left"]` 也没有消费者
 
-也就是说 `EFFECT_ACTIONS["reduce"]`（`game/data/battle2_rules.py:488`）走完会
+也就是说 `EFFECT_ACTIONS["reduce"]`（`game/data/battle_rules.py:488`）走完会
 **写一个不会被读的值**。真正生效的减伤是 `stat_scale: {"reduce": ...}` 经
 `stats` 写 `st["reduce"]`……而 `st["reduce"]` 同样不被伤害路径消费
 （`stats.py:66` 只写 → [_selfcheck.md](../_selfcheck.md)）。

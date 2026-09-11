@@ -1,7 +1,7 @@
 # 参考：`MECH_CASH` 机制兑现声明
 
 > ⚠️ **边界声明**：这张表**不属于引擎**。它在你的内容规则模块里
-> （参考实现：**游戏仓 / 奥兰迪亚侧**的 `game/data/battle2_rules.py:520`），由**你的装配器**读取并翻译成
+> （参考实现：**游戏仓 / 奥兰迪亚侧**的 `game/data/battle_rules.py:520`），由**你的装配器**读取并翻译成
 > `actor["triggers"]`（参考实现：`game/services/class_mech_proc.py:2201` `apply_class_mech`，
 > 装配分支在 `:2313-2374`）。引擎侧零代码认识 `MECH_CASH`。
 >
@@ -72,14 +72,14 @@ owner = "target" if mode.endswith("_target") else "caster"
     "note": "兑现走 skills.py sk_xie_fu res_cost={faith:3} + kind=治疗 heal_formula",
 },
 ```
-（`game/data/battle2_rules.py:616-622`）
+（`game/data/battle_rules.py:616-622`）
 
 也就是说：**`heal_clear` 这个 mode 不是引擎/装配器的能力，而是一条「我们决定用别的
 通道兑现」的记录**。真实兑现走技能数据的 `res_cost` + `kind=治疗`
 （引擎原生路径：`actions._skill_usable` 预检 + `_spend_skill_cost` 扣层 + `_do_heal` 回血）。
 
 ⚠️ `MECH_CASH` docstring 里还列了 `bonus_clear`（「层数转附加伤害后清层」），
-注释自承「**备用形态，R1b 未用**」（`game/data/battle2_rules.py:509-510`）——
+注释自承「**备用形态，R1b 未用**」（`game/data/battle_rules.py:509-510`）——
 装配器里同样没有它。**§`MECH_CASH` 的 mode 全集有 6 个，实际装配器支持 4 个。**
 
 ## 参考实现的 9 条声明
@@ -96,7 +96,7 @@ owner = "target" if mode.endswith("_target") else "caster"
 | `zhan_yi_fury` | 狂暴 | `fury_enter` | `res: zhan_yi` | — | — |
 | `faith_unload` | 卸负 | `heal_clear` | `faith` | — | — |
 
-（`game/data/battle2_rules.py:520-623`）
+（`game/data/battle_rules.py:520-623`）
 
 三条值得逐字看的真实条目：
 
@@ -158,7 +158,7 @@ actor["triggers"]["skill_hit"].append(
 ## 加一条自己的 MECH_CASH
 
 ```python
-# game/data/battle2_rules.py
+# game/data/battle_rules.py
 MECH_CASH["my_burst"] = {
     "name": "我的引爆",
     "mode": "dmg_mult_clear_target",     # 层在敌身上

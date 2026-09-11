@@ -1,7 +1,7 @@
 # 参考：`PASSIVE_PROC` 声明
 
 > ⚠️ **边界声明**：这张表**不属于引擎**。它在你的内容规则模块里
-> （参考实现：**游戏仓 / 奥兰迪亚侧**的 `game/data/battle2_rules.py:653`），由**你的装配器**读取并翻译成
+> （参考实现：**游戏仓 / 奥兰迪亚侧**的 `game/data/battle_rules.py:653`），由**你的装配器**读取并翻译成
 > `actor["triggers"]`（参考实现：`game/services/class_mech_proc.py:1974`
 > `apply_class_passives`）。引擎侧零代码认识 `PASSIVE_PROC`。
 > 下文出现的 proc 名（`poison_cap` / `arcane_constant` / `reflect_bar` …）都是**那只游戏的实例**，不是引擎名词。
@@ -106,7 +106,7 @@ for _also in (cfg.get("also") or []):
 "reflect_bar": { "event": "on_taken", "action": "passive_reflect_bar",
                  "bar_field": "shaken_gain" },
 ```
-（`game/data/battle2_rules.py:821-826`）
+（`game/data/battle_rules.py:821-826`）
 
 装配器：`BAR_INJECT_FIELDS["shaken_gain"]` → `{"key": "shaken", "per_hit": True}`；
 再读技能数据的 `info["shaken_gain"]` 作为数值 → 写进条目 `{"key": "shaken", "gain": N}`
@@ -114,7 +114,7 @@ for _also in (cfg.get("also") or []):
 
 ## 参考实现统计（写文档时的 grep 结果）
 
-- `PASSIVE_PROC` 共 **42** 条声明（`game/data/battle2_rules.py:653-920`）
+- `PASSIVE_PROC` 共 **42** 条声明（`game/data/battle_rules.py:653-920`）
 - 顶层字段出现次数：`event` 39 · `action` 39 · `judge` 22 · `also` 7 · `domain` 5 ·
   `cap_key` 4 · `agg` 2 · `when` 1 · `buff_key` 5
 - `event` 用到的事件（10 个）：`act_cast` · `dmg_calc` · `dot_calc` · `heal_calc` ·

@@ -44,7 +44,7 @@ CROSSREPO_RE = re.compile(r"(游戏仓|游戏侧)")
 GAME_REPO_PATH_PREFIXES = ("game/", "scripts/", "services/", "commands/")
 GAME_REPO_FILES = {
     "run_all_tests.py", "run_numeric_tests.py", "conftest.py",
-    "battle2_rules.py", "class_mech_proc.py", "boss_script.py",
+    "battle_rules.py", "class_mech_proc.py", "boss_script.py",
     "combat.py", "economy.py", "content_rules/apply.py",
 }
 

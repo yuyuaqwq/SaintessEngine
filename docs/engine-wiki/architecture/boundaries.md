@@ -84,7 +84,7 @@
 | R9 | `battle.py:120` → `game.engine`（技能表查询） | 反向边 |
 | R10 | `battle.py:121` → `game.content.MONSTER_SKILLS` | 内容表直读 |
 | R11 | `stats.py:16` → `game.engine.player_final_stats` | **最重的一条**（玩家面板全算） |
-| R12 | `config.py:38` → `game.data.battle2_rules` | 位置不合规（装配逻辑落在引擎包内） |
+| R12 | `config.py:38` → `game.data.battle_rules` | 位置不合规（装配逻辑落在引擎包内） |
 | R13 | `stats.py:97` → 字面量 `"战士"` | 内容名侵入 |
 | R14 | `actions.py:22-26` → 中文字面量 kind | 内容语义耦合 |
 | R15 | `actions.py:42` → 字面量 `"攻击"` | 内容名侵入（普攻兜底） |
@@ -194,21 +194,21 @@ def apply_game_content(actor: dict, ctx: dict | None = None) -> dict:   # game/c
 
 | 内容侧模块 | 职责 |
 |---|---|
-| `game/data/battle2_rules.py` | 四张声明表（本 wiki 用它的真实条目做样例） |
+| `game/data/battle_rules.py` | 四张声明表（本 wiki 用它的真实条目做样例） |
 | `game/content_rules/apply.py` | **S7 单一装配入口**：`ensure_engine_configured()` + `apply_game_content(actor)`（顺序契约的权威） |
 | `game/services/class_mech_proc.py` | 职业机制/被动/资源/旋律装配 + 38 个 `class_*` / `passive_*` / `mech_cash_*` 动作 |
-| `game/services/battle2_equip_proc.py` | 装备特效/词条 → `triggers` 装配（含事件映射表） |
-| `game/services/battle2_we_procs.py` | 27 个 `we_*` 武器特效族动作 |
-| `game/services/battle2_bar_procs.py` | 挂敌身条装配（`BAR_INJECT_FIELDS` → `skill_hit` 触发器） |
-| `game/services/battle2_cond_procs.py` | 技能条件倍率（`cond` → `dmg_calc`/`heal_calc` 乘区） |
-| `game/services/battle2_bridge.py` | 命令层数据 → actor 翻译（`player_to_actor` / `monster_to_actor` / `build_sides`） |
+| `game/services/battle_equip_proc.py` | 装备特效/词条 → `triggers` 装配（含事件映射表） |
+| `game/services/battle_we_procs.py` | 27 个 `we_*` 武器特效族动作 |
+| `game/services/battle_bar_procs.py` | 挂敌身条装配（`BAR_INJECT_FIELDS` → `skill_hit` 触发器） |
+| `game/services/battle_cond_procs.py` | 技能条件倍率（`cond` → `dmg_calc`/`heal_calc` 乘区） |
+| `game/services/battle_bridge.py` | 命令层数据 → actor 翻译（`player_to_actor` / `monster_to_actor` / `build_sides`） |
 | `game/bootstrap.py` | 内容侧装配入口（`mount_engine_hooks` / `load_engine_config`） |
 | `game/content_rules/{skills,panel,gameplay}.py` | 技能表 / 面板公式 / 游戏规则（S5 从 `engine.py` 拆出） |
 
 ⚠️ **一个已核实的重要内容侧缺口**：技能数据的 `cond`（条件倍率）在引擎里是死字段 ——
 `actions._do_heal` 里 `cond_mult = 1.0  # N2b 补，恒 1.0 起步`（`actions.py:679`）。
-内容侧用 `battle2_cond_procs.py` 把它接回乘区（「**引擎零改动**，走既有装配层扩展动作模式」，
-游戏仓 `battle2_cond_procs.py:5-11`）。第三方要 `cond` 就得自己写这个装配器。
+内容侧用 `battle_cond_procs.py` 把它接回乘区（「**引擎零改动**，走既有装配层扩展动作模式」，
+游戏仓 `battle_cond_procs.py:5-11`）。第三方要 `cond` 就得自己写这个装配器。
 
 ## 相关
 

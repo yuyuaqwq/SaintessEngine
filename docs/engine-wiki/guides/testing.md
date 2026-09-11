@@ -6,18 +6,18 @@
 
 ## 参考实现的测试写法（游戏仓侧，可直接照抄）
 
-游戏仓侧的 `tests/test_battle2_*.py` 全是**可独立运行的脚本**（不依赖 pytest 也能跑），
+游戏仓侧的 `tests/test_battle_*.py` 全是**可独立运行的脚本**（不依赖 pytest 也能跑），
 统一结构：
 
 ```python
 # -*- coding: utf-8 -*-
-"""<测试名>：<覆盖什么>。跑法：python tests/test_battle2_xxx.py"""
+"""<测试名>：<覆盖什么>。跑法：python tests/test_battle_xxx.py"""
 import os, sys, random
 
 PLUGIN_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(PLUGIN_DIR, "framework"))  # 引擎框架包（拆仓后为 framework/ submodule）
 QQBOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(PLUGIN_DIR)))
-TEST_DB = os.path.join(PLUGIN_DIR, "test_battle2_xxx.db")
+TEST_DB = os.path.join(PLUGIN_DIR, "test_battle_xxx.db")
 os.environ.setdefault("GWEN_GAME_DB", TEST_DB)
 os.environ.setdefault("GWEN_TEST_MODE", "1")
 sys.path.insert(0, QQBOT_DIR)
@@ -56,11 +56,11 @@ if __name__ == "__main__":
     main()
 ```
 
-（样板取自游戏仓侧 `tests/test_battle2_n4_schedule.py` 的尾部与 `tests/test_battle2_n3_effects.py` 的头部）
+（样板取自游戏仓侧 `tests/test_battle_n4_schedule.py` 的尾部与 `tests/test_battle_n3_effects.py` 的头部）
 
 > ⚠️ **归属**：上面的样板是**游戏仓（AstrBot 插件）**的测试外壳 —— `PLUGIN_DIR` / `QQBOT_DIR` /
 > `GWEN_GAME_DB` / `GWEN_TEST_MODE` 都是那个插件的环境约定，`framework/` 是拆仓后挂进来的
-> 引擎 submodule（真实样例见 游戏仓 `tests/test_battle2_n4_schedule.py:18,33`）。
+> 引擎 submodule（真实样例见 游戏仓 `tests/test_battle_n4_schedule.py:18,33`）。
 > **框架仓自身的测试不需要这些**：`tests/run_all.py` 用纯标准库 python 跑 `tests/test_*.py`。
 
 要点：
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 - **`sys.exit(1 if FAIL else 0)`**：让 CI / 测试运行器（框架仓 `tests/run_all.py`、游戏仓 `scripts/run_all_tests.py`）能判红绿
 - **随机种子**：伤害有 ±15% 波动、闪避/格挡/暴击都是 `random`。
   断言精确数值时必须 `random.seed(...)`
-  （实例：`tests/test_battle2_coverage.py` 尾部 `_r.seed(20260910)`，
+  （实例：`tests/test_battle_coverage.py` 尾部 `_r.seed(20260910)`，
   注释解释了为什么必须固定 —— 玩家真实面板有约 3% 基础闪避，会让防御减伤断言偶发假红）
 
 ## 四条该写的断言
@@ -115,7 +115,7 @@ b._now = 4.2; _ste(b, [])              # 一次补跳多刻
 check("4.2 补跳 3 次（180 伤）", hp1 - e["hp"] == 180)
 ```
 
-真实同款见 `tests/test_battle2_n4_schedule.py` 的 `test_dot_interval_n74`。
+真实同款见 `tests/test_battle_n4_schedule.py` 的 `test_dot_interval_n74`。
 注意断言里「补跳」的期望值 —— 一次 `_settle_time_effects` 最多补 20 跳
 （`schedule.py:261` 的 `guard < 20`）。
 
@@ -151,7 +151,7 @@ check("幂等：不会堆两条", len(trig["dmg_calc"]) == 1)
 | **框架仓** | 引擎全量（引擎自身测试 + 示例游戏冒烟） | `python tests/run_all.py`（纯标准库 python 即可） |
 | **框架仓** | 引擎纯度门禁（改引擎后**必跑**） | `python tests/test_engine_purity.py`（exit=0 全绿） |
 | **框架仓** | 单个引擎测试 | `python tests/test_<name>.py` |
-| **游戏仓** | 单个内容测试 | `python tests/test_battle2_n4_schedule.py` |
+| **游戏仓** | 单个内容测试 | `python tests/test_battle_n4_schedule.py` |
 | **游戏仓** | 全量回归 | `python scripts/run_all_tests.py` |
 
 ⚠️ **游戏仓侧**全量的两个注意（`scripts/run_all_tests.py:15-25`）：

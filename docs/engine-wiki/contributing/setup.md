@@ -35,7 +35,7 @@ python tests/test_engine_purity.py           # 任选：tests/ 下每个 test_*.
 
 > **游戏仓 / 奥兰迪亚侧**对照：那边 200+ 个测试文件同样是"可独立运行的脚本"形态
 > （末尾 `sys.exit(1 if FAIL else 0)`），但得先 `cd data/plugins/dragonfall/`，例如
-> `python tests/test_battle2_n4_schedule.py`，典型输出：
+> `python tests/test_battle_n4_schedule.py`，典型输出：
 >
 > ```
 > === N4 saintess_engine CTB 调度测试 ===
@@ -109,12 +109,12 @@ python scripts/run_all_tests.py [--file tests/test_xxx.py] [--fail-fast]
 **游戏仓 / 奥兰迪亚侧**（参考实现的回归集，规模大得多）：
 
 - `tests/test_*.py` 共 **245** 个文件
-- 其中 saintess_engine 相关 **28** 个（`tests/test_battle2_*.py`）
+- 其中 saintess_engine 相关 **28** 个（`tests/test_battle_*.py`）
 - 引擎专项：`test_engine_no_content.py`（门禁，**旧名** —— 已随拆仓迁入框架仓并改名为
-  `tests/test_engine_purity.py`，游戏仓 `tests/` 里不再有这个文件）· `test_battle2_coverage.py`（覆盖）
-  · `test_battle2_n3_effects.py`（效果系统）· `test_battle2_n4_schedule.py`（调度）
-  · `test_battle2_n5_serialize.py`（存档）· `test_battle2_n8_events.py`（事件总线）
-  · `test_battle2_n10_*`（落地各段：吸血/防御/反伤/元素/承伤属性/初始 ct/食物）
+  `tests/test_engine_purity.py`，游戏仓 `tests/` 里不再有这个文件）· `test_battle_coverage.py`（覆盖）
+  · `test_battle_n3_effects.py`（效果系统）· `test_battle_n4_schedule.py`（调度）
+  · `test_battle_n5_serialize.py`（存档）· `test_battle_n8_events.py`（事件总线）
+  · `test_battle_n10_*`（落地各段：吸血/防御/反伤/元素/承伤属性/初始 ct/食物）
 
 ## 测试脚手架（`tests/conftest.py`）—— 游戏仓 / 奥兰迪亚侧
 

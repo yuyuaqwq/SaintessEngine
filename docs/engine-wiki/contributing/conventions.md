@@ -116,8 +116,8 @@ from saintess_engine.landing import deal_damage, heal_actor
 1. **拒绝过的方案**及原因（例：`actions._deal_aoe` 里解释为何不迁旧 AOE 反推算法，
    `actions.py:298-300`）
 2. **顺序依赖**（例：旋律基础叠层必须排 `act_cast` 首位，游戏仓 `game/services/class_mech_proc.py:2291-2293`）
-3. **缺口**（例：游戏仓 `game/data/battle2_rules.py:218-224` 的「⚠️ 缺口（不硬凑）」段）
-4. **数值权威来源**（例：「desc 权威：30%/20%」，游戏仓 `game/data/battle2_rules.py:768`）
+3. **缺口**（例：游戏仓 `game/data/battle_rules.py:218-224` 的「⚠️ 缺口（不硬凑）」段）
+4. **数值权威来源**（例：「desc 权威：30%/20%」，游戏仓 `game/data/battle_rules.py:768`）
 
 ## 8. 命名
 

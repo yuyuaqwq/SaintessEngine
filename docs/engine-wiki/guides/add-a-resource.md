@@ -13,7 +13,7 @@
 
 ## 完整例子：磐核（`guard_core`）
 
-真实条目（游戏仓侧参考实现《奥兰迪亚》的职业资源），`game/data/battle2_rules.py:225-241`：
+真实条目（游戏仓侧参考实现《奥兰迪亚》的职业资源），`game/data/battle_rules.py:225-241`：
 
 ```python
 "guard_core": {
@@ -44,7 +44,7 @@
 | `stat_scale.reduce: 0.03` | 每核减伤 | `stats._apply_effects`（`stats.py:61-66`）→ 写 `st["reduce"]` ⚠️ 但 `st["reduce"]` 无伤害路径消费者 → 真正生效另有通道（见下「注①」） |
 | `channels` | 攒取渠道 | **引擎不读**；内容侧 `apply_class_channels`（`class_mech_proc.py:1871`）翻译成 `actor.triggers` |
 
-注释里的 **注①** 是这套引擎最典型的一类坑，原文见 `game/data/battle2_rules.py:218-224`：
+注释里的 **注①** 是这套引擎最典型的一类坑，原文见 `game/data/battle_rules.py:218-224`：
 
 > ① 「每核 减伤 +3%」经 `stat_scale.reduce` 声明——saintess_engine 伤害路径**不消费** `st["reduce"]`
 > （stats 只写、instance 仅展示），故装配层（`class_mech_proc.apply_class_mech`）按本声明挂
@@ -137,7 +137,7 @@ info["res_cost"] = {"guard_core": 3}     # 施放时扣 3 层
 ### ② `MECH_CASH` 兑现（层数换伤害 + 清层）
 
 ```python
-"guard_core_burst": {                     # game/data/battle2_rules.py:555
+"guard_core_burst": {                     # game/data/battle_rules.py:555
     "name": "磐核",
     "mode": "dmg_mult_clear",             # owner=caster：读/清 caster 层
     "key": "guard_core",
@@ -202,7 +202,7 @@ if _sc and _cn not in _sc:
 ## 最小骨架（照抄改）
 
 ```python
-# game/data/battle2_rules.py
+# game/data/battle_rules.py
 EFFECT_RULES["my_res"] = {
     "name": "我的资源",
     "cap": 8,

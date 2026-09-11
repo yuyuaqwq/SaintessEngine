@@ -157,7 +157,7 @@ weighted：when 命中的 move 先过滤，再按 weight 重抽（过滤后池�
 
 | 类型 | 路径 | 覆盖 |
 |------|------|------|
-| 回归 | `tests/test_battle2_cooldown_enforce.py` | 54 断言：冷却写入/拦截/到期放行、AI 三判据、priority/weighted 过滤、活锁回归、索引自愈 |
+| 回归 | `tests/test_battle_cooldown_enforce.py` | 54 断言：冷却写入/拦截/到期放行、AI 三判据、priority/weighted 过滤、活锁回归、索引自愈 |
 | 探针 | `tools/probe_cooldown_enforcement.py` | 实跑取证：`cd` 声明 → 连续两次施放是否都命中 |
 | 探针 | `tools/probe_phase_skill_index.py` | 转阶段换招 → 索引是否自动补上 + 新招真能打出 |
 | 回归 | `tests/test_boss_spawn_pool_audit.py` | 30 断言：DEAD=0 门禁 + 21 处身份技在常态池 + 旧命名不回退 |

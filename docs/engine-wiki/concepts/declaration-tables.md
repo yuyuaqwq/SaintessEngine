@@ -44,14 +44,14 @@
                           EFFECT_RULES[key] ──── 行为规则（cap/period/consume）┘
 ```
 
-举一条**真实条目**（`game/data/battle2_rules.py:488`）：
+举一条**真实条目**（`game/data/battle_rules.py:488`）：
 
 ```python
 # 减伤（value 型 buff：mech_val 折算百分比 45→0.45）
 "reduce":    [{"action": "apply", "key": "reduce", "pct_from_mech_val": True}],
 ```
 
-对应的规则声明（`game/data/battle2_rules.py:408`）：
+对应的规则声明（`game/data/battle_rules.py:408`）：
 
 ```python
 # reduce：value 型减伤（effects[key].v）；净化遍历查表清（原 CLEANSE_TAGS 含 reduce）
@@ -112,7 +112,7 @@ hit（dict）                           →  {stacks:1, expire, hit}      出手
 
 ## `MECH_CASH` / `PASSIVE_PROC`：内容侧约定，不是引擎 API
 
-这两张表在 `game/data/battle2_rules.py`，但**引擎没有任何代码读它们**。
+这两张表在 `game/data/battle_rules.py`，但**引擎没有任何代码读它们**。
 读它们的是一个**内容侧装配器** `game/services/class_mech_proc.py`：
 
 ```python

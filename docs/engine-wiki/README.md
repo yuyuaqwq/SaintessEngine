@@ -16,7 +16,7 @@
 
 - 引擎目录：`saintess_engine/`（14 个模块 + `support/` 4 个通用件，共 18 个 `.py` / **5 202 行**）
 - 纯度门禁：`tests/test_engine_purity.py`（AST 静态断言：引擎零「引擎→内容」import 边）
-- 参考实现（**游戏仓 `dragonfall` 侧**）：《奥兰迪亚》内容侧（`game/data/battle2_rules.py` + `game/services/`）
+- 参考实现（**游戏仓 `dragonfall` 侧**）：《奥兰迪亚》内容侧（`game/data/battle_rules.py` + `game/services/`）
   —— 本 wiki **不**把它当规范，只当「可粘贴的真实声明样例」的来源
 
 ---
@@ -75,7 +75,7 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
 | **全同构 actor** | 玩家/怪/召唤物/变身是同一个 dict 模型，无身份分派 | `make_actor`（`actors.py:58`） |
 | **单 effects 容器** | 增益/减益/DOT/控制/标记/资源全部是 `actor.effects[key]` 一个容器 | `effects.py` 的 `act_apply` |
 | **事件总线** | 26 个引擎事件名（`EVENTS`）+ `fire()`；效果声明挂 `actor.triggers` | `effect_triggers.py:48/57` |
-| **声明表驱动** | 效果行为查 `EFFECT_RULES`；名词→动词查 `EFFECT_ACTIONS` | `game/data/battle2_rules.py`（游戏仓侧） |
+| **声明表驱动** | 效果行为查 `EFFECT_RULES`；名词→动词查 `EFFECT_ACTIONS` | `game/data/battle_rules.py`（游戏仓侧） |
 | **动词注册制** | 8 个引擎动词 + `register_action` 任意扩展（内容侧已扩到 70+） | `effects.py:95` |
 | **CTB 绝对时刻制** | `ct` = 下次可行动时刻；耗时 = 基准 × `sqrt(50/spd)` | `schedule.py:32` |
 | **零默认值** | 未声明即无行为（`strict=False` 静默 / `strict=True` 抛错两档） | `config.py:71` |
@@ -131,7 +131,7 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
   本项目 README 已承担门面+导航职责，再建 index 会形成两个入口。若将来发布为独立仓库站，
   建议把本 README 重命名为 `index.md` 而非并存。
 - **reference/mech-cash.md 与 passive-proc.md 的定位**：这两张表**物理上属于内容层**
-  （`game/data/battle2_rules.py`，**游戏仓侧**），由**内容侧装配器**（`game/services/class_mech_proc.py`）消费，
+  （`game/data/battle_rules.py`，**游戏仓侧**），由**内容侧装配器**（`game/services/class_mech_proc.py`）消费，
   引擎不认识它们。它们进 wiki 是因为规格要求，且它们是「第三方照抄一份声明就能接机制」的
   最省力样板；两页开头都显式标注了这个边界。
 
