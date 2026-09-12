@@ -18,6 +18,7 @@ API
     GET    /api/package/<id>              → 包概览（manifest + 各域条目数/校验状态）
     GET    /api/package/<id>/d/<dom>            → 条目列表
     GET    /api/package/<id>/d/<dom>/<key>      → 单条 + schema + 校验结果
+    GET    /api/package/<id>/d/maps/<key>/graph  → 拓扑视图（引擎同一份派生代码算）
     PUT    /api/package/<id>/d/<dom>/<key>      → 保存（**先校验，过后才落盘**）
     DELETE /api/package/<id>/d/<dom>/<key>      → 删除
     POST   /api/package/<id>/validate           → 全包校验
@@ -58,6 +59,7 @@ from editor import dist as DIST      # noqa: E402
 from editor import glossary as GL    # noqa: E402
 from editor import hints as HN       # noqa: E402
 from editor import packages as PK    # noqa: E402
+from editor import space_view as SV  # noqa: E402
 from editor import validate as VD    # noqa: E402
 from editor import wiki as WK        # noqa: E402
 
@@ -216,6 +218,18 @@ class H(BaseHTTPRequestHandler):
             if parts[1] == "code":
                 return self._send(200, {"ok": True, **WK.code_ref((q.get("ref") or [""])[0])})
             return self._err(404, "未知 wiki 接口")
+        # maps 域的拓扑视图：节点/连边/深度/审计由**引擎同一份派生代码**算（editor/space_view.py）
+        if (len(parts) == 6 and parts[0] == "package" and parts[2] == "d"
+                and parts[5] == "graph"):
+            d = PK.resolve_package(parts[1], GAMES_DIR)
+            if not d:
+                return self._err(404, f"包不存在：{parts[1]}")
+            dom = parts[3]
+            if dom not in PK.DOMAINS:
+                return self._err(404, f"未知域：{dom}")
+            data = PK.read_json(PK.domain_path(d, dom), {})
+            out = SV.build_file(data if isinstance(data, dict) else {}, parts[4])
+            return self._send(200 if out.get("ok") else 422, out)
         if len(parts) >= 4 and parts[0] == "package" and parts[2] == "d":
             d = PK.resolve_package(parts[1], GAMES_DIR)
             if not d:

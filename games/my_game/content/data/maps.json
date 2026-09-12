@@ -1,0 +1,90 @@
+{
+  "sample_town": {
+    "name": "示例镇",
+    "desc": "演示星形拓扑：枢纽（广场）+ 辐条（店铺）+ 通道（大街）+ 出口（镇郊）",
+    "topology": "star",
+    "roles": {
+      "hub": "hub",
+      "through": "through",
+      "exit": "exit"
+    },
+    "nodes": [
+      {
+        "id": "sample_town_plaza",
+        "name": "中央广场",
+        "role": "hub",
+        "desc": "枢纽：连所有场所 + 大街"
+      },
+      {
+        "id": "sample_town_smith",
+        "name": "铁匠铺",
+        "desc": "辐条（无 role）：只连枢纽"
+      },
+      {
+        "id": "sample_town_inn",
+        "name": "旅店",
+        "desc": "辐条（无 role）：只连枢纽"
+      },
+      {
+        "id": "sample_town_east_road",
+        "name": "东大街",
+        "role": "through",
+        "desc": "通道层：连广场与镇郊"
+      },
+      {
+        "id": "sample_town_outskirts",
+        "name": "镇郊",
+        "role": "exit",
+        "desc": "出入口：跨图落点 / 出图点"
+      }
+    ]
+  },
+  "sample_plain": {
+    "name": "示例平原",
+    "desc": "演示链状拓扑：按声明序相邻，首节点即出入口",
+    "topology": "chain",
+    "nodes": [
+      {
+        "id": "sample_plain_1",
+        "name": "平原入口",
+        "desc": "首节点 = 入口 = 出入口（链状无独立城门）"
+      },
+      {
+        "id": "sample_plain_2",
+        "name": "碎石坡"
+      },
+      {
+        "id": "sample_plain_3",
+        "name": "平原深处"
+      }
+    ]
+  },
+  "sample_crypt": {
+    "name": "示例密室",
+    "desc": "演示显式连通表：邻接直接给全，深度从入口 BFS；岔路是对称的",
+    "nodes": [
+      {
+        "id": "sample_crypt_1",
+        "name": "入口石室"
+      },
+      {
+        "id": "sample_crypt_2",
+        "name": "回廊"
+      },
+      {
+        "id": "sample_crypt_3",
+        "name": "侧室（岔路）"
+      },
+      {
+        "id": "sample_crypt_4",
+        "name": "主墓室"
+      }
+    ],
+    "links": {
+      "sample_crypt_1": ["sample_crypt_2"],
+      "sample_crypt_2": ["sample_crypt_1", "sample_crypt_3", "sample_crypt_4"],
+      "sample_crypt_3": ["sample_crypt_2"],
+      "sample_crypt_4": ["sample_crypt_2"]
+    }
+  }
+}

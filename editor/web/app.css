@@ -955,6 +955,96 @@ textarea.ctl.lines{font-family:var(--mono);font-size:12px}
 /* 分组工具按钮（编辑器头右侧） */
 .groups-ctl button{font-size:11.5px;padding:0 var(--sp3)}
 
+/* ═══════════════ 拓扑视图（maps 域专用：节点表 + 拓扑 → 图） ═══════════════
+   配色一律走主题 token；角色色板 --ga-1..--ga-8 取**中等饱和度**：做描边与小字
+   在深色/浅色主题下都读得清（不铺满底色，浅色主题才不会糊成一片）。
+   深浅沿用 theme.js 写在 <html data-theme="light"> 上的语义标记，与设计 token 同源。 */
+:root{
+  --ga-1:#6f9fe8; --ga-2:#4ea88a; --ga-3:#b08a1e; --ga-4:#a97fd6;
+  --ga-5:#2f93a8; --ga-6:#d4736f; --ga-7:#c47ba6; --ga-8:#8892a8;
+}
+html[data-theme="light"]{
+  --ga-1:#2f6fd0; --ga-2:#2f8f6a; --ga-3:#96700f; --ga-4:#7a4fbf;
+  --ga-5:#1f7d92; --ga-6:#c0392b; --ga-7:#b0559a; --ga-8:#6b7488;
+}
+/* 角色取值 → 颜色：顺序 = role_values 顺序（app.js 取模 GL_ROLE_N 后落到这 8 个类） */
+.ga-role-0{--ga-c:var(--ga-1)}
+.ga-role-1{--ga-c:var(--ga-2)}
+.ga-role-2{--ga-c:var(--ga-3)}
+.ga-role-3{--ga-c:var(--ga-4)}
+.ga-role-4{--ga-c:var(--ga-5)}
+.ga-role-5{--ga-c:var(--ga-6)}
+.ga-role-6{--ga-c:var(--ga-7)}
+.ga-role-7{--ga-c:var(--ga-8)}
+
+.graph-host{display:flex;flex-direction:column;gap:var(--sp4)}
+/* 警告注记复用试跑抽屉的 .sim-warn 观感，只收掉它的下外边距 */
+.graph-warn{margin-bottom:0}
+
+/* 摘要条：形状 + 节点/边数 + 审计结论 + 重新计算 */
+.graph-bar{display:flex;align-items:center;gap:var(--sp4);flex-wrap:wrap;
+  padding:var(--sp3) var(--sp4);background:var(--bg-2);
+  border:1px solid var(--line);border-radius:var(--r)}
+.graph-shape{font-size:13px;font-weight:600;color:var(--accent)}
+.graph-stat{font:11.5px var(--mono);color:var(--fg-2)}
+.graph-stat b{color:var(--fg-0);font-weight:600}
+.graph-audit{font-size:12px;font-weight:600}
+.graph-audit.ok{color:var(--ok)}
+.graph-audit.bad{color:var(--err)}
+.graph-tip{font-size:11px}
+.graph-bar .btn{margin-left:var(--sp2)}
+
+/* 图例 */
+.graph-legend{display:flex;align-items:center;gap:var(--sp4);flex-wrap:wrap;
+  padding:0 var(--sp1);font-size:11px;color:var(--fg-3)}
+.graph-legend .gl-item{display:inline-flex;align-items:center;gap:5px}
+.graph-swatch{display:inline-block;width:11px;height:11px;border-radius:3px;
+  background:var(--ga-c,var(--fg-3));border:1px solid color-mix(in srgb,var(--fg-3) 35%,transparent)}
+.graph-swatch.is-root{width:auto;height:auto;border:none;background:none;
+  color:var(--accent);font-size:10px;line-height:1}
+.graph-swatch.is-gate{background:transparent;border:1.5px solid var(--accent);border-radius:50%}
+.graph-swatch.is-dangling{background:transparent;border:1px dashed var(--err)}
+.graph-swatch.is-asym{background:transparent;border:1px dashed var(--warn)}
+.graph-swatch.is-grey{background:var(--fg-3);opacity:.5}
+
+/* 画布（宽图横滚；给个高度上限，免得摘要条被顶出视口） */
+.graph-canvas{overflow:auto;max-height:min(72vh,820px);padding:var(--sp2);
+  background:var(--bg-0);border:1px solid var(--line);border-radius:var(--r-lg)}
+.graph-svg{display:block;margin:0 auto;font-family:var(--ui)}
+
+/* 边：默认主题线色；悬空 = 红虚线；不对称 = 琥珀虚线 */
+.ga-edge{stroke:var(--line-2);stroke-width:1.6;fill:none}
+.ga-edge.is-dangling{stroke:var(--err);stroke-dasharray:6 4}
+.ga-edge.is-asym{stroke:var(--warn);stroke-dasharray:3 3}
+.ga-arrow{fill:var(--line-2)}
+.ga-arrow.is-dangling{fill:var(--err)}
+.ga-arrow.is-asym{fill:var(--warn)}
+
+/* 节点：描边取角色色；入口加粗 + ▶；出入口外环；不可达/孤立置灰；悬空目标画红虚影 */
+.ga-box{fill:var(--bg-2);stroke:var(--ga-c,var(--line-2));stroke-width:1.6}
+.ga-node.is-root .ga-box{stroke-width:2.4}
+.ga-node.is-gate .ga-ring{fill:none;stroke:var(--accent);stroke-width:1.4;opacity:.85}
+.ga-label{fill:var(--fg-0);font-size:12.5px;text-anchor:middle}
+.ga-role{fill:var(--ga-c,var(--fg-3));font:10px var(--mono);text-anchor:middle}
+.ga-mark{fill:var(--accent);font-size:10px}
+.ga-node.is-grey .ga-box{stroke:var(--fg-3);opacity:.55}
+.ga-node.is-grey .ga-label{fill:var(--fg-3)}
+.ga-node.is-grey .ga-role{fill:var(--fg-3)}
+.ga-node.is-ghost .ga-box{fill:var(--err-dim);stroke:var(--err);stroke-dasharray:5 4}
+.ga-node.is-ghost .ga-label,.ga-node.is-ghost .ga-role{fill:var(--err)}
+
+/* 空态 / 报错态 / 加载态：一律居中，不白屏 */
+.graph-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:var(--sp3);min-height:240px;padding:var(--sp8) var(--sp6);
+  text-align:center;color:var(--fg-3)}
+.graph-empty-ico{font-size:38px;line-height:1;opacity:.3}
+.graph-empty-title{font-size:13.5px;color:var(--fg-2)}
+.graph-empty-sub{font-size:12.5px;line-height:1.8;max-width:560px}
+
+/* 壁纸模式：画布与摘要条跟着半透明（与其它面板一致） */
+html[data-wall="1"] .graph-canvas{background:color-mix(in srgb,var(--bg-0) 74%,transparent)}
+html[data-wall="1"] .graph-bar{background:color-mix(in srgb,var(--bg-2) 78%,transparent)}
+
 /* 组头吸顶：长表单滚到中段也知道自己在哪一组 */
 fieldset.cat>.cat-legend{
   position:sticky;top:calc(-1 * var(--sp5));z-index:3;

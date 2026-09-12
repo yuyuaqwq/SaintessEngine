@@ -27,6 +27,140 @@ function hlMatch(text, q) {
   return safe.slice(0, idx) + '<mark>' + safe.slice(idx, idx + t.length) + '</mark>' + safe.slice(idx + t.length);
 }
 
+/* ═══════════════ 拓扑视图：布局算法（**纯函数** · 不碰 DOM · 不碰 S） ═══════════════
+   为什么单独拎出来：布局是最容易写错、也最值得钉住的一段 —— 同一 depth 必须落在同一列、
+   每条边的两端必须落在节点框上、空数据不许崩。tests/js/graph_layout_test.js 会用下面的
+   BEGIN/END 标记把这一段从本文件里**抠出来真跑**（本文件是浏览器脚本，不是 module）。
+   ★ 往这一块里加东西时不要用 document / window / S —— 抠出来会直接 ReferenceError。
+   ══════════════════════════════════════════════════════════════════════════════════ */
+/* ##GRAPH_LAYOUT_BEGIN## */
+const GL_NODE_W = 132, GL_NODE_H = 38, GL_GAP_X = 78, GL_GAP_Y = 24, GL_PAD = 28;
+const GL_ROLE_N = 8;       // 角色色板大小 —— 与 app.css 的 .ga-role-0..7 一一对应
+const GL_LABEL_MAX = 12;   // 节点标题最多几个字（SVG 没有 text-overflow，只能自己截）
+
+/* 截字（超长补省略号；一字一份，不追求精确排印） */
+function glClip(s, max) {
+  const t = String(s == null ? '' : s);
+  const m = max || GL_LABEL_MAX;
+  return t.length > m ? t.slice(0, Math.max(1, m - 1)) + '…' : t;
+}
+
+/**
+ * 拓扑视图 → 画布坐标（纯函数：只吃一个 view，不碰 DOM、不读全局状态）。
+ *
+ * 布局规则：
+ *   x 轴 = depth（同一 depth 一列；列序 = depth 升序，depth 跳号也不留空列）
+ *   y 轴 = 同列内按 nodes 数组顺序排开
+ *   边   = 有向：目标在右 → 右出左入；目标在左 → 左出右入；同一列 → 上下出上下入
+ *   dangling（指向不存在的 id）→ 在最后一列右侧补一个「虚影节点」（ghost:true, text 带 ?）
+ *
+ * @param {object} view   GET /api/package/<包>/d/maps/<图>/graph 里的 view
+ *                        （nodes[{id,role,depth,label}] / edges[[from,to]] / audit / root / gate / role_values）
+ * @param {object} [opts] nodeW/nodeH/gapX/gapY/pad 覆盖默认尺度（给测试用）
+ * @returns {{nodes:Array,edges:Array,width:number,height:number,cols:number,rows:number,roleValues:Array,hasGhost:boolean}}
+ */
+function graphLayout(view, opts) {
+  const o = opts || {};
+  const NW = o.nodeW || GL_NODE_W, NH = o.nodeH || GL_NODE_H;
+  const GX = o.gapX || GL_GAP_X, GY = o.gapY || GL_GAP_Y, PAD = o.pad || GL_PAD;
+  const v = (view && typeof view === 'object') ? view : {};
+  const src = Array.isArray(v.nodes) ? v.nodes : [];
+  const audit = (v.audit && typeof v.audit === 'object') ? v.audit : {};
+
+  /* 角色取值：优先用后端给的 role_values；没有就从节点里现推（保证配色自洽） */
+  const roleValues = Array.isArray(v.role_values) ? v.role_values.slice() : [];
+  if (!roleValues.length) {
+    src.forEach((n) => { const r = n && n.role; if (r && roleValues.indexOf(r) < 0) roleValues.push(r); });
+  }
+
+  /* 审计里点名的节点：不可达 / 孤立 → 置灰 */
+  const grey = {};
+  (audit.unreachable || []).forEach((id) => { grey[id] = true; });
+  (audit.isolated || []).forEach((id) => { grey[id] = true; });
+  /* 不对称边 [from,to] → 琥珀虚线 */
+  const asym = {};
+  (audit.asymmetric || []).forEach((e) => { if (Array.isArray(e)) asym[e[0] + '\u0000' + e[1]] = true; });
+
+  /* ① 分列：depth 相同排同一列（列索引按 depth 升序分配，与 depth 数值无关，跳号不空列） */
+  const colOf = {}, cols = [];
+  src.forEach((n) => {
+    if (!n || !n.id) return;
+    const d = Number.isFinite(+n.depth) ? +n.depth : 0;
+    if (colOf[d] === undefined) { colOf[d] = cols.length; cols.push([]); }
+    cols[colOf[d]].push(n);
+  });
+
+  /* ② 列内排开 → 节点几何 */
+  const nodes = [], byId = {}, colRows = [];
+  cols.forEach((list, ci) => {
+    colRows.push(list.length);
+    list.forEach((n, ri) => {
+      const x = PAD + ci * (NW + GX), y = PAD + ri * (NH + GY);
+      const label = n.label == null ? n.id : String(n.label);
+      const ri2 = roleValues.indexOf(n.role);
+      const item = {
+        id: n.id, label: label, text: glClip(label, GL_LABEL_MAX),
+        role: n.role == null ? '' : String(n.role),
+        depth: Number.isFinite(+n.depth) ? +n.depth : 0,
+        roleIndex: ri2,
+        x: x, y: y, w: NW, h: NH, cx: x + NW / 2, cy: y + NH / 2, col: ci, row: ri,
+        isRoot: v.root != null && n.id === v.root,
+        isGate: v.gate != null && n.id === v.gate,
+        grey: !!grey[n.id], ghost: false,
+      };
+      byId[n.id] = item; nodes.push(item);
+    });
+  });
+
+  /* ③ 虚影节点：dangling 的目标 id 在数据里不存在 —— 也画出来（带 ?），否则「悬空」看不见 */
+  const ghostCol = cols.length;
+  const ghosts = [], ghostById = {};
+  function makeGhost(id, gi) {
+    const x = PAD + ghostCol * (NW + GX), y = PAD + gi * (NH + GY);
+    return {
+      id: id, label: id + ' ?', text: glClip(id, GL_LABEL_MAX - 2) + ' ?', role: '',
+      depth: null, roleIndex: -1,
+      x: x, y: y, w: NW, h: NH, cx: x + NW / 2, cy: y + NH / 2, col: ghostCol, row: gi,
+      isRoot: false, isGate: false, grey: false, ghost: true,
+    };
+  }
+
+  /* ④ 边：两端都在 → 真实连线；目标不存在 → dangling（连到虚影） */
+  const edges = [];
+  (Array.isArray(v.edges) ? v.edges : []).forEach((e) => {
+    if (!Array.isArray(e) || e.length < 2) return;
+    const from = e[0], to = e[1];
+    const a = byId[from];
+    if (!a) return;                     // 起点不存在就画不出来（audit 会另有报告）
+    let b = byId[to];
+    let kind = asym[from + '\u0000' + to] ? 'asym' : 'ok';
+    if (!b) {
+      kind = 'dangling';
+      b = ghostById[to];
+      if (!b) { b = makeGhost(to, ghosts.length); ghostById[to] = b; ghosts.push(b); }
+    }
+    let x1 = a.x + a.w, y1 = a.cy, x2 = b.x, y2 = b.cy, dir = 'h';
+    if (b.x >= a.x + a.w - 1) { x1 = a.x + a.w; x2 = b.x; }          // 目标在右：右出 → 左入
+    else if (b.x + b.w <= a.x + 1) { x1 = a.x; x2 = b.x + b.w; }     // 目标在左：左出 → 右入
+    else {                                                           // 同一列：下出 → 上入（或反之）
+      dir = 'v'; x1 = a.cx; x2 = b.cx;
+      if (b.cy > a.cy) { y1 = a.y + a.h; y2 = b.y; } else { y1 = a.y; y2 = b.y + b.h; }
+    }
+    edges.push({ from: from, to: to, kind: kind, dir: dir, x1: x1, y1: y1, x2: x2, y2: y2 });
+  });
+
+  const all = nodes.concat(ghosts);
+  const ncol = cols.length + (ghosts.length ? 1 : 0);
+  const rows = Math.max(0, ...colRows, ghosts.length);
+  return {
+    nodes: all, edges: edges,
+    width: all.length ? PAD * 2 + ncol * (NW + GX) - GX : 0,
+    height: all.length ? PAD * 2 + rows * (NH + GY) - GY : 0,
+    cols: cols.length, rows: rows, roleValues: roleValues, hasGhost: ghosts.length > 0,
+  };
+}
+/* ##GRAPH_LAYOUT_END## */
+
 /* ───────────────────────── 状态 ───────────────────────── */
 const S = {
   domains: [], pkgs: [], pkgId: null, pkg: null,
@@ -46,6 +180,8 @@ const S = {
   collapsed: new Set(),          // 折叠的分组（key = 域#组id；跨重渲染与切换保留）
   isNew: false,                  // 当前条目是「新建草稿」（还没落盘）
   friendly: [],                  // 服务端返回的中文可读报错（保存/新建被拦时）
+  graphCache: {},                // 拓扑视图：'包|条目' → /graph 响应（切条目不重复拉；保存后失效）
+  graphBusy: {},                 // 拓扑视图：'包|条目' → 正在拉（防重复请求）
 };
 
 /* ───────────────────────── API ───────────────────────── */
@@ -460,6 +596,7 @@ function closeEntry() {
   $('formHost').innerHTML = '';        // 清掉上一个条目的表单 —— 否则切域后留着「隐藏的旧表单」，
                                        // 各种 querySelector('.field[data-path=...]') 会命中它（踩过）
   $('diffHost').innerHTML = '';
+  $('graphHost').innerHTML = '';       // 拓扑图同理：留着上一张图会「闪一下旧内容」
   $('saveStatus').textContent = '';
   renderList();
 }
@@ -496,18 +633,26 @@ async function openEntry(key) {
   updateStatusbar();
 }
 
-/* ═══════════════════════════ 条目渲染（三档） ═══════════════════════════ */
+/* ═══════════════════════════ 条目渲染（四档） ═══════════════════════════
+   表单 / JSON / 变更 / 拓扑。第四档「拓扑」只在 maps 域出现（其它域仍是三段式）。 */
 function renderEntry() {
-  els('#modeSwitch button').forEach((b) => b.classList.toggle('on', b.dataset.mode === S.mode));
+  const graphable = isMaps();
+  if (!graphable && S.mode === 'graph') S.mode = 'form';     // 切到别的域 → 拓扑档自动收回
+  els('#modeSwitch button').forEach((b) => {
+    b.classList.toggle('on', b.dataset.mode === S.mode);
+    if (b.dataset.mode === 'graph') b.classList.toggle('hidden', !graphable);
+  });
   const isForm = S.mode === 'form', isJson = S.mode === 'json';
   // 只有表单档且该域有分组时才显示「分组折叠」按钮
   $('groupCtl').classList.toggle('hidden', !isForm || !(groupsOf(S.dom) || []).length);
   $('formHost').classList.toggle('hidden', !isForm);
   $('jsonHost').classList.toggle('hidden', !isJson);
-  $('diffHost').classList.toggle('hidden', isForm || isJson);
+  $('diffHost').classList.toggle('hidden', S.mode !== 'diff');
+  $('graphHost').classList.toggle('hidden', S.mode !== 'graph');
 
   if (isJson) { $('jsonHost').value = JSON.stringify(S.entryData, null, 2); return; }
   if (S.mode === 'diff') { renderDiff(); return; }
+  if (S.mode === 'graph') { renderGraph(); return; }
   renderForm();
 }
 
@@ -750,6 +895,190 @@ function renderDiff() {
     ${rows.length > MAX ? `<div class="diff-more">… 还有 ${rows.length - MAX} 处未显示</div>` : ''}`;
 }
 
+/* ═══════════════════════════ 拓扑视图（maps 域专用） ═══════════════════════════
+   一张图 = 「节点表 + 拓扑」；邻接 / 深度 / 出入口 / 结构审计由**引擎同一份派生代码**算
+   （编辑器只负责画）。前端做三件事：拉 /graph、按 depth 分层画 SVG、把 audit 的问题摆到明面上。
+
+   ⚠️ 图读的是**磁盘上的数据** —— 改完先保存再点「↻ 重新计算」，别拿没保存的草稿当真。
+   ⚠️ 拉数据是异步的，回来时用户可能已经切条目 / 切域 / 切模式 —— 落笔前一律重新校验一次。
+   ════════════════════════════════════════════════════════════════════════════ */
+const isMaps = () => S.dom === 'maps';
+const TOPO_ZH = { star: '星形', chain: '链状', mesh: '显式连通表' };
+const graphKey = (key) => `${S.pkgId}|${key}`;
+
+/* 拉一张图的拓扑视图（带缓存：切来切去不重复请求；保存后失效） */
+async function loadGraph(key) {
+  const ck = graphKey(key);
+  if (S.graphBusy[ck]) return;
+  S.graphBusy[ck] = true;
+  let j;
+  try {
+    const r = await api('GET', `${dPath('maps')}/${encodeURIComponent(key)}/graph`);
+    j = (r.json && typeof r.json === 'object')
+      ? r.json
+      : { ok: false, error: `读取失败（HTTP ${r.status}）`, warnings: [] };
+  } catch (e) {
+    j = { ok: false, error: '读取失败：' + e.message, warnings: [] };
+  }
+  S.graphBusy[ck] = false;
+  S.graphCache[ck] = j;
+  // 只在「还在看这一张图」时落笔 —— 否则会把旧请求的结果画到新条目上
+  if (S.mode !== 'graph' || S.entryKey !== key || !isMaps()) return;
+  renderGraph();
+}
+
+function renderGraph() {
+  const host = $('graphHost');
+  if (!isMaps()) {
+    host.innerHTML = graphEmpty('🗺', '拓扑视图只用于「地图」域', '切到左侧「地图」域，打开一张图。');
+    return;
+  }
+  if (!S.entryKey) {
+    host.innerHTML = graphEmpty('🗺', '先打开一张图', '从左侧列表选一张图，这里会画出它的节点与连边。');
+    return;
+  }
+  const j = S.graphCache[graphKey(S.entryKey)];
+  if (j) { renderGraphBody(host, j, S.entryKey); return; }
+  host.innerHTML = graphEmpty('⏳', '正在算拓扑…', '节点 / 深度 / 出入口由引擎算，取回来后即绘制。');
+  loadGraph(S.entryKey);
+}
+
+function graphEmpty(ico, title, sub) {
+  return `<div class="graph-empty">
+    <div class="graph-empty-ico">${ico}</div>
+    <div class="graph-empty-title">${esc(title)}</div>
+    ${sub ? `<div class="graph-empty-sub">${esc(sub)}</div>` : ''}
+  </div>`;
+}
+
+function renderGraphBody(host, resp, key) {
+  const warns = Array.isArray(resp.warnings) ? resp.warnings : [];
+  // 警告文案里带轻量 markdown（**加粗** / `代码`）—— 与词典注脚同一套渲染（先转义再转标签）
+  const warnHtml = warns.length
+    ? `<div class="sim-warn graph-warn">${warns.map((w) => '⚠ ' + mdInline(w)).join('<br>')}</div>` : '';
+  const view = (resp && typeof resp.view === 'object' && resp.view) ? resp.view : {};
+  const nodes = Array.isArray(view.nodes) ? view.nodes : [];
+
+  if (!resp || resp.ok !== true) {
+    // 失败也要给「重新计算」——否则改完数据只能靠切走再切回来
+    host.innerHTML = warnHtml + graphReloadBar('数据改好后保存，再点这里重算')
+      + graphEmpty('🗺', '算不出这张图的拓扑',
+        (resp && resp.error ? resp.error : '未知原因') + '。');
+    bindGraphBar(host, key);
+    return;
+  }
+  if (!nodes.length) {
+    host.innerHTML = warnHtml + graphReloadBar('给它加上节点（每项至少要有 id）后保存，再点这里重算')
+      + graphEmpty('🗺', '这张图还没有节点', '当前 nodes 是空的，画不出图。');
+    bindGraphBar(host, key);
+    return;
+  }
+  const L = graphLayout(view);
+  host.innerHTML = warnHtml + graphBarHtml(view, L) + graphSvgHtml(L, view);
+  bindGraphBar(host, key);
+}
+
+/* 算不出图时的最小工具条（保留「重新计算」，别让用户只能切走再切回来） */
+function graphReloadBar(hint) {
+  return `<div class="graph-bar">
+      <span class="graph-tip dim">${esc(hint)}</span><span class="spacer"></span>
+      <button class="btn ghost sm" id="btnGraphReload" title="丢弃缓存，重新向引擎要一次">↻ 重新计算</button>
+    </div>`;
+}
+
+/* 摘要条 + 图例（形状 / 节点数 / 边数 / 审计结论 / 重新计算） */
+function graphBarHtml(view, L) {
+  const a = (view.audit && typeof view.audit === 'object') ? view.audit : {};
+  const n = (view.nodes || []).length, m = (view.edges || []).length;
+  // 显式连通表优先：拓扑名是 mesh（或不参与派生）时，说的是「边由数据给，不是算出来的」
+  const shape = view.explicit ? '显式连通表' : (TOPO_ZH[view.topology] || view.topology || '未知形状');
+  let auditTxt, auditCls;
+  if (a.ok) { auditCls = 'ok'; auditTxt = '✓ 结构检查通过'; }
+  else {
+    const bad = [];
+    if ((a.dangling || []).length) bad.push(`悬空边 ${a.dangling.length}`);
+    if ((a.asymmetric || []).length) bad.push(`不对称 ${a.asymmetric.length}`);
+    if ((a.unreachable || []).length) bad.push(`不可达 ${a.unreachable.length}`);
+    if ((a.isolated || []).length) bad.push(`孤立 ${a.isolated.length}`);
+    if (a.no_gate) bad.push('没有出入口');
+    auditCls = 'bad'; auditTxt = '⚠ 结构问题：' + (bad.join(' / ') || '（详见下方）');
+  }
+  return `<div class="graph-bar">
+      <span class="graph-shape">${esc(shape)}</span>
+      <span class="graph-stat">${n} 节点 · ${m} 边</span>
+      <span class="graph-stat">入口 <b>${esc(view.root || '—')}</b> · 出入口 <b>${esc(view.gate || '—')}</b></span>
+      <span class="graph-audit ${auditCls}">${esc(auditTxt)}</span>
+      <span class="spacer"></span>
+      <span class="graph-tip dim">按磁盘数据算 —— 改完先保存</span>
+      <button class="btn ghost sm" id="btnGraphReload" title="丢弃缓存，重新向引擎要一次">↻ 重新计算</button>
+    </div>
+    <div class="graph-legend">${legendHtml(L)}</div>`;
+}
+
+function legendHtml(L) {
+  const out = [];
+  (L.roleValues || []).forEach((r, i) => {
+    out.push(`<span class="gl-item"><i class="graph-swatch ga-role-${i % GL_ROLE_N}"></i>角色 ${esc(r)}</span>`);
+  });
+  out.push('<span class="gl-item"><i class="graph-swatch is-root">▶</i>入口</span>');
+  out.push('<span class="gl-item"><i class="graph-swatch is-gate"></i>出入口（外环）</span>');
+  if (L.hasGhost) out.push('<span class="gl-item"><i class="graph-swatch is-dangling"></i>悬空边 / 缺失节点</span>');
+  out.push('<span class="gl-item"><i class="graph-swatch is-asym"></i>不对称边</span>');
+  out.push('<span class="gl-item"><i class="graph-swatch is-grey"></i>不可达 / 孤立</span>');
+  return out.join('');
+}
+
+/* 数字取整到 0.1 —— SVG 里的坐标没必要带一串小数 */
+const gaNum = (v) => Math.round(Number(v) * 10) / 10;
+
+function graphSvgHtml(L, view) {
+  const defs = [['gaArrow', ''], ['gaArrowBad', 'is-dangling'], ['gaArrowAsym', 'is-asym']]
+    .map(([id, cls]) => `<marker id="${id}" viewBox="0 0 10 10" refX="9.5" refY="5"
+        markerWidth="6" markerHeight="6" orient="auto-start-reverse" markerUnits="strokeWidth">
+        <path class="ga-arrow ${cls}" d="M0,0 L10,5 L0,10 z"></path></marker>`).join('');
+
+  const edges = L.edges.map((e) => {
+    const bad = e.kind === 'dangling', asym = e.kind === 'asym';
+    const mk = bad ? 'gaArrowBad' : (asym ? 'gaArrowAsym' : 'gaArrow');
+    const cls = bad ? 'is-dangling' : (asym ? 'is-asym' : '');
+    const tip = `${e.from} → ${e.to}${bad ? '（目标不存在）' : (asym ? '（不对称：没有回边）' : '')}`;
+    return `<line class="ga-edge ${cls}" x1="${gaNum(e.x1)}" y1="${gaNum(e.y1)}"
+      x2="${gaNum(e.x2)}" y2="${gaNum(e.y2)}" marker-end="url(#${mk})"><title>${esc(tip)}</title></line>`;
+  }).join('');
+
+  const nodes = L.nodes.map((n) => {
+    const cls = ['ga-node',
+      n.roleIndex >= 0 ? 'ga-role-' + (n.roleIndex % GL_ROLE_N) : '',
+      n.isRoot ? 'is-root' : '', n.isGate ? 'is-gate' : '',
+      n.grey ? 'is-grey' : '', n.ghost ? 'is-ghost' : ''].filter(Boolean).join(' ');
+    // gate = 外环；root = 框内左侧 ▶
+    const ring = n.isGate
+      ? `<rect class="ga-ring" x="-5" y="-5" width="${n.w + 10}" height="${n.h + 10}" rx="14" ry="14"></rect>` : '';
+    const mark = n.isRoot ? `<text class="ga-mark" x="9" y="${gaNum(n.h / 2 + 4)}">▶</text>` : '';
+    const ty = n.ghost ? n.h / 2 + 4.5 : (n.role ? 17 : n.h / 2 + 4.5);
+    const roleT = (n.role && !n.ghost)
+      ? `<text class="ga-role" x="${gaNum(n.w / 2)}" y="${gaNum(n.h - 8)}">${esc(n.role)}</text>` : '';
+    const tip = n.label
+      + (n.ghost ? '（数据里没有这个节点 —— 悬空边的目标）' : '')
+      + (n.isRoot ? ' · 入口' : '') + (n.isGate ? ' · 出入口' : '')
+      + (n.grey ? ' · 不可达/孤立' : '');
+    return `<g class="${cls}" transform="translate(${gaNum(n.x)},${gaNum(n.y)})">
+      <rect class="ga-box" width="${n.w}" height="${n.h}" rx="10" ry="10"></rect>${ring}${mark}
+      <text class="ga-label" x="${gaNum(n.w / 2)}" y="${gaNum(ty)}">${esc(n.text)}</text>${roleT}
+      <title>${esc(tip)}</title></g>`;
+  }).join('');
+
+  return `<div class="graph-canvas">
+    <svg class="graph-svg" viewBox="0 0 ${L.width} ${L.height}" width="${L.width}" height="${L.height}"
+      role="img" aria-label="拓扑图：${esc(view.topology || '')}，${L.nodes.length} 个节点，${L.edges.length} 条边">
+      <defs>${defs}</defs>${edges}${nodes}</svg></div>`;
+}
+
+function bindGraphBar(host, key) {
+  const b = el('#btnGraphReload', host);
+  if (b) b.onclick = () => { delete S.graphCache[graphKey(key)]; renderGraph(); };
+}
+
 /* ═══════════════════════════ 脏标记 / 校验问题 ═══════════════════════════ */
 function markDirty() {
   S.dirty = true;
@@ -900,7 +1229,10 @@ async function save() {
   $('saveStatus').className = 'save-status ok';
   renderIssues();
   toast((wasNew ? '已新建 ' : '已保存 ') + S.entryKey, 'ok');
+  // 拓扑图是按**磁盘数据**算的 → 这一条的缓存作废；正开着图就重画一次
+  delete S.graphCache[graphKey(S.entryKey)];
   await refreshPkg(); await loadDomain(S.dom); await loadHints();   // 值变了 → 联想候选跟着更新
+  if (S.mode === 'graph') renderGraph();
 }
 
 async function del() {
@@ -910,6 +1242,7 @@ async function del() {
   const r = await api('DELETE', `${dPath(S.dom)}/${encodeURIComponent(S.entryKey)}`);
   if (!r.ok) { toast('删除失败', 'bad'); return; }
   toast('已删除 ' + S.entryKey, 'ok');
+  delete S.graphCache[graphKey(S.entryKey)];
   closeEntry();
   await refreshPkg(); await loadDomain(S.dom); await loadHints();
 }

@@ -59,6 +59,10 @@ DOMAINS = {
     # 不填这张表 = 不做校验（零行为）。
     "tlogs":    {"label": "流水声明", "kind": "data", "schema": "tlog.schema.json",
                  "primary": "tlog_entry", "icon": "🧾"},
+    # 空间形状：`saintess_engine.space.Space` 消费（节点表 + 拓扑 → 邻接/深度/出入口/必经路径）。
+    # 不给数据 = 不影响任何东西（引擎侧读的是内容自有的地图数据，不读这张表）。
+    "maps":     {"label": "地图",   "kind": "data",  "schema": "maps.schema.json",
+                 "primary": "map", "icon": "🗺"},
 }
 
 

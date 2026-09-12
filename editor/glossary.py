@@ -325,11 +325,31 @@ _TLOGS = {
     "tags": {"zh": "惯用标签", "note": "该 kind 常用标签（约定，不强制）；记录里的 tags 用来粗筛。"},
 }
 
+_MAPS = {
+    "topology": {"zh": "形状名", "note": "邻接怎么来的：`chain`（链状，按声明序相邻）/ `star`（星形：枢纽↔辐条、通道↔出口，含无通道时枢纽直连出口的防断链分支）。形状内置于引擎注册表（第三方可注册自己的）；**给了 links 就不派生**，此处写 `mesh` 或留空即可。",
+                 "ref": ("reference/space.md", "star")},
+    "roles": {"zh": "角色映射", "note": "「角色名 → 取值」的对象（hub/through/exit）。**取值由内容侧定**（引擎不认含义）；缺哪个角色 = 该角色不存在（零默认值），例如没声明 through 就走「无通道」那条防断链分支。",
+              "ref": ("reference/space.md", "roles")},
+    "nodes": {"zh": "节点表", "note": "**顺序有意义**：链状/星形的「深度」= 声明序（作者按由近及远排），**首节点 = 入口**。每项至少要一个 id。",
+              "ref": ("reference/space.md", "nodes")},
+    "links": {"zh": "显式连通表", "note": "`{节点id: [可达节点id…]}`。一给就用它（拓扑不参与派生）；**不必对称** —— 视图会把 a→b 但 b↛a 报出来，但**不自动补边**（补边会掩盖数据错误）。",
+              "ref": ("reference/space.md", "links")},
+    "root": {"zh": "入口节点", "note": "默认 = 首节点。显式连通表的「深度」从它起算（派生形状的深度是声明序，与此无关）。",
+             "ref": ("reference/space.md", "root")},
+    "gate": {"zh": "出入口节点", "note": "跨图落点 / 出图点（同一个语义）。不填则按角色规则推：首节点是枢纽角色且有出口角色节点 → 那个出口节点；否则首节点。",
+             "ref": ("reference/space.md", "gate")},
+    "id": {"zh": "节点标识", "note": "图内唯一。连通表、出入口、root/gate 全按它引用 —— 改 id 等于改所有引用方（编辑器不做批量改名）。",
+           "ref": ("reference/space.md", "nodes")},
+    "role": {"zh": "角色取值", "note": "这个节点算哪种角色（取值要能在本图 roles 映射里对上）。引擎只按角色算几何，**不认取值含义**。",
+             "ref": ("reference/space.md", "roles")},
+}
+
 GLOSSARY = {
     "*": _COMMON,
     "commands": _COMMANDS,
     "texts": _TEXTS,
     "tlogs": _TLOGS,
+    "maps": _MAPS,
     "skills": _SKILLS,
     "monsters": _MONSTERS,
     "affixes": _AFFIXES,
@@ -400,6 +420,14 @@ GROUPS = {
          "fields": ["fields"]},
         {"id": "doc", "label": "分类与标签", "icon": "🗂",
          "fields": ["category", "tags"]},
+    ],
+    "maps": [
+        {"id": "base", "label": "基础", "icon": "📌",
+         "fields": ["name", "desc"]},
+        {"id": "shape", "label": "形状与角色", "icon": "🧭",
+         "fields": ["topology", "roles", "root", "gate"]},
+        {"id": "graph", "label": "节点与连通", "icon": "🗺",
+         "fields": ["nodes", "links", "id", "role"]},
     ],
     "affixes": [
         {"id": "base", "label": "基础", "icon": "📌",
@@ -543,6 +571,7 @@ DOMAIN_SCHEMA = {
     "effect_rules": "effect_rules.schema.json", "passive_proc": "passive_proc.schema.json",
     "commands": "command.schema.json", "texts": "text.schema.json",
     "tlogs": "tlog.schema.json",
+    "maps": "maps.schema.json",
 }
 
 # ───────────────────────────────────────────────────────────────────────── 查询

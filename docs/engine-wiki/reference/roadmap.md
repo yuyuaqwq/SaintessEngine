@@ -43,7 +43,7 @@
 | 3 | **`tlog` 结构化流水** —— ✅ **已建成**（2026-09-12，本次提交，[tlog.md](tlog.md)）：`Record`/`KindTable`/`Sink`/`JSONLSink`/`Reader`/`Replay`/`EventLogBridge` + **`tlogs` 域进编辑器**（schema + 字段分组）；门禁 `tests/test_tlog.py` 65 断言 | 新建形状 | #1（复用 Sink 协议） | `Record`/`Sink`/`Reader`/`Replay` 骨架 + `tlogs` 域进编辑器；0 sink = 零行为；JSONL 往返读回一致 |
 | 4 | `tlog` 落地：战斗流水 —— ✅ **已落地**（2026-09-12，游戏仓 `ab5d975`）：采集走引擎既有观察者通道 + 包 human_act（零引擎改动，可拔插默认关）；`replay()` 用同源装配序列重演，**result/rounds/p_acts 与记录逐项一致**（`tests/test_v182_battle_tlog.py` 37 断言） | 下游落地 | #3 | 打完一场 → 完整流水 → **能回放复现同一场** |
 | 5 | `tlog` 落地：行为流水 —— ✅ **已落地**（2026-09-12，游戏仓 `1c83672`）：drop/shop/instance 三处埋点（统一 `tlog_setup.emit`，未启用零行为）+ `SQLiteSink` 落库出口 + `scripts/tlog_report.py` 分析脚本（与回放共用同一读口） | 下游落地 | #3 | 任务/交易/掉落流水落库；分析脚本能出「某玩家某段流水」 |
-| 6 | 地图形状 → 引擎 | 搬形状 | — | 派生/邻接/出口匹配独立于具体地图数据；配 `maps` 域 → 编辑器能画地图 |
+| 6 | **地图形状** → 引擎 —— ✅ **已建成**（2026-09-12，本次提交，[space.md](space.md)）：`Space`（nodes + topology + roles → 邻接 / 深度 / 出入口 / 必经路径 / 审计 / 视图）+ 形状注册表（内置 `chain` / `star`，第三方可 `register_topology`）；参考实现侧四份重复形状（邻接 / 深度 / `entry`+`exit` 两份逐字相同的实现 / 两处手算「途经点」）收敛到引擎，**逐格一致**由冻结比对门禁守护（游戏仓 `tests/test_v183_space_shape.py`：121 图 × 628 子区域 × 870 次查询 + 3480×2 组提示判断）；**编辑器 `maps` 域 + 拓扑视图**同步落地（`editor/space_view.py` 用引擎同一份派生代码算图） | 搬形状 | — | 派生/邻接/出口匹配独立于具体地图数据；配 `maps` 域 → 编辑器能画地图 |
 | 7 | 物品形状 → 引擎 | 搬形状 | — | 掉落/品质/词条规则与具体物品表解耦 |
 | 8 | 副本形状 → 引擎 | 搬形状 | #6 #7 | 最大一块，依赖前置两块，**排最后** |
 | 9 | 指令表迁移收尾 | 下游落地 | — | 剩余指令按模块批量迁（每批跑一次互斥矩阵门禁） |
@@ -142,3 +142,4 @@ for r in tl.reader().iter_records(kind="battle.hit", actor="p1", since=t0): ...
 | 3 | 战斗流水落地 + 回放 | `tlog` |
 | 4 | 行为流水落地 + 分析脚本 | `tlog` |
 | 5 | 指令表剩余部分迁移 | `command.CommandRegistry` |
+| 6 | 地图邻接 / 深度 / 出入口接入引擎 | `space` —— ✅ 已接入（2026-09-12，游戏仓 `7d8c11d`）|

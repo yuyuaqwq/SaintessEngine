@@ -10,7 +10,8 @@
     "affixes",
     "items",
     "effect_rules",
-    "passive_proc"
+    "passive_proc",
+    "maps"
   ],
   "entry": "content/apply.py",
   "created": "2026-09-11 10:37:01"

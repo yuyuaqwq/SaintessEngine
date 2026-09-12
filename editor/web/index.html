@@ -98,6 +98,8 @@
             <button data-mode="form" class="on">表单</button>
             <button data-mode="json">JSON</button>
             <button data-mode="diff">变更</button>
+            <!-- 第四档：拓扑视图 —— **只在 maps 域出现**（renderEntry() 按域切 hidden） -->
+            <button data-mode="graph" class="hidden" title="节点 + 拓扑 → 图（地图域专用）">🗺 拓扑</button>
           </div>
           <div class="segmented groups-ctl hidden" id="groupCtl" role="group" aria-label="分组折叠">
             <button id="btnGroupsOpen" title="展开全部分组">⤴ 展开</button>
@@ -111,6 +113,7 @@
           <div class="form-host" id="formHost"></div>
           <textarea class="json-host mono hidden" id="jsonHost" spellcheck="false"></textarea>
           <div class="diff-host hidden" id="diffHost"></div>
+          <div class="graph-host hidden" id="graphHost"></div>
         </div>
 
         <footer class="actionbar">
