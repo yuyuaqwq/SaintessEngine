@@ -166,8 +166,13 @@ const S = {
   domains: [], pkgs: [], pkgId: null, pkg: null,
   dom: 'skills', entries: [], status: { invalid: [] },
   entryKey: null, entryData: null, entryOrig: null, schema: null, validationErrors: [],
+  entriesTotal: 0,               // 该域总条数（分页续取期间 > entries.length → 列表显示「已取/总数」）
   mode: 'form', filter: 'all', sort: 'kind',
   dirtyKeys: new Set(),          // 有未保存改动的条目 key（当前域）
+  badKeys: new Set(),            // 有校验问题的条目 key（Set：避免逐行在 invalid 数组里线性找）
+  listBlocks: null,              // 列表虚拟滚动：块表（行 / 分组标题 + 各自高度与偏移）
+  listRowBlock: null,            // 列表虚拟滚动：行下标 → 块下标
+  listSig: '',                   // 列表虚拟滚动：当前窗口签名（滚动时不重复重画）
   kb: -1,                        // 键盘焦点索引
   pkgOpen: false,
   actions: [],                   // 机制动作清单（AST 扫源码；引擎内置 + 包内）
@@ -403,6 +408,7 @@ async function newPackage() {
 }
 
 function showEmptyPkg() {
+  S.listBlocks = null; S.listRowBlock = null; S.listSig = ''; S.entriesTotal = 0;
   $('entryList').innerHTML = '<div class="list-empty">还没有游戏包<br>点左上角包名 → 新建游戏包</div>';
   $('listCount').textContent = '0';
 }
@@ -494,35 +500,188 @@ async function switchDomain(dom) {
 }
 
 /* ═══════════════════════════ 条目列表 ═══════════════════════════ */
+/* 首屏一页取多少条（其余**后台续取**；域比一页小 = 一次到位，零额外请求）
+   为什么分页：单域一万条时列表响应 ~1.9MB，而左栏要等它到齐才能画。
+   先画第一页 → 剩下的边取边补（虚拟滚动下每次补一页只重画一窗口）。 */
+const LIST_PAGE = 500;
+
 async function loadDomain(dom) {
   if (!S.pkgId) return;
-  const r = await api('GET', dPath(dom));
+  const pkg = S.pkgId;
+  const r = await api('GET', `${dPath(dom)}?limit=${LIST_PAGE}`);
   if (!r.ok) { toast((r.json && r.json.message) || '读取域失败', 'bad'); return; }
   S.entries = (r.json.entries || []);
-  S.status = r.json.status || { invalid: [] };
+  S.entriesTotal = Math.max(r.json.count || 0, S.entries.length);
+  setStatus(r.json.status);
   renderList();
+  // 后台续取剩余分段 —— 切域 / 切包后丢弃旧结果（别往新域的表里塞）
+  for (let guard = 0; S.entries.length < S.entriesTotal && guard < 100000; guard++) {
+    const off = S.entries.length;
+    const more = await api('GET', `${dPath(dom)}?offset=${off}&limit=${LIST_PAGE}`);
+    if (S.pkgId !== pkg || S.dom !== dom) return;
+    const got = (more.ok && more.json && more.json.entries) || [];
+    if (!got.length) break;
+    S.entries = S.entries.concat(got);
+    S.entriesTotal = Math.max(S.entriesTotal, (more.json && more.json.count) || 0);
+    renderList();
+  }
 }
 
-function kindClass(k) {
-  const s = String(k || '');
-  if (s.startsWith('魔法·')) return 'k-魔法';
-  return s ? 'k-' + s : '';
+/* 域状态（条目数 + 校验结果）→ 内存里的 Set，供列表逐行判断「待修」 */
+function setStatus(st) {
+  S.status = st || { invalid: [] };
+  S.badKeys = new Set((S.status.invalid || []).map((x) => x.key));
 }
-function isBad(key) { return (S.status.invalid || []).some((x) => x.key === key); }
 
-function visibleEntries() {
-  const q = ($('search').value || '').trim().toLowerCase();
-  let rows = S.entries.slice();
-  if (q) rows = rows.filter((e) => (e.key + ' ' + e.name + ' ' + (e.kind || '')).toLowerCase().includes(q));
-  if (S.filter === 'bad') rows = rows.filter((e) => isBad(e.key));
-  if (S.filter === 'dirty') rows = rows.filter((e) => S.dirtyKeys.has(e.key));
+/* ═══════════ 条目列表：过滤 / 排序 / 窗口切片（**纯函数** · 不碰 DOM · 不碰 S） ═══════════
+   为什么单独拎出来：大包（2000+ 条）下「列表算账」这一段的正确性最该被钉住。
+   tests/test_editor_large_package.py 会把下面这一段从本文件里**抠出来真跑**
+   （跟 graphLayout 同一套办法，见 ##LIST_VIEW_BEGIN## 标记）。
+   ★ 往这一块里加东西时不要用 document / window / S —— 抠出来会直接 ReferenceError。
+   ══════════════════════════════════════════════════════════════════════════════════════ */
+/* ##LIST_VIEW_BEGIN## */
+/* 关键字命中：key / name / kind（与旧版一致） */
+function lvMatch(e, q) {
+  return (e.key + ' ' + e.name + ' ' + (e.kind || '')).toLowerCase().includes(q);
+}
+
+/* 搜索 + 筛选（返回新数组，不改入参） */
+function lvFilter(entries, q, filter, badKeys, dirtyKeys) {
+  const t = String(q == null ? '' : q).trim().toLowerCase();
+  let rows = (entries || []).slice();
+  if (t) rows = rows.filter((e) => lvMatch(e, t));
+  if (filter === 'bad') rows = rows.filter((e) => badKeys.has(e.key));
+  if (filter === 'dirty') rows = rows.filter((e) => dirtyKeys.has(e.key));
+  return rows;
+}
+
+/* 排序（就地排 —— rows 已是 lvFilter 出来的新数组） */
+function lvSort(rows, sort) {
   const sorters = {
     kind: (a, b) => String(a.kind || '').localeCompare(String(b.kind || ''), 'zh') || String(a.name).localeCompare(String(b.name), 'zh'),
     name: (a, b) => String(a.name).localeCompare(String(b.name), 'zh'),
     key: (a, b) => String(a.key).localeCompare(String(b.key)),
   };
-  rows.sort(sorters[S.sort] || sorters.kind);
-  return rows;
+  return rows.sort(sorters[sort] || sorters.kind);
+}
+
+/* 窗口切片（虚拟滚动核心）：blocks = 高度单调的块表 [{h, off}]，
+   给定滚动位置与视口高度 → 该真渲染哪一段。
+   overscan 与 viewport 同单位（像素）：视口上下各多渲染这么高，滚动时不留白。
+   返回 {start, end, padTop, padBottom}：渲染 [start, end)，上下各用占位块撑高（滚动条比例不变）。 */
+function lvSlice(blocks, scrollTop, viewport, overscan) {
+  const n = (blocks || []).length;
+  if (!n) return { start: 0, end: 0, padTop: 0, padBottom: 0 };
+  const top = Math.max(0, +scrollTop || 0);
+  const vh = Math.max(0, +viewport || 0);
+  const scan = Math.max(0, +overscan || 0);
+  const lo = top - scan, hi = top + vh + scan;
+  let start = 0;
+  while (start < n && blocks[start].off + blocks[start].h <= lo) start++;
+  let end = n;
+  while (end > 0 && blocks[end - 1].off >= hi) end--;
+  if (end <= start) { start = Math.min(start, n - 1); end = start + 1; }
+  const total = blocks[n - 1].off + blocks[n - 1].h;
+  return {
+    start: start, end: end,
+    padTop: blocks[start].off,
+    padBottom: total - (blocks[end - 1].off + blocks[end - 1].h),
+  };
+}
+/* ##LIST_VIEW_END## */
+
+const EMPTY_SET = new Set();
+function kindClass(k) {
+  const s = String(k || '');
+  if (s.startsWith('魔法·')) return 'k-魔法';
+  return s ? 'k-' + s : '';
+}
+function isBad(key) { return (S.badKeys || EMPTY_SET).has(key); }
+
+function visibleEntries() {
+  const q = ($('search').value || '').trim();
+  return lvSort(lvFilter(S.entries, q, S.filter, S.badKeys || EMPTY_SET, S.dirtyKeys), S.sort);
+}
+
+/* ─────────── 列表虚拟滚动（大包：2000+ 条不再一次性铺满 DOM） ───────────
+   旧做法：把 2000 条一次性 innerHTML 进 #entryList。实测**光是浏览器布局**就 ~1.0s
+   （拼字符串 29ms + innerHTML 47ms + 绑定 12ms —— 其余全是 2000 行的布局），
+   于是「打开域 / 搜索 / 打开单条 / 保存后刷新」全卡在同一处。
+   新做法：`.entry-row` 是 CSS 定高 38px，一次只把「看得见的那一段 + 上下各 12 行」写进
+   DOM，窗口外用占位块撑出等高滚动区 —— 行的 HTML 与旧版逐字一致，视觉/交互不变。 */
+const LST_OVERSCAN = 12;      // 视口上下各多渲染几行，滚动不留白
+const LST_ROW_H = 38;         // ★ 与 app.css 的 .entry-row{height:38px} 一致（探测失败时的兜底）
+const LST_GRP_H = 30;         // .entry-group 兜底高度（运行时探测更准）
+let _lstRowH = 0, _lstGrpH = 0;
+
+function lstProbeH(cls, fallback, text) {
+  const d = document.createElement('div');
+  d.className = cls;
+  if (text) d.textContent = text;
+  d.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;';
+  document.body.appendChild(d);
+  // 用 getBoundingClientRect（小数也算）—— 分组标题的高度带小数，取整会让整表总高差 1px
+  const h = d.getBoundingClientRect().height || d.offsetHeight || fallback;
+  d.remove();
+  return h;
+}
+/* 行高 / 分组标题高：探测一次即缓存（换主题不影响 px 定高；探测不到就用兜底值） */
+function lstRowH() { if (!_lstRowH) _lstRowH = lstProbeH('entry-row', LST_ROW_H); return _lstRowH; }
+function lstGrpH() { if (!_lstGrpH) _lstGrpH = lstProbeH('entry-group', LST_GRP_H, '测'); return _lstGrpH; }
+
+/* 单行 HTML —— 与旧版**逐字一致**（结构 / class / title 都不动） */
+function rowHtml(e, i, q) {
+  const nm = q ? hlMatch(String(e.name), q) : esc(e.name);
+  const meta = [
+    e.lv !== undefined && e.lv !== null && e.lv !== '' ? `Lv ${esc(e.lv)}` : '',
+    e.summary ? esc(e.summary) : '',
+  ].filter(Boolean).join(' · ');
+  return `<div class="entry-row ${e.key === S.entryKey ? 'on' : ''} ${isBad(e.key) ? 'is-bad' : ''} ${i === S.kb ? 'kb-focus' : ''}"
+      data-key="${esc(e.key)}" data-idx="${i}" title="${esc(meta || e.key)}">
+      <div class="er-main">
+        <div class="er-name">${nm}</div>
+        <div class="er-key">${esc(e.key)}${e.lv !== undefined && e.lv !== null && e.lv !== '' ? ` <span class="er-lv">Lv${esc(e.lv)}</span>` : ''}</div>
+      </div>
+      <div class="er-tail">
+        ${e.kind ? `<span class="chip kind ${kindClass(e.kind)}">${esc(e.kind)}</span>` : ''}
+        ${isBad(e.key) ? '<span class="er-bad" title="有校验问题"></span>' : ''}
+        ${S.dirtyKeys.has(e.key) ? '<span class="er-dirty" title="有未保存改动"></span>' : ''}
+      </div>
+    </div>`;
+}
+
+/* 只重画窗口内的行（滚动时调；窗口没变则什么都不做）
+   want（可选）= 必须渲染出来的那一块（当前条目）：把窗口临时撑到含它为止，滚动位置交给
+   浏览器自己的 scrollIntoView({block:'nearest'}) 定 —— 与旧版逐像素一致。 */
+function renderListWindow(force, want) {
+  const host = $('entryList');
+  const blocks = S.listBlocks;
+  if (!blocks || !blocks.length) return;
+  const cs = getComputedStyle(host);
+  const pt = parseFloat(cs.paddingTop) || 0, pb = parseFloat(cs.paddingBottom) || 0;
+  const vh = Math.max(120, (host.clientHeight || 480) - pt - pb);
+  const last = blocks[blocks.length - 1];
+  const total = last.off + last.h;
+  // 内容变短时（搜索/切域）滚动位置跟着收敛，别落在空白区；正常位置一律不动
+  const raw = Math.max(0, host.scrollTop - pt);
+  const top = Math.min(raw, Math.max(0, total - vh));
+  if (top < raw - 0.5) host.scrollTop = pt + top;
+  const sl = lvSlice(blocks, top, vh, LST_OVERSCAN * lstRowH());
+  if (want) {
+    while (sl.start > 0 && blocks[sl.start].off > want.off) sl.start--;
+    while (sl.end < blocks.length && blocks[sl.end - 1].off + blocks[sl.end - 1].h < want.off + want.h) sl.end++;
+    sl.padTop = blocks[sl.start].off;
+    const tail = blocks[sl.end - 1];
+    sl.padBottom = total - (tail.off + tail.h);
+  }
+  const sig = `${sl.start}|${sl.end}|${Math.round(sl.padTop)}|${Math.round(sl.padBottom)}`;
+  if (!force && sig === S.listSig) return;
+  S.listSig = sig;
+  // 占位块高度用**小数**（分组标题是 29.75px 这类值）—— 取整会让行的真实位置差 0.5px
+  const padTop = sl.padTop > 0.5 ? `<div class="lst-pad" style="height:${sl.padTop.toFixed(2)}px"></div>` : '';
+  const padBot = sl.padBottom > 0.5 ? `<div class="lst-pad" style="height:${sl.padBottom.toFixed(2)}px"></div>` : '';
+  host.innerHTML = padTop + blocks.slice(sl.start, sl.end).map((b) => b.html).join('') + padBot;
+  els('#entryList .entry-row').forEach((n) => (n.onclick = () => openEntry(n.dataset.key)));
 }
 
 function renderList() {
@@ -537,45 +696,55 @@ function renderList() {
     c.textContent = { all: '全部', bad: '⚠ 待修', dirty: '● 未保存' }[f] + (n ? ` ${n}` : '');
   });
 
-  $('listCount').textContent = rows.length === S.entries.length
-    ? `${S.entries.length} 条`
-    : `${rows.length} / ${S.entries.length} 条`;
+  const total = S.entriesTotal || S.entries.length;
+  $('listCount').textContent = S.entries.length < total
+    ? `${S.entries.length} / ${total} 条`                       // 还在后台续取（大包才有这一步）
+    : (rows.length === S.entries.length ? `${total} 条` : `${rows.length} / ${total} 条`);
 
+  const host = $('entryList');
   if (!rows.length) {
-    $('entryList').innerHTML = `<div class="list-empty">${
+    S.listBlocks = null; S.listRowBlock = null; S.listSig = '';
+    host.innerHTML = `<div class="list-empty">${
       S.entries.length ? '没有匹配的条目' : '这个域还没有条目<br>点下面「新建条目」开始'}</div>`;
     return;
   }
 
-  // 分组（按 kind，仅当排序=kind 且条目数 > 12）
+  // 分组（按 kind，仅当排序=kind 且条目数 > 12）；每行 HTML 一次算好 —— 滚动时只换看得见的那一段
   const grouped = S.sort === 'kind' && rows.length > 12;
-  let html = '', lastKind = null;
+  const rh = lstRowH(), gh = lstGrpH();
+  const blocks = [], rowBlock = new Array(rows.length);
+  let off = 0, lastKind = null;
   rows.forEach((e, i) => {
     if (grouped && e.kind !== lastKind) {
-      html += `<div class="entry-group">${esc(e.kind || '未分类')}</div>`;
-      lastKind = e.kind;
+      blocks.push({ i: -1, h: gh, off: off, html: `<div class="entry-group">${esc(e.kind || '未分类')}</div>` });
+      off += gh; lastKind = e.kind;
     }
-    // 搜索时高亮命中片段（跟命令面板一致的手感）
-    const nm = q ? hlMatch(String(e.name), q) : esc(e.name);
-    const meta = [
-      e.lv !== undefined && e.lv !== null && e.lv !== '' ? `Lv ${esc(e.lv)}` : '',
-      e.summary ? esc(e.summary) : '',
-    ].filter(Boolean).join(' · ');
-    html += `<div class="entry-row ${e.key === S.entryKey ? 'on' : ''} ${isBad(e.key) ? 'is-bad' : ''} ${i === S.kb ? 'kb-focus' : ''}"
-      data-key="${esc(e.key)}" data-idx="${i}" title="${esc(meta || e.key)}">
-      <div class="er-main">
-        <div class="er-name">${nm}</div>
-        <div class="er-key">${esc(e.key)}${e.lv !== undefined && e.lv !== null && e.lv !== '' ? ` <span class="er-lv">Lv${esc(e.lv)}</span>` : ''}</div>
-      </div>
-      <div class="er-tail">
-        ${e.kind ? `<span class="chip kind ${kindClass(e.kind)}">${esc(e.kind)}</span>` : ''}
-        ${isBad(e.key) ? '<span class="er-bad" title="有校验问题"></span>' : ''}
-        ${S.dirtyKeys.has(e.key) ? '<span class="er-dirty" title="有未保存改动"></span>' : ''}
-      </div>
-    </div>`;
+    rowBlock[i] = blocks.length;
+    blocks.push({ i: i, h: rh, off: off, html: rowHtml(e, i, q) });
+    off += rh;
   });
-  $('entryList').innerHTML = html;
-  els('#entryList .entry-row').forEach((n) => (n.onclick = () => openEntry(n.dataset.key)));
+  S.listBlocks = blocks;
+  S.listRowBlock = rowBlock;
+  S.listSig = '';
+  // 与旧行为一致：整表重建 → 滚回顶部；若当前条目在这张表里，把它带回视野。
+  // 做法：① 粗定位（在浏览器最终位置**之前**停下，留 40px）② 由浏览器自己的
+  // scrollIntoView({block:'nearest'}) 精确对齐 —— 与旧版逐像素一致，且窗口只画一小段。
+  const ai = rows.findIndex((e) => e.key === S.entryKey);
+  if (ai < 0) {
+    host.scrollTop = 0;
+    renderListWindow(true);
+    return;
+  }
+  const blk = blocks[rowBlock[ai]];
+  const padTopPx = parseFloat(getComputedStyle(host).paddingTop) || 0;
+  const ch = host.clientHeight || 480;
+  const rTop = padTopPx + blk.off, rBot = rTop + blk.h;
+  if (rTop < host.scrollTop - 0.5 || rBot > host.scrollTop + ch + 0.5) {
+    const down = rTop >= host.scrollTop;
+    const ideal = down ? Math.max(0, rBot - ch) : rTop;
+    host.scrollTop = down ? Math.max(0, ideal - 40) : ideal + 40;
+  }
+  renderListWindow(true, blk);
   const cur = el('#entryList .entry-row.on');
   if (cur) cur.scrollIntoView({ block: 'nearest' });
 }
@@ -2062,7 +2231,16 @@ window.addEventListener('DOMContentLoaded', () => {
   };
 
   // 列表
-  $('search').oninput = () => { S.kb = -1; renderList(); };
+  // 逐键搜索：先防抖再重算（大包 2000+ 条时「每个按键全表重排 + 重画」是主要卡点之一）
+  let lstTimer = null;
+  $('search').oninput = () => {
+    S.kb = -1;
+    clearTimeout(lstTimer);
+    lstTimer = setTimeout(() => renderList(), 90);
+  };
+  // 虚拟滚动：滚动 / 窗口尺寸变化时只重画窗口内的行（窗口没变则什么都不做）
+  $('entryList').addEventListener('scroll', () => renderListWindow(false));
+  window.addEventListener('resize', () => renderListWindow(false));
   $('btnSort').onclick = () => {
     S.sort = { kind: 'name', name: 'key', key: 'kind' }[S.sort];
     toast('排序：' + { kind: '按类别', name: '按名称', key: '按 key' }[S.sort], '');
