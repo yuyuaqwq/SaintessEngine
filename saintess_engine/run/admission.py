@@ -26,6 +26,15 @@
    「校验中段先把东西扣掉、后面又拒绝」这类白扣，从形状上不可能发生。
 3. **判定与措辞分离**：`check` 只说通过与否，`reason` 负责怎么说 —— 换个游戏只换措辞。
 
+**两种准入语义**（`mode=`）：
+
+| mode | 含义 | 判定 |
+|---|---|---|
+| `"all"`（默认） | **全部满足才放行**（多重门槛：人数 + 钥匙 + 位置…） | 首拒即返 |
+| `"any"` | **任一满足即放行**（多条放行通道：接了任务 / 有钥匙 / 已通关） | 首个通过即止 |
+
+`any` 模式全不通过时，拒绝理由取链级 `reason`（给了就用），否则取**最后一条**规则的理由。
+
 `check(ctx)` 的返回值约定：
 
 | 返回 | 语义 |
@@ -120,14 +129,23 @@ class Verdict:
 
 
 class Admission:
-    """一条有序准入链。构造后规则表不可变（`rules` 是 tuple）。"""
+    """一条有序准入链。构造后规则表不可变（`rules` 是 tuple）。
 
-    __slots__ = ("name", "rules", "on_pass")
+    :param mode: `"all"`（默认，全过才放行，首拒即返）| `"any"`（任一通过即放行）
+    :param reason: 链级拒绝措辞（主要给 `any` 模式用；str 或 `callable(ctx)`）
+    """
 
-    def __init__(self, rules: Sequence[Rule], *, name: str = "", on_pass=None) -> None:
+    __slots__ = ("name", "rules", "on_pass", "mode", "reason")
+
+    def __init__(self, rules: Sequence[Rule], *, name: str = "", on_pass=None,
+                 mode: str = "all", reason="") -> None:
+        if mode not in ("all", "any"):
+            raise ValueError(f"mode 只能是 'all' 或 'any'，收到 {mode!r}")
         self.name = name
         self.rules = tuple(rules or ())
         self.on_pass = on_pass      # 全过（含 consume）之后调一次
+        self.mode = mode
+        self.reason = reason        # 链级措辞（any 模式全不过时用）
 
     def __len__(self) -> int:
         return len(self.rules)
@@ -136,7 +154,9 @@ class Admission:
         return tuple(r.name for r in self.rules)
 
     def check(self, ctx=None) -> Verdict:
-        """跑一遍链：**首拒即返**，全过才执行 `consume`（各一次，按声明序）。"""
+        """跑一遍链。`all`：首拒即返、全过才执行 `consume`；`any`：首个通过即止。"""
+        if self.mode == "any":
+            return self._check_any(ctx)
         trace = []
         denied = None
         for i, rule in enumerate(self.rules):
@@ -155,6 +175,27 @@ class Admission:
         if self.on_pass is not None:
             self.on_pass(ctx)
         return Verdict(True, None, "", ctx, tuple(trace), True)
+
+    def _check_any(self, ctx=None) -> Verdict:
+        """任一通过即放行：按序判，首个通过即止；全不过 → 链级 reason / 末条规则 reason。"""
+        trace = []
+        last_reason = ""
+        for i, rule in enumerate(self.rules):
+            status, reason = rule.evaluate(ctx)
+            trace.append((rule.name, status, reason))
+            if status == PASS:
+                trace.extend((r.name, SKIP, "") for r in self.rules[i + 1:])
+                if rule.consume is not None:
+                    rule.consume(ctx)
+                if self.on_pass is not None:
+                    self.on_pass(ctx)
+                return Verdict(True, None, "", ctx, tuple(trace), rule.consume is not None)
+            last_reason = reason or last_reason
+        _r = self.reason
+        if callable(_r):
+            _r = _r(ctx)
+        return Verdict(False, None, ("" if _r is None else str(_r)) or last_reason,
+                       ctx, tuple(trace), False)
 
     def audit(self):
         """结构自检 → 问题列表（空列表 = 干净）。只报不改。"""

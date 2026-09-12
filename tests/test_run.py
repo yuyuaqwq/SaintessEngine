@@ -137,6 +137,46 @@ def t2_consume():
 
 
 # ---------------------------------------------------------------- 3 审计
+def t2b_any_mode():
+    print("\n[2b] ★ any 模式：任一满足即放行（多条放行通道）")
+    seen = []
+
+    def mk(name, ok):
+        def _c(ctx):
+            seen.append(name)
+            return ok
+        return Rule(name, check=_c, reason=f"{name} 不满足")
+
+    seen.clear()
+    v = Admission([mk("a", False), mk("b", True), mk("c", True)],
+                  mode="any", reason="都不满足").check({})
+    check("任一通过 → ok=True", v.ok and v.rule is None and v.reason == "")
+    check("★ 首个通过即止（后面的不再判）", seen == ["a", "b"], str(seen))
+    check("trace 把后面的记成 skip", v.trace == (("a", DENY, "a 不满足"), ("b", PASS, ""),
+                                                ("c", SKIP, "")), str(v.trace))
+    seen.clear()
+    v2 = Admission([mk("a", False), mk("b", False)], mode="any", reason="都不满足").check({})
+    check("全不过 → 用链级 reason", (not v2.ok) and v2.reason == "都不满足", repr(v2))
+    check("全不过 → 所有规则都判过", seen == ["a", "b"], str(seen))
+    v3 = Admission([mk("a", False), mk("b", False)], mode="any").check({})
+    check("没给链级 reason → 取末条规则的理由", v3.reason == "b 不满足", repr(v3.reason))
+    hits = []
+    Admission([Rule("k", check=lambda c: True, consume=lambda c: hits.append(1))],
+              mode="any").check({})
+    check("any 模式：通过那条规则的 consume 执行一次", hits == [1], str(hits))
+    hits.clear()
+    Admission([Rule("k", check=lambda c: False, consume=lambda c: hits.append(1))],
+              mode="any").check({})
+    check("any 模式：未通过的规则不执行 consume", hits == [], str(hits))
+    check("any 空链 → 拒绝且理由为空串（不谎报放行）",
+          Admission([], mode="any").check({}).ok is False)
+    try:
+        Admission([], mode="xor")
+        check("非法 mode → 报错", False)
+    except ValueError:
+        check("非法 mode → 报错", True)
+
+
 def t3_audit():
     print("\n[3] 准入链结构自检（只报不改）")
     check("空链 → 报「空链」", Admission([]).audit() and "空链" in Admission([]).audit()[0])
@@ -353,6 +393,7 @@ def main():
     print("== run 门禁：准入链 / 进度 / 名单 / 零知识 ==")
     t1_admission()
     t2_consume()
+    t2b_any_mode()
     t3_audit()
     t4_progress()
     t5_budget()
