@@ -1,0 +1,45 @@
+{
+  "gather_field_low": {
+    "type": "weighted",
+    "desc": "示例：低级采集（带权 + 等级窗口 + 抽空兜底）",
+    "entries": [
+      {"item": "mat_herb", "w": 5, "n": 1},
+      {"item": "mat_fiber", "w": 3, "n": [1, 2]},
+      {"item": "equip_blade", "w": 1, "min_lv": 20}
+    ],
+    "fallback": "mat_herb"
+  },
+  "gather_field_high": {
+    "type": "weighted",
+    "desc": "示例：高级采集（同一张池表里按等级窗口分档的高档池）",
+    "entries": [
+      {"item": "mat_ore", "w": 4, "n": [1, 2]},
+      {"item": "equip_plate", "w": 1, "min_lv": 30, "max_lv": 60}
+    ]
+  },
+  "chest_common_fixed": {
+    "type": "fixed",
+    "desc": "示例：必掉清单（全给，占比不适用）",
+    "entries": [
+      {"item": "mat_herb", "n": 3},
+      {"item": "consume_tea", "n": 1}
+    ]
+  },
+  "chest_choice": {
+    "type": "table_choice",
+    "desc": "示例：互斥档（累计 cutoff，一次只进一档）",
+    "rolls": [
+      {"pool": "gather_field_low", "cutoff": 0.6, "n": [1, 2], "fallback": "mat_herb"},
+      {"pool": "gather_field_high", "cutoff": 0.3},
+      {"pool": "chest_common_fixed", "cutoff": 0.1}
+    ]
+  },
+  "chest_layered": {
+    "type": "table",
+    "desc": "示例：多层概率表（每行独立判定 chance）",
+    "rolls": [
+      {"pool": "chest_common_fixed", "chance": 1.0},
+      {"pool": "gather_field_high", "chance": 0.3, "n": 2, "fallback": "mat_herb"}
+    ]
+  }
+}

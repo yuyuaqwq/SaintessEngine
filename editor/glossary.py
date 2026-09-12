@@ -344,12 +344,47 @@ _MAPS = {
              "ref": ("reference/space.md", "roles")},
 }
 
+# ───────────────────────────────────────────────────────────────────── 掉落池（随机产出形状）
+# 语义出处：`docs/engine-wiki/reference/loot.md`（引擎侧 `LootTable` 的池 / 策略 / 展开 / 审计）。
+# 注意：本域**不做引用解析**（resolver 由内容侧给）—— 注脚凡是涉及「这条产出是什么」的地方，
+# 都只说「内容侧解释」，不替它编答案。
+_DROP_POOLS = {
+    "type": {"zh": "策略名", "note": "怎么从这个池里取：内置 `weighted`（按 w 抽样）/ `fixed`（全给）/ `table`（每行独立判定 chance）/ `table_choice`（互斥档 cutoff）。**自由串，不设枚举** —— 内容侧可 `register_strategy` 注册自己的策略名（如按内容做的专属策略）；未注册的名字引擎按 `weighted` 兜底，编辑器预览会就此给警告。",
+             "ref": ("reference/loot.md", "register_strategy")},
+    "entries": {"zh": "条目表", "note": "条目表（`weighted` / `fixed` 型池用）：每项 {item, w, n, min_lv, max_lv}。`weighted` 按 w 加权抽；`fixed` 是必掉清单，全给。",
+                "ref": ("reference/loot.md", "entries[{item,w,n,min_lv,max_lv}]")},
+    "rolls": {"zh": "抽行表", "note": "抽行表（`table` / `table_choice` 型池用）：每行 {pool, chance, cutoff, n, fallback, fallback_n}。行里的 pool 指向**子池**（递归走它自己的策略）或内容侧引用。",
+              "ref": ("reference/loot.md", "rolls")},
+    "fallback": {"zh": "兜底产出", "note": "抽空时的兜底：条目表型池在候选被等级窗口滤空时调 `ctx.fallback_roll` 钩子；roll 行在子池/引用抽空时改抽这一条的 fallback（份数用 fallback_n）。**没声明 = 抽空就是空**（零默认值）。",
+                 "ref": ("reference/loot.md", "fallback")},
+    "desc": {"zh": "说明", "note": "说明（编辑器/文档用）。本域 schema 不强制长度，可留空。", "ref": None},
+    "item": {"zh": "产出引用", "note": "产出引用串：**写法由内容侧定**（前缀、id 形态都是内容词汇）。引擎不认识它 —— `resolver(ref, ctx)` 由内容侧提供；编辑器预览只显示结构与权重，**不假装知道这是哪件物品**。",
+             "ref": ("reference/loot.md", "item")},
+    "w": {"zh": "权重", "note": "相对权重（**不是**概率）。`weighted` 型按它对条目加权抽样；缺省 1。占比 = 本行 w ÷ 池内权重和（预览里的 share）。**权重和 ≤ 0 = 谁都抽不到**（审计报「空池」）。",
+          "ref": ("reference/loot.md", "weight")},
+    "n": {"zh": "份数", "note": "出多少份：整数，或 `[min,max]` 闭区间（区间取随机 —— 由 `roll_range` 解释，随机源可注入所以可复现）。缺省 1。",
+          "ref": ("reference/loot.md", "roll_range")},
+    "min_lv": {"zh": "等级下限", "note": "等级窗口下限：上下文等级（`player_level` / `monster_lv`）低于它 → 该条**不进候选**。上下文等级为 0（未给）视为不做窗口判断。⚠ 预览没有上下文，占比是按全量权重算的。",
+               "ref": ("reference/loot.md", "min_lv")},
+    "max_lv": {"zh": "等级上限", "note": "等级窗口上限：上下文等级高于它 → 该条不进候选。其余与 min_lv 同。",
+               "ref": ("reference/loot.md", "max_lv")},
+    "pool": {"zh": "子池 / 引用", "note": "子池 key（本域数据里的另一个池）**或**内容侧引用串。是子池 → 递归走它自己的策略；否则交给内容侧 resolver。两侧都不是 → 审计报「断链」。",
+             "ref": ("reference/loot.md", "子池")},
+    "chance": {"zh": "命中概率", "note": "0~1。`table`：每行独立判定，不中即跳过。`table_choice`：整表**没有任何 cutoff** 时，按声明序取首个命中的行；全不中 → 空。",
+               "ref": ("reference/loot.md", "chance")},
+    "cutoff": {"zh": "累计档边", "note": "0~1 的**累计**概率档边。整表只要出现任一 cutoff，就整体走互斥档语义：按声明序累加，首个 acc > roll 者中选，**一次只进一档**；末档会在累计不足 1.0 时容错兜底（引擎不为小瑕疵吞奖励）。",
+               "ref": ("reference/loot.md", "cutoff")},
+    "fallback_n": {"zh": "兜底份数", "note": "走 `fallback` 时的份数；缺省 = 本行 `n` 的份数。",
+                   "ref": ("reference/loot.md", "fallback_n")},
+}
+
 GLOSSARY = {
     "*": _COMMON,
     "commands": _COMMANDS,
     "texts": _TEXTS,
     "tlogs": _TLOGS,
     "maps": _MAPS,
+    "drop_pools": _DROP_POOLS,
     "skills": _SKILLS,
     "monsters": _MONSTERS,
     "affixes": _AFFIXES,
@@ -429,6 +464,16 @@ GROUPS = {
         {"id": "graph", "label": "节点与连通", "icon": "🗺",
          "fields": ["nodes", "links", "id", "role"]},
     ],
+    "drop_pools": [
+        {"id": "base", "label": "池与策略", "icon": "📌",
+         "fields": ["type", "desc", "fallback"]},
+        {"id": "entries", "label": "条目表（按权重 / 必掉）", "icon": "🎲",
+         "fields": ["entries", "item", "w", "n"]},
+        {"id": "rolls", "label": "抽行表（多层 / 互斥档）", "icon": "🎯",
+         "fields": ["rolls", "pool", "chance", "cutoff", "fallback_n"]},
+        {"id": "window", "label": "等级窗口", "icon": "🪜",
+         "fields": ["min_lv", "max_lv"]},
+    ],
     "affixes": [
         {"id": "base", "label": "基础", "icon": "📌",
          "fields": ["name", "desc", "kind", "line"]},
@@ -502,7 +547,7 @@ WIDGETS = {
     # 一行一条的字符串数组
     "exprs": "lines", "maps": "lines", "qualities": "chips",
     # 0~1 的比值
-    "chance": "pct", "mech_chance": "pct", "lifesteal": "pct",
+    "chance": "pct", "mech_chance": "pct", "lifesteal": "pct", "cutoff": "pct",
     "guard_hp_pct": "pct", "heal_pct": "pct", "overload_heal_pct": "pct",
 }
 
@@ -572,6 +617,7 @@ DOMAIN_SCHEMA = {
     "commands": "command.schema.json", "texts": "text.schema.json",
     "tlogs": "tlog.schema.json",
     "maps": "maps.schema.json",
+    "drop_pools": "drop_pools.schema.json",
 }
 
 # ───────────────────────────────────────────────────────────────────────── 查询

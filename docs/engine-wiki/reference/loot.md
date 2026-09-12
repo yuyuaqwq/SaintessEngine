@@ -63,6 +63,10 @@ t.audit()                                # {issues, pool_count, entry_count, ok}
   不再像旧实现那样把 `ptype in ("weighted","fish")` 写死。
 * **内容侧绑定**（引擎零知识）：`resolver(ref, ctx)` 把引用解析成实物（引擎只调它，不认识前缀）；
   `inline_prefixes` / `pool_key_prefixes` / `special_refs` 是**内容词汇表**。
+* **审计的判定与措辞也由内容侧给**：`audit(resolvable=…)` 里 `resolvable(ref, pool)` 返回
+  `True`（解得开）/ `False`（断链，引擎给通用措辞）/ **字符串**（断链，且**这句**就是措辞 ——
+  内容侧用自己的词汇表说话，如「物品缺失 / 名册缺失 / 子池缺失」）/ `None`（这条引用内容侧自己管，不判）。
+  这样引擎不必知道"哪类引用该怎么称呼"，也不会出现「引擎报一句、内容再改写成另一句」的字符串兼容壳。
 * `ctx` 是个宽容袋子（`SimpleCtx`：缺属性 → None；`hooks` 恒为 dict）。
   `roll(key, ctx, **kw)`：`ctx` 与 `kw` 都给 → **就地 `setattr` 到 ctx**（与参考实现一致，别改）。
 * 策略抛错：默认吞掉返回 `[]`（"优雅跳过"，旧行为）；`strict=True` 抛出来（迁移期排查用）。
@@ -113,6 +117,7 @@ draw_slots(pool_ids, 3, fixed=("series_mark",), no_dup=True, rng=rng)  # 固定�
 | `roll_range` | `loot/pick.py:116` | `int` / `[a,b]` / `None` → 数量 |
 | `weigh` / `total_weight` | `loot/pick.py:32` / `:37` | 权重列表 / 权重和 |
 | `LootTable` | `loot/pool.py:200` | 池 + 策略；`roll` `:306` / `expand` `:324` / `audit` `:334` / `audit_pretty` `:399` |
+| `LootTable.audit(resolvable=…)` 的判定回调 | `loot/pool.py:380` | `resolvable(ref, pool)` → `True` / `False` / **措辞字符串** / `None` |
 | `LootTable.roll_sub` / `roll_cfg` | `loot/pool.py:282` / `:271` | 子池/引用抽取 / 抽一行 roll（自定义策略也用得上） |
 | `LootTable.fallback` / `sub_ctx` | `loot/pool.py:260` / `:251` | 兜底钩子 / 子上下文（qty 覆盖） |
 | `register_strategy` / `strategy_names` | `loot/pool.py:47` / `:63` | 策略注册（`uses`/`needs_weights`/`expand` 元数据） |

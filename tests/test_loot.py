@@ -236,10 +236,20 @@ def t5_expand_audit():
     check("审计：池数 / 条目数 / ok",
           au["pool_count"] == len(pools) and au["ok"] is False and isinstance(au["entry_count"], int))
     clean = _tbl({"w": pools["w"]}, resolver=lambda ref, ctx: {"type": "item", "item_id": ref})
-    check("审计：干净池 → ok=True 且 issues 空", clean.audit()["ok"] is True
-          and clean.audit()["issues"] == [])
+    check("审计：干净池 → ok=True 且 issues 空",
+          clean.audit(resolvable=lambda ref, pool: True)["ok"] is True
+          and clean.audit(resolvable=lambda ref, pool: True)["issues"] == [])
     check("审计：resolvable 返回 None 时不判（内容侧自己管）",
-          _tbl({"w": pools["w"]}, resolver=lambda r, c: None).audit()["ok"] is True)
+          _tbl({"w": pools["w"]}, resolver=lambda r, c: None)
+          .audit(resolvable=lambda ref, pool: None)["ok"] is True)
+    check("★ 审计：resolvable 给字符串 → 就用它当措辞（内容侧自己的词汇表说话）",
+          any(m == "物品缺失: a" for l, k, m in
+              _tbl({"w": pools["w"]}, resolver=lambda r, c: None)
+              .audit(resolvable=lambda ref, pool: f"物品缺失: {ref}")["issues"]))
+    check("审计：回调收到的是 (ref, pool) 两个参数（pool 能给上下文）",
+          _tbl({"w": pools["w"]}, resolver=lambda r, c: None)
+          .audit(resolvable=lambda ref, pool: (pool or {}).get("type") == "weighted"
+                 or "池类型不对")["ok"] is True)
     check("audit_pretty 出字符串", "掉落池审计" in clean.audit_pretty())
 
 

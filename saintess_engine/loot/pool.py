@@ -334,8 +334,11 @@ class LootTable:
     def audit(self, *, resolvable=None, pool_of=None) -> dict:
         """结构审计：断链 / 空池 / 权重和 / 子池缺失。
 
-        * `resolvable(ref) -> True|False|None` —— **内容侧提供的引用判定**（引擎不认识前缀）；
-          返回 None 表示"这条引用内容侧自己管，不判"
+        * `resolvable(ref, pool) -> True | False | None | str` —— **内容侧提供的引用判定**
+          （引擎不认识前缀/取值）：
+          `True` 解得开；`False` 断链（引擎给通用措辞）；
+          **字符串 = 断链且用这句措辞**（内容侧自己的词汇表说话："物品缺失 / 名册缺失 / 子池缺失"）；
+          `None` = 这条引用内容侧自己管，不判
         * `pool_of(key) -> dict|None` —— 覆盖池查找（默认用本表的池集合，含前缀剥离）
 
         返回 `{"issues": [(级别, 池key, 描述)], "pool_count": N, "entry_count": M, "ok": bool}`
@@ -353,7 +356,7 @@ class LootTable:
                     if not ref:
                         issues.append(("断链", pool_key, f"条目缺 item 字段: {e}"))
                         continue
-                    self._audit_ref(ref, pool_key, issues, resolvable)
+                    self._audit_ref(ref, pool_key, pool, issues, resolvable)
                 if not entries:
                     issues.append(("空池", pool_key, "entries 为空"))
                 if spec.get("needs_weights"):
@@ -372,13 +375,17 @@ class LootTable:
                         continue
                     # roll 的 pool 字段是「子池 key 或引用」：两者都不是 → 断链
                     # （参考实现同样把"既不在池表、也不是内联引用/特殊值"的 roll 判为断链）
-                    self._audit_ref(sub, pool_key, issues, resolvable, strict=True)
+                    self._audit_ref(sub, pool_key, pool, issues, resolvable, strict=True)
         return {"issues": issues, "pool_count": len(pools),
                 "entry_count": sum(len((p.get("entries") or [])) for p in pools.values()),
                 "ok": not issues}
 
-    def _audit_ref(self, ref, pool_key, issues, resolvable, *, strict: bool = False):
-        """引用审计。`strict=True`（roll 的子池字段用）：解析器说"不认识"也算断链。"""
+    def _audit_ref(self, ref, pool_key, pool, issues, resolvable, *, strict: bool = False):
+        """引用审计。
+
+        * `strict=True`（roll 的子池字段用）：回调说"不认识"（`None`）也算断链
+        * 回调返回**字符串** → 用它当措辞（内容侧自己的词汇表说话，引擎不猜）
+        """
         if ref in self.special_refs:
             return
         if isinstance(ref, str) and ref.startswith(self.inline_prefixes):
@@ -390,9 +397,12 @@ class LootTable:
                 issues.append(("断链", pool_key, f"子池/引用未知: {ref}"))
             return
         try:
-            verdict = resolvable(ref)
+            verdict = resolvable(ref, pool)
         except Exception:                                     # noqa: BLE001
             verdict = None
+        if isinstance(verdict, str) and verdict:
+            issues.append(("断链", pool_key, verdict))
+            return
         if verdict is False or (strict and verdict is None):
             issues.append(("断链", pool_key, f"引用无法解析: {ref}"))
 

@@ -63,6 +63,11 @@ DOMAINS = {
     # 不给数据 = 不影响任何东西（引擎侧读的是内容自有的地图数据，不读这张表）。
     "maps":     {"label": "地图",   "kind": "data",  "schema": "maps.schema.json",
                  "primary": "map", "icon": "🗺"},
+    # 随机产出形状：`saintess_engine.loot.LootTable` 消费（池 + 策略 + 引用解析由内容侧给）。
+    # 引擎零知识：策略名是自由串（内容侧可注册自己的），引用前缀/具体产出全在内容侧。
+    # 预览走 `editor/loot_view.py`（引擎同一份 expand/audit 代码算，见该文件）。
+    "drop_pools": {"label": "掉落池", "kind": "data", "schema": "drop_pools.schema.json",
+                   "primary": "pool", "icon": "🎁"},
 }
 
 
