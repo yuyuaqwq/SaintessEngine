@@ -20,10 +20,23 @@
 A. **结构性**（零假阳性）：`schemas/*.json` 任何 `enum` 的取值不得含非 ASCII 字符
    —— 中文枚举值基本等同「某个游戏的内容分类」。
 B. **词表**：下列文件集不得出现 `GAME_TERMS` 里的词
-   —— `saintess_engine/`（含全部子模块） `schemas/` `editor/` `examples/` `games/`
+   —— `saintess_engine/`（含全部子模块） `schemas/` `editor/` `examples/`
    （**不含** `docs/`：引擎 wiki 会以「参考实现」的身份正当地提到那只游戏；
-     **不含** `tests/`：本文件自身持有词表）
+     **不含** `tests/`：本文件自身持有词表；
+     **不含** `games/`：那是**内容包的落脚处**，按设计就该带游戏身份 —— 见文末「为什么把 games/ 移出扫描」）
 C. `schemas/*.json` 的 `$id` 不得含游戏名。
+
+为什么把 `games/` 移出扫描（2026-09-12 决定）
+--------------------------------------------
+原来扫 `games/` 是因为那里只放**框架自带的演示包**（`my_game`，全英文 id）。
+现在框架仓按设计要长期放**真实游戏的导出包**（`games/orlandia` = 《奥兰迪亚》导出包，
+规格见 `docs/engine-wiki/reference/package-format.md`）—— 内容包**天然带游戏身份**，
+扫它等于「每接一款新游戏都要动一次门禁」，而门禁本身又明令不许为变绿而扩白名单。
+
+要守的东西一处没少：**框架层不得有游戏身份** —— 引擎（`saintess_engine/`）、
+契约（`schemas/`）、工具（`editor/`）、随包示例（`examples/`）四处照旧全扫。
+`games/` 该守的是「包的结构合规」（`game.json` 清单 / 声明的域 / 引擎版本门槛），
+那由 `tests/test_editor_dist.py` 与包导入闸负责，不是词表门禁的活。
 
 词表出处（可复现）
 ------------------
@@ -42,7 +55,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
-SCAN_DIRS = ("saintess_engine", "schemas", "editor", "examples", "games")
+SCAN_DIRS = ("saintess_engine", "schemas", "editor", "examples")
 SCAN_EXT = (".py", ".json", ".js", ".html")
 
 # 游戏身份词（反查自游戏侧数据；框架层不得出现）
