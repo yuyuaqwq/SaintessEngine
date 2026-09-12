@@ -149,6 +149,18 @@ def main():
 
     bad, dyn, n = scan()
     check("扫描到包内 .py 文件（≥30）", n >= 30, f"n={n}")
+
+    # 幽灵目录：删掉源文件后残留的 __pycache__ 会让「包目录数」虚高
+    # （2026-09-12 实测：模块化重排后 support/ 只剩 .pyc，导致 wiki 数字门禁红，
+    #   更危险的是它可被 Python 当命名空间包导入 → 幽灵 import 路径）
+    ghosts = []
+    for name in sorted(os.listdir(ENGINE_DIR)):
+        d = os.path.join(ENGINE_DIR, name)
+        if (os.path.isdir(d) and name != "__pycache__"
+                and not os.path.exists(os.path.join(d, "__init__.py"))):
+            ghosts.append(name)
+    check("包内无幽灵子目录（每个子目录都有 __init__.py）", not ghosts,
+          f"残留={ghosts}（无源文件的目录应整个删掉）")
     check("零非标准库绝对 import（可分发性闸门）", not bad,
           "\n      " + "\n      ".join(bad))
     check("零动态导入穿透（importlib/__import__ 指向外部包）", not dyn,
