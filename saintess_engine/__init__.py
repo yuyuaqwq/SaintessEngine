@@ -15,6 +15,7 @@
             events/      领域事件总线
             clock/       懒计时器
             log/         日志门面（命名 / 可拔插出口 sink / 结构化上下文）
+            tlog/        结构化流水（Record / KindTable / sink / 读口 / 重放 / 事件桥）
             container/   容量受限格子容器
             session/     宿主会话适配
 
@@ -45,11 +46,13 @@ from .battle import (  # noqa: F401
     landing, schedule, serialize, state_effects, stats,
 )
 from . import (  # noqa: F401
-    clock, command, container, events, expr, formation, gauge, kinds, log, session, store, text,
+    clock, command, container, events, expr, formation, gauge, kinds, log, session, store, text, tlog,
 )
 # 指令声明 / 文案表（声明驱动：可拔插，未装载 = 零行为）
 from .command import CommandRegistry, CommandSpec  # noqa: F401
 from .text import TextSpec, TextTable, safe_format  # noqa: F401
+# 结构化流水（声明驱动：KindTable 未装载 = 不校验）
+from .tlog import KindTable, Record, TLog  # noqa: F401
 
 __all__ = [
     # 版本
@@ -78,7 +81,8 @@ __all__ = [
     "battle", "actions", "actors", "ai", "effect_triggers", "effects", "formulas",
     "landing", "schedule", "serialize", "state_effects",
     "expr", "gauge", "formation", "kinds",
-    "store", "command", "events", "clock", "log", "container", "session", "text",
-    # 声明驱动（指令 / 文案）
+    "store", "command", "events", "clock", "log", "tlog", "container", "session", "text",
+    # 声明驱动（指令 / 文案 / 流水）
     "CommandRegistry", "CommandSpec", "TextTable", "TextSpec", "safe_format",
+    "TLog", "Record", "KindTable",
 ]

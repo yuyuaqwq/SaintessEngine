@@ -55,6 +55,10 @@ DOMAINS = {
                  "primary": "command", "icon": "⌨️"},
     "texts":    {"label": "文案",   "kind": "data",  "schema": "text.schema.json",
                  "primary": "text_entry", "icon": "💬"},
+    # 结构化流水声明：`saintess_engine.tlog.KindTable` 消费（「哪个 kind 有哪些字段」）。
+    # 不填这张表 = 不做校验（零行为）。
+    "tlogs":    {"label": "流水声明", "kind": "data", "schema": "tlog.schema.json",
+                 "primary": "tlog_entry", "icon": "🧾"},
 }
 
 

@@ -26,7 +26,7 @@
 **⚠️ 搬一块就要搬干净**：引擎只留骨架、内容侧只留适配与内容、门禁锁住两边。
 半搬 = 制造新的双源（同一个语义在两处各写一份，早晚漂移）。
 
-已建成的形状示例 → [log.md](log.md)、[declarative-commands-and-texts.md](declarative-commands-and-texts.md)、
+已建成的形状示例 → [log.md](log.md)、[tlog.md](tlog.md)、[declarative-commands-and-texts.md](declarative-commands-and-texts.md)、
 [../concepts/declaration-tables.md](../concepts/declaration-tables.md)。
 
 ---
@@ -40,7 +40,7 @@
 |---|---|---|---|---|
 | 1 | **`log` 日志门面** —— ✅ **框架侧已建成**（2026-09-12，[log.md](log.md)）：引擎 4 处历史写法已收敛，验收第三项（内容侧接入选门面出口）在游戏仓 | 新建形状 | — | 不调 `configure` 时行为与现状**逐字一致**；随包 3 个 sink；内容侧 logger 名收敛到 1 处 |
 | 2 | 补齐 3 个数值门禁 —— ✅ **已建成**（2026-09-12，游戏仓 `959d962`）：三个门禁建齐、数值门禁 18/18 无跳过项；**另修好了它们的底座断链**（`tests/numeric_sim.py` 误归档 + 旧包装层签名，详见游戏仓 `docs/NUMERIC_TEST.md` §工具链修复记录） | 补门禁 | — | 胜率矩阵 / CTB 频率 / 装备依赖 从「跳过」变「真跑」 |
-| 3 | **`tlog` 结构化流水** | 新建形状 | #1（复用 Sink 协议） | `Record`/`Sink`/`Reader`/`Replay` 骨架 + `tlogs` 域进编辑器；0 sink = 零行为；JSONL 往返读回一致 |
+| 3 | **`tlog` 结构化流水** —— ✅ **已建成**（2026-09-12，本次提交，[tlog.md](tlog.md)）：`Record`/`KindTable`/`Sink`/`JSONLSink`/`Reader`/`Replay`/`EventLogBridge` + **`tlogs` 域进编辑器**（schema + 字段分组）；门禁 `tests/test_tlog.py` 65 断言 | 新建形状 | #1（复用 Sink 协议） | `Record`/`Sink`/`Reader`/`Replay` 骨架 + `tlogs` 域进编辑器；0 sink = 零行为；JSONL 往返读回一致 |
 | 4 | `tlog` 落地：战斗流水 | 下游落地 | #3 | 打完一场 → 完整流水 → **能回放复现同一场** |
 | 5 | `tlog` 落地：行为流水 | 下游落地 | #3 | 任务/交易/掉落流水落库；分析脚本能出「某玩家某段流水」 |
 | 6 | 地图形状 → 引擎 | 搬形状 | — | 派生/邻接/出口匹配独立于具体地图数据；配 `maps` 域 → 编辑器能画地图 |
@@ -94,11 +94,16 @@ configure(level="INFO", fmt="%(asctime)s %(levelname)s %(name)s %(message)s",
 from saintess_engine.tlog import TLog, Record
 
 tl = TLog(sinks=[JSONLSink("run/tlog.jsonl")])   # 0 个 sink = 零行为
-tl.emit("battle.hit", actor="p1", subject="e1", dmg=34, kind="phys", crit=False)
+tl.emit("battle.hit", actor="p1", subject="e1", dmg=34, crit=False)
+tl.emit("battle.hit", actor="p1", fields={"kind": "phys"}, dmg=34)   # 字段叫 kind 时走 fields=
 tl.emit("quest.accept", actor="p1", quest="Q17")
 
 for r in tl.reader().iter_records(kind="battle.hit", actor="p1", since=t0): ...
 ```
+
+> ⚠️ `emit(第一个参数=记录的 kind, actor=…, tags=…, **字段)`；**字段名与保留参数
+> （`kind`/`actor`/`tags`/`fields`）撞名时用 `fields={...}` 显式传** —— 否则会
+> `TypeError: got multiple values for argument 'kind'`（写文档示例时踩到过）。
 
 | 形状 | 说明 |
 |---|---|

@@ -317,10 +317,19 @@ _TEXTS = {
     "params": {"zh": "占位符声明", "note": "声明的占位符名；缺省由模板自动抽取。声明后会与模板比对（多/少都报）。"},
 }
 
+_TLOGS = {
+    "kind": {"zh": "流水标识", "note": "点分命名（如 battle.hit）；**表形态里以对象 key 为准**。读的人按它筛（`Reader.iter_records(kind=…)`，`battle.` 这种点结尾写法匹配整族）。"},
+    "fields": {"zh": "字段清单", "note": "该 kind 携带的字段名。声明后 `TLog(strict=True)` 会按它拦「多字段 / 少字段」；分析侧按它取数。"},
+    "desc": {"zh": "说明", "note": "编辑器/文档用。"},
+    "category": {"zh": "分类", "note": "编辑器分组用；取值由内容侧定义（框架不设枚举）。"},
+    "tags": {"zh": "惯用标签", "note": "该 kind 常用标签（约定，不强制）；记录里的 tags 用来粗筛。"},
+}
+
 GLOSSARY = {
     "*": _COMMON,
     "commands": _COMMANDS,
     "texts": _TEXTS,
+    "tlogs": _TLOGS,
     "skills": _SKILLS,
     "monsters": _MONSTERS,
     "affixes": _AFFIXES,
@@ -383,6 +392,14 @@ GROUPS = {
          "fields": ["desc", "category"]},
         {"id": "slots", "label": "占位符", "icon": "🧩",
          "fields": ["params"]},
+    ],
+    "tlogs": [
+        {"id": "base", "label": "基础", "icon": "📌",
+         "fields": ["kind", "desc"]},
+        {"id": "data", "label": "字段清单", "icon": "🧩",
+         "fields": ["fields"]},
+        {"id": "doc", "label": "分类与标签", "icon": "🗂",
+         "fields": ["category", "tags"]},
     ],
     "affixes": [
         {"id": "base", "label": "基础", "icon": "📌",
@@ -525,6 +542,7 @@ DOMAIN_SCHEMA = {
     "affixes": "affix.schema.json", "items": "item.schema.json",
     "effect_rules": "effect_rules.schema.json", "passive_proc": "passive_proc.schema.json",
     "commands": "command.schema.json", "texts": "text.schema.json",
+    "tlogs": "tlog.schema.json",
 }
 
 # ───────────────────────────────────────────────────────────────────────── 查询
