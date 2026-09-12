@@ -5,8 +5,13 @@
   "engine": ">=0.1",
   "domains": [
     "classes",
+    "commands",
+    "effect_rules",
     "items",
-    "skills"
+    "monsters",
+    "passive_proc",
+    "skills",
+    "tlogs"
   ],
   "created": "2026-09-12"
 }
