@@ -14,11 +14,12 @@
 > 它是本框架的**参考实现 + 压力测试**，不是本框架的一部分。
 > 下方未显式标注「游戏仓」的路径，均指**框架仓**。
 
-- 引擎目录：`saintess_engine/`（**15** 个子包 + **2** 个顶层模块；共 **54** 个 `.py` / **9 684** 行）
+- 引擎目录：`saintess_engine/`（**16** 个子包 + **2** 个顶层模块；共 **59** 个 `.py` / **10 518** 行）
   —— 数字由 `tests/test_editor_wiki.py` 逐项对照磁盘锁定，改模块结构必同步（否则门禁红）
 - 路线图（待建形状 / 待搬骨架 / `log`·`tlog` 设计）：[reference/roadmap.md](reference/roadmap.md)
 - 已建成的形状（**可拔插**，不配 = 不存在）：[reference/log.md](reference/log.md)（日志门面）·
-  [reference/tlog.md](reference/tlog.md)（结构化流水）· [reference/space.md](reference/space.md)（空间形状）
+  [reference/tlog.md](reference/tlog.md)（结构化流水）· [reference/space.md](reference/space.md)（空间形状）·
+  [reference/loot.md](reference/loot.md)（随机产出：掉落池 / 档位阶梯 / 槽位挂载）
 - 纯度门禁：`tests/test_engine_purity.py`（AST 静态断言：引擎零「引擎→内容」import 边）
 - 参考实现（**游戏仓 `dragonfall` 侧**）：《奥兰迪亚》内容侧（`game/data/battle_rules.py` + `game/services/`）
   —— 本 wiki **不**把它当规范，只当「可粘贴的真实声明样例」的来源

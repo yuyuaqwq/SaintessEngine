@@ -55,7 +55,7 @@ API_SYMBOLS = [
     "action_time", "initial_ct", "hostile_sides", "act_shield",
     "norm_stack", "effects", "heal_amount", "skill_pay_of", "make_actor",
     "get_effect_rules", "get_effect_actions",
-    "Space",
+    "Space", "LootTable", "TierTable",
 ]
 # 私有 → 公开的 5 个符号（旧下划线名保别名：模块全路径 → (公开名, 私有名)）
 # 注意：模块化重排后取自**真实模块**（`saintess_engine.battle.battle`），
