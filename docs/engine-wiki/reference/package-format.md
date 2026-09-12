@@ -149,3 +149,57 @@ JSON 由导出脚本生成，并由**同步门禁**断言「派生一致」；�
    （不带参数 = 全量旧行为），前端「先画第一页、其余后台续取」。门禁
    `tests/test_editor_large_package.py`（2000 条合成包：条数/分页并集/冷热阈值/缓存失效/搜索窗口切片）。
 4. **包的更新与用户数据**：包升级时玩家的存档/数据库如何迁移，尚无方案。
+
+---
+
+## 九、奥兰迪亚包：已进包 / 还没进包（2026-09-13 盘点）
+
+**已进包 16 个域 / 4080 条**（框架 `DOMAINS` 一个不缺）：`items` 900 / `equip_roster` 687 /
+`drop_pools` 596 / `pois` 457 / `monsters` 330 / `skills` 305 / `texts` 233 / `commands` 194 /
+`maps` 121 / `effect_rules` 85 / `affixes` 76 / `passive_proc` 42 / `instances` 27 / `tlogs` 18 /
+`classes` 8 / `loot_vocab` 1。清单与真源模块见 `games/orlandia/README.md`。
+
+### 9.1 需要**拍板**的一件（不是干活问题，是形状问题）
+
+**「怪物名册」的权威形状**。游戏侧的「怪物」不是一张表 —— 是散在 `subareas.py` / `instances.py` /
+`mesh_rooms_*.py` 的 **840 条六元组模板**（`[id, 中文名, role, lv, [技能id], [掉落名]]`，
+355 个唯一 id，**168 个 id 的 lv 跨表不一致**，10 个中文名对应两个 id）。两个候选：
+
+| 候选 | 做法 | 代价 |
+|---|---|---|
+| A. 六元组 → 对象表（键 = 怪 id） | 新建 `monster_roster` 域，条目 = `{id,name,role,lv,skills,drops}`；框架 schema 里已有 `monster_template` def 就是描述六元组的 | 要先定「同一个 id 在两处 lv 不同时以谁为准」（或如实保留 `lv_by_source`） |
+| B. 只建索引，不建名册 | 只导 `MONSTER_MODS`(140) + `HIDDEN_MONSTERS`(25) + 一张 `{中文名 → id}` 索引，供 `mon:`/`elite:` 按名引用解析 | 怪物本体仍不在包里，跨表引用只能解析到「名字对得上」的程度 |
+
+定了形状就能一次消掉 `instances` 的 148 条怪 id 悬空 + `drop_pools` 的 363 条按名引用。
+
+### 9.2 属「下一个域批次」的内容表（不影响当前包可用性）
+
+盘点把游戏仓 `game/data/*.py`（84 模块）里的主要内容表逐张评估了（完整表见
+`workspace/editor-large-package-next/overnight/package-inventory.md` §3），按家族归纳：
+
+| 家族 | 代表表（条数） | 建议 |
+|---|---|---|
+| 生产/配方 | `CRAFT_RECIPES`(426) · `ALCHEMY_RECIPES`(91) · `COOKING_RECIPES`(59) · `ENCHANT_RECIPES`(7) · `REFINE_*`(15) | 一个 `recipes` 域 |
+| 任务 | `MAIN_QUESTS`(70) · `SIDE_QUESTS`(144) · `DAILY_QUESTS`(24) · `WEEKLY_QUESTS`(12) | 一个 `quests` 域 |
+| 角色成长 | `ACHIEVEMENTS`(119) · `TITLES`(68) · `COLLECTION_BOOKS`(5) · `SKILL_UP`(305) | 按需拆分 |
+| 世界人物 | `NPCS`(362+47+22) · `DIALOGUES`(39) · `FACTIONS`(23) | `npcs` / `dialogues` / `factions` |
+| 事件/世界 | `EXPLORE_EVENTS`(146) · `DAILY_MAP_EVENTS`(20) · `WORLD_BOSS_POOL` · `TRIAL_FLOORS`(30) | `events` / `world` |
+| 经济 | `SHOP_*`(88) · `GUILD_SHOP_ITEMS` · `HONOR_SHOP` · `AUCTION_POOL` | `shop` |
+| 伙伴/坐骑 | `PET_POOL`(26) · `MOUNT_*`(22) · `SUMMONS`(5) | `pets` / `mounts` / `summons` |
+| 生活技能 | `FISH_TIERS` · `FISH_POOL`(30) · `FISHING_SPOTS`(11) · `GATHER_*` · `MINING_*` | `fish` / `gather` |
+| 其它 | `PROPS`(374) · `PORTALS`(11) · `RACES`(6) · `TIPS`(58) · `LEGENDARY_EFFECTS`(93) · `SETS`(92) · `MONSTER_MODS`(140) | 按需 |
+
+**不建议进包**（属派生表/索引，进了就是第二份定义）：`MATERIALS_BY_NAME`(686) ·
+`EQUIP_ROSTER_BY_NAME`(686) · `INSTANCE_STAGE_MAPS`/`INSTANCE_STAGE_NPCS`（已装配进 `instances.stages[]`）·
+`SUBAREA_LINKS`（已装配进 `maps.links`）· `ENSY_*`/`MONSTER_LOCS` 等图鉴反查索引 · `GATHER_MAP_POOLS`（已派生成
+`drop_pools` 的 `gather:*` 池）。
+**只能随机制走**（不是数据）：`rules.py` 的规则条目、指令守卫实现、`SET_THEMES` 之类参数。
+
+### 9.3 边界：这份包能当什么用 / 不能当什么用
+
+- **能当**：结构 + 引用基本自洽的**内容只读快照** —— 编辑器可完整浏览/校验 16 域 4080 条、
+  做内容审阅、形状回归、掉落/副本/地图的静态审计（`maps` 空间形状、`instances` 进度、
+  `drop_pools` 展开与运行期逐格一致；带 `loot_vocab` 声明的掉落审计 0 问题）。
+- **不能当**：**可运行的游戏包** —— 没有 `apply.py` / `content/mech/`，`passive_proc` 的 `action`
+  与 `effect_rules` 的通道语义在包内查不到 handler（引擎 `fire()` 静默跳过）。
+  这就是 §七 的 **P4（代码收口）**：从「数据包」到「可运行包」的那一步。

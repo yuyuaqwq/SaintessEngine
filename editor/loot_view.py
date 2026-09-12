@@ -20,10 +20,42 @@ import 它不产生任何引擎副作用。
 是哪个池 —— 需要解析才能回答的部分，一律写进 `warnings`，宁可让用户看到「这里要
 内容侧 resolver」，也不编一个看起来合理的答案。
 
+包内引用词汇声明（可选；不写 = 今天的行为）
+------------------------------------------
+引擎零知识 ⇒ 「哪些引用写法算解得开」只能由**内容侧**声明。内容侧把它写在包里 ——
+就是框架的**声明表域** `loot_vocab`（`content/rules/loot_vocab.json`，一条 = 一个域）：
+
+    {
+      "drop_pools": {                        ← 外层键 = 它服务的**框架域 id**
+        "version": 1,
+        "inline_prefixes":   ["…"],          # 命中即「内容侧自管」，审计跳过；也参与 expand 外列
+        "special_refs":      ["…"],          # 精确值特殊引用，同上
+        "pool_key_prefixes": ["…"],          # 子池 key 可能带的前缀（查表时先剥）
+        "external_prefixes": ["…"],          # 只影响审计（不判断链），**不**参与 expand 外列
+        "ref_domains":       ["items"]       # 裸 ref 落在这些**域**里 → 才算解得开（见下）
+      }
+    }
+
+框架只认键、不认值：它对这份声明的处理是一句机械的话 ——「把它交给引擎的
+`inline_prefixes` / `special_refs` / `pool_key_prefixes` / `resolvable`」，一个具体前缀、
+一个具体池名都没进框架（`tests/test_no_game_vocabulary.py` 守这条）。
+
+* 表/条缺少、JSON 坏、形状不对、键缺失 → 一律当**空声明**：不抛错、不 500，行为与
+  没有这个功能时逐值一致（`load_vocab` 的容错是这功能的骨头：它是**可选增强**）。
+* 只声明 `external_prefixes`（未声明 `ref_domains`）→ 命中该前缀的引用不问；其余引用照旧
+  **不判**（`resolvable` 回 None）→ 与今天同结论。
+* 声明了 `ref_domains` → 审计才**有意义**：裸 ref 拿去查**包自己**那些域的表主键，
+  查不到就报断链（措辞由引擎给）。「哪些域装 ref」也是内容侧说的，框架不预设。
+
 对外接口
 --------
-    build(entry, key="", pools=None) -> dict   # 单条池数据 → 预览（含 warnings）
-    build_file(data, key) -> dict              # 表形态取一条（key 不存在 → {ok: False, error}）
+    build(entry, key="", pools=None, vocab=None) -> dict   # 单条池数据 → 预览（含 warnings）
+    build_file(data, key, vocab=None) -> dict              # 表形态取一条（key 不存在 → {ok: False, error}）
+    audit_file(data, vocab=None) -> dict                   # 整表结构审计（域级端点用）
+    load_vocab(pkg_dir, entry="drop_pools") -> dict        # 读包内声明（坏/缺 → 空声明）
+    normalize_vocab(raw, pkg_dir=None) -> dict              # 归一（也可直接喂原始 JSON 对象）
+
+（`vocab` 可传 `load_vocab()` 的结果，也可传声明原文；两者都做一次幂等归一。）
 
 返回（ok=True）：`{ok, key, type, strategy_uses, entries, rolls, expanded_count,
 expanded_unique, audit: {ok, issues}, warnings}`；坏数据 / 池不存在 → `{ok: False, error, warnings}`。
@@ -39,6 +71,137 @@ _NO_RESOLVER = ("引用解析需要内容侧提供 resolver —— 预览只显�
                 "不判断某个引用（如 mat_a）到底是什么东西、也不会替它编一个答案。")
 _LEVEL_WINDOW = ("有条目带等级窗口（min_lv / max_lv）：实际会不会进候选取决于上下文等级"
                  "（player_level / monster_lv），预览没有上下文，占比是按**全量权重**算的。")
+
+# ---------------- 包内引用词汇声明（见模块 docstring） ----------------
+# 声明是**框架域** `loot_vocab`（content/rules/loot_vocab.json）里的一条：
+#   {"drop_pools": {inline_prefixes/special_refs/pool_key_prefixes/external_prefixes/ref_domains}}
+# 外层键 = 它服务的**框架域 id**（本视图服务的域 = VOCAB_ENTRY）。
+VOCAB_DOMAIN = "loot_vocab"
+VOCAB_ENTRY = "drop_pools"
+# 声明里框架**认识**的键（其余键一律忽略：内容侧给自己加的字段不影响行为）
+VOCAB_PREFIX_KEYS = ("inline_prefixes", "special_refs", "pool_key_prefixes", "external_prefixes")
+VOCAB_DOMAIN_KEY = "ref_domains"
+VOCAB_KEYS = VOCAB_PREFIX_KEYS + (VOCAB_DOMAIN_KEY, "ref_keys", "version")
+
+_VOCAB_NOTE = ("本包带引用词汇声明（{path}）：审计按包自己的说法判「哪些引用解得开」，"
+               "框架不认识任何具体前缀 / 池名。声明里没提到的部分，照旧不猜。")
+
+
+def _str_list(v) -> tuple:
+    """只留非空字符串（声明里混进数字 / null / 嵌套对象都不该让预览崩）。"""
+    if isinstance(v, (list, tuple, set, frozenset)):
+        return tuple(x.strip() for x in v if isinstance(x, str) and x.strip())
+    if isinstance(v, str) and v.strip():        # 单个字符串当一元列表收下（宽容，不报错）
+        return (v.strip(),)
+    return ()
+
+
+def _domain_keys(pkg_dir: str, domains) -> set:
+    """声明里那批**域**的表主键集合（`ref_domains` 的落地）。
+
+    零知识的关键：查的是**包自己**的表、按的是框架**域注册表**（`editor/packages.py`），
+    框架没有硬编码任何 ref 取值。域不认识 / 表读不出来 → 空集（声明降级，不抛）。
+    """
+    if not domains or not pkg_dir:
+        return set()
+    try:
+        from editor import packages as PK      # 同目录模块（延迟导入：避免 import 期耦合）
+    except Exception:                          # noqa: BLE001
+        return set()
+    keys: set = set()
+    for d in domains:
+        if d not in PK.DOMAINS:
+            continue
+        try:
+            tbl = PK.read_json(PK.domain_path(pkg_dir, d), {})
+        except Exception:                      # noqa: BLE001
+            continue
+        if isinstance(tbl, dict):
+            keys.update(k for k in tbl if isinstance(k, str))
+    return keys
+
+
+def normalize_vocab(raw=None, pkg_dir: str | None = None) -> dict:
+    """把「声明」（包内 JSON 对象 / `load_vocab()` 的结果 / None）归一成内部形状。
+
+    * 未知键忽略；坏值忽略；**任何**畸形输入都得到「空声明」而不是异常
+    * `ref_domains` 声明的域 → 展开成 `ref_keys`（包内那些表的主键；`pkg_dir` 缺省则不展开）
+    * `declared` = 这份声明**真的能改变判定吗**（有前缀声明，或至少查到了 ref 主键）。
+      只声明了一个域、而包内没有那张表（或域名根本不认识）→ `declared=False`：
+      等于什么都没说，行为必须与「没有这个文件」逐值相同。
+    """
+    src = raw if isinstance(raw, dict) else {}
+    out = {k: _str_list(src.get(k)) for k in VOCAB_PREFIX_KEYS}
+    out[VOCAB_DOMAIN_KEY] = _str_list(src.get(VOCAB_DOMAIN_KEY))
+    keys = set(_str_list(src.get("ref_keys")))
+    keys |= _domain_keys(pkg_dir or "", out[VOCAB_DOMAIN_KEY])
+    out["ref_keys"] = frozenset(keys)
+    out["declared"] = bool(any(out[k] for k in VOCAB_PREFIX_KEYS) or out["ref_keys"])
+    return out
+
+
+def load_vocab(pkg_dir: str, entry: str = VOCAB_ENTRY) -> dict:
+    """读包内声明表 `content/rules/loot_vocab.json` 里 `entry` 那条；**缺表/缺条/坏 JSON/形状错 → 空声明**。
+
+    为什么不抛错：这是**可选增强**。内容包没有它（绝大多数包）时，编辑器必须与加这功能
+    之前逐格一致 —— 一个坏的声明文件不该让预览 500，只该让它退回「不猜」。
+
+    路径不硬编码：走框架域注册表 `editor/packages.py:domain_path()`（kind=rules），
+    与其它域同一条约定。
+    """
+    raw = None
+    if pkg_dir:
+        try:
+            from editor import packages as PK      # 同目录模块（延迟导入）
+            tbl = PK.read_json(PK.domain_path(pkg_dir, VOCAB_DOMAIN), {})
+            raw = tbl.get(entry) if isinstance(tbl, dict) else None
+        except Exception:                          # noqa: BLE001
+            raw = None
+    return normalize_vocab(raw, pkg_dir)
+
+
+def _make_resolvable(v: dict):
+    """声明 → 引擎审计要的 `resolvable(ref, pool)` 回调（`True`/`False`/`str`/`None`）。
+
+    * 命中 `external_prefixes` → `True`（内容侧自管的引用，框架不判）。
+      与 `inline_prefixes` 刻意分开：后者会被引擎 `expand()` 当成候选前缀**外列**，
+      这里只要「审计别喊断链」，不想动展开语义。
+    * 声明了 `ref_keys`（来自 `ref_domains`）→ 裸 ref 查包内那些域的主键：在 → `True`；
+      不在 → `False`（引擎给通用措辞，断链）—— 这正是「声明之后审计才有意义」。
+    * 只有 `external_prefixes`、没有 `ref_domains` → 其余引用回 `None`（不判），
+      与「完全没有声明」时的结论一致（不留新假红）。
+    * 两者都没有 → 回 `None`（= 不传回调，引擎的 entries 一律不判）。
+    """
+    ext = v["external_prefixes"]
+    keys = v["ref_keys"]
+    if not ext and not keys:
+        return None
+
+    def resolvable(ref, pool):                 # noqa: ARG001（pool 是引擎契约的一部分）
+        if not isinstance(ref, str):
+            return False
+        if ext and ref.startswith(ext):
+            return True
+        if not keys:
+            return None
+        return True if ref in keys else False
+
+    return resolvable
+
+
+def _make_table(pools: dict, v: dict) -> LootTable:
+    """起表：**唯一**差别是词汇声明（resolver 恒为 None —— 见模块 docstring「不装懂」）。"""
+    return LootTable(pools, resolver=None,
+                     inline_prefixes=v["inline_prefixes"],
+                     special_refs=v["special_refs"],
+                     pool_key_prefixes=v["pool_key_prefixes"])
+
+
+def _is_declared_ref(ref, v: dict) -> bool:
+    """这条引用是否被包内声明解释过（内联 / 特殊值 / 外部自管）。"""
+    return (ref in v["special_refs"]
+            or ref.startswith(v["inline_prefixes"])
+            or (bool(v["external_prefixes"]) and ref.startswith(v["external_prefixes"])))
 
 
 def _fail(msg: str, warnings=None) -> dict:
@@ -79,16 +242,20 @@ def _n_of(raw):
     return raw
 
 
-def build(entry: dict, key: str = "", pools=None) -> dict:
-    """把一条池数据算成预览：`{ok, ...}`（纯 JSON，可直接发前端）。"""
+def build(entry: dict, key: str = "", pools=None, vocab=None) -> dict:
+    """把一条池数据算成预览：`{ok, ...}`（纯 JSON，可直接发前端）。
+
+    `vocab` = 包内引用词汇声明（`load_vocab()` 的结果或声明原文；None/空 = 与过去一致）。
+    """
     warnings: list = []
     if not isinstance(entry, dict):
         return _fail("数据不是对象（一个池应当是一个 JSON 对象）", warnings)
 
+    v = normalize_vocab(vocab)
     anchor = str(key or _ANCHOR)
     tbl_pools = dict(pools) if isinstance(pools, dict) else {}
     tbl_pools.setdefault(anchor, entry)
-    table = LootTable(tbl_pools, resolver=None)      # ← 不做引用解析（见模块 docstring）
+    table = _make_table(tbl_pools, v)       # ← 不做引用解析（见模块 docstring）
 
     ptype = entry.get("type")
     if not isinstance(ptype, str) or not ptype.strip():
@@ -98,7 +265,10 @@ def build(entry: dict, key: str = "", pools=None) -> dict:
 
     spec = table.strategy_of(entry)
     uses = spec.get("uses", "entries")
-    _add(warnings, _NO_RESOLVER)
+    if v["declared"]:
+        _add(warnings, _VOCAB_NOTE.format(path="content/rules/loot_vocab.json"))
+    else:
+        _add(warnings, _NO_RESOLVER)
     if ptype not in STRATEGIES:
         _add(warnings, f"策略名 {ptype!r} 不在内置策略表里（内置：{', '.join(sorted(STRATEGIES))}）——"
                        f"内容侧可以注册自己的策略；未注册时引擎按 weighted 兜底，预览同此。")
@@ -167,8 +337,12 @@ def build(entry: dict, key: str = "", pools=None) -> dict:
             if cycle:
                 return _fail(cycle, warnings)
             if not is_sub_pool:
-                _add(warnings, f"rolls 里的 {sub} 不在本域数据里：子池前缀 / 引用写法由内容侧"
-                               f"注册（inline_prefixes 等），预览不猜 —— 引擎审计对此报「断链」。")
+                if _is_declared_ref(sub, v):
+                    _add(warnings, f"rolls 里的 {sub} 是包内声明过的引用（不是本域的池 key）——"
+                                   f"「它是什么」由内容侧解析，审计按声明不判它为断链。")
+                else:
+                    _add(warnings, f"rolls 里的 {sub} 不在本域数据里：子池前缀 / 引用写法由内容侧"
+                                   f"注册（inline_prefixes 等），预览不猜 —— 引擎审计对此报「断链」。")
             rolls.append({
                 "pool": sub,
                 "chance": rc.get("chance"),
@@ -188,7 +362,7 @@ def build(entry: dict, key: str = "", pools=None) -> dict:
     expanded, cycle = _safe_expand(table, anchor)     # ← 引擎同一份展开
     if cycle:
         return _fail(cycle, warnings)
-    audit_rep = table.audit()                          # ← 引擎同一份审计
+    audit_rep = table.audit(resolvable=_make_resolvable(v))   # ← 引擎同一份审计（声明参与判定）
     issues = [{"level": lvl, "pool": pk, "message": msg}
               for (lvl, pk, msg) in audit_rep["issues"] if pk == anchor]
 
@@ -202,15 +376,44 @@ def build(entry: dict, key: str = "", pools=None) -> dict:
         "expanded_count": len(expanded),
         "expanded_unique": len(set(expanded)),
         "audit": {"ok": not issues, "issues": issues},
+        "vocab_declared": v["declared"],
         "warnings": warnings,
     }
 
 
-def build_file(data: dict, key: str) -> dict:
+def build_file(data: dict, key: str, vocab=None) -> dict:
     """表形态 `{池key: 池对象}` 里取一条算预览（key 不存在 → ok=False + 中文原因）。"""
     if not isinstance(data, dict):
         return _fail("整表不是对象（应当是 {池key: 池对象}）")
     entry = data.get(key)
     if entry is None:
         return _fail(f"没有这条池：{key}")
-    return build(entry, key, pools=data)
+    return build(entry, key, pools=data, vocab=vocab)
+
+
+def audit_file(data: dict, vocab=None) -> dict:
+    """整表结构审计（域级）：引擎同一份 `LootTable.audit()`，包内声明参与引用判定。
+
+    为什么要有它：单条预览的 `audit` 只答「这一个池有没有结构问题」；「这一批池整体
+    有多少断链」需要一次全表审计（596 池逐个 preview 打 596 次请求不是办法）。
+
+    返回（纯 JSON）：
+        `{ok, pool_count, entry_count, issue_count, by_kind, issues, vocab_declared}`
+    每个 issue = `{level, pool, message}`（level ∈ 断链 / 空池，措辞由引擎给）。
+    """
+    v = normalize_vocab(vocab)
+    pools = dict(data) if isinstance(data, dict) else {}
+    rep = _make_table(pools, v).audit(resolvable=_make_resolvable(v))
+    issues = [{"level": lvl, "pool": pk, "message": msg} for (lvl, pk, msg) in rep["issues"]]
+    by_kind: dict = {}
+    for i in issues:
+        by_kind[i["level"]] = by_kind.get(i["level"], 0) + 1
+    return {
+        "ok": rep["ok"],
+        "pool_count": rep["pool_count"],
+        "entry_count": rep["entry_count"],
+        "issue_count": len(issues),
+        "by_kind": by_kind,
+        "issues": issues,
+        "vocab_declared": v["declared"],
+    }

@@ -21,6 +21,7 @@ API
     GET    /api/package/<id>/d/maps/<key>/graph  → 拓扑视图（引擎同一份派生代码算）
     GET    /api/package/<id>/d/drop_pools/<key>/preview
                                           → 掉落池预览（引擎同一份 expand/audit 算结构/权重/审计）
+    GET    /api/package/<id>/loot/audit   → 掉落池整表审计（596 池一次算；包内词汇声明参与判定）
     PUT    /api/package/<id>/d/<dom>/<key>      → 保存（**先校验，过后才落盘**）
     DELETE /api/package/<id>/d/<dom>/<key>      → 删除
     POST   /api/package/<id>/validate           → 全包校验
@@ -392,6 +393,16 @@ class H(BaseHTTPRequestHandler):
             data = PK.read_json(PK.domain_path(d, dom), {})
             out = SV.build_file(data if isinstance(data, dict) else {}, parts[4])
             return self._send(200 if out.get("ok") else 422, out)
+        # drop_pools 域级审计：596 池一次算（引擎同一份 LootTable.audit）。
+        # 包内 `content/rules/loot_vocab.json` 是**内容侧**的引用词汇声明（引擎零知识）——
+        # 有它 → 审计按包自己的说法判；没有它 / 声明坏 → 与没有这功能时逐格一致。
+        if len(parts) == 4 and parts[0] == "package" and parts[2] == "loot" and parts[3] == "audit":
+            d = PK.resolve_package(parts[1], GAMES_DIR)
+            if not d:
+                return self._err(404, f"包不存在：{parts[1]}")
+            data = PK.read_json(PK.domain_path(d, "drop_pools"), {})
+            out = LV.audit_file(data if isinstance(data, dict) else {}, LV.load_vocab(d))
+            return self._send(200 if out.get("ok") else 422, out)
         # drop_pools 域的池预览：权重占比 / 展开候选 / 结构审计由**引擎同一份代码**算
         # （editor/loot_view.py；LootTable 在这里 resolver=None —— 预览不假装认识引用）。
         if (len(parts) == 6 and parts[0] == "package" and parts[2] == "d"
@@ -405,7 +416,8 @@ class H(BaseHTTPRequestHandler):
             if dom != "drop_pools":
                 return self._err(404, f"该域没有池预览：{dom}")
             data = PK.read_json(PK.domain_path(d, dom), {})
-            out = LV.build_file(data if isinstance(data, dict) else {}, parts[4])
+            out = LV.build_file(data if isinstance(data, dict) else {}, parts[4],
+                                LV.load_vocab(d))
             return self._send(200 if out.get("ok") else 422, out)
         # instances 域的进度视图：节点序 / 每层剩余 / 末层（is_last）由**引擎同一份 Progress** 算
         # （editor/instance_view.py；怪名/Boss/钥匙/地图全是内容侧词汇 —— 预览不假装认识它们）。

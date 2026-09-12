@@ -14,8 +14,8 @@
         "key": {
           "type": "string",
           "minLength": 1,
-          "pattern": "^[A-Za-z_][A-Za-z0-9_.]*$",
-          "description": "文案标识。**表形态（{key: 声明}）里以对象 key 为准**，此处可省略；仅独立/数组存档形态需要显式写。"
+          "pattern": "^(?=.*[^\\s.\\u00ad\\u200b-\\u200f\\u180e\\u2060\\ufeff])[^\\s.]+(\\.[^\\s.]+)*$",
+          "description": "文案标识。**表形态（{key: 声明}）里以对象 key 为准**，此处可省略；仅独立/数组存档形态需要显式写。命名由内容侧定义、框架不解释，与整表 `propertyNames` 用**同一条** pattern（见本 def 上方/下方说明）。"
         },
         "value": {
           "type": "string",
@@ -55,7 +55,8 @@
       "title": "文案整表：{key: 声明对象}——编辑器用对象形态；代码装载时也接受 `{key: 模板串}` 简写",
       "minProperties": 1,
       "propertyNames": {
-        "pattern": "^[A-Za-z_][A-Za-z0-9_.]*$"
+        "pattern": "^(?=.*[^\\s.\\u00ad\\u200b-\\u200f\\u180e\\u2060\\ufeff])[^\\s.]+(\\.[^\\s.]+)*$",
+        "description": "文案 key 由内容侧命名，框架不解释 —— 这里只挡「明显不是 key」的形状：空串、空白（含不可见空白如全角空格/NBSP）、纯不可见字符（零宽/软连/BOM 之类，靠前置断言要求至少一个可见字符）、空段（前导点 / 尾点 / 连续点）。**为什么放宽**（原来只允许 `^[A-Za-z_][A-Za-z0-9_.]*$`）：内容侧真源 `data/text_specs.json` 里副本/日志/面板三个域的真实 key 就带中文（如 `instance.日志_击杀_经验`、`instance.面板_开本_队伍构成`），实测内容仓某款游戏的 233 条文案里有 156 条含中文；把这些 key 改成 ASCII 要同批改内容侧 156 个 `T.text/T.static` 调用点 + v185 的 805 格冻结快照基线（改冻结门禁基线），代价与收益不成比例。放宽后中文 key 与 ASCII key 同等合法，而「空格 / 空串 / 纯不可见」仍然被拦（`tests/test_texts_schema_contract.py` 钉住这三面）。"
       },
       "additionalProperties": {
         "type": "object",

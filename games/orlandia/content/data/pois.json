@@ -1,0 +1,4633 @@
+{
+  "abyss_altar:abyss_altar_1": {
+    "map": "abyss_altar",
+    "subarea": "abyss_altar_1",
+    "pois": [
+      "shrine",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "abyss_altar:abyss_altar_2": {
+    "map": "abyss_altar",
+    "subarea": "abyss_altar_2",
+    "pois": [
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "abyss_altar:abyss_altar_3": {
+    "map": "abyss_altar",
+    "subarea": "abyss_altar_3",
+    "pois": [
+      "note"
+    ],
+    "source": "world"
+  },
+  "abyss_altar:abyss_altar_4": {
+    "map": "abyss_altar",
+    "subarea": "abyss_altar_4",
+    "pois": [
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "abyss_altar:abyss_altar_5": {
+    "map": "abyss_altar",
+    "subarea": "abyss_altar_5",
+    "pois": [
+      "loot_pile",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "abyss_altar:abyss_altar_6": {
+    "map": "abyss_altar",
+    "subarea": "abyss_altar_6",
+    "pois": [
+      "traveler_grave",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "abyss_gate:abyss_gate_1": {
+    "map": "abyss_gate",
+    "subarea": "abyss_gate_1",
+    "pois": [
+      {
+        "id": "abyss_gate_0_corpse_1",
+        "type": "corpse",
+        "name": "深渊骑士残骸",
+        "hint": "骑士的铠甲被黑暗腐蚀，胸口还挂着护符",
+        "loot": {
+          "materials": [
+            "深渊骑士护符"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "abyss_gate:abyss_gate_2": {
+    "map": "abyss_gate",
+    "subarea": "abyss_gate_2",
+    "pois": [
+      {
+        "id": "abyss_gate_1_rune_1",
+        "type": "rune_stone",
+        "name": "深渊铭文碑",
+        "hint": "碑文在黑暗中泛着幽光",
+        "lore": "『它曾是我们之中的一个，直到它学会以黑暗为食。』"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "abyss_throne:abyss_throne_1": {
+    "map": "abyss_throne",
+    "subarea": "abyss_throne_1",
+    "pois": [
+      {
+        "id": "abyss_throne_0_rune_1",
+        "type": "rune_stone",
+        "name": "深渊预言碑",
+        "hint": "碑上的文字不断在黑暗中明灭",
+        "lore": "『魔像走廊的机关，动一处则万处皆动。智者绕行，愚者触之。』"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "abyss_throne:abyss_throne_2": {
+    "map": "abyss_throne",
+    "subarea": "abyss_throne_2",
+    "pois": [
+      {
+        "id": "abyss_throne_1_trap_1",
+        "type": "trap",
+        "name": "魔像陷阱",
+        "hint": "地板上有细微的震动纹路，恐怕会唤醒魔像"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "ancient_battlefield:ancient_battlefield_1": {
+    "map": "ancient_battlefield",
+    "subarea": "ancient_battlefield_1",
+    "pois": [
+      "loot_pile",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "ancient_battlefield:ancient_battlefield_2": {
+    "map": "ancient_battlefield",
+    "subarea": "ancient_battlefield_2",
+    "pois": [
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "ancient_battlefield:ancient_battlefield_4": {
+    "map": "ancient_battlefield",
+    "subarea": "ancient_battlefield_4",
+    "pois": [
+      "campfire",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "ancient_battlefield:ancient_battlefield_5": {
+    "map": "ancient_battlefield",
+    "subarea": "ancient_battlefield_5",
+    "pois": [
+      "loot_pile",
+      "traveler_grave"
+    ],
+    "source": "mesh"
+  },
+  "ancient_battlefield:ancient_battlefield_6": {
+    "map": "ancient_battlefield",
+    "subarea": "ancient_battlefield_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "ancient_tree:ancient_tree_1": {
+    "map": "ancient_tree",
+    "subarea": "ancient_tree_1",
+    "pois": [
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "ancient_tree:ancient_tree_2": {
+    "map": "ancient_tree",
+    "subarea": "ancient_tree_2",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "ancient_tree:ancient_tree_4": {
+    "map": "ancient_tree",
+    "subarea": "ancient_tree_4",
+    "pois": [
+      "bird_nest",
+      "campfire",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "ancient_tree:ancient_tree_5": {
+    "map": "ancient_tree",
+    "subarea": "ancient_tree_5",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "ash_temple:ash_temple_1": {
+    "map": "ash_temple",
+    "subarea": "ash_temple_1",
+    "pois": [
+      {
+        "id": "ash_temple_0_fire_1",
+        "type": "campfire",
+        "name": "熔岩裂隙",
+        "hint": "裂隙里透出红光，靠过去能感到热浪——但比被恶魔追着打好多了"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "ash_temple:ash_temple_2": {
+    "map": "ash_temple",
+    "subarea": "ash_temple_2",
+    "pois": [
+      {
+        "id": "ash_temple_1_supply_1",
+        "type": "supply",
+        "name": "祭品匣",
+        "hint": "石匣里供奉着祭品，恶魔似乎没来得及取走",
+        "loot": {
+          "materials": [
+            "大生命药水"
+          ]
+        }
+      },
+      {
+        "id": "ash_temple_1_trap_1",
+        "type": "trap",
+        "name": "灼热地板",
+        "hint": "某些石板烧得通红，踩上去会烫伤"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "ash_temple:ash_temple_3": {
+    "map": "ash_temple",
+    "subarea": "ash_temple_3",
+    "pois": [
+      {
+        "id": "ash_temple_2_rune_1",
+        "type": "rune_stone",
+        "name": "封印符文碑",
+        "hint": "碑上刻着上古封印的符文",
+        "lore": "『火非烬，烬非灭。余烬之中，新生萌发。』"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "black_forest:black_forest_1": {
+    "map": "black_forest",
+    "subarea": "black_forest_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "black_forest:black_forest_2": {
+    "map": "black_forest",
+    "subarea": "black_forest_2",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "black_forest:black_forest_3": {
+    "map": "black_forest",
+    "subarea": "black_forest_3",
+    "pois": [
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "black_forest:black_forest_4": {
+    "map": "black_forest",
+    "subarea": "black_forest_4",
+    "pois": [
+      "merchant_camp",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "black_forest:black_forest_5": {
+    "map": "black_forest",
+    "subarea": "black_forest_5",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "black_forest:black_forest_6": {
+    "map": "black_forest",
+    "subarea": "black_forest_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "black_tide_strait:black_tide_strait_1": {
+    "map": "black_tide_strait",
+    "subarea": "black_tide_strait_1",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "black_tide_strait:black_tide_strait_2": {
+    "map": "black_tide_strait",
+    "subarea": "black_tide_strait_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "black_tide_strait:black_tide_strait_4": {
+    "map": "black_tide_strait",
+    "subarea": "black_tide_strait_4",
+    "pois": [
+      "fishing_spot"
+    ],
+    "source": "mesh"
+  },
+  "black_tide_strait:black_tide_strait_5": {
+    "map": "black_tide_strait",
+    "subarea": "black_tide_strait_5",
+    "pois": [
+      "shipwreck",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "black_tide_strait:black_tide_strait_6": {
+    "map": "black_tide_strait",
+    "subarea": "black_tide_strait_6",
+    "pois": [
+      "loot_pile",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "boar_ridge:boar_ridge_1": {
+    "map": "boar_ridge",
+    "subarea": "boar_ridge_1",
+    "pois": [
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "boar_ridge:boar_ridge_2": {
+    "map": "boar_ridge",
+    "subarea": "boar_ridge_2",
+    "pois": [
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "boar_ridge:boar_ridge_3": {
+    "map": "boar_ridge",
+    "subarea": "boar_ridge_3",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "boar_ridge:boar_ridge_4": {
+    "map": "boar_ridge",
+    "subarea": "boar_ridge_4",
+    "pois": [
+      "bird_nest",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "boar_ridge:boar_ridge_5": {
+    "map": "boar_ridge",
+    "subarea": "boar_ridge_5",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "boar_ridge:boar_ridge_6": {
+    "map": "boar_ridge",
+    "subarea": "boar_ridge_6",
+    "pois": [
+      "ancient_altar",
+      "merchant_camp"
+    ],
+    "source": "mesh"
+  },
+  "bone_wild:bone_wild_1": {
+    "map": "bone_wild",
+    "subarea": "bone_wild_1",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "bone_wild:bone_wild_2": {
+    "map": "bone_wild",
+    "subarea": "bone_wild_2",
+    "pois": [
+      "campfire",
+      "loot_pile",
+      "dragon_bone"
+    ],
+    "source": "world"
+  },
+  "bone_wild:bone_wild_3": {
+    "map": "bone_wild",
+    "subarea": "bone_wild_3",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "bone_wild:bone_wild_4": {
+    "map": "bone_wild",
+    "subarea": "bone_wild_4",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "bone_wild:bone_wild_5": {
+    "map": "bone_wild",
+    "subarea": "bone_wild_5",
+    "pois": [
+      "dragon_bone",
+      "traveler_grave"
+    ],
+    "source": "mesh"
+  },
+  "bone_wild:bone_wild_6": {
+    "map": "bone_wild",
+    "subarea": "bone_wild_6",
+    "pois": [
+      "loot_pile",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "border_castle:border_castle_1": {
+    "map": "border_castle",
+    "subarea": "border_castle_1",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "border_castle:border_castle_2": {
+    "map": "border_castle",
+    "subarea": "border_castle_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "border_castle:border_castle_3": {
+    "map": "border_castle",
+    "subarea": "border_castle_3",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "border_castle:border_castle_4": {
+    "map": "border_castle",
+    "subarea": "border_castle_4",
+    "pois": [
+      "campfire",
+      "traveler_grave"
+    ],
+    "source": "mesh"
+  },
+  "border_castle:border_castle_5": {
+    "map": "border_castle",
+    "subarea": "border_castle_5",
+    "pois": [
+      "loot_pile",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "border_castle:border_castle_6": {
+    "map": "border_castle",
+    "subarea": "border_castle_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "cinder_mountain:cinder_mountain_1": {
+    "map": "cinder_mountain",
+    "subarea": "cinder_mountain_1",
+    "pois": [
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "cinder_mountain:cinder_mountain_2": {
+    "map": "cinder_mountain",
+    "subarea": "cinder_mountain_2",
+    "pois": [
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "cinder_mountain:cinder_mountain_3": {
+    "map": "cinder_mountain",
+    "subarea": "cinder_mountain_3",
+    "pois": [
+      "note",
+      "star_gazing"
+    ],
+    "source": "world"
+  },
+  "cinder_mountain:cinder_mountain_4": {
+    "map": "cinder_mountain",
+    "subarea": "cinder_mountain_4",
+    "pois": [
+      "merchant_camp",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "cinder_mountain:cinder_mountain_5": {
+    "map": "cinder_mountain",
+    "subarea": "cinder_mountain_5",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "cloud_sanctum:cloud_sanctum_1": {
+    "map": "cloud_sanctum",
+    "subarea": "cloud_sanctum_1",
+    "pois": [
+      {
+        "id": "cloud_sanctum_0_fire_1",
+        "type": "campfire",
+        "name": "云端火堆",
+        "hint": "云上竟有火堆，火苗是淡金色的"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "cloud_sanctum:cloud_sanctum_2": {
+    "map": "cloud_sanctum",
+    "subarea": "cloud_sanctum_2",
+    "pois": [
+      {
+        "id": "cloud_sanctum_1_mech_1",
+        "type": "mechanism",
+        "name": "星门机关",
+        "hint": "回廊尽头有道星门，门框上嵌着七颗星石",
+        "effect": {
+          "open_secret": true
+        },
+        "desc": "你按下七颗星石，星门无声开启——圣殿的藏宝室出现了！"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "cloud_sea:cloud_sea_1": {
+    "map": "cloud_sea",
+    "subarea": "cloud_sea_1",
+    "pois": [
+      "fishing_spot",
+      "loot_pile",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "cloud_sea:cloud_sea_2": {
+    "map": "cloud_sea",
+    "subarea": "cloud_sea_2",
+    "pois": [
+      "star_gazing",
+      "scenic_view"
+    ],
+    "source": "world"
+  },
+  "cloud_sea:cloud_sea_3": {
+    "map": "cloud_sea",
+    "subarea": "cloud_sea_3",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "cloud_sea:cloud_sea_4": {
+    "map": "cloud_sea",
+    "subarea": "cloud_sea_4",
+    "pois": [
+      "scenic_view",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "cloud_sea:cloud_sea_5": {
+    "map": "cloud_sea",
+    "subarea": "cloud_sea_5",
+    "pois": [
+      "loot_pile",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "cloud_sea:cloud_sea_6": {
+    "map": "cloud_sea",
+    "subarea": "cloud_sea_6",
+    "pois": [
+      "ancient_altar",
+      "star_gazing"
+    ],
+    "source": "mesh"
+  },
+  "cold_spine_snow_trail:cold_spine_snow_trail_1": {
+    "map": "cold_spine_snow_trail",
+    "subarea": "cold_spine_snow_trail_1",
+    "pois": [
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "cold_spine_snow_trail:cold_spine_snow_trail_2": {
+    "map": "cold_spine_snow_trail",
+    "subarea": "cold_spine_snow_trail_2",
+    "pois": [
+      "campfire",
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "cold_spine_snow_trail:cold_spine_snow_trail_3": {
+    "map": "cold_spine_snow_trail",
+    "subarea": "cold_spine_snow_trail_3",
+    "pois": [
+      "scenic_view",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "cold_spine_snow_trail:cold_spine_snow_trail_4": {
+    "map": "cold_spine_snow_trail",
+    "subarea": "cold_spine_snow_trail_4",
+    "pois": [
+      "ice_sculpture",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "cold_spine_snow_trail:cold_spine_snow_trail_5": {
+    "map": "cold_spine_snow_trail",
+    "subarea": "cold_spine_snow_trail_5",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "coral_reef:coral_reef_1": {
+    "map": "coral_reef",
+    "subarea": "coral_reef_1",
+    "pois": [
+      "fishing_spot",
+      "loot_pile",
+      "shipwreck"
+    ],
+    "source": "world"
+  },
+  "coral_reef:coral_reef_2": {
+    "map": "coral_reef",
+    "subarea": "coral_reef_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "coral_reef:coral_reef_3": {
+    "map": "coral_reef",
+    "subarea": "coral_reef_3",
+    "pois": [
+      "fishing_spot",
+      "loot_pile",
+      "scenic_view"
+    ],
+    "source": "world"
+  },
+  "coral_reef:coral_reef_4": {
+    "map": "coral_reef",
+    "subarea": "coral_reef_4",
+    "pois": [
+      "fishing_spot"
+    ],
+    "source": "mesh"
+  },
+  "coral_reef:coral_reef_5": {
+    "map": "coral_reef",
+    "subarea": "coral_reef_5",
+    "pois": [
+      "shipwreck",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "coral_reef:coral_reef_6": {
+    "map": "coral_reef",
+    "subarea": "coral_reef_6",
+    "pois": [
+      "loot_pile",
+      "shipwreck"
+    ],
+    "source": "mesh"
+  },
+  "dawn_cathedral:dawn_cathedral_1": {
+    "map": "dawn_cathedral",
+    "subarea": "dawn_cathedral_1",
+    "pois": [
+      "shrine",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "dawn_cathedral:dawn_cathedral_2": {
+    "map": "dawn_cathedral",
+    "subarea": "dawn_cathedral_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "dawn_cathedral:dawn_cathedral_3": {
+    "map": "dawn_cathedral",
+    "subarea": "dawn_cathedral_3",
+    "pois": [
+      "note"
+    ],
+    "source": "world"
+  },
+  "dawn_cathedral:dawn_cathedral_4": {
+    "map": "dawn_cathedral",
+    "subarea": "dawn_cathedral_4",
+    "pois": [
+      "traveler_grave",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "dawn_cathedral:dawn_cathedral_5": {
+    "map": "dawn_cathedral",
+    "subarea": "dawn_cathedral_5",
+    "pois": [
+      "campfire",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "dawn_cathedral:dawn_cathedral_6": {
+    "map": "dawn_cathedral",
+    "subarea": "dawn_cathedral_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "dawn_city:dawn_city_1": {
+    "map": "dawn_city",
+    "subarea": "dawn_city_1",
+    "pois": [
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "dawn_city:dawn_city_3": {
+    "map": "dawn_city",
+    "subarea": "dawn_city_3",
+    "pois": [
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "deep_dragon_palace:deep_dragon_palace_1": {
+    "map": "deep_dragon_palace",
+    "subarea": "deep_dragon_palace_1",
+    "pois": [
+      {
+        "id": "deep_dragon_palace_0_corpse_1",
+        "type": "corpse",
+        "name": "虾兵残甲",
+        "hint": "一副被遗弃的虾兵铠甲，腰牌还挂着",
+        "loot": {
+          "materials": [
+            "龙宫珠"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "deep_dragon_palace:deep_dragon_palace_2": {
+    "map": "deep_dragon_palace",
+    "subarea": "deep_dragon_palace_2",
+    "pois": [
+      {
+        "id": "deep_dragon_palace_1_chest_1",
+        "type": "chest",
+        "name": "珊瑚宝箱",
+        "hint": "珊瑚长成的箱子，卡在礁石间",
+        "loot": {
+          "gold": 240,
+          "materials": [
+            "龙宫珠"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "deep_lake:deep_lake_1": {
+    "map": "deep_lake",
+    "subarea": "deep_lake_1",
+    "pois": [
+      "fishing_spot",
+      "shrine",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "deep_lake:deep_lake_2": {
+    "map": "deep_lake",
+    "subarea": "deep_lake_2",
+    "pois": [
+      "fishing_spot",
+      "shrine",
+      "ancient_altar"
+    ],
+    "source": "world"
+  },
+  "deep_lake:deep_lake_3": {
+    "map": "deep_lake",
+    "subarea": "deep_lake_3",
+    "pois": [
+      "fishing_spot",
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "deep_lake:deep_lake_4": {
+    "map": "deep_lake",
+    "subarea": "deep_lake_4",
+    "pois": [
+      "fishing_spot",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "deep_lake:deep_lake_5": {
+    "map": "deep_lake",
+    "subarea": "deep_lake_5",
+    "pois": [
+      "loot_pile",
+      "traveler_grave"
+    ],
+    "source": "mesh"
+  },
+  "deep_lake:deep_lake_6": {
+    "map": "deep_lake",
+    "subarea": "deep_lake_6",
+    "pois": [
+      "ancient_altar",
+      "fishing_spot"
+    ],
+    "source": "mesh"
+  },
+  "deer_fort:deer_fort_1": {
+    "map": "deer_fort",
+    "subarea": "deer_fort_1",
+    "pois": [
+      {
+        "id": "deer_fort_0_mech_1",
+        "type": "mechanism",
+        "name": "城门绞盘",
+        "hint": "绞盘还能转动，也许能放下吊桥少走些弯路",
+        "effect": {
+          "skip_wave": true
+        },
+        "desc": "你转动绞盘，吊桥轰然落下——庭院里的守卫被引开了一波！"
+      },
+      {
+        "id": "deer_fort_0_corpse_1",
+        "type": "corpse",
+        "name": "守军残骸",
+        "hint": "鹿角要塞守军的尸体，铠甲上还插着箭",
+        "loot": {
+          "materials": [
+            "军旗碎片"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "deer_fort:deer_fort_2": {
+    "map": "deer_fort",
+    "subarea": "deer_fort_2",
+    "pois": [
+      {
+        "id": "deer_fort_1_supply_1",
+        "type": "supply",
+        "name": "军械箱",
+        "hint": "半埋在土里的军械箱",
+        "loot": {
+          "materials": [
+            "精铁锭"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "deer_fort:deer_fort_3": {
+    "map": "deer_fort",
+    "subarea": "deer_fort_3",
+    "pois": [
+      {
+        "id": "deer_fort_2_chest_1",
+        "type": "chest",
+        "name": "要塞宝箱",
+        "hint": "主厅角落的箱子，锁上刻着鹿角徽记",
+        "loot": {
+          "gold": 150,
+          "materials": [
+            "军旗碎片"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "dragon_ridge:dragon_ridge_1": {
+    "map": "dragon_ridge",
+    "subarea": "dragon_ridge_1",
+    "pois": [
+      "campfire",
+      "dragon_bone"
+    ],
+    "source": "world"
+  },
+  "dragon_ridge:dragon_ridge_2": {
+    "map": "dragon_ridge",
+    "subarea": "dragon_ridge_2",
+    "pois": [
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "dragon_ridge:dragon_ridge_3": {
+    "map": "dragon_ridge",
+    "subarea": "dragon_ridge_3",
+    "pois": [
+      "rune_stone",
+      "scenic_view"
+    ],
+    "source": "world"
+  },
+  "dragon_ridge:dragon_ridge_4": {
+    "map": "dragon_ridge",
+    "subarea": "dragon_ridge_4",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "dragon_ridge:dragon_ridge_5": {
+    "map": "dragon_ridge",
+    "subarea": "dragon_ridge_5",
+    "pois": [
+      "dragon_bone",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "dragon_ridge:dragon_ridge_6": {
+    "map": "dragon_ridge",
+    "subarea": "dragon_ridge_6",
+    "pois": [
+      "ancient_altar",
+      "dragon_bone"
+    ],
+    "source": "mesh"
+  },
+  "dragon_ridge_old_road:dragon_ridge_old_road_1": {
+    "map": "dragon_ridge_old_road",
+    "subarea": "dragon_ridge_old_road_1",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "dragon_ridge_old_road:dragon_ridge_old_road_3": {
+    "map": "dragon_ridge_old_road",
+    "subarea": "dragon_ridge_old_road_3",
+    "pois": [
+      "scenic_view"
+    ],
+    "source": "world"
+  },
+  "dragon_ridge_old_road:dragon_ridge_old_road_4": {
+    "map": "dragon_ridge_old_road",
+    "subarea": "dragon_ridge_old_road_4",
+    "pois": [
+      "campfire",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "dragon_ridge_old_road:dragon_ridge_old_road_5": {
+    "map": "dragon_ridge_old_road",
+    "subarea": "dragon_ridge_old_road_5",
+    "pois": [
+      "dragon_bone",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "dragon_ridge_old_road:dragon_ridge_old_road_6": {
+    "map": "dragon_ridge_old_road",
+    "subarea": "dragon_ridge_old_road_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "dragon_roost:dragon_roost_1": {
+    "map": "dragon_roost",
+    "subarea": "dragon_roost_1",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "dragon_roost:dragon_roost_2": {
+    "map": "dragon_roost",
+    "subarea": "dragon_roost_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "dragon_roost:dragon_roost_3": {
+    "map": "dragon_roost",
+    "subarea": "dragon_roost_3",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "dragon_roost:dragon_roost_4": {
+    "map": "dragon_roost",
+    "subarea": "dragon_roost_4",
+    "pois": [
+      "bird_nest",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "dragon_roost:dragon_roost_5": {
+    "map": "dragon_roost",
+    "subarea": "dragon_roost_5",
+    "pois": [
+      "dragon_bone",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "dragon_roost:dragon_roost_6": {
+    "map": "dragon_roost",
+    "subarea": "dragon_roost_6",
+    "pois": [
+      "loot_pile",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "dragon_tomb:dragon_tomb_1": {
+    "map": "dragon_tomb",
+    "subarea": "dragon_tomb_1",
+    "pois": [
+      {
+        "id": "dragon_tomb_0_rune_1",
+        "type": "rune_stone",
+        "name": "龙语碑文",
+        "hint": "碑上刻着弯弯曲曲的龙语",
+        "lore": "『眠者之殿，龙鳞为钥。』",
+        "effect": {
+          "unlock": "mechanism_dragon_gate"
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "dragon_tomb:dragon_tomb_2": {
+    "map": "dragon_tomb",
+    "subarea": "dragon_tomb_2",
+    "pois": [
+      {
+        "id": "dragon_tomb_1_corpse_1",
+        "type": "corpse",
+        "name": "龙裔遗骸",
+        "hint": "半龙人的遗骸蜷在骨堆边，怀里抱着什么",
+        "loot": {
+          "materials": [
+            "龙鳞"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "dragon_tomb:dragon_tomb_3": {
+    "map": "dragon_tomb",
+    "subarea": "dragon_tomb_3",
+    "pois": [
+      {
+        "id": "dragon_tomb_2_mech_1",
+        "type": "mechanism",
+        "name": "暗门机关",
+        "hint": "大殿侧壁有道龙纹暗门，需要龙语启示",
+        "need": {
+          "poi_read": "dragon_tomb_0_rune_1"
+        },
+        "effect": {
+          "open_secret": true
+        },
+        "desc": "你按碑文低吟龙语，暗门轰然开启！"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "dragonborn_valley_trail:dragonborn_valley_trail_1": {
+    "map": "dragonborn_valley_trail",
+    "subarea": "dragonborn_valley_trail_1",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "dragonborn_valley_trail:dragonborn_valley_trail_2": {
+    "map": "dragonborn_valley_trail",
+    "subarea": "dragonborn_valley_trail_2",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "dragonborn_valley_trail:dragonborn_valley_trail_3": {
+    "map": "dragonborn_valley_trail",
+    "subarea": "dragonborn_valley_trail_3",
+    "pois": [
+      "rune_stone",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "dragonborn_valley_trail:dragonborn_valley_trail_4": {
+    "map": "dragonborn_valley_trail",
+    "subarea": "dragonborn_valley_trail_4",
+    "pois": [
+      "campfire",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "dragonborn_valley_trail:dragonborn_valley_trail_5": {
+    "map": "dragonborn_valley_trail",
+    "subarea": "dragonborn_valley_trail_5",
+    "pois": [
+      "loot_pile",
+      "dragon_bone"
+    ],
+    "source": "mesh"
+  },
+  "dragonborn_valley_trail:dragonborn_valley_trail_6": {
+    "map": "dragonborn_valley_trail",
+    "subarea": "dragonborn_valley_trail_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "dragonsfall_valley:dragonsfall_valley_1": {
+    "map": "dragonsfall_valley",
+    "subarea": "dragonsfall_valley_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "dragonsfall_valley:dragonsfall_valley_2": {
+    "map": "dragonsfall_valley",
+    "subarea": "dragonsfall_valley_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "dragonsfall_valley:dragonsfall_valley_3": {
+    "map": "dragonsfall_valley",
+    "subarea": "dragonsfall_valley_3",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "dragonsfall_valley:dragonsfall_valley_4": {
+    "map": "dragonsfall_valley",
+    "subarea": "dragonsfall_valley_4",
+    "pois": [
+      "campfire",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "dragonsfall_valley:dragonsfall_valley_5": {
+    "map": "dragonsfall_valley",
+    "subarea": "dragonsfall_valley_5",
+    "pois": [
+      "dragon_bone",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "dragonsfall_valley:dragonsfall_valley_6": {
+    "map": "dragonsfall_valley",
+    "subarea": "dragonsfall_valley_6",
+    "pois": [
+      "ancient_altar",
+      "traveler_grave"
+    ],
+    "source": "mesh"
+  },
+  "dusk_ridge_road:dusk_ridge_road_1": {
+    "map": "dusk_ridge_road",
+    "subarea": "dusk_ridge_road_1",
+    "pois": [
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "dusk_ridge_road:dusk_ridge_road_3": {
+    "map": "dusk_ridge_road",
+    "subarea": "dusk_ridge_road_3",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "dusk_ridge_road:dusk_ridge_road_4": {
+    "map": "dusk_ridge_road",
+    "subarea": "dusk_ridge_road_4",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "dusk_ridge_road:dusk_ridge_road_5": {
+    "map": "dusk_ridge_road",
+    "subarea": "dusk_ridge_road_5",
+    "pois": [
+      "loot_pile",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "dusk_ridge_road:dusk_ridge_road_6": {
+    "map": "dusk_ridge_road",
+    "subarea": "dusk_ridge_road_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "dwarf_long_gallery:dwarf_long_gallery_1": {
+    "map": "dwarf_long_gallery",
+    "subarea": "dwarf_long_gallery_1",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "dwarf_long_gallery:dwarf_long_gallery_2": {
+    "map": "dwarf_long_gallery",
+    "subarea": "dwarf_long_gallery_2",
+    "pois": [
+      "rune_stone"
+    ],
+    "source": "world"
+  },
+  "dwarf_long_gallery:dwarf_long_gallery_3": {
+    "map": "dwarf_long_gallery",
+    "subarea": "dwarf_long_gallery_3",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "dwarf_long_gallery:dwarf_long_gallery_4": {
+    "map": "dwarf_long_gallery",
+    "subarea": "dwarf_long_gallery_4",
+    "pois": [
+      "campfire",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "dwarf_long_gallery:dwarf_long_gallery_5": {
+    "map": "dwarf_long_gallery",
+    "subarea": "dwarf_long_gallery_5",
+    "pois": [
+      "loot_pile",
+      "traveler_grave"
+    ],
+    "source": "mesh"
+  },
+  "dwarf_long_gallery:dwarf_long_gallery_6": {
+    "map": "dwarf_long_gallery",
+    "subarea": "dwarf_long_gallery_6",
+    "pois": [
+      "loot_pile",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "elven_ruins:elven_ruins_1": {
+    "map": "elven_ruins",
+    "subarea": "elven_ruins_1",
+    "pois": [
+      {
+        "id": "elven_ruins_0_fire_1",
+        "type": "campfire",
+        "name": "残垣火堆",
+        "hint": "不知谁点的火堆还亮着，能暖暖身子"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "elven_ruins:elven_ruins_2": {
+    "map": "elven_ruins",
+    "subarea": "elven_ruins_2",
+    "pois": [
+      {
+        "id": "elven_ruins_1_mech_1",
+        "type": "mechanism",
+        "name": "精灵石像",
+        "hint": "其中一尊石像的底座有个可以转动的机关",
+        "effect": {
+          "open_secret": true
+        },
+        "desc": "你转动石像底座，走廊侧面无声地滑开一道暗门！"
+      },
+      {
+        "id": "elven_ruins_1_corpse_1",
+        "type": "corpse",
+        "name": "精灵战士遗骸",
+        "hint": "精灵弓手的遗骸，箭袋已经朽烂",
+        "loot": {
+          "materials": [
+            "月光石"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "ember_corridor:ember_corridor_2": {
+    "map": "ember_corridor",
+    "subarea": "ember_corridor_2",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "ember_corridor:ember_corridor_3": {
+    "map": "ember_corridor",
+    "subarea": "ember_corridor_3",
+    "pois": [
+      "loot_pile",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "emerald_forest:emerald_forest_1": {
+    "map": "emerald_forest",
+    "subarea": "emerald_forest_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "emerald_forest:emerald_forest_2": {
+    "map": "emerald_forest",
+    "subarea": "emerald_forest_2",
+    "pois": [
+      "herb_patch",
+      "campfire",
+      "bird_nest"
+    ],
+    "source": "world"
+  },
+  "emerald_forest:emerald_forest_3": {
+    "map": "emerald_forest",
+    "subarea": "emerald_forest_3",
+    "pois": [
+      "herb_patch",
+      "ancient_tree_sight"
+    ],
+    "source": "world"
+  },
+  "emerald_forest:emerald_forest_4": {
+    "map": "emerald_forest",
+    "subarea": "emerald_forest_4",
+    "pois": [
+      "bird_nest",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "emerald_forest:emerald_forest_5": {
+    "map": "emerald_forest",
+    "subarea": "emerald_forest_5",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "emerald_forest:emerald_forest_6": {
+    "map": "emerald_forest",
+    "subarea": "emerald_forest_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "emerald_valley:emerald_valley_1": {
+    "map": "emerald_valley",
+    "subarea": "emerald_valley_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "emerald_valley:emerald_valley_2": {
+    "map": "emerald_valley",
+    "subarea": "emerald_valley_2",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "emerald_valley:emerald_valley_3": {
+    "map": "emerald_valley",
+    "subarea": "emerald_valley_3",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "emerald_valley:emerald_valley_4": {
+    "map": "emerald_valley",
+    "subarea": "emerald_valley_4",
+    "pois": [
+      "bird_nest",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "emerald_valley:emerald_valley_5": {
+    "map": "emerald_valley",
+    "subarea": "emerald_valley_5",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "eye_of_storm:eye_of_storm_1": {
+    "map": "eye_of_storm",
+    "subarea": "eye_of_storm_1",
+    "pois": [
+      {
+        "id": "eye_of_storm_0_rune_1",
+        "type": "rune_stone",
+        "name": "风神铭文碑",
+        "hint": "碑上的铭文被风磨得发亮",
+        "lore": "『风是天空的血脉。追风者，得风之速。』",
+        "effect": {
+          "boss_buff": "spd_up"
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "eye_of_storm:eye_of_storm_2": {
+    "map": "eye_of_storm",
+    "subarea": "eye_of_storm_2",
+    "pois": [
+      {
+        "id": "eye_of_storm_1_chest_1",
+        "type": "chest",
+        "name": "云中铁箱",
+        "hint": "铁箱被风绳捆在云桥上",
+        "loot": {
+          "gold": 320,
+          "materials": [
+            "雷核"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "forge_valley:forge_valley_1": {
+    "map": "forge_valley",
+    "subarea": "forge_valley_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "forge_valley:forge_valley_2": {
+    "map": "forge_valley",
+    "subarea": "forge_valley_2",
+    "pois": [
+      "fishing_spot",
+      "herb_patch"
+    ],
+    "source": "world"
+  },
+  "forge_valley:forge_valley_3": {
+    "map": "forge_valley",
+    "subarea": "forge_valley_3",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "forge_valley:forge_valley_4": {
+    "map": "forge_valley",
+    "subarea": "forge_valley_4",
+    "pois": [
+      "merchant_camp",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "forge_valley:forge_valley_5": {
+    "map": "forge_valley",
+    "subarea": "forge_valley_5",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "frost_fang:frost_fang_1": {
+    "map": "frost_fang",
+    "subarea": "frost_fang_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "frost_fang:frost_fang_2": {
+    "map": "frost_fang",
+    "subarea": "frost_fang_2",
+    "pois": [
+      "campfire",
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "frost_fang:frost_fang_3": {
+    "map": "frost_fang",
+    "subarea": "frost_fang_3",
+    "pois": [
+      "campfire",
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "frost_fang:frost_fang_4": {
+    "map": "frost_fang",
+    "subarea": "frost_fang_4",
+    "pois": [
+      "ice_sculpture",
+      "campfire",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "frost_fang:frost_fang_5": {
+    "map": "frost_fang",
+    "subarea": "frost_fang_5",
+    "pois": [
+      "ice_sculpture",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "frost_field:frost_field_1": {
+    "map": "frost_field",
+    "subarea": "frost_field_1",
+    "pois": [
+      "campfire",
+      "shrine",
+      "ice_sculpture"
+    ],
+    "source": "world"
+  },
+  "frost_field:frost_field_2": {
+    "map": "frost_field",
+    "subarea": "frost_field_2",
+    "pois": [
+      "campfire",
+      "shrine",
+      "ice_sculpture"
+    ],
+    "source": "world"
+  },
+  "frost_field:frost_field_3": {
+    "map": "frost_field",
+    "subarea": "frost_field_3",
+    "pois": [
+      "campfire",
+      "loot_pile",
+      "scenic_view"
+    ],
+    "source": "world"
+  },
+  "frost_field:frost_field_4": {
+    "map": "frost_field",
+    "subarea": "frost_field_4",
+    "pois": [
+      "ice_sculpture",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "frost_field:frost_field_5": {
+    "map": "frost_field",
+    "subarea": "frost_field_5",
+    "pois": [
+      "ice_sculpture",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "frost_field:frost_field_6": {
+    "map": "frost_field",
+    "subarea": "frost_field_6",
+    "pois": [
+      "ice_sculpture",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "frost_throne:frost_throne_1": {
+    "map": "frost_throne",
+    "subarea": "frost_throne_1",
+    "pois": [
+      {
+        "id": "frost_throne_0_fire_1",
+        "type": "campfire",
+        "name": "冰封火堆",
+        "hint": "火堆被冰封了一半，拨开冰壳还能点燃"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "frost_throne:frost_throne_2": {
+    "map": "frost_throne",
+    "subarea": "frost_throne_2",
+    "pois": [
+      {
+        "id": "frost_throne_1_mech_1",
+        "type": "mechanism",
+        "name": "冰晶机关",
+        "hint": "墙上的冰晶簇中嵌着一块不寻常的蓝宝石",
+        "effect": {
+          "unlock": "campfire_throne"
+        },
+        "desc": "你打碎冰晶取下蓝宝石——远处传来冰层碎裂的声音，似乎打通了什么！"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "frost_throne:frost_throne_3": {
+    "map": "frost_throne",
+    "subarea": "frost_throne_3",
+    "pois": [
+      {
+        "id": "frost_throne_2_fire_2",
+        "type": "campfire",
+        "name": "取暖火堆",
+        "hint": "王座旁有个火盆——蓝宝石的光芒似乎让它亮了起来",
+        "need": {
+          "unlock": "campfire_throne"
+        },
+        "effect": {
+          "heal_pct": 0.2
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "frostwhisper_canyon:frostwhisper_canyon_1": {
+    "map": "frostwhisper_canyon",
+    "subarea": "frostwhisper_canyon_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "frostwhisper_canyon:frostwhisper_canyon_2": {
+    "map": "frostwhisper_canyon",
+    "subarea": "frostwhisper_canyon_2",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "frostwhisper_canyon:frostwhisper_canyon_3": {
+    "map": "frostwhisper_canyon",
+    "subarea": "frostwhisper_canyon_3",
+    "pois": [
+      "campfire",
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "frostwhisper_canyon:frostwhisper_canyon_4": {
+    "map": "frostwhisper_canyon",
+    "subarea": "frostwhisper_canyon_4",
+    "pois": [
+      "ice_sculpture",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "frostwhisper_canyon:frostwhisper_canyon_5": {
+    "map": "frostwhisper_canyon",
+    "subarea": "frostwhisper_canyon_5",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "fungus_forest:fungus_forest_1": {
+    "map": "fungus_forest",
+    "subarea": "fungus_forest_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "fungus_forest:fungus_forest_2": {
+    "map": "fungus_forest",
+    "subarea": "fungus_forest_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "fungus_forest:fungus_forest_3": {
+    "map": "fungus_forest",
+    "subarea": "fungus_forest_3",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "fungus_forest:fungus_forest_4": {
+    "map": "fungus_forest",
+    "subarea": "fungus_forest_4",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "fungus_forest:fungus_forest_5": {
+    "map": "fungus_forest",
+    "subarea": "fungus_forest_5",
+    "pois": [
+      "loot_pile",
+      "traveler_grave"
+    ],
+    "source": "mesh"
+  },
+  "fungus_forest:fungus_forest_6": {
+    "map": "fungus_forest",
+    "subarea": "fungus_forest_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "goblin_camp:goblin_camp_1": {
+    "map": "goblin_camp",
+    "subarea": "goblin_camp_1",
+    "pois": [
+      {
+        "id": "goblin_camp_0_chest_1",
+        "type": "chest",
+        "name": "生锈的铁箱",
+        "hint": "铁箱的锁已经锈穿，看起来能撬开",
+        "loot": {
+          "gold": 50,
+          "materials": [
+            "哥布林铁片"
+          ]
+        }
+      },
+      {
+        "id": "goblin_camp_0_fire_1",
+        "type": "campfire",
+        "name": "将熄的篝火",
+        "hint": "火堆还温着，可以烤烤火恢复体力"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "goblin_camp:goblin_camp_2": {
+    "map": "goblin_camp",
+    "subarea": "goblin_camp_2",
+    "pois": [
+      {
+        "id": "goblin_camp_1_chest_2",
+        "type": "chest",
+        "name": "贡品箱",
+        "hint": "箱子上捆着麻绳，里面可能是献给酋长的贡品",
+        "loot": {
+          "gold": 80,
+          "materials": [
+            "哥布林铁片"
+          ]
+        }
+      },
+      {
+        "id": "goblin_camp_1_fire_2",
+        "type": "campfire",
+        "name": "暖火盆",
+        "hint": "火盆里的炭火正旺，能驱散夜战的疲惫"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "goblin_camp:goblin_camp_3": {
+    "map": "goblin_camp",
+    "subarea": "goblin_camp_3",
+    "pois": [
+      {
+        "id": "goblin_camp_2_corpse_1",
+        "type": "corpse",
+        "name": "被抢的商队货箱",
+        "hint": "货箱被砸开过，里面还有没被拿走的零碎",
+        "loot": {
+          "gold": 60,
+          "materials": [
+            "哥布林铁片"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "gold_plain:gold_plain_1": {
+    "map": "gold_plain",
+    "subarea": "gold_plain_1",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "gold_plain:gold_plain_2": {
+    "map": "gold_plain",
+    "subarea": "gold_plain_2",
+    "pois": [
+      "campfire",
+      "herb_patch",
+      "ancient_altar"
+    ],
+    "source": "world"
+  },
+  "gold_plain:gold_plain_3": {
+    "map": "gold_plain",
+    "subarea": "gold_plain_3",
+    "pois": [
+      "star_gazing",
+      "merchant_camp"
+    ],
+    "source": "world"
+  },
+  "gold_plain:gold_plain_4": {
+    "map": "gold_plain",
+    "subarea": "gold_plain_4",
+    "pois": [
+      "merchant_camp",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "gold_plain:gold_plain_5": {
+    "map": "gold_plain",
+    "subarea": "gold_plain_5",
+    "pois": [
+      "ancient_altar",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "gold_plain:gold_plain_6": {
+    "map": "gold_plain",
+    "subarea": "gold_plain_6",
+    "pois": [
+      "loot_pile",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "gray_dwarf:gray_dwarf_1": {
+    "map": "gray_dwarf",
+    "subarea": "gray_dwarf_1",
+    "pois": [
+      {
+        "id": "gray_dwarf_0_corpse_1",
+        "type": "corpse",
+        "name": "守卫残骸",
+        "hint": "灰矮人守卫的尸体，腰带上挂着钥匙串",
+        "loot": {
+          "materials": [
+            "精铁锭"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "gray_dwarf:gray_dwarf_2": {
+    "map": "gray_dwarf",
+    "subarea": "gray_dwarf_2",
+    "pois": [
+      {
+        "id": "gray_dwarf_1_chest_1",
+        "type": "chest",
+        "name": "军械箱",
+        "hint": "铁箱里码着整齐的军械",
+        "loot": {
+          "gold": 180,
+          "materials": [
+            "精铁锭"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "gray_dwarf:gray_dwarf_3": {
+    "map": "gray_dwarf",
+    "subarea": "gray_dwarf_3",
+    "pois": [
+      {
+        "id": "gray_dwarf_2_fire_1",
+        "type": "campfire",
+        "name": "领主壁炉",
+        "hint": "壁炉里的火烧得正旺，决战前烤烤火吧"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "harbor_docks:harbor_docks_1": {
+    "map": "harbor_docks",
+    "subarea": "harbor_docks_1",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "harbor_docks:harbor_docks_2": {
+    "map": "harbor_docks",
+    "subarea": "harbor_docks_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "harbor_docks:harbor_docks_3": {
+    "map": "harbor_docks",
+    "subarea": "harbor_docks_3",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "harbor_docks:harbor_docks_4": {
+    "map": "harbor_docks",
+    "subarea": "harbor_docks_4",
+    "pois": [
+      "shipwreck",
+      "fishing_spot"
+    ],
+    "source": "mesh"
+  },
+  "harbor_docks:harbor_docks_5": {
+    "map": "harbor_docks",
+    "subarea": "harbor_docks_5",
+    "pois": [
+      "loot_pile",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "harbor_docks:harbor_docks_6": {
+    "map": "harbor_docks",
+    "subarea": "harbor_docks_6",
+    "pois": [
+      "shipwreck",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "hill_mine:hill_mine_1": {
+    "map": "hill_mine",
+    "subarea": "hill_mine_1",
+    "pois": [
+      "loot_pile",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "hill_mine:hill_mine_2": {
+    "map": "hill_mine",
+    "subarea": "hill_mine_2",
+    "pois": [
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "hill_mine:hill_mine_3": {
+    "map": "hill_mine",
+    "subarea": "hill_mine_3",
+    "pois": [
+      "rune_stone",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "hill_mine:hill_mine_4": {
+    "map": "hill_mine",
+    "subarea": "hill_mine_4",
+    "pois": [
+      "loot_pile",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "hill_mine:hill_mine_5": {
+    "map": "hill_mine",
+    "subarea": "hill_mine_5",
+    "pois": [
+      "fishing_spot",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "hill_mine:hill_mine_6": {
+    "map": "hill_mine",
+    "subarea": "hill_mine_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "holy_trial:holy_trial_1": {
+    "map": "holy_trial",
+    "subarea": "holy_trial_1",
+    "pois": [
+      {
+        "id": "holy_trial_0_rune_1",
+        "type": "rune_stone",
+        "name": "试炼誓言碑",
+        "hint": "碑上刻着骑士的誓言",
+        "lore": "『无畏之心，百炼成钢。试炼不是考验，是馈赠。』"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "holy_trial:holy_trial_2": {
+    "map": "holy_trial",
+    "subarea": "holy_trial_2",
+    "pois": [
+      {
+        "id": "holy_trial_1_chest_1",
+        "type": "chest",
+        "name": "老兵补给箱",
+        "hint": "老兵脚边的箱子，装着伤药与干粮",
+        "loot": {
+          "materials": [
+            "圣水"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "ironharbor:ironharbor_1": {
+    "map": "ironharbor",
+    "subarea": "ironharbor_1",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "ironharbor:ironharbor_5": {
+    "map": "ironharbor",
+    "subarea": "ironharbor_5",
+    "pois": [
+      "fishing_spot"
+    ],
+    "source": "world"
+  },
+  "ironshield_hills:ironshield_hills_1": {
+    "map": "ironshield_hills",
+    "subarea": "ironshield_hills_1",
+    "pois": [
+      "shrine",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "ironshield_hills:ironshield_hills_2": {
+    "map": "ironshield_hills",
+    "subarea": "ironshield_hills_2",
+    "pois": [
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "ironshield_hills:ironshield_hills_3": {
+    "map": "ironshield_hills",
+    "subarea": "ironshield_hills_3",
+    "pois": [
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "ironshield_hills:ironshield_hills_4": {
+    "map": "ironshield_hills",
+    "subarea": "ironshield_hills_4",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "ironshield_hills:ironshield_hills_5": {
+    "map": "ironshield_hills",
+    "subarea": "ironshield_hills_5",
+    "pois": [
+      "scenic_view",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "ironshield_hills:ironshield_hills_6": {
+    "map": "ironshield_hills",
+    "subarea": "ironshield_hills_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "king_road:king_road_1": {
+    "map": "king_road",
+    "subarea": "king_road_1",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "king_road:king_road_2": {
+    "map": "king_road",
+    "subarea": "king_road_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "king_road:king_road_3": {
+    "map": "king_road",
+    "subarea": "king_road_3",
+    "pois": [
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "king_road:king_road_4": {
+    "map": "king_road",
+    "subarea": "king_road_4",
+    "pois": [
+      "traveler_grave",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "king_road:king_road_5": {
+    "map": "king_road",
+    "subarea": "king_road_5",
+    "pois": [
+      "campfire",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "king_road:king_road_6": {
+    "map": "king_road",
+    "subarea": "king_road_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "knight_yard:knight_yard_1": {
+    "map": "knight_yard",
+    "subarea": "knight_yard_1",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "knight_yard:knight_yard_2": {
+    "map": "knight_yard",
+    "subarea": "knight_yard_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "knight_yard:knight_yard_3": {
+    "map": "knight_yard",
+    "subarea": "knight_yard_3",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "knight_yard:knight_yard_4": {
+    "map": "knight_yard",
+    "subarea": "knight_yard_4",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "knight_yard:knight_yard_5": {
+    "map": "knight_yard",
+    "subarea": "knight_yard_5",
+    "pois": [
+      "campfire",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "knight_yard:knight_yard_6": {
+    "map": "knight_yard",
+    "subarea": "knight_yard_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "lava_bed:lava_bed_1": {
+    "map": "lava_bed",
+    "subarea": "lava_bed_1",
+    "pois": [
+      "fishing_spot",
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "lava_bed:lava_bed_2": {
+    "map": "lava_bed",
+    "subarea": "lava_bed_2",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "lava_bed:lava_bed_3": {
+    "map": "lava_bed",
+    "subarea": "lava_bed_3",
+    "pois": [
+      "fishing_spot",
+      "herb_patch"
+    ],
+    "source": "world"
+  },
+  "lava_bed:lava_bed_4": {
+    "map": "lava_bed",
+    "subarea": "lava_bed_4",
+    "pois": [
+      "campfire",
+      "fishing_spot"
+    ],
+    "source": "mesh"
+  },
+  "lava_bed:lava_bed_5": {
+    "map": "lava_bed",
+    "subarea": "lava_bed_5",
+    "pois": [
+      "loot_pile",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "lava_bed:lava_bed_6": {
+    "map": "lava_bed",
+    "subarea": "lava_bed_6",
+    "pois": [
+      "traveler_grave",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "lost_library:lost_library_2": {
+    "map": "lost_library",
+    "subarea": "lost_library_2",
+    "pois": [
+      "loot_pile",
+      "note"
+    ],
+    "source": "mesh"
+  },
+  "lost_library:lost_library_3": {
+    "map": "lost_library",
+    "subarea": "lost_library_3",
+    "pois": [
+      "loot_pile",
+      "star_gazing"
+    ],
+    "source": "mesh"
+  },
+  "mermaid_bay:mermaid_bay_1": {
+    "map": "mermaid_bay",
+    "subarea": "mermaid_bay_1",
+    "pois": [
+      "fishing_spot",
+      "loot_pile",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "mermaid_bay:mermaid_bay_2": {
+    "map": "mermaid_bay",
+    "subarea": "mermaid_bay_2",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "mermaid_bay:mermaid_bay_3": {
+    "map": "mermaid_bay",
+    "subarea": "mermaid_bay_3",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "mermaid_bay:mermaid_bay_4": {
+    "map": "mermaid_bay",
+    "subarea": "mermaid_bay_4",
+    "pois": [
+      "fishing_spot",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "mermaid_bay:mermaid_bay_5": {
+    "map": "mermaid_bay",
+    "subarea": "mermaid_bay_5",
+    "pois": [
+      "loot_pile",
+      "traveler_grave"
+    ],
+    "source": "mesh"
+  },
+  "mermaid_bay:mermaid_bay_6": {
+    "map": "mermaid_bay",
+    "subarea": "mermaid_bay_6",
+    "pois": [
+      "loot_pile",
+      "shipwreck"
+    ],
+    "source": "mesh"
+  },
+  "mist_tide_passage:mist_tide_passage_1": {
+    "map": "mist_tide_passage",
+    "subarea": "mist_tide_passage_1",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "mist_tide_passage:mist_tide_passage_2": {
+    "map": "mist_tide_passage",
+    "subarea": "mist_tide_passage_2",
+    "pois": [
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "mist_tide_passage:mist_tide_passage_3": {
+    "map": "mist_tide_passage",
+    "subarea": "mist_tide_passage_3",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "mist_tide_passage:mist_tide_passage_4": {
+    "map": "mist_tide_passage",
+    "subarea": "mist_tide_passage_4",
+    "pois": [
+      "fishing_spot",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "mist_tide_passage:mist_tide_passage_5": {
+    "map": "mist_tide_passage",
+    "subarea": "mist_tide_passage_5",
+    "pois": [
+      "shipwreck",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "mist_tide_passage:mist_tide_passage_6": {
+    "map": "mist_tide_passage",
+    "subarea": "mist_tide_passage_6",
+    "pois": [
+      "loot_pile",
+      "note"
+    ],
+    "source": "mesh"
+  },
+  "mist_trench:mist_trench_1": {
+    "map": "mist_trench",
+    "subarea": "mist_trench_1",
+    "pois": [
+      "fishing_spot",
+      "loot_pile",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "mist_trench:mist_trench_2": {
+    "map": "mist_trench",
+    "subarea": "mist_trench_2",
+    "pois": [
+      "loot_pile",
+      "herb_patch"
+    ],
+    "source": "world"
+  },
+  "mist_trench:mist_trench_3": {
+    "map": "mist_trench",
+    "subarea": "mist_trench_3",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "mist_trench:mist_trench_4": {
+    "map": "mist_trench",
+    "subarea": "mist_trench_4",
+    "pois": [
+      "fishing_spot"
+    ],
+    "source": "mesh"
+  },
+  "mist_trench:mist_trench_5": {
+    "map": "mist_trench",
+    "subarea": "mist_trench_5",
+    "pois": [
+      "shipwreck",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "mist_trench:mist_trench_6": {
+    "map": "mist_trench",
+    "subarea": "mist_trench_6",
+    "pois": [
+      "loot_pile",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "misty_swamp:misty_swamp_1": {
+    "map": "misty_swamp",
+    "subarea": "misty_swamp_1",
+    "pois": [
+      "herb_patch",
+      "loot_pile",
+      "campfire",
+      "traveler_grave"
+    ],
+    "source": "world"
+  },
+  "misty_swamp:misty_swamp_2": {
+    "map": "misty_swamp",
+    "subarea": "misty_swamp_2",
+    "pois": [
+      "herb_patch",
+      "fishing_spot"
+    ],
+    "source": "world"
+  },
+  "misty_swamp:misty_swamp_3": {
+    "map": "misty_swamp",
+    "subarea": "misty_swamp_3",
+    "pois": [
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "misty_swamp:misty_swamp_4": {
+    "map": "misty_swamp",
+    "subarea": "misty_swamp_4",
+    "pois": [
+      "traveler_grave",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "misty_swamp:misty_swamp_5": {
+    "map": "misty_swamp",
+    "subarea": "misty_swamp_5",
+    "pois": [
+      "herb_patch",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "misty_swamp:misty_swamp_6": {
+    "map": "misty_swamp",
+    "subarea": "misty_swamp_6",
+    "pois": [
+      "ancient_altar",
+      "traveler_grave"
+    ],
+    "source": "mesh"
+  },
+  "molten_abyss:molten_abyss_1": {
+    "map": "molten_abyss",
+    "subarea": "molten_abyss_1",
+    "pois": [
+      "loot_pile",
+      "campfire",
+      "traveler_grave"
+    ],
+    "source": "world"
+  },
+  "molten_abyss:molten_abyss_2": {
+    "map": "molten_abyss",
+    "subarea": "molten_abyss_2",
+    "pois": [
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "molten_abyss:molten_abyss_3": {
+    "map": "molten_abyss",
+    "subarea": "molten_abyss_3",
+    "pois": [
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "molten_abyss:molten_abyss_4": {
+    "map": "molten_abyss",
+    "subarea": "molten_abyss_4",
+    "pois": [
+      "campfire",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "molten_abyss:molten_abyss_5": {
+    "map": "molten_abyss",
+    "subarea": "molten_abyss_5",
+    "pois": [
+      "loot_pile",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "molten_abyss:molten_abyss_6": {
+    "map": "molten_abyss",
+    "subarea": "molten_abyss_6",
+    "pois": [
+      "traveler_grave",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "moon_court:moon_court_1": {
+    "map": "moon_court",
+    "subarea": "moon_court_1",
+    "pois": [
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "moon_glade:moon_glade_1": {
+    "map": "moon_glade",
+    "subarea": "moon_glade_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "moon_glade:moon_glade_2": {
+    "map": "moon_glade",
+    "subarea": "moon_glade_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "moon_glade:moon_glade_3": {
+    "map": "moon_glade",
+    "subarea": "moon_glade_3",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "moon_glade:moon_glade_4": {
+    "map": "moon_glade",
+    "subarea": "moon_glade_4",
+    "pois": [
+      "bird_nest",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "moon_glade:moon_glade_5": {
+    "map": "moon_glade",
+    "subarea": "moon_glade_5",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "moon_glade:moon_glade_6": {
+    "map": "moon_glade",
+    "subarea": "moon_glade_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "moon_temple:moon_temple_1": {
+    "map": "moon_temple",
+    "subarea": "moon_temple_1",
+    "pois": [
+      {
+        "id": "moon_temple_0_supply_1",
+        "type": "supply",
+        "name": "月光供品",
+        "hint": "祭台上的供品，信徒还未取走",
+        "loot": {
+          "materials": [
+            "月辉石"
+          ]
+        }
+      },
+      {
+        "id": "moon_temple_0_rune_1",
+        "type": "rune_stone",
+        "name": "月神祷文碑",
+        "hint": "碑上刻着月神的祷文",
+        "lore": "『月亏月盈，皆为月恩。』"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "moon_temple:moon_temple_2": {
+    "map": "moon_temple",
+    "subarea": "moon_temple_2",
+    "pois": [
+      {
+        "id": "moon_temple_1_chest_1",
+        "type": "chest",
+        "name": "月光宝箱",
+        "hint": "银白色的箱子，在月光下几乎隐形",
+        "loot": {
+          "gold": 200,
+          "materials": [
+            "月辉石"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "moonshadow_wood:moonshadow_wood_1": {
+    "map": "moonshadow_wood",
+    "subarea": "moonshadow_wood_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "moonshadow_wood:moonshadow_wood_2": {
+    "map": "moonshadow_wood",
+    "subarea": "moonshadow_wood_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "moonshadow_wood:moonshadow_wood_3": {
+    "map": "moonshadow_wood",
+    "subarea": "moonshadow_wood_3",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "moonshadow_wood:moonshadow_wood_4": {
+    "map": "moonshadow_wood",
+    "subarea": "moonshadow_wood_4",
+    "pois": [
+      "bird_nest",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "moonshadow_wood:moonshadow_wood_5": {
+    "map": "moonshadow_wood",
+    "subarea": "moonshadow_wood_5",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "moonshadow_wood:moonshadow_wood_6": {
+    "map": "moonshadow_wood",
+    "subarea": "moonshadow_wood_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "oak_plain:oak_plain_1": {
+    "map": "oak_plain",
+    "subarea": "oak_plain_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "oak_plain:oak_plain_2": {
+    "map": "oak_plain",
+    "subarea": "oak_plain_2",
+    "pois": [
+      "herb_patch",
+      "campfire",
+      "merchant_camp"
+    ],
+    "source": "world"
+  },
+  "oak_plain:oak_plain_3": {
+    "map": "oak_plain",
+    "subarea": "oak_plain_3",
+    "pois": [
+      "merchant_camp",
+      "herb_patch",
+      "scenic_view",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "oak_plain:oak_plain_4": {
+    "map": "oak_plain",
+    "subarea": "oak_plain_4",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "oak_plain:oak_plain_5": {
+    "map": "oak_plain",
+    "subarea": "oak_plain_5",
+    "pois": [
+      "merchant_camp",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "oak_plain:oak_plain_6": {
+    "map": "oak_plain",
+    "subarea": "oak_plain_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "oak_town:oak_town_1": {
+    "map": "oak_town",
+    "subarea": "oak_town_1",
+    "pois": [
+      "shrine",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "old_battlefield:old_battlefield_1": {
+    "map": "old_battlefield",
+    "subarea": "old_battlefield_1",
+    "pois": [
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "old_battlefield:old_battlefield_2": {
+    "map": "old_battlefield",
+    "subarea": "old_battlefield_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "old_battlefield:old_battlefield_3": {
+    "map": "old_battlefield",
+    "subarea": "old_battlefield_3",
+    "pois": [
+      "note"
+    ],
+    "source": "world"
+  },
+  "old_battlefield:old_battlefield_4": {
+    "map": "old_battlefield",
+    "subarea": "old_battlefield_4",
+    "pois": [
+      "traveler_grave",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "old_battlefield:old_battlefield_5": {
+    "map": "old_battlefield",
+    "subarea": "old_battlefield_5",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "old_battlefield:old_battlefield_6": {
+    "map": "old_battlefield",
+    "subarea": "old_battlefield_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "old_king_tomb:old_king_tomb_1": {
+    "map": "old_king_tomb",
+    "subarea": "old_king_tomb_1",
+    "pois": [
+      {
+        "id": "old_king_tomb_0_rune_1",
+        "type": "rune_stone",
+        "name": "墓志铭石碑",
+        "hint": "碑上刻着古王奥德里克的生卒与功绩",
+        "lore": "『吾王奥德里克，戍边四十年，以血换民安。魂归于此，勿扰其眠。』"
+      },
+      {
+        "id": "old_king_tomb_0_trap_1",
+        "type": "trap",
+        "name": "翻板机关",
+        "hint": "石板有松动的痕迹，可能踩空"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "old_king_tomb:old_king_tomb_2": {
+    "map": "old_king_tomb",
+    "subarea": "old_king_tomb_2",
+    "pois": [
+      {
+        "id": "old_king_tomb_1_rune_2",
+        "type": "rune_stone",
+        "name": "古王铭文",
+        "hint": "棺盖边缘刻着一行小字",
+        "lore": "『王座之下，机关常鸣。知吾者，可免一劫。』",
+        "effect": {
+          "unlock": "old_king_tomb_0_rune_1"
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "old_king_tomb:old_king_tomb_3": {
+    "map": "old_king_tomb",
+    "subarea": "old_king_tomb_3",
+    "pois": [
+      {
+        "id": "old_king_tomb_2_mech_1",
+        "type": "mechanism",
+        "name": "王座机关",
+        "hint": "王座扶手处有个隐蔽的机关，似乎需要某种铭文启示",
+        "need": {
+          "poi_read": "old_king_tomb_0_rune_1"
+        },
+        "effect": {
+          "skip_elite": true
+        },
+        "desc": "你依照铭文转动机关，地面裂开一条捷径——可以绕过守卫！"
+      },
+      {
+        "id": "old_king_tomb_2_chest_1",
+        "type": "chest",
+        "name": "陪葬宝箱",
+        "hint": "石箱上雕着古王的家徽，落满灰尘",
+        "loot": {
+          "gold": 200,
+          "materials": [
+            "古王碎片"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "permafrost_field:permafrost_field_1": {
+    "map": "permafrost_field",
+    "subarea": "permafrost_field_1",
+    "pois": [
+      "campfire",
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "permafrost_field:permafrost_field_2": {
+    "map": "permafrost_field",
+    "subarea": "permafrost_field_2",
+    "pois": [
+      "campfire",
+      "shrine",
+      "ice_sculpture"
+    ],
+    "source": "world"
+  },
+  "permafrost_field:permafrost_field_3": {
+    "map": "permafrost_field",
+    "subarea": "permafrost_field_3",
+    "pois": [
+      "campfire",
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "permafrost_field:permafrost_field_4": {
+    "map": "permafrost_field",
+    "subarea": "permafrost_field_4",
+    "pois": [
+      "ice_sculpture",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "permafrost_field:permafrost_field_5": {
+    "map": "permafrost_field",
+    "subarea": "permafrost_field_5",
+    "pois": [
+      "ice_sculpture",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "permafrost_field:permafrost_field_6": {
+    "map": "permafrost_field",
+    "subarea": "permafrost_field_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "rainbow_cloud:rainbow_cloud_1": {
+    "map": "rainbow_cloud",
+    "subarea": "rainbow_cloud_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "rainbow_cloud:rainbow_cloud_2": {
+    "map": "rainbow_cloud",
+    "subarea": "rainbow_cloud_2",
+    "pois": [
+      "star_gazing",
+      "scenic_view"
+    ],
+    "source": "world"
+  },
+  "rainbow_cloud:rainbow_cloud_3": {
+    "map": "rainbow_cloud",
+    "subarea": "rainbow_cloud_3",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "rainbow_cloud:rainbow_cloud_4": {
+    "map": "rainbow_cloud",
+    "subarea": "rainbow_cloud_4",
+    "pois": [
+      "herb_patch",
+      "bird_nest"
+    ],
+    "source": "mesh"
+  },
+  "rainbow_cloud:rainbow_cloud_5": {
+    "map": "rainbow_cloud",
+    "subarea": "rainbow_cloud_5",
+    "pois": [
+      "loot_pile",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "rainbow_cloud:rainbow_cloud_6": {
+    "map": "rainbow_cloud",
+    "subarea": "rainbow_cloud_6",
+    "pois": [
+      "star_gazing",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "redridge_plateau:redridge_plateau_1": {
+    "map": "redridge_plateau",
+    "subarea": "redridge_plateau_1",
+    "pois": [
+      "scenic_view"
+    ],
+    "source": "world"
+  },
+  "redridge_plateau:redridge_plateau_2": {
+    "map": "redridge_plateau",
+    "subarea": "redridge_plateau_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "redridge_plateau:redridge_plateau_3": {
+    "map": "redridge_plateau",
+    "subarea": "redridge_plateau_3",
+    "pois": [
+      "scenic_view"
+    ],
+    "source": "world"
+  },
+  "redridge_plateau:redridge_plateau_4": {
+    "map": "redridge_plateau",
+    "subarea": "redridge_plateau_4",
+    "pois": [
+      "herb_patch",
+      "bird_nest"
+    ],
+    "source": "mesh"
+  },
+  "redridge_plateau:redridge_plateau_5": {
+    "map": "redridge_plateau",
+    "subarea": "redridge_plateau_5",
+    "pois": [
+      "dragon_bone",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "redridge_plateau:redridge_plateau_6": {
+    "map": "redridge_plateau",
+    "subarea": "redridge_plateau_6",
+    "pois": [
+      "ancient_altar",
+      "star_gazing"
+    ],
+    "source": "mesh"
+  },
+  "rockfall_gorge:rockfall_gorge_1": {
+    "map": "rockfall_gorge",
+    "subarea": "rockfall_gorge_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "rockfall_gorge:rockfall_gorge_2": {
+    "map": "rockfall_gorge",
+    "subarea": "rockfall_gorge_2",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "rockfall_gorge:rockfall_gorge_3": {
+    "map": "rockfall_gorge",
+    "subarea": "rockfall_gorge_3",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "rockfall_gorge:rockfall_gorge_4": {
+    "map": "rockfall_gorge",
+    "subarea": "rockfall_gorge_4",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "rockfall_gorge:rockfall_gorge_5": {
+    "map": "rockfall_gorge",
+    "subarea": "rockfall_gorge_5",
+    "pois": [
+      "scenic_view",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "rockfall_gorge:rockfall_gorge_6": {
+    "map": "rockfall_gorge",
+    "subarea": "rockfall_gorge_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "sea_cave:sea_cave_1": {
+    "map": "sea_cave",
+    "subarea": "sea_cave_1",
+    "pois": [
+      {
+        "id": "sea_cave_0_corpse_1",
+        "type": "corpse",
+        "name": "搁浅的水手",
+        "hint": "水手的衣服被海水泡烂，怀里似乎抱着什么",
+        "loot": {
+          "materials": [
+            "海盗的藏宝图"
+          ]
+        }
+      },
+      {
+        "id": "sea_cave_0_trap_1",
+        "type": "trap",
+        "name": "湿滑礁石",
+        "hint": "礁石上长满青苔，踩上去很容易滑倒"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "sea_cave:sea_cave_2": {
+    "map": "sea_cave",
+    "subarea": "sea_cave_2",
+    "pois": [
+      {
+        "id": "sea_cave_1_chest_1",
+        "type": "chest",
+        "name": "海盗宝箱",
+        "hint": "木箱上烙着骷髅标记，锁头是新换的",
+        "loot": {
+          "gold": 120,
+          "materials": [
+            "海盗的藏宝图"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "sea_god_temple:sea_god_temple_1": {
+    "map": "sea_god_temple",
+    "subarea": "sea_god_temple_1",
+    "pois": [
+      {
+        "id": "sea_god_temple_0_rune_1",
+        "type": "rune_stone",
+        "name": "海神祷文碑",
+        "hint": "碑上刻着海神的祷文",
+        "lore": "『潮起潮落，皆为吾意。敬畏者，得海之庇护。』"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "sea_god_temple:sea_god_temple_2": {
+    "map": "sea_god_temple",
+    "subarea": "sea_god_temple_2",
+    "pois": [
+      {
+        "id": "sea_god_temple_1_shell_1",
+        "type": "supply",
+        "name": "嵌贝壁龛",
+        "hint": "墙壁上嵌成花纹的贝壳，泛着海神的微光",
+        "loot": {
+          "materials": [
+            "潮汐贝壳"
+          ]
+        }
+      },
+      {
+        "id": "sea_god_temple_1_shell_2",
+        "type": "supply",
+        "name": "散落的贝壳",
+        "hint": "礁石旁散落的贝壳，潮水刚退",
+        "loot": {
+          "materials": [
+            "潮汐贝壳"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "sea_god_temple:sea_god_temple_3": {
+    "map": "sea_god_temple",
+    "subarea": "sea_god_temple_3",
+    "pois": [
+      {
+        "id": "sea_god_temple_2_chest_1",
+        "type": "chest",
+        "name": "贡品宝箱",
+        "hint": "祭坛旁的箱子，装着信徒的贡品",
+        "loot": {
+          "gold": 260,
+          "materials": [
+            "海神祷文"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "secret_crypt:secret_crypt_1": {
+    "map": "secret_crypt",
+    "subarea": "secret_crypt_1",
+    "pois": [
+      {
+        "id": "secret_crypt_0_trap_1",
+        "type": "trap",
+        "name": "圣光陷阱",
+        "hint": "地板上刻着圣徽，踩上去会触发圣光灼烧"
+      },
+      {
+        "id": "secret_crypt_0_rune_1",
+        "type": "rune_stone",
+        "name": "审判纪要石碑",
+        "hint": "碑上刻着教会审判异端的记录",
+        "lore": "『凡被圣光标记者，不可通行。沿墙而行，可避其锋。』",
+        "effect": {
+          "avoid_trap": "secret_crypt_0_trap_1"
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "secret_crypt:secret_crypt_2": {
+    "map": "secret_crypt",
+    "subarea": "secret_crypt_2",
+    "pois": [
+      {
+        "id": "secret_crypt_1_supply_1",
+        "type": "supply",
+        "name": "教会物资箱",
+        "hint": "铁箱里码着整齐的补给",
+        "loot": {
+          "materials": [
+            "圣水"
+          ],
+          "equip": null
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "secret_crypt:secret_crypt_3": {
+    "map": "secret_crypt",
+    "subarea": "secret_crypt_3",
+    "pois": [
+      {
+        "id": "secret_crypt_2_chest_1",
+        "type": "chest",
+        "name": "圣物箱",
+        "hint": "银质箱体上刻着封印符文，微微发光",
+        "loot": {
+          "gold": 150,
+          "materials": [
+            "圣堂密卷"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "shipwreck_graveyard:shipwreck_graveyard_1": {
+    "map": "shipwreck_graveyard",
+    "subarea": "shipwreck_graveyard_1",
+    "pois": [
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "shipwreck_graveyard:shipwreck_graveyard_2": {
+    "map": "shipwreck_graveyard",
+    "subarea": "shipwreck_graveyard_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "shipwreck_graveyard:shipwreck_graveyard_3": {
+    "map": "shipwreck_graveyard",
+    "subarea": "shipwreck_graveyard_3",
+    "pois": [
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "shipwreck_graveyard:shipwreck_graveyard_4": {
+    "map": "shipwreck_graveyard",
+    "subarea": "shipwreck_graveyard_4",
+    "pois": [
+      "fishing_spot",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "shipwreck_graveyard:shipwreck_graveyard_5": {
+    "map": "shipwreck_graveyard",
+    "subarea": "shipwreck_graveyard_5",
+    "pois": [
+      "shipwreck",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "shipwreck_graveyard:shipwreck_graveyard_6": {
+    "map": "shipwreck_graveyard",
+    "subarea": "shipwreck_graveyard_6",
+    "pois": [
+      "loot_pile",
+      "shipwreck"
+    ],
+    "source": "mesh"
+  },
+  "silver_river:silver_river_1": {
+    "map": "silver_river",
+    "subarea": "silver_river_1",
+    "pois": [
+      "fishing_spot",
+      "herb_patch"
+    ],
+    "source": "world"
+  },
+  "silver_river:silver_river_2": {
+    "map": "silver_river",
+    "subarea": "silver_river_2",
+    "pois": [
+      "fishing_spot",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "silver_river:silver_river_3": {
+    "map": "silver_river",
+    "subarea": "silver_river_3",
+    "pois": [
+      "fishing_spot",
+      "herb_patch"
+    ],
+    "source": "world"
+  },
+  "silver_river:silver_river_4": {
+    "map": "silver_river",
+    "subarea": "silver_river_4",
+    "pois": [
+      "fishing_spot",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "silver_river:silver_river_5": {
+    "map": "silver_river",
+    "subarea": "silver_river_5",
+    "pois": [
+      "merchant_camp",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "silver_river:silver_river_6": {
+    "map": "silver_river",
+    "subarea": "silver_river_6",
+    "pois": [
+      "ancient_altar",
+      "bird_nest"
+    ],
+    "source": "mesh"
+  },
+  "silver_valley:silver_valley_1": {
+    "map": "silver_valley",
+    "subarea": "silver_valley_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "silver_valley:silver_valley_2": {
+    "map": "silver_valley",
+    "subarea": "silver_valley_2",
+    "pois": [
+      "fishing_spot",
+      "herb_patch"
+    ],
+    "source": "world"
+  },
+  "silver_valley:silver_valley_3": {
+    "map": "silver_valley",
+    "subarea": "silver_valley_3",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "silver_valley:silver_valley_4": {
+    "map": "silver_valley",
+    "subarea": "silver_valley_4",
+    "pois": [
+      "fishing_spot",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "silver_valley:silver_valley_5": {
+    "map": "silver_valley",
+    "subarea": "silver_valley_5",
+    "pois": [
+      "campfire",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "silver_valley:silver_valley_6": {
+    "map": "silver_valley",
+    "subarea": "silver_valley_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "silver_wind_road:silver_wind_road_1": {
+    "map": "silver_wind_road",
+    "subarea": "silver_wind_road_1",
+    "pois": [
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "silver_wind_road:silver_wind_road_2": {
+    "map": "silver_wind_road",
+    "subarea": "silver_wind_road_2",
+    "pois": [
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "silver_wind_road:silver_wind_road_3": {
+    "map": "silver_wind_road",
+    "subarea": "silver_wind_road_3",
+    "pois": [
+      "merchant_camp",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "silver_wind_road:silver_wind_road_4": {
+    "map": "silver_wind_road",
+    "subarea": "silver_wind_road_4",
+    "pois": [
+      "ancient_altar",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "silverwood:silverwood_1": {
+    "map": "silverwood",
+    "subarea": "silverwood_1",
+    "pois": [
+      "fishing_spot",
+      "loot_pile",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "silverwood:silverwood_2": {
+    "map": "silverwood",
+    "subarea": "silverwood_2",
+    "pois": [
+      "fishing_spot",
+      "loot_pile",
+      "bird_nest"
+    ],
+    "source": "world"
+  },
+  "silverwood:silverwood_3": {
+    "map": "silverwood",
+    "subarea": "silverwood_3",
+    "pois": [
+      "shrine",
+      "herb_patch"
+    ],
+    "source": "world"
+  },
+  "silverwood:silverwood_4": {
+    "map": "silverwood",
+    "subarea": "silverwood_4",
+    "pois": [
+      "bird_nest",
+      "campfire",
+      "fishing_spot"
+    ],
+    "source": "mesh"
+  },
+  "silverwood:silverwood_5": {
+    "map": "silverwood",
+    "subarea": "silverwood_5",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "silverwood:silverwood_6": {
+    "map": "silverwood",
+    "subarea": "silverwood_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "siren_nest:siren_nest_1": {
+    "map": "siren_nest",
+    "subarea": "siren_nest_1",
+    "pois": [
+      {
+        "id": "siren_nest_0_mech_1",
+        "type": "mechanism",
+        "name": "海藻帷幕",
+        "hint": "厚厚一层海藻帘子，后面似乎藏着什么",
+        "effect": {
+          "unlock": "supply_hidden"
+        },
+        "desc": "你拨开海藻帷幕，露出后面一条隐秘的礁石岔道！"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "siren_nest:siren_nest_2": {
+    "map": "siren_nest",
+    "subarea": "siren_nest_2",
+    "pois": [
+      {
+        "id": "siren_nest_1_supply_1",
+        "type": "supply",
+        "name": "珊瑚藏物",
+        "hint": "珊瑚丛中有个贝壳匣子",
+        "need": {
+          "unlock": "supply_hidden"
+        },
+        "loot": {
+          "materials": [
+            "荧光鳞"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "siren_nest:siren_nest_3": {
+    "map": "siren_nest",
+    "subarea": "siren_nest_3",
+    "pois": [
+      {
+        "id": "siren_nest_2_chest_1",
+        "type": "chest",
+        "name": "珍珠宝箱",
+        "hint": "珍珠母贝做成的箱子，散发着柔光",
+        "loot": {
+          "gold": 220,
+          "materials": [
+            "海妖鳞片"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "sky_ladder_path:sky_ladder_path_1": {
+    "map": "sky_ladder_path",
+    "subarea": "sky_ladder_path_1",
+    "pois": [
+      "star_gazing",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "sky_ladder_path:sky_ladder_path_2": {
+    "map": "sky_ladder_path",
+    "subarea": "sky_ladder_path_2",
+    "pois": [
+      "star_gazing",
+      "scenic_view"
+    ],
+    "source": "world"
+  },
+  "sky_ladder_path:sky_ladder_path_3": {
+    "map": "sky_ladder_path",
+    "subarea": "sky_ladder_path_3",
+    "pois": [
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "sky_ladder_path:sky_ladder_path_4": {
+    "map": "sky_ladder_path",
+    "subarea": "sky_ladder_path_4",
+    "pois": [
+      "campfire",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "sky_ladder_path:sky_ladder_path_5": {
+    "map": "sky_ladder_path",
+    "subarea": "sky_ladder_path_5",
+    "pois": [
+      "loot_pile",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "sky_ladder_path:sky_ladder_path_6": {
+    "map": "sky_ladder_path",
+    "subarea": "sky_ladder_path_6",
+    "pois": [
+      "star_gazing",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "starlake:starlake_1": {
+    "map": "starlake",
+    "subarea": "starlake_1",
+    "pois": [
+      "fishing_spot",
+      "shrine",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "starlake:starlake_2": {
+    "map": "starlake",
+    "subarea": "starlake_2",
+    "pois": [
+      "fishing_spot",
+      "shrine",
+      "bird_nest"
+    ],
+    "source": "world"
+  },
+  "starlake:starlake_3": {
+    "map": "starlake",
+    "subarea": "starlake_3",
+    "pois": [
+      "fishing_spot",
+      "star_gazing"
+    ],
+    "source": "world"
+  },
+  "starlake:starlake_4": {
+    "map": "starlake",
+    "subarea": "starlake_4",
+    "pois": [
+      "bird_nest",
+      "fishing_spot",
+      "star_gazing"
+    ],
+    "source": "mesh"
+  },
+  "starlake:starlake_5": {
+    "map": "starlake",
+    "subarea": "starlake_5",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "starlight_terrace:starlight_terrace_1": {
+    "map": "starlight_terrace",
+    "subarea": "starlight_terrace_1",
+    "pois": [
+      "scenic_view",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "starlight_terrace:starlight_terrace_2": {
+    "map": "starlight_terrace",
+    "subarea": "starlight_terrace_2",
+    "pois": [
+      "star_gazing",
+      "scenic_view"
+    ],
+    "source": "world"
+  },
+  "starlight_terrace:starlight_terrace_3": {
+    "map": "starlight_terrace",
+    "subarea": "starlight_terrace_3",
+    "pois": [
+      "star_gazing",
+      "scenic_view"
+    ],
+    "source": "world"
+  },
+  "starlight_terrace:starlight_terrace_4": {
+    "map": "starlight_terrace",
+    "subarea": "starlight_terrace_4",
+    "pois": [
+      "star_gazing",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "starlight_terrace:starlight_terrace_5": {
+    "map": "starlight_terrace",
+    "subarea": "starlight_terrace_5",
+    "pois": [
+      "loot_pile",
+      "dragon_bone"
+    ],
+    "source": "mesh"
+  },
+  "starlight_terrace:starlight_terrace_6": {
+    "map": "starlight_terrace",
+    "subarea": "starlight_terrace_6",
+    "pois": [
+      "ancient_altar",
+      "star_gazing"
+    ],
+    "source": "mesh"
+  },
+  "storm_cliff:storm_cliff_1": {
+    "map": "storm_cliff",
+    "subarea": "storm_cliff_1",
+    "pois": [
+      "scenic_view",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "storm_cliff:storm_cliff_2": {
+    "map": "storm_cliff",
+    "subarea": "storm_cliff_2",
+    "pois": [
+      "scenic_view",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "storm_cliff:storm_cliff_3": {
+    "map": "storm_cliff",
+    "subarea": "storm_cliff_3",
+    "pois": [
+      "scenic_view",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "storm_cliff:storm_cliff_4": {
+    "map": "storm_cliff",
+    "subarea": "storm_cliff_4",
+    "pois": [
+      "fishing_spot",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "storm_cliff:storm_cliff_5": {
+    "map": "storm_cliff",
+    "subarea": "storm_cliff_5",
+    "pois": [
+      "dragon_bone",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "storm_cliff:storm_cliff_6": {
+    "map": "storm_cliff",
+    "subarea": "storm_cliff_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "storm_plateau:storm_plateau_1": {
+    "map": "storm_plateau",
+    "subarea": "storm_plateau_1",
+    "pois": [
+      "scenic_view",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "storm_plateau:storm_plateau_2": {
+    "map": "storm_plateau",
+    "subarea": "storm_plateau_2",
+    "pois": [
+      "scenic_view"
+    ],
+    "source": "world"
+  },
+  "storm_plateau:storm_plateau_3": {
+    "map": "storm_plateau",
+    "subarea": "storm_plateau_3",
+    "pois": [
+      "scenic_view"
+    ],
+    "source": "world"
+  },
+  "storm_plateau:storm_plateau_4": {
+    "map": "storm_plateau",
+    "subarea": "storm_plateau_4",
+    "pois": [
+      "campfire",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "storm_plateau:storm_plateau_5": {
+    "map": "storm_plateau",
+    "subarea": "storm_plateau_5",
+    "pois": [
+      "loot_pile",
+      "dragon_bone"
+    ],
+    "source": "mesh"
+  },
+  "storm_plateau:storm_plateau_6": {
+    "map": "storm_plateau",
+    "subarea": "storm_plateau_6",
+    "pois": [
+      "ancient_altar",
+      "star_gazing"
+    ],
+    "source": "mesh"
+  },
+  "storm_sea:storm_sea_1": {
+    "map": "storm_sea",
+    "subarea": "storm_sea_1",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "storm_sea:storm_sea_2": {
+    "map": "storm_sea",
+    "subarea": "storm_sea_2",
+    "pois": [
+      "scenic_view",
+      "campfire",
+      "shipwreck"
+    ],
+    "source": "world"
+  },
+  "storm_sea:storm_sea_4": {
+    "map": "storm_sea",
+    "subarea": "storm_sea_4",
+    "pois": [
+      "fishing_spot",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "storm_sea:storm_sea_5": {
+    "map": "storm_sea",
+    "subarea": "storm_sea_5",
+    "pois": [
+      "shipwreck",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "storm_sea:storm_sea_6": {
+    "map": "storm_sea",
+    "subarea": "storm_sea_6",
+    "pois": [
+      "ancient_altar",
+      "dragon_bone"
+    ],
+    "source": "mesh"
+  },
+  "storm_strait:storm_strait_1": {
+    "map": "storm_strait",
+    "subarea": "storm_strait_1",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "storm_strait:storm_strait_2": {
+    "map": "storm_strait",
+    "subarea": "storm_strait_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "storm_strait:storm_strait_3": {
+    "map": "storm_strait",
+    "subarea": "storm_strait_3",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "storm_strait:storm_strait_4": {
+    "map": "storm_strait",
+    "subarea": "storm_strait_4",
+    "pois": [
+      "fishing_spot",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "storm_strait:storm_strait_5": {
+    "map": "storm_strait",
+    "subarea": "storm_strait_5",
+    "pois": [
+      "shipwreck",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "storm_strait:storm_strait_6": {
+    "map": "storm_strait",
+    "subarea": "storm_strait_6",
+    "pois": [
+      "loot_pile",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "storm_throne:storm_throne_1": {
+    "map": "storm_throne",
+    "subarea": "storm_throne_1",
+    "pois": [
+      {
+        "id": "storm_throne_0_rune_1",
+        "type": "rune_stone",
+        "name": "风暴预言碑",
+        "hint": "碑文被雷劈过，字迹模糊但可辨",
+        "lore": "『雷落九重，云怒难平。取风为翼，可登云巅。』"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "storm_throne:storm_throne_2": {
+    "map": "storm_throne",
+    "subarea": "storm_throne_2",
+    "pois": [
+      {
+        "id": "storm_throne_1_trap_1",
+        "type": "trap",
+        "name": "雷池",
+        "hint": "地面有块金属板格外闪亮，恐怕是通电的"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "sunken_ship:sunken_ship_1": {
+    "map": "sunken_ship",
+    "subarea": "sunken_ship_1",
+    "pois": [
+      {
+        "id": "sunken_ship_0_corpse_1",
+        "type": "corpse",
+        "name": "水手遗骸",
+        "hint": "水手抱着一只酒瓶，瓶塞还完好",
+        "loot": {
+          "materials": [
+            "朗姆酒"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "sunken_ship:sunken_ship_2": {
+    "map": "sunken_ship",
+    "subarea": "sunken_ship_2",
+    "pois": [
+      {
+        "id": "sunken_ship_1_chest_1",
+        "type": "chest",
+        "name": "船长酒柜",
+        "hint": "酒柜的锁被砸开了，里面还有存货",
+        "loot": {
+          "gold": 100,
+          "materials": [
+            "朗姆酒"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "sunken_ship:sunken_ship_3": {
+    "map": "sunken_ship",
+    "subarea": "sunken_ship_3",
+    "pois": [
+      {
+        "id": "sunken_ship_2_chest_2",
+        "type": "chest",
+        "name": "船长宝箱",
+        "hint": "最大的铁箱，锁着三重锁",
+        "loot": {
+          "gold": 300,
+          "materials": [
+            "幽灵船票"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "sunset_isle:sunset_isle_1": {
+    "map": "sunset_isle",
+    "subarea": "sunset_isle_1",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "sunset_isle:sunset_isle_2": {
+    "map": "sunset_isle",
+    "subarea": "sunset_isle_2",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "sunset_isle:sunset_isle_3": {
+    "map": "sunset_isle",
+    "subarea": "sunset_isle_3",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "sunset_isle:sunset_isle_4": {
+    "map": "sunset_isle",
+    "subarea": "sunset_isle_4",
+    "pois": [
+      "fishing_spot",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "sunset_isle:sunset_isle_5": {
+    "map": "sunset_isle",
+    "subarea": "sunset_isle_5",
+    "pois": [
+      "loot_pile",
+      "bird_nest"
+    ],
+    "source": "mesh"
+  },
+  "sunset_isle:sunset_isle_6": {
+    "map": "sunset_isle",
+    "subarea": "sunset_isle_6",
+    "pois": [
+      "shipwreck",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "under_dragon:under_dragon_1": {
+    "map": "under_dragon",
+    "subarea": "under_dragon_1",
+    "pois": [
+      {
+        "id": "under_dragon_0_mech_1",
+        "type": "mechanism",
+        "name": "龙骸骨门",
+        "hint": "一扇由龙骸拼成的巨门，卡在轨道上",
+        "effect": {
+          "skip_elite": true
+        },
+        "desc": "你扳动骨门的机括，巨门轰然落下——甬道里的幼龙被隔开了一批！"
+      }
+    ],
+    "source": "dungeon"
+  },
+  "under_dragon:under_dragon_2": {
+    "map": "under_dragon",
+    "subarea": "under_dragon_2",
+    "pois": [
+      {
+        "id": "under_dragon_1_corpse_1",
+        "type": "corpse",
+        "name": "幼龙残骸",
+        "hint": "一只还没成年的地底幼龙尸体",
+        "loot": {
+          "materials": [
+            "地底龙鳞"
+          ]
+        }
+      }
+    ],
+    "source": "dungeon"
+  },
+  "west_ridge_wilds:west_ridge_wilds_1": {
+    "map": "west_ridge_wilds",
+    "subarea": "west_ridge_wilds_1",
+    "pois": [
+      "herb_patch"
+    ],
+    "source": "world"
+  },
+  "west_ridge_wilds:west_ridge_wilds_2": {
+    "map": "west_ridge_wilds",
+    "subarea": "west_ridge_wilds_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "west_ridge_wilds:west_ridge_wilds_3": {
+    "map": "west_ridge_wilds",
+    "subarea": "west_ridge_wilds_3",
+    "pois": [
+      "scenic_view"
+    ],
+    "source": "world"
+  },
+  "west_ridge_wilds:west_ridge_wilds_4": {
+    "map": "west_ridge_wilds",
+    "subarea": "west_ridge_wilds_4",
+    "pois": [
+      "bird_nest",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "west_ridge_wilds:west_ridge_wilds_5": {
+    "map": "west_ridge_wilds",
+    "subarea": "west_ridge_wilds_5",
+    "pois": [
+      "scenic_view",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "west_ridge_wilds:west_ridge_wilds_6": {
+    "map": "west_ridge_wilds",
+    "subarea": "west_ridge_wilds_6",
+    "pois": [
+      "traveler_grave",
+      "ancient_altar"
+    ],
+    "source": "mesh"
+  },
+  "whale_domain:whale_domain_1": {
+    "map": "whale_domain",
+    "subarea": "whale_domain_1",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "whale_domain:whale_domain_2": {
+    "map": "whale_domain",
+    "subarea": "whale_domain_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "whale_domain:whale_domain_3": {
+    "map": "whale_domain",
+    "subarea": "whale_domain_3",
+    "pois": [
+      "fishing_spot",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "whale_domain:whale_domain_4": {
+    "map": "whale_domain",
+    "subarea": "whale_domain_4",
+    "pois": [
+      "fishing_spot",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "whale_domain:whale_domain_5": {
+    "map": "whale_domain",
+    "subarea": "whale_domain_5",
+    "pois": [
+      "shipwreck",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "whale_domain:whale_domain_6": {
+    "map": "whale_domain",
+    "subarea": "whale_domain_6",
+    "pois": [
+      "ancient_altar",
+      "fishing_spot"
+    ],
+    "source": "mesh"
+  },
+  "white_abbey:white_abbey_1": {
+    "map": "white_abbey",
+    "subarea": "white_abbey_1",
+    "pois": [
+      "shrine",
+      "herb_patch"
+    ],
+    "source": "world"
+  },
+  "white_abbey:white_abbey_2": {
+    "map": "white_abbey",
+    "subarea": "white_abbey_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "white_abbey:white_abbey_3": {
+    "map": "white_abbey",
+    "subarea": "white_abbey_3",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "white_abbey:white_abbey_4": {
+    "map": "white_abbey",
+    "subarea": "white_abbey_4",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "white_abbey:white_abbey_5": {
+    "map": "white_abbey",
+    "subarea": "white_abbey_5",
+    "pois": [
+      "loot_pile",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "white_abbey:white_abbey_6": {
+    "map": "white_abbey",
+    "subarea": "white_abbey_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "white_deer:white_deer_1": {
+    "map": "white_deer",
+    "subarea": "white_deer_1",
+    "pois": [
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "white_deer:white_deer_5": {
+    "map": "white_deer",
+    "subarea": "white_deer_5",
+    "pois": [
+      "herb_patch",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "white_deer_forest:white_deer_forest_1": {
+    "map": "white_deer_forest",
+    "subarea": "white_deer_forest_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "white_deer_forest:white_deer_forest_2": {
+    "map": "white_deer_forest",
+    "subarea": "white_deer_forest_2",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "white_deer_forest:white_deer_forest_3": {
+    "map": "white_deer_forest",
+    "subarea": "white_deer_forest_3",
+    "pois": [
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "white_deer_forest:white_deer_forest_4": {
+    "map": "white_deer_forest",
+    "subarea": "white_deer_forest_4",
+    "pois": [
+      "fishing_spot",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "white_deer_forest:white_deer_forest_5": {
+    "map": "white_deer_forest",
+    "subarea": "white_deer_forest_5",
+    "pois": [
+      "bird_nest",
+      "herb_patch"
+    ],
+    "source": "mesh"
+  },
+  "white_deer_forest:white_deer_forest_6": {
+    "map": "white_deer_forest",
+    "subarea": "white_deer_forest_6",
+    "pois": [
+      "loot_pile",
+      "campfire"
+    ],
+    "source": "mesh"
+  },
+  "windmill_plain:windmill_plain_1": {
+    "map": "windmill_plain",
+    "subarea": "windmill_plain_1",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "windmill_plain:windmill_plain_2": {
+    "map": "windmill_plain",
+    "subarea": "windmill_plain_2",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "windmill_plain:windmill_plain_3": {
+    "map": "windmill_plain",
+    "subarea": "windmill_plain_3",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "world"
+  },
+  "windmill_plain:windmill_plain_4": {
+    "map": "windmill_plain",
+    "subarea": "windmill_plain_4",
+    "pois": [
+      "campfire",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "windmill_plain:windmill_plain_5": {
+    "map": "windmill_plain",
+    "subarea": "windmill_plain_5",
+    "pois": [
+      "merchant_camp",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "windmill_plain:windmill_plain_6": {
+    "map": "windmill_plain",
+    "subarea": "windmill_plain_6",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "windvale:windvale_1": {
+    "map": "windvale",
+    "subarea": "windvale_1",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "windvale:windvale_2": {
+    "map": "windvale",
+    "subarea": "windvale_2",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "windvale:windvale_3": {
+    "map": "windvale",
+    "subarea": "windvale_3",
+    "pois": [
+      "herb_patch",
+      "campfire"
+    ],
+    "source": "world"
+  },
+  "windvale:windvale_4": {
+    "map": "windvale",
+    "subarea": "windvale_4",
+    "pois": [
+      "bird_nest",
+      "campfire",
+      "scenic_view"
+    ],
+    "source": "mesh"
+  },
+  "windvale:windvale_5": {
+    "map": "windvale",
+    "subarea": "windvale_5",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  },
+  "winter_lake:winter_lake_1": {
+    "map": "winter_lake",
+    "subarea": "winter_lake_1",
+    "pois": [
+      "fishing_spot",
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "winter_lake:winter_lake_2": {
+    "map": "winter_lake",
+    "subarea": "winter_lake_2",
+    "pois": [
+      "campfire",
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "winter_lake:winter_lake_3": {
+    "map": "winter_lake",
+    "subarea": "winter_lake_3",
+    "pois": [
+      "fishing_spot",
+      "shrine"
+    ],
+    "source": "world"
+  },
+  "winter_lake:winter_lake_4": {
+    "map": "winter_lake",
+    "subarea": "winter_lake_4",
+    "pois": [
+      "ice_sculpture",
+      "fishing_spot"
+    ],
+    "source": "mesh"
+  },
+  "winter_lake:winter_lake_5": {
+    "map": "winter_lake",
+    "subarea": "winter_lake_5",
+    "pois": [
+      "ancient_altar",
+      "loot_pile"
+    ],
+    "source": "mesh"
+  }
+}

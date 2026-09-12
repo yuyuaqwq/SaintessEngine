@@ -28,6 +28,8 @@ from __future__ import annotations
 import os
 import re
 
+from editor import packages as PK      # 域注册表（DOMAIN_SCHEMA 从它派生；packages 不 import glossary，无环）
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 FW_ROOT = os.path.dirname(HERE)
 WIKI_DIR = os.path.join(FW_ROOT, "docs", "engine-wiki")
@@ -198,6 +200,31 @@ _ITEMS = {
     "pick_options.desc": {"zh": "选项说明", "note": "自选项的说明文案（展示用）。", "ref": None},
 }
 
+# ───────────────────────────────────────────────────────────────────── 装备名册
+# 注脚核实口径（2026-09-13）：逐键统计包内 `games/orlandia/content/data/equip_roster.json`（687 条）的字段
+# 分布，再到内容侧消费点逐键搜读取处（穿戴门槛 / 商店与锻造 / 掉落白名单 / 装备生成 / 面板与图鉴 / 武器特效）。
+# 凡「逐键搜索未发现读取点」的字段（如 series_set），注脚直说它不驱动行为；本仓 wiki 没有名册页 → ref 一律 None。
+_EQUIP_ROSTER = {
+    "name": {"zh": "名称", "note": "装备显示名（内容侧词汇）。它同时是本表的**跨表连接锚点** —— 导出期按名把「装备名 → 固定词条」源表接进 fixed_affixes，改名会断开这条连接。⚠ 实测 687 条里有 1 处重名（同名对应 2 个不同 key）：按名连接落在重名上时导出器直接报错，不静默选一条。", "ref": None},
+    "slot": {"zh": "部位", "note": "装配槽位名（取值由内容侧定，框架不枚举 —— 枚举会把「加一个部位」变成改框架 schema）。内容侧按它选槽、算基础属性与价格、判两件装备是否互斥。实测 7 种取值。", "ref": None},
+    "weapon_type": {"zh": "武器类型", "note": "武器细分类型名（内容侧词汇，框架不枚举）。只写在武器部位条目上（实测 241 条，241/241 都是 slot=weapon，非武器 0 条带它）。内容侧按它判职业能否使用、查武器风味文案、算价格。", "ref": None},
+    "quality": {"zh": "品质", "note": "品质档名（取值由内容侧定，框架不枚举；**不能改成 enum** —— 门禁禁止非 ASCII 枚举值，历史上正是把内容侧分类抄进 enum 出过事故）。内容侧按它算价格倍率、筛掉落与收藏。实测 5 档。", "ref": None},
+    "lv": {"zh": "等级", "note": "装备等级档（整数 ≥ 1，schema minimum=1）。内容侧的穿戴准入、掉落等级窗口、图纸/锻造等级都按它比。实测 2~100。", "ref": None},
+    "series": {"zh": "系列", "note": "归属系列名（内容侧的**显示名**，不是 key）。它是 series_set 派生字段的连接键，也是「同系列可成套」的判据。实测 221 个系列名，只有 38 个能在「系列 → 套装名」表里查到 —— 查不到属正常（缺省 = 无套装名，不是坏数据）。", "ref": None},
+    "series_set": {"zh": "系列套装名（派生）", "note": "导出期按 series 查「系列 → 套装名」源表连接进来的派生字段；没有该映射的系列**不写这个字段**（缺省 ≠ 空串）。⚠ 逐键搜索内容侧没有读取点：运行时是在**生成装备时按 series 查源表**拿套装名（写进实例的 set），所以改这里的值不改变任何行为 —— 它给编辑器/审计看，且与条目自带的 set 可能取值不同。", "ref": None},
+    "set": {"zh": "套装名（条目自带）", "note": "条目自带的套装名（内容侧词汇）。⚠ 与 series_set **来源不同**：这是源条目里的字段，series_set 是导出期连接的派生字段，两者的取值属于不同名称空间（实测 set 仅 12 个取值、series_set 38 个）。内容侧的套装件数统计与套装说明读的是运行期写下的实例字段，不是名册里的这一列。", "ref": None},
+    "source": {"zh": "来源（获取途径）", "note": "获取途径名（内容侧词汇）。⚠ 它**不是纯展示字段**：内容侧按它做掉落白名单、商店/锻造进货过滤（把特定来源的装备排除出货架）与图纸配方筛选 —— 改它会改变发放结果。实测 12 个取值。", "ref": None},
+    "req": {"zh": "属性需求", "note": "`{属性名: 需求值}`。属性名是内容侧词汇（框架不枚举，schema 也**故意不写 properties** —— 写了就会长出一份框架侧属性表）；值为非负整数。**缺该字段 = 无门槛**（不是 0）。内容侧在穿戴/购买时逐项比对并拦下不达标的操作。实测 581 条带它、4 种属性名。", "ref": None},
+    "desc": {"zh": "描述", "note": "展示文案。⚠ 本域**允许无描述**（schema 不给 minLength，实测 639/687 有）—— 与物品域「必填且非空」不同，编辑器别按物品域的口径去催。", "ref": None},
+    "special": {"zh": "专属说明", "note": "该装备专属效果的**说明文本**（内容侧词汇，展示用）。机器可读的那一半在 legendary / weapon_effect；改这里的文字只改玩家看到的说明，不改变行为。实测 151 条。", "ref": None},
+    "legendary": {"zh": "传说专属特效 id", "note": "指向内容侧「传说专属特效」表的 id（内容侧按它取效果）。实测 145 条 / 107 个 distinct。⚠ 该表**未进包**（框架没有对应域）→ 包内这条引用目前解析不到目标，是已知缺口。", "ref": None},
+    "weapon_effect": {"zh": "武器特效 id", "note": "指向内容侧武器特效实现的 id —— 实现是代码，不属于任何数据域，引擎不认识它。与 we_data 配对：内容侧按 id 找处理器、把 we_data 并进配置。实测 99 条。", "ref": None},
+    "we_data": {"zh": "武器特效参数", "note": "配合 weapon_effect 的**自由参数字典**（各特效形状不同，实测仅 9 条带它）。结构与键名由内容侧解释；表单对自由结构走 JSON 兜底，键不会因为渲染而丢。", "ref": None},
+    "affix": {"zh": "固定词条 id（单值旧形态）", "note": "单值的固定词条引用（**旧形态**，与 affixes 并存，实测仅 10 条）。内容侧把它当**展示文案**用（列表里的「效果：…」一行），不做词条解析。", "ref": None},
+    "affixes": {"zh": "固定词条 id 列表", "note": "该装备的固定词条引用表（列表，实测 42 条、每件 1~2 条）。内容侧生成装备实例、装配触发器、面板统计与副本掉落筛选都读它。⚠ 与 fixed_affixes **来源不同**（这是条目自带，那是导出期按名连接的），别把两者当同一份。", "ref": None},
+    "fixed_affixes": {"zh": "系列固定词条 id 列表（派生）", "note": "导出期按 name 把「装备名 → 固定词条 id 列表」源表连接进来的派生字段（实测 622 条，其中 11 条是**空列表** —— 源表显式的「无固定词条」标记，与「源表里没有这个名字」是两回事）。⚠ 内容侧消费端读源表并**只取第 1 条**（数据层保留完整供回退），所以这里看到 2 条以上并不代表实战全部生效。", "ref": None},
+}
+
 # ───────────────────────────────────────────────────────────────────── 声明表（EFFECT_RULES）
 _EFFECT_RULES = {
     "cap": {"zh": "叠层上限", "note": "✅ 引擎消费（effects._cap_of）。**上限的唯一收敛点**（apply / period gain / 渠道攒取都走它）。**缺声明 = 999999（不设限）**，不是 0。",
@@ -316,8 +343,12 @@ _COMMANDS = {
 _TEXTS = {
     "key": {"zh": "文案标识", "note": "支持点分命名（如 battle.hit）；渲染时按它取模板，未定义会计入 missing 自检。"},
     "category": {"zh": "分类", "note": "编辑器分组用；取值由内容侧定义（框架不设枚举）。"},
-    "value": {"zh": "模板串", "note": "用 {slot} 占位。未知槽渲染时**原样保留**（不抛），便于发现问题。"},
-    "params": {"zh": "占位符声明", "note": "声明的占位符名；缺省由模板自动抽取。声明后会与模板比对（多/少都报）。"},
+    # 域内精确控件：文案模板是**多行**的（实测最长 126 字、11 条含换行，如面板/日志的分段排版串），
+    # 单行 input 编辑会把换行挤掉。这里按域内路径命中，不会波及其它域的 `value`（`widget_for` 域内精确优先于叶名）。
+    "value": {"widget": "textarea", "zh": "模板串",
+              "note": "模板串，用 {slot} 占位。未知槽渲染时**原样保留**（不抛），便于发现问题。多行输入 —— 面板/日志类文案常自带换行排版（实测最长 126 字、11 条含换行）。"},
+    # params 是**字符串数组**（占位符名清单）—— 与 WIDGETS 里 `lines`（一行一条的字符串数组）同一语义。
+    "params": {"widget": "lines", "zh": "占位符声明", "note": "声明的占位符名；缺省由模板自动抽取。声明后会与模板比对（多/少都报）。"},
 }
 
 _TLOGS = {
@@ -407,6 +438,27 @@ _INSTANCES = {
     "desc": {"zh": "说明", "note": "说明（编辑器/文档用）。本域 schema 不强制长度，可留空。", "ref": None},
 }
 
+# ───────────────────────────────────────────────────────────────────── 交互点（POI）
+# 注脚核实口径（2026-09-13）：逐键统计包内 `games/orlandia/content/data/pois.json`（457 条挂载 / 855 条引用，
+# 其中内联点 66 条）的字段分布，再到内容侧消费点（副本交互处理链 `_handle_poi` / 运行时合并表）逐键搜读取处。
+# 本域是「一条 = 一个房间的挂载」；内联点的 id/type/name/hint 等只在对象形态里出现 —— 注脚区分了这两层。
+# 本仓 wiki 没有 POI 页 → ref 一律 None。
+_POIS = {
+    "map": {"zh": "地图", "note": "房间所在地图（内容侧词汇；与 maps 域的表键同源，编辑器据此可跳过去）。⚠ 框架**不做跨域校验**：「这张图是否真在 maps 里」不会在 schema 层被拦（实测 457 条全部对得上，97 张图，属内容侧自觉）。", "ref": None},
+    "subarea": {"zh": "子区域（房间）", "note": "房间引用（内容侧词汇；与 maps 域那张图的 `nodes[].id` 同源）。表键 = 「地图id:子区域id」，两段都不能含空白 —— 键里不带冒号就没法对回地图。", "ref": None},
+    "pois": {"zh": "挂载的交互点表", "note": "本房间挂载的交互点：**声明顺序即展示顺序**。两种写法混用合法 —— 字符串 = 类型引用（沿用内容侧对该类型的定义，实测 789 条）、对象 = 本点自带 id/type 与产出（实测 66 条）。⚠ 不挂点的房间请**删键**：schema 要求 minItems=1，空数组会被两条校验路径（jsonschema / 内置 mini）都拦下。", "ref": None},
+    "source": {"zh": "挂载来源", "note": "出处标记（自由串，schema 不枚举）。⚠ 它是**导出器**填的、内容侧源表里没有这个词：三张同形表在装配期被并进同一张运行时表，出处只能在这一层保留（实测 world 205 / mesh 197 / dungeon 55）。改它只影响编辑器分组与审计口径，不影响运行时读到的挂载。", "ref": None},
+    "id": {"zh": "交互点 id", "note": "本点在表内的唯一标识（**只有内联对象形态才有**）。内容侧按它记录「这点已经交互过」的状态 → **改 id 等于丢状态**。跨表唯一与否由内容侧负责（实测内容侧的做法是 id 前缀 = 地图 + 层号，66/66 唯一）。", "ref": None},
+    "type": {"zh": "交互点类型", "note": "交互点类型（内容侧词汇）：决定怎么触发、走哪条处理链（副本侧的处理链在内容侧命令层）。框架不预设任何类型名，也**不校验**这里的取值是否真被内容侧定义过 —— 拼错不会报错，只会静默不生效。", "ref": None},
+    "name": {"zh": "名称", "note": "内联交互点的展示名（内容侧词汇，可留空 —— 留空时界面按 id 显示）。⚠ 挂载条目本身没有 name，编辑器列表显示的是表键（「地图id:子区域id」）。", "ref": None},
+    "hint": {"zh": "探索提示", "note": "展示给玩家的探索提示文案（内容侧词汇，可留空）。实测 66 个内联点全部带它。", "ref": None},
+    "loot": {"zh": "产出块", "note": "该点的产出（货币 / 材料 / 装备…）：**结构与键名全由内容侧解释**，框架不预设（schema 只要求它是非空对象；表单对自由结构走 JSON 兜底，键不会因为渲染而丢）。实测 66 个内联点里 32 条带它。", "ref": None},
+    "effect": {"zh": "机制效果块", "note": "交互触发后对场景/流程的作用（开锁 / 开门 / 跳怪…）：结构与键名由内容侧解释，框架不预设；**指向别的交互点的引用写法也在内容侧**（框架不做引用解析）。实测 13 条带它。", "ref": None},
+    "need": {"zh": "交互前置块", "note": "能触发本点的前置条件（如先读过某个点）：结构与键名由内容侧解释，框架不预设。实测 4 条带它 —— 带前置的点在条件不满足时是「不可交互」，不是报错。", "ref": None},
+    "lore": {"zh": "长文本", "note": "碑文 / 铭文 / 日志类的长文本（内容侧词汇，可留空）。实测 12 条都是整段碑文，适合按长文案编辑。", "ref": None},
+    "desc": {"zh": "说明", "note": "触发后展示的说明文案（内联形态；挂载条目上则是编辑器/文档用的一句话说明）。本域**不强制非空**：实测 457 条挂载里 0 条写它、66 个内联点里 8 条写它 —— 只给机制型交互点或备注写。", "ref": None},
+}
+
 GLOSSARY = {
     "*": _COMMON,
     "commands": _COMMANDS,
@@ -415,6 +467,8 @@ GLOSSARY = {
     "maps": _MAPS,
     "drop_pools": _DROP_POOLS,
     "instances": _INSTANCES,
+    "equip_roster": _EQUIP_ROSTER,
+    "pois": _POIS,
     "skills": _SKILLS,
     "monsters": _MONSTERS,
     "affixes": _AFFIXES,
@@ -563,6 +617,32 @@ GROUPS = {
         {"id": "act", "label": "动作参数", "icon": "🎛",
          "fields": ["mode", "form", "spd_pct", "def_pct", "hold"]},
     ],
+    # 装备名册：按「先认一件装备（基础）→ 它在哪条系列/从哪来 → 词条 → 特效 → 门槛」的阅读顺序排。
+    # 两个「套装」字段特意分在同一组里并排展示（set 是条目自带、series_set 是导出期派生的，最容易被当成同一个东西）。
+    "equip_roster": [
+        {"id": "base", "label": "基础", "icon": "📌",
+         "fields": ["name", "desc", "slot", "weapon_type", "quality", "lv"]},
+        {"id": "series", "label": "系列与来源", "icon": "🧵",
+         "fields": ["series", "series_set", "set", "source"]},
+        {"id": "affix", "label": "固定词条", "icon": "💠",
+         "fields": ["fixed_affixes", "affixes", "affix"]},
+        {"id": "effect", "label": "专属特效", "icon": "✨",
+         "fields": ["special", "legendary", "weapon_effect", "we_data"]},
+        {"id": "req", "label": "属性需求", "icon": "🔢",
+         "fields": ["req"]},
+    ],
+    # 交互点：一条 = 一个房间的挂载，所以先给「房间在哪」，再给「挂了什么」，
+    # 最后是只在内联对象形态里出现的「点本体」子键；source 单独一组（它是导出器的出处标记，不是玩法字段）。
+    "pois": [
+        {"id": "loc", "label": "房间位置", "icon": "🗺",
+         "fields": ["map", "subarea"]},
+        {"id": "mount", "label": "挂载", "icon": "🔎",
+         "fields": ["pois"]},
+        {"id": "poi", "label": "交互点本体（内联形态）", "icon": "📦",
+         "fields": ["id", "type", "name", "hint", "desc", "loot", "effect", "need", "lore"]},
+        {"id": "meta", "label": "来源标注", "icon": "🧩",
+         "fields": ["source"]},
+    ],
 }
 
 
@@ -653,17 +733,9 @@ def all_widgets() -> dict:
         out[dom] = tbl
     return out
 
-# 域 → schema 文件（与 packages.DOMAINS 对应；classes 无 schema）
-DOMAIN_SCHEMA = {
-    "skills": "skill.schema.json", "monsters": "monster.schema.json",
-    "affixes": "affix.schema.json", "items": "item.schema.json",
-    "effect_rules": "effect_rules.schema.json", "passive_proc": "passive_proc.schema.json",
-    "commands": "command.schema.json", "texts": "text.schema.json",
-    "tlogs": "tlog.schema.json",
-    "maps": "maps.schema.json",
-    "drop_pools": "drop_pools.schema.json",
-    "instances": "instances.schema.json",
-}
+# 域 → schema 文件：**从 packages.DOMAINS 派生**（别手写第二份 —— 手写的那份会漂：
+# 加一个域时忘了同步，词条分组/控件就静默不生效。classes 无 schema → 不在此表）
+DOMAIN_SCHEMA = {d: m["schema"] for d, m in PK.DOMAINS.items() if m.get("schema")}
 
 # ───────────────────────────────────────────────────────────────────────── 查询
 def lookup(dom: str, path: str):

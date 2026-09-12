@@ -68,12 +68,30 @@ DOMAINS = {
     # 预览走 `editor/loot_view.py`（引擎同一份 expand/audit 代码算，见该文件）。
     "drop_pools": {"label": "掉落池", "kind": "data", "schema": "drop_pools.schema.json",
                    "primary": "pool", "icon": "🎁"},
+    # 引用词汇声明（**声明表**）：某个（产出）域的「哪些引用写法算解得开」由**内容侧**声明，
+    # 框架不认识任何取值 —— 它只把声明机械地转给 `LootTable(inline_prefixes/special_refs/
+    # pool_key_prefixes/resolvable)`。键 = 它服务的**框架域 id**（当前只有 drop_pools），
+    # 值是四类前缀/特殊值 + 「去哪些域里查 ref」。缺文件 = 不声明 = 与没有这功能时一致。
+    # 消费点：`editor/loot_view.py:load_vocab()`（可选增强，坏声明只降级、不 500）。
+    # ⚠ schema=None：声明形状**故意不设 schema** —— 前四个键全是内容侧取值（框架不认识），
+    #    把它们写成 schema 只会长出一份框架侧词汇表；形状与容错在 `loot_view.normalize_vocab()`
+    #    里（坏形状 = 空声明，不是校验错误）。要开 schema 树的话得同时补 glossary 分组。
+    "loot_vocab": {"label": "引用词汇", "kind": "rules", "schema": None,
+                   "primary": None, "icon": "🔤"},
     # 运行形状：`saintess_engine.run` 消费（准入链 `Admission` / 进度 `Progress` / 名单 `Roster`）。
     # 一条 = 一个副本：`stages` 顺序即进度节点序，层内要打的怪是节点池。
     # 进度视图走 `editor/instance_view.py`（引擎同一份 `Progress` 算 节点/剩余/末层/is_last，
     # 不另写一套；见该文件 docstring 的「为什么值得破一条纪律」）。
     "instances": {"label": "副本", "kind": "data", "schema": "instances.schema.json",
                   "primary": "instance", "icon": "🏯"},
+    # 装备名册：`drop_pools` 的 `equip:` / `items.roster_id` / `instances.boss_equip_drop` 的引用落点。
+    # 一条 = 一件装备（`eq_*`）。同域另带两张子表：系列套装 `series_sets` 与「装备名 → 固定词条」映射。
+    "equip_roster": {"label": "装备名册", "kind": "data", "schema": "equip_roster.schema.json",
+                     "primary": "equip", "icon": "🛡"},
+    # 交互点：副本/野外房间挂的点（宝箱/机关/调查点…），键 =「地图id:子区域id」，值是点表。
+    # 从前只以内联形式躺在 `instances.stages[].poi_data` 里，本域给它一个权威落点。
+    "pois": {"label": "交互点", "kind": "data", "schema": "pois.schema.json",
+             "primary": "poi_mount", "icon": "📍"},
 }
 
 

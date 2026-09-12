@@ -1,0 +1,31 @@
+{
+  "drop_pools": {
+    "version": 1,
+    "note": "掉落池引用词汇声明（游戏仓导出，勿手改）：框架编辑器读它才知道「哪些引用写法算解得开」。取值全部派生自 game/drop_engine.py（含用它的_resolvable() 对真数据逐条取证），一个都不手抄；改了那边的声明重跑导出即可。",
+    "inline_prefixes": [
+      "gold:",
+      "gold_pct:",
+      "item:",
+      "special:",
+      "equip_drop:",
+      "petegg:",
+      "rune:"
+    ],
+    "special_refs": [
+      "bp",
+      "gem",
+      "rune",
+      "equip_drop_mix"
+    ],
+    "pool_key_prefixes": [
+      "weighted:",
+      "fixed:"
+    ],
+    "external_prefixes": [
+      "equip:"
+    ],
+    "ref_domains": [
+      "items"
+    ]
+  }
+}
