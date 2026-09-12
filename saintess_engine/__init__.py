@@ -20,6 +20,7 @@
             loot/        随机产出形状（掉落池 / 档位阶梯 / 槽位挂载 / 加权抽取原语）
             container/   容量受限格子容器
             session/     宿主会话适配
+            run/         运行形状（准入链 / 进度 / 名单）
 
 本文件是**包门面**：外部只需 `from saintess_engine import X`。
 包内模块一律相对导入，不反向依赖门面（纯度门禁 tests/test_engine_purity.py）。
@@ -48,8 +49,8 @@ from .battle import (  # noqa: F401
     landing, schedule, serialize, state_effects, stats,
 )
 from . import (  # noqa: F401
-    clock, command, container, events, expr, formation, gauge, kinds, log, loot, session, space,
-    store, text, tlog,
+    clock, command, container, events, expr, formation, gauge, kinds, log, loot, run, session,
+    space, store, text, tlog,
 )
 # 指令声明 / 文案表（声明驱动：可拔插，未装载 = 零行为）
 from .command import CommandRegistry, CommandSpec  # noqa: F401
@@ -60,6 +61,8 @@ from .tlog import KindTable, Record, TLog  # noqa: F401
 from .space import Space  # noqa: F401
 # 随机产出（池 + 策略注册表 / 档位阶梯 / 槽位挂载）
 from .loot import LootTable, TierTable  # noqa: F401
+# 运行形状（准入链 + 进度 + 名单）
+from .run import Admission, Progress, Roster, Rule, Verdict  # noqa: F401
 
 __all__ = [
     # 版本
@@ -90,6 +93,8 @@ __all__ = [
     "expr", "gauge", "formation", "kinds",
     "store", "command", "events", "clock", "log", "tlog", "space", "loot", "container", "session",
     "text",
+    # 运行形状（准入链 / 进度 / 名单）
+    "run", "Admission", "Rule", "Verdict", "Progress", "Roster",
     # 声明驱动（指令 / 文案 / 流水）
     "CommandRegistry", "CommandSpec", "TextTable", "TextSpec", "safe_format",
     "TLog", "Record", "KindTable",

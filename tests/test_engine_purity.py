@@ -77,7 +77,8 @@ MODULE_ATTRS = [
     ("stats", "battle.stats"),
     ("expr", "expr"), ("gauge", "gauge"), ("formation", "formation"), ("kinds", "kinds"),
     ("store", "store"), ("command", "command"), ("events", "events"),
-    ("clock", "clock"), ("log", "log"), ("tlog", "tlog"), ("space", "space"), ("container", "container"), ("session", "session"),
+    ("clock", "clock"), ("log", "log"), ("tlog", "tlog"), ("space", "space"), ("loot", "loot"),
+    ("run", "run"), ("container", "container"), ("session", "session"),
 ]
 
 passed = failed = 0
