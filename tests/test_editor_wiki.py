@@ -127,10 +127,56 @@ def main() -> int:
                 bad_terms.append(f"{dom}.{k}→{page}#{term}")
     check("词典深链目标词在页内（大小写不敏感复核）", not bad_terms, f"{bad_terms[:5]}")
 
+    # 7. README 声明的模块/文件/行数 == 磁盘（防文档数字静默过期）
+    test_readme_counts()
+
     print(f"\n{'-' * 46}\n通过 {PASS} / 失败 {FAIL}")
     for f in FAILURES:
         print("  ❌", f)
     return 1 if FAIL else 0
+
+
+
+def test_readme_counts():
+    """wiki README 声明的模块/文件/行数必须与磁盘一致（防文档数字静默过期）。
+
+    为什么要有这条：该行原先写「14 个模块 + support/ 4 个通用件，共 18 个 .py / 5 202 行」，
+    实际是 **42 个 .py / 7 770 行**，且 `support/` 早已改名 `container/` —— 文档数字没人盯着
+    就会烂很久。判据取自 README 本身（单一真源），测试只做对照，不另存一份数字。
+    """
+    print("【wiki README 数字对照磁盘】")
+    import re
+    import os as _os
+    readme = _os.path.join(W.WIKI_DIR, "README.md")
+    with open(readme, encoding="utf-8") as f:
+        text = f.read()
+    m = re.search(r"\*\*(\d+)\*\* 个子包 \+ \*\*(\d+)\*\* 个顶层模块；"
+                  r"共 \*\*(\d+)\*\* 个 `\.py` / \*\*([\d ]+)\*\* 行", text)
+    check("README 有一行可解析的引擎目录数字", m is not None,
+          "格式：**N** 个子包 + **N** 个顶层模块；共 **N** 个 `.py` / **N NNN** 行")
+    if not m:
+        return
+    pk, top, files, lines = int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4).replace(" ", ""))
+    pkg_dir = _os.path.join(W.FW_ROOT, "saintess_engine")
+
+    dirs = [d for d in _os.listdir(pkg_dir)
+            if _os.path.isdir(_os.path.join(pkg_dir, d)) and d != "__pycache__"]
+    mods = [f for f in _os.listdir(pkg_dir)
+            if f.endswith(".py") and f != "__init__.py"]
+    all_py, total = [], 0
+    for root, _d, fs in _os.walk(pkg_dir):
+        if "__pycache__" in root:
+            continue
+        for f in fs:
+            if f.endswith(".py"):
+                all_py.append(_os.path.join(root, f))
+                with open(_os.path.join(root, f), encoding="utf-8") as fh:
+                    total += len(fh.readlines())
+
+    check(f"子包数 {pk} == 磁盘 {len(dirs)}", pk == len(dirs), f"{sorted(dirs)}")
+    check(f"顶层模块数 {top} == 磁盘 {len(mods)}", top == len(mods), f"{sorted(mods)}")
+    check(f".py 总数 {files} == 磁盘 {len(all_py)}", files == len(all_py))
+    check(f"总行数 {lines} == 磁盘 {total}", lines == total, f"差 {total - lines}")
 
 
 if __name__ == "__main__":
