@@ -123,13 +123,13 @@ def apply_game_content(actor: dict) -> dict:
 （`game/data/*.py`、`game/commands/*.py`、`game/services/*`），
 而包格式是**目标形态**。两者之间靠"搬运"逐步合拢，不是重写。
 
-| 阶段 | 做什么 | 验收 |
-|---|---|---|
-| **P1** | 数据域导出：`game/data/*.py` → `content/data/*.json`（先物品域打样） | 编辑器能打开该域真数据；同步门禁锁住「JSON = 从 Python 重算」 |
-| **P2** | 其余数据域：怪物 / 地图 / 掉落池 / 词条 / 职业 / 装备名册 … | 同上，逐域一条门禁 |
-| **P3** | 声明表迁移：状态规则 / 被动 / 指令 / 文案 / 流水 → `content/rules/*.json` | 声明与调用不脱节（已有门禁体系） |
-| **P4** | 代码收口：扩展代码 → `content/mech/*.py`；装配入口 → `content/apply.py` | 引擎零改动即可跑起包；`mech/` import 即注册生效 |
-| **P5** | 奥兰迪亚仓瘦身为「宿主 + 包」：宿主只留平台耦合层（QQ / AstrBot 等） | 包可整包导出分发；宿主可替换 |
+| 阶段 | 做什么 | 验收 | 现状（2026-09-13） |
+|---|---|---|---|
+| **P1** | 数据域导出：`game/data/*.py` → `content/data/*.json`（先物品域打样） | 编辑器能打开该域真数据；同步门禁锁住「JSON = 从 Python 重算」 | ✅ **完成**：导出器 `dragonfall/scripts/export_game_package.py`（items 900）、门禁 `tests/test_export_package_sync.py`、覆盖验收 `scripts/verify_package_coverage.py` |
+| **P2** | 其余数据域：怪物 / 地图 / 掉落池 / 词条 / 职业 / 装备名册 … | 同上，逐域一条门禁 | ✅ **除「装备名册」类无框架域的表外全部完成** —— 包内 13 域 / 2691 条（框架 DOMAINS 的 13 个域一个不缺）；无框架域的表见 §九 |
+| **P3** | 声明表迁移：状态规则 / 被动 / 指令 / 文案 / 流水 → `content/rules/*.json` | 声明与调用不脱节（已有门禁体系） | ✅ **完成**：`effect_rules`(85) 与 `passive_proc`(42) 落 `content/rules/`；`commands`(194) / `texts`(233) / `tlogs`(18) 落 `content/data/`（按框架 `DOMAINS.kind`） |
+| **P4** | 代码收口：扩展代码 → `content/mech/*.py`；装配入口 → `content/apply.py` | 引擎零改动即可跑起包；`mech/` import 即注册生效 | ⏳ **未开始 —— 这是剩下的大块**。包内现在**没有** `apply.py` / `content/mech/`：引擎能读这份数据、编辑器能改，但**跑不起来这款游戏**（机制的 26 个被动动作、指令守卫实现、战斗脚本等仍在游戏仓 `game/services/*`）。`game.json` 因此**不声明 `entry`**（纯数据包，声明了就必须有文件 —— 门禁守这条） |
+| **P5** | 奥兰迪亚仓瘦身为「宿主 + 包」：宿主只留平台耦合层（QQ / AstrBot 等） | 包可整包导出分发；宿主可替换 | ⏳ 未开始 |
 
 **过渡期铁律**：同一份语义**不许两处各写一份**。P1~P3 期间 Python 仍是真源 →
 JSON 由导出脚本生成，并由**同步门禁**断言「派生一致」；改一边不同步就红。
