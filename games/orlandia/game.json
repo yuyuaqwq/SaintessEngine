@@ -4,13 +4,18 @@
   "desc": "《奥兰迪亚·余烬纪年》内容侧数据导出包（QQ 机器人文字 RPG 内容仓 dragonfall 单向导出）",
   "engine": ">=0.1",
   "domains": [
+    "affixes",
     "classes",
     "commands",
+    "drop_pools",
     "effect_rules",
+    "instances",
     "items",
+    "maps",
     "monsters",
     "passive_proc",
     "skills",
+    "texts",
     "tlogs"
   ],
   "created": "2026-09-12"

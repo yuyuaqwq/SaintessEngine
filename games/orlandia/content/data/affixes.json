@@ -1,0 +1,946 @@
+{
+  "abyss_resist": {
+    "name": "深渊抗性",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "abyss_resist": 0.1
+    },
+    "desc": "暗影伤害－10%"
+  },
+  "arcana_flux": {
+    "name": "充能汲引",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "res": "element",
+      "gain": 1,
+      "on": "on_cast"
+    },
+    "qualities": [
+      "blue"
+    ],
+    "line": "法师·基础/转职通用",
+    "desc": "元素/奥术技能施放 充能获取 +1 (额外)"
+  },
+  "arcane_focus": {
+    "name": "凝神塑能",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "mp_cost_reduce": 0.1
+    },
+    "qualities": [
+      "blue"
+    ],
+    "line": "法师·基础即受益",
+    "desc": "元素/奥术技能 魔力消耗 -10% (续航向，基础即受益)"
+  },
+  "armor_break": {
+    "name": "破甲",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.25,
+    "effect": {
+      "debuff": "def",
+      "pct": 0.15,
+      "turns": 2
+    },
+    "desc": "攻击 25% 降低目标防御 15%(2 刻)"
+  },
+  "bleed": {
+    "name": "流血",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.2,
+    "effect": {
+      "dot_pct": 0.05,
+      "stacks": 3
+    },
+    "desc": "攻击 20% 使目标流血(每刻 5% 生命，3 刻)"
+  },
+  "block": {
+    "name": "格挡",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "block": 0.15
+    },
+    "desc": "格挡率 +15%（格挡时减伤 50%）"
+  },
+  "blood_bath": {
+    "name": "浴血",
+    "kind": "defense",
+    "trigger": "on_taken",
+    "effect": {
+      "res": "rage",
+      "gain": 1,
+      "on": "on_taken"
+    },
+    "qualities": [
+      "purple"
+    ],
+    "line": "战士·攻线",
+    "desc": "受击时 怒气 +1 (与血债怒火叠加)"
+  },
+  "boiling_blood": {
+    "name": "沸血浇筑",
+    "kind": "defense",
+    "trigger": "passive",
+    "effect": {
+      "dmg_reduce": 0.08,
+      "cond": "rage_full"
+    },
+    "qualities": [
+      "orange"
+    ],
+    "line": "战士·攻线沸血体系",
+    "desc": "怒气全满时 全减伤 +8% (沸血战体)"
+  },
+  "break_magic": {
+    "name": "破魔",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.25,
+      "enemy_role": "caster",
+      "tag": "🔮破魔"
+    },
+    "desc": "对魔法系敌人(法师/治疗型/会用魔法技的怪)＋25% 伤害"
+  },
+  "burst_break": {
+    "name": "爆发贯体",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "chi_skill_phys": 0.1
+    },
+    "qualities": [
+      "purple"
+    ],
+    "line": "拳师·通用倾泻流",
+    "desc": "气力技物理伤害 +10%"
+  },
+  "cdr": {
+    "name": "轻灵",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "cdr": 0.05
+    },
+    "desc": "冷却缩减＋5%"
+  },
+  "charge": {
+    "name": "蓄力",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.1,
+    "effect": {
+      "dmg_pct": 0.5
+    },
+    "desc": "攻击 10% 造成 150% 伤害"
+  },
+  "chi_limit": {
+    "name": "气量强化",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "res": "chi",
+      "max_bonus": 2
+    },
+    "qualities": [
+      "purple",
+      "orange"
+    ],
+    "unique": true,
+    "line": "拳师·攻线/爆发流",
+    "desc": "气上限 +2 (至 12)"
+  },
+  "combo": {
+    "name": "连击",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.15,
+    "effect": {
+      "extra_atk": 0.5
+    },
+    "desc": "攻击 15% 追加一次 50% 伤害"
+  },
+  "combo_edge": {
+    "name": "连段之锋",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "combo_threshold_reduce": 1,
+      "cond": "攻线限定"
+    },
+    "qualities": [
+      "purple"
+    ],
+    "line": "刺客·攻线限定",
+    "desc": "连段生效阈值 -1 (combo ≥ 3 → ≥ 2；攻线限定)"
+  },
+  "combo_recover": {
+    "name": "连段回收",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "res": "chi",
+      "gain": 1,
+      "on": "combo_skill"
+    },
+    "qualities": [
+      "blue"
+    ],
+    "line": "拳师·通用基础连段",
+    "desc": "连招技额外 +1 气"
+  },
+  "combo_ward": {
+    "name": "连段护持",
+    "kind": "defense",
+    "trigger": "on_taken",
+    "effect": {
+      "combo_keep_chance": 0.15,
+      "tiers": {
+        "purple": 0.15,
+        "orange": 0.3
+      },
+      "cond": "攻线限定"
+    },
+    "qualities": [
+      "purple",
+      "orange"
+    ],
+    "line": "刺客·攻线限定",
+    "desc": "受击时 15% 概率连击不因受击回退 (史诗 30%；攻线限定)"
+  },
+  "counter": {
+    "name": "反击",
+    "kind": "attack",
+    "trigger": "on_taken",
+    "chance": 0.2,
+    "effect": {
+      "pct": 0.6
+    },
+    "desc": "受击后 20% 反击 60% 伤害"
+  },
+  "crit_charge": {
+    "name": "暴击蓄能",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "res": "energy",
+      "gain": 3,
+      "on": "on_crit"
+    },
+    "qualities": [
+      "purple",
+      "orange"
+    ],
+    "line": "游侠·转职后兑现",
+    "desc": "暴击命中时 精力回复 +3"
+  },
+  "crit_dmg": {
+    "name": "暴击伤害",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "crit_dmg": 0.2
+    },
+    "desc": "暴击伤害＋20%"
+  },
+  "crit_return": {
+    "name": "暴击回点",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "res": "cp",
+      "gain": 1,
+      "on": "on_crit",
+      "chance": 0.15,
+      "tiers": {
+        "blue": 0.15,
+        "purple": 0.25,
+        "orange": 0.4
+      }
+    },
+    "qualities": [
+      "blue",
+      "purple"
+    ],
+    "line": "刺客·毒线/影步线向",
+    "desc": "暴击时 15% 概率额外获得 1 连击点 (史诗 25%，传说 40%)"
+  },
+  "crit_up": {
+    "name": "暴击强化",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "crit": 0.05
+    },
+    "desc": "暴击率＋5%"
+  },
+  "divine_radiance": {
+    "name": "神赐容光",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "res": "faith",
+      "max_bonus": 1
+    },
+    "qualities": [
+      "purple"
+    ],
+    "line": "牧师·通用",
+    "desc": "信仰上限 +1"
+  },
+  "dmg_reduce": {
+    "name": "减伤",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "dmg_reduce": 0.03
+    },
+    "desc": "受击伤害－3%"
+  },
+  "dodge": {
+    "name": "闪避",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "dodge": 0.05
+    },
+    "desc": "闪避率＋5%"
+  },
+  "dragon_aw": {
+    "name": "龙威",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.25,
+      "enemy_contains": [
+        "龙"
+      ],
+      "tag": "🐉龙威"
+    },
+    "desc": "对龙系敌人＋25% 伤害"
+  },
+  "elem_resist": {
+    "name": "元素抗性",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "elem_resist": 0.08
+    },
+    "desc": "火/冰/雷抗性＋8%"
+  },
+  "element_fire": {
+    "name": "元素·火",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "effect": {
+      "element": "fire",
+      "pct": 0.05
+    },
+    "desc": "攻击附加 5% 火属性伤害"
+  },
+  "element_ice": {
+    "name": "元素·冰",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "effect": {
+      "element": "ice",
+      "pct": 0.05,
+      "slow": 0.1,
+      "slow_turns": 2
+    },
+    "desc": "攻击附加 5% 冰属性伤害 + 减速（敌速减半）"
+  },
+  "element_thunder": {
+    "name": "元素·雷",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.15,
+    "effect": {
+      "element": "thunder",
+      "pct": 0.05,
+      "thunder_bonus": 0.2
+    },
+    "desc": "攻击附加 5% 雷属性伤害，15% 概率追加 20% 雷伤"
+  },
+  "ember_brand": {
+    "name": "残血灼薪",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "res": "rage",
+      "gain": 1,
+      "cond": "hp_lt_30"
+    },
+    "qualities": [
+      "blue"
+    ],
+    "line": "战士·攻线",
+    "desc": "生命 <30% 时 怒气获取 +1"
+  },
+  "energy_blade": {
+    "name": "精力刀刃",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "res": "energy",
+      "cost_reduce": 0.05,
+      "tiers": {
+        "blue": 0.05,
+        "purple": 0.08,
+        "orange": 0.12
+      }
+    },
+    "qualities": [
+      "blue",
+      "purple"
+    ],
+    "line": "游侠·通用",
+    "desc": "精力消耗 -5% (史诗 -8%，传说 -12%)"
+  },
+  "energy_tide": {
+    "name": "精力潮汐",
+    "kind": "defense",
+    "trigger": "turn_start",
+    "effect": {
+      "res": "energy",
+      "regen": 5,
+      "tiers": {
+        "purple": 5,
+        "orange": 10
+      }
+    },
+    "qualities": [
+      "purple",
+      "orange"
+    ],
+    "line": "游侠·通用",
+    "desc": "每刻 精力回复 +5 (传说 +10)"
+  },
+  "execute": {
+    "name": "处决",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.3,
+      "execute_threshold": 0.3,
+      "tag": "💀处决"
+    },
+    "desc": "对生命 <30% 的目标＋30% 伤害"
+  },
+  "exp_bonus": {
+    "name": "求知",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "exp_bonus": 0.05
+    },
+    "desc": "战斗经验＋5%"
+  },
+  "finisher": {
+    "name": "终结之技",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "finisher_dmg": 0.1,
+      "tiers": {
+        "blue": 0.1,
+        "purple": 0.15,
+        "orange": 0.2
+      }
+    },
+    "qualities": [
+      "blue",
+      "purple"
+    ],
+    "line": "刺客·通用",
+    "desc": "终结技伤害 +10% (史诗 +15%，传说 +20%)"
+  },
+  "full_pack": {
+    "name": "盈满背囊",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "res": "energy",
+      "max_bonus": 10,
+      "tiers": {
+        "purple": 10,
+        "orange": 20
+      }
+    },
+    "qualities": [
+      "purple",
+      "orange"
+    ],
+    "line": "游侠·通用",
+    "desc": "精力上限 +10 (史诗 +10，传说 +20)"
+  },
+  "gold_bonus": {
+    "name": "聚宝",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "gold_bonus": 0.05
+    },
+    "desc": "金币收益＋5%"
+  },
+  "heal_power": {
+    "name": "圣愈",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "heal_power": 0.05
+    },
+    "desc": "治疗强度＋5%"
+  },
+  "holy_echo": {
+    "name": "圣辉回响",
+    "kind": "defense",
+    "trigger": "passive",
+    "effect": {
+      "res": "faith",
+      "gain": 1,
+      "on": "on_heal",
+      "tiers": {
+        "blue": 1,
+        "purple": 2
+      }
+    },
+    "qualities": [
+      "blue",
+      "purple"
+    ],
+    "line": "牧师·通用",
+    "desc": "治疗命中时 信仰 +1 (史诗 +2)"
+  },
+  "holy_heart": {
+    "name": "圣光之心",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "res": "faith",
+      "max_bonus": 2
+    },
+    "qualities": [
+      "orange"
+    ],
+    "unique": true,
+    "line": "牧师·通用",
+    "desc": "信仰上限 +2 (唯一主词条)"
+  },
+  "hp_up": {
+    "name": "生命强化",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "hp_pct": 0.05
+    },
+    "desc": "最大生命＋5%"
+  },
+  "hunt": {
+    "name": "追猎",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.2,
+      "enemy_marked": true,
+      "tag": "🎯追猎"
+    },
+    "desc": "对标记/被集火目标＋20% 伤害"
+  },
+  "lifesteal": {
+    "name": "吸血",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "lifesteal": 0.08
+    },
+    "desc": "吸血 +8%（伤害回血，面板可见）"
+  },
+  "luck": {
+    "name": "幸运",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "luck": 0.05
+    },
+    "desc": "掉落收益＋5%"
+  },
+  "magic_ward": {
+    "name": "魔抗",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "magic_reduce": 0.05
+    },
+    "desc": "魔法免伤 +5%"
+  },
+  "meditate": {
+    "name": "冥想",
+    "kind": "defense",
+    "trigger": "turn_start",
+    "effect": {
+      "pct": 0.01
+    },
+    "desc": "每刻回复 1% 魔力"
+  },
+  "momentum_mastery": {
+    "name": "蓄势精通",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "momentum_per_chi": 0.04,
+      "base": 0.03,
+      "cond": "攻线蓄势"
+    },
+    "qualities": [
+      "blue",
+      "purple"
+    ],
+    "line": "拳师·攻线专属",
+    "desc": "攻线每 1 气提升的物理伤害 +3% → +4% (蓄势 Momentum 系数；苦修锁 4% 不上浮)"
+  },
+  "opening_stance": {
+    "name": "起手之势",
+    "kind": "defense",
+    "trigger": "battle_start",
+    "effect": {
+      "res": "chi",
+      "gain": 1,
+      "on": "battle_start"
+    },
+    "qualities": [
+      "blue"
+    ],
+    "line": "拳师·通用开局节奏",
+    "desc": "战斗开始时 +1 气"
+  },
+  "pene_flat": {
+    "name": "破甲刃",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "pene_flat": 0.5
+    },
+    "desc": "固定物穿 2+装备等级×0.5 点"
+  },
+  "pene_magi": {
+    "name": "法穿",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "pene_magi": 0.05
+    },
+    "desc": "法穿＋5%（无视魔法防御）"
+  },
+  "pene_mflat": {
+    "name": "破法刃",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "pene_mflat": 0.5
+    },
+    "desc": "固定法穿 2+装备等级×0.5 点"
+  },
+  "pene_phys": {
+    "name": "穿甲",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "pene_phys": 0.05
+    },
+    "desc": "物穿＋5%（无视物理防御）"
+  },
+  "phys_ward": {
+    "name": "铁壁",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "phys_reduce": 0.05
+    },
+    "desc": "物理免伤 +5%"
+  },
+  "pierce": {
+    "name": "贯穿",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.2,
+    "effect": {
+      "atk_pct": 0.6
+    },
+    "desc": "攻击 20% 无视防御"
+  },
+  "pious_charm": {
+    "name": "虔诚护符",
+    "kind": "defense",
+    "trigger": "on_taken",
+    "effect": {
+      "res": "faith",
+      "gain": 1,
+      "on": "on_taken"
+    },
+    "qualities": [
+      "blue"
+    ],
+    "unique": true,
+    "line": "牧师·通用",
+    "desc": "受击时 信仰 +1 (唯一词条)"
+  },
+  "precise": {
+    "name": "精准",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "precise": 0.1,
+      "dmg_mult": 1.1,
+      "tag": "🎯精准"
+    },
+    "desc": "命中＋10%（无视闪避），伤害＋10%"
+  },
+  "purify": {
+    "name": "净化",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.15,
+    "effect": {
+      "purge": 1,
+      "holy_weaken": 0.1
+    },
+    "desc": "攻击 15% 驱散目标 1 层增益，成功时敌人攻击－10%(1 刻)"
+  },
+  "rage_forge": {
+    "name": "怒火熔铸",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "res": "rage",
+      "max_bonus": 2
+    },
+    "qualities": [
+      "purple",
+      "orange"
+    ],
+    "unique": true,
+    "line": "战士·通用基础",
+    "desc": "怒气上限 +2 (10 → 12，配合满怒档)"
+  },
+  "reaction_catalyst": {
+    "name": "反应催化",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "reaction_dmg": 0.15,
+      "cond": "element_mage"
+    },
+    "qualities": [
+      "purple"
+    ],
+    "line": "法师·攻线限定",
+    "desc": "元素反应伤害 +15% (元素法师转职后生效)"
+  },
+  "regen": {
+    "name": "回春",
+    "kind": "defense",
+    "trigger": "turn_start",
+    "effect": {
+      "pct": 0.01
+    },
+    "desc": "每刻回复 1% 生命"
+  },
+  "rhythm_badge": {
+    "name": "节奏之徽",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "res": "cp",
+      "max_bonus": 1,
+      "max_total": 2
+    },
+    "qualities": [
+      "purple",
+      "orange"
+    ],
+    "unique": true,
+    "line": "刺客·收藏主词条",
+    "desc": "连击点上限 +1 (最多 +2)"
+  },
+  "rock_rest": {
+    "name": "磐息",
+    "kind": "defense",
+    "trigger": "on_taken",
+    "effect": {
+      "res": "chi",
+      "gain": 1,
+      "on": "on_taken"
+    },
+    "qualities": [
+      "blue"
+    ],
+    "line": "拳师·守线专属",
+    "desc": "受击时额外 +1 气 (配合守线反震/柱势)"
+  },
+  "shield": {
+    "name": "护盾",
+    "kind": "defense",
+    "trigger": "battle_start",
+    "effect": {
+      "shield_hp_pct": 0.1,
+      "turns": 3
+    },
+    "desc": "战斗开始获得 10% 生命护盾"
+  },
+  "shield_power": {
+    "name": "坚盾",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "shield_power": 0.05
+    },
+    "desc": "护盾强度＋5%"
+  },
+  "sigil_blessing": {
+    "name": "圣徽之佑",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "mp_cost_reduce": 5,
+      "on": "miracle",
+      "tiers": {
+        "blue": 5,
+        "purple": 10
+      }
+    },
+    "qualities": [
+      "blue",
+      "purple"
+    ],
+    "line": "牧师·神迹技",
+    "desc": "神迹技 魔力消耗 -5 (史诗 -10)"
+  },
+  "sigil_engrave": {
+    "name": "印记铭刻",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "max_sigil": 1,
+      "cond": "element_mage",
+      "max_total": 1
+    },
+    "qualities": [
+      "blue",
+      "purple"
+    ],
+    "line": "法师·攻线限定",
+    "desc": "元素印记上限 +1 (每系 3 → 4，元素法师转职后生效)"
+  },
+  "swift": {
+    "name": "迅捷",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "spd_pct": 0.05
+    },
+    "desc": "速度＋5%"
+  },
+  "swift_tailwind": {
+    "name": "疾风余韵",
+    "kind": "defense",
+    "trigger": "turn_start",
+    "effect": {
+      "res": "energy",
+      "regen": 10,
+      "cond": "energy_ge_80"
+    },
+    "qualities": [
+      "orange"
+    ],
+    "line": "游侠·守线满弦兑现",
+    "desc": "刻结束时，若精力 ≥ 80，下刻 精力回复 +10"
+  },
+  "tenacity": {
+    "name": "韧性",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "tenacity": 0.05
+    },
+    "desc": "被暴击率－5%"
+  },
+  "tenacity_cc": {
+    "name": "坚韧",
+    "kind": "defense",
+    "trigger": "on_taken",
+    "chance": 0.2,
+    "effect": {
+      "immune_cc": 1,
+      "heal_pct": 0.03
+    },
+    "desc": "受击 20% 免疫眩晕/减速，成功时回复 3% 生命"
+  },
+  "thirst_magi": {
+    "name": "吸魂",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "lifesteal_magi": 0.08
+    },
+    "desc": "法术吸血 +8%（仅魔法攻击回血）"
+  },
+  "thirst_phys": {
+    "name": "渴血",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "lifesteal_phys": 0.08
+    },
+    "desc": "物理吸血 +8%（仅物理攻击回血）"
+  },
+  "thorns": {
+    "name": "反伤",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "thorns": 0.1
+    },
+    "desc": "反伤 +10%（受击反弹伤害，面板可见）"
+  },
+  "war_spirit": {
+    "name": "战意",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "res": "rage",
+      "gain": 1,
+      "on": [
+        "on_attack",
+        "on_skill"
+      ]
+    },
+    "qualities": [
+      "blue",
+      "purple"
+    ],
+    "line": "战士·通用基础",
+    "desc": "攻击/技能触发怒气时 怒气获取额外 +1"
+  },
+  "warcry_echo": {
+    "name": "战吼回响",
+    "kind": "defense",
+    "trigger": "passive",
+    "effect": {
+      "res": "rage",
+      "gain": 1,
+      "on": "buff_skill"
+    },
+    "qualities": [
+      "purple"
+    ],
+    "line": "战士·通用基础",
+    "desc": "释放增益技能后 怒气 +1"
+  }
+}
