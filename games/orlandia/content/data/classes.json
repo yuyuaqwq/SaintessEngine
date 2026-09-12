@@ -1,0 +1,552 @@
+{
+  "cls_ci_ke": {
+    "desc": "暗影中的利刃，出手必见血，暴击与闪避的极致。",
+    "mech": "命中攒连击点满5爆发；多段投喂链值/毒层，终结阈值可配。",
+    "icon": "🗡️",
+    "role": "输出",
+    "cast_atk": 0.8,
+    "cast_defend": 0.25,
+    "cast_flee": 0.8,
+    "evolve": [
+      "影舞者(30)",
+      "暗影之刃(60)",
+      "无影之刃(90)"
+    ],
+    "evolve_branches": {
+      "1": [
+        "影舞者",
+        "毒刃者"
+      ],
+      "2": [
+        "暗影之刃",
+        "淬毒师"
+      ],
+      "3": [
+        "无影之刃",
+        "蚀骨者"
+      ]
+    },
+    "attack_text": "匕首突刺",
+    "basic_skill": {
+      "name": "暗刺",
+      "kind": "物理",
+      "exprs": [
+        "atk*1.0"
+      ],
+      "cast": 0.0,
+      "cd": 0,
+      "mp": 0,
+      "basic": true,
+      "trigger_hit": true,
+      "cast_verb": "匕首突刺"
+    },
+    "tutor": [
+      "暗影渡鸦",
+      "铁港城·港口广场"
+    ],
+    "base": {
+      "hp": 95,
+      "mp": 70,
+      "atk": 17,
+      "def": 9,
+      "matk": 7,
+      "mdef": 8,
+      "spd": 19,
+      "crit": 0.2,
+      "dodge": 0.18,
+      "pene_phys": 0.1,
+      "cdr": 0.05
+    },
+    "growth": {
+      "hp": 12,
+      "mp": 5,
+      "atk": 3.0,
+      "def": 1.3,
+      "matk": 0.6,
+      "mdef": 0.9,
+      "spd": 1.6
+    },
+    "weapon_type": "dagger",
+    "name": "刺客",
+    "default_rank": 1,
+    "reach": 1,
+    "rank_label": "前排"
+  },
+  "cls_fa_shi": {
+    "desc": "掌控元素之力的施法者，输出爆炸但身板脆弱。",
+    "mech": "纯蓝施法者；转职解锁充能条 + 元素架设(专注+40%增伤)。",
+    "icon": "🔥",
+    "role": "输出",
+    "cast_atk": 1.0,
+    "cast_defend": 0.45,
+    "cast_flee": 1.2,
+    "evolve": [
+      "元素使(30)",
+      "元素术士(60)",
+      "元素贤者(90)"
+    ],
+    "evolve_branches": {
+      "1": [
+        "元素使",
+        "奥术学者"
+      ],
+      "2": [
+        "元素术士",
+        "奥术大师"
+      ],
+      "3": [
+        "元素贤者",
+        "奥秘主宰"
+      ]
+    },
+    "attack_text": "凝聚魔力轰出法球",
+    "basic_skill": {
+      "name": "法球",
+      "kind": "魔法",
+      "exprs": [
+        "matk*1.0"
+      ],
+      "cast": 0.0,
+      "cd": 0,
+      "mp": 0,
+      "basic": true,
+      "trigger_hit": true,
+      "cast_verb": "凝聚魔力轰出法球"
+    },
+    "tutor": [
+      "大法师·艾德琳",
+      "白鹿城·白鹿广场"
+    ],
+    "base": {
+      "hp": 90,
+      "mp": 120,
+      "atk": 8,
+      "def": 7,
+      "matk": 22,
+      "mdef": 14,
+      "spd": 12,
+      "crit": 0.08,
+      "dodge": 0.05,
+      "pene_magi": 0.1,
+      "abyss_res": 0.05
+    },
+    "growth": {
+      "hp": 10,
+      "mp": 10,
+      "atk": 0.8,
+      "def": 1.0,
+      "matk": 3.8,
+      "mdef": 1.8,
+      "spd": 0.9
+    },
+    "weapon_type": "staff",
+    "name": "法师",
+    "default_rank": 2,
+    "reach": 2,
+    "rank_label": "后排"
+  },
+  "cls_mu_shi": {
+    "desc": "信仰圣光的神职者，能打能奶，队伍的灵魂。",
+    "mech": "治疗攒信仰值满10放神迹；攻线歌者双资源，守线圣律随附支援。",
+    "icon": "✨",
+    "role": "治疗",
+    "cast_atk": 0.6,
+    "cast_defend": 0.35,
+    "cast_flee": 1.0,
+    "evolve": [
+      "神谕者(30)",
+      "大主教(60)",
+      "圣光先知(90)"
+    ],
+    "evolve_branches": {
+      "1": [
+        "神谕者",
+        "死灵祭司"
+      ],
+      "2": [
+        "大主教",
+        "亡魂引渡者"
+      ],
+      "3": [
+        "圣光先知",
+        "黯灵君主"
+      ]
+    },
+    "attack_text": "圣光冲击",
+    "basic_skill": {
+      "name": "圣光冲击",
+      "kind": "魔法",
+      "exprs": [
+        "matk*1.0"
+      ],
+      "cast": 0.0,
+      "cd": 0,
+      "mp": 0,
+      "basic": true,
+      "trigger_hit": true,
+      "cast_verb": "圣光冲击"
+    },
+    "tutor": [
+      "圣殿执事·莉亚",
+      "白鹿城·白鹿广场"
+    ],
+    "base": {
+      "hp": 100,
+      "mp": 110,
+      "atk": 10,
+      "def": 11,
+      "matk": 16,
+      "mdef": 16,
+      "spd": 11,
+      "crit": 0.06,
+      "dodge": 0.06,
+      "elem_res": 0.05,
+      "heal_power": 0.1
+    },
+    "growth": {
+      "hp": 12,
+      "mp": 9,
+      "atk": 1.2,
+      "def": 1.8,
+      "matk": 2.6,
+      "mdef": 2.4,
+      "spd": 0.8
+    },
+    "weapon_type": "mace",
+    "name": "牧师",
+    "default_rank": 2,
+    "reach": 2,
+    "rank_label": "后排"
+  },
+  "cls_novice": {
+    "desc": "刚踏上冒险之路的新人，还没有正式职业。去冒险者行会找接待员就职，或到各城寻找职业导师吧！",
+    "icon": "🧭",
+    "role": "见习",
+    "attack_text": "挥剑攻击",
+    "basic_skill": {
+      "name": "挥拳",
+      "kind": "物理",
+      "exprs": [
+        "atk*1.0"
+      ],
+      "cast": 0.0,
+      "cd": 0,
+      "mp": 0,
+      "basic": true,
+      "trigger_hit": true,
+      "cast_verb": "挥剑攻击"
+    },
+    "base": {
+      "hp": 110,
+      "mp": 50,
+      "atk": 11,
+      "def": 9,
+      "matk": 9,
+      "mdef": 9,
+      "spd": 10,
+      "crit": 0.05,
+      "dodge": 0.03
+    },
+    "growth": {
+      "hp": 14,
+      "mp": 6,
+      "atk": 1.3,
+      "def": 1.1,
+      "matk": 1.1,
+      "mdef": 1.1,
+      "spd": 1.0
+    },
+    "weapon_type": "sword",
+    "name": "见习冒险者",
+    "default_rank": 1,
+    "reach": 1,
+    "rank_label": "前排"
+  },
+  "cls_shi_ren": {
+    "desc": "怀抱诗琴的吟游诗人，旋律即力量——唱响战歌鼓舞全队，或以挽歌瓦解敌阵。",
+    "mech": "旋律驻留：唱一首歌持续光环，强度满 5 触发终章爆发；咏叹增益线/挽歌瓦解线。",
+    "icon": "🎵",
+    "role": "支援",
+    "cast_atk": 0.5,
+    "cast_defend": 0.35,
+    "cast_flee": 1.0,
+    "evolve": [
+      "咏叹者(30)",
+      "晨曦歌者(60)",
+      "天籁颂者(90)"
+    ],
+    "evolve_branches": {
+      "1": [
+        "咏叹者",
+        "挽歌者"
+      ],
+      "2": [
+        "晨曦歌者",
+        "安魂歌者"
+      ],
+      "3": [
+        "天籁颂者",
+        "镇魂挽者"
+      ]
+    },
+    "attack_text": "拨弦攻击",
+    "basic_skill": {
+      "name": "拨弦",
+      "kind": "魔法",
+      "exprs": [
+        "matk*1.0"
+      ],
+      "cast": 0.0,
+      "cd": 0,
+      "mp": 0,
+      "basic": true,
+      "trigger_hit": true,
+      "cast_verb": "拨弦攻击"
+    },
+    "tutor": [
+      "流浪乐师·阿莱克斯",
+      "白鹿城·酒馆"
+    ],
+    "base": {
+      "hp": 95,
+      "mp": 105,
+      "atk": 9,
+      "def": 10,
+      "matk": 15,
+      "mdef": 14,
+      "spd": 13,
+      "crit": 0.07,
+      "dodge": 0.08
+    },
+    "growth": {
+      "hp": 11,
+      "mp": 9,
+      "atk": 1.1,
+      "def": 1.5,
+      "matk": 2.5,
+      "mdef": 2.2,
+      "spd": 0.9
+    },
+    "weapon_type": "staff",
+    "name": "吟游诗人",
+    "default_rank": 2,
+    "reach": 2,
+    "rank_label": "后排"
+  },
+  "cls_wu_seng": {
+    "desc": "以拳入道的修行者，拳拳到肉，连击与反击的行家。",
+    "mech": "出招攒气3/10气双档；攻线推敌破绽条，守线防御攒磐核。",
+    "icon": "🥊",
+    "role": "辅助",
+    "cast_atk": 1.15,
+    "cast_defend": 0.25,
+    "cast_flee": 0.9,
+    "evolve": [
+      "格斗士(30)",
+      "拳术师(60)",
+      "破晓者(90)"
+    ],
+    "evolve_branches": {
+      "1": [
+        "格斗士",
+        "磐石行者"
+      ],
+      "2": [
+        "拳术师",
+        "铁壁行者"
+      ],
+      "3": [
+        "破晓者",
+        "不破之壁"
+      ]
+    },
+    "attack_text": "挥拳轰击",
+    "basic_skill": {
+      "name": "直拳",
+      "kind": "物理",
+      "exprs": [
+        "atk*1.0"
+      ],
+      "cast": 0.0,
+      "cd": 0,
+      "mp": 0,
+      "basic": true,
+      "trigger_hit": true,
+      "cast_verb": "挥拳轰击"
+    },
+    "tutor": [
+      "船帮武师·老陈",
+      "铁港城·港口广场"
+    ],
+    "base": {
+      "hp": 135,
+      "mp": 55,
+      "atk": 15,
+      "def": 12,
+      "matk": 6,
+      "mdef": 11,
+      "spd": 14,
+      "crit": 0.1,
+      "dodge": 0.12
+    },
+    "growth": {
+      "hp": 18,
+      "mp": 4,
+      "atk": 2.8,
+      "def": 2.0,
+      "matk": 0.5,
+      "mdef": 1.6,
+      "spd": 1.1
+    },
+    "weapon_type": "fist",
+    "name": "拳师",
+    "default_rank": 1,
+    "reach": 1,
+    "rank_label": "前排"
+  },
+  "cls_you_xia": {
+    "desc": "敏捷的弓箭手，箭无虚发，暴击与闪避的艺术家。攻线觉醒自然之力，与万木为友。",
+    "mech": "每刻回30精力；满100凝神屏息，蓄力改电荷制(边攒边打)。",
+    "icon": "🏹",
+    "role": "输出",
+    "cast_atk": 1.0,
+    "cast_defend": 0.25,
+    "cast_flee": 0.8,
+    "evolve": [
+      "森语者(30)",
+      "自然守望者(60)",
+      "万木之灵(90)"
+    ],
+    "evolve_branches": {
+      "1": [
+        "森语者",
+        "风行者"
+      ],
+      "2": [
+        "自然守望者",
+        "疾风射手"
+      ],
+      "3": [
+        "万木之灵",
+        "狂风之猎"
+      ]
+    },
+    "attack_text": "弯弓搭箭",
+    "basic_skill": {
+      "name": "疾射",
+      "kind": "物理",
+      "exprs": [
+        "atk*1.0"
+      ],
+      "cast": 0.0,
+      "cd": 0,
+      "mp": 0,
+      "basic": true,
+      "trigger_hit": true,
+      "cast_verb": "弯弓搭箭"
+    },
+    "tutor": [
+      "猎手·柯恩",
+      "铁港城·港口广场"
+    ],
+    "base": {
+      "hp": 110,
+      "mp": 60,
+      "atk": 15,
+      "def": 10,
+      "matk": 8,
+      "mdef": 9,
+      "spd": 16,
+      "crit": 0.15,
+      "dodge": 0.12
+    },
+    "growth": {
+      "hp": 14,
+      "mp": 5,
+      "atk": 2.6,
+      "def": 1.6,
+      "matk": 0.8,
+      "mdef": 1.0,
+      "spd": 1.4
+    },
+    "weapon_type": "bow",
+    "name": "游侠",
+    "default_rank": 2,
+    "reach": 2,
+    "rank_label": "后排"
+  },
+  "cls_zhan_shi": {
+    "desc": "身穿重甲、手持巨剑的钢铁壁垒，正面硬刚一切敌人。",
+    "mech": "怒气三路攒满10放背水一战；攻线入狂暴双形态，守线防御即生产。",
+    "icon": "🛡️",
+    "role": "坦克",
+    "cast_atk": 1.15,
+    "cast_defend": 0.4,
+    "cast_flee": 1.1,
+    "evolve": [
+      "狂战士(30)",
+      "狂战统领(60)",
+      "战争领主(90)"
+    ],
+    "evolve_branches": {
+      "1": [
+        "狂战士",
+        "盾卫士"
+      ],
+      "2": [
+        "狂战统领",
+        "坚盾卫士"
+      ],
+      "3": [
+        "战争领主",
+        "坚城统帅"
+      ]
+    },
+    "attack_text": "挥剑斩击",
+    "basic_skill": {
+      "name": "挥剑斩击",
+      "kind": "物理",
+      "exprs": [
+        "atk*1.0"
+      ],
+      "cast": 0.0,
+      "cd": 0,
+      "mp": 0,
+      "basic": true,
+      "trigger_hit": true,
+      "res_gain": 1,
+      "cast_verb": "挥剑斩击"
+    },
+    "tutor": [
+      "老兵·格里姆",
+      "白鹿城·白鹿广场"
+    ],
+    "base": {
+      "hp": 150,
+      "mp": 40,
+      "atk": 18,
+      "def": 14,
+      "matk": 6,
+      "mdef": 10,
+      "spd": 10,
+      "crit": 0.05,
+      "dodge": 0.03,
+      "elem_res": 0.05,
+      "shield_power": 0.05
+    },
+    "growth": {
+      "hp": 22,
+      "mp": 3,
+      "atk": 3.2,
+      "def": 2.6,
+      "matk": 0.5,
+      "mdef": 1.2,
+      "spd": 0.6
+    },
+    "weapon_type": "sword",
+    "name": "战士",
+    "default_rank": 1,
+    "reach": 1,
+    "rank_label": "前排"
+  }
+}

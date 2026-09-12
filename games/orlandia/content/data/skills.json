@@ -1,0 +1,920 @@
+{
+  "sk_an_shen_qu": {
+    "lv": 20,
+    "mp": 12,
+    "power": 0.97,
+    "kind": "治疗",
+    "cast": 0.6,
+    "cd": 12,
+    "name": "安神曲",
+    "heal_formula": "matk*1.5 + 25 + player_lv*0.6 + skill_lv*10",
+    "desc": "吟唱安神曲调，柔光随旋律抚愈众人——治疗全队 150% 魔攻 + 固定治疗量（成长）",
+    "owner_class": "cls_shi_ren"
+  },
+  "sk_bing_zhui": {
+    "lv": 4,
+    "mp": 8,
+    "power": 1.16,
+    "kind": "魔法·冰",
+    "element": "ice",
+    "exprs": [
+      "matk*1.4 + 15 + player_lv*5.0 + skill_lv*12"
+    ],
+    "cast": 0.8,
+    "mech": "ice_mark",
+    "mech_val": 1,
+    "mech2": "spd_down",
+    "name": "冰锥",
+    "desc": "指尖凝出剔透冰晶掷向敌人，寒气透骨——造成 140% 魔法攻击 + 15 固定魔法伤害（成长），挂冰印 1 层并减速 20% 持续 5 刻",
+    "owner_class": "cls_fa_shi"
+  },
+  "sk_bo_xian": {
+    "lv": 12,
+    "mp": 8,
+    "power": 1.0,
+    "kind": "增益",
+    "cast": 0.6,
+    "cd": 4,
+    "mech": "melody_chant",
+    "mech_val": 1,
+    "name": "拨弦",
+    "desc": "指尖轻挑琴弦，引动旋律层层攀升——吟唱：当前旋律强度 +1",
+    "owner_class": "cls_shi_ren"
+  },
+  "sk_ce_ti": {
+    "lv": 4,
+    "mp": 6,
+    "power": 0.81,
+    "kind": "物理",
+    "exprs": [
+      "atk*0.9 + 14 + player_lv*5.0 + skill_lv*13"
+    ],
+    "cast": 0.45,
+    "cd": 8,
+    "shaken_gain": 3,
+    "cond": {
+      "type": "enemy_broken",
+      "mult": 1.3
+    },
+    "name": "侧踢",
+    "desc": "侧身旋踢扫向破绽处——造成 90% 物理攻击 + 14 固定物理伤害（成长），推破绽条；对破防目标伤害 ×1.3",
+    "owner_class": "cls_wu_seng"
+  },
+  "sk_chong_feng": {
+    "lv": 24,
+    "mp": 10,
+    "power": 0.87,
+    "kind": "物理",
+    "exprs": [
+      "atk*1.5 + 25 + player_lv*8.0 + skill_lv*18"
+    ],
+    "cast": 0.5,
+    "cd": 12,
+    "cond": {
+      "type": "player_first",
+      "mult": 1.15,
+      "label": "先手压制"
+    },
+    "name": "冲锋",
+    "desc": "战靴踏碎尘土，身影撞入敌阵——造成 150% 物理攻击 + 25 固定物理伤害（成长），位移至前排并先手压制",
+    "owner_class": "cls_zhan_shi"
+  },
+  "sk_chong_quan": {
+    "lv": 24,
+    "mp": 10,
+    "power": 0.73,
+    "kind": "物理",
+    "exprs": [
+      "atk*1.1 + 18 + player_lv*6.0 + skill_lv*15"
+    ],
+    "cast": 0.4,
+    "cd": 12,
+    "shaken_gain": 3,
+    "name": "冲拳",
+    "desc": "蓄势冲拳破阵而入——造成 110% 物理攻击 + 18 固定物理伤害（成长），位移至前排并推破绽条",
+    "owner_class": "cls_wu_seng"
+  },
+  "sk_ci_ji": {
+    "lv": 1,
+    "mp": 6,
+    "power": 0.66,
+    "kind": "物理",
+    "exprs": [
+      "atk*0.95 + 10 + player_lv*4.0 + skill_lv*12"
+    ],
+    "cast": 0.45,
+    "mech": "lian_duan",
+    "mech_val": 1,
+    "name": "刺击",
+    "desc": "匕刃如毒蛇吐信直取要害——造成 95% 物理攻击 + 10 固定物理伤害（成长），命中积攒 1 段连击",
+    "owner_class": "cls_ci_ke"
+  },
+  "sk_feng_zhi_ji_zou": {
+    "lv": 16,
+    "power": 1.0,
+    "kind": "增益",
+    "cast": 0.3,
+    "cd": 8,
+    "res_cost": {
+      "energy": 20
+    },
+    "effect": "spd_buff",
+    "buff_turns": 8,
+    "name": "风之疾走",
+    "desc": "风元素缠绕足踝，身形化作林间掠影——速度 +30%，持续 8 刻，附带位移",
+    "owner_class": "cls_you_xia"
+  },
+  "sk_gang_quan": {
+    "lv": 8,
+    "mp": 8,
+    "power": 0.59,
+    "kind": "物理",
+    "exprs": [
+      "atk*0.9 + 15 + player_lv*6.0 + skill_lv*14"
+    ],
+    "cast": 0.5,
+    "cd": 12,
+    "shaken_gain": 5,
+    "name": "钢拳",
+    "desc": "钢拳崩裂护甲——造成 90% 物理攻击 + 15 固定物理伤害（成长），推破绽条并使目标破防",
+    "owner_class": "cls_wu_seng"
+  },
+  "sk_ge_lie": {
+    "lv": 4,
+    "mp": 6,
+    "power": 0.78,
+    "kind": "物理",
+    "exprs": [
+      "atk*1.2 + 12 + player_lv*5.0 + skill_lv*13"
+    ],
+    "cast": 0.3,
+    "cd": 8,
+    "mech": "bleed",
+    "mech_val": 2,
+    "name": "割裂",
+    "desc": "利刃撕开皮肉留下一道血痕——造成 120% 物理攻击 + 12 固定物理伤害（成长），附加 2 层流血持续 8 刻，命中 +1 段",
+    "owner_class": "cls_ci_ke"
+  },
+  "sk_gong_zhen": {
+    "lv": 8,
+    "mp": 12,
+    "power": 0.8,
+    "kind": "魔法",
+    "aoe": "all",
+    "exprs": [
+      "matk*0.6 + 12 + player_lv*3.0 + skill_lv*8"
+    ],
+    "cast": 0.7,
+    "cd": 10,
+    "name": "共振",
+    "desc": "琴身共鸣如钟，音浪扫过整片战场——对全体造成 60% 魔法攻击 + 12 固定魔法伤害（成长）",
+    "owner_class": "cls_shi_ren"
+  },
+  "sk_he_sheng": {
+    "lv": 28,
+    "mp": 12,
+    "power": 1.0,
+    "kind": "增益",
+    "buff_turns": 6,
+    "cast": 0.6,
+    "cd": 16,
+    "mech": "melody_chant",
+    "mech_val": 1,
+    "name": "和声",
+    "desc": "多重合声叠涌，旋律在共鸣中沸腾——吟唱：强度 +1，当前旋律效果翻倍，持续 6 刻",
+    "owner_class": "cls_shi_ren"
+  },
+  "sk_hui_kan": {
+    "lv": 1,
+    "mp": 6,
+    "power": 0.82,
+    "kind": "物理",
+    "exprs": [
+      "atk*1 + 20 + player_lv*5.0 + skill_lv*12"
+    ],
+    "cast": 0.45,
+    "mech": "zhan_yi",
+    "mech_val": 1,
+    "name": "挥砍",
+    "desc": "长剑划出利落的弧光——造成 100% 物理攻击 + 20 固定物理伤害（成长），命中积攒 1 点战意",
+    "owner_class": "cls_zhan_shi"
+  },
+  "sk_huo_qiu_shu": {
+    "lv": 1,
+    "mp": 6,
+    "power": 1.16,
+    "kind": "魔法·火",
+    "element": "fire",
+    "exprs": [
+      "matk*1.6 + 16 + player_lv*5.4 + skill_lv*12.8"
+    ],
+    "cast": 0.8,
+    "mech": "fire_mark",
+    "mech_val": 1,
+    "name": "火球术",
+    "desc": "将游离的火元素凝成灼热弹丸掷出，命中即焚——造成 160% 魔法攻击 + 16 固定魔法伤害（成长），挂火印 1 层",
+    "owner_class": "cls_fa_shi"
+  },
+  "sk_ji_ge": {
+    "lv": 8,
+    "mp": 6,
+    "power": 1.0,
+    "kind": "增益",
+    "cast": 0.3,
+    "cd": 8,
+    "mech": "melody",
+    "melody": "spd",
+    "melody_pct": 12,
+    "name": "疾歌",
+    "desc": "轻快旋律催人疾行，风声与琴音竞速——驻留：全队速度 +12%",
+    "owner_class": "cls_shi_ren"
+  },
+  "sk_ji_ying": {
+    "lv": 24,
+    "mp": 8,
+    "power": 1.0,
+    "kind": "增益",
+    "buff_turns": 6,
+    "cast": 0.25,
+    "cd": 12,
+    "effect": "spd_buff",
+    "name": "疾影",
+    "desc": "足尖点地，身影拉成一道残线——自身速度 +40% 持续 6 刻",
+    "owner_class": "cls_ci_ke"
+  },
+  "sk_ji_zou_yin": {
+    "lv": 24,
+    "mp": 8,
+    "power": 1.0,
+    "kind": "增益",
+    "buff_turns": 6,
+    "cast": 0.3,
+    "cd": 12,
+    "effect": "spd_all",
+    "name": "疾走音",
+    "desc": "急促音符如风掠过，脚步随之轻盈——全队速度 +20%，持续 6 刻（一次性，非驻留）",
+    "owner_class": "cls_shi_ren"
+  },
+  "sk_lei_ji": {
+    "lv": 8,
+    "mp": 8,
+    "power": 1.16,
+    "kind": "魔法·雷",
+    "element": "thunder",
+    "exprs": [
+      "matk*1.6 + 19 + player_lv*6.0 + skill_lv*14"
+    ],
+    "cast": 0.8,
+    "cd": 8,
+    "mech": "thunder_mark",
+    "mech_val": 1,
+    "name": "雷击",
+    "desc": "引一道晴空落雷劈下，电弧灼目——造成 160% 魔法攻击 + 19 固定魔法伤害（成长），挂雷印 1 层",
+    "owner_class": "cls_fa_shi"
+  },
+  "sk_leng_jing": {
+    "lv": 28,
+    "mp": 0,
+    "power": 1.0,
+    "kind": "治疗",
+    "cast": 0.5,
+    "cd": 16,
+    "mech": "zhan_yi_cash",
+    "mech_val": 5,
+    "hp_pct": 0.2,
+    "res_cost": {
+      "zhan_yi": 5
+    },
+    "name": "冷静",
+    "desc": "治疗；花 5 层战意 → 回 20% 生命 + 清 1 减益（CD 16 刻）",
+    "owner_class": "cls_zhan_shi"
+  },
+  "sk_lian_she": {
+    "lv": 1,
+    "power": 0.41,
+    "kind": "物理",
+    "exprs": [
+      "atk*0.68 + 8 + player_lv*3.0 + skill_lv*7.5"
+    ],
+    "cast": 0.6,
+    "hits": 2,
+    "res_cost": {
+      "energy": 22
+    },
+    "name": "连射",
+    "desc": "弓弦连响，两箭破风而出——造成 68% 物理攻击 + 8 固定物理伤害×2（成长）",
+    "owner_class": "cls_you_xia"
+  },
+  "sk_lian_zhao_san_lian": {
+    "lv": 12,
+    "mp": 12,
+    "power": 0.29,
+    "kind": "物理",
+    "exprs": [
+      "atk*0.35 + 9 + player_lv*4.0 + skill_lv*10"
+    ],
+    "cast": 0.45,
+    "cd": 12,
+    "hits": 3,
+    "shaken_gain": 5,
+    "name": "连招三连",
+    "desc": "拳影连珠三连轰击——每段造成 35% 物理攻击 + 9 固定物理伤害×3（成长），三段皆推破绽条",
+    "owner_class": "cls_wu_seng"
+  },
+  "sk_lie_wang_xian_jing": {
+    "lv": 12,
+    "power": 1.17,
+    "kind": "物理",
+    "exprs": [
+      "atk*1.1 + 16 + player_lv*5.0 + skill_lv*13"
+    ],
+    "cast": 0.5,
+    "cd": 12,
+    "mech": "spd_down",
+    "mech_val": 40,
+    "res_cost": {
+      "energy": 30
+    },
+    "name": "猎网陷阱",
+    "desc": "猎网铺开，荆棘缠住猎物双足——造成 110% 物理攻击 + 16 固定物理伤害（成长），减速 40%，持续 6 刻",
+    "owner_class": "cls_you_xia"
+  },
+  "sk_lie_yin_she_ji": {
+    "lv": 28,
+    "power": 1.17,
+    "kind": "物理",
+    "exprs": [
+      "atk*1.1 + 15 + player_lv*5.0 + skill_lv*12"
+    ],
+    "cast": 0.5,
+    "cd": 8,
+    "mech": "hunt_mark",
+    "mech_val": 1,
+    "res_cost": {
+      "energy": 30
+    },
+    "name": "猎印射击",
+    "desc": "箭尖蘸取猎印之芒，烙入猎物魂灵——造成 110% 物理攻击 + 15 固定物理伤害（成长），挂猎印 1 层（全队对该目标伤害 +8%/层，上限 3 层）",
+    "owner_class": "cls_you_xia"
+  },
+  "sk_meng_ji": {
+    "lv": 4,
+    "mp": 6,
+    "power": 0.97,
+    "kind": "物理",
+    "exprs": [
+      "atk*1.3 + 20 + player_lv*7.0 + skill_lv*16"
+    ],
+    "cast": 0.6,
+    "cd": 8,
+    "name": "猛击",
+    "desc": "双臂蓄满蛮力猛然砸下——造成 130% 物理攻击 + 20 固定物理伤害（成长），每层战意使伤害 +3%",
+    "owner_class": "cls_zhan_shi"
+  },
+  "sk_miao_zhun_she_ji": {
+    "lv": 4,
+    "power": 1.17,
+    "kind": "物理",
+    "exprs": [
+      "atk*1.3 + 18 + player_lv*5.0 + skill_lv*14"
+    ],
+    "cast": 0.5,
+    "res_cost": {
+      "energy": 28
+    },
+    "name": "瞄准射击",
+    "desc": "屏息凝神，箭尖直指要害——造成 130% 物理攻击 + 18 固定物理伤害（成长）",
+    "owner_class": "cls_you_xia"
+  },
+  "sk_ming_xiang": {
+    "lv": 28,
+    "mp": 6,
+    "power": 1.0,
+    "kind": "增益",
+    "buff_turns": 6,
+    "cast": 0.5,
+    "cd": 16,
+    "effect": "cleanse",
+    "name": "冥想",
+    "desc": "气沉丹田，心镜澄明——清除 1 个减益，自身每刻回蓝 2% 持续 6 刻",
+    "owner_class": "cls_wu_seng"
+  },
+  "sk_po_jia_zhan": {
+    "lv": 8,
+    "mp": 8,
+    "power": 0.87,
+    "kind": "物理",
+    "pierce": true,
+    "exprs": [
+      "atk*1.2 + 18 + player_lv*6.0 + skill_lv*14"
+    ],
+    "cast": 0.5,
+    "cd": 8,
+    "mech": "zhan_yi",
+    "mech_val": 1,
+    "name": "破甲斩",
+    "desc": "利刃精准劈入甲胄缝隙——造成 120% 物理攻击 + 18 固定物理伤害（成长），破防并命中积攒 1 点战意",
+    "owner_class": "cls_zhan_shi"
+  },
+  "sk_po_yin": {
+    "lv": 4,
+    "mp": 8,
+    "power": 1.1,
+    "kind": "魔法",
+    "exprs": [
+      "matk*1.1 + 15 + player_lv*3.8 + skill_lv*10"
+    ],
+    "cast": 0.6,
+    "cd": 6,
+    "name": "破音",
+    "desc": "弦音陡然拔高，震裂耳膜——造成 110% 魔法攻击 + 15 固定魔法伤害（成长）的音爆",
+    "owner_class": "cls_shi_ren"
+  },
+  "sk_qian_xing": {
+    "lv": 16,
+    "mp": 8,
+    "power": 1.0,
+    "kind": "增益",
+    "cast": 0.3,
+    "cd": 16,
+    "effect": "stealth",
+    "name": "潜行",
+    "desc": "屏息凝神，气息与阴影融为一体——进入潜行：下次攻击必定暴击，且不积累连击段",
+    "owner_class": "cls_ci_ke"
+  },
+  "sk_qun_ti_zhi_yu": {
+    "lv": 4,
+    "mp": 14,
+    "power": 0.97,
+    "kind": "治疗",
+    "cast": 0.6,
+    "cd": 12,
+    "faith": 0,
+    "name": "群体治愈",
+    "heal_formula": "matk*1.7 + 30 + player_lv*0.6 + skill_lv*10",
+    "desc": "圣光化作细雨笼罩全场——治疗全队 170% 魔攻 + 固定治疗量（成长）",
+    "owner_class": "cls_mu_shi"
+  },
+  "sk_shan_bi_bu": {
+    "lv": 24,
+    "power": 1.0,
+    "kind": "增益",
+    "cast": 0.3,
+    "cd": 16,
+    "res_cost": {
+      "energy": 25
+    },
+    "effect": "dodge_buff",
+    "buff_turns": 6,
+    "name": "闪避步",
+    "desc": "身影如叶随风偏转，险险避开锋芒——闪避 +30%，持续 6 刻",
+    "owner_class": "cls_you_xia"
+  },
+  "sk_shan_xian": {
+    "lv": 28,
+    "mp": 12,
+    "power": 1.0,
+    "kind": "增益",
+    "buff_turns": 6,
+    "cast": 0.4,
+    "cd": 12,
+    "effect": "dodge_buff",
+    "name": "闪现",
+    "desc": "身形一晃化作流光穿梭战场——位移至后排，闪避 +30% 持续 6 刻",
+    "owner_class": "cls_fa_shi"
+  },
+  "sk_sheng_guang_cheng_ji": {
+    "lv": 8,
+    "mp": 10,
+    "power": 1.1,
+    "kind": "魔法",
+    "exprs": [
+      "matk*1.3 + 18 + player_lv*4.0 + skill_lv*11"
+    ],
+    "cast": 0.5,
+    "cd": 6,
+    "faith": 0,
+    "name": "圣光惩击",
+    "desc": "圣光凝成惩戒光柱轰然落下——造成 130% 魔法攻击 + 18 固定魔法伤害（成长），对暗影生物额外克制",
+    "owner_class": "cls_mu_shi"
+  },
+  "sk_sheng_guang_cheng_jie": {
+    "lv": 16,
+    "mp": 10,
+    "power": 0.87,
+    "kind": "魔法",
+    "exprs": [
+      "matk*1.5 + 9 + player_lv*2.5 + skill_lv*6.6"
+    ],
+    "cast": 0.5,
+    "cd": 8,
+    "faith": 0,
+    "name": "圣光惩戒",
+    "desc": "圣光凝成审判之矛贯穿敌阵——造成 150% 魔法攻击 + 9 固定魔法伤害（成长）（单体输出，不增信念）",
+    "owner_class": "cls_mu_shi"
+  },
+  "sk_sheng_guang_dan": {
+    "lv": 1,
+    "mp": 4,
+    "power": 0.6,
+    "kind": "魔法",
+    "exprs": [
+      "matk*0.6 + 10 + player_lv*2.0 + skill_lv*6"
+    ],
+    "cast": 0.4,
+    "cd": 0,
+    "faith": 0,
+    "name": "圣光弹",
+    "desc": "指尖凝出一缕圣光掷向敌人——造成 60% 魔法攻击 + 10 固定魔法伤害（成长）的圣光弹（无冷却填充技）",
+    "owner_class": "cls_mu_shi"
+  },
+  "sk_sheng_guang_hu_dun": {
+    "lv": 12,
+    "mp": 12,
+    "power": 1.0,
+    "kind": "增益",
+    "buff_turns": 10,
+    "cast": 0.45,
+    "cd": 12,
+    "faith": 0,
+    "name": "圣光护盾",
+    "desc": "以圣光织成鎏金壁障——为单体张开护盾，持续 10 刻",
+    "owner_class": "cls_mu_shi"
+  },
+  "sk_sheng_guang_qu_san": {
+    "lv": 8,
+    "mp": 10,
+    "power": 1.0,
+    "kind": "治疗",
+    "cast": 0.45,
+    "cd": 12,
+    "faith": 0,
+    "effect": "cleanse",
+    "name": "圣光驱散",
+    "heal_formula": "matk*1.5 + 20 + player_lv*0.8 + skill_lv*12",
+    "desc": "指尖迸发净化之光，浊气如雾消融——驱散单体 1 个减益，附带回血（150% 魔攻+成长）",
+    "owner_class": "cls_mu_shi"
+  },
+  "sk_sheng_you": {
+    "lv": 28,
+    "mp": 15,
+    "power": 1.0,
+    "kind": "增益",
+    "cast": 0.5,
+    "cd": 16,
+    "faith": 0,
+    "effect": "cc_immune",
+    "name": "圣佑",
+    "desc": "圣辉结成守护光环环绕周身——免疫 1 次控制",
+    "owner_class": "cls_mu_shi"
+  },
+  "sk_shou_ge": {
+    "lv": 4,
+    "mp": 6,
+    "power": 1.0,
+    "kind": "增益",
+    "cast": 0.3,
+    "cd": 8,
+    "mech": "melody",
+    "melody": "def",
+    "melody_pct": 10,
+    "name": "守歌",
+    "desc": "弦音如盾，守护之歌环绕周身——驻留：全队减伤 +10%",
+    "owner_class": "cls_shi_ren"
+  },
+  "sk_shuang_jing_hu_ti": {
+    "lv": 16,
+    "mp": 12,
+    "power": 1.0,
+    "kind": "增益",
+    "buff_turns": 12,
+    "cast": 0.5,
+    "cd": 16,
+    "effect": "shield_self",
+    "name": "霜晶护体",
+    "desc": "以霜晶凝成冰甲覆于周身，寒意凛然——为自己张开护盾，持续 12 刻",
+    "owner_class": "cls_fa_shi"
+  },
+  "sk_shuang_ren_luan_wu": {
+    "lv": 12,
+    "mp": 10,
+    "power": 0.46,
+    "kind": "物理",
+    "exprs": [
+      "atk*0.5 + 11 + player_lv*4.0 + skill_lv*11"
+    ],
+    "cast": 0.35,
+    "cd": 12,
+    "hits": 2,
+    "name": "双刃乱舞",
+    "desc": "双匕交错翻飞成银色风暴——造成 50% 物理攻击 + 11 固定物理伤害×2（成长），每段命中 +1 段连击",
+    "owner_class": "cls_ci_ke"
+  },
+  "sk_suo_yin": {
+    "lv": 1,
+    "mp": 4,
+    "power": 0.6,
+    "kind": "魔法",
+    "exprs": [
+      "matk*0.6 + 8 + player_lv*2.2 + skill_lv*6"
+    ],
+    "cast": 0.4,
+    "cd": 0,
+    "name": "锁音",
+    "desc": "指尖勾弦弹出短促清音——造成 60% 魔法攻击 + 8 固定魔法伤害（成长）的快速音弹（无冷却填充技）",
+    "owner_class": "cls_shi_ren"
+  },
+  "sk_tie_bi": {
+    "lv": 12,
+    "mp": 5,
+    "power": 1.0,
+    "kind": "增益",
+    "buff_turns": 8,
+    "cast": 0.35,
+    "cd": 12,
+    "mech_val": 45,
+    "reduce_pct": 0.45,
+    "effect": "reduce",
+    "name": "铁壁",
+    "desc": "重盾横胸，筋肉绷紧如铁——自身减伤 45%，持续 8 刻",
+    "owner_class": "cls_zhan_shi"
+  },
+  "sk_tong_qiang": {
+    "lv": 16,
+    "mp": 8,
+    "power": 1.0,
+    "kind": "增益",
+    "buff_turns": 8,
+    "cast": 0.35,
+    "cd": 16,
+    "mech_val": 45,
+    "reduce_pct": 0.45,
+    "effect": "reduce",
+    "name": "铜墙",
+    "desc": "身如铜铸，气沉如墙——自身减伤 45% 持续 8 刻",
+    "owner_class": "cls_wu_seng"
+  },
+  "sk_xie_fu": {
+    "lv": 24,
+    "mp": 0,
+    "power": 1.0,
+    "kind": "治疗",
+    "cast": 0.45,
+    "cd": 12,
+    "mech": "faith_unload",
+    "mech_val": 3,
+    "faith": 0,
+    "res_cost": {
+      "faith": 3
+    },
+    "name": "卸负",
+    "heal_formula": "matk*0.8 + 15 + player_lv*0.5 + skill_lv*8",
+    "desc": "将沉重信念交还圣光，卸下心头重负——卸除 3 点信念，自身回血（80% 魔攻+成长）",
+    "owner_class": "cls_mu_shi"
+  },
+  "sk_xin_yang_qi_dao": {
+    "lv": 20,
+    "mp": 12,
+    "power": 1.0,
+    "kind": "增益",
+    "buff_turns": 10,
+    "cast": 0.6,
+    "cd": 16,
+    "faith": 0,
+    "effect": "matk_all",
+    "name": "信仰祈祷",
+    "desc": "虔诚诵念祷词，信仰化作共鸣之力——全队魔攻 +50%，持续 10 刻",
+    "owner_class": "cls_mu_shi"
+  },
+  "sk_xuan_feng_zhan": {
+    "lv": 20,
+    "mp": 12,
+    "power": 0.93,
+    "kind": "物理",
+    "exprs": [
+      "atk*1.2 + 22 + player_lv*7.0 + skill_lv*16"
+    ],
+    "cast": 0.7,
+    "cd": 12,
+    "mech": "zhan_yi",
+    "mech_val": 1,
+    "name": "旋风斩",
+    "desc": "身形旋转如风暴，刀光席卷前方——造成 120% 物理攻击 + 22 固定物理伤害（成长）（前排全体），每段命中积攒 1 点战意",
+    "owner_class": "cls_zhan_shi"
+  },
+  "sk_yan_wu_dan": {
+    "lv": 20,
+    "mp": 12,
+    "power": 1.0,
+    "kind": "增益",
+    "buff_turns": 8,
+    "cast": 0.3,
+    "cd": 16,
+    "effect": "disengage_dodge",
+    "name": "烟雾弹",
+    "desc": "掷出烟雾弹，白烟瞬间吞没战场——脱离战斗，全队闪避 +25% 持续 8 刻",
+    "owner_class": "cls_ci_ke"
+  },
+  "sk_yin_ren": {
+    "lv": 16,
+    "mp": 8,
+    "power": 1.08,
+    "kind": "魔法",
+    "exprs": [
+      "matk*1.5 + 11 + player_lv*3.4 + skill_lv*8.8"
+    ],
+    "cast": 0.6,
+    "cd": 8,
+    "name": "音刃",
+    "desc": "琴弦急振，声浪凝为利刃破空而去——音波单体输出，造成 150% 魔法攻击 + 11 固定魔法伤害（成长）",
+    "owner_class": "cls_shi_ren"
+  },
+  "sk_ying_xi": {
+    "lv": 8,
+    "mp": 8,
+    "power": 0.92,
+    "kind": "物理",
+    "exprs": [
+      "atk*1.3 + 14 + player_lv*5.0 + skill_lv*14"
+    ],
+    "cast": 0.35,
+    "cd": 8,
+    "mech": "lian_duan",
+    "mech_val": 1,
+    "name": "影袭",
+    "desc": "身形融入暗影，匕首自背后骤然刺出——造成 130% 物理攻击 + 14 固定物理伤害（成长），命中 +1 段，背击时伤害 ×1.3",
+    "owner_class": "cls_ci_ke"
+  },
+  "sk_ying_yan_suo_ding": {
+    "lv": 8,
+    "power": 1.0,
+    "kind": "增益",
+    "cast": 0.35,
+    "cd": 12,
+    "res_cost": {
+      "energy": 20
+    },
+    "effect": "crit_hit_buff",
+    "buff_turns": 10,
+    "name": "鹰眼锁定",
+    "desc": "鹰瞳凝光，猎物破绽尽收眼底——自身暴击 +20%、命中 +15%，持续 10 刻",
+    "owner_class": "cls_you_xia"
+  },
+  "sk_yuan_su_yin_bao": {
+    "lv": 12,
+    "mp": 10,
+    "power": 1.16,
+    "kind": "魔法",
+    "exprs": [
+      "matk*1.7 + 20 + player_lv*6.0 + skill_lv*14"
+    ],
+    "cast": 0.8,
+    "cd": 8,
+    "mech": "element_burst",
+    "mech_val": 1,
+    "name": "元素引爆",
+    "desc": "捏碎掌心的元素印记，引发连锁激荡——造成 170% 魔法攻击 + 20 固定魔法伤害（成长），结算目标印记并触发对应反应",
+    "owner_class": "cls_fa_shi"
+  },
+  "sk_yun_shi_shu": {
+    "lv": 24,
+    "mp": 24,
+    "power": 1.08,
+    "kind": "魔法·火",
+    "element": "fire",
+    "exprs": [
+      "matk*2 + 25 + player_lv*8.0 + skill_lv*20"
+    ],
+    "cast": 1.2,
+    "cd": 16,
+    "aoe": "all",
+    "name": "陨石术",
+    "desc": "召来天外陨石轰然坠地，烈焰翻涌四溅——造成 200% 魔法攻击 + 25 固定魔法伤害（成长）（全体），挂火印 1 层",
+    "owner_class": "cls_fa_shi"
+  },
+  "sk_zhan_ge": {
+    "lv": 1,
+    "mp": 6,
+    "power": 1.0,
+    "kind": "增益",
+    "cast": 0.3,
+    "cd": 8,
+    "mech": "melody",
+    "melody": "atk",
+    "melody_pct": 12,
+    "name": "战歌",
+    "desc": "拨动琴弦，战意随旋律点燃血液——驻留：全队攻击 +12%",
+    "owner_class": "cls_shi_ren"
+  },
+  "sk_zhan_hou": {
+    "lv": 16,
+    "mp": 8,
+    "power": 1.0,
+    "kind": "增益",
+    "buff_turns": 10,
+    "cast": 0.5,
+    "cd": 16,
+    "mech": "zhan_yi",
+    "mech_val": 3,
+    "effect": "atk_all",
+    "name": "战吼",
+    "desc": "胸腔炸开一声战吼，战意点燃血液——全队攻击 +30% 持续 10 刻，自身积攒 3 点战意",
+    "owner_class": "cls_zhan_shi"
+  },
+  "sk_zhen_di_ji": {
+    "lv": 20,
+    "mp": 12,
+    "power": 0.59,
+    "kind": "物理",
+    "exprs": [
+      "atk*0.9 + 15 + player_lv*6.0 + skill_lv*14"
+    ],
+    "cast": 0.55,
+    "cd": 12,
+    "mech": "stun",
+    "mech_val": 2.0,
+    "shaken_gain": 15,
+    "name": "震地击",
+    "desc": "重拳砸地震裂大地——造成 90% 物理攻击 + 15 固定物理伤害（成长），40% 概率眩晕 2.0 刻",
+    "owner_class": "cls_wu_seng"
+  },
+  "sk_zhi_ming_ju_ji": {
+    "lv": 20,
+    "power": 1.51,
+    "kind": "物理",
+    "exprs": [
+      "atk*1.3 + 21 + player_lv*6.0 + skill_lv*15"
+    ],
+    "cast": 0.65,
+    "cd": 12,
+    "res_cost": {
+      "energy": 55
+    },
+    "cond": {
+      "type": "enemy_debuff",
+      "mult": 1.3
+    },
+    "name": "致命狙击",
+    "desc": "长弓满月，箭矢贯透要害——造成 130% 物理攻击 + 21 固定物理伤害（成长），对异常状态目标伤害 ×1.3",
+    "owner_class": "cls_you_xia"
+  },
+  "sk_zhi_quan": {
+    "lv": 1,
+    "mp": 6,
+    "power": 0.63,
+    "kind": "物理",
+    "exprs": [
+      "atk*0.55 + 11 + player_lv*3.4 + skill_lv*8"
+    ],
+    "cast": 0.3,
+    "shaken_gain": 2,
+    "name": "直拳",
+    "desc": "拳风凌厉直捣要害——造成 55% 物理攻击 + 11 固定物理伤害（成长），命中即推破绽条",
+    "owner_class": "cls_wu_seng"
+  },
+  "sk_zhi_yu_shu": {
+    "lv": 1,
+    "mp": 8,
+    "power": 0.87,
+    "kind": "治疗",
+    "cast": 0.5,
+    "faith": 0,
+    "name": "治愈术",
+    "heal_formula": "matk*3.0 + 40 + player_lv*1.0 + skill_lv*15",
+    "desc": "高举圣徽，圣光如甘霖洒落——治疗单体 300% 魔攻 + 固定治疗量（成长）",
+    "owner_class": "cls_mu_shi"
+  },
+  "sk_zhong_jie_ge_hou": {
+    "lv": 28,
+    "mp": 12,
+    "power": 1.04,
+    "kind": "物理",
+    "exprs": [
+      "atk*1.5 + 19 + player_lv*6.0 + skill_lv*16"
+    ],
+    "cast": 0.4,
+    "cd": 12,
+    "mech": "finisher",
+    "name": "终结·割喉",
+    "desc": "匕刃横过咽喉，终结一击快如闪电——造成 150% 物理攻击 + 19 固定物理伤害（成长），连段越高伤害越高（每段 +10%），结算后连段归零",
+    "owner_class": "cls_ci_ke"
+  },
+  "sk_zhou_yu_dan_mu": {
+    "lv": 20,
+    "mp": 16,
+    "power": 0.47,
+    "kind": "魔法·雷",
+    "element": "thunder",
+    "exprs": [
+      "matk*0.33 + 10 + player_lv*4.0 + skill_lv*8"
+    ],
+    "cast": 1.0,
+    "cd": 12,
+    "hits": 3,
+    "mech": "thunder_mark",
+    "mech_val": 1,
+    "name": "骤雨弹幕",
+    "desc": "挥指洒出漫天电弧如骤雨倾泻——共 3 段，每段造成 33% 魔法攻击 + 10 固定魔法伤害×3（成长），各挂雷印 1 层",
+    "owner_class": "cls_fa_shi"
+  }
+}

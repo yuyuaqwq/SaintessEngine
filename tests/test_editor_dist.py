@@ -288,6 +288,27 @@ def main() -> int:
     check("包名不会被 inspect 路由抢占（/api/package/<id> 仍然通）",
           st == 404 and "包不存在" in (j.get("message") or ""), f"{st} {j.get('message')}")
 
+    # ── 15. 真仓里的包：结构不变量（**守「声明了 entry 却缺文件」这类坏包**）
+    #    2026-09-12 的奥兰迪亚导出包正是踩了这条：game.json 声明 content/apply.py，包里却没有该文件。
+    repo_games = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "games")
+    pkgs = [d for d in sorted(os.listdir(repo_games))
+            if os.path.isfile(os.path.join(repo_games, d, "game.json"))] if os.path.isdir(repo_games) else []
+    check("真仓 games/ 下确有包（别把门禁跑成空转）", len(pkgs) >= 1, f"{repo_games}: {pkgs}")
+    for pid in pkgs:
+        pdir = os.path.join(repo_games, pid)
+        man = PK.load_manifest(pdir)
+        check(f"[{pid}] game.json 可解析且 id 与目录名一致", man.get("id") == pid, f"{man.get('id')}")
+        doms = man.get("domains") or []
+        unknown = [d for d in doms if d not in PK.DOMAINS]
+        check(f"[{pid}] domains 全是已知域", not unknown, f"未知域 {unknown}")
+        for d in doms:
+            check(f"[{pid}] 声明域 {d} 有数据文件",
+                  os.path.isfile(PK.domain_path(pdir, d)), PK.domain_path(pdir, d))
+        ent = man.get("entry")
+        check(f"[{pid}] entry 不声明或声明即存在",
+              ent is None or (bool(ent) and os.path.exists(os.path.join(pdir, str(ent)))),
+              f"声明了 {ent!r} 但文件不在（坏包：引擎/分发都以为有装配入口）")
+
     httpd.shutdown()
     for d in (clean, gd2):
         shutil.rmtree(d, ignore_errors=True)

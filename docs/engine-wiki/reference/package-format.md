@@ -38,7 +38,9 @@
     apply.py                    # 【装配入口】唯一被引擎回调的文件
 ```
 
-`game.json` 的 `entry` 字段指向装配入口（惯例 `content/apply.py`）。
+`game.json` 的 `entry` 字段指向装配入口（惯例 `content/apply.py`）。**可选**：纯数据导出包
+（内容侧机制尚未移植、只把 `content/data/*.json` 交给编辑器）不声明它；一旦声明，该文件**必须存在**
+（`tests/test_editor_dist.py` 守这条 —— 声明了却缺文件 = 坏包，2026-09-12 的导出包正踩过）。
 
 ---
 
