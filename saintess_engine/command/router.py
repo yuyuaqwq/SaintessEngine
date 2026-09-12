@@ -22,9 +22,11 @@ import logging
 import re
 from typing import Any, Callable, NamedTuple, Optional, Sequence
 
+from ..log import get_logger
+
 __all__ = ["HandlerHit", "find_static", "matches_any", "run_shortcut", "PatternSet"]
 
-_log = logging.getLogger("saintess_engine.command")
+_log = get_logger("command")
 
 
 class HandlerHit(NamedTuple):

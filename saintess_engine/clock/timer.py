@@ -30,7 +30,11 @@ from __future__ import annotations
 import time
 from typing import Any, Callable, Optional
 
+from ..log import get_logger
+
 __all__ = ["LazyTimers"]
+
+_LOG = get_logger("clock")
 
 
 class LazyTimers:
@@ -44,7 +48,7 @@ class LazyTimers:
     clock:                取当前时间戳的函数（默认 `time.time` 取整）——
                           **可注入**，测试可控时间。
     default_duration_sec: 未显式给时长、且类型也没注册时长时的兜底（默认 60）。
-    logger:               传入 logger；None → 标准库 logger。
+    logger:               传入 logger；None → 用门面 logger（`<prefix>.clock`）。
     """
 
     def __init__(self, *, load: Callable[[str], dict],
@@ -190,5 +194,4 @@ class LazyTimers:
         if self._logger is not None:
             self._logger.warning(msg, *args)
             return
-        import logging
-        logging.getLogger("saintess_engine.clock").warning(msg, *args)
+        _LOG.warning(msg, *args)

@@ -26,7 +26,7 @@
 **⚠️ 搬一块就要搬干净**：引擎只留骨架、内容侧只留适配与内容、门禁锁住两边。
 半搬 = 制造新的双源（同一个语义在两处各写一份，早晚漂移）。
 
-已建成的形状示例 → [declarative-commands-and-texts.md](declarative-commands-and-texts.md)、
+已建成的形状示例 → [log.md](log.md)、[declarative-commands-and-texts.md](declarative-commands-and-texts.md)、
 [../concepts/declaration-tables.md](../concepts/declaration-tables.md)。
 
 ---
@@ -38,7 +38,7 @@
 
 | # | 项 | 类型 | 依赖 | 验收（可判定） |
 |---|---|---|---|---|
-| 1 | **`log` 日志门面** | 新建形状 | — | 不调 `configure` 时行为与现状**逐字一致**；随包 3 个 sink；内容侧 logger 名收敛到 1 处 |
+| 1 | **`log` 日志门面** —— ✅ **框架侧已建成**（2026-09-12，[log.md](log.md)）：引擎 4 处历史写法已收敛，验收第三项（内容侧接入选门面出口）在游戏仓 | 新建形状 | — | 不调 `configure` 时行为与现状**逐字一致**；随包 3 个 sink；内容侧 logger 名收敛到 1 处 |
 | 2 | 补齐 3 个数值门禁 | 补门禁 | — | 胜率矩阵 / CTB 频率 / 装备依赖 从「跳过」变「真跑」 |
 | 3 | **`tlog` 结构化流水** | 新建形状 | #1（复用 Sink 协议） | `Record`/`Sink`/`Reader`/`Replay` 骨架 + `tlogs` 域进编辑器；0 sink = 零行为；JSONL 往返读回一致 |
 | 4 | `tlog` 落地：战斗流水 | 下游落地 | #3 | 打完一场 → 完整流水 → **能回放复现同一场** |

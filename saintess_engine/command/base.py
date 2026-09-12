@@ -23,6 +23,8 @@ import logging
 import re
 from typing import Any, Optional, Sequence
 
+from ..log import get_logger
+
 from .guards import DEFAULT_BATTLE_HINT, DEFAULT_REGISTER_HINT, require_battle, require_player
 from .paging import page_items, parse_page
 from .router import HandlerHit, PatternSet, find_static, matches_any, run_shortcut
@@ -39,7 +41,8 @@ class CommandBase:
     register_hint: str = DEFAULT_REGISTER_HINT
     battle_none_hint: str = DEFAULT_BATTLE_HINT
     tip_fallback: Sequence[str] = (DEFAULT_TIP,)
-    logger_name: str = "saintess_engine.command"
+    # 空 = 用日志门面的默认名（`<prefix>.command`）；宿主可给完整名（如自己的 "astrbot"）
+    logger_name: str = ""
 
     # ---------- 可覆盖：指令别名（剥参数时用） ----------
     command_aliases: Sequence[str] = ()
@@ -91,7 +94,8 @@ class CommandBase:
 
     # ============================================================ 日志
     def _logger(self) -> logging.Logger:
-        return logging.getLogger(getattr(self, "logger_name", "saintess_engine.command"))
+        name = getattr(self, "logger_name", "") or ""
+        return logging.getLogger(name) if name else get_logger("command")
 
     def _warn(self, msg: str, *args, **kwargs) -> None:
         self._logger().warning(msg, *args, **kwargs)
@@ -144,8 +148,8 @@ class CommandBase:
         try:
             stop()
         except Exception:
-            logging.getLogger("saintess_engine.command").warning(
-                "[saintess_engine.command] stop_event 调用失败（已忽略）", exc_info=True)
+            get_logger("command").warning(
+                "stop_event 调用失败（已忽略）", exc_info=True)
 
     # ============================================================ handler 路由
     @classmethod

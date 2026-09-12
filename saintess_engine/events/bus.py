@@ -16,7 +16,11 @@ from __future__ import annotations
 
 from typing import Callable, Iterable, Optional, Sequence
 
+from ..log import get_logger
+
 __all__ = ["EventBus"]
+
+_LOG = get_logger("events")
 
 
 class EventBus:
@@ -30,7 +34,7 @@ class EventBus:
                     False = 自动 declare 后注册。
     tolerant_fire:  True（默认）= 订阅方抛异常时 log + 跳过（不阻断后续订阅方）。
     blank_line_default: 段落空行的默认策略（单个订阅可用 `blank_line=` 覆盖）。
-    logger:        传入 logger；None → 用标准库 root logger。
+    logger:        传入 logger；None → 用门面 logger（`<prefix>.events`）。
 
     典型用法::
 
@@ -55,7 +59,6 @@ class EventBus:
         self.blank_line_default = blank_line_default
         self.sink_key = sink_key
         self._logger = logger
-        self._fallback_log = None
 
     # ------------------------------------------------------------ 事件集
     def declare(self, *names: str) -> None:
@@ -158,7 +161,4 @@ class EventBus:
         if self._logger is not None:
             self._logger.warning(msg, *args)
             return
-        import logging
-        if self._fallback_log is None:
-            self._fallback_log = logging.getLogger("saintess_engine.events")
-        self._fallback_log.warning(msg, *args)
+        _LOG.warning(msg, *args)
