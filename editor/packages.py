@@ -68,6 +68,12 @@ DOMAINS = {
     # 预览走 `editor/loot_view.py`（引擎同一份 expand/audit 代码算，见该文件）。
     "drop_pools": {"label": "掉落池", "kind": "data", "schema": "drop_pools.schema.json",
                    "primary": "pool", "icon": "🎁"},
+    # 运行形状：`saintess_engine.run` 消费（准入链 `Admission` / 进度 `Progress` / 名单 `Roster`）。
+    # 一条 = 一个副本：`stages` 顺序即进度节点序，层内要打的怪是节点池。
+    # 进度视图走 `editor/instance_view.py`（引擎同一份 `Progress` 算 节点/剩余/末层/is_last，
+    # 不另写一套；见该文件 docstring 的「为什么值得破一条纪律」）。
+    "instances": {"label": "副本", "kind": "data", "schema": "instances.schema.json",
+                  "primary": "instance", "icon": "🏯"},
 }
 
 

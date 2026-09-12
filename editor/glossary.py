@@ -378,6 +378,32 @@ _DROP_POOLS = {
                    "ref": ("reference/loot.md", "fallback_n")},
 }
 
+_INSTANCES = {
+    "name": {"zh": "名称（副本名 / 层名）", "note": "叶名 `name`：副本对象上是**副本名**、层对象上是**层名**（都是内容侧词汇）—— 玩家输入的命令文本会用到它，措辞表在内容侧。留空会被视图当坏数据报出来。", "ref": None},
+    "lv": {"zh": "需求等级", "note": "需求等级（准入链的一关；判定与拒绝措辞都在内容侧，视图只显示数值）。", "ref": None},
+    "icon": {"zh": "图标", "note": "面板图标（内容侧自选；空则界面用默认）。", "ref": None},
+    "min_players": {"zh": "最少人数", "note": "最少人数。`1` 且 max_players 也为 `1` = 纯单人副本（无队也能开）。", "ref": None},
+    "max_players": {"zh": "最多人数", "note": "最多人数。`min_players ≤ 1 < max_players` = 弹性副本（无队按单人开）。min_players > max_players 是坏数据，视图直接报错。", "ref": None},
+    "key_item": {"zh": "钥匙物品", "note": "钥匙物品引用（内容侧词汇；空 = 本副本不要钥匙）。「怎么算持有钥匙」的三路匹配口径属于内容侧规则，视图不判。", "ref": None},
+    "key_source": {"zh": "钥匙获取途径", "note": "钥匙获取途径的取值（内容侧词汇）—— 只用来拼提示里「获取途径」那一句的槽位。", "ref": None},
+    "entry": {"zh": "入口", "note": "入口位置（地图 + 子区域，都是内容侧词汇）。「人得站在入口才能开本」这类红线是内容侧规则。", "ref": None},
+    "map": {"zh": "入口地图", "note": "入口所在地图引用（内容侧词汇）。", "ref": None},
+    "subarea": {"zh": "入口子区域", "note": "入口所在子区域引用（内容侧词汇）。留空时内容侧可回退到 id —— 回退口径由内容侧定，视图不替它选。", "ref": None},
+    "boss": {"zh": "Boss（终局 / 本层）", "note": "叶名 `boss`：副本对象上 = **终局 Boss**（空 = 不设）、层对象上 = **本层 Boss 表**（内容侧词汇）。注意这里是**副本级**的 Boss，和层内的 `stages.boss` 不是一回事。", "ref": None},
+    "hp_mult": {"zh": "血量倍率", "note": "副本内怪物血量倍率（`1.0` = 不调）。≤ 0 是坏数据，视图直接报错。", "ref": None},
+    "atk_mult": {"zh": "攻击倍率", "note": "副本内怪物攻击倍率（`1.0` = 不调）。≤ 0 是坏数据，视图直接报错。", "ref": None},
+    "stages": {"zh": "层表", "note": "层表：**顺序即推进顺序**（引擎 `Progress` 的节点序，`is_last` 就是末层判定）。层空（没有怪/精英/Boss）= 坏数据，视图如实报错不伪装；Boss 放非末层同样报错。", "ref": None},
+    "monsters": {"zh": "普通怪", "note": "本层普通怪引用表（内容侧词汇）。视图把它们折算成本层要清的单位数（剩余池 `units`）。", "ref": None},
+    "elite": {"zh": "精英怪", "note": "本层精英怪引用表（内容侧词汇）。与普通怪一样计入本层单位数。", "ref": None},
+    "pois": {"zh": "兴趣点", "note": "本层兴趣点引用表（内容侧词汇）。只展示，不计入进度单位。", "ref": None},
+    "secret": {"zh": "隐藏房间", "note": "本层隐藏房间/暗格引用（内容侧词汇；空 = 本层没有）。", "ref": None},
+    "npc": {"zh": "本层 NPC", "note": "本层 NPC 引用（内容侧词汇；空 = 本层没有）。", "ref": None},
+    "gold": {"zh": "通关金币", "note": "通关金币（发奖口径属于内容侧；视图只显示数值）。", "ref": None},
+    "exp": {"zh": "通关经验", "note": "通关经验（同上）。", "ref": None},
+    "materials": {"zh": "通关材料", "note": "通关材料引用表（内容侧词汇）。", "ref": None},
+    "desc": {"zh": "说明", "note": "说明（编辑器/文档用）。本域 schema 不强制长度，可留空。", "ref": None},
+}
+
 GLOSSARY = {
     "*": _COMMON,
     "commands": _COMMANDS,
@@ -385,6 +411,7 @@ GLOSSARY = {
     "tlogs": _TLOGS,
     "maps": _MAPS,
     "drop_pools": _DROP_POOLS,
+    "instances": _INSTANCES,
     "skills": _SKILLS,
     "monsters": _MONSTERS,
     "affixes": _AFFIXES,
@@ -400,6 +427,20 @@ GLOSSARY = {
 #   ② 组里列的名字必须真在 schema 里（防拼错）
 #   ③ 顺序即界面顺序（把最常改的放前面）
 GROUPS = {
+    "instances": [
+        {"id": "base", "label": "基础", "icon": "📌",
+         "fields": ["name", "lv", "icon", "desc"]},
+        {"id": "team", "label": "人数", "icon": "👥",
+         "fields": ["min_players", "max_players"]},
+        {"id": "gate", "label": "入口与钥匙", "icon": "🔑",
+         "fields": ["entry", "map", "subarea", "key_item", "key_source"]},
+        {"id": "scale", "label": "强度", "icon": "⚔️",
+         "fields": ["boss", "hp_mult", "atk_mult"]},
+        {"id": "stages", "label": "层与推进", "icon": "🪜",
+         "fields": ["stages", "monsters", "elite", "pois", "secret", "npc"]},
+        {"id": "reward", "label": "通关奖励", "icon": "🎁",
+         "fields": ["gold", "exp", "materials"]},
+    ],
     "skills": [
         {"id": "base", "label": "基础", "icon": "📌",
          "fields": ["name", "desc", "kind", "kind_override", "lv"]},
@@ -618,6 +659,7 @@ DOMAIN_SCHEMA = {
     "tlogs": "tlog.schema.json",
     "maps": "maps.schema.json",
     "drop_pools": "drop_pools.schema.json",
+    "instances": "instances.schema.json",
 }
 
 # ───────────────────────────────────────────────────────────────────────── 查询

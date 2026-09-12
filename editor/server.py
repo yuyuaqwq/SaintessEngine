@@ -61,6 +61,7 @@ from editor import dist as DIST      # noqa: E402
 from editor import glossary as GL    # noqa: E402
 from editor import hints as HN       # noqa: E402
 from editor import loot_view as LV   # noqa: E402
+from editor import instance_view as IV  # noqa: E402
 from editor import packages as PK    # noqa: E402
 from editor import space_view as SV  # noqa: E402
 from editor import validate as VD    # noqa: E402
@@ -247,6 +248,21 @@ class H(BaseHTTPRequestHandler):
                 return self._err(404, f"该域没有池预览：{dom}")
             data = PK.read_json(PK.domain_path(d, dom), {})
             out = LV.build_file(data if isinstance(data, dict) else {}, parts[4])
+            return self._send(200 if out.get("ok") else 422, out)
+        # instances 域的进度视图：节点序 / 每层剩余 / 末层（is_last）由**引擎同一份 Progress** 算
+        # （editor/instance_view.py；怪名/Boss/钥匙/地图全是内容侧词汇 —— 预览不假装认识它们）。
+        if (len(parts) == 6 and parts[0] == "package" and parts[2] == "d"
+                and parts[5] == "run"):
+            d = PK.resolve_package(parts[1], GAMES_DIR)
+            if not d:
+                return self._err(404, f"包不存在：{parts[1]}")
+            dom = parts[3]
+            if dom not in PK.DOMAINS:
+                return self._err(404, f"未知域：{dom}")
+            if dom != "instances":
+                return self._err(404, f"该域没有进度视图：{dom}")
+            data = PK.read_json(PK.domain_path(d, dom), {})
+            out = IV.build_file(data if isinstance(data, dict) else {}, parts[4])
             return self._send(200 if out.get("ok") else 422, out)
         if len(parts) >= 4 and parts[0] == "package" and parts[2] == "d":
             d = PK.resolve_package(parts[1], GAMES_DIR)
