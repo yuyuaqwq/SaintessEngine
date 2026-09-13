@@ -66,6 +66,7 @@ from .mech import cond_procs as _cond_procs      # 技能条件乘区（1）
 from .mech import element_procs as _element_procs  # 元素反应/克制/流转（4）
 from .mech import equip as _equip                # 装备/词条/武器特效 → triggers + bonus 分域
 from .mech import params as P
+from .mech import food_proc as _food_proc       # 食物效果装配（B8 端口，真源 game/services/battle_food_proc.py）
 from .mech import team_procs as _team_procs      # 团队/面幅（20）
 from .mech import we_procs as _we_procs          # 武器/词条特效（27）
 from .mech import worldboss as _worldboss        # 世界 Boss GM 增伤（1）
@@ -204,11 +205,14 @@ skill_up = _skills.skill_up
 # 内容装配（apply_game_content）—— 声明 → actor["triggers"]
 # ============================================================
 
-def apply_game_content(actor: dict):
+def apply_game_content(actor: dict, ctx: dict | None = None) -> dict:
     """**唯一**开战内容装配入口（幂等）。返回 actor（原对象，就地装配）。
 
-    顺序契约 = 游戏仓 `game/content_rules/apply.py:22-42` 的 ①→⑥（逐条见下方 `_step` 注释；
-    ⑥ 食物一步尚待搬，已在契约里显式标注"待搬"而不是静默跳过）。
+    顺序契约 = 游戏仓 `game/content_rules/apply.py:22-42` 的 ①→⑥，**六步已全部到位**
+    （B8 2026-09-13 补齐第⑥步食物效果；逐条见下方 `_step` 注释）。
+
+    :param ctx: 可选上下文，与宿主入口同形：``aids``（吃下的料理 aid 列表 → 第⑥步）/
+                ``logs``（播报累加）。不吃料理就不传 —— 第⑥步整步跳过（与真源一致）。
 
     ⚠️ 装配实现全在 `content/mech/` 各机制族模块里（逐字搬运物）：
       · `class_mech.apply_class_mech` / `.apply_class_passives`（③：start_full/channels/每核减伤/
@@ -244,13 +248,18 @@ def apply_game_content(actor: dict):
     #   ④ 挂敌身条（幂等；③ 已挂时此处为空操作 —— 显式保留以固定顺序契约，便于该步独立演进）
     #   ⑤ 技能条件乘区（幂等同上）
     #   ⑤b 元素机制（两轴反应/克制 + 元素流转挂印转换）
-    #   ⑥ 食物效果      ⬜ 待搬（需 FOOD_EFFECT_PARAMS；且"谁吃料理"属宿主事件）
+    #   ⑥ 食物效果（B8 补：`content/mech/food_proc.py` 逐字端口自 `game/services/battle_food_proc.py`；
+    #      「谁吃料理」是宿主事件 → 由宿主经 ctx["aids"] 传进来，包只管效果装配）
     _step("install", install_engine)
     _step("equip", _equip.apply_to_actor, actor)
     _step("mech", _class_mech.apply_class_mech, actor)
     _step("bar", _bar_procs.apply_bar_procs, actor)
     _step("cond", _cond_procs.apply_cond_procs, actor)
     _step("element", _element_procs.apply_element_procs, actor)
+    aids = (ctx or {}).get("aids")
+    if aids:
+        _step("food", _food_proc.install_food_fx, actor, list(aids),
+              (ctx or {}).get("logs") or [])
 
     actor[_MARK] = True       # 幂等保险丝（装配全部走完才打；中途异常也不阻断 → 仍落标记）
     return actor

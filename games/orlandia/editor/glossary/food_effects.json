@@ -1,0 +1,94 @@
+{
+  "fields": {
+    "name": {
+      "zh": "展示名",
+      "note": "中文效果名（19/19 条）。来自 FOOD_EFFECT_NAMES，由导出器注入；播报/图鉴读它。"
+    },
+    "label": {
+      "zh": "源·播报标签",
+      "note": "源表自带标签 —— 实测只有 lifesteal（\"吸血\"）1/19 条有；展示名主表是 name。"
+    },
+    "chance": {
+      "zh": "触发概率",
+      "note": "命中/受击类效果的触发概率（0-1）。缺 = 必触发。",
+      "widget": "pct"
+    },
+    "pct": {
+      "zh": "百分比数值",
+      "note": "0.01 = 1%；吸血/回春/护体这类的主数值。",
+      "widget": "pct"
+    },
+    "mult": {
+      "zh": "伤害倍率",
+      "note": "乘区类（execute 斩杀 / precise 精准）：1.30 = +30%。",
+      "widget": "pct"
+    },
+    "atk_pct": {
+      "zh": "攻击百分比",
+      "note": "按攻击力换算的系数。",
+      "widget": "pct"
+    },
+    "hp_ratio": {
+      "zh": "生命比例",
+      "note": "按生命上限换算的比例（如护盾给的量）。",
+      "widget": "pct"
+    },
+    "turns": {
+      "zh": "持续刻数",
+      "note": "周期/时限类效果的刻数（时间驱动，1 刻一跳）。"
+    },
+    "slow_turns": {
+      "zh": "减速刻数",
+      "note": "元素/静电类减速的持续刻数。"
+    },
+    "stacks": {
+      "zh": "叠层层数",
+      "note": "每次触发叠几层（放血 bleed / 龙息 dragon_tongue）。"
+    },
+    "max_n": {
+      "zh": "叠层上限",
+      "note": "叠层类效果的上限。"
+    }
+  },
+  "groups": [
+    {
+      "id": "identity",
+      "label": "展示",
+      "icon": "🏷️",
+      "fields": [
+        "name",
+        "label"
+      ]
+    },
+    {
+      "id": "trigger",
+      "label": "触发",
+      "icon": "🎲",
+      "fields": [
+        "chance"
+      ]
+    },
+    {
+      "id": "value",
+      "label": "数值",
+      "icon": "📈",
+      "fields": [
+        "pct",
+        "mult",
+        "atk_pct",
+        "hp_ratio"
+      ]
+    },
+    {
+      "id": "duration",
+      "label": "持续 / 叠层",
+      "icon": "⏳",
+      "fields": [
+        "turns",
+        "slow_turns",
+        "stacks",
+        "max_n"
+      ]
+    }
+  ]
+}

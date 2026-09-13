@@ -348,5 +348,12 @@
     "schema": "stats.schema.json",
     "primary": "stat",
     "icon": "📊"
+  },
+  "food_effects": {
+    "label": "食物效果",
+    "kind": "data",
+    "schema": "food_effects.schema.json",
+    "primary": "food_effect",
+    "icon": "🍱"
   }
 }
