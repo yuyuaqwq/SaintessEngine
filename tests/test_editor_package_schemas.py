@@ -85,8 +85,15 @@ def req(base, method, path, body=None):
 
 
 def _sha(path):
+    """文件内容 sha256（**行尾归一**：CRLF → LF）。
+
+    为什么归一：本处两条断言冻的是「schema **内容**」——① 框架基线 17 份不许悄悄改；
+    ② 包内同名 schema 与框架基线是否逐字相同。取原始字节会让**同一个 commit 在两个克隆里
+    得出不同哈希**（2026-09-13 实测：独立克隆 core.autocrlf=true → CRLF 5856B；
+    游戏仓 submodule 克隆 → LF 5713B，9 份假红）→ 门禁不可移植。
+    """
     with open(path, "rb") as f:
-        return hashlib.sha256(f.read()).hexdigest()
+        return hashlib.sha256(f.read().replace(b"\r\n", b"\n")).hexdigest()
 
 
 def _field_paths_of(path):
@@ -187,24 +194,25 @@ def main():
     #   schema 本批给 15 处自由形状补了子形状，是**该演进**的那半边；而框架侧那份是
     #   「迁移期基线 + 回退副本」，**必须保持游戏中立**（由 tests/test_no_game_vocabulary.py 守，
     #   实测：把包侧带游戏词 description 的 schema 拷进框架会当场报 11 处中立性违规））：
-    #     ① 框架基线**不许悄悄改** —— 17 份 sha256 冻结在本文件里，改一个字节即红；
+    #     ① 框架基线**不许悄悄改** —— 17 份 sha256 冻结在本文件里（**行尾归一口径**，
+    #        2026-09-13 起：原取原始字节会因 core.autocrlf 差异跨克隆假红），改一个字节即红；
     #     ② 包内同名 schema 的**字段路径集 ⊇ 框架基线** —— 只许加子形状/说明，不许丢字段。
     _FW_BASELINE_SHA = {
-        "affix.schema.json": "985f59b66a66ba138f9c03ee430de9c4ca04f9c2c5acc4e3df6d6ad1f5c969e7",
-        "command.schema.json": "d705822eb07dc2b966a5cb1b5cc9dd3a73555f75f5e4ff7b7a6cb0131d184dbd",
+        "affix.schema.json": "45d520daf62737400c459d19e3a1c0b06a9464d7966e381cb7f8615501949740",
+        "command.schema.json": "8cdacbd60e0827b9430bc4a90ba11125ddd34a2fc50e3d3d403173ce529a0f6f",
         "drop_pools.schema.json": "34f9aaf5c13ce6f19019386a88325e2ee0b365ac4b8a541cc8ad493c4b82a5c7",
-        "effect_rules.schema.json": "2af259475c98f5aa34a00e8d0cb6ca6310ceae1deafd7032615fb5ea4cc8013b",
-        "equip_roster.schema.json": "b8b65eaeeab04dc8617d0baef887f63dbb47c583849c17b7327164a5253deb4f",
-        "instances.schema.json": "9661d7464d8f179a8cc1d707207b717616bd543057132baa813fde041ca92d98",
+        "effect_rules.schema.json": "0de57f5efd8c72855a4c03ac498e7ceeef22f1a36f7a459834aac27288c7e7e5",
+        "equip_roster.schema.json": "066c611a96283d8d5a8c88b4ec36f2e1b3e80ce141db042ba7c25c862aa58bfb",
+        "instances.schema.json": "6fc513a58926c228a01d707ad6d95e1c834008f0e9eefc8afbb9a54e4d0ff24a",
         "item.schema.json": "18fa1f260d0cf8d14dadcd9032055b75b9e0b4796de3c747061c31a1091d8c2c",
         "legendary_effects.schema.json": "7151d3a418c01f6341816a52193b470467f602cd9b22c46a64e6a7d798f8965f",
-        "maps.schema.json": "d68bfd7f07165732a06c92954818994ce5950027a8b7c113aa91767fb911eebd",
-        "monster.schema.json": "89db8b09da218dde6906ffe1d323daab0cae9d8f29544f44cbf23252980107b7",
+        "maps.schema.json": "1493ade7eae208011cb71ee0fce164b11dbb639bead70a1fcc3202343fee74ac",
+        "monster.schema.json": "f84ffe89c308611ebdc7803a35e9f299d8442c7fb31f9cf717715938bdf3d4c7",
         "monster_roster.schema.json": "d2cbf083b0380fe94d75ef9324284d43f053c7935587276d6fc225bc73a54e06",
-        "passive_proc.schema.json": "9d250181f599c88c2aa85c5af74ba0fa2ec80279ecbf954c0cfb8ac378cc18a9",
+        "passive_proc.schema.json": "11744f7f288bf4b93546e8a943c40d535b8ae461dd9d43b9e161f13f4e8d07c9",
         "pets.schema.json": "575359b695fe83f5779d8040ce938659721d4fc4972e699d1827c1de52433089",
         "pois.schema.json": "ecb77c1cdfe7f3ca8e3ccd4bb6bf80fcc5cab7931269917cc44a5fc3e65eadc4",
-        "skill.schema.json": "2edee16e6cfc82daae051e4e56ed98d629876d792f7728313184f2781201a6e5",
+        "skill.schema.json": "87c0fef5d779cef4c45750970aec7f4a2ae68ea0af9fc22013f439c018b10f14",
         "text.schema.json": "f72760a1b04e56669fb3d11a031df44b3c4848ecafa46548a707ba51211eb396",
         "tlog.schema.json": "4e43b03352edc74a8eb93a2a27c493933809c731b2137778c75132766652ea19",
     }
