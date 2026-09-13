@@ -347,6 +347,66 @@ def _res_display_name(key: str) -> str:
 # ============================================================
 
 
+def _target_by_label(b, raw: str):
+    """站位图编号 → actor（`a2`/`A2`/`2` = 敌方第 2 个；`b1` = 我方第 1 个）。
+
+    编号与站位图**同源**：`saintess_engine.formation.numbered_units`（存活单位、rank 升序 + 层内原序）。
+    """
+    from saintess_engine.formation import numbered_units
+    s = (raw or "").strip()
+    if not s:
+        return None
+    m = re.match(r"^([abAB])\s*(\d+)$", s)
+    if m:
+        side = "enemy" if m.group(1).lower() == "a" else "player"
+        n = int(m.group(2))
+    elif s.isdigit():
+        side, n = "enemy", int(s)            # 纯数字 = 敌方第 n 个（与面板引导「打2号(纯数字同义)」一致）
+    else:
+        return None
+    for num, u in numbered_units(_sides_of_x(b).get(side) or []):
+        if num == n:
+            return u
+    return None
+
+
+def _sides_of_x(b) -> dict:
+    """战斗对象或 battle_state dict 都取到 sides（命令层两条路径都用得到）。"""
+    if isinstance(b, dict):
+        return b.get("sides") or {}
+    return getattr(b, "sides", None) or {}
+
+
+def _resolve_target_arg(b, raw):
+    """『攻击 <名字>』/『技能1 a2』的目标串 → **actor dict**（引擎 `ActCtx.target` 只认 actor）。
+
+    ★ 2026-09-13 P1 修复（B10 收口批 L5 线发现；**改前既有**）：命令层原来把 `target_arg`
+    字符串直传 `human_act(target=...)`，而 v181 引擎在伤害/治疗落地时做 `target.get("hp")`
+    → `AttributeError: 'str' object has no attribute 'get'`；而站位图面板一直教玩家
+    『技能1 a2』（`_battle_footer` 的引导行）—— 玩家照做即报错。
+
+    解析顺序（只认**存活**单位，与站位图编号同源）：
+      ① 编号 `a1/a2…`（敌）/`b1/b2…`（己） ② 纯数字 = 敌方第 n 个
+      ③ 名字：精确 → 前缀 → 包含（先敌后己）
+    解析不到 → `None` = 自动选敌（与无参写法一致；**不再把字符串丢给引擎**）。
+    `b` 可以是 Battle 对象或 battle_state dict。
+    """
+    s = (raw or "").strip()
+    if not s:
+        return None
+    u = _target_by_label(b, s)
+    if u is not None:
+        return u
+    _sd = _sides_of_x(b)
+    cands = list(_sd.get("enemy") or []) + list(_sd.get("player") or [])
+    alive = [x for x in cands if isinstance(x, dict) and (x.get("hp", 0) or 0) > 0]
+    for pick in (lambda n: n == s, lambda n: n.startswith(s), lambda n: s in n):
+        for x in alive:
+            if pick(str(x.get("name") or "")):
+                return x
+    return None
+
+
 def _b_enemy(self, b) -> dict:
     """命令层读当前敌方 actor（显示/结算用；sides['enemy'] 首个存活，无 → {}）。
 
@@ -1197,7 +1257,7 @@ async def attack(self, event: AstrMessageEvent, group_id, qq_id, player, target_
             self._unlock_battle(group_id, qq_id)
             yield event.plain_result("⏳ 旧存档已失效，重新讨伐吧！")
             return
-        async for _r in self._worldboss_act(event, group_id, qq_id, player, b, "attack", None, target=target_arg or None):
+        async for _r in self._worldboss_act(event, group_id, qq_id, player, b, "attack", None, target=_resolve_target_arg(b, target_arg)):
             yield _r
         return
     b = self._restore_battle(battle["state"])
@@ -1208,7 +1268,9 @@ async def attack(self, event: AstrMessageEvent, group_id, qq_id, player, target_
         yield event.plain_result("⏳ 旧存档已失效，重新探索开始新的战斗吧！")
         return
     # v2 指定目标：『攻击 <名字>』解析为目标名传给引擎（引擎会校验射程/存活）；无参→None 自动
-    _target = target_arg or None
+    # ★ P1 修复：解析成 **actor**（`_resolve_target_arg`）—— v181 引擎 `ActCtx.target` 只认 actor，
+    #   传字符串会在落地段 `target.get("hp")` 崩。
+    _target = _resolve_target_arg(b, target_arg)
     # v94.2 体力：每次攻击扣 1（普通/世界Boss通用；instance/pvp 已在上方分流）
     _ok, _st = self._spend_stamina(group_id, qq_id, 1, player, "攻击")
     if not _ok:
@@ -1487,7 +1549,7 @@ async def skill(self, event: AstrMessageEvent, group_id, qq_id, player, skill_na
             return
     if battle["state"].get("type") == "instance":
         # N5b4-5a R2：接线点 skill → 新 Router（saintess_engine 原生；老 _instance_act R3 删除）
-        async for _r in self._instance_router(event, group_id, qq_id, player, battle["state"], "skill", skill_name, target=_skill_target):
+        async for _r in self._instance_router(event, group_id, qq_id, player, battle["state"], "skill", skill_name, target=_resolve_target_arg(battle["state"], _skill_target)):
             yield _r
         return
     if battle["state"].get("type") == "pvp":
@@ -1505,7 +1567,7 @@ async def skill(self, event: AstrMessageEvent, group_id, qq_id, player, skill_na
             self._unlock_battle(group_id, qq_id)
             yield event.plain_result("⏳ 旧存档已失效，重新讨伐吧！")
             return
-        async for _r in self._worldboss_act(event, group_id, qq_id, player, b, "skill", skill_name, target=_skill_target):
+        async for _r in self._worldboss_act(event, group_id, qq_id, player, b, "skill", skill_name, target=_resolve_target_arg(b, _skill_target)):
             yield _r
         return
     b = self._restore_battle(battle["state"])
@@ -1524,7 +1586,7 @@ async def skill(self, event: AstrMessageEvent, group_id, qq_id, player, skill_na
         else:
             yield event.plain_result(_st + "\n🍖 战斗中『使用 <食物>』恢复体力继续战斗，或『逃跑』脱离战斗～")
         return
-    logs, ended, _who = b.human_act("skill", skill_name, b.focus(), target=_skill_target)
+    logs, ended, _who = b.human_act("skill", skill_name, b.focus(), target=_resolve_target_arg(b, _skill_target))
     self._sync_battle_player(player, b)
     db.update_player(group_id, qq_id, hp=player["hp"], mp=player["mp"], max_hp=player["max_hp"], max_mp=player["max_mp"])
     if ended:
