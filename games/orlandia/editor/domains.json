@@ -166,5 +166,208 @@
     "schema": "panel_rules.schema.json",
     "primary": "panel_rule",
     "icon": "🧮"
+  },
+  "dialogues": {
+    "label": "对话",
+    "kind": "data",
+    "schema": "dialogues.schema.json",
+    "primary": "dialogue",
+    "icon": "💬"
+  },
+  "quests": {
+    "label": "任务",
+    "kind": "data",
+    "schema": "quests.schema.json",
+    "primary": "quest",
+    "icon": "📜"
+  },
+  "events": {
+    "label": "事件",
+    "kind": "data",
+    "schema": "events.schema.json",
+    "primary": "event",
+    "icon": "🎲"
+  },
+  "event_templates": {
+    "label": "事件模板",
+    "kind": "data",
+    "schema": "event_templates.schema.json",
+    "primary": "event_template",
+    "icon": "🧩"
+  },
+  "tips": {
+    "label": "提示",
+    "kind": "data",
+    "schema": "tips.schema.json",
+    "primary": "tip",
+    "icon": "💡"
+  },
+  "subareas": {
+    "label": "子区域",
+    "kind": "data",
+    "schema": "subareas.schema.json",
+    "primary": "subarea",
+    "icon": "🗺️"
+  },
+  "instance_stage_maps": {
+    "label": "副本层地图",
+    "kind": "data",
+    "schema": "instance_stage_maps.schema.json",
+    "primary": "stage_map",
+    "icon": "🏰"
+  },
+  "instance_investigation": {
+    "label": "副本调查点",
+    "kind": "data",
+    "schema": "instance_investigation.schema.json",
+    "primary": "investigation",
+    "icon": "🔍"
+  },
+  "worlds": {
+    "label": "世界",
+    "kind": "data",
+    "schema": "worlds.schema.json",
+    "primary": "world",
+    "icon": "🌍"
+  },
+  "dungeon_pois": {
+    "label": "副本兴趣点",
+    "kind": "data",
+    "schema": "dungeon_pois.schema.json",
+    "primary": "dungeon_poi",
+    "icon": "📍"
+  },
+  "craft": {
+    "label": "配方",
+    "kind": "data",
+    "schema": "craft.schema.json",
+    "primary": "recipe",
+    "icon": "🔨"
+  },
+  "alchemy": {
+    "label": "炼金",
+    "kind": "data",
+    "schema": "alchemy.schema.json",
+    "primary": "alchemy",
+    "icon": "⚗️"
+  },
+  "cooking": {
+    "label": "烹饪",
+    "kind": "data",
+    "schema": "cooking.schema.json",
+    "primary": "recipe",
+    "icon": "🍲"
+  },
+  "skill_up": {
+    "label": "技能升级",
+    "kind": "data",
+    "schema": "skill_up.schema.json",
+    "primary": "skill_up",
+    "icon": "⬆️"
+  },
+  "job_guide": {
+    "label": "职业指引",
+    "kind": "data",
+    "schema": "job_guide.schema.json",
+    "primary": "guide",
+    "icon": "📖"
+  },
+  "runes": {
+    "label": "符文",
+    "kind": "data",
+    "schema": "runes.schema.json",
+    "primary": "rune",
+    "icon": "🔯"
+  },
+  "props": {
+    "label": "道具",
+    "kind": "data",
+    "schema": "props.schema.json",
+    "primary": "prop",
+    "icon": "🎁"
+  },
+  "shop": {
+    "label": "商店",
+    "kind": "data",
+    "schema": "shop.schema.json",
+    "primary": "shop",
+    "icon": "🏪"
+  },
+  "smith_stock": {
+    "label": "铁匠货架",
+    "kind": "data",
+    "schema": "smith_stock.schema.json",
+    "primary": "stock",
+    "icon": "⚒️"
+  },
+  "shop_stock": {
+    "label": "商店库存",
+    "kind": "data",
+    "schema": "shop_stock.schema.json",
+    "primary": "stock",
+    "icon": "📦"
+  },
+  "achievements": {
+    "label": "成就",
+    "kind": "data",
+    "schema": "achievements.schema.json",
+    "primary": "achievement",
+    "icon": "🏆"
+  },
+  "achievement_conds": {
+    "label": "成就条件",
+    "kind": "data",
+    "schema": "achievement_conds.schema.json",
+    "primary": "cond",
+    "icon": "✅"
+  },
+  "title_conds": {
+    "label": "称号条件",
+    "kind": "data",
+    "schema": "title_conds.schema.json",
+    "primary": "cond",
+    "icon": "🎖️"
+  },
+  "monster_mods": {
+    "label": "怪物改造",
+    "kind": "data",
+    "schema": "monster_mods.schema.json",
+    "primary": "monster_mod",
+    "icon": "🧬"
+  },
+  "item_templates": {
+    "label": "物品模板",
+    "kind": "data",
+    "schema": "item_templates.schema.json",
+    "primary": "item_template",
+    "icon": "📐"
+  },
+  "drops": {
+    "label": "掉落",
+    "kind": "data",
+    "schema": "drops.schema.json",
+    "primary": "drop",
+    "icon": "🎰"
+  },
+  "potion_effects": {
+    "label": "药水效果",
+    "kind": "data",
+    "schema": "potion_effects.schema.json",
+    "primary": "potion_effect",
+    "icon": "🧪"
+  },
+  "wild_king": {
+    "label": "野王",
+    "kind": "data",
+    "schema": "wild_king.schema.json",
+    "primary": "wild_king",
+    "icon": "👑"
+  },
+  "stats": {
+    "label": "属性",
+    "kind": "data",
+    "schema": "stats.schema.json",
+    "primary": "stat",
+    "icon": "📊"
   }
 }
