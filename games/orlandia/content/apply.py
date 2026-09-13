@@ -188,11 +188,19 @@ def monster_skill(skill_key):
 
 
 def basic_skill_of(class_name):
-    """职业普攻配置（包内 classes.json 的 `basic_skill`；缺 → None 回落 basic_fallback）。"""
-    cls = _CLASSES.get(class_name or "")
-    if not isinstance(cls, dict):
-        return None
-    bs = cls.get("basic_skill")
+    """职业普攻配置（包内 classes.json 的 `basic_skill`；缺 → None 回落 basic_fallback）。
+
+    ★ B8 修（2026-09-13）：表 key 是**职业 id**（`cls_fa_shi`），而引擎
+    `saintess_engine/battle/actions.py:36 resolve_basic_skill(actor["class_name"])` 传进来的是
+    **中文职业名** —— 必须先 `tables.resolve("classes", …)`（= 游戏仓 `game/core/index.py:47
+    resolve`；退役的宿主取件器 `game/bootstrap.py::_basic_skill_of` 正是这么做的，端口漏抄这步）。
+    漏 resolve 的症状：查不到 → 引擎回落 `basic_fallback`（物理 `atk*1.0`）→ 法师/牧师（全 int、
+    atk=0）普攻 0 伤害 → 数值矩阵 9 条红（连低 5 级怪都打不过）；物理职业看不出来（`atk*1.0` 同值）。
+    """
+    from .tables import resolve           # noqa: PLC0415 函数内导入：避免模块级环（同 params.py）
+    cid = resolve("classes", class_name or "")
+    cls = _CLASSES.get(cid) or {}
+    bs = (cls or {}).get("basic_skill") or {}
     return bs if isinstance(bs, dict) else None
 
 
