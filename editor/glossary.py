@@ -668,8 +668,10 @@ WIDGETS = {
     # 长文案
     "desc": "textarea", "flavor": "textarea", "heal_formula": "textarea",
     "line": "textarea", "food_effect": "textarea", "effect_data": "textarea",
+    "lore": "textarea",                # 碑文/铭文一类整段长文本（实测有整段碑文的条目）
     # 一行一条的字符串数组
     "exprs": "lines", "maps": "lines", "qualities": "chips",
+    "affixes": "lines", "fixed_affixes": "lines",   # 名册装备的固定词条 id 列表（一行一个 id）
     # 0~1 的比值
     "chance": "pct", "mech_chance": "pct", "lifesteal": "pct", "cutoff": "pct",
     "guard_hp_pct": "pct", "heal_pct": "pct", "overload_heal_pct": "pct",
@@ -685,6 +687,11 @@ REF_DOMAINS = {
     "buff_key": "effect_rules",   # passive_proc.buff_key —— 效果 key
     "cap_key": "effect_rules",    # passive_proc.cap_key —— 资源上限 key
     "res": "effect_rules",        # passive_proc.res —— 资源 key
+    # 装备名册（`equip_roster` 域）：这三个叶名都只指向名册装备 id，且实测只出现在名册相关处
+    # （`roster_id` 只在 items、`rid` 在 items.pick_options[]、`boss_equip` 在副本掉落块里）
+    "roster_id": "equip_roster",
+    "rid": "equip_roster",
+    "boss_equip": "equip_roster",
 }
 
 # 引擎面板键（**框架协议**，出自 `saintess_engine/battle/stats.py:117-122` 的 actor 面板读取）
@@ -703,12 +710,19 @@ def widget_for(dom: str, path: str) -> str | None:
     return WIDGETS.get(leaf)
 
 
+_REF_PATH_ONLY = ("start_classes", "mask", "cap_key", "buff_key")   # 只认全路径（叶名太泛，防外溢）
+
+
 def ref_domain_for(dom: str, path: str) -> str | None:
-    """该字段引用哪个域的 key（None = 不是跨域引用）。"""
-    leaf = str(path).split(".")[-1]
-    if str(path) in ("start_classes", "mask", "cap_key", "buff_key"):
-        return REF_DOMAINS.get(str(path))
-    return REF_DOMAINS.get(leaf)
+    """该字段引用哪个域的 key（None = 不是跨域引用）。
+
+    查法：**先全路径**（`REF_DOMAINS` 里可以写 `a.b` 形式的精确路径，用于叶名有歧义的字段），
+    再退回叶名。`_REF_PATH_ONLY` 那几个字段只认全路径（例如 `mask` 在别的域里不是引用）。
+    """
+    p = str(path)
+    if p in _REF_PATH_ONLY or p in REF_DOMAINS:
+        return REF_DOMAINS.get(p)
+    return REF_DOMAINS.get(p.split(".")[-1])
 
 
 def suggest_meta(dom: str, path: str) -> dict:

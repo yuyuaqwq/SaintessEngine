@@ -32,7 +32,8 @@ import 它不产生任何引擎副作用。
         "special_refs":      ["…"],          # 精确值特殊引用，同上
         "pool_key_prefixes": ["…"],          # 子池 key 可能带的前缀（查表时先剥）
         "external_prefixes": ["…"],          # 只影响审计（不判断链），**不**参与 expand 外列
-        "ref_domains":       ["items"]       # 裸 ref 落在这些**域**里 → 才算解得开（见下）
+        "ref_domains":       ["items"],      # 裸 ref 落在这些**域**里 → 才算解得开（见下）
+        "ref_prefix_domains": {"mat:": "materials"}   # 带前缀的引用：剥前缀查那个**域**的主键（见下）
       }
     }
 
@@ -46,6 +47,11 @@ import 它不产生任何引擎副作用。
   **不判**（`resolvable` 回 None）→ 与今天同结论。
 * 声明了 `ref_domains` → 审计才**有意义**：裸 ref 拿去查**包自己**那些域的表主键，
   查不到就报断链（措辞由引擎给）。「哪些域装 ref」也是内容侧说的，框架不预设。
+* 声明了 `ref_prefix_domains` → **带前缀的引用也能判**（`{"前缀": "域 id"}`）：命中该前缀的引用，
+  剥掉前缀后的 id 要能在那个域的表主键里找到 —— 找到 `True`、找不到 `False`（真断链）。
+  比 `external_prefixes` 严一档（后者一律不判「对不对」，只说「别喊断链」）；
+  同一个前缀两处都声明时**以本键为准**（更严的赢，避免一份声明里两句话打架）。
+  值允许写域 id 列表（任一域命中即算解得开）。它同样**不**参与 expand 外列（不猜权重）。
 
 对外接口
 --------
@@ -81,7 +87,8 @@ VOCAB_ENTRY = "drop_pools"
 # 声明里框架**认识**的键（其余键一律忽略：内容侧给自己加的字段不影响行为）
 VOCAB_PREFIX_KEYS = ("inline_prefixes", "special_refs", "pool_key_prefixes", "external_prefixes")
 VOCAB_DOMAIN_KEY = "ref_domains"
-VOCAB_KEYS = VOCAB_PREFIX_KEYS + (VOCAB_DOMAIN_KEY, "ref_keys", "version")
+VOCAB_PREFIX_DOMAIN_KEY = "ref_prefix_domains"     # {"前缀": "域 id" | ["域 id", …]}：带前缀的引用也判
+VOCAB_KEYS = VOCAB_PREFIX_KEYS + (VOCAB_DOMAIN_KEY, VOCAB_PREFIX_DOMAIN_KEY, "ref_keys", "version")
 
 _VOCAB_NOTE = ("本包带引用词汇声明（{path}）：审计按包自己的说法判「哪些引用解得开」，"
                "框架不认识任何具体前缀 / 池名。声明里没提到的部分，照旧不猜。")
@@ -121,6 +128,28 @@ def _domain_keys(pkg_dir: str, domains) -> set:
     return keys
 
 
+def _prefix_domain_keys(raw, pkg_dir: str) -> dict:
+    """`ref_prefix_domains`（{"前缀": "域 id" | ["域 id", …]}）→ {"前缀": frozenset(域主键)}。
+
+    与 `ref_domains` 同一条纪律：**域不认识 / 表读不出来 → 这个前缀就当没说**（丢掉，
+    不拿空集去判 —— 那会把整族引用全报成断链，是假红）。畸形输入一律丢掉，不抛。
+    """
+    out: dict = {}
+    if not isinstance(raw, dict):
+        return out
+    for pref, doms in raw.items():
+        if not isinstance(pref, str) or not pref:
+            continue
+        if isinstance(doms, str):
+            doms = [doms]
+        if not isinstance(doms, (list, tuple)):
+            continue
+        keys = _domain_keys(pkg_dir, [d for d in doms if isinstance(d, str) and d])
+        if keys:
+            out[pref] = frozenset(keys)
+    return out
+
+
 def normalize_vocab(raw=None, pkg_dir: str | None = None) -> dict:
     """把「声明」（包内 JSON 对象 / `load_vocab()` 的结果 / None）归一成内部形状。
 
@@ -136,7 +165,19 @@ def normalize_vocab(raw=None, pkg_dir: str | None = None) -> dict:
     keys = set(_str_list(src.get("ref_keys")))
     keys |= _domain_keys(pkg_dir or "", out[VOCAB_DOMAIN_KEY])
     out["ref_keys"] = frozenset(keys)
-    out["declared"] = bool(any(out[k] for k in VOCAB_PREFIX_KEYS) or out["ref_keys"])
+    raw_prefix_domains = src.get(VOCAB_PREFIX_DOMAIN_KEY)
+    out[VOCAB_PREFIX_DOMAIN_KEY] = raw_prefix_domains if isinstance(raw_prefix_domains, dict) else {}
+    pre = _prefix_domain_keys(out[VOCAB_PREFIX_DOMAIN_KEY], pkg_dir or "")
+    if not pre:
+        # 幂等：喂进来的本来就是**归一过的**内部形状（`load_vocab()` 的结果再进 `audit_file()`），
+        # 而这次没给 pkg_dir（拿不到包内表主键）→ 别把已经展开好的丢掉（丢了 = 整族引用假红）。
+        src_pre = src.get("ref_prefix_keys")
+        if isinstance(src_pre, dict):
+            pre = {k: frozenset(v) for k, v in src_pre.items()
+                   if isinstance(k, str) and k and isinstance(v, (list, tuple, set, frozenset))}
+    out["ref_prefix_keys"] = pre
+    out["declared"] = bool(any(out[k] for k in VOCAB_PREFIX_KEYS) or out["ref_keys"]
+                           or out["ref_prefix_keys"])
     return out
 
 
@@ -163,6 +204,9 @@ def load_vocab(pkg_dir: str, entry: str = VOCAB_ENTRY) -> dict:
 def _make_resolvable(v: dict):
     """声明 → 引擎审计要的 `resolvable(ref, pool)` 回调（`True`/`False`/`str`/`None`）。
 
+    * 命中 `ref_prefix_domains`（前缀 → 域）→ **真判**：剥掉前缀查那个域的主键，
+      在 → `True`；不在 → `False`（引擎给通用措辞，断链）。这一条优先于 `external_prefixes`：
+      同一前缀两处都声明时，更严的那句说了算。长前缀优先匹配（`a:` 与 `ab:` 并存时不误判）。
     * 命中 `external_prefixes` → `True`（内容侧自管的引用，框架不判）。
       与 `inline_prefixes` 刻意分开：后者会被引擎 `expand()` 当成候选前缀**外列**，
       这里只要「审计别喊断链」，不想动展开语义。
@@ -174,12 +218,17 @@ def _make_resolvable(v: dict):
     """
     ext = v["external_prefixes"]
     keys = v["ref_keys"]
-    if not ext and not keys:
+    pre = v.get("ref_prefix_keys") or {}
+    if not ext and not keys and not pre:
         return None
+    by_len = sorted(pre, key=len, reverse=True)      # 长前缀先比，避免 "a:" 抢走 "ab:x"
 
     def resolvable(ref, pool):                 # noqa: ARG001（pool 是引擎契约的一部分）
         if not isinstance(ref, str):
             return False
+        for p in by_len:
+            if ref.startswith(p):
+                return ref[len(p):] in pre[p]
         if ext and ref.startswith(ext):
             return True
         if not keys:
@@ -198,9 +247,15 @@ def _make_table(pools: dict, v: dict) -> LootTable:
 
 
 def _is_declared_ref(ref, v: dict) -> bool:
-    """这条引用是否被包内声明解释过（内联 / 特殊值 / 外部自管）。"""
+    """这条引用是否被包内声明解释过（内联 / 特殊值 / 外部自管 / 前缀→域）。
+
+    「前缀→域」声明的引用算**被解释过**：它由包自己的表判对错（审计会给结论），
+    预览不必再补一句「这里要内容侧 resolver」。
+    """
+    pre = v.get("ref_prefix_keys") or {}
     return (ref in v["special_refs"]
             or ref.startswith(v["inline_prefixes"])
+            or any(ref.startswith(p) for p in pre)
             or (bool(v["external_prefixes"]) and ref.startswith(v["external_prefixes"])))
 
 

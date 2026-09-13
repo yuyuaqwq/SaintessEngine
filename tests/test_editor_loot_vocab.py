@@ -269,8 +269,10 @@ def t5_no_side_effects():
         same_rolls = [(r["pool"], r["chance"], r["cutoff"]) for r in a.get("rolls") or []] == \
                      [(r["pool"], r["chance"], r["cutoff"]) for r in b.get("rolls") or []]
         check(f"{label} 的条目/抽行逐值不变（只有审计判定变）", same_entries and same_rolls, f"{key}")
-    check("声明不改引擎判定：`equip:` 在引擎内仍不是 inline 前缀（框架用 resolvable 单独处理）",
-          "equip:" not in v["inline_prefixes"] and "equip:" in v["external_prefixes"], str(v)[:160])
+    check("声明不改引擎判定：`equip:` 仍不是 inline 前缀（不参与展开外列），而改走「前缀→域」**真判**",
+          "equip:" not in v["inline_prefixes"]
+          and v["ref_prefix_domains"].get("equip:") == "equip_roster"
+          and "equip:" not in v["external_prefixes"], str(v)[:160])
     a = LV.build_file(data, EQUIP_POOL)
     b = LV.build_file(data, EQUIP_POOL, v)
     check("`external_prefixes` 只影响判定、**不**混进展开外列（该池展开数不变）",
@@ -283,6 +285,100 @@ def t5_no_side_effects():
           f"{c['expanded_count']} -> {d['expanded_count']}")
 
 
+def t6_prefix_domains():
+    """`ref_prefix_domains`：带前缀的引用也能**真判**（剥前缀查那个域的主键）。
+
+    这一节的核心是「收紧」：`external_prefixes` 只能说「别喊断链」，而这一条能说
+    「这条引用对不上名册就是错的」。同时守三条纪律：只声明 external 时行为与旧版逐值相同、
+    域名不认识时该前缀当没说（不制造假红）、`load_vocab()` 的结果再进 `audit_file()` 不掉语义。
+    """
+    print("\n-- 6. 前缀→域（ref_prefix_domains）：带前缀的引用也真判 --")
+    pools = {"p1": {"type": "weighted", "entries": [
+        {"item": "equip:eq_in", "weight": 1},       # 名册里有
+        {"item": "equip:eq_out", "weight": 1},      # 名册里没有 → 真断链（收紧的意义所在）
+        {"item": "raw_in", "weight": 1},            # 裸 ref → 由 ref_domains 判
+    ]}}
+    d = tempfile.mkdtemp(prefix="fw_loot_prefix_")
+    root = os.path.join(d, "pkg")
+    os.makedirs(os.path.join(root, "content", "data"))
+    os.makedirs(os.path.join(root, "content", "rules"))
+    with open(os.path.join(root, "game.json"), "w", encoding="utf-8") as f:
+        json.dump({"id": "pkg", "name": "pkg", "engine": ">=0.1",
+                   "domains": ["drop_pools", "equip_roster"]}, f)
+    with open(os.path.join(root, "content", "data", "equip_roster.json"), "w", encoding="utf-8") as f:
+        json.dump({"eq_in": {"name": "在册"}, "other": {"name": "别的"}}, f, ensure_ascii=False)
+    with open(os.path.join(root, "content", "data", "items.json"), "w", encoding="utf-8") as f:
+        json.dump({"raw_in": {"name": "裸引用在 items 里"}}, f, ensure_ascii=False)
+    with open(os.path.join(root, POOLS_REL), "w", encoding="utf-8") as f:
+        json.dump(pools, f, ensure_ascii=False)
+
+    def declare(obj):
+        with open(os.path.join(root, VOCAB_REL), "w", encoding="utf-8") as f:
+            json.dump({"drop_pools": obj}, f, ensure_ascii=False)
+
+    def msgs(rep):
+        return [i["message"] for i in (rep.get("issues") or [])]
+
+    # ① 只声明「前缀→域」：在册的不报、不在册的**必须报**（这就是比 external 严的地方）
+    declare({"version": 1, "ref_prefix_domains": {"equip:": "equip_roster"}})
+    v = LV.load_vocab(root)                      # 真调用形状：load_vocab → audit_file（幂等）
+    rep = LV.audit_file(pools, v)
+    check("声明前缀→域后：在册的解得开、不在册的报断链（一共只报 1 条）",
+          rep["issue_count"] == 1 and "equip:eq_out" in msgs(rep)[0],
+          f"{rep['issue_count']} {msgs(rep)}")
+    check("裸 ref 未被牵连（没声明 ref_domains 时它照旧不判）",
+          "raw_in" not in " ".join(msgs(rep)), msgs(rep))
+
+    # ② 只声明 external_prefixes → 旧行为：该前缀一律不问（连不在册的也不报）
+    declare({"version": 1, "external_prefixes": ["equip:"]})
+    rep = LV.audit_file(pools, LV.load_vocab(root))
+    check("只声明 external_prefixes 时与旧版逐值一致（该前缀下一条都不报）",
+          not any("equip:" in m for m in msgs(rep)), msgs(rep))
+
+    # ③ 同一前缀两处都声明 → 更严的那句说了算（external 不能把收紧的话盖掉）
+    declare({"version": 1, "external_prefixes": ["equip:"],
+             "ref_prefix_domains": {"equip:": "equip_roster"}})
+    rep = LV.audit_file(pools, LV.load_vocab(root))
+    check("同一前缀 external + 前缀→域 并存 → 以更严的为准（仍报 1 条）",
+          rep["issue_count"] == 1 and "equip:eq_out" in msgs(rep)[0], msgs(rep))
+
+    # ④ 域名不认识 / 表不在包里 → 该前缀当没说：绝不把整族引用判成断链（假红）
+    declare({"version": 1, "ref_prefix_domains": {"equip:": "no_such_domain"}})
+    v = LV.load_vocab(root)
+    rep = LV.audit_file(pools, v)
+    check("域名不认识 → 声明降级成「没说」（declared=False 且 0 断链）",
+          v["declared"] is False and rep["issue_count"] == 0, f"{v['declared']} {msgs(rep)}")
+
+    # ⑤ 多个前缀命中时长的先比（`equip:eq_in` 不该被 `equip:` 抢走）
+    declare({"version": 1, "ref_prefix_domains": {"equip:": "equip_roster", "equip:eq_in": "items"}})
+    rep = LV.audit_file(pools, LV.load_vocab(root))
+    check("长前缀优先：`equip:eq_in` 按 items 判（items 里没有 → 报）",
+          any("equip:eq_in" in m for m in msgs(rep)), msgs(rep))
+
+    # ⑥ 幂等：归一过的形状再归一次不丢「前缀→域」（丢了 = 服务端把整族引用全报断链）
+    declare({"version": 1, "ref_prefix_domains": {"equip:": "equip_roster"}})
+    v1 = LV.load_vocab(root)
+    v2 = LV.normalize_vocab(v1)                  # 不带 pkg_dir 再归一次
+    check("幂等：normalize 过的声明再 normalize 仍保留前缀→域（不带 pkg_dir 也不丢）",
+          dict(v2["ref_prefix_keys"]) == dict(v1["ref_prefix_keys"]) and v2["declared"],
+          f"{v1['ref_prefix_keys']} -> {v2['ref_prefix_keys']}")
+
+    # ⑦ 预览侧：被「前缀→域」解释过的引用，不再补一句「要内容侧 resolver」
+    declare({"version": 1, "ref_prefix_domains": {"equip:": "equip_roster"}})
+    prev = LV.build_file(pools, "p1", LV.load_vocab(root))
+    check("预览不为已声明的前缀引用补「需要内容侧 resolver」这句",
+          not any("resolver" in w for w in (prev.get("warnings") or [])), prev.get("warnings"))
+
+    # ⑧ 外列语义不变：前缀→域 也**不**参与 expand 外列（不猜权重）
+    declare({"version": 1, "ref_prefix_domains": {"equip:": "equip_roster"}})
+    a = LV.build_file(pools, "p1")
+    b = LV.build_file(pools, "p1", LV.load_vocab(root))
+    check("前缀→域 不改变展开数（只影响审计判定）",
+          a["expanded_count"] == b["expanded_count"] and a["expanded_unique"] == b["expanded_unique"],
+          f"{a['expanded_count']} vs {b['expanded_count']}")
+    shutil.rmtree(d, ignore_errors=True)
+
+
 def main():
     print("== 掉落池「包内引用词汇声明」门禁 ==")
     if not os.path.exists(os.path.join(REAL_PKG, POOLS_REL)):
@@ -293,6 +389,7 @@ def main():
     t3_bad_declarations()
     t4_http()
     t5_no_side_effects()
+    t6_prefix_domains()
     print(f"\n===== 结果：通过 {PASS} / {PASS + FAIL} =====")
     for f in FAILURES:
         print("  ❌", f)

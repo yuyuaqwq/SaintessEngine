@@ -21,11 +21,12 @@
       "weighted:",
       "fixed:"
     ],
-    "external_prefixes": [
-      "equip:"
-    ],
+    "external_prefixes": [],
     "ref_domains": [
       "items"
-    ]
+    ],
+    "ref_prefix_domains": {
+      "equip:": "equip_roster"
+    }
   }
 }
