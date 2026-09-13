@@ -156,10 +156,10 @@ actor["triggers"][event]
    → ACTIONS_HANDLERS[动词](battle, caster, target, params, logs)
 ```
 
-`apply_effects`（`effects.py:137`）里的两条通用规则：
+`apply_effects`（`effects.py:165`）里的两条通用规则：
 
-1. **概率 roll**：`eff["chance"]` 存在时 `random() >= chance` 就跳过（`effects.py:155-161`）
-2. **参数合并**：`_merge_params` 让调用方参数优先于映射默认（`effects.py:125-134`）
+1. **概率 roll**：`eff["chance"]` 存在时 `random() >= chance` 就跳过（`effects.py:183-189`）
+2. **参数合并**：`_merge_params` 让调用方参数优先于映射默认（`effects.py:153-162`）
 
 ## 引擎自然点位速查（26 个事件里哪些引擎会自己喊）
 

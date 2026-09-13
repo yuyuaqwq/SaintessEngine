@@ -142,6 +142,36 @@ def main():
     check("纯引擎清单走缓存（同一对象）", AC.inventory(None) is AC.inventory(None))
     check("use_cache=False 可强制重扫", AC.inventory(None, use_cache=False) is not AC.inventory(None))
 
+    # ---------- 3b. 声明表引用的动作是否都实现了（「声明了没实现」不该静默） ----------
+    #   为什么守：`fire()` 对没注册的动作名**静默跳过**（不报错、不触发）——
+    #   声明表说「用 passive_xxx」，而没人实现它时，玩法只是"没效果"，没有任何提示。
+    rules_dir = os.path.join(pkg, "content", "rules")
+    os.makedirs(rules_dir, exist_ok=True)
+    with open(os.path.join(rules_dir, "passive_proc.json"), "w", encoding="utf-8") as f:
+        json.dump({"p_ok_pkg": {"action": "tst_plain"},                       # 包内实现 ✓
+                   "p_ok_engine": {"action": "damage"},                       # 引擎内置 ✓
+                   "p_bad": {"action": "nope_verb"},                          # 没实现 ✗
+                   "p_bad_also": {"action": "damage",                         # also 里的坏名字也要抓
+                                  "also": [{"event": "act_done", "action": "bad_verb"}]}},
+                  f, ensure_ascii=False)
+    dec = AC.declared_action_names(pkg)
+    check("收集到声明引用的动作名（含 also 里的）",
+          dec["declared"] == ["bad_verb", "damage", "nope_verb", "tst_plain"], dec["declared"])
+    dm = AC.declared_missing(pkg)
+    check("★ 只报「没实现」的（包内实现与引擎内置都不报）",
+          dm["missing"] == ["bad_verb", "nope_verb"] and dm["ok"] is False, dm["missing"])
+    check("报缺口时带上引用它的条目 key（便于定位）",
+          dm["sources"].get("nope_verb") == ["p_bad"] and dm["sources"].get("bad_verb") == ["p_bad_also"],
+          dm["sources"])
+
+    # 真包当前进度（P4 的进度条：声明了 N 个动作 / 实现了 M 个）
+    real = AC.declared_missing(os.path.join(ROOT, "games", "orlandia"))
+    check("真包：声明的动作一个都没实现（= P4 还没搬 mech/；这正是进度条的意义）",
+          real["missing"] == sorted(real["missing"]) and len(real["missing"]) == real["declared"],
+          f"declared={real['declared']} missing={len(real['missing'])}")
+    print(f"    （真包进度：声明 {real['declared']} 个动作 / 已实现 {real['implemented']} 个"
+          f"（引擎内置+包内）/ 缺 {len(real['missing'])} 个）")
+
     # ---------- 4. API 接线 ----------
     gd = tempfile.mkdtemp(prefix="fw_actions_games_")
     SRV.GAMES_DIR = gd

@@ -55,16 +55,16 @@ config.set_config("effect_actions", {
 })
 ```
 
-翻译规则（`effects.resolve_actions`，`effects.py:107`）：
+翻译规则（`effects.resolve_actions`，`effects.py:135`）：
 
 | 表里写什么 | 引擎怎么处理 |
 |---|---|
 | `"名词": [{"action": "动词", ...参数}]` | 逐个执行；`action` 之外的键是**映射默认参数** |
 | `"名词": {"action": "动词", ...}` | 等价于单元素列表 |
 | 表里没有该名词，但名字本身是已注册动词 | 按动词直通执行 `{"action": <名词>}` |
-| 表里没有、也不是动词 | **静默跳过**（`effects.py:163-164` `continue`） ← 最常见的「我的效果没生效」原因 |
+| 表里没有、也不是动词 | **静默跳过**（`effects.py:191-192` `continue`） ← 最常见的「我的效果没生效」原因 |
 
-参数合并语义（`_merge_params`，`effects.py:125`）：**调用方显式给的参数优先**，
+参数合并语义（`_merge_params`，`effects.py:153`）：**调用方显式给的参数优先**，
 映射默认只在该参数缺失/为 None 时补位。所以同一名词被不同技能引用时，
 技能数据可以覆盖 `pct`。
 
@@ -124,9 +124,9 @@ hero hp: 65
 ## 名词也可以直接挂在技能数据上
 
 上面走的是「事件触发」路子。另一条路是**技能数据驱动**：技能 dict 里的 `mech`
-字段经 `effects_from_skill`（`effects.py:188`）转成 effect 列表，在命中后由
+字段经 `effects_from_skill`（`effects.py:216`）转成 effect 列表，在命中后由
 `_apply_hit_effects`（`actions.py:515`）执行。分派判据见 `_mech_to_effect`
-（`effects.py:207`）——「叠层资源型」走 `apply op=add`，否则保留名词走 `EFFECT_ACTIONS`。
+（`effects.py:235`）——「叠层资源型」走 `apply op=add`，否则保留名词走 `EFFECT_ACTIONS`。
 
 更完整的机制写法（judge 谓词 / 乘区钩子 / 计数器）见
 [../guides/write-a-mechanic.md](../guides/write-a-mechanic.md)。

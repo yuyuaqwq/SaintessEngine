@@ -38,7 +38,7 @@ WIKI_DIR = os.path.join(FW_ROOT, "docs", "engine-wiki")
 _COMMON = {
     "name": {"zh": "名称", "note": "显示名。多数表里它也是引擎日志/索引用的标识（技能冷却表即以显示名为 key，改名等于放弃旧冷却条目）。",
              "ref": ("reference/skill-availability.md", "cd")},
-    "desc": {"zh": "描述", "note": "展示文案。**必填且不能为空串**（schema minLength=1）—— 新建条目被拦，最常见就是这里。",
+    "desc": {"zh": "描述", "note": "展示文案。**是否必填以该域 schema 为准**：物品/技能等域是「必填且非空」（minLength=1，新建被拦最常见就是这里）；名册/挂载类域（如装备名册、交互点、宠物）**允许无描述** —— 那些域在上面的域注脚里各自写明，覆盖本条。",
              "ref": None},
     "kind": {"zh": "类型 / 门类", "note": "分派用的类型。技能侧它决定走哪条执行链（伤害 / 治疗 / 增益）。",
              "ref": ("concepts/actor-model.md", "kind")},

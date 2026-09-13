@@ -93,11 +93,39 @@ ActionHandler = Callable
 
 
 def register_action(key):
-    """装饰器：注册动词执行器。"""
+    """装饰器：注册动词执行器。
+
+    注册是**覆盖式**（同名后注册者胜）—— 包在开发/热重载时会反复 import，覆盖是有意的。
+    但"覆盖"也意味着**写错名字不会报错**：你会静默多出一个谁也没引用的动作，而声明表引用的
+    那个动作在 `fire()` 里被静默跳过（`effects.py` 的 `ACTION_HANDLERS.get(...)` 不命中就 return）。
+    所以这里把「覆盖」记进 `REGISTERED_OVERWRITES`（只做诊断、不改行为），
+    另提供 `action_names()` / `missing_actions(declared)` 给加载器与门禁做**启动自检**：
+    「声明里引用的动作都注册了吗」应该是加载期能回答的问题，而不是等它静默不触发。
+    """
     def deco(fn):
+        if key in ACTION_HANDLERS:
+            REGISTERED_OVERWRITES.append(str(key))
         ACTION_HANDLERS[key] = fn
         return fn
     return deco
+
+
+# 被重复注册（覆盖）过的动作名，按注册顺序追加（诊断用；见 register_action 的说明）
+REGISTERED_OVERWRITES: list = []
+
+
+def action_names() -> list:
+    """已注册的动作名（含引擎内置 8 个），排序。"""
+    return sorted(ACTION_HANDLERS)
+
+
+def missing_actions(declared) -> list:
+    """`declared`（声明表里引用的动作名，可迭代）里**没有注册实现**的那些，排序返回。
+
+    用法（加载器/门禁）：为空 = 「声明了没实现」不存在；非空 = 列出来的名字在战斗中会被静默跳过。
+    """
+    have = set(ACTION_HANDLERS)
+    return sorted({str(n) for n in (declared or ()) if str(n) not in have})
 
 
 # ============================================================

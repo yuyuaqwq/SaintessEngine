@@ -402,7 +402,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
 | ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 本引擎不实现） |
 | `config.set_hook` | `config.py:123` | 零外部引用（都走 `mount`） |
-| `effects.resolve_actions` | `effects.py:107` | 零外部引用（引擎内部调用） |
+| `effects.resolve_actions` | `effects.py:135` | 零外部引用（引擎内部调用） |
 | `ai.eval_when` | `ai.py:152` | 零外部引用（`resolve_ai_move` 内部调） |
 | ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |
 | ~~`Battle.DEFAULT_CT_WAIT`~~ | — | **已删**（2026-09-11） |

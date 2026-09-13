@@ -70,6 +70,55 @@ def find(actions: list, name: str):
     return None
 
 
+# 声明表里「引用动作名」的字段（新增声明表时在这里登记，别让收集逻辑散落）
+_PROC_ACTION_FIELD = "action"          # passive_proc.<key>.action = 动词名
+_PROC_ALSO_FIELD = "also"              # passive_proc.<key>.also = [{event, action, …}, …]
+
+
+def declared_action_names(pkg_dir: str) -> dict:
+    """包内**声明表**引用到的动作名（声明说「用哪个动词」，动词得有人实现）。
+
+    目前来源：`passive_proc` 的 `action` 与 `also[].action`（`also` 可能是 dict、也可能是 list）。
+    返回 `{declared: [名字…], sources: {名字: [条目 key…]}}`（排序稳定，便于门禁比对）。
+    """
+    try:
+        from editor import packages as PK
+        tbl = PK.read_json(PK.domain_path(pkg_dir, "passive_proc"), {})
+    except Exception:                                          # noqa: BLE001
+        tbl = {}
+    src: dict = {}
+
+    def take(v, key):
+        if isinstance(v, str) and v.strip():
+            src.setdefault(v.strip(), set()).add(key)
+
+    for key, e in (tbl.items() if isinstance(tbl, dict) else []):
+        if not isinstance(e, dict):
+            continue
+        take(e.get(_PROC_ACTION_FIELD), str(key))
+        also = e.get(_PROC_ALSO_FIELD)
+        for one in (also if isinstance(also, list) else [also]):
+            if isinstance(one, dict):
+                take(one.get(_PROC_ACTION_FIELD), str(key))
+    return {"declared": sorted(src), "sources": {k: sorted(v) for k, v in sorted(src.items())}}
+
+
+def declared_missing(pkg_dir: str) -> dict:
+    """声明里引用、但**没有实现**的动作（引擎内置 + 包内 `mech/` 都算实现）。
+
+    为什么要它：`fire()` 对没注册的动作名是**静默跳过**（不报错、不触发）——
+    「声明了没实现」应该在加载/检查期就能回答，而不是等它静默不生效。
+    返回 `{declared: n, implemented: n, missing: [名字…], sources: {名字: [条目…]}, ok: bool}`。
+    """
+    inv = inventory(pkg_dir)
+    have = {a.get("name") for a in (inv.get("actions") or []) if isinstance(a, dict)}
+    dec = declared_action_names(pkg_dir)
+    missing = [n for n in dec["declared"] if n not in have]
+    return {"declared": len(dec["declared"]), "implemented": len(have),
+            "missing": missing, "sources": {n: dec["sources"][n] for n in missing},
+            "ok": not missing}
+
+
 def suggest_keys(action: dict | None) -> list:
     """必填参数键（供「一键补键」）。"""
     if not action:

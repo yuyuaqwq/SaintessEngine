@@ -159,7 +159,7 @@ def equip_affix_bleed(actor):
         {"type": "affix_bleed_hit"})
 ```
 
-`chance: 0.2` 由 `apply_effects` 的通用 roll 消费（`effects.py:155-161`），
+`chance: 0.2` 由 `apply_effects` 的通用 roll 消费（`effects.py:183-189`），
 不需要你写 roll 代码。`op="add"` + `key` 走叠层，cap 由规则表的 `cap: 3` 管。
 
 ## 面板词条（常驻增幅）

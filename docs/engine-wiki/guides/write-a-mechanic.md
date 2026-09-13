@@ -43,7 +43,7 @@ def my_verb(battle, caster, target, params, logs):
 
 ## 参数从哪里来：`params` 的三层合并
 
-`apply_effects` 在调你的动词前做了合并（`_merge_params`，`effects.py:125`）：
+`apply_effects` 在调你的动词前做了合并（`_merge_params`，`effects.py:153`）：
 
 ```
 params = dict(效果 dict)                      ← 声明方写的一切
@@ -65,7 +65,7 @@ for k, v in 映射动作.items():
 
 | 来源 | 说明 |
 |---|---|
-| `eff["chance"]` | `apply_effects` 的通用概率 roll（`effects.py:155-161`）。`None` = 恒触发；`0.4` = 40% 才执行 |
+| `eff["chance"]` | `apply_effects` 的通用概率 roll（`effects.py:183-189`）。`None` = 恒触发；`0.4` = 40% 才执行 |
 | `_owner` | 事件总线注入的**声明者**（`effect_triggers.py:103-106`）。`params.get("_owner")` 拿宿主 —— 「谁带的这个装备」用它 |
 
 事件数值（`dmg` / `heal` / `amount` / `is_crit` / `overflow` / `source`）**不在 params 里**，
