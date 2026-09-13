@@ -26,9 +26,9 @@
       · `pct = int(round(visited * 100.0 / total)) if total else 0`（含 round 的银行家舍入，
         与真源逐字一致 —— 不要改成 `//` 或 `int*100//total`）。
 
-⚠️ **本模块不含首访材料池**（真源 `_FIRST_VISIT_MAT_POOL`）：它是 `exploration.py` 唯一的模块级
-静态表，但消费端是宿主 `record_visit()`（隐藏房间首访随机入包，本次 B8.2 未接线），且「一个域的
-所有行同形状」是框架门禁硬要求（见导出插件文件头 ②）→ 材料池**有意未进包**，留在宿主侧。
+⚠️ B8.2 当时**本模块不含首访材料池**（真源 `_FIRST_VISIT_MAT_POOL`，理由：域行须同形状）。
+**B13-L7（2026-09-14）已收口**：见文件末「② 到达子区域（首访奖励）」——
+`record_visit()` 与材料池逐字搬进本模块（池子是**代码侧常量**，不进域，域行形状未动）。
 """
 from __future__ import annotations
 
@@ -111,3 +111,193 @@ def overall_progress(visited) -> dict:
     pct = int(round(visited_n * 100.0 / total)) if total else 0
     return {"visited": visited_n, "total": total,
             "hidden_found": hidden_found, "hidden_total": hidden_total, "pct": pct}
+
+
+# ============================================================
+# ② 到达子区域（首访奖励）—— B13-L7 收口（2026-09-14）
+# ------------------------------------------------------------
+# 真源：游戏仓 `game/core/exploration.py:39 record_visit` + `:21 _FIRST_VISIT_MAT_POOL`
+#       + `:26/:34 _map_by_id/_is_hidden` + `:155-174` 材料三件套 —— **逐字搬**，只换取件：
+#
+# | 真源取件 | 包内替身 | 说明 |
+# |---|---|---|
+# | `SUBAREAS.get(map_id)` / `sa.get("hidden")` / `sa.get("id")` | 本模块探索点表（键 `地图:子区域`，字段同源） | 键空间与宿主 `visited_subareas` 逐字相同；628 点 = 628 子区域 |
+# | `_map_by_id(map_id).get("lv", 1)` | `content/data/worlds.json`（= 宿主 `MAPS` 条目原样，含 `lv`） | 缺图 → `{}` → lv=1（与真源 `_map_by_id` 返回 `{}` 同义） |
+# | `from .. import db` + `db.xxx(...)` | 模块级 `db`（`bind_host` 注入 / `sys.modules` 兜底） | 存储层留宿主（写库、读档、入包全在宿主） |
+# | `C.resolve/C.display/C.MATERIALS`（材料名↔id↔价） | 模块级 `C`（宿主 `content` 聚合层句柄） | `MATERIALS` **未进包**（BRIEF §5：无同名域）→ 缺口登记 |
+#
+# 接口不变式：`visited` 那半边（`region_progress(visited)` / `overall_progress(visited)`）签名
+# **一字未动**（宿主命令 `game/commands/exploration.py` 与 `game/core/exploration.py` 薄壳都按它调）。
+# ============================================================
+import random
+
+# v115 隐藏房间首访奖励的随机材料池（固定池）。
+# 以材料中文名为池项，运行时用 C.resolve("materials", 名) 取稳定 mat_ 拼音 id 入包。
+_FIRST_VISIT_MAT_POOL = ("草药", "铁矿石", "兽肉", "浆果", "蜂蜜")
+
+_WORLDS = _read_json(os.path.join(_DATA_DIR, "worlds.json"), {})
+
+_HOST_PKG = "data.plugins.dragonfall.game"
+_HOST_PKG_FALLBACK = "game"
+_INJECTED = {}
+
+
+def bind_host(**objs) -> None:
+    """宿主替身注入（幂等）——键 = 模块名（`db` / `content`）。宿主薄壳 import 期调用。"""
+    for k, v in (objs or {}).items():
+        if v is not None:
+            _INJECTED[k] = v
+
+
+def lazy_host_module(full_name: str):
+    """按**完整模块名**包一个惰性宿主模块句柄 —— 宿主薄壳用它注入自己那棵树的模块：:
+
+        _M.bind_host(data=_M.lazy_host_module(__package__.rsplit(".", 1)[0] + ".data"))
+
+    为什么必须由薄壳注入全名：同一进程里可能并存 `game.*` 与 `data.plugins.dragonfall.game.*`
+    两套模块树（plan §8-R2；`tests/` 两种 import 都有）—— 写目标（`_INDEXES` / `MONSTER_LOCS` /
+    派生表）必须落在**调用方那棵树**上，否则另一棵树读到空表。
+    """
+    import importlib
+
+    class _Mod:
+        def __getattr__(self, attr):
+            return getattr(importlib.import_module(full_name), attr)
+
+    return _Mod()
+
+
+def _host_module(name: str):
+    """取宿主子模块（注入优先 → `sys.modules` → importlib；**绝不静默空跑**）。"""
+    import importlib
+    import sys
+    if name in _INJECTED:
+        return _INJECTED[name]
+    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+        m = sys.modules.get("%s.%s" % (prefix, name))
+        if m is not None:
+            return m
+    last = None
+    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+        try:
+            return importlib.import_module("%s.%s" % (prefix, name))
+        except Exception as exc:                # noqa: BLE001
+            last = exc
+    raise RuntimeError("exploration：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
+
+
+class _HostMod:
+    """宿主模块替身（`db` / `content`）——正文 `db.xxx(...)` / `C.xxx(...)` 一行未改。"""
+
+    def __init__(self, name):
+        self._name = name
+
+    def __getattr__(self, attr):
+        return getattr(_host_module(self._name), attr)
+
+
+db = _HostMod("db")
+C = _HostMod("content")
+
+
+def _map_by_id(map_id: str) -> dict:
+    """在 worlds 域（= 宿主 `MAPS` 条目原样）中按 id 定位地图 dict（缺 → `{}`）。"""
+    m = _WORLDS.get(map_id)
+    return m if isinstance(m, dict) else {}
+
+
+def _is_hidden(pt: dict) -> bool:
+    """子区域是否隐藏房间（v115 新字段 hidden）。"""
+    return bool((pt or {}).get("hidden"))
+
+
+def _map_point(map_id: str, sa_id: str):
+    """该图该子区域的探索点行（宿主 `next(s for s in SUBAREAS[map] if s['id']==sa_id)` 的等价物）。"""
+    return _TABLE.get("%s:%s" % (map_id, sa_id))
+
+
+def _map_has_points(map_id: str) -> bool:
+    """该图是否有子区域（宿主 `SUBAREAS.get(map_id)` 非空的等价物）。"""
+    for _k, v in _ORDERED:
+        if v.get("map") == map_id:
+            return True
+    return False
+
+
+def record_visit(group_id, qq_id, map_id, sa_id):
+    """到达子区域时调用：记录到访 + 首访奖励。
+
+    返回：
+      - sa 不存在 / map 无子区域 → None
+      - 首访 → {"first": True, "exp": n, "gold": n, "mat": 材料名 or None}
+      - 非首访 → {"first": False}
+    """
+    if not _map_has_points(map_id):
+        return None
+    pt = _map_point(map_id, sa_id)
+    if pt is None:
+        return None
+
+    # 判断是否首访（先查集合，命中则非首访）
+    visited = db.get_visited_subareas(qq_id)
+    key = f"{map_id}:{sa_id}"
+    if key in visited:
+        return {"first": False}
+
+    # 首访：记录 + 发奖
+    db.add_visited_subarea(group_id, qq_id, map_id, sa_id)
+    cur = _map_by_id(map_id)
+    lv = int(cur.get("lv", 1) or 1)
+    exp = lv * 8
+    gold = lv * 3
+
+    player = db.get_player(group_id, qq_id)
+    if player:
+        # v115 §6.2：只加数值，不处理升级（get_player 读档有惰性升级兜底，审计确认无副作用）
+        db.update_player(group_id, qq_id,
+                         exp=player.get("exp", 0) + exp,
+                         gold=player.get("gold", 0) + gold)
+
+    mat = None
+    if _is_hidden(pt):
+        # 隐藏房间首访额外随机 1 个材料入包
+        name = random.choice(_FIRST_VISIT_MAT_POOL)
+        mat_id = C_resolve_material(name)
+        if mat_id:
+            mat_name = C_display_material(mat_id)
+            db.add_item(group_id, qq_id, mat_id,
+                        {"name": mat_name, "type": "材料", "stackable": True,
+                         "price": C_material_price(mat_id)})
+            mat = mat_name or name
+        else:
+            mat = name
+
+    # v115 协作契约：reward 为给命令层拼接展示的友好文案（world.py _subarea_arrive/传送
+    # 读取 rv["reward"] → 追加 "🎉 {reward}"）。隐藏房间首访附材料，普通首访仅经验/金币。
+    _reward = f"首次探索（{lv} 级区域）！获得经验 +{exp}、金币 +{gold}"
+    if mat:
+        _reward += f"，并拾得 {mat}"
+    return {"first": True, "exp": exp, "gold": gold, "mat": mat, "reward": _reward}
+
+
+# ---- 材料解析辅助（宿主 `content` 聚合层句柄）----
+def C_resolve_material(name):
+    """材料中文名 → mat_ 拼音 id（查不到返回原名字，add_item 兜底）。"""
+    try:
+        return C.resolve("materials", name)
+    except Exception:                            # noqa: BLE001
+        return name
+
+
+def C_display_material(mat_id):
+    """mat_ id → 显示名。"""
+    return C.display("materials", mat_id)
+
+
+def C_material_price(mat_id):
+    """mat_ id → 商店价（无定义给 10）。"""
+    try:
+        m = C.MATERIALS.get(mat_id, {})
+        return m.get("price", 10)
+    except Exception:                            # noqa: BLE001
+        return 10

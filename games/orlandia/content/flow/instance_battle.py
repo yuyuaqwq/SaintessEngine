@@ -45,8 +45,12 @@
 |---|---|---|---|
 | `T.text("instance.日志_团队治疗", name=…, amount=…)`（:183） | `team_heal_text(name, amount) -> str` | 宿主 `T.text` 渲染器（文案键在宿主） | `None` → 治疗照算、**该行不追加**（缺口，见 `overnight/b82_L4_battle_cmds.md`） |
 | `T.static("instance.结算_战斗异常")`（:311）/ `T.static("instance.面板_战斗_不在")`（:330） | `act(...)` 返回第 4 位 **abort 码**（`"no_sides"` / `"no_actor"` / `""`） | 调用方按码拼文案（对齐 `instance_gate` 的 `v.reason` 渲染口径） | —— |
-| `sync_player_from_actor(snap, actor)` | `sync_player_fn(snap, actor)` | 宿主 `services.battle_bridge.sync_player_from_actor` | `None` → 快照不回写（缺口） |
-| `db.update_player(group_id, key, hp=…, mp=…, max_hp=…, max_mp=…)` | `db_update_fn(group_id, key, hp, mp, max_hp, max_mp)` | 宿主 `db.update_player` 包装 | `None` → 不写库（缺口） |
+**B11-L2（2026-09-14）收口**：`sync_player_fn` 缺省已闭合 —— 不传 = 包内
+`content.bridge.sync_player_from_actor`（B9-L8 把回写半边搬进包内同一模块；
+宿主薄壳传的 `services.battle_bridge.sync_player_from_actor` 就是它的一层委托，两边同源）。
+
+| `sync_player_from_actor(snap, actor)` | `sync_player_fn(snap, actor)` | 宿主 `services.battle_bridge.sync_player_from_actor` | 缺省 = 包内 `content.bridge.sync_player_from_actor`（**B11-L2 闭合**，不再是缺口） |
+| `db.update_player(group_id, key, hp=…, mp=…, max_hp=…, max_mp=…)` | `db_update_fn(group_id, key, hp, mp, max_hp, max_mp)` | 宿主 `db.update_player` 包装 | `None` → 不写库（**DB 属宿主**：包内不建 DB 句柄；宿主薄壳恒传） |
 | `.boss_script` 三函数（`boss_script_cfg` / `make_script_event` / `make_script_hook`） | `script_api=模块或对象` | 宿主 `.boss_script` 模块（等价物 = 包内同名模块） | 包内 `content/flow/boss_script.py` |
 | `st` 存档（宿主持久化） | 同左 | 普通 dict（键名/类型/缺失语义一律不变） | —— |
 
@@ -439,6 +443,15 @@ def act(st: dict, group_id, qq_id, action: str, skill_name=None,
     return logs, ended, nxt, ""
 
 
+def _pkg_sync_player(snap: dict, actor: dict) -> None:
+    """缺省回写半边：包内 `content.bridge.sync_player_from_actor`（B9-L8 已搬入包内）。
+
+    宿主薄壳传的 `services.battle_bridge.sync_player_from_actor` 是它的一层委托
+    （B9-L8 报告：宿主 47 行薄壳 → 同一实现）——两边同源，缺省因此与传参行为一致。
+    """
+    BR.sync_player_from_actor(snap, actor)
+
+
 def sync_views(st: dict, group_id, sync_player_fn=None, db_update_fn=None) -> None:
     """唯一视图/DB 同步点：saintess_engine actors → 玩法壳旧键 + 玩家 DB 血量。
 
@@ -448,11 +461,14 @@ def sync_views(st: dict, group_id, sync_player_fn=None, db_update_fn=None) -> No
     - st["now"]
     - DB：存活玩家 hp/mp 写回（战斗内 DB 保持开本值每刻同步，保留现行为）
 
-    ★ 端口差异：真源 `sync_player_from_actor`（:388）与 `db.update_player`（:408）
-    是**宿主耦合**（回写半边未进包）→ 由调用方注入 `sync_player_fn` / `db_update_fn`；
-    不传 = 该回写跳过（快照/敌视图/now 仍照算）。
+    ★ 端口差异：真源 `sync_player_from_actor`（:388）→ 缺省 = 包内 `_pkg_sync_player`
+    （B11-L2 收口：B9-L8 已把回写半边搬进 `content/bridge.py`，缺省不再是「不回写」）；
+    `db.update_player`（:408）**属宿主持久化** → 仍由调用方注入 `db_update_fn`，
+    不传 = 不写库（快照/敌视图/now 仍照算）。
     """
     players = st.setdefault("players", {})
+    if sync_player_fn is None:
+        sync_player_fn = _pkg_sync_player
     for _a in _players_of(st):
         _k = str(_a.get("qq_id") or "")
         snap = players.get(_k)

@@ -8,9 +8,11 @@
 | `game/commands/social.py:672-729 pet_view` | 宠物面板（饱食度衰减结算+持久化 / 品质 / 出处 / 技能 / 亲密度 / 加成行） |
 | `game/commands/social.py:751-898 pet_feed` | 喂养全族：无参食物清单 / 批量双格式解析 / 食物白名单 / 单次与批量结算（升级循环） |
 | `game/commands/social.py:917-993 mount_cmd` | 骑乘/下马/坐骑面板（拥有校验 / 获取渠道提示 / 等级门槛 / 面板行） |
+| `game/commands/social.py:688-703 pet_rename` | 改名（**B12-L1**：宠物存在守卫 + 取前 8 字 + 落库 + 文案，见 `pet_rename_run`） |
+| `game/commands/social.py:716-728 pet_release` | 放生（**B12-L1**：宠物存在守卫 + 落库 + 文案，见 `pet_release_run`） |
 
-**未搬**（留在命令层的 IO/渲染壳）：`pet_rename`、`pet_release`（各 5~8 行，纯文案）、
-`_tip(...)` 随机提示行、`_strip_cmd` 解析、`yield event.plain_result`。
+**未搬**（留在命令层的 IO/渲染壳）：`_tip(...)` 随机提示行、`_strip_cmd` 解析、
+`yield event.plain_result`（B12-L1 起 `pet_rename` / `pet_release` 的正文已进本模块）。
 
 宿主耦合替身（**只改两类东西**：① 存储层 ② 读表口）
 ----------------------------------------------------
@@ -26,6 +28,7 @@
 由命令层补）；`False` 时 lines = `[无宠物文案]`（含图鉴行时是**一条**含 `\n` 的消息）。
 `pet_feed(group_id, qq_id, mat_name)` → 待 yield 的**消息 list**（真源每个分支 yield 一条 → 单元素 list）。
 `mount_run(group_id, qq_id, player, raw, cmd)` → 同上（面板分支是**一条多行消息**）。
+`pet_rename_run(qq_id, raw_name)` / `pet_release_run(qq_id)` → 待 yield 的消息 list（B12-L1 收口搬入）。
 
 用法::
 
@@ -382,3 +385,37 @@ def mount_run(group_id, qq_id, player, raw: str, msg: str, cmd: str, tip_fn):
         lines.append("")
         lines.append("💡 可获得的坐骑：" + "、".join(f"{_q_label(m)}{m['name']}" for m in C.MOUNT_POOL))
     return ["\n".join(lines)]
+
+
+# ============================================================
+# ⑤ 改名 / 放生（**B12-L1** 收口搬入；真源 `social.py:688-703 pet_rename` /
+#    `social.py:716-728 pet_release`）—— 返回待 yield 的消息 list
+# ============================================================
+
+def pet_rename_run(qq_id, raw_name):
+    """宠物改名：宠物存在守卫 → 名字取前 8 字 → 落库。返回待 yield 的消息 list。
+
+    真源顺序：先 `db.pet_get` 守卫（无宠物直接返回），再 `self._strip_cmd(event,"宠物改名")`
+    取参。`raw_name` = 命令层 `self._strip_cmd(event, "宠物改名")` 的原样字符串
+    （`strip()` 与 `[:8]` 截断是真源语义，留在包内）。
+    """
+    pet = db.pet_get(qq_id)
+    if not pet:
+        return ["你还没有宠物！"]
+    new_name = (raw_name or "").strip()[:8]
+    if not new_name:
+        return ["格式：宠物改名 <名字>"]
+    db.pet_update(qq_id, name=new_name)
+    return [f"🐾 你的宠物改名为【{new_name}】！"]
+
+
+def pet_release_run(qq_id):
+    """放生宠物：存在守卫 → `db.pet_delete`。返回待 yield 的消息 list（真源逐字）。
+
+    图鉴记录保留（24 章三：放生后宠物蛋可重新掉落，图鉴记录保留）。
+    """
+    pet = db.pet_get(qq_id)
+    if not pet:
+        return ["你还没有宠物～"]
+    db.pet_delete(qq_id)
+    return [f"🕊️ 你放生了【{pet['name']}】……它会记得你的。\n📖 图鉴记录已保留，之后还有机会遇到它！"]

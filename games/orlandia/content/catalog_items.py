@@ -1,0 +1,604 @@
+# -*- coding: utf-8 -*-
+"""包内物品装备族门面（`content/catalog_items.py`）—— 宿主聚合层 `C` 的「B-物品装备族」等价物。
+
+为什么需要它
+------------
+宿主 `game/content.py`（19 行）= `from .data import *` + `from .core import *`，包内模块过去靠
+宿主句柄读它的名字。宿主 `game/data`（74,707 行 / 87 文件）要删 ⇒ 这些名字必须先在包内由**域 JSON**
+重建。本模块 = B 单元（物品装备族 40 个数据名里可从域重建的 23 个）的那一层。
+
+读口纪律（B14_BRIEF §3 / 计划 §9 I1·I2）
+----------------------------------------
+* 只读包内域数据：`content/data/<域>.json` · `content/rules/<域>.json`（缺文件/坏 JSON → 空，不抛，
+  与 `content/tables.py:48 _read_json` 同款）。
+* **不 import 宿主任何模块**、**不用 `_HostMod`/`_host_attr`** —— 宿主表删掉之后本模块仍能活。
+
+域来源（真源 = 游戏仓；单向导出器 = 游戏仓 `scripts/export_game_package.py`）
+--------------------------------------------------------------------------
+    content/data/items.json             ← derive_items        ITEMS 全量 900（材料 598 是它的前缀段）
+    content/data/equip_roster.json      ← derive_equip_roster 687 装备（导出期注入 series_set/fixed_affixes）
+    content/data/runes.json             ← derive_runes        16 符文（导出期注入 craft/conflicts）
+    content/data/affixes.json           ← derive_affixes      76 词条
+    content/data/sets.json              ← derive_sets         92 套装
+    content/data/props.json             ← derive_props         59 道具（导出期注入 mounts）
+    content/data/legendary_effects.json ← derive_legendary_effects 93 传说特效
+    content/data/enhance_table.json     ← derive_enhance_table 10 行强化阶梯（键 = int 还原）
+    content/rules/game_config.json      ← derive_game_config  enhance / upgrade / refine 三组常量
+
+三处「类型还原」（JSON 只有 str 键 / 只有 array，不做还原 = 静默错值）
+--------------------------------------------------------------------
+  ① **int 键**：`ENHANCE_TABLE` / `UPGRADE_TABLE` / `ENHANCE_FAIL_DROP` / `RUNES[*]["lvl"]`
+     —— 源里是 int 键，不还原 = `.get(3)` 恒 None = 强化/升级/符文数值静默归零（与
+     `content/tables.py:ENHANCE_TABLE` 同族坑，B13-L1 头注也点过符文这一条）。
+  ② **导出期注入字段要剥**：`equip_roster.json` 的 `series_set` / `fixed_affixes`、
+     `runes.json` 的 `craft` / `conflicts`、`props.json` 的 `mounts` —— 它们是真源**别的表**
+     （`SERIES_SETS` / `SERIES_FIXED_AFFIX` / `RUNE_CRAFT` / `RUNE_CONFLICTS` / `MOUNT_POOL` 挂点）
+     折进条目的产物，留在表里会让 `EQUIP_ROSTER` / `RUNES` / `PROPS` 三条**逐条不等**。
+     本模块剥掉后，其中三张（`RUNE_CRAFT` / `RUNE_CONFLICTS` / 道具挂点）由剥出来的值重建。
+  ③ **衍生索引**：`MATERIALS_BY_NAME`（名字 → 材料条目，`MATERIALS` 值序）、
+     `EQUIP_ROSTER_BY_NAME`（名字 → [装备 id]，`EQUIP_ROSTER` 值序、重名收全 —— 实测 686 键/687 id）。
+
+⚠ 键序（迭代序）：域落盘走导出契约 `sort_table`（字典序），真源是**手写插入序** ⇒ 序不可逆
+--------------------------------------------------------------------------------------
+本模块按 `content/quests_flow.py:SIDE_QUEST_ORDER` / `content/event_menu.py:MAP_ORDER` /
+`content/tables.py:JOB_ORDER` 同一手法**显式声明真源插入序**（`_ORDER_*`，见「① 顺序声明」段），
+带集合守卫：域里多一条/少一条就 `raise`（防「加了内容忘了改这里」= 静默改序）。
+顺序字面量由 `overnight/_b14b_gen_orders.py` 从真源生成（本文件不手抄）。
+更彻底的做法是**在域里补 `seq`/`order` 字段**（I3 反向可逆性）—— 已登记给主 agent 裁。
+
+⚠ 无域可依的名字（17 个）：本模块**不提供**（不许编数据），逐名缺口见 `overnight/W-B14-B.md`：
+    EQUIP_SLOTS · QUALITY_ORDER · WEAPON_FLAVOR        —— 宿主 `game/data/equipment.py`（无域）
+    GEM_TIERS · GEM_TIER_NAMES · GEM_SOCKETS · GEM_DRILL · GEM_LEGENDARY_EFFECTS · RUNE_REMOVE_COST
+                                                        —— 宿主 `game/data/gems.py`（无域）
+    ENCHANT_SLOTS · ENCHANT_RECIPES · ENCHANT_CRIT_CHANCE —— 宿主 `game/data/enchant.py`（无域）
+    RUNE_DROP · RUNE_LEVEL_ROMAN · RUNE_CRAFT_SHARDS    —— 宿主 `game/data/runes.py`（常量段，无域）
+    AFFIX_POOL_BY_QUALITY · AFFIX_AFFINITY_CN           —— 宿主 `game/data/affixes.py`（配套索引，无域）
+"""
+from __future__ import annotations
+
+import json
+import os
+
+_HERE = os.path.dirname(os.path.abspath(__file__))          # <pkg>/content
+_DATA_DIR = os.path.join(_HERE, "data")
+_RULES_DIR = os.path.join(_HERE, "rules")
+
+
+def _read_json(path: str, default):
+    """读一个 JSON 文件（缺文件 / 坏 JSON / 权限 → default，不抛）。"""
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:                                        # noqa: BLE001
+        return default
+
+
+def _read_domain(domain: str, sub: str, default):
+    """读包内 `content/<sub>/<domain>.json`（`sub` = data|rules）。"""
+    return _read_json(os.path.join(_HERE, sub, f"{domain}.json"), default)
+
+
+# ============================================================
+# ② 域（只读；缺域 → 空表 + 记进 `missing_domains()`，不静默造数）
+# ============================================================
+_ITEMS: dict = _read_domain("items", "data", {})
+_EQUIP_ROSTER_RAW: dict = _read_domain("equip_roster", "data", {})
+_RUNES_RAW: dict = _read_domain("runes", "data", {})
+_AFFIXES_RAW: dict = _read_domain("affixes", "data", {})
+_SETS_RAW: dict = _read_domain("sets", "data", {})
+_PROPS_RAW: dict = _read_domain("props", "data", {})
+_LEGENDARY_RAW: dict = _read_domain("legendary_effects", "data", {})
+_ENHANCE_TABLE_RAW: dict = _read_domain("enhance_table", "data", {})
+_GAME_CONFIG: dict = _read_domain("game_config", "rules", {})
+_CFG_ENHANCE: dict = dict(_GAME_CONFIG.get("enhance") or {})
+_CFG_UPGRADE: dict = dict(_GAME_CONFIG.get("upgrade") or {})
+_CFG_REFINE: dict = dict(_GAME_CONFIG.get("refine") or {})
+
+# __B14B_ORDERS_BEGIN__
+_ORDER_MATERIALS = """
+mat_wang_ying_kai_jia_pian mat_tu_zhi_can_ye mat_bp_lie_zong_liao_ya mat_bp_tie_ya_lang_pi mat_bp_lan_ge_zhi_lei mat_bp_lei_ming_long_lin mat_bp_jin_he_zhi_xin mat_bp_ao_la_sheng_yin
+mat_bp_mu_ying_long_hun mat_qiu_ling_lang_pi mat_wu_zei_wan_zu mat_yun_nu_zhi_he mat_yun_dian_kai_jia mat_yun_xiong_mao mat_yun_xu mat_wang_ying_zhan_hui
+mat_guang_zhi_sheng_dian mat_ke_luo_de_luo_pan mat_tu_mao mat_tu_pi mat_shou_ren_zhan_hui mat_shou_ren_fu_ren mat_bing_yuan_su_he_xin mat_bing_xiong_pi
+mat_bing_lang_ya mat_bing_tong_zhi_zhu mat_bing_she_lin mat_dong_yu_lin mat_jian_chi_hu_ya mat_fu_guan_xun_zhang mat_jie_lve_zhe_hui_ji mat_gu_dai_wen_xian
+mat_gu_mu_zhi mat_gu_shu_zhi_xin mat_gu_wang_jian mat_gu_long_yi_jia mat_gu_long_lin mat_shi_lai_mu_hui_zhang mat_shi_lai_mu_nian_ye mat_gu_lu_de_huang_guan
+mat_ge_bu_lin_hui_ji mat_ge_bu_lin_er_zhui mat_ge_bu_lin_er_duo mat_ge_bu_lin_tie_pian mat_sheng_guang_sheng_hui mat_sheng_guang_jie_jing mat_sheng_dian_tie_kuai mat_sheng_shui
+mat_di_di_e_mo_jiao mat_di_di_long_lin mat_di_yu_quan_ya mat_duo_luo_jing_ling_hu_fu mat_ye_ge_zhi_yan mat_da_shi_lai_mu_he mat_tian_kong_zhan_ren mat_tian_ying_yu
+mat_ao_la_sheng_yin mat_nu_pu_suo_lian mat_bao_zi_nang mat_shou_wei_gu_mu mat_shou_wei_kai_jia_sui_pian mat_shou_hu_zhe_sui_pian mat_shen_pan_guan_zhi_lian mat_xiao_e_mo_jiao
+mat_shan_yang_jiao mat_lan_ge_zhi_yu mat_dao_zhu_ya mat_yan_jiang_ru_chong_pi mat_yan_yang_mao mat_yan_xi_lin mat_yan_shu_ya mat_yan_long_lin
+mat_ju_shou_zhi_ya mat_ju_xing_ye_zhu_ya mat_ju_mo_ya mat_ju_mo_liao_ya mat_ju_mo_xue mat_ju_lu_yu_gu mat_ju_e_lin mat_ju_ying_yu
+mat_ju_gui_jia mat_wu_shi_fa_zhang_sui_pian mat_you_long_lin mat_you_ling_zhi_chen mat_you_ling_fan_bu mat_you_hun_chen mat_wan_dao_sui_pian mat_qiang_hua_shi
+mat_cai_hong_lu mat_cai_hong_lin mat_ying_bao_pi mat_yuan_ling_zhi_chen mat_guai_wu_tu_jian_sui_pian mat_e_mo_zhan_ren mat_cheng_nian_long_lin mat_zhan_zheng_ji_qi_ling_jian
+mat_zhan_hun_zhi_chen mat_mo_luo_zhi_guan mat_ao_lan_zhi_zhu mat_jiao_guan_zhi_jian mat_xing_lang_pi mat_xing_hui_chen mat_chen_xi_zhi_guan mat_an_ying_hui_ji
+mat_an_ying_jing_ling_ren mat_mu_ying_long_hun mat_yue_guang_jing_hua mat_yue_ying_zhi_zhao mat_yue_xiong_pi mat_yue_lang_mao_pi mat_yue_lu_jiao mat_mu_zhuang_sui_pian
+mat_shu_shi_fa_zhang mat_ji_xie_ling_jian mat_jie_ke_de_jin_gou mat_ji_guang_hu_wei mat_lin_yu_zhi_ye mat_ran_xue_sheng_dian mat_ran_xue_ji_qi mat_ran_hei_sheng_dian
+mat_ran_hei_sheng_ling mat_ran_hei_mei_gui mat_can_hai_he_xin mat_mu_zhu_pi mat_shui_shou_gu_pai mat_shui_mu_ning_jiao mat_shui_jing_ling_lei mat_shui_jing_ling_lin
+mat_shui_zhi_wang_ya mat_shui_gui_zhi_lei mat_chen_mu mat_he_tun_du_su mat_he_long_ling_zhu_lin mat_he_long_lin mat_hai_yao_zhi_yu mat_hai_yao_lin
+mat_hai_yao_lin_pian mat_hai_ju_ren_lin mat_hai_xing_pian mat_hai_yan_jie_jing mat_hai_shen_ji_qi mat_hai_zao_chan_rao mat_hai_she_lin mat_hai_ou_yu_mao
+mat_xiao_hao_pin mat_tao_sheng_jing_jiao mat_shen_hai_qi_shi_jia mat_shen_yuan_shou_wei_jia mat_shen_yuan_e_mo_jiao mat_shen_yuan_fa_shi_zhang mat_shen_yuan_quan_ya mat_shen_yuan_qi_shi_kui_jia_sui_pian
+mat_yuan_ying_zhi_lin mat_hu_bing_he_xin mat_hu_yao_lei mat_hu_ling_lei mat_hu_wang_zhu mat_xi_xi_lin mat_xi_lu_pi mat_ni_gu_zhi_mao
+mat_xuan_wo_lei mat_chao_xi_zhi_lei mat_chao_xi_sui_pian mat_chao_xi_bei_ke mat_chao_xi_hu_fu mat_lan_ge_zhi_lei mat_huo_xi_yi_lin mat_huo_fu_yi
+mat_hui_ying_lang_ya mat_hui_ai_ren_hui_ji mat_jin_he mat_jin_he_zhi_xin mat_jin_yi_long_lin mat_yan_yi_long_lin mat_rong_yan_he_xin mat_rong_yan_jia_ke
+mat_rong_yan_ru_chong_pi mat_rong_yan_ling_zhu_he mat_niu_jiao mat_kuang_zhan_shi_yao_dai mat_gou_ya mat_lang_wang_ya mat_lang_pi mat_lie_quan_xiang_quan
+mat_meng_ma_mao mat_shan_hu_zhi mat_jia_ke_can_pian mat_bai_zu_hui_zhang mat_dao_zei_mian_jin mat_mang_yu_lin mat_zhen_jun_rou mat_shi_lu_zhi_chui
+mat_shi_xi_lin mat_shi_long_lin mat_kuang_shi_sui_pian mat_kuang_mo_zhi_jiao mat_sui_lie_feng_yin_shi mat_sui_gu mat_tu_jiu_yu mat_zhang_yu_mo_nang
+mat_fu_wen_shi mat_jing_ling_guo mat_jing_ling_lu_jiao mat_jing_rui_pei_jian mat_hong_ji_shan_hu mat_lv_lu_jiao mat_cui_lu_jiao mat_fei_cui_sen_lin
+mat_fu_guan_jun mat_fu_ya_shou_ya mat_fu_ya_zhan_hui mat_fu_rou mat_fu_shi_shou_zhao mat_chuan_zhang_luo_pan mat_cao_yuan_lang_pi mat_ying_guang_hu_wei
+mat_ying_guang_fen mat_sa_man_tu_teng mat_lan_ge_zhi_guan mat_xu_kong_quan_ya mat_she_pi mat_feng_zhen mat_zhi_zhu_si mat_bian_fu_yi
+mat_fu_yi mat_xie_ke mat_lie_zong_liao_ya mat_chu_shou_pi mat_gu_di_lu_shui mat_chi_yi_yu mat_he_er_jia_de_ji_qi mat_chen_guang_long_lin
+mat_xun_meng_long_zhao mat_yuan_gu_fu_wen_shi mat_ye_zhu_ya mat_jin_yan_hu_pi mat_tie_ya_lang_pi mat_tie_jia_zhu_pi mat_yin_hui_yue_shi mat_yin_zong_lang_pi
+mat_xiu_jian_sui_pian mat_xiu_jia_sui_pian mat_fu_mo_fen_chen mat_yun_xing_he mat_xue_tu_pi mat_xue_ling_liao_ya mat_xue_lang_pi mat_lei_jing
+mat_lei_xi_pi mat_lei_ting_zhi_xin mat_lei_man_pi mat_lei_niao_yu mat_lei_ming_zhi_yi mat_lei_ming_long_lin mat_wu_guan_jing mat_shuang_ju_mo_wang_jiao
+mat_shuang_ju_mo_xue mat_shuang_ya_long_lin mat_shuang_bai_liao_ya mat_shuang_yu_sheng_dian mat_shuang_yu_ju_mo_xue mat_xia_guang_long_lin mat_ling_zhu_gu_mu_xin mat_ling_zhu_gu_jia
+mat_feng_zhi_he_xin mat_feng_zhi_yu mat_feng_bao_zhi_ling_chen mat_feng_bao_shou_pi mat_feng_bao_he_xin mat_feng_bao_ying_yu mat_feng_yu_jie_jing mat_feng_yu_lu_jiao
+mat_feng_long_yu mat_ma_er_ku_si_de_fa_guan mat_qi_shi_hui_ji mat_gu_chong_ke mat_gu_mo_xiang_he mat_gu_jiu_yu mat_gu_long_can_hai mat_hai_wang_long_gu
+mat_gao_ji_qiang_hua_shi mat_lie_xi_pi mat_mo_xiang_he_xin mat_mo_xiang_can_he mat_mo_yan_zhi_he mat_jiao_ren_lin mat_sha_yu_ya mat_e_yu_pi
+mat_ying_wu_yu mat_mai_jiu mat_li_ming_zhi_guang mat_li_ming_zhi_guang_sui_pian mat_hei_an_jing_ling_ren mat_hei_yao_sui_pian mat_hei_yuan_zhi_yan mat_hei_ya_pi_feng
+mat_long_zai_zhao mat_long_xia_ke mat_long_yi_can_hun mat_long_yu_chuan_cheng mat_long_hun_sui_pian mat_long_jing_zhi mat_long_lin_shou_pi mat_long_lin_shou_cang
+mat_long_lin_sui_pian mat_sheng_guang_bai_he mat_qi_shi_tuan_hui_ji mat_luo_lan_de_duan_jian mat_cao_yao mat_jiang_guo mat_ye_mei mat_mian_tuan
+mat_yue_guang_cao mat_zhao_ze_hua mat_bing_jing mat_long_xue_cao mat_tie_kuang_shi mat_shi_cai mat_jing_tie mat_mi_yin
+mat_jing_jin mat_yuan_zhi mat_shou_rou mat_mian_fen mat_kong_ping mat_yu_mao mat_shou_xue mat_shui_jing
+mat_mo_fa_fen_chen mat_yin_lin_yu mat_jin_li mat_di_wang_gui mat_mang_yu mat_ye_guang_jiao mat_jiao_ren_lei mat_shen_hai_shui_jing
+mat_long_xian_xiang mat_gu_dai_yu_gu mat_yao_sai_can_pian mat_shi_lian_hui_ji mat_yue_hui_sui_pian mat_yong_dong_zhi_he mat_feng_bao_zhi_he mat_yue_guang_yu
+mat_xi_zun mat_qing_wen_lu mat_zhao_ya_shan mat_deng_yu_xue mat_bing_lin_xun mat_lei_wen_qing mat_shen_mi_lin_pian mat_hu_zhen_zhu
+mat_hai_zao mat_zhen_zhu_bei mat_jing_xu_cao mat_lei_jing_sha mat_feng_bao_bei mat_shen_yuan_zhen_zhu mat_yun_mian mat_cai_hong_lu_zhu
+mat_shui_cao mat_po_jiu_de_xue_zi mat_chen_jiu_de_bao_xiang mat_yu_wang_fei_cui_ju_long mat_rainbow_kite mat_moon_jelly mat_star_remnant mat_hu_po_jing_hua
+mat_bai_lu_jiao mat_ying_guang_lin mat_fu_wen_sui_pian mat_an_ying_jing_hua mat_xing_yun_fu mat_ember_ash mat_old_page mat_ember_beacon
+mat_jian_sheng_can_ye mat_star_hourglass mat_hui_jin_zhi_he mat_jun_qi_sui_pian mat_gu_wang_sui_pian mat_sheng_tang_mi_juan mat_da_sheng_ming_yao_shui mat_you_ling_chuan_piao
+mat_xing_hui_shi mat_yue_guang_shi mat_yue_hui_shi mat_lang_mu_jiu mat_hai_dao_cang_bao_tu mat_hai_shen_dao_wen mat_shen_yuan_qi_shi_hu_fu mat_lei_he
+mat_long_gong_zhu mat_long_lin mat_feng_mi mat_feng_gan_rou mat_shuang_hua mat_ye_xiao_yu_mao mat_ying_huo_chong mat_you_guang_gu
+mat_xiang_mu_zhong_zi mat_yue_zhi_lei mat_yao_jing_zhi_chen mat_zhi_zhu_du_nang mat_rong_yan_shi mat_shen_yuan_jing_gang mat_gui_hun_jing_hua mat_sheng_guang_yu_mao
+mat_xue_zhi_jing_hua mat_an_ying_sui_pian mat_huo_yan_he_xin mat_ling_hun_sui_pian mat_shou_ren_liao_ya mat_zuo_lang_quan_chi i_stone_upgrade i_stone_refine
+i_stone_blessed mat_night_mushroom mat_aurora_flower mat_thunder_vine mat_moon_dew mat_deep_crystal mat_star_iron mat_jiu_shu_can_ye
+mat_mo_shui_ping mat_tui_se_mo_shui mat_dang_an_shi_yao_shi mat_yu_jin_jia_pian mat_jin_lang_ya mat_shao_jiao_jian_ren mat_yong_shi_yu_jin mat_qi_shi_tuan_hui_zhang
+mat_lie_yan_fu_wen mat_han_shuang_fu_wen mat_lei_ji_fu_wen mat_chuan_shuo_duan_zao_cai_liao mat_li_shi_xue_jia_bi_ji mat_sheng_nv_ting_feng_la mat_jiao_hui_mi_wen mat_jun_tuan_zhang_ye
+mat_shao_jiao_de_jian_qiao_can_pian mat_ge_zhe_zhi_xia mat_li_ang_chen_ge_de_shou_gao mat_li_ming_zhi_shi_can_ye mat_ying_xiong_wang_pei_jian_sui_pian mat_shou_ye_zhe_jin_yu mat_hui_jin_hui_xiang_feng_yin_can_pian mat_ke_fu_shi_ban_sui_pian
+mat_shi_ban_tuo_pian mat_sheng_guang_la_zhu mat_bi_yan_zhi_tong_hui_ji mat_yuan_yu_ji_shi mat_yuan_yu_ji_shi_yi_wen mat_yuan_huo_jing_gang mat_ling_ya_fu mat_ji_tan_mi_wen
+mat_shen_yuan_mi_wen mat_chang_ye_deng_huo mat_bai_hua_de_yu_jin mat_jin_he_zhi_lei mat_fu_ya_xue_nang mat_deng_ta_de_deng_xin mat_ji_hai_deng_you mat_chao_xi_ri_zhi_can_ye
+mat_wei_ji_chu_de_xin mat_gui_fan_jin_bi mat_ming_dan_can_ye mat_long_jing_zhi_jiao mat_long_yu_tong_pai mat_long_yu_wan_ge_can_juan mat_lin_ge_zhi_lin mat_chi_lin_zhi_yin
+mat_mei_shi_jie_yin_jian_xin mat_shi_pu_tu_zhi_xiang_cao_kao_shou_rou mat_shi_pu_tu_zhi_jin_guo_ye_zhu_pai_pai mat_cai_pu_tuo_ben mat_yue_guang_lan mat_yue_guang_lan_hua_ban mat_yue_guang_lan_mi mat_yue_guang_zhu_dao_yin_zi
+mat_pei_fang_yue_guang_an_shen_ji mat_xiao_xun_de_cao_yao_bao mat_you_liang_cao_yao mat_shou_gu_huai_biao mat_li_ming_wang_guan_sui_pian mat_li_ming_wang_guan mat_yue_hui_xin_wu mat_shang_hui_huo_dan_yin_feng_xian
+mat_hui_qi_sui_pian mat_hui_qi_hui_mi_xin mat_jiu_zhan_chang_yi_wu_xiu_jian_sui mat_san_ben_zhang_ce mat_hui_qi_hui_zhang_ce mat_mao_zhao_ka_pian mat_xiang_mu_tong_lv_dian_fang_zhang mat_cheng_zhu_fu_jiu_dang_kou_ya_wen_shu
+mat_ying_zi_mao_de_xin mat_jin_yu_can_pian mat_xiu_shi_de_yin_shao mat_jin_luo_cun_jiu_dang_chao_ben mat_luo_sha_lin_de_jiu_shou_pa mat_tie_shao_zi mat_mao_xian_zhe_shou_ce mat_xiao_hui_de_mu_diao
+mat_rong_huo_jing_tie mat_hui_chang_ge_de_bei_ke mat_wang_zhe_zhi_deng mat_tu_zhi_ye_xing_pi_feng mat_yu_lei_zhen_zhu mat_jiu_wu_chen_chuan_huai_biao mat_white_ash mat_pei_fang_bai_shi_sheng_hui_yao_ji
+mat_chuan_shuo_tu_zhi_rong_lu_zhi_xin mat_qing_tong_yu_ling mat_lao_xiu_shi_shou_gao mat_sheng_wu_xia mat_yue_guang_yin_ji mat_xian_zu_fu_wen_chui mat_yue_lin_ban_pian mat_yue_lin_wan_zheng
+mat_pei_fang_yin_ling_li_er item_late_letter item_edmund_tag item_dried_flower item_thank_letter mat_guang_zhong_ju_hua mat_lao_hua_nong_de_jiu_hua_jian mat_chun_feng_ling_zhong_zi
+mat_ying_huo_chong_fen mat_chun_feng_ling_hua_ban mat_yue_guang_lu mat_yue_gui_ye mat_yong_heng_hua_ban mat_yong_heng_hua_zhong_zi mat_ye_zhu_pi mat_shan_zei_hui_zhang
+mat_shu_shi_he_xin mat_yue_ying_zhi_pi mat_long_yan_jing_hua mat_sen_lin_ya_ma_bu mat_yue_guang_mian mat_yin_ling_si mat_fu_wen_duan mat_sheng_hui_rong
+mat_yue_hua_chou mat_xing_chen_jin mat_ling_wen_juan mat_cu_zhi_ge mat_ren_pi_ge mat_ying_zhi_ge mat_ying_ying_ge mat_jing_zhi_ge
+mat_shuang_han_ge mat_mo_neng_ge mat_cu_tie mat_qing_tong mat_jing_tie_ding mat_gang_tie_ding mat_hei_tie_ding mat_mi_yin_ding
+mat_jing_jin_ding mat_xing_tie mat_qing_xiang_mu mat_lie_huo_mu mat_lie_feng_zhi_mu mat_ling_mu mat_jing_ling_zhi_mu mat_chen_xing_zhi_mu
+mat_yuan_su_zhi_mu mat_cang_qiong_tian_mu mat_xiu_chao_xie_jia mat_zhu_ying_zhu_lei mat_lei_jing_kuang_he mat_pan_wo_gui_jia mat_yong_tan_pu_can_ye mat_hou_niao_de_xin
+mat_xian_zu_bei_shi_sui_pian mat_he_jie_xin mat_jiu_yin_shao mat_he_shen_yin_ling mat_wang_shi_mi_xin mat_feng_la mat_bei_tou_de_mian_bao mat_long_shao
+mat_xue_shi_zhi_yuan mat_yu_jin_he_xin mat_ye_dao_zhi_xin mat_tide_blackiron mat_moonlight_essence mat_ember_seed mat_bp_jin_gou_wan_dao mat_bp_he_jia_de_ji_qi
+mat_po_jia_fu_wen mat_xing_yun_bao_shi mat_chuan_shuo_diao_gan_yin_ling mat_bp_hui_ying_lang_ya_ren mat_bp_gu_wang_jian mat_bp_shi_ye_zhi_mian
+""".split()
+_ORDER_ITEMS_REST = """
+i_treat_s i_treat_m i_treat_l i_mana_s i_mana_m i_mana_l i_full_potion i_holy_water
+i_bread i_meat_skewer i_ale i_stew i_elf_fruit i_dwarf_liquor i_str_potion i_def_potion
+i_spd_potion i_fury_potion i_holy_potion i_dragon_scale_potion i_battlecry_potion i_lucky_potion i_scroll_heal i_scroll_purify
+i_scroll_teleport i_shuang_bei_jin_bi_fu i_fu_huo_yu_mao i_holy_charm i_moon_dew it_slime_jelly it_cook_skewer it_gold_feast
+i_mermaid_tear i_ambergris_draught i_treat_micro i_treat_light i_treat_strong i_treat_holy i_treat_divine i_herb_juice
+i_bandage i_holy_light_pot i_dragon_blood_pot i_phoenix_tear i_life_spring i_mana_micro i_mana_light i_mana_strong
+i_mana_holy i_mana_divine i_arcane_crystal i_moonlight_pot i_starlight_pot i_arcane_dew i_mana_source i_lingxi_pot
+i_full_potion_hi i_full_potion_super i_sage_pot i_battle_mix i_adventurer_mix i_holy_sage_pot i_expedition_mix i_apprentice_mix
+i_life_elixir i_moon_holy_water i_salve_s i_salve_m i_salve_l i_oats_porridge i_honey_pancake i_apple_wine
+i_deer_burger i_honey_tea i_deer_cheese i_seafood_chowder i_salt_baked_fish i_dock_rum i_moon_cake i_laurel_tea
+i_silver_jelly i_sacred_bread i_holy_water_drink i_blessed_pastry i_pirate_stew i_octopus_ball i_fog_coffee i_ash_pancake
+i_lava_egg i_ember_pepper i_royal_roast i_gold_dessert i_royal_soup i_elf_jam i_nectar_wine i_tree_honey
+i_dwarf_oven_bread i_miner_stew i_stone_ale i_snowwolf_steak i_frost_berry i_reindeer_jerky i_dragon_pepper i_dragon_egg_pancake
+i_wolf_jerky i_eagle_egg i_snake_soup i_mushroom_soup i_wild_honey i_roast_bird i_fish_soup i_herb_tea
+i_war_god_pot i_brute_pot i_armor_break_pot i_dragon_power_pot i_rock_shield_pot i_thorn_pot i_holy_shield_pot i_immovable_pot
+i_swift_pot i_shadowstep_pot i_pene_pot i_pene_magi_pot i_lifesteal_pot i_crit_dmg_pot i_block_pot i_windspirit_pot
+i_lethal_pot i_sharpeye_pot i_death_pot i_arcane_pot i_mystic_pot i_starfire_pot i_void_pot i_berserker_pot
+i_warsaint_pot i_scroll_guild i_scroll_camp i_scroll_noble i_lucky_coin i_four_leaf i_fortune_paper i_wealth_talisman
+i_pardon_order i_absolution_scroll i_king_pardon i_chest_wood i_chest_iron i_chest_bronze i_chest_silver i_chest_gold
+i_chest_mithril i_chest_dragon i_chest_pirate i_chest_tomb i_chest_elf i_chest_royal i_chest_abyss i_badge_iron_rank
+i_mem_emberwalker i_treatment_potion i_mana_potion i_great_treatment i_great_mana i_super_treatment i_super_mana i_scroll_escape
+i_key_old_king i_key_crypt i_key_elven i_key_ash i_key_abyss i_key_dragon_tomb i_key_trial i_key_moon
+i_key_frost i_key_storm_throne i_key_siren i_key_gray_dwarf i_key_under_dragon i_key_eye_storm i_key_abyss_throne i_key_cloud
+i_atk_potion i_crit_potion i_lucky_charm i_night_mushroom_soup i_moon_tea i_aurora_honey i_dragon_blood_hotpot i_thunder_skewer
+i_moon_dew_essence i_abyss_crystal_potion i_star_iron_agent it_glow_bait it_dough_bait it_blood_bait i_hei_yuan_fu_wen_xiang i_long_gong_fu_wen_xiang
+i_emergency_salve i_brutal_wine i_field_ration i_flash_powder i_ironwall_salve i_antidote_pill i_pearl_tonic i_abyss_echo
+i_rainbow_elixir i_storm_chowder i_glow_shark_soup i_thunder_elixir i_dragonbone_elixir i_tome_long_xi_zhi_nu i_tome_xu_kong_bao_po i_tome_du_bao
+i_tome_an_mian_qu i_tome_shou_ge i_novice_weapon_pack i_sheng_guang_cao i_hei_yu_jian i_chang_ye_nuan_jiu i_yue_guang_an_shen_ji i_chun_feng_ling_hua_mi
+i_lao_li_de_jian_ding_fang_da_jing i_ge_bei_gua_shi i_chen_xi_bo_wu_guan_zhen_cang_ce i_chong_wu_kou_liang i_yue_wei_hu_shi_pu i_xu_mao_chong_wu_dian_gui_bin_ka i_yi_dai_shang_lu_kou_liang i_yun_wen_si_jin
+i_hei_tie_shang_hui_yin i_shang_hui_gu_fen_ping_zheng i_yin_feng_shang_ling i_chen_xi_cheng_wei_bing_jia_jiang_ling i_wang_du_bo_wu_guan_rong_yu_hui_zhang i_gu_long_yu_shou_wang_zhi_xi i_yun_lin_hu_fu i_xiao_hui_mai_jiu
+i_zhuang_zhe_yi_xiao_pian_hai_de_ping_zi i_yin_ling_li_er i_xiang_cao_kao_shou_rou i_jin_guo_ye_zhu_pai_pai i_bai_shi_sheng_hui_yao_ji i_rage_draught i_boiling_war_blood i_molten_core
+i_prebattle_feast i_element_crystal i_affinity_draught i_vitality_draught i_swiftness_core i_fulltension_brew i_radiance_potion i_faith_crystal
+i_incense_candle i_shadowstrike_potion i_blink_crystal i_nightowl_tea i_chi_pellet i_chi_essence i_surging_brew i_jin_ling_xiang_lu
+i_sheng_hui_ti_shen_xiang i_jing_ji_kui_lei_zhong i_zhan_di_yi_zhe_mo_ou i_shuang_han_bu_shou_jia i_chen_mo_feng_zhou_la i_jiao_xie_sheng_wang i_mei_huo_mo_fen i_sheng_quan_yuan_quan_ping
+i_chong_neng_zheng_liu_qi i_ji_hun_shui_jing i_shi_zhi_yan_xiang i_bu_si_niao_zhi_yu i_sheng_guang_jing_shui i_long_xue_bian_shen_yao i_ci_yuan_men_fei_fu i_yuan_su_yin_bao_ji
+i_lian_xie_zeng_fu_mo i_yuan_su_gong_ming_shi i_ruo_dian_ji_po_shi i_kuang_gong_ti_deng i_pan_yan_gou_suo i_xun_bao_luo_pan i_xing_guang_wang_yuan_jing i_feng_rao_zhi_chu
+i_jiao_xiao_yu_wang i_ling_zhong_dai i_bian_xie_zhong_zhi_xiang i_kong_jian_bu_dai i_xin_ya_ling i_geng_ming_qi_yue i_gui_tu_xing_sha i_duan_lu_zhong_zhu_quan
+i_ming_yun_zhi_mo i_yi_wang_zhi_quan i_tui_bian_shen_yao i_huan_xing_wan_ou i_qing_dian_yan_hua i_yu_jin_ji_nian_zhang
+""".split()
+_ORDER_EQUIP_ROSTER = """
+eq_tie_jian eq_lie_gong eq_xue_tu_fa_zhang eq_xiang_mu_duan_gun eq_pi_jia eq_jiu_pi_xue eq_xiang_mu_dun eq_lie_lu_gong
+eq_xue_tu_zhi_zhang eq_bai_lu_pi_jia eq_xiang_mu_hu_tui eq_mao_pi_mao eq_xiang_mu_jie_zhi eq_xiang_mu_xiang_lian eq_bu_quan_tao eq_bai_lu_pi_mao
+eq_bai_lu_xiong_jia eq_bai_lu_hu_tui eq_bai_lu_pi_xue eq_bai_lu_zhi_jie eq_bai_lu_diao_zhu eq_han_si_shou_gong_wu_qi eq_pi_ge_quan_tao eq_wan_dao
+eq_shui_shou_duan_ren eq_hai_feng_chang_gong eq_chuan_zhang_mao eq_shui_shou_jia_ke eq_hai_dao_xue eq_shui_shou_hu_tui eq_zhen_zhu_xiang_lian eq_mao_xing_jie_zhi
+eq_tie_zhi_hu eq_jin_gou_wan_dao eq_jie_ke_jin_gou eq_gu_lu_de_huang_guan eq_sheng_guang_chang_jian eq_chen_xi_fa_zhang eq_wang_du_chang_gong eq_sheng_dian_zhan_chui
+eq_qi_shi_tou_kui eq_sheng_guang_xiong_jia eq_qi_shi_chang_xue eq_sheng_guang_hu_tui eq_sheng_guang_hu_fu eq_wang_guo_hui_jie eq_gu_wang_jian eq_shen_pan_zhi_lian
+eq_sheng_guang_zhan_kui eq_sheng_guang_zhong_jia eq_sheng_guang_zhong_xue eq_sheng_guang_zhan_tui eq_sheng_cai_chang_jian eq_sheng_guang_fa_zhang eq_sheng_guang_lie_gong eq_sheng_guang_zhan_chui
+eq_yue_yu_chang_gong eq_yin_ye_fa_zhang eq_yue_guang_duan_ren eq_yue_guan_tou_kui eq_jing_ling_lian_jia eq_yue_zhi_xue eq_yue_yu_hu_tui eq_xing_yu_xiang_lian
+eq_yue_hua_jie_zhi eq_chen_xi_zhi_guan eq_yue_shen_zhi_gong eq_shuang_lang_chang_jian eq_tie_zhen_zhan_chui eq_bei_feng_chang_gong eq_shuang_lang_tou_kui eq_tie_zhen_xiong_jia
+eq_shuang_yuan_chang_xue eq_shuang_lang_hu_tui eq_rong_lu_xiang_lian eq_fu_wen_jie_zhi eq_he_er_jia_de_ji_qi eq_da_di_zhi_xin eq_long_ji_da_jian eq_long_yu_fa_zhang
+eq_long_lin_tou_kui eq_long_lin_xiong_jia eq_long_lin_hu_tui eq_long_zhao_shou_tao eq_long_yan_xiang_lian eq_long_yu_sheng_jian eq_li_ming_zhi_guang eq_hai_shen_san_cha_ji
+eq_chao_xi_fa_zhang eq_zhen_zhu_tou_guan eq_long_lin_hai_jia eq_hai_shen_chang_xue eq_hai_shen_hu_tui eq_hai_shen_xiang_lian eq_hai_shen_jie_zhi eq_lang_ge_zhi_lei
+eq_ao_lan_zhi_zhu eq_shen_yuan_zhan_ren eq_rong_yan_fa_zhang eq_shen_yuan_tou_kui eq_hei_yao_xiong_jia eq_di_di_chang_xue eq_hei_yao_hu_tui eq_shen_yuan_xiang_lian
+eq_mo_luo_zhi_guan eq_cang_qiong_zhi_qiang eq_xing_guang_fa_zhang eq_cang_qiong_tou_kui eq_yun_wen_xiong_jia eq_xing_hui_chang_xue eq_cang_qiong_hu_tui eq_cang_qiong_xiang_lian
+eq_ao_la_sheng_yin eq_mu_ying_zhi_ren eq_sheng_yu_quan_zhang eq_sui_xing_quan_tao eq_an_xing_quan_tao eq_ji_feng_wan_ge eq_da_xian_zhe_fa_guan eq_da_xian_zhe_sheng_yi
+eq_da_xian_zhe_hu_tui eq_ying_xi_zhi_ren eq_chen_guang_fa_zhang_15 eq_shu_guang_quan_zhang_16 eq_zhu_feng_pi_jia_92 eq_yun_duan_hu_tui_90 eq_xing_chen_fa_zhang eq_xing_chen_chang_pao
+eq_xing_chen_zhi_jie eq_xing_chen_zhui_shi eq_xing_chen_hu_tui eq_hui_jin_chang_jian eq_hui_jin_kai_jia eq_hui_jin_zhi_kui eq_hui_jin_zhi_dun eq_hui_jin_hu_tui
+eq_hui_jin_zhan_xue eq_starfall_sword eq_yin_ling_duan_ren eq_yin_ling_hu_tui eq_fei_cui_pi_jia eq_fei_cui_hu_tui eq_mi_wu_hu_tui eq_yin_ling_zhang
+eq_mi_wu_dou_mao eq_yin_ling_tou_kui eq_yin_ling_xiong_jia eq_yin_ling_zhan_xue eq_yin_ling_xiang_lian eq_fei_cui_tou_kui eq_fei_cui_zhan_xue eq_fei_cui_xiang_lian
+eq_mi_wu_xiong_jia eq_mi_wu_zhan_xue eq_mi_wu_xiang_lian eq_lie_feng_chang_gong eq_ji_feng_chang_gong eq_jing_tie_chang_jian eq_ying_mu_zhan_gong eq_qi_yuan_fa_zhang
+eq_tie_tou_zhan_chui eq_hou_pi_quan_tao eq_shui_shou_wan_dao eq_yuan_yang_chang_gong eq_tie_mao_zhan_chui eq_tie_lian_quan_tao eq_lie_zong_liao_ya eq_tie_ya_lang_pi_jia
+eq_lei_ming_long_lin_dun eq_jin_he_zhi_xin_zhang eq_mu_ying_long_hun_jian eq_ye_xing_pi_feng eq_rong_lu_zhi_xin eq_bai_hua_de_hu_fu eq_chang_ye_hui_ji eq_chuan_shuo_diao_gan
+eq_shou_ye_zhe_hui_zhang eq_song_mu_hu_fu eq_mao_yan_shi_xiong_zhen eq_xue_shi_zhan_jian eq_xue_shi_zhan_jia eq_yu_jin_jun_tuan_jian eq_yu_jin_jun_tuan_kui eq_yu_jin_jun_tuan_jia
+eq_yu_jin_jun_tuan_xue eq_yuan_su_shi_tu_fa_zhang eq_yuan_su_shi_tu_zhi_guan eq_yuan_su_shi_tu_chang_pao eq_yuan_su_shi_tu_zhui_shi eq_shi_zhi_ling_zhu_mi_yi eq_shi_zhi_ling_zhu_shi_jie eq_xun_lin_chang_pi_feng
+eq_xun_lin_chang_gong eq_lie_shou_chang_gong eq_lie_shou_pi_mao eq_lie_shou_pi_jia eq_lie_shou_chang_xue eq_ri_mian_quan_zhang eq_ri_mian_sheng_guan eq_ri_mian_fa_yi
+eq_ri_mian_sheng_xue eq_ye_dao_quan_zhang eq_ye_dao_dou_mao eq_ye_dao_fa_yi eq_ye_dao_zhi_jie eq_shi_yue_quan_zhang eq_shi_yue_sheng_guan eq_shi_yue_fa_yi
+eq_shi_yue_sheng_xue eq_ying_sha_zhi_ren eq_ying_sha_mian_jin eq_ying_sha_pi_yi eq_ying_sha_hu_tui eq_ying_sha_qing_xue eq_xu_shi_quan_tao eq_xu_shi_shu_dai
+eq_po_zhu_quan_tao eq_po_zhu_wu_pao eq_po_zhu_hu_tui eq_po_zhu_bu_xue eq_tiepichangjian eq_tiepitoukui eq_tiepixiongjia eq_tiepihutui
+eq_tiepizhanxue eq_jingtiezhanjian eq_jingtietoukui eq_jingtiexiongjia eq_jingtiehutui eq_jingtiezhanxue eq_bailianchangjian eq_bailiantoukui
+eq_bailianxiongjia eq_bailianhutui eq_bailianzhanxue eq_jianxifazhang eq_xuetufamao eq_xuetuchangpao eq_xuetuhutui eq_xuetufaxue
+eq_fuwenfazhang eq_fuwenfamao eq_fuwenchangpao eq_fuwenhutui eq_fuwenfaxue eq_mifafazhang eq_mifafamao eq_mifachangpao
+eq_mifahutui eq_mifafaxue eq_buyiquanzhang eq_buyishengguan eq_buyifayi eq_buyihutui eq_buyishengxue eq_zhufuquanzhang
+eq_zhufushengguan eq_zhufufayi eq_zhufuhutui eq_zhufushengxue eq_shengtangquanzhang eq_shengtangshengguan eq_shengtangfayi eq_shengtanghutui
+eq_shengtangshengxue eq_lie_shou_duan_gong eq_lie_shou_xin_pi_mao eq_lie_shou_xin_pi_jia eq_lie_shou_hu_tui eq_lie_shou_xin_chang_xue eq_feng_xing_chang_gong eq_feng_xing_pi_mao
+eq_feng_xing_pi_jia eq_feng_xing_hu_tui eq_feng_xing_chang_xue eq_an_ye_chang_gong eq_an_ye_pi_mao eq_an_ye_pi_jia eq_an_ye_hu_tui eq_an_ye_chang_xue
+eq_qing_ying_bi_shou eq_qing_ying_mian_jin eq_qing_ying_pi_yi eq_qing_ying_hu_tui eq_qing_ying_qing_xue eq_ye_xing_bi_shou eq_ye_xing_mian_jin eq_ye_xing_pi_yi
+eq_ye_xing_hu_tui eq_ye_xing_qing_xue eq_yin_ying_bi_shou eq_yin_ying_mian_jin eq_yin_ying_pi_yi eq_yin_ying_hu_tui eq_yin_ying_qing_xue eq_xing_zhe_quan_tao
+eq_xing_zhe_shu_fa_dai eq_xing_zhe_wu_dou_pao eq_xing_zhe_hu_tui eq_xing_zhe_bu_xue eq_shi_quan_quan_tao eq_shi_quan_shu_fa_dai eq_shi_quan_wu_dou_pao eq_shi_quan_hu_tui
+eq_shi_quan_bu_xue eq_bi_chui_quan_tao eq_bi_chui_shu_fa_dai eq_bi_chui_wu_dou_pao eq_bi_chui_hu_tui eq_bi_chui_bu_xue eq_hu_lin_xiong_jia eq_hu_lin_hu_tui
+eq_hu_lin_zhi_xue eq_cu_gang_xiong_jia eq_cu_gang_hu_tui eq_cu_gang_zhan_xue eq_lin_yu_xiong_yi eq_lin_yu_hu_tui eq_lin_yu_fa_xue eq_hu_lin_bai_lu_xiong_jia
+eq_hu_lin_bai_lu_hu_tui eq_hu_lin_bai_lu_zhi_xue eq_du_kou_xiong_jia eq_du_kou_hu_tui eq_du_kou_zhi_xue eq_du_kou_chen_xi_xiong_jia eq_du_kou_chen_xi_hu_tui eq_du_kou_chen_xi_zhi_xue
+eq_xun_lin_xiong_jia eq_xun_lin_hu_tui eq_xun_lin_zhi_xue eq_xun_lin_yue_yu_xiong_jia eq_xun_lin_yue_yu_hu_tui eq_xun_lin_yue_yu_zhi_xue eq_shuang_lie_xiong_jia eq_shuang_lie_hu_tui
+eq_shuang_lie_zhi_xue eq_shuang_lie_long_ji_xiong_jia eq_shuang_lie_long_ji_hu_tui eq_shuang_lie_long_ji_zhi_xue eq_long_yi_xiong_jia eq_long_yi_hu_tui eq_long_yi_zhi_xue eq_long_yi_feng_yi_xiong_jia
+eq_long_yi_feng_yi_hu_tui eq_long_yi_feng_yi_zhi_xue eq_lie_feng_pi_feng eq_lie_feng_hu_tui eq_lie_feng_zhi_xue eq_chen_lu_jie_zhi eq_chen_lu_xiang_lian eq_lie_hu_dou_mao
+eq_lie_hu_jia_ke eq_lie_hu_chang_xue eq_xiang_mu_fu_ji eq_bai_lu_hu_fu eq_chun_cao_shou_huan eq_ye_ying_xiong_zhen eq_chao_xi_zhi_huan eq_chao_xi_diao_zhui
+eq_mao_lian_hu_wan eq_chuan_zhang_de_wang_yuan_jing eq_hai_dao_yan_zhao eq_hang_hai_dou_peng eq_shen_yuan_zhi_mao eq_deng_ta_zhi_guang eq_shui_shou_jie_jie_zhi eq_chao_xi_zhi_xue
+eq_tie_gang_hui_zhang eq_chen_xi_zhi_jie eq_rong_yan_hu_shou eq_rong_yan_hu_tui eq_rong_yan_zhi_xue eq_yue_ying_dou_peng eq_xing_hui_jie_zhi eq_xing_hui_diao_zhui
+eq_fei_cui_zhi_xin eq_fei_cui_hu_fu eq_ji_feng_hu_shou eq_ji_feng_zhi_xue eq_yue_yu_zhi_jie eq_jing_ling_pi_feng eq_shuang_jiao_zhan_huan eq_shuang_jiao_diao_zhui
+eq_shuang_jiao_pi_feng eq_han_shuang_zhi_jie eq_bei_feng_hu_fu eq_long_lin_shou_huan eq_long_ji_hui_ji eq_lie_shou_dou_peng eq_lie_shou_zhi_xue eq_tie_bi_hu_fu
+eq_xing_huo_jie_zhi eq_cang_lang_zhi_zhua eq_feng_bao_zhi_yan eq_feng_bao_diao_zhui eq_cang_qiong_zhi_yi eq_cang_qiong_zhi_xue eq_long_yi_hu_fu eq_long_yi_jie_zhi
+eq_tian_qiong_zhi_guan eq_xing_guang_xiang_lian eq_feng_shen_zhi_huan eq_lei_guang_hui_zhang eq_mi_yin_shou_zhuo eq_shou_wang_zhe_hu_fu eq_gu_lu_jin_jie eq_gu_lu_jun_dao
+eq_gu_lu_zhan_hui eq_you_ling_jun_qi eq_qi_shi_can_jia eq_yao_sai_shi_zhang eq_jin_bi_dai eq_xiu_mao_hu_shou eq_yan_quan_lie_ji eq_tie_ji_quan_tao
+eq_sui_yue_quan eq_shuang_yu_chang_gong eq_ji_feng_lie_gong eq_cu_zhi_bi_shou eq_cu_zhi_tie_jian eq_cu_bu_tou_jin eq_jian_xi_mu_zhang eq_jiu_pi_jia_ke
+eq_cu_zhi_chang_gong eq_ye_mao_zhi_zhua eq_lv_zhe_pi_xue eq_lie_quan_zhi_ya eq_lin_ying_zhi_gong eq_tie_lang_zhi_zhua eq_ying_huo_fa_zhang eq_yan_yang_zhi_jiao
+eq_ye_lu_pi_mao eq_shui_ta_pi_jia eq_du_ya_gu_lian eq_xue_tu_zhi_xue_ren eq_lv_ren_zhi_dun eq_xing_huo_fa_zhang eq_lie_ying_zhi_ya eq_lv_ren_pi_jia
+eq_cui_feng_zhi_gong eq_yuan_xing_dou_mao eq_chen_xing_diao_zhui eq_jing_tie_gong_jian eq_tie_gang_bu_mao eq_tie_gang_pi_jia eq_tie_gang_guo_tui eq_tie_gang_bu_xue
+eq_tie_gang_shou_huan eq_tie_gang_zhui_shi eq_jing_tie_duan_zhang eq_tie_gang_duan_dao eq_jing_tie_duan_bi eq_jing_tie_zhong_chui eq_jing_tie_zhan_gong eq_tie_gang_wan_dao
+eq_jing_tie_zhi_huan eq_jing_tie_duan_zhang_20 eq_tie_gang_pi_xue eq_tie_gang_zhan_kui eq_feng_xing_duan_gong eq_fu_wen_shou_huan eq_fu_wen_xiang_lian eq_fu_wen_duan_zhang
+eq_fu_wen_dou_mao eq_feng_xing_pi_xue eq_feng_xing_zhi_jie eq_zhu_fu_hui_ji eq_tie_gang_zhan_ren eq_zhu_feng_chang_gong eq_shuang_yu_fa_zhang eq_tie_gang_yuan_dun
+eq_xue_chao_duan_ren eq_tie_bi_xiong_jia eq_lei_ting_zhi_huan eq_mi_guang_diao_zhui eq_zhu_huo_tou_kui eq_wang_du_shi_yue_zhi_jian eq_sheng_guang_zhi_shi_chang_jian eq_sheng_guang_zhi_shi_tou_kui
+eq_sheng_guang_zhi_shi_xiong_jia eq_sheng_guang_zhi_shi_hu_tui eq_sheng_guang_zhi_shi_zhan_xue eq_yue_yu_shao_bing_pi_jia eq_sheng_guang_li_zan_hui_zhang eq_sheng_guang_zhi_shi_zhan_chui eq_sheng_guang_zhi_shi_chang_gong eq_sheng_guang_zhi_shi_fa_zhang
+eq_sheng_guang_qi_dao_zhe_zhi_xue eq_yue_yu_ye_ge_bi_shou eq_yue_yu_xun_lin_duan_gong eq_yue_yu_shao_bing_zhi_jie eq_yue_yu_ye_feng_hu_tui eq_yue_yu_shao_bing_xiang_lian eq_sheng_guang_zhi_wo eq_sheng_guang_shen_pan_zhi_ren
+eq_sheng_guang_bi_hu_zhi_dun eq_sheng_guang_zhu_fu_zhi_huan eq_sheng_guang_qi_dao_fa_zhang eq_sheng_guang_zhui_lie_chang_gong eq_sheng_guang_xun_dao_zhe_xiong_jia eq_sheng_guang_shao_bing_tou_kui eq_sheng_guang_yuan_zheng_hu_tui eq_sheng_guang_xun_li_zhan_xue
+eq_yue_yu_ci_ke_bi_shou eq_yue_yu_yin_yue_chang_gong eq_yue_yu_mi_yi_fa_zhang eq_yue_yu_ying_xi_xiong_jia eq_yue_yu_ye_xiao_tou_kui eq_yue_yu_feng_xing_zhe_zhi_xue eq_yue_yu_yue_ying_hu_tui eq_yue_yu_hui_yue_xiang_lian
+eq_yue_yu_yue_hua_zhi_jie eq_tie_bi_zhan_jia eq_tie_bi_jun_tuan_jian eq_tie_bi_bi_lei_zhi_dun eq_tie_bi_wei_shu_tou_kui eq_tie_bi_zhong_zhuang_zhan_xue eq_tie_bi_jun_tuan_tui_jia eq_chen_xi_sheng_jian
+eq_yue_shen_zhi_jie eq_shu_guang_bi_lei eq_shuang_lang_pi_xue eq_hai_shen_bei_ke_lian eq_hai_shen_shan_hu_jie eq_shuang_lang_zhan_ren eq_shuang_lang_lie_gong eq_shuang_lang_bing_jia
+eq_shuang_lang_xue_xue eq_shuang_lang_tui_jia eq_hai_shen_zhi_dun eq_hai_shen_bo_wen_jia eq_hai_shen_zhen_zhu_lian eq_xing_hui_fa_zhang eq_xing_hui_chang_pao eq_xing_hui_fa_guan
+eq_nu_tao_san_cha_ji eq_zhen_hai_zhi_dun eq_shuang_lang_zhi_wang_ya eq_bing_hao_zhan_ren eq_xing_hui_zhi_guan eq_xing_he_fa_zhang eq_lie_yu_chang_gong eq_jing_lei_zhan_gong
+eq_lie_kong_zhan_gong eq_shi_long_quan_tao eq_han_yue_quan_tao eq_you_ying_duan_ren eq_cui_du_han_ren eq_sheng_hui_fa_yi eq_cang_qiong_hu_jia eq_xing_chen_zhi_xue
+eq_jian_xi_hui_guang_fa_zhang eq_shao_bing_duan_jian eq_lie_hu_tie_bi eq_duan_huo_tie_quan eq_sheng_mu_quan_zhang eq_hui_xiang_zhi_ren eq_sui_bing_chang_gong eq_mi_fa_dian_ji_zhi_zhang
+eq_sheng_hui_quan_zhang eq_ye_xiao_shuang_bi eq_shi_xin_quan_tao eq_ben_lei_da_jian eq_xing_yun_chang_gong eq_yan_mie_fa_dian_fa_zhang eq_shu_zui_sheng_zhang eq_xue_hen_shuang_ci
+eq_hui_jin_quan_tao eq_ao_la_sheng_jian eq_yong_shuang_mi_zhang eq_lie_feng_zhang_gong eq_sheng_cai_zhong_chui eq_mu_guang_zhi_ci eq_lei_wen_quan_jia eq_po_yue_ju_jian
+eq_shi_xing_ju_ren eq_da_xian_zhe_mi_dian eq_huan_ying_chang_gong eq_tie_wei_zhan_kui eq_shao_bing_xiong_jia eq_xun_lin_zhe_hu_tui eq_ji_feng_qing_xue eq_tie_wei_zhi_jie
+eq_chen_xi_hu_fu eq_han_shuang_zhi_guan eq_jing_ji_zhan_jia eq_sheng_tang_wei_shi_hu_tui eq_xun_jie_zhan_xue eq_lan_dun_zhi_jie eq_shi_guang_sha_lou eq_shen_yan_zhan_kui
+eq_shen_yuan_xiong_jia eq_shi_xiang_gui_jing_jia eq_wang_zhe_zhan_xue eq_bu_mie_zhi_jie eq_si_wang_zhi_wu eq_pan_shi_wang_guan eq_sheng_hui_xiong_jia eq_bing_mai_hu_tui
+eq_sheng_dian_zhan_xue eq_hui_xiang_zhi_jie eq_bu_mie_yi_zhi eq_cang_qiong_zhi_guan eq_long_ji_lin_jia eq_tai_tan_hu_tui eq_xu_kong_xing_zhe_zhi_xue eq_fan_shang_zhi_huan
+eq_shi_xiang_gui_zhi_xin eq_wu_zhong_zhi_ren eq_zhou_ren_zhi_shi eq_ao_shu_cang_qiong_zhi_guan eq_mu_lie_zhi_ren eq_yong_qi_fa_dian eq_sui_yue_zhi_zhang eq_shi_yue_zhi_guan
+eq_wang_wu_zhan_kai eq_jin_huo_bi_lei eq_hai_yao_zhi_ya eq_shi_hun_duan_ren eq_yong_shuang_quan_zhang eq_ma_er_ku_si_de_fa_guan eq_shi_ye_zhi_mian eq_yao_sai_you_ling_zhi_kui
+eq_shi_lian_hui_zhang eq_yue_hui_zhi_jie eq_yong_dong_zhi_xin eq_feng_bao_zhi_guan eq_ke_luo_de_luo_pan eq_lan_ge_zhi_guan eq_shi_lu_zhan_chui eq_hei_yuan_zhi_yan
+eq_yun_nu_zhi_he eq_ju_mo_liao_ya_zhui eq_lie_zong_zhan_kui eq_hui_ying_lang_ya_ren eq_ju_e_lin_jia eq_tie_ya_zhan_kui eq_hei_ya_mian_jin eq_hong_ji_shan_hu_jie
+eq_chao_xi_san_cha_ji eq_yin_zong_yue_ren eq_lan_ge_yu_xue eq_gu_shu_zhi_zhang eq_shuang_ju_mo_zhan_chui eq_rong_yan_zhong_jian eq_shuang_ya_bing_ren eq_hai_wang_gu_mian
+eq_shen_yuan_ji_qiang eq_lei_ting_hu_jian eq_chen_guang_fa_zhang eq_shi_yue_zhi_zhang_chu_ya eq_shi_yue_chang_jian_chu_xin eq_shi_yue_zhang_gong_xin_lv eq_shi_yue_quan_zhang_chu_mu eq_shi_yue_bi_shou_chu_ying
+eq_shi_yue_quan_tao_chu_feng eq_mai_jiu_de_zhu_fu eq_sheng_nv_de_yi_zeng eq_yue_guan_de_shou_wang eq_jin_shan_shou_wang_zhe_zhi_hui eq_hui_jin_sheng_jian_chu_huo eq_long_lin_pi_hu_zhi_zhui eq_bilei_zhanjian
+eq_mingwen_fadian_zhizhang eq_xianzhe_fadian_zhizhang eq_xunlie_changgong eq_yexing_duanren eq_zhenyue_quantao eq_bilei_juntuan_zhanjian eq_mingke_fadian_zhizhang eq_huiguang_shengzhang
+eq_yuanzheng_zhigong eq_anyezhi_ren eq_hanyue_quan eq_bilei_jianjia eq_mingwen_fapao eq_xianzhe_fayi eq_xunlie_pijia eq_youye_piyi
+eq_panyue_wupao eq_bilei_shouyu_xiongjia eq_mingke_fapao eq_huiguang_shengyi eq_yuanzheng_pijia eq_yeying_piyi eq_budong_wupao
+""".split()
+_ORDER_AFFIXES = """
+bleed armor_break combo execute lifesteal crit_up crit_dmg element_fire
+element_ice element_thunder precise pierce pene_phys pene_magi pene_flat pene_mflat
+hunt charge counter break_magic purify dragon_aw block thorns
+dmg_reduce phys_ward magic_ward thirst_phys thirst_magi shield dodge tenacity_cc
+regen meditate swift elem_resist abyss_resist hp_up tenacity luck
+cdr exp_bonus gold_bonus heal_power shield_power war_spirit rage_forge warcry_echo
+blood_bath ember_brand boiling_blood arcana_flux arcane_focus sigil_engrave reaction_catalyst energy_blade
+energy_tide full_pack crit_charge swift_tailwind holy_echo divine_radiance holy_heart sigil_blessing
+pious_charm crit_return finisher combo_ward combo_edge rhythm_badge combo_recover chi_limit
+rock_rest burst_break opening_stance momentum_mastery
+""".split()
+_ORDER_SETS = """
+set_han_shuang set_lie_yan set_lei_ting set_mi_yin set_long_lin set_yue_ying set_hei_zhao set_sheng_hui
+set_bai_yin_qi_shi set_hei_tie_yong_bing set_chen_guang_jiao_hui set_lv_ren_gong_hui set_tie_pi set_jing_tie set_qi_shi set_shou_wang
+set_li_ming set_xue_tu set_fu_wen set_mi_fa set_xing_jie set_xing_chen set_lie_shou set_feng_xing
+set_an_ye set_ying_yan set_cang_qiong set_bu_yi set_zhu_fu set_sheng_tang set_shen_pan set_shen_en
+set_qing_ying set_ye_xing set_yin_ying set_huan_ying set_wu_ye set_xing_zhe set_tie_shou set_hu_xiao
+set_pan_shi set_anvil_guard set_xue_shi_zhan_tuan set_yu_jin_jun_tuan_hui_zhang set_yuan_su_shi_tu set_shi_zhi_ling_zhu set_xun_lin_zhang_pi_feng set_lie_shou_yuan_zheng_dui_hui_ji
+set_sheng_dian_ri_mian set_an_ye_sheng_dian set_sheng_hui_shi_yue set_ye_mu_he_qi_ying_sha set_xu_shi_yong_dong set_shi_bu_ke_dang set_xiang_mu_tao set_hai_feng_tao
+set_sheng_guang_tao set_yue_yu_tao set_shuang_lang_tao set_long_ji_tao set_hai_shen_tao set_di_di_tao set_cang_qiong_tao set_bai_lu_tao
+set_yin_ling_tao set_fei_cui_tao set_mi_wu_tao set_xing_chen_tao set_hui_jin_shou_wei_tao set_tie_pi_tao set_jing_tie_tao set_bai_lian_tao
+set_xue_tu_tao set_fu_wen_tao set_mi_fa_tao set_bu_yi_tao set_zhu_fu_tao set_sheng_tang_tao set_lie_shou_tao set_feng_xing_tao
+set_an_ye_tao set_qing_ying_tao set_ye_xing_tao set_yin_ying_tao set_xing_zhe_tao set_shi_quan_tao set_bi_chui_tao set_hu_lin_tao
+set_du_kou_tao set_xun_lin_tao set_shuang_lie_tao set_long_yi_tao
+""".split()
+_ORDER_PROPS = """
+fountain statue notice_board clock_tower wishing_well flower_bed benches windmill
+camp_flag market_stall anchor lighthouse fishing_boats boundary_stone old_tree rock_formation
+wild_flowers ruined_wagon campfire_remains mountain_spring stone_altar_ruin highland_rock birch_grove rune_pillar
+minecart deep_well ice_sculpture aurora_gazing moon_pool elf_carving forge_table anvil
+bellows bar_counter ale_barrel fireplace medicine_cabinet mortar_pestle candle_stand holy_icon
+throne tapestry armor_stand quest_board trophy_rack deer_head hunting_bow animal_hide
+weapon_rack cauldron fishing_net fish_drying_rack oar miner_lamp goods_shelf stall
+well washing_line haystack
+""".split()
+_ORDER_LEGENDARY_EFFECTS = """
+gold_hook jack_hook ancient_king judgment_chain dawn_crown moon_bow helga_relic earth_heart
+dragon_tongue dawn_light moro_crown aura_seal lang_tear ao_lan_pearl starfall ember_ward
+goblin_crown mu_ying_blade jin_he_heart mu_ying_soul silver_bell_rod rong_lu_heart element_apostle_wand element_apostle_crown
+element_apostle_robe element_apostle_pendant time_lord_scepter time_lord_ring chu_huo dragon_scale obsidian_aegis iron_bastion
+steady_core life_spring arcane_ward grim_ward storm_herald frost_veil crimson_fang soul_devourer
+executioner sun_blaze chain_overload mark_hunt giant_slayer memory_tear war_cry top_hunter
+mortal_wound arcane_echo siphon summon_pact last_breath oath_sword dawn_grace sea_breeze
+lighthouse_ward morning_dew kingdom_lion_heart blood_oath_echo sanctum_light ember_furnace surge_ready night_watch
+beast_ward captain_insight abyss_anchor moon_shadow ranger_precision jade_wealth blazing_sun deep_frost
+thunder_mark wolf_howl night_prayer crimson_tide xing_hui_zhi_guan xing_he_fa_zhang shuang_lang_zhi_wang_ya bing_hao_zhan_ren
+frozen_heart death_wall night_eater_mask storm_crown cloud_rage_core star_destruction dragon_annihilation divine_execution
+holy_edict star_shatter dark_star_gauntlet gale_dirge shadow_raid
+""".split()
+_ORDER_RUNES = """
+rn_brutal rn_armor_pierce rn_burn rn_freeze rn_chain rn_weaken rn_magic_break rn_lifesteal
+rn_regen rn_barrier rn_thorns rn_swift rn_ironwall rn_mana_flow rn_scavenger rn_exp_bless
+""".split()
+_ORDER_RUNE_CRAFT = """
+rn_brutal rn_armor_pierce rn_magic_break rn_lifesteal rn_regen rn_thorns rn_burn rn_freeze
+rn_weaken rn_swift rn_ironwall rn_mana_flow rn_scavenger rn_exp_bless rn_chain rn_barrier
+""".split()
+_ORDER_RUNE_EFFECT_NAMES = """
+brutal armor_pierce burn lifesteal freeze swift barrier regen
+chain weaken thorns scavenger exp_bless ironwall mana_flow magic_break
+""".split()
+# __B14B_ORDERS_END__
+
+
+
+# ============================================================
+# ③ 小工具（建索引 / 还原键型 / 剥导出期注入字段）
+# ============================================================
+def _missing(table) -> bool:
+    return not isinstance(table, dict) or not table
+
+
+def _ordered(dom, order, where: str, partial: bool = False) -> dict:
+    """按**声明序**建表（域是字典序，真源是插入序）。
+
+    域读不到（缺文件/坏 JSON/空表）→ 返回 `{}`，**不抛**（与 `_read_json` 同口径；
+    空表会在门禁上以「不等」现形，不会静默通过），并把域记进 `missing_domains()`。
+    域在、但键集与声明不一致 → `raise`（防「加内容忘了改序声明」= 静默漏条目/改序）。
+    `partial=True`：本条声明只覆盖域的**一段**（`ITEMS` = 材料段 + 非材料段两条声明）——
+    仍查「声明里的键域里得有 + 声明内不重复」，只是不要求覆盖全域。
+    """
+    if _missing(dom):
+        return {}
+    keys = list(order)
+    if len(set(keys)) != len(keys):
+        raise ValueError(f"catalog_items：{where} 的序声明有重复键 —— 拒绝静默取首个")
+    have = set(dom)
+    miss = [k for k in keys if k not in have]
+    extra = [] if partial else [k for k in dom if k not in set(keys)]
+    if miss or extra:
+        raise ValueError(
+            "catalog_items：%s 域与序声明不一致（域缺 %d / 声明缺 %d）—— 请重跑 "
+            "overnight/_b14b_gen_orders.py 同步序声明。域缺 %s … 未声明 %s …"
+            % (where, len(miss), len(extra), miss[:5], sorted(extra)[:5]))
+    return {k: dom[k] for k in keys}
+
+
+def _int_keys(tbl) -> dict:
+    """字符串键 → int 键（非整数键**原样保留**，不静默丢）。"""
+    out: dict = {}
+    for k, v in (tbl or {}).items():
+        try:
+            out[int(k)] = v
+        except (TypeError, ValueError):
+            out[k] = v
+    return out
+
+
+def _num_sorted(tbl) -> dict:
+    """int 键表 → 按**数值升序**（真源是 `for lv in range(...)`/字面量升序；JSON 是字典序，
+    `\"10\" < \"2\"` ⇒ 不排序 = 升级表第 2 行漂到第 10 行后）。非整数键排在后面并保持相对序。"""
+    ints = {k: v for k, v in (tbl or {}).items() if isinstance(k, int) and not isinstance(k, bool)}
+    rest = {k: v for k, v in (tbl or {}).items() if k not in ints}
+    return {**{k: ints[k] for k in sorted(ints)}, **rest}
+
+
+def _strip(entry, dropped) -> dict:
+    """剥掉导出期注入字段（**保持其余字段顺序**，与真源逐位一致）。"""
+    if not isinstance(entry, dict):
+        return entry
+    return {k: v for k, v in entry.items() if k not in dropped}
+
+
+def missing_domains() -> list:
+    """本模块要用的域里，哪几张读不到（缺文件 / 坏 JSON / 空表）。"""
+    out = []
+    for name, sub, tbl in (("items", "data", _ITEMS), ("equip_roster", "data", _EQUIP_ROSTER_RAW),
+                           ("runes", "data", _RUNES_RAW), ("affixes", "data", _AFFIXES_RAW),
+                           ("sets", "data", _SETS_RAW), ("props", "data", _PROPS_RAW),
+                           ("legendary_effects", "data", _LEGENDARY_RAW),
+                           ("enhance_table", "data", _ENHANCE_TABLE_RAW),
+                           ("game_config", "rules", _GAME_CONFIG)):
+        if _missing(tbl):
+            out.append(f"{sub}/{name}")
+    return out
+
+
+# ============================================================
+# ④ 物品（`ITEMS` / `MATERIALS` / `MATERIALS_BY_NAME`）
+# ------------------------------------------------------------
+# 真源 `game/data/items.py`：`MATERIALS`（598，含 591 个 `mat_*` + 7 个白名单 id）先声明，
+# 再若干 `ITEMS.update(...)` 追加消耗品/技能书等 → `ITEMS = dict(MATERIALS) + 追加段`（900）。
+# 导出域 `items.json` = `ITEMS` 全量（逐键逐值相等，实测 900/900）。材料段与非材料段的**切法**
+# 不靠前缀猜（`i_stone_*` / `item_*` 7 个不是 `mat_` 开头）—— 由 `_ORDER_MATERIALS` /
+# `_ORDER_ITEMS_REST` 两段声明给出（生成自真源插入序，带集合守卫）。
+# ============================================================
+_MATERIALS_SEG: dict = _ordered(_ITEMS, _ORDER_MATERIALS, "items（材料段）", partial=True)
+_ITEMS_REST_SEG: dict = _ordered(_ITEMS, _ORDER_ITEMS_REST, "items（非材料段）", partial=True)
+if set(_MATERIALS_SEG) | set(_ITEMS_REST_SEG) != set(_ITEMS) and _ITEMS:
+    raise ValueError(
+        "catalog_items：items 域有 %d 条既不在材料段声明也不在非材料段声明里 —— "
+        "请重跑 overnight/_b14b_gen_orders.py 同步序声明（漏条目 = 静默丢物品）。"
+        % len(set(_ITEMS) - set(_MATERIALS_SEG) - set(_ITEMS_REST_SEG)))
+
+MATERIALS: dict = dict(_MATERIALS_SEG)
+
+ITEMS: dict = dict(MATERIALS)
+ITEMS.update(_ITEMS_REST_SEG)
+
+# 名字 → 材料条目（真源 `items.py:3054 {_m["name"]: _m for _m in MATERIALS.values()}`；值序 = MATERIALS 序）
+MATERIALS_BY_NAME: dict = {v["name"]: v for v in MATERIALS.values() if isinstance(v, dict) and v.get("name")}
+
+
+# ============================================================
+# ⑤ 装备名册（`EQUIP_ROSTER` / `EQUIP_ROSTER_BY_NAME`）
+# ------------------------------------------------------------
+# 真源 `game/data/equip_roster.py:15 EQUIP_ROSTER`（687）。域条目多两个**导出期注入**字段
+# （`series_set` ← `SERIES_SETS`、`fixed_affixes` ← `SERIES_FIXED_AFFIX`）→ 必须剥，否则逐条不等。
+# `EQUIP_ROSTER_BY_NAME`（:1048 `setdefault(name, []).append(id)`）= 名字 → [id]（686 键 / 687 id，
+# 重名 1 处「精铁短杖」），由剥好的 `EQUIP_ROSTER` 按值序重建（无需第二份声明）。
+# ============================================================
+_EQUIP_ROSTER_INJECTED = ("series_set", "fixed_affixes")
+
+EQUIP_ROSTER: dict = {
+    rid: _strip(ent, _EQUIP_ROSTER_INJECTED)
+    for rid, ent in _ordered(_EQUIP_ROSTER_RAW, _ORDER_EQUIP_ROSTER, "equip_roster").items()
+}
+
+EQUIP_ROSTER_BY_NAME: dict = {}
+for _rid, _ent in EQUIP_ROSTER.items():
+    if isinstance(_ent, dict) and _ent.get("name"):
+        EQUIP_ROSTER_BY_NAME.setdefault(_ent["name"], []).append(_rid)
+
+
+# ============================================================
+# ⑥ 符文（`RUNES` / `RUNE_CRAFT` / `RUNE_EFFECT_NAMES` / `RUNE_CONFLICTS` / `RUNE_SHARD_KEY`）
+# ------------------------------------------------------------
+# 真源 `game/data/runes.py`：`RUNES`（16，`lvl` 是 **int 键**）+ 常量段 `RUNE_CONFLICTS`（3 对）/
+# `RUNE_DROP` / `RUNE_EFFECT_NAMES` / `RUNE_LEVEL_ROMAN` / `RUNE_CRAFT` / `RUNE_CRAFT_SHARDS` /
+# `RUNE_SHARD_KEY`。域 `runes.json` 把 `RUNE_CRAFT` 折成条目 `craft` 字段、`RUNE_CONFLICTS`
+# 折成对称的条目 `conflicts` 字段 → 两张表都由剥出来的值重建（序由真源插入序声明给出）。
+# `RUNE_DROP` / `RUNE_LEVEL_ROMAN` / `RUNE_CRAFT_SHARDS` **无域** → 缺口，不提供。
+# ============================================================
+_RUNES_INJECTED = ("craft", "conflicts")
+
+
+def _runes_build() -> dict:
+    out: dict = {}
+    raw = _ordered(_RUNES_RAW, _ORDER_RUNES, "runes")
+    for rid, ent in raw.items():
+        e = _strip(ent, _RUNES_INJECTED)
+        if e.get("lvl") is not None:                        # int 键还原（不做 = 符文数值恒 0）
+            e["lvl"] = _int_keys(e["lvl"])
+        out[rid] = e
+    return out
+
+
+RUNES: dict = _runes_build()
+
+# 符文制作配方（真源 `RUNE_CRAFT`，序 = 真源插入序）
+RUNE_CRAFT: dict = {
+    rid: dict(_RUNES_RAW[rid]["craft"])
+    for rid in _ORDER_RUNE_CRAFT if rid in _RUNES_RAW and "craft" in _RUNES_RAW[rid]
+}
+
+# 效果 key → 中文名（真源 `RUNE_EFFECT_NAMES`；值 = `RUNES[*]["name"]`，实测 16/16 逐条相等）
+_EFFECT_NAMES_BY_KEY: dict = {v["effect"]: v.get("name") for v in RUNES.values() if isinstance(v, dict)}
+RUNE_EFFECT_NAMES: dict = {
+    eff: _EFFECT_NAMES_BY_KEY[eff]
+    for eff in _ORDER_RUNE_EFFECT_NAMES if eff in _EFFECT_NAMES_BY_KEY
+}
+
+
+def _rune_conflicts() -> list:
+    """真源 `RUNE_CONFLICTS`（3 对，**无向对**）← 域里每条符文的 `conflicts` 字段。
+
+    规则：按真源符文插入序遍历，每遇到一条「未被收过的无向对」收一次，方向取遍历时那条符文
+    的 effect（实测与真源逐位相同：`[[burn,freeze],[barrier,thorns],[scavenger,exp_bless]]`）。
+    域侧是对称标注（互相都写），所以「首见即收」正好等价于真源的声明序。
+    """
+    out: list = []
+    seen: set = set()
+    for rid in _ORDER_RUNES:
+        ent = _RUNES_RAW.get(rid) or {}
+        eff = (RUNES.get(rid) or {}).get("effect")
+        for other in (ent.get("conflicts") or []):
+            pair = frozenset((eff, other))
+            if pair in seen:
+                continue
+            seen.add(pair)
+            out.append([eff, other])
+    return out
+
+
+RUNE_CONFLICTS: list = _rune_conflicts()
+
+# 符文碎片材料 key（真源常量 `RUNE_SHARD_KEY = "mat_fu_wen_sui_pian"`，注释写明「items.py 已定义
+# 名字『符文碎片』」）→ 按**名字唯一命中**从 items 域取 key（命中 ≠ 1 就 raise，不猜）。
+_RUNE_SHARD_NAME = "符文碎片"
+_RUNE_SHARD_HITS = [k for k, v in ITEMS.items() if isinstance(v, dict) and v.get("name") == _RUNE_SHARD_NAME]
+if len(_RUNE_SHARD_HITS) != 1:
+    raise ValueError(
+        "catalog_items：items 域里名字 %r 的条目有 %d 条（要求恰好 1 条）—— RUNE_SHARD_KEY "
+        "无法唯一确定，拒绝猜。" % (_RUNE_SHARD_NAME, len(_RUNE_SHARD_HITS)))
+RUNE_SHARD_KEY: str = _RUNE_SHARD_HITS[0]
+
+
+# ============================================================
+# ⑦ 词条 / 套装 / 道具 / 传说特效（域直读，仅还原序）
+# ============================================================
+AFFIXES: dict = _ordered(_AFFIXES_RAW, _ORDER_AFFIXES, "affixes")
+SETS: dict = _ordered(_SETS_RAW, _ORDER_SETS, "sets")
+LEGENDARY_EFFECTS: dict = _ordered(_LEGENDARY_RAW, _ORDER_LEGENDARY_EFFECTS, "legendary_effects")
+
+# 道具（真源 `game/data/props.py:12 PROPS`）；域条目多一个导出期注入的 `mounts`（← `MOUNT_POOL`
+# 挂点）→ 剥掉（道具本体条目没有它）。
+PROPS: dict = {
+    pid: _strip(ent, ("mounts",))
+    for pid, ent in _ordered(_PROPS_RAW, _ORDER_PROPS, "props").items()
+}
+
+
+# ============================================================
+# ⑧ 强化 / 升级 / 精炼（数值键表 + `game_config` 三组常量）
+# ------------------------------------------------------------
+# 真源 `game/data/enhance.py` / `upgrade.py` / `refine.py`；常量组在 `content/rules/game_config.json`
+# 的 `enhance` / `upgrade` / `refine`（导出器「每个模块级常量都有家」硬闸的产物）。
+# 三张数值键表（`ENHANCE_TABLE` / `UPGRADE_TABLE` / `ENHANCE_FAIL_DROP`）都按数值升序还原键型。
+# ============================================================
+ENHANCE_TABLE: dict = _num_sorted(_int_keys(_ENHANCE_TABLE_RAW))
+MAX_ENHANCE = _CFG_ENHANCE.get("MAX_ENHANCE")
+ENHANCE_FAIL_DROP: dict = _num_sorted(_int_keys(_CFG_ENHANCE.get("ENHANCE_FAIL_DROP")))
+ENHANCE_SMITH_MAPS: list = list(_CFG_ENHANCE.get("ENHANCE_SMITH_MAPS") or [])
+
+UPGRADE_TABLE: dict = _num_sorted(_int_keys(_CFG_UPGRADE.get("UPGRADE_TABLE")))
+UPGRADE_STONE = _CFG_UPGRADE.get("UPGRADE_STONE")
+UPGRADE_STAMINA = _CFG_UPGRADE.get("UPGRADE_STAMINA")
+UPGRADE_MATERIAL_CN = _CFG_UPGRADE.get("UPGRADE_MATERIAL_CN")
+
+REFINE_RECIPES: dict = dict(_CFG_REFINE.get("REFINE_RECIPES") or {})
+
+
+__all__ = [
+    "MATERIALS", "MATERIALS_BY_NAME", "ITEMS",
+    "EQUIP_ROSTER", "EQUIP_ROSTER_BY_NAME",
+    "RUNES", "RUNE_CRAFT", "RUNE_EFFECT_NAMES", "RUNE_CONFLICTS", "RUNE_SHARD_KEY",
+    "AFFIXES", "SETS", "PROPS", "LEGENDARY_EFFECTS",
+    "ENHANCE_TABLE", "MAX_ENHANCE", "ENHANCE_FAIL_DROP", "ENHANCE_SMITH_MAPS",
+    "UPGRADE_TABLE", "UPGRADE_STONE", "UPGRADE_STAMINA", "UPGRADE_MATERIAL_CN",
+    "REFINE_RECIPES", "missing_domains",
+]
