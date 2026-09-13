@@ -255,12 +255,18 @@ def install_engine() -> None:
     import saintess_engine.battle.formulas as formulas
 
     config.register_hook_provider(_lazy_mount)
-    config.mount(
-        formulas=formulas,                    # 引擎自带通用公式模块
-        effect_rules=_load("effect_rules", True),   # 状态/资源声明表
-        effect_actions=_load("effect_actions", True),
-        passive_proc=_load("passive_proc", True),
-    )
+    # ⚠️ hook（引擎只认 13 个名字）走 `mount`；**声明表不要走 mount** ——
+    # `set_hook` 对不认识的名字是**静默忽略**，写 `mount(effect_rules=…)` 会"看起来装配成功、
+    # 实则规则表是空的"（效果全部不生效且不报错）。声明表走 `load_game_rules`。
+    config.mount(formulas=formulas)          # 引擎自带通用公式模块
+
+    class _Rules:
+        pass
+
+    _r = _Rules()
+    _r.EFFECT_RULES = _load("effect_rules", True)
+    _r.EFFECT_ACTIONS = _load("effect_actions", True)
+    config.load_game_rules(_r)
     _MOUNTED = True
 
 

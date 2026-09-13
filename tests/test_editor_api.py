@@ -2,6 +2,7 @@
 """框架编辑器 API 回归：包管理 / 域 CRUD / 校验拦截 / 沙箱试跑（端到端，真起 HTTP）。"""
 import json
 import os
+import subprocess
 import sys
 import threading
 import urllib.error
@@ -77,6 +78,29 @@ def main():
     check("脚手架落了 content/apply.py", os.path.exists(os.path.join(pkg_dir, "content", "apply.py")))
     check("脚手架落了 7 个域的 JSON", all(
         os.path.exists(PK.domain_path(pkg_dir, d)) for d in PK.DOMAINS))
+
+    # 2b. ★ 脚手架产出的 apply.py **真的能装配**（不只是"文件存在"）——
+    #     往 content/rules/effect_rules.json 写一条，再在子进程里 import + install_engine()，
+    #     断言引擎侧规则表非空。为什么必须真跑：`config.set_hook` 对不认识的名字**静默忽略**，
+    #     脚手架曾用 `mount(effect_rules=…)` 挂声明表 → "装配看起来成功"但表是空的（效果全不生效且不报错）。
+    with open(PK.domain_path(pkg_dir, "effect_rules"), "w", encoding="utf-8") as f:
+        json.dump({"sk_probe": {"name": "探针", "period": {"turns": 1}}}, f, ensure_ascii=False)
+    probe = ("import json, sys\n"
+             f"sys.path.insert(0, {ROOT!r})\n"
+             f"sys.path.insert(0, {pkg_dir!r})\n"
+             "import content.apply as A\n"
+             "A.install_engine()\n"
+             "import saintess_engine.config as C\n"
+             "print(json.dumps({'rules': len(C.get_effect_rules() or {})}))\n")
+    pr = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, timeout=180)
+    got = {}
+    try:
+        got = json.loads((pr.stdout or "").strip().splitlines()[-1]) if pr.stdout.strip() else {}
+    except Exception:                                     # noqa: BLE001
+        got = {}
+    check("★ 脚手架 apply.py 装配后引擎规则表非空（声明表不能走 mount，要走 load_game_rules）",
+          pr.returncode == 0 and got.get("rules", 0) >= 1,
+          f"rc={pr.returncode} got={got} err={(pr.stderr or '')[-200:]}")
 
     # 3. 非法 id 被拒
     st, j = req(base, "POST", "/api/packages", {"id": "Bad-ID!", "name": "x"})
