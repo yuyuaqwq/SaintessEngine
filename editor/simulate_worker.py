@@ -53,11 +53,13 @@ def main() -> int:
         return _emit({"ok": False, "stage": "load", "message": f"包目录不存在：{pkg_dir}"}) or 0
     _setup_paths(pkg_dir)
 
-    # ---- 载入游戏包（第三方自己写的装配入口）----
+    # ---- 载入游戏包（走引擎官方加载器：它以「包」的方式导入 content，包内相对导入可用）----
     try:
-        sys.path.insert(0, os.path.join(pkg_dir, "content"))
-        import apply as pkg_apply                     # content/apply.py
-        pkg_apply.install_engine()
+        from saintess_engine import package as pkg_loader
+        info = pkg_loader.load(pkg_dir)
+        if not info["ok"]:
+            return _emit({"ok": False, "stage": "load", "message": "游戏包装配失败",
+                          "traceback": "\n".join(info["errors"])}) or 0
     except Exception:
         return _emit({"ok": False, "stage": "load", "message": "游戏包装配失败",
                       "traceback": traceback.format_exc()}) or 0

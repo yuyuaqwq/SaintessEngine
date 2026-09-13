@@ -95,13 +95,14 @@ export FW_FRAMEWORK_ROOT=/path/to/framework-engine      # Windows: set FW_FRAMEW
 python DIST_smoke.py
 ```
 
-或在你自己的代码里装配：
+或在你自己的代码里装配（**推荐**：用引擎官方的包加载器 —— 它会以「包」的方式导入 `content`，
+所以包里写 `from .mech import …` 这类相对导入才可用）：
 
 ```python
 import sys; sys.path.insert(0, ".")          # 本包目录
-sys.path.insert(0, "./content")
-import apply                                  # content/apply.py
-apply.install_engine()                        # 内容 → 引擎（幂等）
+from saintess_engine import package as pkg_loader
+info = pkg_loader.load(".")                  # game.json → 版本门禁 → import content.apply → install_engine()
+assert info["ok"], info["errors"]
 from saintess_engine import Battle, make_actor
 ```
 
@@ -180,10 +181,22 @@ def _ensure_minimum_assembly():
 def main():
     _setup_paths()
     try:
-        import apply as pkg_apply                 # noqa: PLC0415  content/apply.py
-        pkg_apply.install_engine()
+        # 用**引擎官方的包加载器**：它把 `content` 当**包**导入 → 包内 `from .mech import …`
+        # 这类相对导入可用（旧写法「content 进 path + 顶层 import apply」会在这类包上炸，
+        # 或被 except 吞掉 → 动作静默不注册）。
+        from saintess_engine import package as pkg_loader        # noqa: PLC0415
+        info = pkg_loader.load(HERE)
+        if not info["ok"]:
+            print("[x] 装配失败（content/apply.py）：")
+            for e in info["errors"]:
+                print("   ", e)
+            return 1
+        if info.get("import_style") == "top-level":
+            print("[i] 本包用的是旧式顶层导入（没有包内相对导入）—— 建议改成 "
+                  "`from saintess_engine import package; package.load(包根)`")
     except Exception:
-        print("[x] 装配失败（content/apply.py）：")
+        print("[x] 引擎 import 失败 —— 先装好 saintess_engine，"
+              "或用 FW_FRAMEWORK_ROOT 指向框架仓根目录。")
         traceback.print_exc()
         return 1
     try:
