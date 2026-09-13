@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/game_config.schema.json",
+  "title": "游戏配置常量（game_config）—— 一条 = 一个源模块的常量组（21 组 / 110 个成员）",
+  "description": "一条 = **一个 `game/data/*.py` 配置模块的常量组**（外层键 = 源模块名；条目 = `{源常量名: 值原样}`）。真源 = 游戏仓 20 个「配置/常量」模块（逐个判定表见 `overnight/B9-L7-domains.md` §2），经 `scripts/export_domains/b9_l7_domains.py:derive_game_config` 单向导出。**key 口径**：外层键 = 源模块名（`^[a-z][a-z0-9_]*$`），成员键 = **源侧常量名原样**（UPPER_SNAKE，改名 = 语义漂移）；值**一字不改**（不补默认值、不改类型、不展开引用串）。已属别域的表**不在此重复**（`panel_rules` / `enhance_table` / `effect_rules` / `passive_proc` / `weekly_quests` / `trial_floors`）。三个坑：① `UPGRADE_TABLE`/`HOUSE_LEVELS`/`HOUSE_REFUND`/`ENHANCE_FAIL_DROP` 的 **int 键**落成字符串键（包内 `content/config.py:int_keys()` 还原，不还原 = `.get(3)` 恒 None）；② tuple 落成 array（按序解包/索引不受影响，判等要注意）；③ `battle_config` 里 4 张 **tuple 键**表本轮未导（JSON 键不可逆，见报告缺口）。",
+  "x-primary": "config_group",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "minLength": 1,
+    "description": "键 = 真源模块名（如 `econ_config` / `battle_config` / `trial_tower`）。导出期自证「组名 == 真源文件名」—— 键口径漂了就是有人改了映射，直接拒绝导出。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/config_group"
+  },
+  "$defs": {
+    "config_group": {
+      "type": "object",
+      "title": "一个配置模块的常量组（game_config 的一条）",
+      "additionalProperties": true,
+      "minProperties": 1,
+      "description": "`{源常量名: 值原样}`（成员名 UPPER_SNAKE，值可为 dict/list/str/int/float/bool）。每个模块级公开常量都必须有家：进本组、进别的域、或写进导出器的排除名单并带理由 —— 新增常量却没归口会让导出器**报红**（不是静默漏出包）。",
+      "properties": {
+        "battle_config": {
+          "type": "object",
+          "title": "战斗配置表",
+          "description": "（39 张表）游戏仓 `game/data/battle_config.py`（518 行，自述「纯数据，无逻辑、无 IO」）。本组 = 该模块的全部模块级常量 **减去** 4 张 tuple 键表（`BRANCH_RESOURCE_OVERRIDE`/`ELEMENT_REACTIONS`/`REACTION_TABLE`/`MECH_CFG`，JSON 键不可逆，见报告缺口）与 3 张已属 `panel_rules` 域的表（`TIER_GROWTH`/`BRANCH_BONUS`/`BRANCH_BONUS_BY_CLASS`）。含 DOT 定义与抗性上限、元素反应倍率、Boss 攻击倍率、控制机制白名单、连击/能量/怒气配置、品质升级与大师之作概率、敌方血条配置、buff 倍率表、印记上限…；成员名 = 源常量名原样（如 `DOT_DEFS`/`BUFF_MULT`/`MECH_STACK_MAX`）。"
+        },
+        "battle_rules": {
+          "type": "object",
+          "title": "战斗规则注入表",
+          "description": "（4 张表）游戏仓 `game/data/battle_rules.py`（1,036 行，「saintess_engine 引擎的注入表 —— 换这套 = 新游戏」）。本组只含 4 张自有表：`EFFECT_ACTIONS`（70 个效果名 → 动作列表）、`MECH_CASH`（9 个爆发机制：终结技/狂暴/燃尽…）、`BAR_INJECT_FIELDS`、`BAR_STATE_PREFIX`。`EFFECT_RULES`（85 条）与 `PASSIVE_PROC`（42 条）已在 `effect_rules` / `passive_proc` 域；`DOT_DEFS` 等 5 个名字是顶层 `from .battle_config import …` 进来的，家在 `battle_config` 组（不在本组重复）。"
+        },
+        "weekly_quests": {
+          "type": "object",
+          "title": "周常常量",
+          "description": "（2 个常量）游戏仓 `game/data/weekly_quests.py:152/155`：`WEEKLY_PICK`（每周自动发布条数 = 3）/ `WEEKLY_MIN_LV`（悬赏板解锁等级 = 50）。表本体（12 条悬赏池）在 `weekly_quests` 域。消费端：包内 `content/flow/weekly_progress.py`（`_assign_week` 取前 N 条 / 解锁判定），宿主命令薄壳 re-export 这两个名字。"
+        },
+        "trial_tower": {
+          "type": "object",
+          "title": "修炼塔常量",
+          "description": "（3 个常量）游戏仓 `game/data/trial_tower.py:24/27/30`：`TRIAL_DAILY_LIMIT`（每日可通关层数 = 3）/ `TRIAL_MIN_LV`（爬塔解锁等级 = 70）/ `TRIAL_MAX_FLOOR`（层数硬上限 = 30）。层表本体在 `trial_floors` 域。消费端：包内 `content/flow/tower_data.py`（投影这三个名字）→ `content/flow/tower_progress.py`（当日剩余层数 / 登顶判定）+ 宿主 `game/commands/tower.py`（门槛文案）。"
+        },
+        "econ_config": {
+          "type": "object",
+          "title": "经济常量",
+          "description": "（1 张常量表）游戏仓 `game/data/econ_config.py:8 ECON_CONFIG`（16 键）：住宿费（新手/高档两档 + 取整）、传送费保底、上架/摆摊定价上下限、商店装备价系数、装备回收半价、神秘锻造图纸价、购买数量上限。v125.1 从命令层 20+ 处裸魔法数字下沉而来。"
+        },
+        "signin_config": {
+          "type": "object",
+          "title": "签到配置",
+          "description": "（1 张配置表）游戏仓 `game/data/signin_config.py:7 SIGNIN_CONFIG`（6 键）：基础金币 / 连签每级加成 / 节日倍率 / 运势阈值（小凶/大吉）/ 每 7 天额外奖励品质权重。"
+        },
+        "enhance": {
+          "type": "object",
+          "title": "强化流程常量",
+          "description": "（3 个常量）游戏仓 `game/data/enhance.py:20/24/27`：`MAX_ENHANCE`（+9 上限）/ `ENHANCE_FAIL_DROP`（+5/+6 失败掉 1 级）/ `ENHANCE_SMITH_MAPS`（6 张可强化铁匠铺地图）。**表本体** `ENHANCE_TABLE`（10 行 rate/cost/mult）在 `enhance_table` 域，不在本组重复。"
+        },
+        "upgrade": {
+          "type": "object",
+          "title": "装备升级",
+          "description": "（1 张表 + 4 个常量）游戏仓 `game/data/upgrade.py`：`UPGRADE_TABLE`（1..10 级的金币阶梯，**int 键 → 字符串键**，包内用 `content/config.py:int_keys()` 还原）、`MAX_UPGRADE`（存量兼容，真等级化后不再消费）、`UPGRADE_STONE`/`UPGRADE_STAMINA`/`UPGRADE_MATERIAL_CN`（每级 1 个精炼强化石 / 体力 10 / 显示名）。"
+        },
+        "calamity": {
+          "type": "object",
+          "title": "怪异炼成",
+          "description": "（6 个常量）游戏仓 `game/data/calamity.py`：`CALAMITY_MAX`（每件 3 次）/ `CALAMITY_COST`（2000 金 + 1 枚余烬核心）/ `CALAMITY_STATS`（可强化属性池）/ `CALAMITY_BONUS`（+3%）/ `CALAMITY_MALUS`（−1%）/ `CALAMITY_POSITIVE_CHANCE`（90%）。"
+        },
+        "refine": {
+          "type": "object",
+          "title": "装备重锻配方",
+          "description": "（1 张配方表）游戏仓 `game/data/refine.py:15 REFINE_RECIPES`（3 条派生链：弯刀→血誓战剑→余烬军团战剑 / 日冕权杖→夜祷权杖）：键 = 旧装备中文名，值 = `{target, mats, gold, inherit, desc}`。"
+        },
+        "housing": {
+          "type": "object",
+          "title": "房产与房屋",
+          "description": "（4 张表）游戏仓 `game/data/housing.py`：`PROPERTIES`（6 处地契：城镇/价格/描述）、`HOUSE_LEVELS`（1..4 级房屋：仓库容量/升级材料/回家恢复/铺面位，**int 键**）、`HOUSE_MAX_LEVEL`（= 4，由 `max(HOUSE_LEVELS)` 派生）、`HOUSE_REFUND`（各等级卖房返还比例，**int 键**）。"
+        },
+        "gather": {
+          "type": "object",
+          "title": "露营点与挖掘点",
+          "description": "（2 张表）游戏仓 `game/data/gather.py`：`CAMP_SPOTS`（9 个露营点：地图 → 点名声）、`MINE_SPOTS`（9 个挖掘点：地图 → `{name, min_lv}`，min_lv = 挖掘副业等级门槛，v173 重排）。"
+        },
+        "gather_pools": {
+          "type": "object",
+          "title": "采集与挖掘掉落池",
+          "description": "（3 张表）游戏仓 `game/data/gather_pools.py`：`GATHER_MAP_POOLS`（68 张地图的采集池）、`GATHER_COND_POOLS`（8 张条件池）、`MINING_DEEP_POOLS`（9 张深矿池）。⚠ 池内条目源侧是 **tuple**（按序解包），落盘后是 array —— 按序索引不受影响，判等 `== (a, b)` 的地方要自己 `tuple(...)`。"
+        },
+        "item_tag_display": {
+          "type": "object",
+          "title": "物品属性显示模板",
+          "description": "（1 张注册表）游戏仓 `game/data/item_tag_display.py:25 ITEM_TAG_DISPLAY`（3 条：鱼 / 材料 / `*` 通配）：键 = 物品大类，值 = `{line, max_lines, omit}`（`line` 用 `str.format(**tag)` 填槽，前缀「  · 」由渲染端加）。"
+        },
+        "prof_config": {
+          "type": "object",
+          "title": "副业配置",
+          "description": "（15 张表/常量）游戏仓 `game/data/prof_config.py`：导师与等待（`PROF_TUTORS`/`PROF_WAIT_BASE`/`PROF_WAIT_DECAY`/`PROF_WAIT_FLOOR`）、每日副业任务（`DAILY_PROF_TASKS`/`DAILY_PROF_EXP`）、体力与过滤（`PROF_STAMINA_COST`/`BAG_FILTER_TYPES`/`MINING_KEYWORDS`）、经济（`PAWN_RATES`/`PRICE_BAND`/`RARE_MATERIAL_PRICE`）、附魔与符文门槛（`ENCHANT_SLOT_UNLOCK`/`RUNE_LEVEL_GATE`）、采点门槛（`GATHER_MAP_MIN_LV`）。⚠ 其中若干成员源侧是 tuple（落盘成 array）。**同文件的 `price_band()` / `gather_map_min_lv()` 两个函数是逻辑**，不进域。"
+        },
+        "formula_skeleton": {
+          "type": "object",
+          "title": "公式骨架数值",
+          "description": "（1 张参数表）游戏仓 `game/data/formula_skeleton.py:22 FORMULA_SKELETON`（9 组）：exp 超 100 级兜底、怪物 exp/gold 的线性斜率与战斗拉长补偿、技能成长默认值（p/c/m/l 斜率与系数）、技能点定价、副业经验曲线 a/b、装备暴击与项链 mdef 修正、boss 旧减速曲线。**这里只有数值**；公式结构（分支/截断序/随机）仍在宿主 `core/engine`（引擎执行器）。⚠ `boss_atk_legacy.seg` 源侧是 tuple 的 tuple。"
+        },
+        "stat_templates": {
+          "type": "object",
+          "title": "怪物与装备数值模板",
+          "description": "（13 张表）游戏仓 `game/data/stat_templates.py`（v102.5 从 `core/stats.py` 下沉）：怪物角色模板 base/growth、经验/金币基数、野外档位倍率、普通/精英/Boss 的 HP 段乘区与 ATK 段乘区（含副本 Boss 专用段）、角色修正、装备槽基础值与成长。⚠ 段乘区源侧是 **tuple 的 tuple**（`((30, 1.0), (60, 1.6), …)`），落盘成 array 的 array —— 消费端按序解包/索引不受影响。"
+        },
+        "builds": {
+          "type": "object",
+          "title": "流派方案",
+          "description": "（1 张表）游戏仓 `game/data/builds.py:8 BUILDS`：键 = 职业 id → `{流派名: {icon, skills, desc}}`（每职业 2-3 套技能组合；v153 职业重构后全量更新）。`skills` 里是**中文技能名**（指向 `skills` 域，按名引用）。"
+        },
+        "mounts": {
+          "type": "object",
+          "title": "坐骑池与掉落",
+          "description": "（3 张表）游戏仓 `game/data/mounts.py`：`MOUNT_POOL`（11 只坐骑：价格/折扣/各项加成）、`MOUNT_DROP_ELITE`（精英掉落率）、`MOUNT_DROP_BOSS`（Boss 掉落率）。**`MOUNT_BY_KEY` 不进域** —— 它是 `{m['key']: m for m in MOUNT_POOL}` 的派生索引，可由 `MOUNT_POOL` 重建（重复导 = 第二份）。"
+        },
+        "summons": {
+          "type": "object",
+          "title": "召唤物模板",
+          "description": "（1 张表）游戏仓 `game/data/summons.py:21 SUMMONS`（5 条：骷髅兵/藤蔓守卫/…）：`{name, icon, atk_ratio, hp_ratio, def_ratio, dmg_type, limit, bodyguard, rank, reach}`（比率相对召唤者）。"
+        },
+        "rules": {
+          "type": "object",
+          "title": "行为彩蛋规则",
+          "description": "（1 张规则表）游戏仓 `game/data/rules.py:10 RULES`（20 条，v97.5 行为彩蛋）：每条 = `{id, trigger, desc, cond, count, action}`，`action.template` 指向宿主的文案/效果模板注册表（**模板本体未进包** = 空引用，见报告缺口）。"
+        }
+      }
+    }
+  }
+}

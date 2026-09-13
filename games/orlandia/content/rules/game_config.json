@@ -1,0 +1,4571 @@
+{
+  "battle_config": {
+    "ASSASSIN_ON_CRIT_GAIN": 1,
+    "ASSASSIN_ON_TAKE_HIT_PENALTY": -1,
+    "BOSS_ATTACK_MULTS": {
+      "enraged": 1.35,
+      "phase_step": 0.2,
+      "low_hp": 1.25,
+      "pv_broken": 1.3,
+      "stack_step": 0.08,
+      "cap": 3.0
+    },
+    "BUFF_MULT": {
+      "atk_up": [
+        "atk",
+        1.3
+      ],
+      "atk_up_strong": [
+        "atk",
+        1.75
+      ],
+      "echo_bless": [
+        "atk",
+        1.05
+      ],
+      "matk_up": [
+        "matk",
+        1.5
+      ],
+      "matk_up_strong": [
+        "matk",
+        1.8
+      ],
+      "matk_up_pot": [
+        "matk",
+        1.3
+      ],
+      "def_up": [
+        "def",
+        1.45
+      ],
+      "spd_up": [
+        "spd",
+        1.4
+      ],
+      "crit_up": [
+        "crit",
+        0.2
+      ],
+      "hit_up": [
+        "precise",
+        0.15
+      ],
+      "atk_up_big": [
+        "atk",
+        1.4
+      ],
+      "atk_up_small": [
+        "atk",
+        1.2
+      ],
+      "spd_up_small": [
+        "spd",
+        1.2
+      ],
+      "crit_up_small": [
+        "crit",
+        0.15
+      ],
+      "crit_up_big": [
+        "crit",
+        0.3
+      ],
+      "food_atk_up": [
+        "atk",
+        1.1
+      ],
+      "food_def_up": [
+        "def",
+        1.15
+      ],
+      "food_spd_up": [
+        "spd",
+        1.12
+      ],
+      "food_crit_up": [
+        "crit",
+        0.08
+      ],
+      "food_matk_up": [
+        "matk",
+        1.1
+      ],
+      "food_spd_up_small": [
+        "spd",
+        1.1
+      ],
+      "mon_atk_up": [
+        "atk",
+        1.3
+      ],
+      "mon_atk_up_strong": [
+        "atk",
+        1.7
+      ],
+      "mon_def_up": [
+        "def",
+        1.4
+      ],
+      "mon_atk_down": [
+        "atk",
+        0.7
+      ],
+      "magic_resist": [
+        "magic_reduce",
+        0.15
+      ]
+    },
+    "COMBO_CFG": {
+      "cap": 10,
+      "finish_min": 3,
+      "per_layer": 0.05,
+      "max_bonus": 0.4,
+      "class_id": "cls_ci_ke",
+      "path": 1
+    },
+    "CONTROL_MECHS": [
+      "stun",
+      "freeze",
+      "silence"
+    ],
+    "DOT_ADAPT_DECAY_STEP": 0.04,
+    "DOT_BLEED_DOUBLE_HP_PCT": 0.3,
+    "DOT_BOSS_PCT_MULT": 0.5,
+    "DOT_DEFS": {
+      "poison": {
+        "atk": 0.8,
+        "matk": 0.0,
+        "hp": 0.0,
+        "type": "flat"
+      },
+      "burn": {
+        "atk": 0.0,
+        "matk": 0.6,
+        "hp": 0.005,
+        "type": "hybrid"
+      },
+      "bleed": {
+        "atk": 0.05,
+        "matk": 0.0,
+        "hp": 0.015,
+        "type": "pct"
+      },
+      "corros": {
+        "atk": 0.3,
+        "matk": 0.2,
+        "hp": 0.01,
+        "type": "pct",
+        "true_dmg": true
+      }
+    },
+    "DOT_PCT_CAP": 0.01,
+    "DOT_RESIST_CAP": 0.95,
+    "ECHO_CFG": {
+      "max_layers": 3,
+      "heal_per_layer": 6,
+      "buff_extend_per_layer": 1
+    },
+    "ELEMENT_MARKS_MAX": 3,
+    "ELEMENT_SAME_CAST_EXTRA_CHARGE": 1,
+    "ENEMY_BAR_CFG": {
+      "shaken": {
+        "name": "破绽",
+        "max": 125,
+        "decay_per_turn": 1.7,
+        "threshold_base": 50,
+        "threshold_inc": 1.35,
+        "threshold_cap": 2.5,
+        "auto_trigger": true,
+        "immune_secs": 2.0,
+        "phase_preserve_pct": 0.5,
+        "trigger_effect": "skip_turn",
+        "no_inject_on_trigger": true
+      },
+      "curse": {
+        "name": "骨噬诅咒",
+        "max": 1,
+        "decay_per_turn": 0,
+        "threshold_base": 1,
+        "threshold_inc": 1.0,
+        "threshold_cap": 1.0,
+        "auto_trigger": true,
+        "immune_secs": 0.0,
+        "phase_preserve_pct": 1.0,
+        "trigger_effect": "debuff",
+        "vuln": 0.2,
+        "acc": 0.1,
+        "turns": 3
+      }
+    },
+    "ENERGY_HIGH": {
+      "threshold": 80,
+      "crit_bonus": 0.1,
+      "max_cost": 25
+    },
+    "LUCKY_CRIT_CHANCE": 0.3,
+    "LUCKY_CRIT_MULT": 1.3,
+    "LUCK_CRIT_CONV": {
+      "per_luck": 0.3,
+      "cap": 0.12
+    },
+    "MASTERPIECE_CHANCE": 0.02,
+    "MECH_COMBO_STACKS": [
+      "wind"
+    ],
+    "MECH_FROZEN_MULT": {
+      "freeze": 1.5
+    },
+    "MECH_FULL_HP_CRIT": [
+      "shadow"
+    ],
+    "MECH_PROC_GROUPS": {
+      "poison_dmg": [
+        "poison",
+        "poison_burst"
+      ],
+      "arcane_dmg": [
+        "arcane"
+      ]
+    },
+    "MECH_STACK_BONUS": {
+      "rage": 0.12,
+      "shadow": 0.12,
+      "chi": 0.12,
+      "spellblade": 0.08,
+      "dragon_might": 0.1,
+      "zen": 0.12
+    },
+    "MECH_STACK_MAX": {
+      "burn": 5,
+      "poison": 5,
+      "rage": 5,
+      "shadow": 5,
+      "chi": 5,
+      "judge": 5,
+      "mark": 5,
+      "wind": 3,
+      "iron": 5,
+      "shield": 5,
+      "bless": 10,
+      "arcane": 5,
+      "spellblade": 5,
+      "zhan_yi": 10,
+      "lian_duan": 10
+    },
+    "MECH_STACK_WHITELIST": [
+      "rage",
+      "shield",
+      "wind",
+      "shadow",
+      "chi",
+      "bless",
+      "judge",
+      "iron",
+      "mark",
+      "burn",
+      "poison",
+      "freeze",
+      "arcane",
+      "spellblade",
+      "zhan_yi",
+      "lian_duan"
+    ],
+    "MECH_STAT_PASSIVES": {
+      "judge": "judge",
+      "shadow": "shadow"
+    },
+    "MOMENTUM_CFG": {
+      "per_chi": 0.03,
+      "cap_chi": 10
+    },
+    "MULTI_HIT_CRIT_FIRST_ONLY": true,
+    "QUALITY_UPGRADE_CHANCE": 0.05,
+    "QUALITY_UPGRADE_COST": {
+      "mat_jing_jin": 1,
+      "mat_shen_hai_shui_jing": 1
+    },
+    "QUALITY_UPGRADE_MASTER_BONUS": 0.02,
+    "RAGE_GAIN_HP_SCALE": {
+      "base": 1,
+      "coef": 4.0,
+      "cap": 5
+    },
+    "SHADOW_STEALTH_DMG_MULT": {
+      "终结·破影一击": 1.5,
+      "幽影刃": 1.25
+    },
+    "SHADOW_STEP_CFG": {
+      "stealth_extra": 1,
+      "stealth_proc": "stealth"
+    },
+    "SKILL_CC_WHITELIST": [
+      "stun",
+      "silence",
+      "cleanse"
+    ],
+    "TEAM_BUFF_KEYS": {
+      "def_all": "def_up",
+      "atk_all": "atk_up",
+      "matk_all": "matk_up_strong",
+      "crit_all": "crit_up",
+      "spd_all": "spd_up"
+    }
+  },
+  "battle_rules": {
+    "BAR_INJECT_FIELDS": {
+      "shaken_gain": {
+        "key": "shaken",
+        "per_hit": true
+      }
+    },
+    "BAR_STATE_PREFIX": "bar:",
+    "EFFECT_ACTIONS": {
+      "stun": [
+        {
+          "action": "apply",
+          "key": "stun",
+          "on": "target",
+          "turns": 1
+        }
+      ],
+      "freeze": [
+        {
+          "action": "apply",
+          "key": "freeze",
+          "on": "target",
+          "turns": 1
+        }
+      ],
+      "sleep": [
+        {
+          "action": "apply",
+          "key": "sleep",
+          "on": "target",
+          "turns": 1
+        }
+      ],
+      "silence": [
+        {
+          "action": "apply",
+          "key": "silence",
+          "on": "target",
+          "turns": 2
+        }
+      ],
+      "slow": [
+        {
+          "action": "apply",
+          "key": "spd_down",
+          "on": "target",
+          "turns": 2,
+          "mode": "skip"
+        }
+      ],
+      "spd_down": [
+        {
+          "action": "apply",
+          "key": "spd_down",
+          "on": "target",
+          "turns": 2,
+          "mode": "skip"
+        }
+      ],
+      "atk_up": [
+        {
+          "action": "apply",
+          "key": "atk_up"
+        }
+      ],
+      "dodge_buff": [
+        {
+          "action": "apply",
+          "key": "dodge_up"
+        }
+      ],
+      "spd_buff": [
+        {
+          "action": "apply",
+          "key": "spd_up"
+        }
+      ],
+      "crit_hit_buff": [
+        {
+          "action": "apply",
+          "key": "crit_up"
+        }
+      ],
+      "cc_immune": [
+        {
+          "action": "apply",
+          "key": "cc_immune"
+        }
+      ],
+      "purify_immune": [
+        {
+          "action": "apply",
+          "key": "cc_immune"
+        }
+      ],
+      "shadow_dance": [
+        {
+          "action": "class_shadow_dance_enter"
+        }
+      ],
+      "stance_guard": [
+        {
+          "action": "class_stance_guard_enter"
+        }
+      ],
+      "guard_stance": [
+        {
+          "action": "class_guard_stance_enter"
+        }
+      ],
+      "atk_all": [
+        {
+          "action": "team_apply",
+          "key": "atk_up"
+        }
+      ],
+      "def_all": [
+        {
+          "action": "team_apply",
+          "key": "def_up"
+        }
+      ],
+      "def_up": [
+        {
+          "action": "apply",
+          "key": "def_up"
+        }
+      ],
+      "matk_all": [
+        {
+          "action": "team_apply",
+          "key": "matk_up_strong"
+        }
+      ],
+      "crit_all": [
+        {
+          "action": "team_apply",
+          "key": "crit_up"
+        }
+      ],
+      "spd_all": [
+        {
+          "action": "team_apply",
+          "key": "spd_up"
+        }
+      ],
+      "atk_matk_all": [
+        {
+          "action": "team_apply",
+          "key": "atk_up"
+        },
+        {
+          "action": "team_apply",
+          "key": "matk_up"
+        }
+      ],
+      "all_stat_cc": [
+        {
+          "action": "team_apply",
+          "key": "all_up_atk"
+        },
+        {
+          "action": "team_apply",
+          "key": "all_up_def"
+        },
+        {
+          "action": "team_apply",
+          "key": "all_up_matk"
+        },
+        {
+          "action": "team_apply",
+          "key": "all_up_spd"
+        },
+        {
+          "action": "team_apply",
+          "key": "all_up_crit"
+        },
+        {
+          "action": "team_cc_immune"
+        }
+      ],
+      "shield_all": [
+        {
+          "action": "team_shield",
+          "halve": true
+        }
+      ],
+      "shield_block": [
+        {
+          "action": "self_shield",
+          "key": "shield_self"
+        },
+        {
+          "action": "apply",
+          "key": "block_up"
+        }
+      ],
+      "shield_all_reduce": [
+        {
+          "action": "team_shield",
+          "halve": true
+        },
+        {
+          "action": "team_taken_reduce"
+        }
+      ],
+      "reduce_shield_all": [
+        {
+          "action": "team_taken_reduce"
+        },
+        {
+          "action": "team_shield",
+          "halve": true
+        }
+      ],
+      "arcane_shield": [
+        {
+          "action": "self_shield",
+          "key": "arcane_shield"
+        }
+      ],
+      "reduce_all": [
+        {
+          "action": "team_taken_reduce"
+        }
+      ],
+      "dodge_reduce_all": [
+        {
+          "action": "team_apply",
+          "key": "dodge_up_big"
+        },
+        {
+          "action": "team_taken_reduce"
+        }
+      ],
+      "arcane_matrix": [
+        {
+          "action": "team_dmg_aura"
+        }
+      ],
+      "hunt_team_dmg": [
+        {
+          "action": "team_dmg_aura"
+        }
+      ],
+      "star_lock": [
+        {
+          "action": "target_lock_mark"
+        },
+        {
+          "action": "team_dmg_aura"
+        }
+      ],
+      "vuln": [
+        {
+          "action": "timed_vuln"
+        }
+      ],
+      "stealth_cc": [
+        {
+          "action": "apply",
+          "key": "stealth",
+          "hit": {
+            "guaranteed_crit": true
+          }
+        },
+        {
+          "action": "self_cc_immune"
+        }
+      ],
+      "disengage_dodge": [
+        {
+          "action": "team_apply",
+          "key": "dodge_up"
+        }
+      ],
+      "protect": [
+        {
+          "action": "team_guard"
+        }
+      ],
+      "block_reflect": [
+        {
+          "action": "block_once"
+        }
+      ],
+      "element_switch": [
+        {
+          "action": "class_element_switch"
+        }
+      ],
+      "arcane_field": [
+        {
+          "action": "arcane_field"
+        }
+      ],
+      "buff_atk": [
+        {
+          "action": "apply",
+          "key": "atk_up"
+        }
+      ],
+      "buff_atk_big": [
+        {
+          "action": "apply",
+          "key": "atk_up_big"
+        }
+      ],
+      "buff_atk_small": [
+        {
+          "action": "apply",
+          "key": "atk_up_small"
+        }
+      ],
+      "buff_atk_food": [
+        {
+          "action": "apply",
+          "key": "food_atk_up"
+        }
+      ],
+      "buff_def": [
+        {
+          "action": "apply",
+          "key": "def_up"
+        }
+      ],
+      "buff_def_food": [
+        {
+          "action": "apply",
+          "key": "food_def_up"
+        }
+      ],
+      "buff_spd": [
+        {
+          "action": "apply",
+          "key": "spd_up"
+        }
+      ],
+      "buff_spd_small": [
+        {
+          "action": "apply",
+          "key": "spd_up_small"
+        }
+      ],
+      "buff_spd_food": [
+        {
+          "action": "apply",
+          "key": "food_spd_up"
+        }
+      ],
+      "buff_crit": [
+        {
+          "action": "apply",
+          "key": "crit_up"
+        }
+      ],
+      "buff_crit_small": [
+        {
+          "action": "apply",
+          "key": "crit_up_small"
+        }
+      ],
+      "buff_crit_big": [
+        {
+          "action": "apply",
+          "key": "crit_up_big"
+        }
+      ],
+      "buff_crit_food": [
+        {
+          "action": "apply",
+          "key": "food_crit_up"
+        }
+      ],
+      "buff_matk": [
+        {
+          "action": "apply",
+          "key": "matk_up_pot"
+        }
+      ],
+      "buff_matk_strong": [
+        {
+          "action": "apply",
+          "key": "matk_up_strong"
+        }
+      ],
+      "buff_matk_food": [
+        {
+          "action": "apply",
+          "key": "food_matk_up"
+        }
+      ],
+      "food_spd_up_small": [
+        {
+          "action": "apply",
+          "key": "food_spd_up_small"
+        }
+      ],
+      "next_atk_up": [
+        {
+          "action": "apply",
+          "key": "next_atk_up",
+          "hit": {
+            "dmg_mult": 1.5
+          }
+        }
+      ],
+      "buff_phys_next": [
+        {
+          "action": "apply",
+          "key": "buff_phys_next",
+          "hit": {
+            "dmg_mult": 1.4
+          }
+        }
+      ],
+      "stealth": [
+        {
+          "action": "apply",
+          "key": "stealth",
+          "hit": {
+            "guaranteed_crit": true
+          }
+        }
+      ],
+      "heal_self": [
+        {
+          "action": "heal",
+          "on": "caster"
+        }
+      ],
+      "heal_pct": [
+        {
+          "action": "heal",
+          "on": "caster"
+        }
+      ],
+      "regen": [
+        {
+          "action": "heal",
+          "on": "caster"
+        }
+      ],
+      "stacks_set": [
+        {
+          "action": "apply",
+          "op": "set",
+          "on": "target"
+        }
+      ],
+      "interrupt": [
+        {
+          "action": "interrupt"
+        }
+      ],
+      "reduce": [
+        {
+          "action": "apply",
+          "key": "reduce",
+          "pct_from_mech_val": true
+        }
+      ],
+      "shield_self": [
+        {
+          "action": "shield",
+          "halve": false
+        }
+      ],
+      "shield": [
+        {
+          "action": "shield",
+          "halve": true
+        }
+      ],
+      "cleanse": [
+        {
+          "action": "cleanse"
+        }
+      ],
+      "cleanse_all": [
+        {
+          "action": "cleanse_all"
+        }
+      ]
+    },
+    "MECH_CASH": {
+      "finisher": {
+        "name": "终结技",
+        "mode": "dmg_mult_clear",
+        "key": "lian_duan",
+        "per_layer": 0.1,
+        "upgrade": {
+          "proc": "finisher_up",
+          "per_layer_add": 0.06
+        },
+        "clear": true,
+        "crit_at": 4,
+        "layer_label": "连段",
+        "unit": "段",
+        "icon": "🔪"
+      },
+      "zhan_yi_fury": {
+        "name": "狂暴",
+        "mode": "fury_enter",
+        "res": "zhan_yi",
+        "label": "血祭",
+        "icon": "🔥"
+      },
+      "arcane_burst": {
+        "name": "燃尽",
+        "mode": "dmg_mult_clear",
+        "key": "arcane",
+        "per_layer": 0.15,
+        "clear": true,
+        "layer_label": "奥术充能",
+        "unit": "层",
+        "icon": "🔮"
+      },
+      "guard_core_burst": {
+        "name": "磐核",
+        "mode": "dmg_mult_clear",
+        "key": "guard_core",
+        "per_layer": 0.7,
+        "clear": true,
+        "layer_label": "磐核",
+        "unit": "枚",
+        "icon": "🪨"
+      },
+      "element_burst_all": {
+        "name": "元素迸发",
+        "mode": "dmg_mult_clear_target",
+        "key": [
+          "fire_mark",
+          "ice_mark",
+          "thunder_mark"
+        ],
+        "per_layer": 0.12,
+        "clear": true,
+        "layer_label": "元素印记",
+        "icon": "💥"
+      },
+      "element_burst_3": {
+        "name": "元素裁决",
+        "mode": "per_system_clear_target",
+        "key": [
+          "fire_mark",
+          "ice_mark",
+          "thunder_mark"
+        ],
+        "per_system": 0.2,
+        "clear": true,
+        "layer_label": "元素印记",
+        "icon": "⚖️"
+      },
+      "poison_burst": {
+        "name": "荆棘爆",
+        "mode": "dmg_mult_clear_target",
+        "key": "poison",
+        "per_layer": 0.15,
+        "clear": true,
+        "layer_label": "毒",
+        "icon": "☠️"
+      },
+      "poison_burst_finisher": {
+        "name": "毒爆",
+        "mode": "dmg_mult_clear_target",
+        "key": "poison",
+        "per_layer": 0.14,
+        "clear": true,
+        "clear_extra": [
+          {
+            "owner": "caster",
+            "key": "lian_duan"
+          }
+        ],
+        "layer_label": "毒",
+        "icon": "☠️"
+      },
+      "faith_unload": {
+        "name": "卸负",
+        "mode": "heal_clear",
+        "key": "faith",
+        "amount": 3,
+        "note": "兑现走 skills.py sk_xie_fu res_cost={faith:3} + kind=治疗 heal_formula"
+      }
+    }
+  },
+  "builds": {
+    "BUILDS": {
+      "cls_zhan_shi": {
+        "狂战流": {
+          "icon": "⚔️",
+          "skills": [
+            "挥砍",
+            "破甲斩",
+            "旋风斩",
+            "怒斩",
+            "嗜血斩",
+            "战争化身"
+          ],
+          "desc": "挥砍/破甲攒战意 → 怒斩战意增伤 → 嗜血斩吸血 → 战争化身真伤终结"
+        },
+        "盾卫流": {
+          "icon": "🛡️",
+          "skills": [
+            "铁壁",
+            "战吼·守",
+            "守护姿态",
+            "顿足",
+            "嘲讽",
+            "守护圣域"
+          ],
+          "desc": "铁壁强化防御 → 守护姿态受击反击 → 嘲讽拉仇恨 → 守护圣域全队庇护"
+        },
+        "血怒流": {
+          "icon": "🩸",
+          "skills": [
+            "挥砍",
+            "猛击",
+            "裂地斩",
+            "血祭",
+            "怒涛连斩",
+            "怒涛·终焉"
+          ],
+          "desc": "猛击叠战意 → 血祭提前入狂暴 → 怒涛连斩多段攒意 → 怒涛·终焉终结"
+        }
+      },
+      "cls_fa_shi": {
+        "元素爆发流": {
+          "icon": "🔥",
+          "skills": [
+            "火球术",
+            "冰锥",
+            "雷击",
+            "元素引爆",
+            "织焰",
+            "元素裁决"
+          ],
+          "desc": "火/冰/雷挂印 → 元素引爆结算反应 → 织焰叠火印 → 元素裁决三印爆发"
+        },
+        "元素迸发流": {
+          "icon": "⚡",
+          "skills": [
+            "火球术",
+            "骤雨弹幕",
+            "元素迸发",
+            "双系连珠",
+            "元素湮灭",
+            "万象天雷"
+          ],
+          "desc": "骤雨弹幕叠雷印 → 元素迸发按层结算 → 元素湮灭满印增伤 → 万象天雷顶点"
+        },
+        "奥术精算流": {
+          "icon": "📖",
+          "skills": [
+            "奥术弹幕",
+            "奥术飞弹",
+            "深度冥想",
+            "奥术脉冲",
+            "奥术洪流",
+            "奥术湮灭"
+          ],
+          "desc": "奥术弹幕/飞弹攒充能 → 深度冥想架设蓄能 → 奥术洪流燃尽爆发 → 奥术湮灭顶点"
+        }
+      },
+      "cls_you_xia": {
+        "森语猎印流": {
+          "icon": "🌿",
+          "skills": [
+            "猎印射击",
+            "森语印记",
+            "追猎",
+            "淬毒箭",
+            "荆棘爆",
+            "死神之箭"
+          ],
+          "desc": "猎印挂标 → 追猎标记特攻 → 淬毒叠毒 → 荆棘爆引爆毒层 → 死神之箭斩杀"
+        },
+        "疾风连射流": {
+          "icon": "💨",
+          "skills": [
+            "连射",
+            "疾风射击",
+            "双重射击",
+            "风之疾走",
+            "急速射击",
+            "贯日箭"
+          ],
+          "desc": "连射高频 → 疾风射击速度压制 → 风之疾走提速 → 贯日箭必中必暴终结"
+        },
+        "自然召唤流": {
+          "icon": "🍃",
+          "skills": [
+            "猎印射击",
+            "藤蔓缠绕",
+            "召唤藤蔓守卫",
+            "追猎",
+            "召唤古树守卫",
+            "猎杀时刻"
+          ],
+          "desc": "藤蔓守卫纯挡刀 → 古树守卫全队攻击光环 → 猎杀时刻集火标记目标"
+        }
+      },
+      "cls_mu_shi": {
+        "神谕治疗流": {
+          "icon": "✨",
+          "skills": [
+            "治愈术",
+            "群体治愈",
+            "圣光护盾",
+            "圣言术",
+            "神圣恩典",
+            "生命圣域"
+          ],
+          "desc": "治愈术/群体治愈群奶 → 圣光护盾保人 → 神圣恩典大奶 → 生命圣域全体治愈"
+        },
+        "圣光祝福流": {
+          "icon": "🌞",
+          "skills": [
+            "治愈术",
+            "信仰祈祷",
+            "圣光祝福",
+            "圣光庇护",
+            "圣佑",
+            "曙光"
+          ],
+          "desc": "信仰祈祷全队魔攻 → 圣光祝福攻魔双增 → 圣光庇护减伤 → 曙光全体免疫"
+        },
+        "死灵骷髅流": {
+          "icon": "💀",
+          "skills": [
+            "召唤骷髅",
+            "骨噬诅咒",
+            "灵魂标记",
+            "亡灵祭仪",
+            "骸骨洪流",
+            "亡魂主宰"
+          ],
+          "desc": "召唤骷髅铺场 → 骨噬诅咒集火增伤 → 亡灵祭仪攒信念 → 骸骨洪流消耗爆发"
+        }
+      },
+      "cls_ci_ke": {
+        "影舞连段流": {
+          "icon": "🗡️",
+          "skills": [
+            "刺击",
+            "双刃乱舞",
+            "影袭",
+            "潜行",
+            "幻影连刺",
+            "终结·暗影绞杀"
+          ],
+          "desc": "刺击/双刃乱舞攒连段 → 潜行必暴 → 幻影连刺多段 → 终结·暗影绞杀斩杀"
+        },
+        "毒刃腐蚀流": {
+          "icon": "☠️",
+          "skills": [
+            "割裂",
+            "毒刃",
+            "双毒刃",
+            "淬毒之刃",
+            "毒爆",
+            "万毒噬心"
+          ],
+          "desc": "毒刃/双毒刃叠毒 → 淬毒之刃破防 → 毒爆引爆毒层 → 万毒噬心真伤终结"
+        },
+        "影遁收割流": {
+          "icon": "🌙",
+          "skills": [
+            "刺击",
+            "疾影",
+            "潜行",
+            "收割",
+            "影遁",
+            "万影归一"
+          ],
+          "desc": "疾影提速 → 潜行必暴 → 收割残血斩杀 → 影遁保命 → 万影归一满段爆发"
+        }
+      },
+      "cls_wu_seng": {
+        "破绽连打流": {
+          "icon": "🥊",
+          "skills": [
+            "直拳",
+            "侧踢",
+            "钢拳",
+            "连招三连",
+            "碎颅势",
+            "撼岳·终焉"
+          ],
+          "desc": "直拳/侧踢/钢拳连招推破绽 → 碎颅势破防特攻 → 撼岳·终焉满破绽爆发"
+        },
+        "磐核守御流": {
+          "icon": "🛡️",
+          "skills": [
+            "铜墙",
+            "守御姿态",
+            "铁壁拳",
+            "磐岩释能",
+            "磐核爆发",
+            "大地守护"
+          ],
+          "desc": "守御姿态挨打攒磐核 → 磐岩释能消耗 → 磐核爆发倾泻 → 大地守护全队减伤"
+        },
+        "气力爆发流": {
+          "icon": "🌀",
+          "skills": [
+            "直拳",
+            "冲拳",
+            "震地击",
+            "气力爆发",
+            "气力裂空",
+            "崩山"
+          ],
+          "desc": "直拳/冲拳推破绽 → 震地击眩晕 → 气力爆发按破绽加成 → 崩山破防终结"
+        }
+      },
+      "cls_shi_ren": {
+        "咏叹鼓舞流": {
+          "icon": "🎵",
+          "skills": [
+            "战歌",
+            "拨弦",
+            "激昂战歌",
+            "英雄赞歌",
+            "咏叹调",
+            "天籁"
+          ],
+          "desc": "战歌驻留攻击光环 → 拨弦叠强度 → 激昂战歌强化 → 天籁音刃顶点终结"
+        },
+        "咏叹圣咏流": {
+          "icon": "🎶",
+          "skills": [
+            "战歌",
+            "守歌",
+            "和声",
+            "咏叹·愈",
+            "英雄叙事诗",
+            "终章·黎明颂歌"
+          ],
+          "desc": "战歌+守歌双驻留 → 和声翻倍效果 → 咏叹·愈全队回血 → 终章·黎明颂歌爆发"
+        },
+        "挽歌瓦解流": {
+          "icon": "🌙",
+          "skills": [
+            "哀歌",
+            "镇魂歌",
+            "安眠曲",
+            "挽歌",
+            "沉默之歌",
+            "终末安魂"
+          ],
+          "desc": "哀歌/挽歌削弱敌方 → 安眠曲睡眠控场 → 沉默之歌封印技能 → 终末安魂全控"
+        }
+      }
+    }
+  },
+  "calamity": {
+    "CALAMITY_MAX": 3,
+    "CALAMITY_COST": {
+      "gold": 2000,
+      "mats": {
+        "mat_yu_jin_he_xin": 1
+      }
+    },
+    "CALAMITY_STATS": [
+      "atk",
+      "matk",
+      "def",
+      "mdef",
+      "crit",
+      "crit_dmg"
+    ],
+    "CALAMITY_BONUS": 0.03,
+    "CALAMITY_MALUS": 0.01,
+    "CALAMITY_POSITIVE_CHANCE": 0.9
+  },
+  "econ_config": {
+    "ECON_CONFIG": {
+      "inn_cost_lv_cap": 15,
+      "inn_cost_min_low": 30,
+      "inn_cost_per_lv": 5,
+      "inn_cost_min_high": 100,
+      "inn_cost_round": 100,
+      "inn_cost_high_mult": 2.0,
+      "portal_min_cost": 1,
+      "market_min_price": 1,
+      "market_price_cap": 999999,
+      "shop_equip_price_base": 3,
+      "shop_equip_price_lv": 0.5,
+      "equip_resale_rate": 0.5,
+      "bp_price_base": 20,
+      "bp_price_per_lv": 3,
+      "bp_smith_mult": 3,
+      "buy_qty_max": 999
+    }
+  },
+  "enhance": {
+    "MAX_ENHANCE": 9,
+    "ENHANCE_FAIL_DROP": {
+      "5": 1,
+      "6": 1
+    },
+    "ENHANCE_SMITH_MAPS": [
+      "oak_town",
+      "white_deer",
+      "ironharbor",
+      "ironshield_town",
+      "anvil_fort",
+      "dawn_city"
+    ]
+  },
+  "formula_skeleton": {
+    "FORMULA_SKELETON": {
+      "exp_fallback": {
+        "base": 60,
+        "power": 1.45,
+        "add": 50
+      },
+      "monster_exp": {
+        "linear_slope": 0.9,
+        "combat_len_mult": 1.5,
+        "hp_pow": 0.7
+      },
+      "monster_gold": {
+        "linear_slope": 0.6,
+        "combat_len_mult": 1.3,
+        "hp_pow": 0.5
+      },
+      "skill_growth": {
+        "power_per_lv_divisor": 100,
+        "cond_default": 0.05,
+        "mech_default_div": 2,
+        "buff_turns_base": 3,
+        "buff_turns_per_lv": 1,
+        "lifesteal_default": 0.2,
+        "lifesteal_per_lv_divisor": 100
+      },
+      "skill_learn_cost": {
+        "divisor": 6,
+        "base": 2
+      },
+      "prof_exp_need": {
+        "a": 5,
+        "b": 15
+      },
+      "equip_crit": {
+        "base": 0.02,
+        "per_lv": 0.01,
+        "per_lv_div": 10
+      },
+      "necklace_mdef": {
+        "flat": 3
+      },
+      "boss_atk_legacy": {
+        "seg": [
+          [
+            30,
+            0.0
+          ],
+          [
+            60,
+            -0.005
+          ],
+          [
+            999,
+            -0.004
+          ]
+        ],
+        "floor": 0.2
+      }
+    }
+  },
+  "gather": {
+    "CAMP_SPOTS": {
+      "rockfall_gorge": "落石营地",
+      "emerald_valley": "翠谷营地",
+      "gold_plain": "金穗营地",
+      "frost_field": "霜原营地",
+      "dragon_ridge": "龙脊营地",
+      "fungus_forest": "真菌营地",
+      "coral_reef": "珊瑚营地",
+      "mist_trench": "海沟营地",
+      "cloud_sea": "云海营地"
+    },
+    "MINE_SPOTS": {
+      "rockfall_gorge": {
+        "name": "铜矿脉",
+        "min_lv": 1
+      },
+      "hill_mine": {
+        "name": "铁矿脉",
+        "min_lv": 2
+      },
+      "white_abbey": {
+        "name": "秘银矿脉",
+        "min_lv": 4
+      },
+      "border_castle": {
+        "name": "边境矿脉",
+        "min_lv": 4
+      },
+      "frost_fang": {
+        "name": "冰晶矿脉",
+        "min_lv": 7
+      },
+      "dwarf_long_gallery": {
+        "name": "矮人秘银矿脉",
+        "min_lv": 7
+      },
+      "forge_valley": {
+        "name": "熔岩矿脉",
+        "min_lv": 7
+      },
+      "molten_abyss": {
+        "name": "熔火深渊矿脉",
+        "min_lv": 8
+      },
+      "dragon_ridge": {
+        "name": "龙脊矿脉",
+        "min_lv": 9
+      }
+    }
+  },
+  "gather_pools": {
+    "GATHER_MAP_POOLS": {
+      "oak_plain": [
+        [
+          "mat_cao_yao",
+          30
+        ],
+        [
+          "mat_jiang_guo",
+          20
+        ],
+        [
+          "mat_yue_guang_cao",
+          15
+        ],
+        [
+          "mat_shi_lai_mu_nian_ye",
+          15
+        ],
+        [
+          "mat_tu_mao",
+          10
+        ],
+        [
+          "mat_tu_pi",
+          10
+        ],
+        [
+          "mat_sen_lin_ya_ma_bu",
+          8
+        ]
+      ],
+      "white_deer_forest": [
+        [
+          "mat_cao_yao",
+          25
+        ],
+        [
+          "mat_jiang_guo",
+          15
+        ],
+        [
+          "mat_yue_guang_cao",
+          15
+        ],
+        [
+          "mat_lin_yu_zhi_ye",
+          20
+        ],
+        [
+          "mat_gu_mu_zhi",
+          15
+        ],
+        [
+          "mat_lang_pi",
+          10
+        ],
+        [
+          "mat_bei_tou_de_mian_bao",
+          3
+        ],
+        [
+          "mat_yue_guang_mian",
+          8
+        ]
+      ],
+      "emerald_forest": [
+        [
+          "mat_cao_yao",
+          25
+        ],
+        [
+          "mat_lin_yu_zhi_ye",
+          20
+        ],
+        [
+          "mat_gu_mu_zhi",
+          15
+        ],
+        [
+          "mat_yue_guang_cao",
+          10
+        ],
+        [
+          "mat_zhao_ze_hua",
+          15
+        ],
+        [
+          "mat_lang_pi",
+          15
+        ],
+        [
+          "mat_fu_wen_duan",
+          5
+        ]
+      ],
+      "misty_swamp": [
+        [
+          "mat_zhao_ze_hua",
+          30
+        ],
+        [
+          "mat_cao_yao",
+          20
+        ],
+        [
+          "mat_yue_guang_cao",
+          10
+        ],
+        [
+          "mat_shi_lai_mu_nian_ye",
+          15
+        ],
+        [
+          "mat_lin_yu_zhi_ye",
+          15
+        ],
+        [
+          "mat_gu_mu_zhi",
+          10
+        ]
+      ],
+      "silverwood": [
+        [
+          "mat_yue_guang_cao",
+          40
+        ],
+        [
+          "mat_cao_yao",
+          15
+        ],
+        [
+          "mat_jiang_guo",
+          10
+        ],
+        [
+          "mat_lin_yu_zhi_ye",
+          20
+        ],
+        [
+          "mat_gu_mu_zhi",
+          15
+        ],
+        [
+          "mat_fu_wen_duan",
+          5
+        ]
+      ],
+      "permafrost_field": [
+        [
+          "mat_bing_jing",
+          40
+        ],
+        [
+          "mat_cao_yao",
+          10
+        ],
+        [
+          "mat_yue_guang_cao",
+          5
+        ],
+        [
+          "mat_lin_yu_zhi_ye",
+          20
+        ],
+        [
+          "mat_gu_mu_zhi",
+          25
+        ]
+      ],
+      "redridge_plateau": [
+        [
+          "mat_long_xue_cao",
+          15
+        ],
+        [
+          "mat_cao_yao",
+          15
+        ],
+        [
+          "mat_yue_guang_cao",
+          10
+        ],
+        [
+          "mat_lin_yu_zhi_ye",
+          30
+        ],
+        [
+          "mat_gu_mu_zhi",
+          30
+        ]
+      ],
+      "abyss_altar": [
+        [
+          "mat_shen_yuan_e_mo_jiao",
+          25
+        ],
+        [
+          "mat_di_di_e_mo_jiao",
+          20
+        ],
+        [
+          "mat_hei_yuan_zhi_yan",
+          15
+        ],
+        [
+          "mat_shen_yuan_quan_ya",
+          15
+        ],
+        [
+          "mat_mo_yan_zhi_he",
+          15
+        ],
+        [
+          "mat_hui_jin_zhi_he",
+          2
+        ]
+      ],
+      "ancient_battlefield": [
+        [
+          "mat_zhan_hun_zhi_chen",
+          25
+        ],
+        [
+          "mat_gu_wang_sui_pian",
+          20
+        ],
+        [
+          "mat_jun_qi_sui_pian",
+          20
+        ],
+        [
+          "mat_xiu_jian_sui_pian",
+          15
+        ],
+        [
+          "mat_gu_long_can_hai",
+          20
+        ]
+      ],
+      "ancient_tree": [
+        [
+          "mat_shou_wei_gu_mu",
+          30
+        ],
+        [
+          "mat_ling_zhu_gu_mu_xin",
+          20
+        ],
+        [
+          "mat_gu_shu_zhi_xin",
+          20
+        ],
+        [
+          "mat_lin_yu_zhi_ye",
+          15
+        ],
+        [
+          "mat_gu_mu_zhi",
+          15
+        ]
+      ],
+      "black_forest": [
+        [
+          "mat_fu_ya_shou_ya",
+          25
+        ],
+        [
+          "mat_zhi_zhu_si",
+          20
+        ],
+        [
+          "mat_bian_fu_yi",
+          15
+        ],
+        [
+          "mat_fu_rou",
+          20
+        ],
+        [
+          "mat_ying_guang_fen",
+          20
+        ]
+      ],
+      "black_tide_strait": [
+        [
+          "mat_hei_yao_sui_pian",
+          25
+        ],
+        [
+          "mat_shen_yuan_zhen_zhu",
+          20
+        ],
+        [
+          "mat_hai_she_lin",
+          20
+        ],
+        [
+          "mat_zhang_yu_mo_nang",
+          15
+        ]
+      ],
+      "boar_ridge": [
+        [
+          "mat_ye_zhu_ya",
+          30
+        ],
+        [
+          "mat_ju_xing_ye_zhu_ya",
+          10
+        ],
+        [
+          "mat_shou_rou",
+          25
+        ],
+        [
+          "mat_cao_yao",
+          15
+        ],
+        [
+          "mat_jiang_guo",
+          20
+        ],
+        [
+          "mat_cu_tie",
+          8
+        ],
+        [
+          "mat_qing_tong",
+          5
+        ]
+      ],
+      "bone_wild": [
+        [
+          "mat_gu_long_can_hai",
+          30
+        ],
+        [
+          "mat_hai_wang_long_gu",
+          20
+        ],
+        [
+          "mat_gu_mo_xiang_he",
+          15
+        ],
+        [
+          "mat_gu_jiu_yu",
+          15
+        ],
+        [
+          "mat_sui_gu",
+          20
+        ]
+      ],
+      "border_castle": [
+        [
+          "mat_shou_ren_fu_ren",
+          25
+        ],
+        [
+          "mat_shou_rou",
+          20
+        ],
+        [
+          "mat_tie_kuang_shi",
+          20
+        ],
+        [
+          "mat_sui_gu",
+          20
+        ],
+        [
+          "mat_tie_ya_lang_pi",
+          15
+        ],
+        [
+          "mat_cu_tie",
+          8
+        ],
+        [
+          "mat_qing_tong",
+          5
+        ]
+      ],
+      "cinder_mountain": [
+        [
+          "mat_jin_he",
+          25
+        ],
+        [
+          "mat_ember_ash",
+          20
+        ],
+        [
+          "mat_huo_fu_yi",
+          15
+        ],
+        [
+          "mat_rong_yan_he_xin",
+          20
+        ],
+        [
+          "mat_e_mo_zhan_ren",
+          20
+        ]
+      ],
+      "cloud_sea": [
+        [
+          "mat_yun_xu",
+          25
+        ],
+        [
+          "mat_yun_mian",
+          20
+        ],
+        [
+          "mat_tian_ying_yu",
+          20
+        ],
+        [
+          "mat_cai_hong_lu",
+          15
+        ],
+        [
+          "mat_feng_zhi_yu",
+          20
+        ]
+      ],
+      "cold_spine_snow_trail": [
+        [
+          "mat_meng_ma_mao",
+          30
+        ],
+        [
+          "mat_bing_jing",
+          20
+        ],
+        [
+          "mat_xue_tu_pi",
+          20
+        ],
+        [
+          "mat_bing_xiong_pi",
+          15
+        ],
+        [
+          "mat_bing_yuan_su_he_xin",
+          15
+        ]
+      ],
+      "coral_reef": [
+        [
+          "mat_shan_hu_zhi",
+          25
+        ],
+        [
+          "mat_xie_ke",
+          20
+        ],
+        [
+          "mat_zhen_zhu_bei",
+          20
+        ],
+        [
+          "mat_hai_xing_pian",
+          15
+        ],
+        [
+          "mat_hong_ji_shan_hu",
+          20
+        ]
+      ],
+      "dawn_cathedral": [
+        [
+          "mat_sheng_guang_bai_he",
+          30
+        ],
+        [
+          "mat_sheng_shui",
+          25
+        ],
+        [
+          "mat_sheng_guang_jie_jing",
+          20
+        ],
+        [
+          "mat_yu_mao",
+          15
+        ],
+        [
+          "mat_yue_guang_cao",
+          10
+        ]
+      ],
+      "deep_lake": [
+        [
+          "mat_mang_yu_lin",
+          25
+        ],
+        [
+          "mat_hu_ling_lei",
+          20
+        ],
+        [
+          "mat_shui_zhi_wang_ya",
+          20
+        ],
+        [
+          "mat_hu_zhen_zhu",
+          20
+        ],
+        [
+          "mat_shen_mi_lin_pian",
+          15
+        ]
+      ],
+      "dragon_ridge": [
+        [
+          "mat_shi_long_lin",
+          25
+        ],
+        [
+          "mat_yan_long_lin",
+          20
+        ],
+        [
+          "mat_long_lin_sui_pian",
+          20
+        ],
+        [
+          "mat_gu_long_lin",
+          15
+        ],
+        [
+          "mat_long_xue_cao",
+          15
+        ],
+        [
+          "mat_long_zai_zhao",
+          10
+        ]
+      ],
+      "dragon_ridge_old_road": [
+        [
+          "mat_long_lin_sui_pian",
+          25
+        ],
+        [
+          "mat_shi_long_lin",
+          20
+        ],
+        [
+          "mat_gu_long_lin",
+          15
+        ],
+        [
+          "mat_long_zai_zhao",
+          20
+        ],
+        [
+          "mat_long_xue_cao",
+          5
+        ]
+      ],
+      "dragon_roost": [
+        [
+          "mat_cheng_nian_long_lin",
+          25
+        ],
+        [
+          "mat_gu_long_lin",
+          25
+        ],
+        [
+          "mat_long_zai_zhao",
+          15
+        ],
+        [
+          "mat_hai_wang_long_gu",
+          20
+        ],
+        [
+          "mat_long_xue_cao",
+          15
+        ]
+      ],
+      "dragonborn_valley_trail": [
+        [
+          "mat_long_yi_can_hun",
+          25
+        ],
+        [
+          "mat_long_lin_sui_pian",
+          20
+        ],
+        [
+          "mat_yan_long_lin",
+          20
+        ],
+        [
+          "mat_long_zai_zhao",
+          15
+        ],
+        [
+          "mat_long_xue_cao",
+          10
+        ]
+      ],
+      "dragonsfall_valley": [
+        [
+          "mat_long_hun_sui_pian",
+          25
+        ],
+        [
+          "mat_gu_long_lin",
+          20
+        ],
+        [
+          "mat_mu_ying_long_hun",
+          15
+        ],
+        [
+          "mat_hai_wang_long_gu",
+          20
+        ],
+        [
+          "mat_long_xue_cao",
+          20
+        ]
+      ],
+      "dusk_ridge_road": [
+        [
+          "mat_you_hun_chen",
+          30
+        ],
+        [
+          "mat_bian_fu_yi",
+          25
+        ],
+        [
+          "mat_hei_yao_sui_pian",
+          20
+        ],
+        [
+          "mat_sui_gu",
+          15
+        ],
+        [
+          "mat_fu_rou",
+          10
+        ]
+      ],
+      "dwarf_long_gallery": [
+        [
+          "mat_mi_yin",
+          25
+        ],
+        [
+          "mat_tie_kuang_shi",
+          20
+        ],
+        [
+          "mat_fu_wen_shi",
+          20
+        ],
+        [
+          "mat_yuan_gu_fu_wen_shi",
+          15
+        ],
+        [
+          "mat_jing_tie",
+          20
+        ]
+      ],
+      "emerald_valley": [
+        [
+          "mat_jing_ling_guo",
+          25
+        ],
+        [
+          "mat_cui_lu_jiao",
+          20
+        ],
+        [
+          "mat_jing_ling_lu_jiao",
+          15
+        ],
+        [
+          "mat_lin_yu_zhi_ye",
+          25
+        ],
+        [
+          "mat_cao_yao",
+          15
+        ]
+      ],
+      "forge_valley": [
+        [
+          "mat_rong_yan_he_xin",
+          25
+        ],
+        [
+          "mat_huo_xi_yi_lin",
+          20
+        ],
+        [
+          "mat_jin_he",
+          15
+        ],
+        [
+          "mat_rong_yan_ru_chong_pi",
+          20
+        ],
+        [
+          "mat_tie_kuang_shi",
+          20
+        ]
+      ],
+      "frost_fang": [
+        [
+          "mat_shuang_ya_long_lin",
+          25
+        ],
+        [
+          "mat_bing_jing",
+          25
+        ],
+        [
+          "mat_jian_chi_hu_ya",
+          20
+        ],
+        [
+          "mat_xue_lang_pi",
+          15
+        ],
+        [
+          "mat_bing_lang_ya",
+          15
+        ]
+      ],
+      "frost_field": [
+        [
+          "mat_bing_jing",
+          30
+        ],
+        [
+          "mat_xue_lang_pi",
+          25
+        ],
+        [
+          "mat_xue_tu_pi",
+          20
+        ],
+        [
+          "mat_bing_lang_ya",
+          15
+        ],
+        [
+          "mat_meng_ma_mao",
+          10
+        ]
+      ],
+      "frostwhisper_canyon": [
+        [
+          "mat_shuang_ju_mo_xue",
+          25
+        ],
+        [
+          "mat_shuang_ju_mo_wang_jiao",
+          20
+        ],
+        [
+          "mat_shuang_ya_long_lin",
+          20
+        ],
+        [
+          "mat_bing_jing",
+          20
+        ],
+        [
+          "mat_bing_lang_ya",
+          15
+        ]
+      ],
+      "fungus_forest": [
+        [
+          "mat_bao_zi_nang",
+          25
+        ],
+        [
+          "mat_zhen_jun_rou",
+          25
+        ],
+        [
+          "mat_fu_guan_jun",
+          20
+        ],
+        [
+          "mat_ying_guang_fen",
+          15
+        ],
+        [
+          "mat_zhi_zhu_si",
+          15
+        ]
+      ],
+      "gold_plain": [
+        [
+          "mat_shou_rou",
+          25
+        ],
+        [
+          "mat_niu_jiao",
+          20
+        ],
+        [
+          "mat_cao_yao",
+          20
+        ],
+        [
+          "mat_jiang_guo",
+          15
+        ],
+        [
+          "mat_cao_yuan_lang_pi",
+          20
+        ],
+        [
+          "mat_feng_la",
+          10
+        ]
+      ],
+      "harbor_docks": [
+        [
+          "mat_hai_yan_jie_jing",
+          30
+        ],
+        [
+          "mat_hai_ou_yu_mao",
+          20
+        ],
+        [
+          "mat_xie_ke",
+          15
+        ],
+        [
+          "mat_wu_zei_wan_zu",
+          15
+        ],
+        [
+          "mat_hai_zao",
+          20
+        ]
+      ],
+      "hill_mine": [
+        [
+          "mat_tie_kuang_shi",
+          35
+        ],
+        [
+          "mat_kuang_shi_sui_pian",
+          20
+        ],
+        [
+          "mat_shui_jing",
+          15
+        ],
+        [
+          "mat_shi_cai",
+          15
+        ],
+        [
+          "mat_mi_yin",
+          15
+        ]
+      ],
+      "ironshield_hills": [
+        [
+          "mat_tie_kuang_shi",
+          25
+        ],
+        [
+          "mat_qiu_ling_lang_pi",
+          25
+        ],
+        [
+          "mat_shi_cai",
+          20
+        ],
+        [
+          "mat_tie_ya_lang_pi",
+          15
+        ],
+        [
+          "mat_shan_yang_jiao",
+          15
+        ]
+      ],
+      "king_road": [
+        [
+          "mat_you_ling_zhi_chen",
+          30
+        ],
+        [
+          "mat_sui_gu",
+          20
+        ],
+        [
+          "mat_gu_dai_wen_xian",
+          20
+        ],
+        [
+          "mat_sheng_dian_tie_kuai",
+          15
+        ],
+        [
+          "mat_fu_rou",
+          15
+        ]
+      ],
+      "knight_yard": [
+        [
+          "mat_sheng_guang_jie_jing",
+          25
+        ],
+        [
+          "mat_tie_kuang_shi",
+          20
+        ],
+        [
+          "mat_sheng_shui",
+          20
+        ],
+        [
+          "mat_sheng_dian_tie_kuai",
+          15
+        ],
+        [
+          "mat_fu_wen_shi",
+          20
+        ]
+      ],
+      "lava_bed": [
+        [
+          "mat_yan_jiang_ru_chong_pi",
+          25
+        ],
+        [
+          "mat_rong_yan_he_xin",
+          20
+        ],
+        [
+          "mat_rong_yan_ling_zhu_he",
+          20
+        ],
+        [
+          "mat_hei_yao_sui_pian",
+          15
+        ],
+        [
+          "mat_jin_he",
+          20
+        ]
+      ],
+      "mermaid_bay": [
+        [
+          "mat_hai_yao_lin",
+          25
+        ],
+        [
+          "mat_jiao_ren_lin",
+          20
+        ],
+        [
+          "mat_hai_yao_zhi_yu",
+          15
+        ],
+        [
+          "mat_zhen_zhu_bei",
+          20
+        ]
+      ],
+      "mist_tide_passage": [
+        [
+          "mat_wu_guan_jing",
+          25
+        ],
+        [
+          "mat_hai_yan_jie_jing",
+          20
+        ],
+        [
+          "mat_shui_mu_ning_jiao",
+          20
+        ],
+        [
+          "mat_hai_zao",
+          20
+        ],
+        [
+          "mat_hai_she_lin",
+          15
+        ]
+      ],
+      "mist_trench": [
+        [
+          "mat_yuan_ying_zhi_lin",
+          25
+        ],
+        [
+          "mat_mang_yu_lin",
+          20
+        ],
+        [
+          "mat_shui_mu_ning_jiao",
+          20
+        ],
+        [
+          "mat_zhang_yu_mo_nang",
+          15
+        ],
+        [
+          "mat_shen_yuan_zhen_zhu",
+          20
+        ]
+      ],
+      "molten_abyss": [
+        [
+          "mat_rong_yan_he_xin",
+          25
+        ],
+        [
+          "mat_di_di_e_mo_jiao",
+          20
+        ],
+        [
+          "mat_xiao_e_mo_jiao",
+          20
+        ],
+        [
+          "mat_huo_fu_yi",
+          20
+        ],
+        [
+          "mat_rong_yan_ru_chong_pi",
+          15
+        ]
+      ],
+      "moon_glade": [
+        [
+          "mat_yue_guang_jing_hua",
+          25
+        ],
+        [
+          "mat_yue_lu_jiao",
+          20
+        ],
+        [
+          "mat_yue_lang_mao_pi",
+          20
+        ],
+        [
+          "mat_yin_hui_yue_shi",
+          15
+        ],
+        [
+          "mat_yue_guang_cao",
+          20
+        ]
+      ],
+      "moonshadow_wood": [
+        [
+          "mat_yue_ying_zhi_zhao",
+          25
+        ],
+        [
+          "mat_ying_bao_pi",
+          25
+        ],
+        [
+          "mat_yue_xiong_pi",
+          20
+        ],
+        [
+          "mat_an_ying_jing_hua",
+          15
+        ],
+        [
+          "mat_ying_guang_fen",
+          15
+        ]
+      ],
+      "old_battlefield": [
+        [
+          "mat_xiu_jian_sui_pian",
+          25
+        ],
+        [
+          "mat_jun_qi_sui_pian",
+          20
+        ],
+        [
+          "mat_sui_gu",
+          20
+        ],
+        [
+          "mat_sheng_dian_tie_kuai",
+          15
+        ],
+        [
+          "mat_zhan_hun_zhi_chen",
+          20
+        ]
+      ],
+      "rainbow_cloud": [
+        [
+          "mat_cai_hong_lu_zhu",
+          25
+        ],
+        [
+          "mat_cai_hong_lin",
+          20
+        ],
+        [
+          "mat_cai_hong_lu",
+          20
+        ],
+        [
+          "mat_xia_guang_long_lin",
+          20
+        ],
+        [
+          "mat_tian_ying_yu",
+          15
+        ]
+      ],
+      "rockfall_gorge": [
+        [
+          "mat_shi_cai",
+          30
+        ],
+        [
+          "mat_yan_xi_lin",
+          25
+        ],
+        [
+          "mat_cao_yao",
+          15
+        ],
+        [
+          "mat_tie_kuang_shi",
+          15
+        ],
+        [
+          "mat_jiang_guo",
+          15
+        ]
+      ],
+      "shipwreck_graveyard": [
+        [
+          "mat_you_ling_chuan_piao",
+          25
+        ],
+        [
+          "mat_chen_mu",
+          20
+        ],
+        [
+          "mat_you_ling_fan_bu",
+          20
+        ],
+        [
+          "mat_lang_mu_jiu",
+          15
+        ],
+        [
+          "mat_you_ling_zhi_chen",
+          20
+        ]
+      ],
+      "silver_river": [
+        [
+          "mat_yin_lin_yu",
+          25
+        ],
+        [
+          "mat_he_long_lin",
+          20
+        ],
+        [
+          "mat_gu_di_lu_shui",
+          20
+        ],
+        [
+          "mat_shui_jing_ling_lin",
+          15
+        ],
+        [
+          "mat_zhen_zhu_bei",
+          20
+        ]
+      ],
+      "silver_valley": [
+        [
+          "mat_yin_lin_yu",
+          25
+        ],
+        [
+          "mat_gu_di_lu_shui",
+          25
+        ],
+        [
+          "mat_cao_yao",
+          20
+        ],
+        [
+          "mat_xi_xi_lin",
+          15
+        ],
+        [
+          "mat_jiang_guo",
+          15
+        ]
+      ],
+      "silver_wind_road": [
+        [
+          "mat_cao_yao",
+          25
+        ],
+        [
+          "mat_jiang_guo",
+          20
+        ],
+        [
+          "mat_lin_yu_zhi_ye",
+          20
+        ],
+        [
+          "mat_tu_mao",
+          15
+        ],
+        [
+          "mat_gu_mu_zhi",
+          20
+        ]
+      ],
+      "sky_ladder_path": [
+        [
+          "mat_yun_mian",
+          25
+        ],
+        [
+          "mat_tian_ying_yu",
+          20
+        ],
+        [
+          "mat_yun_xu",
+          20
+        ],
+        [
+          "mat_feng_zhi_yu",
+          20
+        ],
+        [
+          "mat_yun_xiong_mao",
+          15
+        ]
+      ],
+      "starlake": [
+        [
+          "mat_hu_zhen_zhu",
+          25
+        ],
+        [
+          "mat_shui_jing_ling_lin",
+          20
+        ],
+        [
+          "mat_hu_ling_lei",
+          15
+        ],
+        [
+          "mat_shen_mi_lin_pian",
+          20
+        ]
+      ],
+      "starlight_terrace": [
+        [
+          "mat_xing_hui_chen",
+          25
+        ],
+        [
+          "mat_xing_hui_shi",
+          20
+        ],
+        [
+          "mat_xing_lang_pi",
+          15
+        ],
+        [
+          "mat_yue_guang_shi",
+          15
+        ],
+        [
+          "mat_star_hourglass",
+          3
+        ]
+      ],
+      "storm_cliff": [
+        [
+          "mat_feng_bao_ying_yu",
+          25
+        ],
+        [
+          "mat_feng_long_yu",
+          20
+        ],
+        [
+          "mat_lei_niao_yu",
+          20
+        ],
+        [
+          "mat_feng_bao_he_xin",
+          15
+        ],
+        [
+          "mat_lei_ming_zhi_yi",
+          20
+        ]
+      ],
+      "storm_plateau": [
+        [
+          "mat_lei_jing",
+          25
+        ],
+        [
+          "mat_lei_niao_yu",
+          20
+        ],
+        [
+          "mat_lei_xi_pi",
+          20
+        ],
+        [
+          "mat_lei_man_pi",
+          15
+        ],
+        [
+          "mat_lei_ting_zhi_xin",
+          5
+        ],
+        [
+          "mat_lei_he",
+          3
+        ]
+      ],
+      "storm_sea": [
+        [
+          "mat_feng_bao_zhi_ling_chen",
+          25
+        ],
+        [
+          "mat_feng_bao_bei",
+          20
+        ],
+        [
+          "mat_feng_bao_he_xin",
+          20
+        ],
+        [
+          "mat_lei_man_pi",
+          15
+        ]
+      ],
+      "storm_strait": [
+        [
+          "mat_feng_bao_bei",
+          25
+        ],
+        [
+          "mat_lei_man_pi",
+          20
+        ],
+        [
+          "mat_feng_bao_ying_yu",
+          20
+        ],
+        [
+          "mat_hai_she_lin",
+          15
+        ],
+        [
+          "mat_lei_jing_sha",
+          20
+        ]
+      ],
+      "sunset_isle": [
+        [
+          "mat_dao_zhu_ya",
+          20
+        ],
+        [
+          "mat_ying_wu_yu",
+          25
+        ],
+        [
+          "mat_xie_ke",
+          20
+        ],
+        [
+          "mat_zhen_zhu_bei",
+          20
+        ],
+        [
+          "mat_hong_ji_shan_hu",
+          15
+        ]
+      ],
+      "west_ridge_wilds": [
+        [
+          "mat_qiu_ling_lang_pi",
+          25
+        ],
+        [
+          "mat_tu_jiu_yu",
+          20
+        ],
+        [
+          "mat_sui_gu",
+          20
+        ],
+        [
+          "mat_fu_rou",
+          15
+        ],
+        [
+          "mat_tie_ya_lang_pi",
+          20
+        ]
+      ],
+      "whale_domain": [
+        [
+          "mat_long_jing_zhi",
+          25
+        ],
+        [
+          "mat_tao_sheng_jing_jiao",
+          20
+        ],
+        [
+          "mat_hai_ju_ren_lin",
+          20
+        ],
+        [
+          "mat_jing_xu_cao",
+          20
+        ]
+      ],
+      "white_abbey": [
+        [
+          "mat_sheng_shui",
+          25
+        ],
+        [
+          "mat_sheng_guang_bai_he",
+          25
+        ],
+        [
+          "mat_sheng_guang_jie_jing",
+          20
+        ],
+        [
+          "mat_mi_yin",
+          15
+        ],
+        [
+          "mat_fu_wen_shi",
+          15
+        ]
+      ],
+      "windmill_plain": [
+        [
+          "mat_mian_fen",
+          25
+        ],
+        [
+          "mat_cao_yao",
+          20
+        ],
+        [
+          "mat_jiang_guo",
+          20
+        ],
+        [
+          "mat_feng_zhen",
+          15
+        ],
+        [
+          "mat_tu_mao",
+          10
+        ],
+        [
+          "mat_lin_yu_zhi_ye",
+          10
+        ]
+      ],
+      "windvale": [
+        [
+          "mat_feng_yu_jie_jing",
+          25
+        ],
+        [
+          "mat_feng_yu_lu_jiao",
+          20
+        ],
+        [
+          "mat_feng_zhi_yu",
+          20
+        ],
+        [
+          "mat_ying_guang_hu_wei",
+          15
+        ],
+        [
+          "mat_lin_yu_zhi_ye",
+          20
+        ]
+      ],
+      "winter_lake": [
+        [
+          "mat_hu_bing_he_xin",
+          25
+        ],
+        [
+          "mat_bing_jing",
+          20
+        ],
+        [
+          "mat_bing_she_lin",
+          20
+        ],
+        [
+          "mat_dong_yu_lin",
+          15
+        ],
+        [
+          "mat_bing_tong_zhi_zhu",
+          20
+        ]
+      ]
+    },
+    "GATHER_COND_POOLS": {
+      "silverwood": [
+        [
+          "mat_night_mushroom",
+          8,
+          "night"
+        ],
+        [
+          "mat_moon_dew",
+          6,
+          "night"
+        ]
+      ],
+      "misty_swamp": [
+        [
+          "mat_night_mushroom",
+          10,
+          "night"
+        ]
+      ],
+      "white_deer_forest": [
+        [
+          "mat_moon_dew",
+          8,
+          "night"
+        ],
+        [
+          "mat_ying_huo_chong_fen",
+          6,
+          "night"
+        ],
+        [
+          "mat_yue_guang_lu",
+          6,
+          "night"
+        ]
+      ],
+      "permafrost_field": [
+        [
+          "mat_aurora_flower",
+          6,
+          "winter+night"
+        ],
+        [
+          "mat_bing_jing",
+          10,
+          "winter"
+        ]
+      ],
+      "emerald_forest": [
+        [
+          "mat_thunder_vine",
+          8,
+          "rain"
+        ]
+      ],
+      "redridge_plateau": [
+        [
+          "mat_thunder_vine",
+          8,
+          "rain"
+        ]
+      ],
+      "storm_plateau": [
+        [
+          "mat_thunder_vine",
+          10,
+          "rain"
+        ]
+      ],
+      "starlight_terrace": [
+        [
+          "mat_moon_dew",
+          6,
+          "night"
+        ]
+      ]
+    },
+    "MINING_DEEP_POOLS": {
+      "rockfall_gorge": [
+        [
+          "mat_shi_cai",
+          40
+        ],
+        [
+          "mat_qiang_hua_shi",
+          25
+        ],
+        [
+          "mat_tie_kuang_shi",
+          25
+        ],
+        [
+          "mat_jing_tie",
+          10
+        ]
+      ],
+      "hill_mine": [
+        [
+          "mat_tie_kuang_shi",
+          40
+        ],
+        [
+          "mat_qiang_hua_shi",
+          20
+        ],
+        [
+          "mat_jing_tie",
+          30
+        ],
+        [
+          "mat_mi_yin",
+          20
+        ],
+        [
+          "mat_jing_jin",
+          8
+        ],
+        [
+          "mat_deep_crystal",
+          2
+        ]
+      ],
+      "white_abbey": [
+        [
+          "mat_tie_kuang_shi",
+          30
+        ],
+        [
+          "mat_jing_tie",
+          25
+        ],
+        [
+          "mat_mi_yin",
+          30
+        ],
+        [
+          "mat_fu_wen_shi",
+          20
+        ],
+        [
+          "mat_sheng_guang_jie_jing",
+          15
+        ]
+      ],
+      "border_castle": [
+        [
+          "mat_tie_kuang_shi",
+          40
+        ],
+        [
+          "mat_qiang_hua_shi",
+          25
+        ],
+        [
+          "mat_jing_tie",
+          20
+        ],
+        [
+          "mat_shi_cai",
+          15
+        ]
+      ],
+      "frost_fang": [
+        [
+          "mat_tie_kuang_shi",
+          30
+        ],
+        [
+          "mat_bing_jing",
+          30
+        ],
+        [
+          "mat_bing_yuan_su_he_xin",
+          20
+        ],
+        [
+          "mat_deep_crystal",
+          12
+        ],
+        [
+          "mat_gao_ji_qiang_hua_shi",
+          8
+        ]
+      ],
+      "dwarf_long_gallery": [
+        [
+          "mat_mi_yin",
+          30
+        ],
+        [
+          "mat_jing_jin",
+          25
+        ],
+        [
+          "mat_deep_crystal",
+          20
+        ],
+        [
+          "mat_star_iron",
+          15
+        ],
+        [
+          "mat_yuan_gu_fu_wen_shi",
+          10
+        ]
+      ],
+      "forge_valley": [
+        [
+          "mat_tie_kuang_shi",
+          40
+        ],
+        [
+          "mat_jing_tie",
+          30
+        ],
+        [
+          "mat_rong_yan_he_xin",
+          25
+        ],
+        [
+          "mat_jing_jin",
+          20
+        ],
+        [
+          "mat_deep_crystal",
+          5
+        ]
+      ],
+      "molten_abyss": [
+        [
+          "mat_rong_yan_he_xin",
+          30
+        ],
+        [
+          "mat_hei_yao_sui_pian",
+          20
+        ],
+        [
+          "mat_jing_jin",
+          25
+        ],
+        [
+          "mat_rong_huo_jing_tie",
+          15
+        ],
+        [
+          "mat_deep_crystal",
+          10
+        ]
+      ],
+      "dragon_ridge": [
+        [
+          "mat_shi_long_lin",
+          30
+        ],
+        [
+          "mat_long_lin_sui_pian",
+          25
+        ],
+        [
+          "mat_jing_jin_ding",
+          15
+        ],
+        [
+          "mat_jing_jin",
+          15
+        ],
+        [
+          "mat_deep_crystal",
+          15
+        ]
+      ]
+    }
+  },
+  "housing": {
+    "PROPERTIES": {
+      "prop_oak_01": {
+        "name": "橡木小屋",
+        "map": "oak_town",
+        "price": 5000,
+        "desc": "橡木镇边缘的小木屋，推开窗就是绿野的麦田。新手冒险者的第一个家。"
+      },
+      "prop_white_01": {
+        "name": "白鹿公寓",
+        "map": "white_deer",
+        "price": 20000,
+        "desc": "白鹿城商街上的公寓，楼下就是酒馆，消息灵通。中阶过渡的好选择。"
+      },
+      "prop_harbor_01": {
+        "name": "铁港阁楼",
+        "map": "ironharbor",
+        "price": 60000,
+        "desc": "铁港城码头顶层的阁楼，推开窗就是桅杆与海风。跑商的绝佳据点。"
+      },
+      "prop_dawn_01": {
+        "name": "晨曦宅院",
+        "map": "dawn_city",
+        "price": 150000,
+        "desc": "晨曦城圣光区内的雅致宅院，门前种着圣光百合。身份的象征。"
+      },
+      "prop_moon_01": {
+        "name": "月冠别墅",
+        "map": "moon_court",
+        "price": 300000,
+        "desc": "月冠王庭的精灵别墅，月光能透过叶隙洒进屋内。奢华之选。"
+      },
+      "prop_anvil_01": {
+        "name": "铁砧庄园",
+        "map": "anvil_fort",
+        "price": 500000,
+        "desc": "铁砧要塞山壁上的矮人庄园，室内流淌着温热的熔岩渠。顶级置业。"
+      }
+    },
+    "HOUSE_LEVELS": {
+      "1": {
+        "name": "木屋",
+        "storage": 20,
+        "upgrade_cost": null,
+        "heal_pct": 0.5,
+        "stall_slots": 0,
+        "desc": "温暖的小木屋，够住。"
+      },
+      "2": {
+        "name": "石屋",
+        "storage": 40,
+        "upgrade_cost": {
+          "gold": 5000,
+          "mats": {
+            "mat_shi_cai": 20
+          }
+        },
+        "heal_pct": 1.0,
+        "stall_slots": 1,
+        "desc": "结实的石屋，仓库大了，回家能完全恢复。"
+      },
+      "3": {
+        "name": "庄园",
+        "storage": 80,
+        "upgrade_cost": {
+          "gold": 20000,
+          "mats": {
+            "mat_jing_tie": 10
+          }
+        },
+        "heal_pct": 1.0,
+        "stall_slots": 2,
+        "desc": "带院子的庄园，铺面挂机位更多，可邀请好友留宿。"
+      },
+      "4": {
+        "name": "宅邸",
+        "storage": 160,
+        "upgrade_cost": {
+          "gold": 80000,
+          "mats": {
+            "mat_mi_yin": 5
+          }
+        },
+        "heal_pct": 1.0,
+        "stall_slots": 3,
+        "desc": "气派的宅邸，仓库 160 格，解锁专属宅邸传送点。"
+      }
+    },
+    "HOUSE_MAX_LEVEL": 4,
+    "HOUSE_REFUND": {
+      "1": 0.5,
+      "2": 0.4,
+      "3": 0.3,
+      "4": 0.2
+    }
+  },
+  "item_tag_display": {
+    "ITEM_TAG_DISPLAY": {
+      "鱼": {
+        "line": "🐟 {size:.1f}cm / {weight}kg",
+        "max_lines": 30,
+        "omit": "……还有 {left} 条"
+      },
+      "材料": {
+        "line": "🧪 {size:.1f}cm / {weight}kg",
+        "max_lines": 20,
+        "omit": "……还有 {left} 份"
+      },
+      "*": {
+        "line": "{size:.1f}cm / {weight}kg",
+        "max_lines": 20,
+        "omit": "……还有 {left} 条"
+      }
+    }
+  },
+  "mounts": {
+    "MOUNT_POOL": [
+      {
+        "key": "mount_horse",
+        "name": "老马",
+        "icon": "🐴",
+        "quality": "white",
+        "lv": 1,
+        "price": 500,
+        "discount": 0.1,
+        "elite_bonus": 0.0,
+        "stamina_reduce": 0.0,
+        "sell_bonus": 0.0,
+        "collect_bonus": 0.0,
+        "fish_bonus": 0.0,
+        "exp_mult": 0.0,
+        "desc": "温顺可靠的老马，腿脚虽慢但从不尥蹶子。传送费－10%"
+      },
+      {
+        "key": "mount_donkey",
+        "name": "小毛驴",
+        "icon": "🫏",
+        "quality": "white",
+        "lv": 5,
+        "price": 300,
+        "discount": 0.05,
+        "elite_bonus": 0.0,
+        "stamina_reduce": 0.0,
+        "sell_bonus": 0.05,
+        "collect_bonus": 0.0,
+        "fish_bonus": 0.0,
+        "exp_mult": 0.0,
+        "desc": "倔脾气但很能驮，货郎的最爱。传送费－5%，出售价格＋5%(商店直购)"
+      },
+      {
+        "key": "mount_steed",
+        "name": "骏马",
+        "icon": "🐎",
+        "quality": "green",
+        "lv": 15,
+        "price": 0,
+        "discount": 0.2,
+        "elite_bonus": 0.0,
+        "stamina_reduce": 0.0,
+        "sell_bonus": 0.0,
+        "collect_bonus": 0.0,
+        "fish_bonus": 0.0,
+        "exp_mult": 0.0,
+        "desc": "脚程极快的良种骏马，跑商赶路两不误。传送费－20%(精英掉落『骏马缰绳』)"
+      },
+      {
+        "key": "mount_camel",
+        "name": "铁港驼马",
+        "icon": "🐫",
+        "quality": "green",
+        "lv": 20,
+        "price": 0,
+        "discount": 0.15,
+        "elite_bonus": 0.0,
+        "stamina_reduce": 0.0,
+        "sell_bonus": 0.1,
+        "collect_bonus": 0.0,
+        "fish_bonus": 0.0,
+        "exp_mult": 0.0,
+        "desc": "铁港商队驯养的驮兽。传送费－15%，出售价格＋10%(稀有级垂钓产出『驼马缰绳』)"
+      },
+      {
+        "key": "mount_wolf",
+        "name": "雪狼",
+        "icon": "🐺",
+        "quality": "blue",
+        "lv": 30,
+        "price": 0,
+        "discount": 0.3,
+        "elite_bonus": 0.05,
+        "stamina_reduce": 0.0,
+        "sell_bonus": 0.0,
+        "collect_bonus": 0.0,
+        "fish_bonus": 0.0,
+        "exp_mult": 0.0,
+        "desc": "北境驯化的雪狼，嗅觉灵敏专挑厉害的打。传送费－30%，探索精英率＋5%(Boss 掉落『雪狼缰绳』)"
+      },
+      {
+        "key": "mount_reindeer",
+        "name": "北境驯鹿",
+        "icon": "🦌",
+        "quality": "blue",
+        "lv": 35,
+        "price": 0,
+        "discount": 0.25,
+        "elite_bonus": 0.0,
+        "stamina_reduce": 0.15,
+        "sell_bonus": 0.0,
+        "collect_bonus": 0.05,
+        "fish_bonus": 0.0,
+        "exp_mult": 0.0,
+        "desc": "踏雪无痕的北境驯鹿。传送费－25%，探索/移动 15% 概率不耗体力，采集产出＋5%(北境采集稀有产出『驯鹿缰绳』)"
+      },
+      {
+        "key": "mount_ghost",
+        "name": "幽灵马",
+        "icon": "👻",
+        "quality": "purple",
+        "lv": 45,
+        "price": 0,
+        "discount": 0.4,
+        "elite_bonus": 0.0,
+        "stamina_reduce": 0.0,
+        "sell_bonus": 0.0,
+        "collect_bonus": 0.0,
+        "fish_bonus": 0.0,
+        "exp_mult": 0.05,
+        "desc": "午夜马厩里走出的幻影。传送费－40%，战斗经验＋5%(Boss 稀有掉落『幽灵缰绳』)"
+      },
+      {
+        "key": "mount_unicorn",
+        "name": "森林独角兽",
+        "icon": "🦄",
+        "quality": "purple",
+        "lv": 45,
+        "price": 0,
+        "discount": 0.3,
+        "elite_bonus": 0.05,
+        "stamina_reduce": 0.1,
+        "sell_bonus": 0.0,
+        "collect_bonus": 0.1,
+        "fish_bonus": 0.0,
+        "exp_mult": 0.0,
+        "desc": "银月林海的圣兽。传送费－30%，精英率＋5%，探索/移动 10% 概率不耗体力，采集产出＋10%(传说级垂钓稀有产出『独角兽缰绳』)"
+      },
+      {
+        "key": "mount_fogbird",
+        "name": "雾羽候鸟",
+        "icon": "🕊️",
+        "quality": "purple",
+        "lv": 50,
+        "price": 0,
+        "discount": 0.3,
+        "elite_bonus": 0.05,
+        "stamina_reduce": 0.2,
+        "sell_bonus": 0.0,
+        "collect_bonus": 0.0,
+        "fish_bonus": 0.0,
+        "exp_mult": 0.05,
+        "desc": "翅羽如雾的候鸟之王，日行千里。传送费－30%，探索/移动 20% 概率不耗体力，精英率＋5%，经验＋5%（隐藏线·候鸟的信 hq7_3 奖励『雾羽候鸟缰绳』）"
+      },
+      {
+        "key": "mount_griffin",
+        "name": "狮鹫",
+        "icon": "🦅",
+        "quality": "orange",
+        "lv": 60,
+        "price": 0,
+        "discount": 0.4,
+        "elite_bonus": 0.1,
+        "stamina_reduce": 0.2,
+        "sell_bonus": 0.1,
+        "collect_bonus": 0.0,
+        "fish_bonus": 0.0,
+        "exp_mult": 0.1,
+        "desc": "翱翔天际的传说坐骑。传送费－40%，精英率＋10%，探索/移动 20% 概率不耗体力，出售＋10%，经验＋10%(Boss 极稀有掉落『狮鹫缰绳』)"
+      },
+      {
+        "key": "mount_warhorse",
+        "name": "炎蹄战马",
+        "icon": "🔥",
+        "quality": "orange",
+        "lv": 55,
+        "price": 0,
+        "discount": 0.35,
+        "elite_bonus": 0.05,
+        "stamina_reduce": 0.1,
+        "sell_bonus": 0.0,
+        "collect_bonus": 0.0,
+        "fish_bonus": 0.1,
+        "exp_mult": 0.05,
+        "desc": "蹄下燃着烈焰的战争坐骑。传送费－35%，精英率＋5%，探索/移动 10% 概率不耗体力，钓鱼产出＋10%，经验＋5%(Boss 极稀有掉落『炎蹄缰绳』)"
+      }
+    ],
+    "MOUNT_DROP_ELITE": {
+      "mount_steed": 0.06
+    },
+    "MOUNT_DROP_BOSS": {
+      "mount_wolf": 0.1,
+      "mount_ghost": 0.04,
+      "mount_warhorse": 0.02,
+      "mount_griffin": 0.01
+    }
+  },
+  "prof_config": {
+    "PROF_TUTORS": {
+      "gather": [
+        "草药师·艾琳",
+        "橡木镇"
+      ],
+      "mining": [
+        "矿工长·巴尔金",
+        "铁港城"
+      ],
+      "fishing": [
+        "老渔夫·马库斯",
+        "铁港城"
+      ],
+      "cooking": [
+        "大厨·罗莎",
+        "白鹿城"
+      ],
+      "alchemy": [
+        "炼金术士·梅尔文",
+        "晨曦城"
+      ],
+      "craft": [
+        "铁匠大师·奥格",
+        "铁港城"
+      ],
+      "enhance": [
+        "强化师·克拉拉",
+        "白鹿城"
+      ],
+      "enchant": [
+        "符文大师·吉姆利",
+        "铁砧要塞"
+      ]
+    },
+    "PROF_WAIT_BASE": {
+      "fishing": [
+        45,
+        75,
+        "垂钓"
+      ],
+      "gather": [
+        45,
+        75,
+        "采集"
+      ],
+      "mining": [
+        65,
+        115,
+        "挖掘"
+      ]
+    },
+    "DAILY_PROF_TASKS": {
+      "gather": [
+        "采集",
+        5,
+        50
+      ],
+      "mining": [
+        "挖掘",
+        3,
+        50
+      ],
+      "fishing": [
+        "垂钓",
+        5,
+        50
+      ],
+      "alchemy": [
+        "炼金合成",
+        2,
+        50
+      ],
+      "craft": [
+        "锻造装备",
+        1,
+        50
+      ],
+      "cooking": [
+        "烹饪料理",
+        2,
+        50
+      ],
+      "enhance": [
+        "强化装备",
+        1,
+        50
+      ],
+      "enchant": [
+        "附魔装备",
+        1,
+        50
+      ]
+    },
+    "BAG_FILTER_TYPES": [
+      "装备",
+      "材料",
+      "消耗品",
+      "符文",
+      "宠物蛋",
+      "坐骑",
+      "图纸",
+      "鱼"
+    ],
+    "PROF_STAMINA_COST": {
+      "gather": 5,
+      "mining": 5,
+      "fishing": 5,
+      "cooking": 5,
+      "alchemy": 10,
+      "craft": 10,
+      "enhance": 10,
+      "enchant": 10
+    },
+    "PROF_WAIT_DECAY": 0.05,
+    "PROF_WAIT_FLOOR": 10,
+    "MINING_KEYWORDS": [
+      "矿石",
+      "秘银",
+      "精钢",
+      "结晶",
+      "核心",
+      "碎片",
+      "石",
+      "精华"
+    ],
+    "PAWN_RATES": {
+      "equip": 1.0,
+      "pet_mount": 0.5,
+      "consumable": 0.85,
+      "mat_smith": 0.9,
+      "mat_alchemy": 0.9,
+      "mat_shop": 0.8
+    },
+    "ENCHANT_SLOT_UNLOCK": {
+      "purple": 7,
+      "orange": 8
+    },
+    "RUNE_LEVEL_GATE": {
+      "1": 2,
+      "2": 4,
+      "3": 6
+    },
+    "DAILY_PROF_EXP": 50,
+    "PRICE_BAND": {
+      "lo_base": 3,
+      "lo_per_lv": 4,
+      "hi_base": 20,
+      "hi_per_lv": 12
+    },
+    "RARE_MATERIAL_PRICE": 150,
+    "GATHER_MAP_MIN_LV": [
+      [
+        10,
+        1
+      ],
+      [
+        20,
+        2
+      ],
+      [
+        30,
+        3
+      ],
+      [
+        40,
+        4
+      ],
+      [
+        50,
+        5
+      ],
+      [
+        60,
+        6
+      ],
+      [
+        70,
+        7
+      ],
+      [
+        80,
+        8
+      ],
+      [
+        90,
+        9
+      ],
+      [
+        1000000000,
+        10
+      ]
+    ]
+  },
+  "refine": {
+    "REFINE_RECIPES": {
+      "弯刀": {
+        "target": "rec_xue_shi_zhan_jian",
+        "mats": {
+          "mat_tie_kuang_shi": 4,
+          "mat_xue_shi_zhi_yuan": 1
+        },
+        "gold": 800,
+        "inherit": "half",
+        "desc": "铁港弯刀淬入血誓之源，剑脊烙上团徽——血誓战剑（继承一半强化/升级）"
+      },
+      "血誓战剑": {
+        "target": "rec_yu_jin_jun_tuan_jian",
+        "mats": {
+          "mat_sheng_dian_tie_kuai": 3,
+          "mat_yu_jin_he_xin": 1
+        },
+        "gold": 1500,
+        "inherit": "half",
+        "desc": "血誓战剑熔入余烬核心，剑锋燃起烽火——余烬军团战剑（继承一半强化/升级）"
+      },
+      "日冕权杖": {
+        "target": "rec_ye_dao_quan_zhang",
+        "mats": {
+          "mat_sheng_guang_jie_jing": 3,
+          "mat_ye_dao_zhi_xin": 1
+        },
+        "gold": 1800,
+        "inherit": "half",
+        "desc": "日冕权杖浸入夜色，杖首光芒转为幽蓝——夜祷权杖（继承一半强化/升级）"
+      }
+    }
+  },
+  "rules": {
+    "RULES": [
+      {
+        "id": "rule_explore_luck",
+        "trigger": "explore_done",
+        "desc": "连续 3 趟空探索 → 运气守恒补偿经验",
+        "cond": {
+          "event": "empty"
+        },
+        "count": {
+          "key": "explore_empty",
+          "gte": 3
+        },
+        "action": {
+          "template": "exp_gain",
+          "params": {
+            "min": 12,
+            "scale_lv": 2,
+            "header": "🍀 【运气守恒】连续三趟一无所获，命运终于看不过去了！\n你感到一股久违的领悟涌上心头——✨ 经验 +{exp}"
+          }
+        }
+      },
+      {
+        "id": "rule_explore_ghost",
+        "trigger": "explore_done",
+        "desc": "深夜野外探索 → 幽灵搭话（气氛彩蛋）",
+        "cond": {
+          "event": "empty",
+          "time": "deep_night",
+          "map_type": "野外"
+        },
+        "chance": 0.18,
+        "action": {
+          "template": "dialog",
+          "params": {
+            "texts": [
+              "👻 深夜的{name}雾气弥漫，一个半透明的老奶奶飘过来问路：“年轻人……王都怎么走？”你指完路，她才想起自己已经死了三百多年。",
+              "👻 你听见身后传来一声叹息，回头却空无一人——只有一盏忽明忽暗的鬼火，在你转身时悄悄熄灭了。",
+              "👻 雾里传来缥缈的歌声，像是很久以前的童谣。你竖起耳朵听了半天，歌声突然停了，取而代之的是一声轻笑。"
+            ]
+          }
+        }
+      },
+      {
+        "id": "rule_explore_scenery",
+        "trigger": "explore_done",
+        "desc": "野外探索 → 风景彩蛋",
+        "cond": {
+          "event": "empty",
+          "map_type": "野外"
+        },
+        "chance": 0.08,
+        "action": {
+          "template": "dialog",
+          "params": {
+            "texts": [
+              "🌄 你爬上{name}的一处高地，正赶上夕阳把云层烧成金色。这一刻，旅途的疲惫都被风吹散了。",
+              "🌈 雨后的{name}挂起一道完整的彩虹，从山脚一直架到天边。你看了很久，直到它慢慢淡去。",
+              "🦋 一群蝴蝶从你面前飞过，扑闪着翅膀在花丛间打了个转。你忽然觉得，这片大陆还挺美的。"
+            ]
+          }
+        }
+      },
+      {
+        "id": "rule_explore_coin",
+        "trigger": "explore_done",
+        "desc": "野外探索 → 捡到零钱",
+        "cond": {
+          "event": "empty"
+        },
+        "chance": 0.06,
+        "action": {
+          "template": "loot_gold",
+          "params": {
+            "min": 5,
+            "max": 15,
+            "scale_lv": 1,
+            "header": "🪙 你踢开一块石头，底下压着几枚不知谁遗落的铜板。\n💰 获得 {gold} 金币！"
+          }
+        }
+      },
+      {
+        "id": "rule_win_streak",
+        "trigger": "battle_win",
+        "desc": "连续 3 场胜利 → 勇者气势",
+        "cond": {
+          "event": "win"
+        },
+        "count": {
+          "key": "win_streak",
+          "gte": 3
+        },
+        "action": {
+          "template": "exp_gain",
+          "params": {
+            "min": 15,
+            "scale_lv": 3,
+            "header": "🔥 【三连胜】你越战越勇，气势如虹！连战三场的经验让你获益匪浅——✨ 经验 +{exp}"
+          }
+        }
+      },
+      {
+        "id": "rule_win_lowhp",
+        "trigger": "battle_win",
+        "desc": "残血反杀 → 战意回响",
+        "cond": {
+          "event": "win",
+          "hp_pct_max": 0.3
+        },
+        "chance": 0.8,
+        "action": {
+          "template": "dialog",
+          "params": {
+            "texts": [
+              "💢 你拖着残破的身躯站到最后——敌人的最后一击擦着你的发梢掠过，倒下的却是它！\n这场以命相搏的胜利，让你的血脉都沸腾了。",
+              "💢 鲜血顺着伤口滴落，你握剑的手却没有一丝颤抖。赢了——赢得惊心动魄！"
+            ]
+          }
+        }
+      },
+      {
+        "id": "rule_win_boss",
+        "trigger": "battle_win",
+        "desc": "击败 Boss → 额外战利品",
+        "cond": {
+          "event": "win",
+          "enemy_tag": "boss"
+        },
+        "chance": 0.5,
+        "action": {
+          "template": "loot_gold",
+          "params": {
+            "min": 30,
+            "max": 60,
+            "scale_lv": 3,
+            "header": "👑 你在 Boss 的巢穴深处又搜刮了一遍，摸到一小袋私藏的金币！\n💰 额外获得 {gold} 金币！"
+          }
+        }
+      },
+      {
+        "id": "rule_win_ice_melt",
+        "trigger": "battle_win",
+        "desc": "击败冰系怪物 → 融化掉落",
+        "cond": {
+          "event": "win",
+          "enemy_tag": [
+            "冰",
+            "霜",
+            "雪",
+            "冻"
+          ]
+        },
+        "chance": 0.5,
+        "action": {
+          "template": "loot_materials",
+          "params": {
+            "mats": [
+              "冰蛇鳞",
+              "冻鱼鳞",
+              "冰熊皮"
+            ],
+            "n": 1,
+            "bp_line": "",
+            "header": "🧊 【融化掉落】冰霜怪物的身体在阳光下缓缓化开，露出几片保存完好的鳞甲！\n🎒 额外获得：{mats}！{extra}"
+          }
+        }
+      },
+      {
+        "id": "rule_win_small_joy",
+        "trigger": "battle_win",
+        "desc": "普通胜利 → 小确幸彩蛋",
+        "cond": {
+          "event": "win"
+        },
+        "chance": 0.05,
+        "action": {
+          "template": "dialog",
+          "params": {
+            "texts": [
+              "🪶 战斗结束，一只不知从哪飞来的小鸟落在你肩头，歪头看了你一眼，又飞走了。",
+              "🍀 你收拾战场时，在怪物身下发现一朵完好的小花。你把它别在衣襟上，心情莫名好了起来。"
+            ]
+          }
+        }
+      },
+      {
+        "id": "rule_gather_rare",
+        "trigger": "gather_done",
+        "desc": "连续 3 次采集 → 采到稀有材料",
+        "cond": {
+          "event": [
+            "gather",
+            "mine"
+          ]
+        },
+        "count": {
+          "key": "gather_count",
+          "gte": 3
+        },
+        "action": {
+          "template": "loot_materials",
+          "params": {
+            "mats": [
+              "月光精华",
+              "琥珀精华",
+              "暗影精华"
+            ],
+            "n": 1,
+            "bp_line": "",
+            "header": "🌟 【变异采集】你在这片土地上来回摸索了许久，竟采到一份罕见的精华！\n🎒 获得稀有材料：{mats}！{extra}"
+          }
+        }
+      },
+      {
+        "id": "rule_gather_artifact",
+        "trigger": "gather_done",
+        "desc": "采集/挖掘 → 挖到古董",
+        "cond": {
+          "event": [
+            "gather",
+            "mine"
+          ]
+        },
+        "chance": 0.04,
+        "action": {
+          "template": "loot_gold",
+          "params": {
+            "min": 10,
+            "max": 30,
+            "scale_lv": 2,
+            "header": "🏺 你的工具碰到一个硬物——挖出来一看，是半埋在土里的古旧钱罐！\n💰 获得 {gold} 金币！"
+          }
+        }
+      },
+      {
+        "id": "rule_fish_rare",
+        "trigger": "gather_done",
+        "desc": "垂钓 → 捞到珍珠",
+        "cond": {
+          "event": "fish"
+        },
+        "chance": 0.05,
+        "action": {
+          "template": "loot_materials",
+          "params": {
+            "mats": [
+              "湖珍珠",
+              "珍珠贝"
+            ],
+            "n": 1,
+            "bp_line": "",
+            "header": "🦪 【意外收获】鱼线猛地一沉——拉上来一只紧紧闭合的大蚌！\n🎒 获得：{mats}！{extra}"
+          }
+        }
+      },
+      {
+        "id": "rule_gather_bee",
+        "trigger": "gather_done",
+        "desc": "采集 → 惊动蜜蜂（笑点小伤害）",
+        "cond": {
+          "event": [
+            "gather",
+            "mine"
+          ]
+        },
+        "chance": 0.03,
+        "action": {
+          "template": "damage",
+          "params": {
+            "pct": 0.03,
+            "min": 1,
+            "header": "🐝 你扒开草丛，惊动了一窝野蜂！手忙脚乱地扑打中，损失 {dmg} 点生命(当前 ❤️ {hp}/{max_hp})\n(蜜蜂：'嗡嗡嗡嗡嗡嗡！')"
+          }
+        }
+      },
+      {
+        "id": "rule_move_scenery",
+        "trigger": "move_enter",
+        "desc": "跨图移动 → 沿途风景",
+        "chance": 0.1,
+        "action": {
+          "template": "dialog",
+          "params": {
+            "texts": [
+              "🌄 前往{name}的路上，你路过一片开满野花的坡地，微风送来淡淡的草木香。",
+              "🌊 途经一条清澈的小溪，你在溪边洗了把脸。溪水冰凉，人也精神了不少。",
+              "🐑 一群绵羊挡在路中间慢悠悠地吃草，你等了好一会儿，它们才不情愿地让开路。"
+            ]
+          }
+        }
+      },
+      {
+        "id": "rule_move_crossroad",
+        "trigger": "move_enter",
+        "desc": "跨图移动 → 岔路口小插曲",
+        "chance": 0.05,
+        "action": {
+          "template": "dialog",
+          "params": {
+            "texts": [
+              "🪧 岔路口立着一块歪歪扭扭的路牌，箭头指的方向和地图完全相反。你选择相信地图——但愿路牌没坑人。",
+              "🧭 一个樵夫告诉你：“往{name}走有条近路，就是野猪多了点。”你权衡了一下，还是走了大路。"
+            ]
+          }
+        }
+      },
+      {
+        "id": "rule_move_letter",
+        "trigger": "move_enter",
+        "desc": "跨图移动 → 捡到漂流信",
+        "chance": 0.03,
+        "action": {
+          "template": "loot_gold",
+          "params": {
+            "min": 8,
+            "max": 20,
+            "scale_lv": 1,
+            "header": "✉️ 路边的草丛里压着一封信和几枚铜板，信上写着：\"给捡到的人——这是迷路旅人的谢礼，帮我告诉家里人我还活着。\"\n💰 获得 {gold} 金币！"
+          }
+        }
+      },
+      {
+        "id": "rule_craft_perfect",
+        "trigger": "craft_done",
+        "desc": "制作成功 → 完美成品",
+        "chance": 0.06,
+        "action": {
+          "template": "dialog",
+          "params": {
+            "texts": [
+              "✨ 收尾的一瞬间，你福至心灵——这件作品的手感前所未有的好！连老师傅看了都得夸一句。",
+              "✨ 火光映着你的脸，这一次的手艺格外顺畅，成品的光泽比平时亮了几分。"
+            ]
+          }
+        }
+      },
+      {
+        "id": "rule_craft_side",
+        "trigger": "craft_done",
+        "desc": "制作成功 → 意外副产品",
+        "chance": 0.05,
+        "action": {
+          "template": "loot_materials",
+          "params": {
+            "mats": [
+              "魔法粉尘",
+              "附魔粉尘",
+              "星辉尘"
+            ],
+            "n": 1,
+            "bp_line": "",
+            "header": "🪄 收拾工作台时，你发现边角料里凝出一点亮晶晶的粉尘——意外的副产品！\n🎒 获得：{mats}！{extra}"
+          }
+        }
+      },
+      {
+        "id": "rule_quest_thanks",
+        "trigger": "quest_deliver",
+        "desc": "交付任务 → 委托人额外感谢",
+        "chance": 0.3,
+        "action": {
+          "template": "loot_gold",
+          "params": {
+            "min": 10,
+            "max": 25,
+            "scale_lv": 1,
+            "header": "🙏 委托人追出几步叫住你：“差点忘了！”说着往你手里塞了几枚钱币。\n💰 额外获得 {gold} 金币！"
+          }
+        }
+      },
+      {
+        "id": "rule_quest_keepsake",
+        "trigger": "quest_deliver",
+        "desc": "交付任务 → 小信物彩蛋",
+        "chance": 0.08,
+        "action": {
+          "template": "dialog",
+          "params": {
+            "texts": [
+              "🎁 委托人递来一小包干粮：“路上吃，别饿着。”你收下了——虽然只是普通的干粮，却让人心里一暖。",
+              "📿 交付完毕，委托人从袖口解下一枚旧护身符送给你：“不值钱，但保平安。”你把它挂在了腰间。"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "signin_config": {
+    "SIGNIN_CONFIG": {
+      "base_gold": 20,
+      "streak_gold_step": 5,
+      "festival_mult": 2,
+      "fortune_bad_th": 0.15,
+      "fortune_good_th": 0.55,
+      "week_quality_weights": [
+        55,
+        35,
+        10
+      ]
+    }
+  },
+  "stat_templates": {
+    "MONSTER_ROLE_BASE": {
+      "tank": {
+        "hp": 60,
+        "atk": 8,
+        "def": 7,
+        "matk": 3,
+        "mdef": 6,
+        "spd": 6,
+        "dodge": 0.0
+      },
+      "dps": {
+        "hp": 45,
+        "atk": 12,
+        "def": 4,
+        "matk": 4,
+        "mdef": 4,
+        "spd": 10,
+        "dodge": 0.05,
+        "pene_phys": 0.05
+      },
+      "caster": {
+        "hp": 40,
+        "atk": 5,
+        "def": 3,
+        "matk": 14,
+        "mdef": 8,
+        "spd": 9,
+        "dodge": 0.03,
+        "pene_magi": 0.05
+      },
+      "speedster": {
+        "hp": 35,
+        "atk": 9,
+        "def": 3,
+        "matk": 5,
+        "mdef": 4,
+        "spd": 16,
+        "dodge": 0.08
+      },
+      "healer": {
+        "hp": 38,
+        "atk": 4,
+        "def": 3,
+        "matk": 12,
+        "mdef": 8,
+        "spd": 8,
+        "dodge": 0.02
+      },
+      "elite": {
+        "hp": 95,
+        "atk": 14,
+        "def": 8,
+        "matk": 10,
+        "mdef": 8,
+        "spd": 11,
+        "dodge": 0.05,
+        "pene_phys": 0.03,
+        "pene_magi": 0.03
+      },
+      "boss": {
+        "hp": 160,
+        "atk": 16,
+        "def": 10,
+        "matk": 12,
+        "mdef": 10,
+        "spd": 10,
+        "dodge": 0.03
+      }
+    },
+    "MONSTER_ROLE_GROWTH": {
+      "tank": {
+        "hp": 36,
+        "atk": 4.6,
+        "def": 4.0,
+        "matk": 0.8,
+        "mdef": 2.8,
+        "spd": 0.3,
+        "dodge": 0.0
+      },
+      "dps": {
+        "hp": 30,
+        "atk": 9.0,
+        "def": 5.0,
+        "matk": 1.0,
+        "mdef": 2.4,
+        "spd": 1.0,
+        "dodge": 0.0
+      },
+      "caster": {
+        "hp": 22,
+        "atk": 2.6,
+        "def": 3.5,
+        "matk": 9.0,
+        "mdef": 4.0,
+        "spd": 0.9,
+        "dodge": 0.0
+      },
+      "speedster": {
+        "hp": 22,
+        "atk": 6.0,
+        "def": 4.5,
+        "matk": 1.0,
+        "mdef": 2.0,
+        "spd": 1.8,
+        "dodge": 0.0
+      },
+      "healer": {
+        "hp": 20,
+        "atk": 2.2,
+        "def": 3.0,
+        "matk": 6.0,
+        "mdef": 3.0,
+        "spd": 0.8,
+        "dodge": 0.0
+      },
+      "elite": {
+        "hp": 70,
+        "atk": 8.2,
+        "def": 5.5,
+        "matk": 5.0,
+        "mdef": 4.5,
+        "spd": 1.5,
+        "dodge": 0.0
+      },
+      "boss": {
+        "hp": 145,
+        "atk": 7.5,
+        "def": 3.8,
+        "matk": 6.0,
+        "mdef": 3.4,
+        "spd": 1.8,
+        "dodge": 0.0
+      }
+    },
+    "MONSTER_EXP_BASE": {
+      "tank": 8,
+      "dps": 9,
+      "caster": 10,
+      "speedster": 9,
+      "healer": 10,
+      "elite": 24,
+      "boss": 60
+    },
+    "FIELD_TIER_MULT": {
+      "elite": [
+        [
+          15,
+          0.9
+        ],
+        [
+          30,
+          1.5
+        ],
+        [
+          60,
+          1.1
+        ],
+        [
+          999,
+          0.9
+        ]
+      ],
+      "boss": [
+        [
+          15,
+          1.9
+        ],
+        [
+          30,
+          0.95
+        ],
+        [
+          60,
+          0.85
+        ],
+        [
+          999,
+          0.85
+        ]
+      ]
+    },
+    "NORMAL_HP_STAGE_MULT": [
+      [
+        15,
+        0.0
+      ],
+      [
+        30,
+        0.145
+      ],
+      [
+        60,
+        0.005
+      ],
+      [
+        999,
+        0.0
+      ]
+    ],
+    "BOSS_ATK_STAGE_MULT": [
+      [
+        15,
+        0.0
+      ],
+      [
+        30,
+        0.032
+      ],
+      [
+        60,
+        0.055
+      ],
+      [
+        999,
+        0.045
+      ]
+    ],
+    "INSTANCE_BOSS_ATK_STAGE_MULT": [
+      [
+        15,
+        0.0
+      ],
+      [
+        25,
+        0.13
+      ],
+      [
+        60,
+        0.055
+      ],
+      [
+        999,
+        0.02
+      ]
+    ],
+    "HP_STAGE_MULT": [
+      [
+        15,
+        0.0
+      ],
+      [
+        30,
+        0.05
+      ],
+      [
+        60,
+        0.03
+      ],
+      [
+        999,
+        0.02
+      ]
+    ],
+    "ATK_STAGE_MULT": [
+      [
+        30,
+        0.0
+      ],
+      [
+        999,
+        0.004
+      ]
+    ],
+    "MONSTER_GOLD_BASE": {
+      "tank": 5,
+      "dps": 6,
+      "caster": 6,
+      "speedster": 6,
+      "healer": 6,
+      "elite": 20,
+      "boss": 60
+    },
+    "MONSTER_ROLE_MODS": {
+      "boss": {
+        "hp_per_lv": 0.06,
+        "hp_cap": 3.0,
+        "def_mult": 1.25,
+        "mdef_mult": 1.25,
+        "dot_res": 0.9
+      },
+      "elite": {
+        "hp_per_lv": 0.04,
+        "hp_cap": 3.0,
+        "def_mult": 1.15,
+        "mdef_mult": 1.15,
+        "dot_res": 0.8
+      }
+    },
+    "EQUIP_SLOT_BASE": {
+      "weapon": {
+        "atk": 3,
+        "matk": 3
+      },
+      "helm": {
+        "def": 2,
+        "hp": 8
+      },
+      "armor": {
+        "def": 4,
+        "hp": 15
+      },
+      "legs": {
+        "def": 3,
+        "hp": 10
+      },
+      "boots": {
+        "def": 1,
+        "spd": 2
+      },
+      "ring": {
+        "atk": 1,
+        "matk": 1
+      },
+      "necklace": {
+        "mdef": 2,
+        "hp": 6
+      }
+    },
+    "EQUIP_SLOT_SCALING": {
+      "weapon": {
+        "atk": 1.0,
+        "matk": 1.0
+      },
+      "helm": {
+        "def": 0.5,
+        "hp": 3
+      },
+      "armor": {
+        "def": 0.9,
+        "hp": 6
+      },
+      "legs": {
+        "def": 0.65,
+        "hp": 4
+      },
+      "boots": {
+        "def": 0.4,
+        "spd": 0.5
+      },
+      "ring": {
+        "atk": 0.35,
+        "matk": 0.35
+      },
+      "necklace": {
+        "mdef": 0.6,
+        "hp": 2.5
+      }
+    }
+  },
+  "summons": {
+    "SUMMONS": {
+      "skeleton": {
+        "name": "骷髅兵",
+        "icon": "💀",
+        "atk_ratio": 0.5,
+        "hp_ratio": 0.35,
+        "def_ratio": 0.4,
+        "dmg_type": "phys",
+        "limit": 3,
+        "bodyguard": 0.4,
+        "rank": 1,
+        "reach": 1
+      },
+      "vine_guard": {
+        "name": "藤蔓守卫",
+        "icon": "🌿",
+        "atk_ratio": 0.0,
+        "hp_ratio": 0.25,
+        "def_ratio": 0.35,
+        "dmg_type": "phys",
+        "limit": 2,
+        "bodyguard": 1.0,
+        "absorb_once": true,
+        "eats_aoe": true,
+        "rank": 1,
+        "reach": 1
+      },
+      "treant": {
+        "name": "古树守卫",
+        "icon": "🌳",
+        "atk_ratio": 0.3,
+        "hp_ratio": 0.5,
+        "def_ratio": 0.6,
+        "dmg_type": "phys",
+        "limit": 1,
+        "bodyguard": 0.5,
+        "aura_atk_all": 0.3,
+        "eats_aoe": true,
+        "rank": 1,
+        "reach": 1
+      },
+      "fire_elemental": {
+        "name": "火元素",
+        "icon": "🔥",
+        "atk_ratio": 0.5,
+        "hp_ratio": 0.4,
+        "def_ratio": 0.3,
+        "dmg_type": "magi",
+        "limit": 1,
+        "bodyguard": 0,
+        "element": "fire",
+        "mark_on_hit": "fire",
+        "attack_interval": 3.0,
+        "eats_aoe": true,
+        "rank": 2,
+        "reach": 2
+      },
+      "thunder_elemental": {
+        "name": "雷元素",
+        "icon": "⚡",
+        "atk_ratio": 0.45,
+        "hp_ratio": 0.4,
+        "def_ratio": 0.3,
+        "dmg_type": "magi",
+        "limit": 1,
+        "bodyguard": 0,
+        "element": "thunder",
+        "mark_on_hit": "thunder",
+        "attack_interval": 3.0,
+        "eats_aoe": true,
+        "rank": 2,
+        "reach": 2
+      }
+    }
+  },
+  "trial_tower": {
+    "TRIAL_DAILY_LIMIT": 3,
+    "TRIAL_MIN_LV": 70,
+    "TRIAL_MAX_FLOOR": 30
+  },
+  "upgrade": {
+    "UPGRADE_TABLE": {
+      "1": {
+        "cost": 300
+      },
+      "2": {
+        "cost": 450
+      },
+      "3": {
+        "cost": 675
+      },
+      "4": {
+        "cost": 1012
+      },
+      "5": {
+        "cost": 1518
+      },
+      "6": {
+        "cost": 2277
+      },
+      "7": {
+        "cost": 3415
+      },
+      "8": {
+        "cost": 5122
+      },
+      "9": {
+        "cost": 7683
+      },
+      "10": {
+        "cost": 11524
+      }
+    },
+    "MAX_UPGRADE": 10,
+    "UPGRADE_STONE": "i_stone_refine",
+    "UPGRADE_STAMINA": 10,
+    "UPGRADE_MATERIAL_CN": "精炼强化石"
+  },
+  "weekly_quests": {
+    "WEEKLY_PICK": 3,
+    "WEEKLY_MIN_LV": 50
+  }
+}

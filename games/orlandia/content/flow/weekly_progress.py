@@ -16,7 +16,7 @@
 | `from .. import db` + `db.get_event_state(k)` / `db.set_event_state(k, v)` | 模块级 `db` = **惰性宿主代理** `_HostDB`（属性访问时才解析宿主模块） | 正文里 `db.xxx(...)` **一行未改**；宿主由 `bind_host(db)` 注入，或按 `sys.modules` 找**已加载**的宿主模块（绝不 import，防在包侧另起一份宿主模块树） |
 | `from ..reward import grant_reward`（函数内 import） | `grant_reward = _host_grant_reward()` | 同一分发：注入优先，否则取宿主 `game.reward` 模块 |
 | `from .. import content as C` + `C.WEEKLY_QUESTS`（`game/commands/weekly.py:56/135`） | `weekly_pool()` —— 读包内 `content/data/weekly_quests.json` | **域文件单源**；按条目 `seq`（= 源列表插入序，导出期注入）还原顺序 |
-| 模块常量 `_WEEKLY_PICK = 3` / `_WEEKLY_MIN_LV = 50`（命令层硬编码） | `WEEKLY_PICK` / `WEEKLY_MIN_LV`（同值，注明真源行号） | 常量无条目形状 → 暂留包内常量（缺口见报告） |
+| 模块常量 `_WEEKLY_PICK = 3` / `_WEEKLY_MIN_LV = 50`（命令层硬编码） | `WEEKLY_PICK` / `WEEKLY_MIN_LV` = `_CFG.const("weekly_quests", …)` | ★ B9-L7：常量不再是包内字面量，改读 `game_config` 域（真源 `game/data/weekly_quests.py:152/155`，导出器 `b9_l7_domains.py:derive_game_config`） |
 
 顺序不变式（**渲染逐字等价的关键**）
 ------------------------------------
@@ -42,6 +42,9 @@ from __future__ import annotations
 import datetime
 import json
 import os
+
+# 包内常量读口（B9-L7：WEEKLY_PICK / WEEKLY_MIN_LV 改读 `game_config` 常量域，不再自带副本）
+from .. import config as _CFG
 
 # ============================================================
 # 宿主替身口（① 存储层 / 发放函数）
@@ -97,9 +100,11 @@ _QUEST_SRC = "game/data/weekly_quests.py:22 WEEKLY_QUESTS"
 WEEKLY_PICK_SRC = "game/data/weekly_quests.py:152 WEEKLY_PICK"
 WEEKLY_MIN_LV_SRC = "game/data/weekly_quests.py:155 WEEKLY_MIN_LV"
 
-# 每周自动发布条数 / 悬赏板解锁等级（真源同值；常量暂无域，见模块 docstring）
-WEEKLY_PICK = 3
-WEEKLY_MIN_LV = 50
+# 每周自动发布条数 / 悬赏板解锁等级 —— ★ B9-L7 起**读域**（`game_config` 域的 `weekly_quests` 组，
+# 由 `scripts/export_domains/b9_l7_domains.py:derive_game_config` 从真源单向导出）：
+# 包内不再有第二份数值副本；名字保持原样（宿主 `game/commands/weekly.py:60-61` re-export 这两个名字）。
+WEEKLY_PICK: int = _CFG.const("weekly_quests", "WEEKLY_PICK")
+WEEKLY_MIN_LV: int = _CFG.const("weekly_quests", "WEEKLY_MIN_LV")
 
 _DOMAIN_JSON = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                             "data", "weekly_quests.json")

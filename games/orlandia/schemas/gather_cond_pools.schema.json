@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/gather_cond_pools.schema.json",
+  "title": "限定采集池（gather_cond_pools）—— 一条 = 一张地图的**时机限定**采集物（表键 = 地图 id）",
+  "description": "真源 = 游戏仓 `game/data/gather_pools.py:109 GATHER_COND_POOLS`（v102.3 生活技能差异化），由 `scripts/export_domains/b9_profession.py:derive_gather_cond_pools` 单向导出。源格式是 `{地图 id: [(材料 id, 权重, 条件串), …]}` → 折成每条一个对象（`drops` = `[[材料 id, 权重, 条件串], …]`）+ 注入 `seq`（1 基源序）。消费者：`game/services/profession.py:gather_cond_roll`（当前时段/季节/天气命中 → 从该池按权重追加；未命中返回 None）+ 模块级启动校验 `validate_gather_cond`。**双重门禁**：条件词逐 token 必须在运行期注册表 `_GATHER_COND_CHECKERS`（night/morning/winter/rain）里 —— 运行期对未知词 fail-closed（本条永不命中 + 告警），导出期直接拒绝。⚠️ 插入序参与随机消费（`gather_cond_roll` 按插入序 extend `hit` 再 `random.choice`）→ 包侧消费按 `seq` 还原源序，否则同 seed 结果漂移。",
+  "x-primary": "gather_cond_pool",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "地图 id（maps 域 key；实测 8 条：silverwood / misty_swamp / white_deer_forest / permafrost_field / emerald_forest / redridge_plateau / storm_plateau / starlight_terrace）"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/gather_cond_pool"
+  },
+  "$defs": {
+    "gather_cond_pool": {
+      "type": "object",
+      "title": "限定采集池（一条 = 一张地图）",
+      "required": [
+        "drops",
+        "seq"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "drops": {
+          "type": "array",
+          "minItems": 1,
+          "title": "限定材料表",
+          "description": "该地图的时机限定采集物。元素 = `[材料 id, 相对权重, 条件串]`。权重相对低（稀有感）。",
+          "items": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "prefixItems": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "title": "材料 id",
+                "description": "items 域 key（导出期不校验闭合）。"
+              },
+              {
+                "type": "integer",
+                "minimum": 1,
+                "title": "权重",
+                "description": "相对权重（≥1）。"
+              },
+              {
+                "type": "string",
+                "minLength": 1,
+                "title": "条件串",
+                "description": "时机条件，用 `+` 组合（实测只有单条件：night / rain / winter；`winter+night` 是设计上支持、当前数据未用到的形态）。逐 token 必须 ∈ 运行期注册表。"
+              }
+            ]
+          }
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "源插入序",
+          "description": "导出期注入：源 `GATHER_COND_POOLS` dict 的 1 基插入序。**渲染逐字等价的关键**（`hit` 列表顺序 → `random.choice` 结果）。"
+        }
+      }
+    }
+  }
+}

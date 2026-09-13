@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/fishing_pool.schema.json",
+  "title": "鱼种池（fishing_pool）—— 一条 = 一个渔获条目（表键 = 鱼名）",
+  "description": "真源 = 游戏仓 `game/data/fishing.py:91 FISH_POOL`（16 章 2.3/2.4 渔获品种池；v126.6 扩容），由 `scripts/export_domains/b9_profession.py:derive_fishing_pool` 单向导出。源是 **list**（插入序参与累计权重抽样）→ 导出为「键 = 鱼名」的表并给每条注入 `seq`（1 基源序）；包侧消费必须按 `seq` 还原源序，否则同 seed 的渔获会漂移。消费者：`game/core/fishing.py:_roll_fish_legacy`（按 `spots` 限定水域 + `season` 硬限定 + `season_boost` ×1.5 + `weight` 累计权重抽样）、`game/services/profession.py:settle_fishing`（按 `type` 分岔：鱼/垃圾/材料入包、宝物开箱、鱼王全服广播）、`roll_fish_size_weight`（`size_range`/`weight_range` 掷个体属性）。",
+  "x-primary": "fish",
+  "type": "object",
+  "propertyNames": {
+    "type": "string",
+    "minLength": 1,
+    "description": "鱼名（= 该条目的 `name`；源侧 30 条无重名，重名会静默丢鱼 → 导出器直接拒绝）"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/fish"
+  },
+  "$defs": {
+    "fish": {
+      "type": "object",
+      "title": "渔获条目（一条）",
+      "required": [
+        "name",
+        "quality",
+        "type",
+        "price",
+        "spots",
+        "weight",
+        "size_range",
+        "weight_range",
+        "desc",
+        "seq"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "鱼名",
+          "description": "显示名（= 表键）。入包 / 出售按这个名字展示。"
+        },
+        "quality": {
+          "type": "string",
+          "enum": [
+            "white",
+            "green",
+            "blue",
+            "purple",
+            "orange"
+          ],
+          "title": "品质档",
+          "description": "五档品质（真源 `FISH_QUALITY_WEIGHTS` 的档位空间；白档不显示 ✦ 标记）。"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "鱼",
+            "材料",
+            "垃圾",
+            "宝物",
+            "鱼王"
+          ],
+          "title": "类型",
+          "description": "结算分岔依据（`settle_fishing`）：鱼/材料 → 入背包；垃圾 → 只报不给；宝物 → 立即开箱得金币；鱼王 → 全服广播 + 悬赏金币。"
+        },
+        "price": {
+          "type": "integer",
+          "minimum": 0,
+          "title": "售价",
+          "description": "标价（实收按店铺 8~9 折）。实测 0~250；0 = 「陈旧的宝箱」（固定内容 = 开箱金币，本体不入包）。"
+        },
+        "spots": {
+          "title": "限定钓点",
+          "description": "`null` = 全部水域；列表 = 仅这些钓点产出（元素是 fishing_spots 域 key）。",
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ]
+        },
+        "weight": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "抽取权重",
+          "description": "档位内相对权重（不是概率）。实测 10~60；同档权重和决定该档内分布。"
+        },
+        "size_range": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number"
+          },
+          "title": "尺寸区间(cm)",
+          "description": "个体尺寸掷点区间（low ≤ high）；v126.2 起随个体属性入包（tags），出售按 FIFO 加权「大鱼更贵」。"
+        },
+        "weight_range": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number"
+          },
+          "title": "重量区间(kg)",
+          "description": "个体重量掷点区间（low ≤ high）。"
+        },
+        "desc": {
+          "type": "string",
+          "minLength": 1,
+          "x-widget": "textarea",
+          "title": "说明",
+          "description": "出货文案里的 `📦 {desc}` 一段。"
+        },
+        "season": {
+          "type": "string",
+          "enum": [
+            "spring",
+            "summer",
+            "autumn",
+            "winter"
+          ],
+          "title": "季节硬限定",
+          "description": "v116 垂钓季节限定：非该季节**不产出**（实测 4 条）。整档/整点被季节过滤空时会放宽重试（见 `roll_fish`）。"
+        },
+        "season_boost": {
+          "type": "string",
+          "enum": [
+            "spring",
+            "summer",
+            "autumn",
+            "winter"
+          ],
+          "title": "季节偏好",
+          "description": "v116：该季节权重 ×1.5（非硬限定；实测 5 条）。"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "源插入序",
+          "description": "导出期注入：源 `FISH_POOL` list 的 1 基下标。**渲染逐字等价的关键** —— `_roll_fish_legacy` 按插入序做累计权重抽样，包侧按 `seq` 还原源序才对得上同 seed 结果。"
+        }
+      }
+    }
+  }
+}

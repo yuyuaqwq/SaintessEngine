@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """《奥兰迪亚》战斗流水**采集半边** —— 战斗事件/人类行动 → 流水（P4-D3 搬运物，逐字保真）。
 
-真源：游戏仓 `C:/Users/yuyu/qqbot/data/plugins/dragonfall/game/services/battle_tlog.py`
-      **全文件 321 行**；本文件 = 真源 `:12-242` 的**逐字节拷贝**，正文一字未改
-      （对拍见 `overnight/d3_tlog_verify.py` A1：真源正文 ↔ 本文件正文 逐行 diff 为空）。
+真源（历史）：游戏仓 `C:/Users/yuyu/qqbot/data/plugins/dragonfall/game/services/battle_tlog.py`
+      旧版 **321 行**；本文件 = 其 `:12-242` 的**逐字节拷贝**（对拍 `overnight/d3_tlog_verify.py` A1）。
+      ★ **B10-L2 收口（2026-09-13）**：宿主已改**半边薄壳**（采集半边再导出本模块；回放半边 `:245-321` 留宿主）⇒ 本模块 = 采集唯一实现。
 
 切片口径（一条分界线：真源 :245 `# ==== 回放`）
   · **采集半边 = 本文件**：`BattleTLog`（链 `battle.on_event` / 包 `human_act` / 包 `act`

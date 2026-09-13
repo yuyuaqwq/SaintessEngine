@@ -1,0 +1,59 @@
+{
+  "fields": {
+    "id": {
+      "zh": "称号 id",
+      "note": "= 表键 = 真源 `game/data/titles.py TITLES[i]['id']`；与 `title_conds` 域同键空间（那边 50 条有判定函数）。",
+      "group": "identity"
+    },
+    "name": {
+      "zh": "称号名",
+      "note": "显示名（实测 68/68）。⚠️ 源侧有同名不同表的称号（「垂钓大师」= fish10 与 ach_fish100；「寻宝猎人」= treasure_hunter 与 res_treasure_hunter）—— 展示/加成以成就侧为准，引用请用 id。",
+      "group": "identity"
+    },
+    "desc": {
+      "zh": "获得说明",
+      "note": "获得条件的说明文案（v124.2 起无消费挂点的承诺效果已从 desc 去掉；纯收藏型标注「纯收藏」）。",
+      "widget": "textarea",
+      "group": "identity"
+    },
+    "seq": {
+      "zh": "源列表序",
+      "note": "1 基下标 = 真源 TITLES 插入序（导出期注入，非源侧字段）。⭐ 消费侧 `economy.py:5105` / `stat_bonus.py:108` **按下标** `C.TITLES[i]` 取称号 —— 读侧必须按 seq 还原顺序，丢序 = 称号错位/加成错人（与 weekly_quests 域同法）。",
+      "group": "identity"
+    },
+    "bonus": {
+      "zh": "属性加成",
+      "note": "解锁即生效的属性加成（core/stat_bonus.py 消费；实测 9 条：pro_gather10 hp:30 / pro_mining10 atk:8 / pro_fishing10 crit:0.02 / pro_alchemy10 mp:30 / pro_cooking10 spd:3 / pvp_hero atk:10 / dusk_detective spd:3 / night_rain spd:3 / goose_messenger spd:5）。crit 是小数。有就有、没有就没有（不补 {}）。",
+      "widget": "kv",
+      "group": "effect"
+    },
+    "effect": {
+      "zh": "资源向效果注册名",
+      "note": "v140 波2 资源向称号的消费点注册名（实测 6 条：craft_stamina-1 / gather_quality+10% / treasure_find+2% / fish_rare+5% / alchemy_yield+1 / food_effect+10%）—— 源侧注明「效果待消费点接线」，本域只搬运不解释。",
+      "widget": "select",
+      "group": "effect"
+    }
+  },
+  "groups": [
+    {
+      "id": "identity",
+      "label": "称号",
+      "icon": "🎖️",
+      "fields": [
+        "id",
+        "name",
+        "desc",
+        "seq"
+      ]
+    },
+    {
+      "id": "effect",
+      "label": "加成与效果",
+      "icon": "✨",
+      "fields": [
+        "bonus",
+        "effect"
+      ]
+    }
+  ]
+}

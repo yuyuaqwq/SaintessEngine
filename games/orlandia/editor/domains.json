@@ -390,5 +390,75 @@
     "schema": "exploration.schema.json",
     "primary": "explore_entry",
     "icon": "🧭"
+  },
+  "trial_floors": {
+    "label": "修炼塔层",
+    "kind": "data",
+    "schema": "trial_floors.schema.json",
+    "primary": "trial_floor",
+    "icon": "🗼"
+  },
+  "game_config": {
+    "label": "游戏配置",
+    "kind": "rules",
+    "schema": "game_config.schema.json",
+    "primary": "config_group",
+    "icon": "⚙️"
+  },
+  "titles": {
+    "label": "称号",
+    "kind": "data",
+    "schema": "titles.schema.json",
+    "primary": "title",
+    "icon": "🎖"
+  },
+  "guild": {
+    "label": "公会",
+    "kind": "data",
+    "schema": "guild.schema.json",
+    "primary": "guild_table",
+    "icon": "🏰"
+  },
+  "portals": {
+    "label": "方碑",
+    "kind": "data",
+    "schema": "portals.schema.json",
+    "primary": "portal",
+    "icon": "🪧"
+  },
+  "fishing_spots": {
+    "label": "钓点",
+    "kind": "data",
+    "schema": "fishing_spots.schema.json",
+    "primary": "fishing_spot",
+    "icon": "🎣"
+  },
+  "fishing_pool": {
+    "label": "鱼种池",
+    "kind": "data",
+    "schema": "fishing_pool.schema.json",
+    "primary": "fish",
+    "icon": "🐟"
+  },
+  "gather_pools": {
+    "label": "采集池",
+    "kind": "data",
+    "schema": "gather_pools.schema.json",
+    "primary": "gather_pool",
+    "icon": "🌿"
+  },
+  "gather_cond_pools": {
+    "label": "限定采集池",
+    "kind": "data",
+    "schema": "gather_cond_pools.schema.json",
+    "primary": "gather_cond_pool",
+    "icon": "🌙"
+  },
+  "mining_deep_pools": {
+    "label": "深矿池",
+    "kind": "data",
+    "schema": "mining_deep_pools.schema.json",
+    "primary": "mining_deep_pool",
+    "icon": "⛏️"
   }
 }

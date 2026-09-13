@@ -1,0 +1,223 @@
+{
+  "border_castle": {
+    "drops": [
+      [
+        "mat_tie_kuang_shi",
+        40
+      ],
+      [
+        "mat_qiang_hua_shi",
+        25
+      ],
+      [
+        "mat_jing_tie",
+        20
+      ],
+      [
+        "mat_shi_cai",
+        15
+      ]
+    ],
+    "seq": 4
+  },
+  "dragon_ridge": {
+    "drops": [
+      [
+        "mat_shi_long_lin",
+        30
+      ],
+      [
+        "mat_long_lin_sui_pian",
+        25
+      ],
+      [
+        "mat_jing_jin_ding",
+        15
+      ],
+      [
+        "mat_jing_jin",
+        15
+      ],
+      [
+        "mat_deep_crystal",
+        15
+      ]
+    ],
+    "seq": 9
+  },
+  "dwarf_long_gallery": {
+    "drops": [
+      [
+        "mat_mi_yin",
+        30
+      ],
+      [
+        "mat_jing_jin",
+        25
+      ],
+      [
+        "mat_deep_crystal",
+        20
+      ],
+      [
+        "mat_star_iron",
+        15
+      ],
+      [
+        "mat_yuan_gu_fu_wen_shi",
+        10
+      ]
+    ],
+    "seq": 6
+  },
+  "forge_valley": {
+    "drops": [
+      [
+        "mat_tie_kuang_shi",
+        40
+      ],
+      [
+        "mat_jing_tie",
+        30
+      ],
+      [
+        "mat_rong_yan_he_xin",
+        25
+      ],
+      [
+        "mat_jing_jin",
+        20
+      ],
+      [
+        "mat_deep_crystal",
+        5
+      ]
+    ],
+    "seq": 7
+  },
+  "frost_fang": {
+    "drops": [
+      [
+        "mat_tie_kuang_shi",
+        30
+      ],
+      [
+        "mat_bing_jing",
+        30
+      ],
+      [
+        "mat_bing_yuan_su_he_xin",
+        20
+      ],
+      [
+        "mat_deep_crystal",
+        12
+      ],
+      [
+        "mat_gao_ji_qiang_hua_shi",
+        8
+      ]
+    ],
+    "seq": 5
+  },
+  "hill_mine": {
+    "drops": [
+      [
+        "mat_tie_kuang_shi",
+        40
+      ],
+      [
+        "mat_qiang_hua_shi",
+        20
+      ],
+      [
+        "mat_jing_tie",
+        30
+      ],
+      [
+        "mat_mi_yin",
+        20
+      ],
+      [
+        "mat_jing_jin",
+        8
+      ],
+      [
+        "mat_deep_crystal",
+        2
+      ]
+    ],
+    "seq": 2
+  },
+  "molten_abyss": {
+    "drops": [
+      [
+        "mat_rong_yan_he_xin",
+        30
+      ],
+      [
+        "mat_hei_yao_sui_pian",
+        20
+      ],
+      [
+        "mat_jing_jin",
+        25
+      ],
+      [
+        "mat_rong_huo_jing_tie",
+        15
+      ],
+      [
+        "mat_deep_crystal",
+        10
+      ]
+    ],
+    "seq": 8
+  },
+  "rockfall_gorge": {
+    "drops": [
+      [
+        "mat_shi_cai",
+        40
+      ],
+      [
+        "mat_qiang_hua_shi",
+        25
+      ],
+      [
+        "mat_tie_kuang_shi",
+        25
+      ],
+      [
+        "mat_jing_tie",
+        10
+      ]
+    ],
+    "seq": 1
+  },
+  "white_abbey": {
+    "drops": [
+      [
+        "mat_tie_kuang_shi",
+        30
+      ],
+      [
+        "mat_jing_tie",
+        25
+      ],
+      [
+        "mat_mi_yin",
+        30
+      ],
+      [
+        "mat_fu_wen_shi",
+        20
+      ],
+      [
+        "mat_sheng_guang_jie_jing",
+        15
+      ]
+    ],
+    "seq": 3
+  }
+}

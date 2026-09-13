@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """《奥兰迪亚》敌身条族战斗内动作 —— bar_procs（P4-D2 搬运物，逐字保真）。
 
-真源：游戏仓 `C:/Users/yuyu/qqbot/data/plugins/dragonfall/game/services/battle_bar_procs.py`
-      **`:31-200`**（5 个模块级助手 + 4 个 `@register_action` 动作；真源共 244 行）。
+来源（搬运前身）：游戏仓 `C:/Users/yuyu/qqbot/data/plugins/dragonfall/game/services/battle_bar_procs.py`
+      **`:31-200`**（5 个模块级助手 + 4 个 `@register_action` 动作；真源共 244 行）。★ B10-L3 起本文件 = 唯一实现，宿主那份改 52 行薄壳（再导出）。
 本文件 = 真源 `:31-200` 的**逐字拷贝**：函数体、数值、`logs.append` 文案、注释一字未改
 （对拍见 `overnight/d2_misc_verify.py` A4：真源片段 ↔ 本文件正文 逐行 diff 为空）。
 

@@ -1,0 +1,1754 @@
+{
+  "abyss_altar": {
+    "drops": [
+      [
+        "mat_shen_yuan_e_mo_jiao",
+        25
+      ],
+      [
+        "mat_di_di_e_mo_jiao",
+        20
+      ],
+      [
+        "mat_hei_yuan_zhi_yan",
+        15
+      ],
+      [
+        "mat_shen_yuan_quan_ya",
+        15
+      ],
+      [
+        "mat_mo_yan_zhi_he",
+        15
+      ],
+      [
+        "mat_hui_jin_zhi_he",
+        2
+      ]
+    ],
+    "seq": 8
+  },
+  "ancient_battlefield": {
+    "drops": [
+      [
+        "mat_zhan_hun_zhi_chen",
+        25
+      ],
+      [
+        "mat_gu_wang_sui_pian",
+        20
+      ],
+      [
+        "mat_jun_qi_sui_pian",
+        20
+      ],
+      [
+        "mat_xiu_jian_sui_pian",
+        15
+      ],
+      [
+        "mat_gu_long_can_hai",
+        20
+      ]
+    ],
+    "seq": 9
+  },
+  "ancient_tree": {
+    "drops": [
+      [
+        "mat_shou_wei_gu_mu",
+        30
+      ],
+      [
+        "mat_ling_zhu_gu_mu_xin",
+        20
+      ],
+      [
+        "mat_gu_shu_zhi_xin",
+        20
+      ],
+      [
+        "mat_lin_yu_zhi_ye",
+        15
+      ],
+      [
+        "mat_gu_mu_zhi",
+        15
+      ]
+    ],
+    "seq": 10
+  },
+  "black_forest": {
+    "drops": [
+      [
+        "mat_fu_ya_shou_ya",
+        25
+      ],
+      [
+        "mat_zhi_zhu_si",
+        20
+      ],
+      [
+        "mat_bian_fu_yi",
+        15
+      ],
+      [
+        "mat_fu_rou",
+        20
+      ],
+      [
+        "mat_ying_guang_fen",
+        20
+      ]
+    ],
+    "seq": 11
+  },
+  "black_tide_strait": {
+    "drops": [
+      [
+        "mat_hei_yao_sui_pian",
+        25
+      ],
+      [
+        "mat_shen_yuan_zhen_zhu",
+        20
+      ],
+      [
+        "mat_hai_she_lin",
+        20
+      ],
+      [
+        "mat_zhang_yu_mo_nang",
+        15
+      ]
+    ],
+    "seq": 12
+  },
+  "boar_ridge": {
+    "drops": [
+      [
+        "mat_ye_zhu_ya",
+        30
+      ],
+      [
+        "mat_ju_xing_ye_zhu_ya",
+        10
+      ],
+      [
+        "mat_shou_rou",
+        25
+      ],
+      [
+        "mat_cao_yao",
+        15
+      ],
+      [
+        "mat_jiang_guo",
+        20
+      ],
+      [
+        "mat_cu_tie",
+        8
+      ],
+      [
+        "mat_qing_tong",
+        5
+      ]
+    ],
+    "seq": 13
+  },
+  "bone_wild": {
+    "drops": [
+      [
+        "mat_gu_long_can_hai",
+        30
+      ],
+      [
+        "mat_hai_wang_long_gu",
+        20
+      ],
+      [
+        "mat_gu_mo_xiang_he",
+        15
+      ],
+      [
+        "mat_gu_jiu_yu",
+        15
+      ],
+      [
+        "mat_sui_gu",
+        20
+      ]
+    ],
+    "seq": 14
+  },
+  "border_castle": {
+    "drops": [
+      [
+        "mat_shou_ren_fu_ren",
+        25
+      ],
+      [
+        "mat_shou_rou",
+        20
+      ],
+      [
+        "mat_tie_kuang_shi",
+        20
+      ],
+      [
+        "mat_sui_gu",
+        20
+      ],
+      [
+        "mat_tie_ya_lang_pi",
+        15
+      ],
+      [
+        "mat_cu_tie",
+        8
+      ],
+      [
+        "mat_qing_tong",
+        5
+      ]
+    ],
+    "seq": 15
+  },
+  "cinder_mountain": {
+    "drops": [
+      [
+        "mat_jin_he",
+        25
+      ],
+      [
+        "mat_ember_ash",
+        20
+      ],
+      [
+        "mat_huo_fu_yi",
+        15
+      ],
+      [
+        "mat_rong_yan_he_xin",
+        20
+      ],
+      [
+        "mat_e_mo_zhan_ren",
+        20
+      ]
+    ],
+    "seq": 16
+  },
+  "cloud_sea": {
+    "drops": [
+      [
+        "mat_yun_xu",
+        25
+      ],
+      [
+        "mat_yun_mian",
+        20
+      ],
+      [
+        "mat_tian_ying_yu",
+        20
+      ],
+      [
+        "mat_cai_hong_lu",
+        15
+      ],
+      [
+        "mat_feng_zhi_yu",
+        20
+      ]
+    ],
+    "seq": 17
+  },
+  "cold_spine_snow_trail": {
+    "drops": [
+      [
+        "mat_meng_ma_mao",
+        30
+      ],
+      [
+        "mat_bing_jing",
+        20
+      ],
+      [
+        "mat_xue_tu_pi",
+        20
+      ],
+      [
+        "mat_bing_xiong_pi",
+        15
+      ],
+      [
+        "mat_bing_yuan_su_he_xin",
+        15
+      ]
+    ],
+    "seq": 18
+  },
+  "coral_reef": {
+    "drops": [
+      [
+        "mat_shan_hu_zhi",
+        25
+      ],
+      [
+        "mat_xie_ke",
+        20
+      ],
+      [
+        "mat_zhen_zhu_bei",
+        20
+      ],
+      [
+        "mat_hai_xing_pian",
+        15
+      ],
+      [
+        "mat_hong_ji_shan_hu",
+        20
+      ]
+    ],
+    "seq": 19
+  },
+  "dawn_cathedral": {
+    "drops": [
+      [
+        "mat_sheng_guang_bai_he",
+        30
+      ],
+      [
+        "mat_sheng_shui",
+        25
+      ],
+      [
+        "mat_sheng_guang_jie_jing",
+        20
+      ],
+      [
+        "mat_yu_mao",
+        15
+      ],
+      [
+        "mat_yue_guang_cao",
+        10
+      ]
+    ],
+    "seq": 20
+  },
+  "deep_lake": {
+    "drops": [
+      [
+        "mat_mang_yu_lin",
+        25
+      ],
+      [
+        "mat_hu_ling_lei",
+        20
+      ],
+      [
+        "mat_shui_zhi_wang_ya",
+        20
+      ],
+      [
+        "mat_hu_zhen_zhu",
+        20
+      ],
+      [
+        "mat_shen_mi_lin_pian",
+        15
+      ]
+    ],
+    "seq": 21
+  },
+  "dragon_ridge": {
+    "drops": [
+      [
+        "mat_shi_long_lin",
+        25
+      ],
+      [
+        "mat_yan_long_lin",
+        20
+      ],
+      [
+        "mat_long_lin_sui_pian",
+        20
+      ],
+      [
+        "mat_gu_long_lin",
+        15
+      ],
+      [
+        "mat_long_xue_cao",
+        15
+      ],
+      [
+        "mat_long_zai_zhao",
+        10
+      ]
+    ],
+    "seq": 22
+  },
+  "dragon_ridge_old_road": {
+    "drops": [
+      [
+        "mat_long_lin_sui_pian",
+        25
+      ],
+      [
+        "mat_shi_long_lin",
+        20
+      ],
+      [
+        "mat_gu_long_lin",
+        15
+      ],
+      [
+        "mat_long_zai_zhao",
+        20
+      ],
+      [
+        "mat_long_xue_cao",
+        5
+      ]
+    ],
+    "seq": 23
+  },
+  "dragon_roost": {
+    "drops": [
+      [
+        "mat_cheng_nian_long_lin",
+        25
+      ],
+      [
+        "mat_gu_long_lin",
+        25
+      ],
+      [
+        "mat_long_zai_zhao",
+        15
+      ],
+      [
+        "mat_hai_wang_long_gu",
+        20
+      ],
+      [
+        "mat_long_xue_cao",
+        15
+      ]
+    ],
+    "seq": 24
+  },
+  "dragonborn_valley_trail": {
+    "drops": [
+      [
+        "mat_long_yi_can_hun",
+        25
+      ],
+      [
+        "mat_long_lin_sui_pian",
+        20
+      ],
+      [
+        "mat_yan_long_lin",
+        20
+      ],
+      [
+        "mat_long_zai_zhao",
+        15
+      ],
+      [
+        "mat_long_xue_cao",
+        10
+      ]
+    ],
+    "seq": 25
+  },
+  "dragonsfall_valley": {
+    "drops": [
+      [
+        "mat_long_hun_sui_pian",
+        25
+      ],
+      [
+        "mat_gu_long_lin",
+        20
+      ],
+      [
+        "mat_mu_ying_long_hun",
+        15
+      ],
+      [
+        "mat_hai_wang_long_gu",
+        20
+      ],
+      [
+        "mat_long_xue_cao",
+        20
+      ]
+    ],
+    "seq": 26
+  },
+  "dusk_ridge_road": {
+    "drops": [
+      [
+        "mat_you_hun_chen",
+        30
+      ],
+      [
+        "mat_bian_fu_yi",
+        25
+      ],
+      [
+        "mat_hei_yao_sui_pian",
+        20
+      ],
+      [
+        "mat_sui_gu",
+        15
+      ],
+      [
+        "mat_fu_rou",
+        10
+      ]
+    ],
+    "seq": 27
+  },
+  "dwarf_long_gallery": {
+    "drops": [
+      [
+        "mat_mi_yin",
+        25
+      ],
+      [
+        "mat_tie_kuang_shi",
+        20
+      ],
+      [
+        "mat_fu_wen_shi",
+        20
+      ],
+      [
+        "mat_yuan_gu_fu_wen_shi",
+        15
+      ],
+      [
+        "mat_jing_tie",
+        20
+      ]
+    ],
+    "seq": 28
+  },
+  "emerald_forest": {
+    "drops": [
+      [
+        "mat_cao_yao",
+        25
+      ],
+      [
+        "mat_lin_yu_zhi_ye",
+        20
+      ],
+      [
+        "mat_gu_mu_zhi",
+        15
+      ],
+      [
+        "mat_yue_guang_cao",
+        10
+      ],
+      [
+        "mat_zhao_ze_hua",
+        15
+      ],
+      [
+        "mat_lang_pi",
+        15
+      ],
+      [
+        "mat_fu_wen_duan",
+        5
+      ]
+    ],
+    "seq": 3
+  },
+  "emerald_valley": {
+    "drops": [
+      [
+        "mat_jing_ling_guo",
+        25
+      ],
+      [
+        "mat_cui_lu_jiao",
+        20
+      ],
+      [
+        "mat_jing_ling_lu_jiao",
+        15
+      ],
+      [
+        "mat_lin_yu_zhi_ye",
+        25
+      ],
+      [
+        "mat_cao_yao",
+        15
+      ]
+    ],
+    "seq": 29
+  },
+  "forge_valley": {
+    "drops": [
+      [
+        "mat_rong_yan_he_xin",
+        25
+      ],
+      [
+        "mat_huo_xi_yi_lin",
+        20
+      ],
+      [
+        "mat_jin_he",
+        15
+      ],
+      [
+        "mat_rong_yan_ru_chong_pi",
+        20
+      ],
+      [
+        "mat_tie_kuang_shi",
+        20
+      ]
+    ],
+    "seq": 30
+  },
+  "frost_fang": {
+    "drops": [
+      [
+        "mat_shuang_ya_long_lin",
+        25
+      ],
+      [
+        "mat_bing_jing",
+        25
+      ],
+      [
+        "mat_jian_chi_hu_ya",
+        20
+      ],
+      [
+        "mat_xue_lang_pi",
+        15
+      ],
+      [
+        "mat_bing_lang_ya",
+        15
+      ]
+    ],
+    "seq": 31
+  },
+  "frost_field": {
+    "drops": [
+      [
+        "mat_bing_jing",
+        30
+      ],
+      [
+        "mat_xue_lang_pi",
+        25
+      ],
+      [
+        "mat_xue_tu_pi",
+        20
+      ],
+      [
+        "mat_bing_lang_ya",
+        15
+      ],
+      [
+        "mat_meng_ma_mao",
+        10
+      ]
+    ],
+    "seq": 32
+  },
+  "frostwhisper_canyon": {
+    "drops": [
+      [
+        "mat_shuang_ju_mo_xue",
+        25
+      ],
+      [
+        "mat_shuang_ju_mo_wang_jiao",
+        20
+      ],
+      [
+        "mat_shuang_ya_long_lin",
+        20
+      ],
+      [
+        "mat_bing_jing",
+        20
+      ],
+      [
+        "mat_bing_lang_ya",
+        15
+      ]
+    ],
+    "seq": 33
+  },
+  "fungus_forest": {
+    "drops": [
+      [
+        "mat_bao_zi_nang",
+        25
+      ],
+      [
+        "mat_zhen_jun_rou",
+        25
+      ],
+      [
+        "mat_fu_guan_jun",
+        20
+      ],
+      [
+        "mat_ying_guang_fen",
+        15
+      ],
+      [
+        "mat_zhi_zhu_si",
+        15
+      ]
+    ],
+    "seq": 34
+  },
+  "gold_plain": {
+    "drops": [
+      [
+        "mat_shou_rou",
+        25
+      ],
+      [
+        "mat_niu_jiao",
+        20
+      ],
+      [
+        "mat_cao_yao",
+        20
+      ],
+      [
+        "mat_jiang_guo",
+        15
+      ],
+      [
+        "mat_cao_yuan_lang_pi",
+        20
+      ],
+      [
+        "mat_feng_la",
+        10
+      ]
+    ],
+    "seq": 35
+  },
+  "harbor_docks": {
+    "drops": [
+      [
+        "mat_hai_yan_jie_jing",
+        30
+      ],
+      [
+        "mat_hai_ou_yu_mao",
+        20
+      ],
+      [
+        "mat_xie_ke",
+        15
+      ],
+      [
+        "mat_wu_zei_wan_zu",
+        15
+      ],
+      [
+        "mat_hai_zao",
+        20
+      ]
+    ],
+    "seq": 36
+  },
+  "hill_mine": {
+    "drops": [
+      [
+        "mat_tie_kuang_shi",
+        35
+      ],
+      [
+        "mat_kuang_shi_sui_pian",
+        20
+      ],
+      [
+        "mat_shui_jing",
+        15
+      ],
+      [
+        "mat_shi_cai",
+        15
+      ],
+      [
+        "mat_mi_yin",
+        15
+      ]
+    ],
+    "seq": 37
+  },
+  "ironshield_hills": {
+    "drops": [
+      [
+        "mat_tie_kuang_shi",
+        25
+      ],
+      [
+        "mat_qiu_ling_lang_pi",
+        25
+      ],
+      [
+        "mat_shi_cai",
+        20
+      ],
+      [
+        "mat_tie_ya_lang_pi",
+        15
+      ],
+      [
+        "mat_shan_yang_jiao",
+        15
+      ]
+    ],
+    "seq": 38
+  },
+  "king_road": {
+    "drops": [
+      [
+        "mat_you_ling_zhi_chen",
+        30
+      ],
+      [
+        "mat_sui_gu",
+        20
+      ],
+      [
+        "mat_gu_dai_wen_xian",
+        20
+      ],
+      [
+        "mat_sheng_dian_tie_kuai",
+        15
+      ],
+      [
+        "mat_fu_rou",
+        15
+      ]
+    ],
+    "seq": 39
+  },
+  "knight_yard": {
+    "drops": [
+      [
+        "mat_sheng_guang_jie_jing",
+        25
+      ],
+      [
+        "mat_tie_kuang_shi",
+        20
+      ],
+      [
+        "mat_sheng_shui",
+        20
+      ],
+      [
+        "mat_sheng_dian_tie_kuai",
+        15
+      ],
+      [
+        "mat_fu_wen_shi",
+        20
+      ]
+    ],
+    "seq": 40
+  },
+  "lava_bed": {
+    "drops": [
+      [
+        "mat_yan_jiang_ru_chong_pi",
+        25
+      ],
+      [
+        "mat_rong_yan_he_xin",
+        20
+      ],
+      [
+        "mat_rong_yan_ling_zhu_he",
+        20
+      ],
+      [
+        "mat_hei_yao_sui_pian",
+        15
+      ],
+      [
+        "mat_jin_he",
+        20
+      ]
+    ],
+    "seq": 41
+  },
+  "mermaid_bay": {
+    "drops": [
+      [
+        "mat_hai_yao_lin",
+        25
+      ],
+      [
+        "mat_jiao_ren_lin",
+        20
+      ],
+      [
+        "mat_hai_yao_zhi_yu",
+        15
+      ],
+      [
+        "mat_zhen_zhu_bei",
+        20
+      ]
+    ],
+    "seq": 42
+  },
+  "mist_tide_passage": {
+    "drops": [
+      [
+        "mat_wu_guan_jing",
+        25
+      ],
+      [
+        "mat_hai_yan_jie_jing",
+        20
+      ],
+      [
+        "mat_shui_mu_ning_jiao",
+        20
+      ],
+      [
+        "mat_hai_zao",
+        20
+      ],
+      [
+        "mat_hai_she_lin",
+        15
+      ]
+    ],
+    "seq": 43
+  },
+  "mist_trench": {
+    "drops": [
+      [
+        "mat_yuan_ying_zhi_lin",
+        25
+      ],
+      [
+        "mat_mang_yu_lin",
+        20
+      ],
+      [
+        "mat_shui_mu_ning_jiao",
+        20
+      ],
+      [
+        "mat_zhang_yu_mo_nang",
+        15
+      ],
+      [
+        "mat_shen_yuan_zhen_zhu",
+        20
+      ]
+    ],
+    "seq": 44
+  },
+  "misty_swamp": {
+    "drops": [
+      [
+        "mat_zhao_ze_hua",
+        30
+      ],
+      [
+        "mat_cao_yao",
+        20
+      ],
+      [
+        "mat_yue_guang_cao",
+        10
+      ],
+      [
+        "mat_shi_lai_mu_nian_ye",
+        15
+      ],
+      [
+        "mat_lin_yu_zhi_ye",
+        15
+      ],
+      [
+        "mat_gu_mu_zhi",
+        10
+      ]
+    ],
+    "seq": 4
+  },
+  "molten_abyss": {
+    "drops": [
+      [
+        "mat_rong_yan_he_xin",
+        25
+      ],
+      [
+        "mat_di_di_e_mo_jiao",
+        20
+      ],
+      [
+        "mat_xiao_e_mo_jiao",
+        20
+      ],
+      [
+        "mat_huo_fu_yi",
+        20
+      ],
+      [
+        "mat_rong_yan_ru_chong_pi",
+        15
+      ]
+    ],
+    "seq": 45
+  },
+  "moon_glade": {
+    "drops": [
+      [
+        "mat_yue_guang_jing_hua",
+        25
+      ],
+      [
+        "mat_yue_lu_jiao",
+        20
+      ],
+      [
+        "mat_yue_lang_mao_pi",
+        20
+      ],
+      [
+        "mat_yin_hui_yue_shi",
+        15
+      ],
+      [
+        "mat_yue_guang_cao",
+        20
+      ]
+    ],
+    "seq": 46
+  },
+  "moonshadow_wood": {
+    "drops": [
+      [
+        "mat_yue_ying_zhi_zhao",
+        25
+      ],
+      [
+        "mat_ying_bao_pi",
+        25
+      ],
+      [
+        "mat_yue_xiong_pi",
+        20
+      ],
+      [
+        "mat_an_ying_jing_hua",
+        15
+      ],
+      [
+        "mat_ying_guang_fen",
+        15
+      ]
+    ],
+    "seq": 47
+  },
+  "oak_plain": {
+    "drops": [
+      [
+        "mat_cao_yao",
+        30
+      ],
+      [
+        "mat_jiang_guo",
+        20
+      ],
+      [
+        "mat_yue_guang_cao",
+        15
+      ],
+      [
+        "mat_shi_lai_mu_nian_ye",
+        15
+      ],
+      [
+        "mat_tu_mao",
+        10
+      ],
+      [
+        "mat_tu_pi",
+        10
+      ],
+      [
+        "mat_sen_lin_ya_ma_bu",
+        8
+      ]
+    ],
+    "seq": 1
+  },
+  "old_battlefield": {
+    "drops": [
+      [
+        "mat_xiu_jian_sui_pian",
+        25
+      ],
+      [
+        "mat_jun_qi_sui_pian",
+        20
+      ],
+      [
+        "mat_sui_gu",
+        20
+      ],
+      [
+        "mat_sheng_dian_tie_kuai",
+        15
+      ],
+      [
+        "mat_zhan_hun_zhi_chen",
+        20
+      ]
+    ],
+    "seq": 48
+  },
+  "permafrost_field": {
+    "drops": [
+      [
+        "mat_bing_jing",
+        40
+      ],
+      [
+        "mat_cao_yao",
+        10
+      ],
+      [
+        "mat_yue_guang_cao",
+        5
+      ],
+      [
+        "mat_lin_yu_zhi_ye",
+        20
+      ],
+      [
+        "mat_gu_mu_zhi",
+        25
+      ]
+    ],
+    "seq": 6
+  },
+  "rainbow_cloud": {
+    "drops": [
+      [
+        "mat_cai_hong_lu_zhu",
+        25
+      ],
+      [
+        "mat_cai_hong_lin",
+        20
+      ],
+      [
+        "mat_cai_hong_lu",
+        20
+      ],
+      [
+        "mat_xia_guang_long_lin",
+        20
+      ],
+      [
+        "mat_tian_ying_yu",
+        15
+      ]
+    ],
+    "seq": 49
+  },
+  "redridge_plateau": {
+    "drops": [
+      [
+        "mat_long_xue_cao",
+        15
+      ],
+      [
+        "mat_cao_yao",
+        15
+      ],
+      [
+        "mat_yue_guang_cao",
+        10
+      ],
+      [
+        "mat_lin_yu_zhi_ye",
+        30
+      ],
+      [
+        "mat_gu_mu_zhi",
+        30
+      ]
+    ],
+    "seq": 7
+  },
+  "rockfall_gorge": {
+    "drops": [
+      [
+        "mat_shi_cai",
+        30
+      ],
+      [
+        "mat_yan_xi_lin",
+        25
+      ],
+      [
+        "mat_cao_yao",
+        15
+      ],
+      [
+        "mat_tie_kuang_shi",
+        15
+      ],
+      [
+        "mat_jiang_guo",
+        15
+      ]
+    ],
+    "seq": 50
+  },
+  "shipwreck_graveyard": {
+    "drops": [
+      [
+        "mat_you_ling_chuan_piao",
+        25
+      ],
+      [
+        "mat_chen_mu",
+        20
+      ],
+      [
+        "mat_you_ling_fan_bu",
+        20
+      ],
+      [
+        "mat_lang_mu_jiu",
+        15
+      ],
+      [
+        "mat_you_ling_zhi_chen",
+        20
+      ]
+    ],
+    "seq": 51
+  },
+  "silver_river": {
+    "drops": [
+      [
+        "mat_yin_lin_yu",
+        25
+      ],
+      [
+        "mat_he_long_lin",
+        20
+      ],
+      [
+        "mat_gu_di_lu_shui",
+        20
+      ],
+      [
+        "mat_shui_jing_ling_lin",
+        15
+      ],
+      [
+        "mat_zhen_zhu_bei",
+        20
+      ]
+    ],
+    "seq": 52
+  },
+  "silver_valley": {
+    "drops": [
+      [
+        "mat_yin_lin_yu",
+        25
+      ],
+      [
+        "mat_gu_di_lu_shui",
+        25
+      ],
+      [
+        "mat_cao_yao",
+        20
+      ],
+      [
+        "mat_xi_xi_lin",
+        15
+      ],
+      [
+        "mat_jiang_guo",
+        15
+      ]
+    ],
+    "seq": 53
+  },
+  "silver_wind_road": {
+    "drops": [
+      [
+        "mat_cao_yao",
+        25
+      ],
+      [
+        "mat_jiang_guo",
+        20
+      ],
+      [
+        "mat_lin_yu_zhi_ye",
+        20
+      ],
+      [
+        "mat_tu_mao",
+        15
+      ],
+      [
+        "mat_gu_mu_zhi",
+        20
+      ]
+    ],
+    "seq": 54
+  },
+  "silverwood": {
+    "drops": [
+      [
+        "mat_yue_guang_cao",
+        40
+      ],
+      [
+        "mat_cao_yao",
+        15
+      ],
+      [
+        "mat_jiang_guo",
+        10
+      ],
+      [
+        "mat_lin_yu_zhi_ye",
+        20
+      ],
+      [
+        "mat_gu_mu_zhi",
+        15
+      ],
+      [
+        "mat_fu_wen_duan",
+        5
+      ]
+    ],
+    "seq": 5
+  },
+  "sky_ladder_path": {
+    "drops": [
+      [
+        "mat_yun_mian",
+        25
+      ],
+      [
+        "mat_tian_ying_yu",
+        20
+      ],
+      [
+        "mat_yun_xu",
+        20
+      ],
+      [
+        "mat_feng_zhi_yu",
+        20
+      ],
+      [
+        "mat_yun_xiong_mao",
+        15
+      ]
+    ],
+    "seq": 55
+  },
+  "starlake": {
+    "drops": [
+      [
+        "mat_hu_zhen_zhu",
+        25
+      ],
+      [
+        "mat_shui_jing_ling_lin",
+        20
+      ],
+      [
+        "mat_hu_ling_lei",
+        15
+      ],
+      [
+        "mat_shen_mi_lin_pian",
+        20
+      ]
+    ],
+    "seq": 56
+  },
+  "starlight_terrace": {
+    "drops": [
+      [
+        "mat_xing_hui_chen",
+        25
+      ],
+      [
+        "mat_xing_hui_shi",
+        20
+      ],
+      [
+        "mat_xing_lang_pi",
+        15
+      ],
+      [
+        "mat_yue_guang_shi",
+        15
+      ],
+      [
+        "mat_star_hourglass",
+        3
+      ]
+    ],
+    "seq": 57
+  },
+  "storm_cliff": {
+    "drops": [
+      [
+        "mat_feng_bao_ying_yu",
+        25
+      ],
+      [
+        "mat_feng_long_yu",
+        20
+      ],
+      [
+        "mat_lei_niao_yu",
+        20
+      ],
+      [
+        "mat_feng_bao_he_xin",
+        15
+      ],
+      [
+        "mat_lei_ming_zhi_yi",
+        20
+      ]
+    ],
+    "seq": 58
+  },
+  "storm_plateau": {
+    "drops": [
+      [
+        "mat_lei_jing",
+        25
+      ],
+      [
+        "mat_lei_niao_yu",
+        20
+      ],
+      [
+        "mat_lei_xi_pi",
+        20
+      ],
+      [
+        "mat_lei_man_pi",
+        15
+      ],
+      [
+        "mat_lei_ting_zhi_xin",
+        5
+      ],
+      [
+        "mat_lei_he",
+        3
+      ]
+    ],
+    "seq": 59
+  },
+  "storm_sea": {
+    "drops": [
+      [
+        "mat_feng_bao_zhi_ling_chen",
+        25
+      ],
+      [
+        "mat_feng_bao_bei",
+        20
+      ],
+      [
+        "mat_feng_bao_he_xin",
+        20
+      ],
+      [
+        "mat_lei_man_pi",
+        15
+      ]
+    ],
+    "seq": 60
+  },
+  "storm_strait": {
+    "drops": [
+      [
+        "mat_feng_bao_bei",
+        25
+      ],
+      [
+        "mat_lei_man_pi",
+        20
+      ],
+      [
+        "mat_feng_bao_ying_yu",
+        20
+      ],
+      [
+        "mat_hai_she_lin",
+        15
+      ],
+      [
+        "mat_lei_jing_sha",
+        20
+      ]
+    ],
+    "seq": 61
+  },
+  "sunset_isle": {
+    "drops": [
+      [
+        "mat_dao_zhu_ya",
+        20
+      ],
+      [
+        "mat_ying_wu_yu",
+        25
+      ],
+      [
+        "mat_xie_ke",
+        20
+      ],
+      [
+        "mat_zhen_zhu_bei",
+        20
+      ],
+      [
+        "mat_hong_ji_shan_hu",
+        15
+      ]
+    ],
+    "seq": 62
+  },
+  "west_ridge_wilds": {
+    "drops": [
+      [
+        "mat_qiu_ling_lang_pi",
+        25
+      ],
+      [
+        "mat_tu_jiu_yu",
+        20
+      ],
+      [
+        "mat_sui_gu",
+        20
+      ],
+      [
+        "mat_fu_rou",
+        15
+      ],
+      [
+        "mat_tie_ya_lang_pi",
+        20
+      ]
+    ],
+    "seq": 63
+  },
+  "whale_domain": {
+    "drops": [
+      [
+        "mat_long_jing_zhi",
+        25
+      ],
+      [
+        "mat_tao_sheng_jing_jiao",
+        20
+      ],
+      [
+        "mat_hai_ju_ren_lin",
+        20
+      ],
+      [
+        "mat_jing_xu_cao",
+        20
+      ]
+    ],
+    "seq": 64
+  },
+  "white_abbey": {
+    "drops": [
+      [
+        "mat_sheng_shui",
+        25
+      ],
+      [
+        "mat_sheng_guang_bai_he",
+        25
+      ],
+      [
+        "mat_sheng_guang_jie_jing",
+        20
+      ],
+      [
+        "mat_mi_yin",
+        15
+      ],
+      [
+        "mat_fu_wen_shi",
+        15
+      ]
+    ],
+    "seq": 65
+  },
+  "white_deer_forest": {
+    "drops": [
+      [
+        "mat_cao_yao",
+        25
+      ],
+      [
+        "mat_jiang_guo",
+        15
+      ],
+      [
+        "mat_yue_guang_cao",
+        15
+      ],
+      [
+        "mat_lin_yu_zhi_ye",
+        20
+      ],
+      [
+        "mat_gu_mu_zhi",
+        15
+      ],
+      [
+        "mat_lang_pi",
+        10
+      ],
+      [
+        "mat_bei_tou_de_mian_bao",
+        3
+      ],
+      [
+        "mat_yue_guang_mian",
+        8
+      ]
+    ],
+    "seq": 2
+  },
+  "windmill_plain": {
+    "drops": [
+      [
+        "mat_mian_fen",
+        25
+      ],
+      [
+        "mat_cao_yao",
+        20
+      ],
+      [
+        "mat_jiang_guo",
+        20
+      ],
+      [
+        "mat_feng_zhen",
+        15
+      ],
+      [
+        "mat_tu_mao",
+        10
+      ],
+      [
+        "mat_lin_yu_zhi_ye",
+        10
+      ]
+    ],
+    "seq": 66
+  },
+  "windvale": {
+    "drops": [
+      [
+        "mat_feng_yu_jie_jing",
+        25
+      ],
+      [
+        "mat_feng_yu_lu_jiao",
+        20
+      ],
+      [
+        "mat_feng_zhi_yu",
+        20
+      ],
+      [
+        "mat_ying_guang_hu_wei",
+        15
+      ],
+      [
+        "mat_lin_yu_zhi_ye",
+        20
+      ]
+    ],
+    "seq": 67
+  },
+  "winter_lake": {
+    "drops": [
+      [
+        "mat_hu_bing_he_xin",
+        25
+      ],
+      [
+        "mat_bing_jing",
+        20
+      ],
+      [
+        "mat_bing_she_lin",
+        20
+      ],
+      [
+        "mat_dong_yu_lin",
+        15
+      ],
+      [
+        "mat_bing_tong_zhi_zhu",
+        20
+      ]
+    ],
+    "seq": 68
+  }
+}

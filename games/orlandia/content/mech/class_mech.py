@@ -41,8 +41,8 @@
 `battle.sides`（阵营遍历：旋律光环/过载回血/挽歌 tick）。另有动作改写宿主身上的
 `_faith_overload_at` / `effects["melody_state"]["_silence_at"]` 等私有字段（游戏仓同款）。
 
-过渡期铁律（设计稿 §五-3）：**包版是搬运物**，游戏仓 `class_mech_proc.py` 同名实现继续
-存在；两者语义必须逐字一致（否则同一 actor 走不同装配路径会得到不同数值）。
+★ B10-L3 收口（2026-09-13）：本文件 = **唯一实现**。游戏仓 `game/services/class_mech_proc.py`
+已改 71 行薄壳（加载包 + 同名单 re-export）；双源消除，等价证据 `overnight/b10_l3_snap.py`。
 
 动作清单（39 个；真源 `@register_action` 装饰器行号）
 -----------------------------------------------------

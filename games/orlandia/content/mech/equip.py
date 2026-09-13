@@ -6,6 +6,12 @@
 本文件 = 真源 `:20-1174` 的**逐字拷贝**：函数体、数值、`logs`/效果 dict 文案、注释一字未改
 （对拍见 `overnight/d2_equip_verify.py` A1：真源正文 ↔ 本文件正文 逐行 diff 只剩白名单 3 处）。
 
+★ B10-L1（2026-09-13）**宿主薄壳化**：游戏仓 `game/services/battle_equip_proc.py` 与
+  `game/services/battle_we_procs.py` 已改成**薄壳**（包加载口 + 全量再导出 + 入口一行委托），
+  本文件 = 这两族的**唯一实现**（双源收口）。宿主薄壳 ↔ 原宿主正文的行为等价证据 =
+  `overnight/b10_l1_snap.py`（1756 例逐字节快照：返回值 + actor/battle 全量副作用 + 渲染文案，
+  改前改后同 sha256 `cffef69fdaf9ad9bca834342ca1f12ed6a4e8d8089e10d15dd01e7438db9adbd`）。
+
 入口（对外，真源同名）
   `apply_to_actor(actor)`（真源 :1133）—— 命令层开战前调用（幂等口径见下 §幂等）：
       0) `_apply_bonus_domains` → `actor["bonus"]["cap"]`（上限词条 max_bonus）/`["cost"]`

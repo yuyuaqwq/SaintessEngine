@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
-"""《奥兰迪亚·余烬纪年》包内**开战构造半边**（逐字搬自游戏仓 `game/services/battle_bridge.py` :27-372）。
+"""《奥兰迪亚·余烬纪年》包内**开战构造半边 + 战斗回写半边**（逐字搬自游戏仓 `game/services/battle_bridge.py`）。
 
 来源与范围
 ----------
 真源 421 行 = **构造半边** `:1-372`（玩家/怪物 → actor、sides 组装、开战仪式、`apply_battle_loadout`）
-           + 回写半边 `:375-420`（`sync_player_from_actor`）。
-本文件 = 真源 `:27-372` **逐字搬入**，只改两类东西：
+           + 回写半边 `:375-420`（`sync_player_from_actor`：actor → 玩家存档）。
+构造半边 = 真源 `:27-372` **逐字搬入**（D3 批），只改两类东西：
   ① **import 层**：外部依赖换成包内同源物（见下表）
   ② **宿主耦合**：读玩家 DB / 流水的部分 → **改成「由调用方传普通 dict」**（替身接口见下表）
+回写半边 = 真源 `:375-420` **逐字搬入**（B9-L8 批，2026-09-13；零宿主耦合，见文末
+「战斗回写」节）。两条方向（构造 / 回写）从此同处一个模块 —— 新调用点 import 一处即得两向。
 
 本文件是包内「命令层数据 → saintess_engine actor」的翻译层：调用方（宿主/CLI/测试）手里是
 普通 dict（player 档 / 怪组），本模块把它们翻译成引擎的 `sides` actors，并做开战装配序列。
@@ -32,9 +34,17 @@
 | `apply_player_battle_start(player, actor, db)`（:188） | 第三参改 **`event_state`** | 同上（薄壳，保持旧签名语义）|
 | `attach_tlog(b, ...)`（:207，读宿主 `tlog_setup` 流水开关 + sink）| **不搬**（宿主流水装配）| —— |
 
-⚠️ 未搬（构造半边之外，属宿主侧契约）：`sync_player_from_actor`（真源 :400-420，战斗后
-   actor → player dict 回写）、`attach_tlog`、`_default_db`。清单见
+⚠️ 未搬（宿主侧契约，**不属于本包**）：`attach_tlog`（读宿主 `game/tlog_setup.py` 流水开关 +
+   采集 sink）、`_default_db`（宿主存储层访问器 `from .. import db`）。清单见
    `overnight/d3-bridge-port.md` §4。
+
+★ 回写半边 `sync_player_from_actor` 原在上述「未搬」清单里 —— **B9-L8 批（2026-09-13）已搬入
+   本文件**（真源 `:375-420` 逐字，**零宿主耦合**：只读 actor、原地写调用方给的 player dict），
+   宿主 `game/services/battle_bridge.py` 只剩一层委托薄壳。收口理由：构造半边在包内、回写半边
+   在宿主时，包内新调用点（如 `content/flow/instance_battle.py` 的 `sync_player_fn`）漏注入
+   就会**静默不同步**（玩家 hp/增益留在 actor 上，存档读不到）——现在 import 一处即得两向。
+   证据：`overnight/b9_l8_backsync_verify.py`（三源逐字节 + 反证）· `overnight/b9_l8_snap.py`
+   （改造前后快照逐字节）· 报告 `overnight/B9-L8-bridge.md`。
 
 ⚠️ 不变式：`player_to_actor` 透传的 `qq_id` / `group_id` 只是**调用方给的普通 dict 字段**，
    包内不解析平台语义（不认 QQ 号 / 群号，只当字符串键用）。
@@ -387,7 +397,61 @@ def _seed_battle_keys(player: dict) -> dict:
     return player
 
 
+# ============================================================
+# 战斗回写（saintess_engine actor → 命令层 player dict）★ B9-L8 搬入
+# ------------------------------------------------------------
+# 真源 = 游戏仓 `game/services/battle_bridge.py` `:375-420`（**逐字**，含注释；本批 2026-09-13）。
+# 与本文件上半的构造半边（`player_to_actor` 等）方向相反：actor → 调用方 player dict。
+# 宿主耦合 = **零**：只读 actor、原地写调用方给的 player dict；不读 DB / 平台 / 墙上时间。
+# 调用方（宿主命令层 / 包内流程 / CLI / 测试）拿到的是**普通 dict**，不需要任何替身注入。
+# ============================================================
+
+# 战斗后需要同步回 player dict 的面板当前值（hp/mp 战斗中被引擎改动，
+# 命令层 db.update_player / 展示页读的是 player dict——旧引擎引用传递
+# 自动同步；saintess_engine actor 是副本，命令层行动后必须显式回写）。
+_BACK_SYNC_SCALARS = (
+    "hp", "mp", "max_hp", "max_mp",
+)
+
+# 战斗可变状态键（actor → player dict 同构回写；V 系列：效果状态在 effects，
+# shields/cooldown 独立容器，defending/charging/ct 行动状态——战斗内由引擎维护
+# 在 actor 上，战斗结束/展示前回写 player 保证命令层读得到）。
+_BACK_SYNC_BAGS = (
+    "effects", "shields", "cooldown", "charging", "defending",
+    "ct", "poi_buff",
+    # 旧玩家 dict 兼容键（职业层可能在 player 上读，见 _PLAYER_PASSTHROUGH）
+    "resources", "stacks", "eff", "food_effects", "buff_hits",
+    "last_element", "overflow_shield_cd",
+    "stealth_atk", "reduce_all_left", "reduce_left",
+    "combo_seq", "last_combo_tag", "tailwind_prev_energy",
+)
+
+
+def sync_player_from_actor(player: dict, actor: dict) -> dict:
+    """saintess_engine actor 战斗后状态 → player dict 回写（命令层行动后调用）。
+
+    旧 Battle 构造时把 player dict 直接当 _focus 引用，引擎内 hp/buffs 改动
+    自动落在 player dict 上；saintess_engine 的 player actor 是 make_actor 副本，
+    命令层在每次 human_act / 战斗结束结算前调用本函数，把战斗结果同步回
+    player dict，后续 db.update_player / 展示面板读到的才是最新值。
+
+    返回 player（原地回写后同一引用；player 为空 dict 时也安全）。
+    """
+    player = player if isinstance(player, dict) else {}
+    actor = actor if isinstance(actor, dict) else {}
+    if not actor:
+        return player
+    for k in _BACK_SYNC_SCALARS:
+        if actor.get(k) is not None:
+            player[k] = actor[k]
+    for k in _BACK_SYNC_BAGS:
+        if k in actor and actor[k] is not None:
+            player[k] = actor[k]
+    return player
+
+
 __all__ = [
     "player_to_actor", "monster_to_actor", "enemies_to_actors", "build_sides",
     "apply_player_battle_start", "apply_battle_loadout", "prepare_player_for_battle",
+    "sync_player_from_actor",
 ]

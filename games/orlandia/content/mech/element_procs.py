@@ -23,9 +23,9 @@
    （同样的 try/except 包裹、同样的 `or {}` 兜底；表值逐字见 `element_data.py` 头注）。
    其余 import（`:37` register_action、函数体内 `saintess_engine...` 惰性 import）一字未动。
 
-本族参数表 → 包内 `content/mech/element_data.py`（真源行号见该文件头注）：
-  `ELEMENT_REACTIONS`(`:80-90`) / `REACTION_TABLE`(`:147-152`) / `ELEMENT_MARKS_MAX`(`:142`) /
-  `MECH_CFG["element"]`(`:474-480`)。
+本族参数表 → 包内 `content/mech/element_data.py`（真源行号见该文件头注）：`ELEMENT_REACTIONS`(`:80-90`) /
+`REACTION_TABLE`(`:147-152`) / `ELEMENT_MARKS_MAX`(`:142`) / `MECH_CFG["element"]`(`:474-480`)。
+★ B10-L2 收口（2026-09-13）：宿主 `battle_element_procs.py` 已改**薄壳**（再导出本模块）⇒ 本模块 = 唯一实现。
 """
 from __future__ import annotations
 

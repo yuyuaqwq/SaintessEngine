@@ -1,158 +1,44 @@
 # -*- coding: utf-8 -*-
-# =============================================================================
-# ★ B8.2 线1 端口：修炼塔塔表（`content/flow/tower_data.py`）
-#
-# 真源（游戏仓 `qqbot/data/plugins/dragonfall`，**只读**，未改一行）：
-#     `game/data/trial_tower.py`  整文件 134 行，**逐字搬入**（本注释块以下与真源同字节）
-#     · :24  TRIAL_DAILY_LIMIT = 3   每日通关层数上限
-#     · :27  TRIAL_MIN_LV      = 70  爬塔解锁等级
-#     · :30  TRIAL_MAX_FLOOR   = 30  层数硬上限
-#     · :42  _EXP / :45 _GOLD / :50 _ROLES / :56 _FLOOR_NAMES / :64 _FLOOR_DESC
-#     · :95  _GUARD_NAMES
-#     · :112 TRIAL_FLOORS             **30 条**，字段
-#            floor/name/guard/lv/role/skills/hp_mult/atk_mult/reward_exp/reward_gold/desc
-#
-# 为什么它在包内是「模块常量」而不是域文件：
-#     B8.2 线1 的域名归主 agent（本线只拿到 `weekly_quests` 预声明），
-#     故这里先把真源**整文件逐字**落在包内（零改写 = 零漂移），
-#     待 `tower_floors`（暂名）域声明后由导出器接管 → 见 `scripts/export_domains/weekly_tower.py`
-#     文件头「域 2（未建）」与 `overnight/b82_L1_weekly_tower.md` §遗留。
-#
-# 消费者：`content/flow/tower_progress.py`（真源 `game/services/tower_progress.py`）的
-#     `_floor_def()` 读 `TRIAL_FLOORS` / `TRIAL_DAILY_LIMIT` / `TRIAL_MAX_FLOOR`；
-#     宿主命令薄壳读 `TRIAL_MIN_LV`（公告门槛文案）。三者与真源 `game.content` 同值。
-# =============================================================================
-# -*- coding: utf-8 -*-
-"""奥兰迪亚·余烬纪年 数据层 - trial_tower.py（v169.2 修炼爬塔 Lv70+）
+"""包内修炼塔塔表读口（`content/flow/tower_data.py`）—— **域投影**，不再是逐字端口。
 
-成长模型（v169.1）经验需求放大后，S5(71-100) 阶段除了周常悬赏，还需一个
-可主动选择的单人挑战经验源。修炼爬塔 = 30 层守关试炼，Lv70+ 可挑战，
-每日限通过 3 层（失败/逃跑不占次数），胜利即发 exp+gold，可继续挑战下一层。
+B9-L7（2026-09-13）之前：本文件是 `game/data/trial_tower.py` **整文件逐字**搬进包的副本
+（B8.2 线1 的临时落法，注释里写明「待域声明后由导出器接管」）。
 
-TRIAL_FLOORS：list[dict]，下标 0 = 第 1 层（floor 字段 = 实际层数）：
-    floor       层数 1-30
-    name        层名（西幻守关者命名）
-    lv          塔卫等级/建议等级（1-10 层 71-80 → 11-20 层 81-90 → 21-30 层 91-100，
-                塔卫实际等级 = min(lv, 玩家等级+2)，保证永远有挑战性又不锁死）
-    role        塔卫角色模板（tank/dps/caster/speedster/healer，走 monster_stats 数值）
-    skills      塔卫技能 ID 列表（data/monsters.py MONSTER_SKILLS，验证存在性）
-    hp_mult     血量倍率（相对同等级模板怪的挑战系数，逐层爬坡）
-    atk_mult    攻击倍率（同上）
-    reward_exp  通关经验（第 1 层 ≈ 66k → 第 30 层 ≈ 378k，几何爬坡 ~6%/层；
-                锚点：Lv71 需求 591k（首层 ≈ 11%）/ Lv100 需求 1608k（顶层 ≈ 24%），
-                配合每日 3 层上限，一天塔供给 ≈ 需求的 35-60%——高频但不碾压野外）
-    reward_gold 通关金币（≈ exp 的 1/8~1/4，顶层 ≈ 82k）
-    desc        一层风味描述
+B9-L7 之后（本版）：塔表与三条常量都改成**读域**，包内不再有第二份副本
+（BRIEF §6「不许半搬」：同一语义留两份 = 新双源）。
+
+| 名字 | 真源 | 域（导出器产出） |
+|---|---|---|
+| `TRIAL_FLOORS` | `game/data/trial_tower.py:112`（生成式，30 条） | `content/data/trial_floors.json` ← `derive_trial_floors` |
+| `TRIAL_DAILY_LIMIT` | `game/data/trial_tower.py:24`（=3） | `content/rules/game_config.json:trial_tower` |
+| `TRIAL_MIN_LV` | `game/data/trial_tower.py:27`（=70） | 同上 |
+| `TRIAL_MAX_FLOOR` | `game/data/trial_tower.py:30`（=30） | 同上 |
+
+★ 真源里**没进包**的部分（不是数据，是生成这张表的代码）：`_floor_lv` / `_hp_mult` /
+`_atk_mult` 三个函数与 `_EXP` / `_GOLD` / `_ROLES` / `_FLOOR_NAMES` / `_FLOOR_DESC` /
+`_GUARD_NAMES` 六张私有中间表 —— 成品 `TRIAL_FLOORS` 已进域，重复导它们 = 同一语义两份。
+
+消费方（一行未改，仍按同名读）
+- `content/flow/tower_progress.py`：`_TD.TRIAL_FLOORS`（`_floor_def` 线性查找时按 1 基层号匹配）、
+  `_TD.TRIAL_DAILY_LIMIT` / `_TD.TRIAL_MAX_FLOOR`（当日剩余层数 / 登顶判定），并把这三个名字
+  re-export 给宿主命令薄壳。
+- 宿主 `game/commands/tower.py`：`_TP.TRIAL_MIN_LV`（公告门槛）——
+  传的是 `content/flow/tower_progress.py` 的 re-export（= 本模块的值）。
+
+口径：本模块**只做名字绑定**，值一律来自 `content/config.py`（域文件，导出器单向产出）；
+键型还原（`"1"` → `1`）与顺序还原（按 floor 排回源 list 序）在 `content/config.py:trial_floors()`
+里做 —— 少了任何一步，塔的层序与「下一层」推导都会漂（渲染文案逐字变）。
 """
-# 每日通关层数上限（v169.2 拍板：3 层/日，防一键刷完 + 给爬塔留长期目标）
-TRIAL_DAILY_LIMIT = 3
+from __future__ import annotations
 
-# 爬塔解锁等级（Lv70+，对应成长模型 S5 起点；塔卫 71 级起步压着玩家等级线）
-TRIAL_MIN_LV = 70
+from .. import config as _CFG
 
-# 挑战层数写死上限（数据保护：超过表长/非法输入一律 clamp 到 [1, 30]）
-TRIAL_MAX_FLOOR = 30
+# 塔表（list，下标 = 层号 - 1，与真源 `TRIAL_FLOORS` 逐条等价）
+TRIAL_FLOORS: list = _CFG.trial_floors()
 
-# 层等级生成：1-10 层 Lv71-80 / 11-20 层 Lv81-90 / 21-30 层 Lv91-100
-def _floor_lv(floor: int) -> int:
-    if floor <= 10:
-        return 70 + floor
-    if floor <= 20:
-        return 80 + (floor - 10)
-    return 90 + (floor - 20)
+# 三条常量（真源行号见模块 docstring 的表）
+TRIAL_DAILY_LIMIT: int = _CFG.TRIAL_DAILY_LIMIT
+TRIAL_MIN_LV: int = _CFG.TRIAL_MIN_LV
+TRIAL_MAX_FLOOR: int = _CFG.TRIAL_MAX_FLOOR
 
-
-# 经验/金币几何爬坡（与 __init__ 顶部注释一致；直接写表，便于门禁测试比对）
-_EXP = [66000, 70100, 74400, 79100, 84000, 89200, 94700, 100600, 106800, 113400,
-        120400, 127900, 135800, 144300, 153200, 162700, 172800, 183500, 194900, 207000,
-        219800, 233400, 247900, 263300, 279600, 296900, 315300, 334900, 355700, 377700]
-_GOLD = [8800, 9500, 10260, 11090, 11970, 12930, 13960, 15080, 16290, 17590,
-         19000, 20520, 22160, 23930, 25850, 27920, 30150, 32560, 35160, 37980,
-         41020, 44300, 47840, 51670, 55800, 60270, 65090, 70290, 75920, 81990]
-
-# 角色模板轮转：物理近战 → 法系 → 敏捷 → 血牛 → 治疗(带召唤帮手意味的重压层)
-_ROLES = ["dps", "caster", "speedster", "tank", "healer"]
-# 每层血量/攻击挑战系数（逐层线性爬坡：1 层 ≈ 同等级普通怪 1.1 倍 → 30 层 ≈ 2.6 倍，
-# 满装毕业号顶层也要认真打几轮，不会秒杀通关）
-def _hp_mult(floor: int) -> float:
-    return round(1.10 + (floor - 1) * 0.055, 3)
-
-
-def _atk_mult(floor: int) -> float:
-    return round(1.00 + (floor - 1) * 0.030, 3)
-
-
-# 守关者命名（每 5 层一个守关主题，10 层一档境界）
-_FLOOR_NAMES = [
-    "磐岩试炼", "奔流试炼", "疾风试炼", "烈焰试炼", "寒霜试炼",
-    "雷光试炼", "暗影试炼", "星辰试炼", "龙威试炼", "深渊试炼·一",
-    "深渊试炼·二", "深渊试炼·三", "深渊试炼·四", "深渊试炼·五", "深渊试炼·六",
-    "深渊试炼·七", "深渊试炼·八", "深渊试炼·九", "深渊试炼·十", "深渊试炼·极",
-    "暮色回廊", "永夜回廊", "烬火回廊", "霜语回廊", "雷鸣回廊",
-    "虚空回廊", "星陨回廊", "古龙回廊", "神骸回廊", "至高之巅",
-]
-_FLOOR_DESC = [
-    "第一层：沉重的磐岩守卫挡住去路，它是每一位登塔者最初的磨刀石。",
-    "第二层：奔流的水灵在石阶上织成旋涡，踏浪而行者方可通过。",
-    "第三层：疾风之灵快如闪电，它想看看你的反应有多快。",
-    "第四层：烈焰魔仆让整层走廊热浪翻涌，小心它的灼烧。",
-    "第五层：寒霜巨像将这里冻成冰窟，击碎它，寒意自会退去。",
-    "第六层：雷光守卫的每一次挥击都带着电弧，别让麻痹追上你。",
-    "第七层：暗影刺客潜伏在灯火照不到的角落，它会从背后出手。",
-    "第八层：星辰之灵周身环绕着细碎星光，美则美矣，杀机暗藏。",
-    "第九层：一头幼龙盘踞于此，龙威初显，它已把这里当作巢穴。",
-    "第十层：深渊之力在此汇聚成门，守门者凝视着每一个登塔者。",
-    "第十一层：深渊的回响越来越重，连石壁都在低语你的名字。",
-    "第十二层：扭曲的深渊魔裔在此徘徊，它渴望吞噬新鲜的灵魂。",
-    "第十三层：这里的空气带着硫磺味，深渊之火在墙角无声燃烧。",
-    "第十四层：深渊守卫的铠甲上刻满古老符文，每一道都在蓄势待发。",
-    "第十五层：深渊洪流冲刷着台阶，你必须逆流而上。",
-    "第十六层：暗影在此凝成实质，连光都开始躲避这一层。",
-    "第十七层：深渊的低语试图动摇你的心智，守住本心再挥剑。",
-    "第十八层：成群的深渊猎手在此巡逻，它们配合默契。",
-    "第十九层：深渊魔像的每一次践踏都让塔身震颤。",
-    "第二十层：深渊的极意在此显化，守关者是这一境界的化身。",
-    "第二十一层：暮色从窗外渗入，这一层开始，属于更高维度的试炼。",
-    "第二十二层：永夜笼罩着整层回廊，唯有战斗的火光能照亮前路。",
-    "第二十三层：烬火在焦黑的墙壁上跳跃，灰烬中藏着致命的杀机。",
-    "第二十四层：霜语者的低吟让温度骤降，冻伤比刀伤更致命。",
-    "第二十五层：雷鸣声震耳欲聋，闪电随时会劈向你的头顶。",
-    "第二十六层：虚空在这里撕开裂缝，有东西正从裂缝中窥视。",
-    "第二十七层：星陨的痕迹布满地面，这里曾坠落过天穹之物。",
-    "第二十八层：古龙的气息让整层空气变得沉重，仿佛被龙威锁定。",
-    "第二十九层：神骸的余威仍在，这具骸骨的主人曾撼动大陆。",
-    "第三十层：至高之巅——塔顶的王座之上，守关者等待着一个配得上登顶的人。",
-]
-# 每层塔卫名字模式：「<层名>·守卫」，个别层用专属名增强记忆点
-_GUARD_NAMES = [
-    "磐岩守卫", "奔流之灵", "疾风之影", "烈焰魔仆", "霜语巨像",
-    "雷光战卫", "暗影刺客", "星辰之灵", "炽鳞幼龙", "深渊守望者",
-    "深渊回响", "深渊魔裔", "深渊炎魔", "符文守卫", "深渊洪流",
-    "凝影之物", "深渊低语者", "深渊猎手头目", "深渊魔像", "深渊化身",
-    "暮色行者", "永夜领主", "烬火巨灵", "霜语女妖", "雷鸣巨人",
-    "虚空撕裂者", "星陨兽", "古龙裔", "神骸守卫", "至高王座之主",
-]
-
-TRIAL_FLOORS = []
-for _f in range(1, TRIAL_MAX_FLOOR + 1):
-    _role = _ROLES[(_f - 1) % len(_ROLES)]
-    _skills = {
-        "dps": ["ms_lian_zhan", "ms_zhao_ji"],
-        "caster": ["ms_an_ying_jian", "ms_bao_dan"],
-        "speedster": ["ms_ji_pao", "ms_qian_xing"],
-        "tank": ["ms_chong_zhuang", "ms_fu_shi"],
-        "healer": ["ms_an_ying_zhi_liao", "ms_fu_ji"],
-    }[_role]
-    TRIAL_FLOORS.append({
-        "floor": _f,
-        "name": _FLOOR_NAMES[_f - 1],
-        "guard": _GUARD_NAMES[_f - 1],
-        "lv": _floor_lv(_f),
-        "role": _role,
-        "skills": _skills,
-        "hp_mult": _hp_mult(_f),
-        "atk_mult": _atk_mult(_f),
-        "reward_exp": _EXP[_f - 1],
-        "reward_gold": _GOLD[_f - 1],
-        "desc": _FLOOR_DESC[_f - 1],
-    })
+__all__ = ["TRIAL_FLOORS", "TRIAL_DAILY_LIMIT", "TRIAL_MIN_LV", "TRIAL_MAX_FLOOR"]

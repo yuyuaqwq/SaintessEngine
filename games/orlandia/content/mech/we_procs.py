@@ -12,6 +12,9 @@
    不需要：引擎 `register_action` 顶层装饰器 **import 即注册**（真源那句注释自己写明
    「装饰器已随模块 import 注册（register_action 模块级执行）——本函数仅做幂等标记」）；
    本包由 `content/apply.py` / 验收脚本 import 本模块触发注册。
+   ★ **B10-L1（2026-09-13）反转**：宿主 `battle_we_procs.py` 已薄壳化（双源收口），
+   但薄壳仍按名调 `ensure_registered()` → 该入口**逐字搬回本文件末尾**
+   （见文末「逐字端口回填」段），全仓仍只有这一份实现。
 2. **import 头**：真源 `:20` `from saintess_engine.battle.effects import register_action` 与
    `:21` `from saintess_engine.battle.actors import actor_alive` **原样保留**（未新增
    模块级 import——ACT_TICK 按第 3 类在各函数体内就地取，与真源形状一致）。函数体内其余
@@ -1518,3 +1521,27 @@ def we_affix_purify(battle, caster, target, params, logs):
                    "mult": 1.0 - wk, "turns": 1, "on": "target"}, logs)
         logs.append("😇 圣洁之力！净化后敌人攻击下降 "
                     f"{int(wk * 100)}%（1 刻）！")
+
+
+# ★ B10-L1（2026-09-13）**逐字端口回填**：下面这一段（banner + `_INSTALLED` +
+#   `ensure_registered()`）抄自游戏仓 `game/services/battle_we_procs.py:1481-1494`，
+#   与真源**逐字相同**（函数体/文案/注释一字未改）。
+#   背景：D2 搬运时按「import 即注册」口径删掉了它；B10 把宿主 `battle_we_procs.py`
+#   薄壳化后，宿主仍按名调用 `ensure_registered()`（宿主 `battle_equip_proc` 旧入口 /
+#   本包 `equip.install_ext_actions`）——该语义必须有唯一归宿，故原样搬回包内。
+#   行为零变化：本函数自身不注册动作（注册由上面的模块级装饰器在 import 时完成），
+#   只置幂等标记；`True/False` 语义与真源一致。
+# ============================================================
+# 注册入口（装配层 install_ext_actions 调，幂等）
+# ============================================================
+
+_INSTALLED = False
+
+
+def ensure_registered() -> None:
+    """注册全部族扩展动作（battle_equip_proc.apply_to_actor 前调一次）。"""
+    global _INSTALLED
+    if _INSTALLED:
+        return
+    _INSTALLED = True
+    # 装饰器已随模块 import 注册（register_action 模块级执行）——本函数仅做幂等标记

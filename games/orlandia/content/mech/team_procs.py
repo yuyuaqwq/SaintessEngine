@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """《奥兰迪亚》战斗内动词 —— P4/D2 切片：「团队/面幅」机制族 20 个动作（**搬运物**，逐字保真）。
 
-真源 = 游戏仓 `C:/Users/yuyu/qqbot/data/plugins/dragonfall/game/services/battle_team_procs.py`
-（788 行，动作区 :172-788）。本文件正文 = 真源 :44-788 **逐字节**搬运（含分节注释与空行）；
-真源 :2-41 的模块散文不搬（换成下面这段头注）。
+真源（历史）= 游戏仓 `C:/Users/yuyu/qqbot/data/plugins/dragonfall/game/services/battle_team_procs.py`
+旧版 **788 行**（动作区 :172-788）；本文件正文 = 其 `:44-788` **逐字节**搬运（含分节注释与空行）。
+★ B10-L2（2026-09-13）起宿主那份已改**薄壳**（再导出本模块）⇒ 原「过渡期双源」已收口。
 
 搬运物（20 个 `@register_action` 动词，动作区 :172-788）
 --------------------------------------------------------------------------
@@ -32,8 +32,8 @@
    `state_def` / `stats`）逐字未动。
 5. 其它：零改写。
 
-⚠️ 过渡期铁律（设计稿 §五-3）：**包版是搬运物**，游戏仓 `battle_team_procs.py` 的同名实现继续
-存在；两者语义必须逐字一致（否则同一 actor 走不同装配路径会得到不同数值）。
+✅ **B10-L2 收口（2026-09-13）**：宿主 `game/services/battle_team_procs.py` 已改**薄壳**
+（`from content.mech.team_procs import …` 再导出，零实现）⇒ **本模块 = 唯一实现**。
 """
 from saintess_engine.battle.effects import apply_effects, register_action
 
@@ -718,7 +718,7 @@ def block_reflect_hit(battle, caster, target, params, logs):
     logs.append(f"⚔️ 格挡反伤：{rd} 点！")
 
 
-# 注：元素流转（`element_switch`）的完整实现在 `game/services/battle_element_procs.py`（主系切换 + 下次挂印转换 + 元素两轴）。
+# 注：元素流转（`element_switch`）的完整实现在 `content/mech/element_procs.py`（主系切换 + 下次挂印转换 + 元素两轴）。
 
 # ============================================================
 # 10. 奥术力场（arcane_field：护盾 / 利刃 二选一）

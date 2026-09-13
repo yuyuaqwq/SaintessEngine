@@ -1,0 +1,88 @@
+{
+  "fields": {
+    "floor": {
+      "zh": "层号",
+      "note": "1..30（源表第 i 条的 floor = i，导出器断言表序与层号一致）。它同时是外层键的整数形式 —— 玩家侧「第 N 层」的 N 就是它；包内 `content/config.py:trial_floors()` 把键从 \"1\" 还原成 int 并**按 floor 排回源顺序**。",
+      "group": "base"
+    },
+    "name": {
+      "zh": "层名",
+      "note": "西幻守关者命名的层名（实测：磐岩试炼 / 深渊试炼·一 / 至高之巅 …），通关文案里逐字出现。",
+      "group": "base"
+    },
+    "guard": {
+      "zh": "塔卫名",
+      "note": "战斗里显示的敌人名（实测：磐岩守卫 / 深渊守望者 / 至高王座之主 …）；构造塔卫时 `fd['guard']` 优先，缺省才回落「第N层守卫」。",
+      "group": "base"
+    },
+    "lv": {
+      "zh": "塔卫等级",
+      "note": "71..100（1-10 层 71-80 / 11-20 层 81-90 / 21-30 层 91-100）。战斗侧实际取 `min(lv, 玩家等级+2)` —— 永远有挑战性又不锁死。",
+      "group": "base"
+    },
+    "role": {
+      "zh": "塔卫角色模板",
+      "note": "走 `monster_stats` 的角色模板，五类轮转（dps → caster → speedster → tank → healer，源侧 `_ROLES[(f-1) % 5]`）。**枚举 = 源侧轮转表**，不是展示值；加一类要同步 schema enum。",
+      "widget": "select",
+      "group": "base"
+    },
+    "skills": {
+      "zh": "塔卫技能",
+      "note": "塔卫技能 id 列表（源 = `data/monsters.py MONSTER_SKILLS`；实测每层 2 个，按角色模板给）。技能 id 是否在 `monsters` 域里存在由导出侧另行核对，本域只保证非空字符串。",
+      "widget": "lines",
+      "group": "base"
+    },
+    "hp_mult": {
+      "zh": "血量倍率",
+      "note": "相对同等级模板怪的挑战系数（第 1 层 1.1 → 第 30 层 2.695，逐层线性爬坡）。构造塔卫时 `int(hp × hp_mult)`。",
+      "group": "power"
+    },
+    "atk_mult": {
+      "zh": "攻击倍率",
+      "note": "同上（第 1 层 1.0 → 第 30 层 1.87）；对 `atk` 与 `matk` 各乘一次取 int。",
+      "group": "power"
+    },
+    "reward_exp": {
+      "zh": "通关经验",
+      "note": "66,000（第 1 层）→ 377,700（第 30 层），几何爬坡 ~6%/层。塔卫怪物的 `exp` 字段就取它，经验由标准战斗结算发放。",
+      "group": "reward"
+    },
+    "reward_gold": {
+      "zh": "通关金币",
+      "note": "8,800（第 1 层）→ 81,990（第 30 层），≈ exp 的 1/8~1/4。★ 怪物 `gold` 字段被置 0（v93 经济：怪物 gold 不直接入账），这枚金币由 `content/flow/tower_progress.py:tower_guard_on_kill` 显式入账。",
+      "group": "reward"
+    },
+    "desc": {
+      "zh": "层描述",
+      "note": "该层的风味描述（实测以「第N层：」开头，30 条逐条手写）。",
+      "widget": "textarea",
+      "group": "text"
+    }
+  },
+  "groups": [
+    {
+      "id": "base",
+      "label": "层与塔卫",
+      "icon": "🗼",
+      "fields": ["floor", "name", "guard", "lv", "role", "skills"]
+    },
+    {
+      "id": "power",
+      "label": "挑战系数",
+      "icon": "⚔️",
+      "fields": ["hp_mult", "atk_mult"]
+    },
+    {
+      "id": "reward",
+      "label": "通关奖励",
+      "icon": "🎁",
+      "fields": ["reward_exp", "reward_gold"]
+    },
+    {
+      "id": "text",
+      "label": "文案",
+      "icon": "📖",
+      "fields": ["desc"]
+    }
+  ]
+}
