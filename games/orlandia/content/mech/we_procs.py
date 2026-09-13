@@ -158,7 +158,11 @@ def we_dot(battle, caster, target, params, logs):
     _add_stacks(tgt, dot_key, int(params.get("amount", 1) or 1), cap=cap,
                 battle=battle, caster=caster)   # v181 批D：施法者快照（DOT 公式 atk/matk 段）
     turns = int(params.get("turns") or 0) or 3
-    logs.append(_DOT_LOG.get(params.get("key"), f"🔥 {dot_key}：目标持续掉血（{turns} 刻）！"))
+    # ★ 2026-09-13 文案修复（改前既有）：`_DOT_LOG` 的表文案带 `{turns}` 占位符，此前**从不
+    #   `.format()`** → 玩家会看到「目标 {turns} 刻内每刻损失当前生命！」（占位符裸露）。
+    #   这里统一 `.format(turns=…)`；缺 key 时的兜底文案是 f-string（已填好），故加 `{` 守卫。
+    _dtxt = _DOT_LOG.get(params.get("key")) or f"🔥 {dot_key}：目标持续掉血（{turns} 刻）！"
+    logs.append(_dtxt.format(turns=turns) if "{" in _dtxt else _dtxt)
 
 
 # ============================================================
