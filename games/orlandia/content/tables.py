@@ -102,6 +102,120 @@ PCT_CAPS: dict = dict(_PANEL_RULES.get("pct_caps") or {})
 PCT_STATS: tuple = tuple((_PANEL_RULES.get("pct_stats") or {}).get("stats") or ())
 PENE_PCT_STATS: tuple = tuple((_PANEL_RULES.get("pene_pct_stats") or {}).get("stats") or ())
 
+# ============================================================
+# ②b job_guide 域（『职业』速查读口）—— 2026-09-13 B8.2 线5
+# ------------------------------------------------------------
+# 真源 = 游戏仓 `game/data/job_guide.py`（`_build_guide()` 产物 JOB_GUIDE + 注入
+# `JOB_ALIASES`→`aliases` / `EXTRA_RESOURCES`+`EXTRA_RESOURCE_GUIDE`→`extra_resources`），
+# 由 `scripts/export_domains/life_growth.py:derive_job_guide` 单向导出。
+# 消费者：命令层『职业』/『职业 <名称>』（`game/commands/job_guide.py` 薄壳）。
+#
+# ⚠️ 两个坑（都是「JSON 只有字符串键」+「导出按字典序」造成，与 ENHANCE_TABLE 同族）：
+#   ① `tiers` / `tier_levels` 的键真源是 **int 档位**、落盘后是 "1"/"2"/"3" —— 不还原
+#      = 原文 `.get(int(t), 30)` 恒取缺省 → 档位路线全显示 Lv.30（逐字节对不上真源）；
+#   ② 域文件外层键是**字典序**（导出契约 `sort_table`，幂等优先），真源插入序
+#      （= 职业展示序）在域里没处存 → 在本模块显式声明 `JOB_ORDER`：多了/少了职业就
+#      `raise`（防「加职业忘了改这里」= 静默漏职业 / 一览顺序漂移）。
+# ============================================================
+_JOB_RAW: dict = _read_domain("job_guide", "data", {})
+
+
+def _job_int_tiers(tbl) -> dict:
+    """档位键 "1"/"2"/"3" → int（与 `_int_keys` 同口径：非整数键原样保留、不静默丢）。"""
+    return _int_keys(tbl)
+
+
+def _job_guide_load(raw) -> dict:
+    """域条目 → 真源同形的内存表（只做键型还原，零默认值、零改写）。"""
+    out: dict = {}
+    for cid, ent in (raw or {}).items():
+        e = dict(ent)
+        e["tiers"] = {k: list(v or []) for k, v in _job_int_tiers(ent.get("tiers")).items()}
+        e["tier_levels"] = _job_int_tiers(ent.get("tier_levels"))
+        out[cid] = e
+    return out
+
+
+JOB_GUIDE: dict = _job_guide_load(_JOB_RAW)
+
+# 职业展示顺序（一览 / 多命中候选 / 隐藏传承的遍历序）—— 源 = 真源 JOB_GUIDE 插入序
+# （= 游戏仓 `game/data/classes.py` 的 CLASSES 声明序；域文件键是字典序，顺序只能显式声明）。
+JOB_ORDER = ("cls_zhan_shi", "cls_fa_shi", "cls_you_xia", "cls_mu_shi",
+             "cls_ci_ke", "cls_wu_seng", "cls_shi_ren")
+
+
+def job_order() -> list:
+    """JOB_ORDER ∩ 域内存在的职业；域里出现未声明顺序的职业 → raise（静默漏职业防线）。"""
+    ids = [cid for cid in JOB_ORDER if cid in JOB_GUIDE]
+    extra = [cid for cid in JOB_GUIDE if cid not in JOB_ORDER]
+    if extra:
+        raise ValueError(
+            f"job_guide 域出现未声明展示顺序的职业 {extra} —— 请同步 content/tables.py:JOB_ORDER"
+            "（否则该职业在一览里被静默丢掉）")
+    return ids
+
+
+def job_base_order() -> list:
+    """基础职业展示序（真源 `BASE_ORDER`）。"""
+    return [cid for cid in job_order() if not JOB_GUIDE[cid].get("hidden")]
+
+
+def job_hidden_order() -> list:
+    """隐藏职业展示序（真源 `HIDDEN_ORDER`；本轮实测为空）。"""
+    return [cid for cid in job_order() if JOB_GUIDE[cid].get("hidden")]
+
+
+def job_hidden_successors() -> dict:
+    """`{基础职业 id: [隐藏职业 id…]}`（真源 `HIDDEN_SUCCESSORS`；本轮实测为空）。"""
+    succ: dict = {}
+    for cid in job_order():
+        g = JOB_GUIDE[cid]
+        if g.get("hidden") and g.get("src_base"):
+            succ.setdefault(g["src_base"], []).append(cid)
+    return succ
+
+
+# 别名表（名字 → 职业 id）：域条目 `aliases` 按**声明序**展开。跨职业重复名**首个赢**
+# （真源 `JOB_ALIASES` 建表用 `setdefault`；实测 44 名分 7 职业零重复，两条口径同结果）。
+def _job_alias_index() -> dict:
+    idx: dict = {}
+    for cid in JOB_ORDER:
+        if cid not in JOB_GUIDE:
+            continue
+        for a in (JOB_GUIDE[cid].get("aliases") or []):
+            idx.setdefault(a, cid)
+    return idx
+
+
+JOB_ALIAS: dict = _job_alias_index()
+
+
+def resolve_job(raw):
+    """职业名 → 职业 id。**与真源 `game/data/job_guide.py:192 resolve_job` 逐行同义**：
+
+      1) 职业 id；2) 显示名；3) 别名（`aliases`：转职分支名 + 兼容名 歌者）；
+      4) 模糊子串（≥2 字，双向 contains）：命中 1 个 → id、多个 → list、0 个 → None。
+    """
+    if not raw:
+        return None
+    raw = str(raw).strip()
+    if raw in JOB_GUIDE:
+        return raw
+    for cid in job_order():
+        if JOB_GUIDE[cid].get("name") == raw:
+            return cid
+    if raw in JOB_ALIAS:
+        return JOB_ALIAS[raw]
+    if len(raw) >= 2:
+        hit = []
+        for cid in job_order():
+            names = [JOB_GUIDE[cid].get("name")] + [a for a, c in JOB_ALIAS.items() if c == cid]
+            if any(raw in n for n in names) or any(n in raw for n in names):
+                hit.append(cid)
+        if hit:
+            return hit[0] if len(hit) == 1 else hit
+    return None
+
 # 「面板真正要用的域」清单 —— `missing_domains()` 与验收脚本按它点名核对（缺表 = 面板变白板）
 REQUIRED_DOMAINS = ("classes", "skills", "races", "sets", "enhance_table", "panel_rules")
 
@@ -117,6 +231,35 @@ def missing_domains() -> list:
         if not isinstance(tbl, dict) or not tbl:
             out.append(dom)
     return out
+
+
+# ============================================================
+# ②c boss_phases 域（Boss 阶段模板）—— 2026-09-13 B8.2 线5
+# ------------------------------------------------------------
+# 真源 = 游戏仓 `game/data/boss_phases.py:26 BOSS_PHASE_TEMPLATES`（4 条四阶段模板），
+# 由 `scripts/export_domains/b82_l5.py:derive_boss_phases` 单向导出。
+# 消费者：包内 Boss 剧本导演 `content/flow/boss_script.py`（宿主 `game/commands/boss_script.py`
+# 已移出仓）—— 端口把 `merge_phase_config` 改成**调用方传参** `phase_templates=`，
+# 宿主 `game/commands/instance_battle.py` 传的就是下面这个函数。
+# 语义与真源逐行同义（`phase_template` 未知 id 回落 normal；`merge_phase_config` 模板为底、
+# overrides 逐键覆盖，含 `None` 值 —— `null` 是源侧合法值，不许改写成 0/""）。
+# ============================================================
+BOSS_PHASE_TEMPLATES: dict = _read_domain("boss_phases", "data", {})
+
+
+def phase_template(phase_id: str) -> dict:
+    """取阶段模板（带缺省兜底，未知 id 返回常态模板）—— 真源 `boss_phases.py:95` 同义
+    （`normal` 缺失时与真源一样 `KeyError`，不静默回落空 dict）。"""
+    return BOSS_PHASE_TEMPLATES.get(phase_id) or BOSS_PHASE_TEMPLATES["normal"]
+
+
+def merge_phase_config(phase_id: str, overrides: dict = None) -> dict:
+    """模板 + Boss 内联覆盖合并：模板为底，overrides 逐键覆盖 —— 真源 `:100` 同义。"""
+    base = dict(phase_template(phase_id))
+    if overrides:
+        for k, v in overrides.items():
+            base[k] = v
+    return base
 
 
 # ============================================================
@@ -145,11 +288,19 @@ _SKILLS_BY_ID = _id_index(SKILLS)
 
 
 def resolve(table_name: str, name_or_id: str):
-    """名字或 id → id（找不到**原样返回**）—— `game/core/index.py:47` 同义。"""
+    """名字或 id → id（找不到**原样返回**）—— `game/core/index.py:47` 同义。
+
+    例外：`"job_guide"` 走 `resolve_job()`（真源 `game/data/job_guide.py:192` 同义）——
+    它的返回值是**三态**（命中 → 职业 id / 多命中 → id 列表 / 找不到 → `None`），
+    因为『职业』命令要区分「查到」「匹到多个」「没有」三种提示（原样返回一个不存在的
+    字符串会让命令误判成命中）。
+    """
     if table_name == "classes":
         return _CLASSES_BY_NAME.get(name_or_id, name_or_id)
     if table_name == "skills":
         return _SKILLS_BY_NAME.get(name_or_id, name_or_id)
+    if table_name == "job_guide":
+        return resolve_job(name_or_id)
     return name_or_id
 
 
@@ -198,4 +349,7 @@ __all__ = [
     "BRANCH_BONUS", "BRANCH_BONUS_BY_CLASS", "PLAYER_BASE_GROWTH",
     "PCT_CAPS", "PCT_STATS", "PENE_PCT_STATS", "CLASS_NOVICE", "REQUIRED_DOMAINS",
     "missing_domains", "resolve", "display", "skill_info", "skill_by_key",
+    "JOB_GUIDE", "JOB_ORDER", "JOB_ALIAS", "job_order", "job_base_order",
+    "job_hidden_order", "job_hidden_successors", "resolve_job",
+    "BOSS_PHASE_TEMPLATES", "phase_template", "merge_phase_config",
 ]

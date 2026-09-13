@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/exploration.schema.json",
+  "title": "探索点位（exploration）—— 一条 = 一个探索点（键 = 地图id:子区域id），628 点",
+  "description": "真源 = 游戏仓 `game/core/exploration.py`：**该文件没有行表**（唯一模块级静态表 = `:23 _FIRST_VISIT_MAT_POOL`，5 个材料名，消费端是宿主 `record_visit()`，本次**有意未进包**；`region_progress():96` / `overall_progress():137` 是对 `MAPS × SUBAREAS` 的**运行时聚合**，`record_visit():39` 是副作用流程）。本域 = 把「探索点」这一层投影成表，导出见 `scripts/export_domains/collection_exploration.py:derive_exploration`；聚合逻辑归包内模块 `content/exploration.py`（`region_progress(visited)` / `overall_progress(visited)`，逐字搬自真源，唯一接口替换 = 到访集合由调用方传）。**点键与宿主 `visited_subareas` 表 / `db.get_visited_subareas(qq_id)` 的键空间逐字相同**（`f\"{map_id}:{sa_id}\"`），所以『到访过没』就是 `key ∈ visited`。消费端：宿主命令 `game/commands/exploration.py`（B8.2 薄壳：宿主只给到访键集合 + 拼文案）。与已进包域的边界：`subareas` 域一行 = 一个**子区域内容**（name/desc/lv/npcs/…），本域一行 = 一个**探索点**（只地址/境/隐藏/序）；`worlds` 域一行 = 一张图的元数据；`pois` 域键同为 `地图:子区域` 但一行 = 该点上的**交互点**（内容）—— 键同、语义不同。",
+  "x-primary": "explore_entry",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*:[a-z0-9_]+$",
+    "description": "`地图id:子区域id`（房间地址；实测 628/628 匹配）。与 `pois` 域的键空间同形式（同源地址），两域语义不同（见 description）。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/explore_entry"
+  },
+  "$defs": {
+    "explore_entry": {
+      "type": "object",
+      "title": "一个探索点（地图id:子区域id → 境/隐藏/序）",
+      "additionalProperties": true,
+      "required": [
+        "map",
+        "region",
+        "hidden",
+        "order"
+      ],
+      "description": "实测 628/628 条字段集恒为这四个键（导出器逐条构造，字段集不会漂）。行的形状**单形状**：本域不放保留配置行 —— 框架门禁「一个域的所有行同形状」（`required` 必须每行成立）是硬约束。",
+      "properties": {
+        "map": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "所在图 id",
+          "description": "= 键的 `:` 前半（导出期摊平，便于按图聚合）；实测 121 图，覆盖 `MAPS` 里全部有子区域的图。"
+        },
+        "region": {
+          "type": "string",
+          "title": "所在境 / 大陆",
+          "description": "聚合键（`region_progress` 按它分组）：取自图的 `region` 字段原样（实测 10 个境且全非空）。真源 `_m.get(\"region\") or \"\"` 允许空串，故本 schema 不设 minLength —— 空串也是真源口径，不替它编值。"
+        },
+        "hidden": {
+          "type": "boolean",
+          "title": "是否隐藏房间",
+          "description": "真源 `_is_hidden(sa)` = `bool(sa.get(\"hidden\"))`（实测 50 个 true / 578 个 false）。隐藏房间只计 `hidden_total` / `hidden_found`，不进 `total` / `visited`。"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "title": "真源遍历序",
+          "description": "`MAPS` 顺序 × 子区域顺序的全局序号（0 起，导出期注入）。**聚合的 region 返回序 = 该序里 region 的首次出现序**（实测『南境·绿野』首、『北境·烬原』末，**不是**字典序）—— 不注入就会漂『探索进度』的行序。"
+        }
+      }
+    }
+  }
+}

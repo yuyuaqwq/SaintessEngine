@@ -1,0 +1,100 @@
+{
+  "fields": {
+    "id": {
+      "zh": "阶段 id",
+      "note": "与外层键相同（导出器逐条断言一致）：`normal` / `enrage` / `exhaust` / `rampage` 四把键。引擎与 Boss 数据（`monster_mods` / `instances` 的 `phases[]`）都按它引用模板。"
+    },
+    "name": {
+      "zh": "阶段名",
+      "note": "展示名（实测：常态 / 激怒 / 疲态 / 狂澜）。"
+    },
+    "icon": {
+      "zh": "图标字形",
+      "note": "演出 / 预告文案前缀字形（实测：⚖️ / 🔥 / 💧 / 🌊）。"
+    },
+    "atk_mult": {
+      "zh": "攻击倍率",
+      "note": "阶段攻击乘区（1.25 = +25%）。导演读法：`!= 1.0` 才生效（覆盖式），否则回落旧行为 1+0.2×阶段数。实测 1.00 / 1.25 / 0.80 / 1.50。"
+    },
+    "def_add": {
+      "zh": "防御加值",
+      "note": "阶段防御**加法**（可为负 = 破绽期）。实测 0 / 80 / -120 / 150。"
+    },
+    "spd_add": {
+      "zh": "速度加值",
+      "note": "阶段速度加法（可为负）。实测 0 / 20 / -10 / 30。"
+    },
+    "dmg_taken_mult": {
+      "zh": "承伤倍率",
+      "note": "阶段承伤倍率（>1 = 更脆，核心件外露；1.40 = 疲态 H+0.40）。实测 1.0 / 1.4。"
+    },
+    "add_skills": {
+      "zh": "换招表",
+      "note": "转阶段追加的技能（**引擎侧技能 id 串**）：导演幂等 append 进 `actor.skills` 并切 `auto_act`。实测 **4/4 条都是空列表** —— 逐 Boss 换招写在 `monster_mods` / `instances` 的内联覆盖里。"
+    },
+    "freq_mult": {
+      "zh": "行动频率倍率",
+      "note": "阶段行动频率（<1 = 降频，如疲态 0.50 = 每 2 刻一动）。实测 1.0 / 0.5。"
+    },
+    "ult_every": {
+      "zh": "全场大招间隔",
+      "note": "每 N 刻释放一次全场大招（刻）。**`null` 是合法值** = 无此行为（不是缺省）。实测 null / 3。"
+    },
+    "exit_turns": {
+      "zh": "退出刻数",
+      "note": "阶段持续多少刻后自动退出。**`null` = 不限**（设计文档 None=不限）。实测 null / 8 / 5。"
+    },
+    "exit_dmg": {
+      "zh": "退出承伤阈值",
+      "note": "累计承伤达到该值即退出阶段。**`null` = 不限**。实测 4/4 条都是 null（本批没人用）。"
+    },
+    "counter": {
+      "zh": "反制提示",
+      "note": "写入战报的解题引导（设计口径：阶段是内容单位不是血量单位 —— 强度靠要解的题）。"
+    },
+    "enter_line": {
+      "zh": "进场文案",
+      "note": "进入本阶段时的演出句。"
+    },
+    "warn_line": {
+      "zh": "预告文案",
+      "note": "接近本阶段阈值时的预告句；**`null` = 无预告**（实测常态那条是 null）。"
+    },
+    "preserve_debuffs": {
+      "zh": "保留异常层数",
+      "note": "阶段转换时是否保留异常层数（v138.2 律三；`false` 才触发净化）。实测 4/4 条都是 true。"
+    }
+  },
+  "groups": [
+    {
+      "id": "ident",
+      "label": "阶段标识",
+      "icon": "🏷",
+      "fields": ["id", "name", "icon"]
+    },
+    {
+      "id": "numeric",
+      "label": "数值变化",
+      "icon": "📊",
+      "fields": ["atk_mult", "def_add", "spd_add", "dmg_taken_mult", "freq_mult"]
+    },
+    {
+      "id": "behavior",
+      "label": "行为变化",
+      "icon": "🌀",
+      "fields": ["add_skills", "ult_every", "preserve_debuffs"]
+    },
+    {
+      "id": "exit",
+      "label": "退出条件",
+      "icon": "⏱",
+      "fields": ["exit_turns", "exit_dmg"]
+    },
+    {
+      "id": "script",
+      "label": "演出文案",
+      "icon": "🎬",
+      "fields": ["counter", "enter_line", "warn_line"]
+    }
+  ]
+}

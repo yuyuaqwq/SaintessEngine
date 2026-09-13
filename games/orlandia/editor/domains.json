@@ -355,5 +355,40 @@
     "schema": "food_effects.schema.json",
     "primary": "food_effect",
     "icon": "🍱"
+  },
+  "weekly_quests": {
+    "label": "周常任务",
+    "kind": "data",
+    "schema": "weekly_quests.schema.json",
+    "primary": "weekly_quest",
+    "icon": "📅"
+  },
+  "collection_books": {
+    "label": "收藏册",
+    "kind": "data",
+    "schema": "collection_books.schema.json",
+    "primary": "collection_book",
+    "icon": "📚"
+  },
+  "talk_actions": {
+    "label": "对话动作",
+    "kind": "data",
+    "schema": "talk_actions.schema.json",
+    "primary": "talk_action",
+    "icon": "💬"
+  },
+  "boss_phases": {
+    "label": "Boss 阶段",
+    "kind": "data",
+    "schema": "boss_phases.schema.json",
+    "primary": "boss_phase",
+    "icon": "👹"
+  },
+  "exploration": {
+    "label": "探索",
+    "kind": "data",
+    "schema": "exploration.schema.json",
+    "primary": "explore_entry",
+    "icon": "🧭"
   }
 }
