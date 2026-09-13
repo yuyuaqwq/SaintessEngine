@@ -32,7 +32,7 @@
 
 | # | 位置 | 内容 | 为什么是领域概念 | 契约说明 |
 |---|---|---|---|---|
-| **B1** | `kinds/__init__.py:27-34` | `SkillKind` 枚举值写死中文（`PHYS = "物理"` …） | 伤害通道枚举是引擎的**领域模型**。引擎内部**从不裸比较中文**（全仓无第二个裸字面量，已 grep 确认）——一律经 `SkillKind` / `kind_is()` / `kind_meta()` | 枚举**取值**沿用参考实现的写法；第三方数据用别的通道名 → 见 §三 injectable |
+| **B1** | ~~`kinds/__init__.py:27-34`~~ **（2026-09-13 P4 下沉已消除）** | `SkillKind` 枚举值（中文）**已随 `kinds/` 下沉到内容侧**（游戏仓 `game/data/kinds.py`） | 伤害通道枚举是引擎的**领域模型**。引擎内部**从不裸比较中文**（全仓无第二个裸字面量，已 grep 确认）——一律经 `config.kind_of(name)` 注入面读值。下沉后引擎侧不再持有任何 kind 词表 | 内容侧自带词表（第三方同构：内容包 `content/mech/kinds.py`）；引擎侧契约只剩 `config.kind_of` → §三 injectable |
 | **B2** | `landing.py:117,237,246,251,373-396` | 固定键：`sleep`（受击打醒）、`death_guard`（濒死保护）、`heal_amp_pct` / `heal_down` / `_anti_heal_pct`（受疗修正） | 这 5 个是**战斗物理规则里的固定语义位**（打醒/濒死/禁疗），与"护盾先挡"同级；`state_def()` 本来就查 config 表取参数 | 契约词汇。文档在 `reference/effect-rules.md` 登记；`sleep`/`death_guard` 改 config 查表 → §三 |
 | **B3** | `effects.py:369` | `if key == "reduce":` | 特殊处理"减伤"这一**通道**（区别于普通叠层面板） | 契约词汇（同名 key 在内容侧 `EFFECT_ACTIONS` 也走 reduce 通道） |
 | **B4** | `effects.py:305`、`schedule.py:268,272` | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | "Boss" 是**通用战斗角色概念**（与 `player` 同级）；值是内容侧数据标签 | 契约词汇。第三方用别的标签 → §三 |

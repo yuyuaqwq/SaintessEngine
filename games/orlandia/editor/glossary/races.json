@@ -1,0 +1,13 @@
+{
+ "fields": {
+  "name": {"zh": "种族名", "note": "显示名（面板 `race_name()` 直接取它做展示）。", "group": "base"},
+  "icon": {"zh": "图标", "note": "展示用字形（任意字符 / 表情）。", "group": "base"},
+  "desc": {"zh": "种族描述", "note": "种族设定文案（纯展示）。", "group": "base", "widget": "textarea"},
+  "talents": {"zh": "天赋数值表", "note": "天赋名 → 数值。**面板只认它认识的键**：`growth_mult`（基础成长）、`hp_mult` / `spd_mult`（乘区）、`crit_add`（暴击）；其余键并入各自 cap 或交战斗/命令层消费。键集是内容侧的。", "group": "talent", "widget": "kv"},
+  "talent_names": {"zh": "天赋显示名", "note": "天赋键 → 中文名（纯展示，面板零消费）。", "group": "talent", "widget": "kv"}
+ },
+ "groups": [
+  {"id": "base", "label": "基础", "icon": "📌", "fields": ["name", "icon", "desc"]},
+  {"id": "talent", "label": "天赋", "icon": "✨", "fields": ["talents", "talent_names"]}
+ ]
+}

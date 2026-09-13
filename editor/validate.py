@@ -6,9 +6,21 @@
 按域 schema 的 primary def 校验）。第三方游戏可以替换 `schemas/` 下的 schema。
 
 对外接口：
-    load_schema(dom) -> dict | None
-    primary_def(dom) -> (schema, def_name) | (None, None)
-    validate_entry(dom, data) -> [错误文案]
+    load_schema(dom, pkg_dir=None) -> dict | None
+    schema_warnings(dom, pkg_dir=None) -> [可读告警]（坏 schema 降级时非空）
+    primary_def(dom, pkg_dir=None) -> (schema, def_name) | (None, None)
+    validate_entry(dom, data, pkg_dir=None) -> [错误文案]
+
+`pkg_dir` 省略 = 只认框架内置域（旧行为逐字不变）。给了包目录 → 域元数据走
+`packages.effective_domains(pkg_dir)`：包自带的域声明（`<pkg>/editor/domains.json`）
+可以新增自己的域、或覆盖同名内置域的 schema；schema 文件按
+`packages.schema_path()` 解析 —— **包内优先，框架回退**：
+
+    <pkg>/schemas/<声明值>  →  <pkg>/<声明值>  →  框架 schemas/<声明值>  →  None（不校验）
+
+包自带的那份 schema 读不了（坏 JSON / 权限）→ **不炸、不静默**：回退框架那份（若在）
+并按框架规则校验，同时给一条可读告警（`schema_warnings()`）；框架那份也读不了 →
+该域暂时不校验（编辑器照旧可增删改），告警照留。
 """
 from __future__ import annotations
 
@@ -25,32 +37,72 @@ except Exception:                        # noqa: BLE001
     _js = None
 
 _cache: dict = {}
+_CACHE_MAX = 500
 
 
-def load_schema(dom: str):
-    if dom in _cache:
-        return _cache[dom]
+def _read_schema_file(path: str):
+    """读一份 schema 文件 → (schema | None, 出错原因)。**不抛。**"""
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f), ""
+    except (OSError, json.JSONDecodeError) as e:
+        return None, f"{os.path.basename(path)} 读不了：{e}"
+
+
+def _resolve_schema(dom: str, pkg_dir=None):
+    """按 `packages.schema_path()` 的**包内优先 → 框架回退**读 schema
+    → `(schema | None, [可读告警])`。**坏 schema 不炸**（见模块 docstring）。"""
     from . import packages as P
-    d = P.DOMAINS.get(dom) or {}
-    fn = d.get("schema")
-    out = None
-    if fn:
-        p = os.path.join(SCHEMA_DIR, fn)
-        if os.path.exists(p):
-            try:
-                with open(p, encoding="utf-8") as f:
-                    out = json.load(f)
-            except (OSError, json.JSONDecodeError):
-                out = None
-    _cache[dom] = out
-    return out
+    p = P.schema_path(pkg_dir, dom)
+    if not p:
+        return None, []                    # 没声明 / 找不到 → 不校验（旧行为）
+    out, err = _read_schema_file(p)
+    if out is not None:
+        return out, []
+    # 包内那份坏了 → 降级回退框架那份（并说清楚，不静默）
+    warns = [f"域 {dom} 的 schema 读不了（{err}）"]
+    # ★ B2b：回退那份按**包声明的 schema 文件名**找（`framework_schema_path()`）——
+    #   不能再问「域名在不在内置集里」：内容域（skills / items …）由包声明，内置集已没有它们。
+    fw = P.framework_schema_path(pkg_dir, dom) if pkg_dir else P.schema_path(None, dom)
+    if fw and os.path.normpath(fw) != os.path.normpath(p):
+        out, err2 = _read_schema_file(fw)
+        if out is not None:
+            warns.append(f"已回退框架 schemas/{os.path.basename(fw)}"
+                         "（该域仍按框架规则校验）")
+            return out, warns
+        warns.append(f"框架 schemas/{os.path.basename(fw)} 也读不了（{err2}）")
+    warns.append("该域暂时不校验（编辑器仍可增删改，不会 500）")
+    return None, warns
 
 
-def primary_def(dom: str):
+def schema_info(dom: str, pkg_dir=None) -> tuple:
+    """`(schema | None, [可读告警])` —— 带缓存（键含包目录）。"""
+    key = (str(pkg_dir or ""), dom)
+    hit = _cache.get(key)
+    if hit is not None:
+        return hit[0], list(hit[1])
+    out, warns = _resolve_schema(dom, pkg_dir)
+    if len(_cache) > _CACHE_MAX:
+        _cache.clear()
+    _cache[key] = (out, warns)
+    return out, list(warns)
+
+
+def load_schema(dom: str, pkg_dir=None):
+    """该域生效的 schema（包内优先 → 框架回退）；没有 → None（= 不校验）。"""
+    return schema_info(dom, pkg_dir)[0]
+
+
+def schema_warnings(dom: str, pkg_dir=None) -> list:
+    """读该域 schema 时的可读告警（空 = 一切正常）。坏包自带 schema → 降级说明。"""
+    return schema_info(dom, pkg_dir)[1]
+
+
+def primary_def(dom: str, pkg_dir=None):
     from . import packages as P
-    d = P.DOMAINS.get(dom) or {}
+    d = P.domain_meta(pkg_dir, dom) or {}
     name = d.get("primary")
-    schema = load_schema(dom)
+    schema = load_schema(dom, pkg_dir)
     if not schema or not name:
         return None, None
     return schema, name
@@ -63,9 +115,9 @@ def _path_join(path: list) -> str:
     return out or "(根)"
 
 
-def validate_entry(dom: str, data: dict) -> list:
-    """返回错误文案列表（空 = 通过）。"""
-    schema, name = primary_def(dom)
+def validate_entry(dom: str, data: dict, pkg_dir=None) -> list:
+    """返回错误文案列表（空 = 通过）。`pkg_dir` 省略 = 只认框架内置域。"""
+    schema, name = primary_def(dom, pkg_dir)
     if not schema or not name:
         return []                        # 无 schema 的域 = 不校验（编辑器仍可增删改）
     defs = (schema.get("$defs") or {})

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "passive_proc",
+  "description": "铆炉回声 · 被动声明域（content/rules/）—— 引擎不读，由本包装配器（content/apply.py）翻成 actor[\"triggers\"]",
+  "$defs": {
+    "passive_proc": {
+      "type": "object",
+      "required": ["name", "event", "action"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "description": "展示名"},
+        "event": {"type": "string", "minLength": 1,
+                  "description": "触发事件（on_taken / on_hit / battle_start…，取值留内容侧）"},
+        "action": {"type": "string", "minLength": 1,
+                   "description": "本包的机制动词（@register_action 的 key）"},
+        "params": {"type": "object", "description": "动词参数"},
+        "start_classes": {"type": "array", "items": {"type": "string"}},
+        "desc": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  }
+}

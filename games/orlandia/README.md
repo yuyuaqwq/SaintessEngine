@@ -10,7 +10,13 @@
 
 ## 一、包里有什么
 
-**19 个域 / 4569 条**（框架 `editor/packages.py` 的 `DOMAINS` 19 个域一个不缺），约 1.9 MB：
+**24 个域 / 5115 条**，约 2 MB：
+
+> ★ 2026-09-13 B2b：域的表**真源在本包的 `editor/domains.json`**（24 域）—— 框架内置集只剩
+> 8 个**引擎域**（effect_rules / passive_proc / commands / texts / tlogs / maps / drop_pools /
+> instances，每个都能在 `saintess_engine/` 指到消费端）；**内容域不内置**，只能由包声明
+> （反证：拿掉本包那份声明 → 编辑器只认识那 8 个）。下表是 19 域那批的历史盘点，
+> 其后新增的 5 个域：`npcs` 431 / `sets` 92 / `enhance_table` 10 / `panel_rules` 7 / `races` 6。
 
 | 域 | 条数 | 文件 | 真源（游戏仓 `dragonfall/`） | 备注 |
 |---|---:|---|---|---|
@@ -34,7 +40,7 @@
 | classes | 8 | `content/data/classes.json` | `game/data/classes.py::CLASSES` | 职业（含 `tutor` 元组 → list） |
 | loot_vocab | 1 | **`content/rules/loot_vocab.json`** | `game/drop_engine.py` 的三张声明常量 | 掉落池**引用词汇声明**（内容侧告诉审计「哪些引用解得开」） |
 
-`game.json` 声明：`id=orlandia` / `engine=">=0.1"` / `domains=[19 个域]` / `created=2026-09-12`。
+`game.json` 声明：`id=orlandia` / `engine=">=0.1"` / `domains=[24 个域]` / `created=2026-09-12`。
 **没有 `entry`**：本包是纯数据包（机制尚未移植），一旦声明 `entry` 就必须有那个文件
 ——`tests/test_editor_dist.py` 守这条不变量。
 

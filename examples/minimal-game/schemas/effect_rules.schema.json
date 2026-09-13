@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "effect_rules",
+  "description": "铆炉回声 · 声明表域（content/rules/）—— 引擎按 key 查行为规则；本包自带 schema",
+  "$defs": {
+    "effect_rule": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "description": "展示名（本游戏自己的词）"},
+        "cap": {"type": "integer", "minimum": 0, "description": "最多叠几层"},
+        "on": {"type": "string", "description": "挂谁身上（caster / target）"},
+        "start_classes": {"type": "array", "items": {"type": "string"},
+                          "description": "哪些职业起手就带"},
+        "stat_scale": {"type": "object", "additionalProperties": {"type": "number"},
+                       "description": "每层折算的面板加成"},
+        "channels": {"type": "object", "description": "攒取渠道声明（本示例由 apply.py 翻成 triggers）"},
+        "period": {"type": "object", "description": "持续伤害/回复（dir / interval / turns…）"},
+        "consume": {"type": "object", "description": "消耗语义（mode 等）"},
+        "desc": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  }
+}

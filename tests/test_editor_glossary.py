@@ -2,7 +2,9 @@
 """字段词典门禁（editor/glossary.py）。
 
 守住三条（对应「字段加翻译 / 加注脚 / 能跳文档」这个需求的质量底线）：
-  1. **覆盖率**：6 域 schema 里每个能被表单渲染的字段，都要有中文名。少一个 = 用户看到英文。
+  1. **覆盖率**：schema 里每个能被表单渲染的字段，都要有中文名。少一个 = 用户看到英文。
+     ★ 2026-09-13 B2b：框架内置集**只留 8 个引擎域**（`G.DOMAIN_SCHEMA` 随之内缩）；
+     内容域（skills / items …）的「面板不空白」改由**包这一层**守（见下面「旗舰包合成覆盖」）。
   2. **出处不许编**：词典里的每条 wiki 引用，页面必须存在、`find` 词必须真在页里
      （否则点「📖 打开文档」跳过去什么都没有——比没有链接更糟）。
   3. **报错翻译**：schema 英文报错 → 中文可读，且带字段中文名（用户「不知道什么规则」的正面回答）。
@@ -20,6 +22,9 @@ sys.path.insert(0, ROOT)
 
 from editor import glossary as G          # noqa: E402
 from editor import packages as PK         # noqa: E402
+
+# 框架词典（第 3 层，**未随内置集瘦身**）里带默认词条的域；"*" = 通用叶名那份
+FW_VOCAB_DOMAINS = set(G.GLOSSARY) - {"*"}
 
 PASS = 0
 FAIL = 0
@@ -52,6 +57,22 @@ def field_paths(fname: str) -> list:
     return list(dict.fromkeys(out))
 
 
+def _fields_in(path: str) -> list:
+    """任意 schema 文件（含包内那份）里会被表单渲染的字段路径（口径同 `field_paths`）。"""
+    s = json.load(open(path, encoding="utf-8"))
+    out: list = []
+
+    def walk(props, pre):
+        for k, v in (props or {}).items():
+            out.append(pre + k)
+            if isinstance(v, dict) and isinstance(v.get("properties"), dict):
+                walk(v["properties"], pre + k + ".")
+
+    for _name, d in (s.get("$defs") or {}).items():
+        walk(d.get("properties") or {}, "")
+    return list(dict.fromkeys(out))
+
+
 def top_keys(fname: str) -> list:
     """顶层字段名（分组只管顶层；嵌套子键在它所属对象的卡片里渲染）。"""
     s = json.load(open(os.path.join(ROOT, "schemas", fname), encoding="utf-8"))
@@ -76,6 +97,33 @@ def main() -> int:
             if not e or not e.get("zh"):
                 nozh.append(f"{dom}.{p}")
     check(f"字段中文名覆盖 {total} 个字段（0 缺口）", not nozh, f"缺：{nozh[:12]}")
+
+    # ★ 2026-09-13 收口：**包侧词汇表**上线后，「面板不空白」的覆盖口径 = 框架默认 ∪ 包声明。
+    #   字段的真源在包（`<pkg>/editor/glossary/<域>.json`），框架那份只是回退；所以旗舰包必须
+    #   逐域逐字段都能查到中文名（来自哪一层不限），否则编辑器里会有裸字段。
+    pk_dir = os.path.join(ROOT, "games", "orlandia")
+    if os.path.isdir(pk_dir):
+        print("\n-- 旗舰包 games/orlandia：框架默认 ∪ 包声明的合成覆盖")
+        total_p, gaps_p = 0, []
+        for dom, meta in PK.effective_domains(pk_dir)[0].items():
+            fn = meta.get("schema")
+            if not fn:
+                continue
+            for rel in (os.path.join("schemas", fn), fn):
+                fp = os.path.join(pk_dir, rel)
+                if os.path.isfile(fp):
+                    break
+            else:
+                continue
+            for p in _fields_in(fp):
+                total_p += 1
+                e = G.lookup(dom, p, pk_dir)
+                if not e or not e.get("zh"):
+                    gaps_p.append(f"{dom}.{p}")
+        check(f"旗舰包合成覆盖 {total_p} 个字段（0 缺口；中文名可来自框架默认或包词汇表）",
+              not gaps_p, f"缺：{gaps_p[:12]}")
+        check("包词汇表零告警（坏声明不静默）", G.glossary_warnings(pk_dir) == [],
+              G.glossary_warnings(pk_dir))
 
     # 2. 出处门禁：wiki 页面存在 + find 词真的在页里
     refs = 0
@@ -172,8 +220,16 @@ def main() -> int:
     check("groups_for 返回深拷贝（改调用方不污染全局）",
           (lambda a: (a[0]["fields"].append("__x__"), "__x__" not in G.groups_for("skills")[0]["fields"])[1])(
               G.groups_for("skills")))
-    check(f"all_groups 覆盖 {len(G.DOMAIN_SCHEMA)} 个有 schema 的域",
-      set(G.all_groups()) == set(G.DOMAIN_SCHEMA))
+    # ★ B2b：`G.DOMAIN_SCHEMA` 从**内置域集**派生（只留 8 个引擎域），而框架词典 `GROUPS`
+    #   仍为内容域保留默认分组（第 3 层未随瘦身）→ 两者不再等价。口径改成两条：
+    #     ① 每个内置引擎域（有 schema）必须有分组；
+    #     ② 框架词典里出过词条的每个域也必须有分组（防漏分组 / 拼错域名）。
+    check(f"all_groups 覆盖全部 {len(G.DOMAIN_SCHEMA)} 个内置（引擎）域",
+          set(G.DOMAIN_SCHEMA) <= set(G.all_groups()),
+          sorted(set(G.DOMAIN_SCHEMA) - set(G.all_groups())))
+    check(f"框架词典的 {len(FW_VOCAB_DOMAINS)} 个域都有分组（内容域词条仍在框架默认层）",
+          FW_VOCAB_DOMAINS <= set(G.all_groups()),
+          sorted(FW_VOCAB_DOMAINS - set(G.all_groups())))
 
     # 10. 控件形态与跨域引用（长文案给大框 / 比值给滑杆 / 引用取真 key）
     ALLOWED = {"textarea", "lines", "chips", "pct"}
@@ -191,8 +247,13 @@ def main() -> int:
                                 for k in ("mech_chance", "lifesteal"))
           and G.widget_for("effect_rules", "guard_hp_pct") == "pct")
     check("枚举数组给多选标签", G.widget_for("affixes", "qualities") == "chips")
-    bad_ref = [f"{k}→{v}" for k, v in G.REF_DOMAINS.items() if v not in PK.DOMAINS]
-    check("跨域引用指向的域都真实存在", not bad_ref, f"{bad_ref}")
+    # ★ B2b：框架默认引用表指向的域可能是**内容域**（不在内置集里）—— 真源在包，
+    #   所以判据 = 内置引擎域 ∪ 旗舰内容包声明的域（orlandia 的 editor/domains.json）。
+    _fp = os.path.join(ROOT, "games", "orlandia")
+    KNOWN_DOMAINS = set(PK.DOMAINS) | set(PK.effective_domains(_fp)[0])
+    bad_ref = [f"{k}→{v}" for k, v in G.REF_DOMAINS.items() if v not in KNOWN_DOMAINS]
+    check(f"跨域引用指向的域都真实存在（判据 = 内置 {len(PK.DOMAINS)} 引擎域 ∪ 旗舰包声明的域）",
+          not bad_ref, f"{bad_ref}")
     check("引用类字段解析出目标域（monsters.skills → skills / start_classes → classes）",
           G.ref_domain_for("monsters", "skills") == "skills"
           and G.ref_domain_for("effect_rules", "start_classes") == "classes"

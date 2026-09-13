@@ -46,6 +46,7 @@ sys.path.insert(0, ROOT)
 from editor import packages as PK          # noqa: E402
 from editor import server as SRV           # noqa: E402
 from editor import validate as VD          # noqa: E402
+import _domain_fixtures as FX              # noqa: E402  （内容域只能由包声明：B2b）
 
 ITEMS = 2000                               # 真数据里物品域一次就是 1704 条，这里按 2000 压
 MONSTERS = 300
@@ -164,6 +165,11 @@ def full_entry(dom: str, i: int) -> dict:
 def build_full_pkg(root: str) -> str:
     pkg = os.path.join(root, "full_game")
     PK.create_package("full_game", "整包压测", "13 域", list(PK.DOMAINS), root)
+    # ★ B2b：合成包要用的**内容域**由包自己声明（框架内置集只留 8 个引擎域）
+    FX.declare(pkg, "items", "skills", "monsters", "affixes", "classes")
+    _m = PK.load_manifest(pkg)
+    _m["domains"] = list(FULL_COUNTS)
+    PK.save_manifest(pkg, _m)
     for dom, n in FULL_COUNTS.items():
         PK.write_json(PK.domain_path(pkg, dom), {f"{dom[:3]}_{i:05d}": full_entry(dom, i) for i in range(n)})
     return pkg
@@ -171,7 +177,11 @@ def build_full_pkg(root: str) -> str:
 
 def build_pkg(root: str) -> str:
     pkg = os.path.join(root, "big_game")
+    for sub in ("content/data", "content/rules"):
+        os.makedirs(os.path.join(pkg, *sub.split("/")), exist_ok=True)
     data = {"items": make_items(ITEMS), "monsters": make_monsters(MONSTERS), "maps": make_maps(MAPS)}
+    # ★ B2b：内容域（items/monsters/skills/classes/affixes）由包声明；引擎域走内置
+    FX.declare(pkg, "items", "monsters", "skills", "classes", "affixes")
     for dom, tbl in data.items():
         PK.write_json(PK.domain_path(pkg, dom), tbl)
     for dom in ("skills", "classes", "affixes", "drop_pools"):
@@ -365,7 +375,9 @@ def main() -> int:
 
         # 1. 域列表 + 条目列表（**先量列表 = 真冷启动**：2000 条都要现算一遍校验）
         st, j, _ = req(base, "GET", "/api/domains")
-        check("GET /api/domains 200 且域齐全", st == 200 and len(j.get("domains") or []) >= 9,
+        # ★ B2b：不带包 = 框架内置（引擎域）那份（19 → 8）；包的域走 ?pkg= 拿
+        check(f"GET /api/domains 200 且内置域齐全（{len(PK.DOMAINS)} 个）",
+              st == 200 and len(j.get("domains") or []) == len(PK.DOMAINS) >= 8,
               f"{st} / {len(j.get('domains') or [])}")
         med, first, (st, j) = timed(base, "/api/package/big_game/d/items", n=5)
         keys = [e["key"] for e in (j.get("entries") or [])]

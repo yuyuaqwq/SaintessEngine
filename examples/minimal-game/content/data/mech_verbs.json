@@ -1,0 +1,23 @@
+{
+  "res_gain": {
+    "key": "res_gain",
+    "name": "攒取资源",
+    "desc": "资源攒取渠道：把声明表的 channels 落成一次叠层 +N（params: res / gain / when / per_dt）",
+    "params": ["res", "gain", "when", "per_dt"],
+    "source": "content/mech/actions.py"
+  },
+  "heat_vent": {
+    "key": "heat_vent",
+    "name": "炉温喷涌",
+    "desc": "本示例的核心机制：按炉温层数追加一段贯穿伤害并耗层（params: key / per_layer / min_layers / spend）",
+    "params": ["key", "per_layer", "min_layers", "spend"],
+    "source": "content/mech/actions.py"
+  },
+  "backdraft": {
+    "key": "backdraft",
+    "name": "回火",
+    "desc": "被动 proc：受击后按自身物攻比例反击伤害来源（params: pct）",
+    "params": ["pct"],
+    "source": "content/mech/actions.py"
+  }
+}

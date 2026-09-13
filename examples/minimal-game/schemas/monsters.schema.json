@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "monsters",
+  "description": "铆炉回声 · 怪物域 —— 本包自带 schema（框架 schemas/monster.schema.json 只作回退，字段口径按本示例的裸面板写）",
+  "$defs": {
+    "monster": {
+      "type": "object",
+      "required": ["name", "level", "hp", "atk"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "description": "怪物名"},
+        "level": {"type": "integer", "minimum": 1, "description": "等级"},
+        "hp": {"type": "number", "minimum": 1, "description": "生命"},
+        "atk": {"type": "number", "minimum": 0, "description": "物攻"},
+        "matk": {"type": "number", "minimum": 0},
+        "def": {"type": "number", "minimum": 0},
+        "mdef": {"type": "number", "minimum": 0},
+        "spd": {"type": "number", "minimum": 0},
+        "crit": {"type": "number", "minimum": 0, "maximum": 1},
+        "dodge": {"type": "number", "minimum": 0, "maximum": 1},
+        "skills": {"type": "array", "items": {"type": "string"},
+                   "description": "怪物技能 key（本示例在 content/data/skills.py 里）"},
+        "ai": {"type": "object", "description": "引擎 ai.py 的谓词/动作表（select / fallback / moves）"},
+        "desc": {"type": "string"}
+      },
+      "additionalProperties": true
+    }
+  }
+}

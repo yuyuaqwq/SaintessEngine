@@ -17,6 +17,7 @@ sys.path.insert(0, ROOT)
 
 from editor import server as SRV          # noqa: E402
 from editor import packages as PK         # noqa: E402
+import _domain_fixtures as FX             # noqa: E402  （内容域只能由包声明：B2b）
 
 PASS = 0
 FAIL = 0
@@ -62,7 +63,9 @@ def main():
     # 1. 域注册表 / 静态页
     st, j = req(base, "GET", "/api/domains")
     check("GET /api/domains 200", st == 200 and j.get("ok"), f"{st} {j}")
-    check(f"域齐全（{len(j.get('domains') or [])} 个）", len(j.get("domains") or []) >= 7)
+    # ★ B2b：不带包 = **框架内置（引擎域）**那份 —— 19 → 8；内容域 tab 由包声明带出来
+    check(f"内置域齐全（{len(j.get('domains') or [])} 个 == 内置 {len(PK.DOMAINS)}）",
+          len(j.get("domains") or []) == len(PK.DOMAINS) >= 8)
     r = urllib.request.urlopen(base + "/", timeout=10)
     html = r.read().decode("utf-8")
     # 单页应用外壳：域栏（工作台导航）+ 命令面板 + 样式表接线
@@ -76,8 +79,15 @@ def main():
     check("POST /api/packages 建包", st == 200 and j.get("ok"), f"{st} {j}")
     pkg_dir = j.get("dir")
     check("脚手架落了 content/apply.py", os.path.exists(os.path.join(pkg_dir, "content", "apply.py")))
-    check("脚手架落了 7 个域的 JSON", all(
+    check(f"脚手架落了 {len(PK.DOMAINS)} 个内置（引擎）域的 JSON", all(
         os.path.exists(PK.domain_path(pkg_dir, d)) for d in PK.DOMAINS))
+    # ★ B2b：skills 是内容域 —— 由**包自己声明**（真源在包），框架内置集里没有它
+    FX.declare(pkg_dir, "skills")
+    _man = PK.load_manifest(pkg_dir)
+    _man["domains"] = list(PK.DOMAINS) + ["skills"]
+    PK.save_manifest(pkg_dir, _man)
+    check("包声明内容域后 skills 可用（落 content/data/skills.json）",
+          PK.domain_path(pkg_dir, "skills").replace(os.sep, "/").endswith("content/data/skills.json"))
 
     # 2b. ★ 脚手架产出的 apply.py **真的能装配**（不只是"文件存在"）——
     #     往 content/rules/effect_rules.json 写一条，再在子进程里 import + install_engine()，
@@ -156,8 +166,8 @@ def main():
     check("删除后条目数归零", j.get("count") == 0, f"{j}")
 
     # 10. 字段词典（翻译 / 注脚 / 文档深链的数据源）
-    st, j = req(base, "GET", "/api/schema/skills")
-    check("GET /api/schema/<dom> 可达（该路由历史上写成 3 段，2 段永不匹配 → 修掉）",
+    st, j = req(base, "GET", "/api/schema/skills?pkg=t_game")
+    check("GET /api/schema/<dom>?pkg= 可达（该路由历史上写成 3 段，2 段永不匹配 → 修掉）",
           st == 200 and j.get("ok") and bool((j.get("schema") or {}).get("$defs", {}).get("skill")),
           f"{st}")
     st, j = req(base, "GET", "/api/glossary")
@@ -173,9 +183,13 @@ def main():
           f"{sorted(doms)[:9]}")
     check("词典条目带中文名 + wiki 深链",
           bool(doms["effect_rules"]["cap"]["zh"]) and doms["effect_rules"]["cap"]["wiki"].startswith("wiki:"))
-    wid = j.get("widgets") or {}
+    # ★ B2b：控件表按**有效域表**铺（内置 8 引擎域 ∪ 包声明）—— skills 是内容域，
+    #   所以要带包问；不带包时那份只覆盖引擎域（旧行为的口径随内置集一起收窄）。
+    st_w, j_w = req(base, "GET", "/api/glossary?pkg=t_game")
+    wid = (j_w.get("widgets") or {})
     check("词典带控件形态（desc → textarea / mech_chance → pct）",
-          (wid.get("skills") or {}).get("desc", {}).get("widget") == "textarea"
+          st_w == 200
+          and (wid.get("skills") or {}).get("desc", {}).get("widget") == "textarea"
           and (wid.get("skills") or {}).get("mech_chance", {}).get("widget") == "pct",
           f"{wid.get('skills', {}).get('desc')}")
     check("词典带面板键候选（框架协议）", bool(j.get("panel_keys")), f"{j.get('panel_keys')}")

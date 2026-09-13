@@ -174,7 +174,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 
 | # | 瑕疵 | 位置 |
 |---|---|---|
-| B1 | `kinds/` 枚举值写死中文（`PHYS = "物理"` …） | `kinds/__init__.py:33-40` |
+| B1 | ~~`kinds/` 枚举值写死中文（`PHYS = "物理"` …）~~ **2026-09-13 P4 下沉已消除** | 引擎侧无 `kinds/`（词表移居内容侧，引擎只经 `config.kind_of` 读值） |
 | B2 | 固定效果 key：`"death_guard"`（濒死保护）、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`（受疗修正）。（原含 `"sleep"` 打醒 —— **2026-09-11 已数据化**移除，改读 `wake_on_hit` 字段） | `landing.py:167-179, 248, 384-407` |
 | B3 | `effects.act_apply` 里 `if key == "reduce":` | `effects.py:452` |
 | B4 | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | `effects.py:370` · `schedule.py:267,286` |

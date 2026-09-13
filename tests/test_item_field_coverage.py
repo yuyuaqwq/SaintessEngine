@@ -29,6 +29,11 @@
 覆盖范围：`games/<包>/content/{data,rules}/<域>.json`（域名 → schema 取自 editor/packages.py）。
 本门禁只做结构对账，不评判值的语义 —— 语义归字段词典（editor/glossary.py）。
 
+★ 2026-09-13 B2b：域的真源在包（框架内置集只留 8 个引擎域，内容域不内置）。
+本门禁的扫描面因此从「内置域集」改成**每个包自己的有效域表**：schema 也按该包解析
+（`packages.schema_path()`，包内优先 → 框架回退）。这样内容域（items / skills …）
+照样被扫，而且扫的是这个包**自己**那份 schema —— 比改造前更准。
+
 跑法：python tests/test_item_field_coverage.py
 """
 import json
@@ -45,6 +50,8 @@ import editor.packages as PK          # noqa: E402
 import editor.glossary as G           # noqa: E402
 
 passed = failed = 0
+
+REAL_PKG = os.path.join(FW_ROOT, "games", "orlandia")      # 内容域的真源样板（24 域）
 
 # 判红的域（本次交付范围：物品域已核到 0 缺口）。其它域的同类差异先按 ⚠ 提示列出。
 STRICT_DOMAINS = ("items",)
@@ -129,13 +136,17 @@ def missing_required(data, schema, pre=""):
     return out
 
 
-def load_schema(dom):
-    meta = PK.DOMAINS.get(dom) or {}
+def load_schema(dom, pkg_dir=None):
+    """该域在**这个包视角下**的 schema 主 def（包内优先 → 框架回退）。
+
+    ★ B2b：不带包时只认内置（引擎）域 —— 内容域必须带包目录（真源在包）。
+    """
+    meta = PK.domain_meta(pkg_dir, dom) or {}
     fname = meta.get("schema")
     if not fname:
         return None, None
-    path = os.path.join(FW_ROOT, "schemas", fname)
-    if not os.path.exists(path):
+    path = PK.schema_path(pkg_dir, dom)
+    if not path or not os.path.exists(path):
         return None, fname
     doc = json.load(open(path, encoding="utf-8"))
     defs = doc.get("$defs") or {}
@@ -203,8 +214,11 @@ def main():
           missing_required({}, nullable) == ["lv"] and missing_required({}, not_nullable) == ["lv"])
 
     # 2. schema 侧体检：物品域的 primary def 可解析
-    item_def, item_fname = load_schema("items")
-    check("items 域 schema 可解析（$defs + properties）", bool(item_def), f"{item_fname}")
+    #    ★ B2b：items 是**内容域** —— schema 由包提供（orlandia 自带 `schemas/item.schema.json`）
+    item_def, item_fname = load_schema("items", REAL_PKG)
+    check("items 域 schema 可解析（$defs + properties；包声明 + 包内 schema 优先）",
+          bool(item_def), f"{item_fname}")
+    check("items 域框架侧不再是内置域（真源在包）", "items" not in PK.DOMAINS)
     if not item_def:
         return finish()
 
@@ -214,8 +228,10 @@ def main():
     soft = []
     for pkg_dir in package_dirs():
         pkg = os.path.basename(pkg_dir)
-        for dom in PK.DOMAINS:
-            sdef, fname = load_schema(dom)
+        # ★ B2b：扫描面 = **该包自己的有效域表**（内置引擎域 ∪ 包声明的内容域）——
+        #   过去问内置域集，瘦身后会漏掉 items/skills 这些内容域的数据。
+        for dom in sorted(PK.effective_domains(pkg_dir)[0]):
+            sdef, fname = load_schema(dom, pkg_dir)
             if not sdef:
                 continue
             path = PK.domain_path(pkg_dir, dom)

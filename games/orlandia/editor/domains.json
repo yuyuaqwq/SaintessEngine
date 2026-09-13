@@ -1,0 +1,170 @@
+{
+  "skills": {
+    "label": "技能",
+    "kind": "data",
+    "schema": "skill.schema.json",
+    "primary": "skill",
+    "icon": "⚔️"
+  },
+  "classes": {
+    "label": "职业",
+    "kind": "data",
+    "schema": null,
+    "primary": null,
+    "icon": "🧙"
+  },
+  "monsters": {
+    "label": "怪物",
+    "kind": "data",
+    "schema": "monster.schema.json",
+    "primary": "monster_skill",
+    "icon": "🐺"
+  },
+  "affixes": {
+    "label": "词条",
+    "kind": "data",
+    "schema": "affix.schema.json",
+    "primary": "affix",
+    "icon": "💠"
+  },
+  "items": {
+    "label": "物品",
+    "kind": "data",
+    "schema": "item.schema.json",
+    "primary": "item",
+    "icon": "🎒"
+  },
+  "effect_rules": {
+    "label": "声明表",
+    "kind": "rules",
+    "schema": "effect_rules.schema.json",
+    "primary": "effect_rule",
+    "icon": "📜"
+  },
+  "passive_proc": {
+    "label": "被动声明",
+    "kind": "rules",
+    "schema": "passive_proc.schema.json",
+    "primary": "passive_proc",
+    "icon": "🌀"
+  },
+  "commands": {
+    "label": "指令",
+    "kind": "data",
+    "schema": "command.schema.json",
+    "primary": "command",
+    "icon": "⌨️"
+  },
+  "texts": {
+    "label": "文案",
+    "kind": "data",
+    "schema": "text.schema.json",
+    "primary": "text_entry",
+    "icon": "💬"
+  },
+  "tlogs": {
+    "label": "流水声明",
+    "kind": "data",
+    "schema": "tlog.schema.json",
+    "primary": "tlog_entry",
+    "icon": "🧾"
+  },
+  "maps": {
+    "label": "地图",
+    "kind": "data",
+    "schema": "maps.schema.json",
+    "primary": "map",
+    "icon": "🗺"
+  },
+  "drop_pools": {
+    "label": "掉落池",
+    "kind": "data",
+    "schema": "drop_pools.schema.json",
+    "primary": "pool",
+    "icon": "🎁"
+  },
+  "loot_vocab": {
+    "label": "引用词汇",
+    "kind": "rules",
+    "schema": null,
+    "primary": null,
+    "icon": "🔤"
+  },
+  "instances": {
+    "label": "副本",
+    "kind": "data",
+    "schema": "instances.schema.json",
+    "primary": "instance",
+    "icon": "🏯"
+  },
+  "equip_roster": {
+    "label": "装备名册",
+    "kind": "data",
+    "schema": "equip_roster.schema.json",
+    "primary": "equip",
+    "icon": "🛡"
+  },
+  "pois": {
+    "label": "交互点",
+    "kind": "data",
+    "schema": "pois.schema.json",
+    "primary": "poi_mount",
+    "icon": "📍"
+  },
+  "legendary_effects": {
+    "label": "传说特效",
+    "kind": "data",
+    "schema": "legendary_effects.schema.json",
+    "primary": "legendary_effect",
+    "icon": "✨"
+  },
+  "pets": {
+    "label": "宠物",
+    "kind": "data",
+    "schema": "pets.schema.json",
+    "primary": "pet",
+    "icon": "🐾"
+  },
+  "monster_roster": {
+    "label": "怪物名册",
+    "kind": "data",
+    "schema": "monster_roster.schema.json",
+    "primary": "monster",
+    "icon": "🐺"
+  },
+  "npcs": {
+    "label": "NPC",
+    "kind": "data",
+    "schema": "npcs.schema.json",
+    "primary": "npc",
+    "icon": "🧑"
+  },
+  "races": {
+    "label": "种族",
+    "kind": "data",
+    "schema": "races.schema.json",
+    "primary": "race",
+    "icon": "🧬"
+  },
+  "sets": {
+    "label": "套装",
+    "kind": "data",
+    "schema": "sets.schema.json",
+    "primary": "set",
+    "icon": "🧥"
+  },
+  "enhance_table": {
+    "label": "强化表",
+    "kind": "data",
+    "schema": "enhance_table.schema.json",
+    "primary": "enhance_level",
+    "icon": "🔨"
+  },
+  "panel_rules": {
+    "label": "面板规则",
+    "kind": "rules",
+    "schema": "panel_rules.schema.json",
+    "primary": "panel_rule",
+    "icon": "🧮"
+  }
+}

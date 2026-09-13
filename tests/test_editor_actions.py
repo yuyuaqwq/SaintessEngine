@@ -164,11 +164,14 @@ def main():
           dm["sources"].get("nope_verb") == ["p_bad"] and dm["sources"].get("bad_verb") == ["p_bad_also"],
           dm["sources"])
 
-    # 真包当前进度（P4 的进度条：声明了 N 个动作 / 实现了 M 个）
+    # 真包当前进度（P4 的进度条：声明了 N 个动作 / 实现了 M 个 / 缺 K 个）
+    # ⚠️ 2026-09-13（P4-D2 搬完 96 个动作）后本断言更新为「缺 0」：
+    #    此前是「一个都没实现（= 还没搬 mech/）」——那是搬之前的临时事实，别改回去。
     real = AC.declared_missing(os.path.join(ROOT, "games", "orlandia"))
-    check("真包：声明的动作一个都没实现（= P4 还没搬 mech/；这正是进度条的意义）",
-          real["missing"] == sorted(real["missing"]) and len(real["missing"]) == real["declared"],
-          f"declared={real['declared']} missing={len(real['missing'])}")
+    check("真包：声明引用的动作**全部有实现**（P4-D2 已搬完；缺 0）",
+          real["ok"] is True and real["missing"] == [] and real["declared"] > 0,
+          f"declared={real['declared']} implemented={real['implemented']} "
+          f"missing={len(real['missing'])} {real['missing'][:5]}")
     print(f"    （真包进度：声明 {real['declared']} 个动作 / 已实现 {real['implemented']} 个"
           f"（引擎内置+包内）/ 缺 {len(real['missing'])} 个）")
 

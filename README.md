@@ -42,7 +42,6 @@ python editor/server.py
 | `expr/` | 表达式求值器（数值公式任意自定义；白名单 tokenizer，不 eval 输入） |
 | `gauge/` | 计量条：累积 / 衰减 / 阈值触发 / 免疫窗口 / 阶段保留 |
 | `formation/` | 站位与目标选择几何（层数 / 射程 / AoE 范围） |
-| `kinds/` | 技能与伤害类别域（类型元数据 / 前缀匹配） |
 | `store/` | SQLite 骨架：连接/锁/事务 + 建表注册 + 列迁移 + Repository |
 | `command/` | 命令层骨架：分页 / 文本剥离 / 守卫 / handler 路由 / 提示 / 基类 / **指令声明注册表** |
 | `events/` | 领域事件总线：注册序执行 / 未知事件策略 / 异常容忍 |
@@ -63,7 +62,6 @@ saintess_engine/            # 框架包（可整包拷走）
   expr/             #   表达式求值器
   gauge/            #   计量条
   formation/        #   站位与目标选择几何
-  kinds/            #   技能/伤害类别域
   store/            #   SQLite 骨架
   command/          #   命令层骨架
   events/           #   领域事件总线

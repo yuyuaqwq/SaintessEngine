@@ -16,15 +16,52 @@ schema 是给机器看的：`{"type": "string"}` 说得出类型，说不出「�
    `tests/test_editor_glossary.py` 逐条断言（找不到 → 门禁红）。
 3. **不装懂**：wiki 没记载、也没核实的键，注脚直说「未核实」，不编一个像是真的语义。
 
+包自带词汇表（**包声明 > 框架默认**，与第 2 层 `editor/relations.json` 同一套纪律）
+-------------------------------------------------------------------------------
+本文件的 `GLOSSARY` / `GROUPS` / `WIDGETS` 是**框架默认值（回退）**，不是真源：游戏专属词汇
+（字段叫什么、分几组、哪些字段是长文案）住在框架里 = 「加一个域就得改框架」。真源改为**包侧
+每域一个文件** `<pkg>/editor/glossary/<域>.json`（缺目录 = 没声明）：
+
+    {
+      "fields": {
+        "name":                {"zh": "名称", "note": "…", "group": "base"},
+        "effect_data":         {"zh": "效果参数", "widget": "textarea"},
+        "rid":                 {"zh": "产出 id", "ref": {"domain": "equip_roster", "by": "key"}}
+      },
+      "groups": [{"id": "base", "label": "基础", "icon": "📌", "fields": ["name", "desc"]}]
+    }
+
+* **fields**：查字段**先问包**（精确路径 → 叶名），命中即用包那条（`source="package"`）；
+  没命中才回退框架 `GLOSSARY`（域内精确 → 域内叶名 → 通用叶名）。**条目整条替换，不做
+  字段级合并**（包写了 zh 没写 note = 这条没注脚，不拿框架注脚来补，免得注脚半包半框架）。
+* **groups**：包给了就是**该域的完整分组表**（整表替换，不合并）；包没给用框架 `GROUPS`。
+* `widget` 取本层控件词表 `PKG_WIDGETS`（textarea / lines / pct / chips / rows / kv / select）；
+  不在词表 → 丢该属性 + 一条 warning。前端目前只实现前 4 种，其余按 schema 类型默认渲染
+  （`web/schema_form.js` 的分派对未知形态不报错）。
+* `ref` = 跨域引用（`{"domain": …, "by": "key|name"}`）→ **只喂下拉候选**
+  （`ref_source="package_vocab"`）；**引用校验面归 `relations.json`**（同一件事两处声明会打架）。
+* `wiki`（可选，本层超出冻结约定的扩展键）= `["页.md", "页内词"]` → 编辑器内文档深链；
+  别的实现忽略它即可（不冲突）。
+* **坏声明只降级、绝不抛**（坏 JSON / 顶层非对象 / 未知域 / 元非对象 / widget 不在词表 /
+  ref 形状不对 / 组形状不对）→ 丢那部分 + 一条可读 warning，其余照用；告警从
+  `glossary_warnings(pkg_dir)` 取（`/api/glossary` 与包概览带回前端，不静默）。
+
 对外接口
 --------
-    lookup(dom, path) -> dict | None     # 单字段（依次回退：dom 精确 → dom 叶名 → 通用叶名）
-    all_entries() -> dict                # 给 /api/glossary
-    friendly(dom, errors) -> list        # schema 报错 → 中文可读（带字段中文名）
-    ref_url(entry) -> str | None         # 词典条目 → 编辑器内 wiki 深链
+    lookup(dom, path, pkg_dir=None) -> dict | None   # 包词汇表 → dom 精确 → 通用叶名
+    all_entries(pkg_dir=None) -> dict                # 给 /api/glossary
+    groups_for(dom, pkg_dir=None) / all_groups(pkg_dir=None)
+    widget_for(dom, path, pkg_dir=None) / all_widgets(pkg_dir=None)
+    friendly(dom, errors, pkg_dir=None) -> list      # schema 报错 → 中文（带字段中文名）
+    missing_required(dom, data, schema_def, pkg_dir=None) -> list
+    ref_url(entry) -> str | None                     # 词典条目 → 编辑器内 wiki 深链
+    package_glossary(pkg_dir) -> dict                # 规范化后的包词汇表
+    glossary_warnings(pkg_dir) -> [可读告警]
+    declared_vocab(pkg_dir, dom, path) -> dict | None  # **只认包声明**
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 
@@ -836,14 +873,284 @@ GROUPS = {
 }
 
 
-def groups_for(dom: str) -> list:
-    """该域的表单分组（深拷贝，调用方随便改）。"""
-    return [dict(g, fields=list(g.get("fields") or [])) for g in GROUPS.get(dom, [])]
+# ───────────────────────────────────────────────────── 包自带词汇表（真源在包）
+# 读法见文件头「包自带词汇表」。**只降级、绝不抛**：坏 JSON / 坏形状 → 当该域没声明 + 一条
+# 可读 warning（`glossary_warnings`），其余照用。缺目录 = 没声明（正常，不告警）。
+PKG_GLOSSARY_REL = ("editor", "glossary")        # 包内相对路径（**目录**，每域一个文件）
+# 控件词表（本层约定）：前端 `web/schema_form.js` 目前实现前 4 种，其余按 schema 类型默认渲染
+PKG_WIDGETS = ("textarea", "lines", "pct", "chips", "rows", "kv", "select")
+_PKG_REF_BYS = ("key", "name")
+_ENTRY_STR_KEYS = ("zh", "note", "group")
+_PKG_CACHE: dict = {}                            # 包目录 -> (目录签名, 声明, 告警)
+_PKG_CACHE_MAX = 500
 
 
-def all_groups() -> dict:
-    """给前端：{域: [{id,label,icon,fields}]}。"""
-    return {d: groups_for(d) for d in GROUPS}
+def _pkg_key(pkg_dir) -> str:
+    return os.path.normpath(os.path.abspath(str(pkg_dir))) if pkg_dir else ""
+
+
+def pkg_glossary_dir(pkg_dir: str) -> str:
+    """`<pkg>/editor/glossary/`（可能不存在 —— 那就是没声明）。"""
+    return os.path.join(pkg_dir, *PKG_GLOSSARY_REL)
+
+
+def pkg_glossary_path(pkg_dir: str, dom: str) -> str:
+    """该域的词汇表文件路径（**不做存在性检查**；缺文件 = 该域没声明）。"""
+    return os.path.join(pkg_glossary_dir(pkg_dir), f"{dom}.json")
+
+
+def _pkg_dir_sig(d: str):
+    """目录签名 = (目录, ((文件名, mtime_ns, size), …))。目录不在 → None（= 没声明）。"""
+    try:
+        entries = sorted(os.scandir(d), key=lambda e: e.name)
+    except OSError:
+        return None
+    out = []
+    for e in entries:
+        try:
+            st = e.stat()
+        except OSError:
+            continue
+        out.append((e.name, st.st_mtime_ns, st.st_size))
+    return (d, tuple(out))
+
+
+def _pkg_json_files(d: str) -> list:
+    """目录下的声明文件：`*.json`，且**跳过 `_` / `.` 开头的**（示例 / 临时文件不算声明）。"""
+    try:
+        names = sorted(os.listdir(d))
+    except OSError:
+        return []
+    return [n for n in names
+            if n.endswith(".json") and not n.startswith(("_", "."))
+            and os.path.isfile(os.path.join(d, n))]
+
+
+def _norm_pkg_entry(dom: str, field: str, meta, warns: list, domains: dict):
+    """规范化一条包词汇条目 → `{zh, note, widget, group, ref, wiki}`（**坏的部分只丢它自己**）。"""
+    where = f"词汇表 {dom}.{field}"
+    if not isinstance(meta, dict):
+        warns.append(f"{where}：形状不对（需为对象，可含 zh/note/widget/group/ref）"
+                     f"（实为 {type(meta).__name__}）—— 该条已忽略")
+        return None
+    out = {"zh": "", "note": "", "widget": None, "group": None, "ref": None, "wiki": None}
+    for k in _ENTRY_STR_KEYS:
+        v = meta.get(k)
+        if v is None:
+            continue
+        if isinstance(v, str):
+            out[k] = v
+        else:
+            warns.append(f"{where}：{k} 需为字符串（实为 {v!r}）—— 已忽略该属性")
+    w = meta.get("widget")
+    if w is not None:
+        if isinstance(w, str) and w in PKG_WIDGETS:
+            out["widget"] = w
+        else:
+            warns.append(f"{where}：widget={w!r} 不在控件词表"
+                         f"（{' / '.join(PKG_WIDGETS)}）—— 已忽略该属性")
+    ref = meta.get("ref")
+    if ref is not None:
+        if not isinstance(ref, dict) or not isinstance(ref.get("domain"), str) or not ref["domain"]:
+            warns.append(f"{where}：ref 需为 {{\"domain\": \"…\", \"by\": \"key|name\"}}"
+                         f"（实为 {ref!r}）—— 该引用已忽略")
+        else:
+            tdom, by = ref["domain"], ref.get("by", "key")
+            if by not in _PKG_REF_BYS:
+                warns.append(f"{where}：by={by!r} 非法（只能是 key / name）—— 按 key 处理")
+                by = "key"
+            if tdom not in domains:
+                warns.append(f"{where}：ref 的目标域 {tdom!r} 不在该包的有效域表里"
+                             " —— 该引用已忽略（仍可选，但不会有下拉与校验）")
+            else:
+                out["ref"] = {"domain": tdom, "by": by}
+    wiki = meta.get("wiki")
+    if wiki is not None:
+        if (isinstance(wiki, list) and len(wiki) == 2
+                and all(isinstance(x, str) and x for x in wiki)):
+            out["wiki"] = (wiki[0], wiki[1])
+        else:
+            warns.append(f"{where}：wiki 需为 [\"页.md\", \"页内词\"]（两个非空字符串，实为 {wiki!r}）"
+                         " —— 已忽略该属性")
+    if not any((out["zh"], out["note"], out["widget"], out["group"], out["ref"], out["wiki"])):
+        return None
+    return out
+
+
+def _norm_pkg_groups(dom: str, groups, warns: list):
+    """规范化包的 `groups` → `[{id,label,icon,fields}]`；**整段坏 → None**（该域回退框架 GROUPS）。"""
+    if groups is None:
+        return None
+    if not isinstance(groups, list):
+        warns.append(f"词汇表 {dom}.groups：形状不对（需为数组，实为 {type(groups).__name__}）"
+                     " —— 该域分组回退框架默认")
+        return None
+    out, seen, used = [], set(), {}
+    for i, g in enumerate(groups):
+        where = f"词汇表 {dom}.groups[{i}]"
+        if not isinstance(g, dict):
+            warns.append(f"{where}：形状不对（需为对象，可含 id/label/icon/fields）—— 该组已忽略")
+            continue
+        gid = g.get("id")
+        if not isinstance(gid, str) or not gid:
+            warns.append(f"{where}：缺 id（需为非空字符串）—— 该组已忽略")
+            continue
+        if gid in seen:
+            warns.append(f"{where}：id {gid!r} 与前面的组重复 —— 该组已忽略")
+            continue
+        fields = g.get("fields")
+        if not isinstance(fields, list) or not fields or not all(isinstance(x, str) and x for x in fields):
+            warns.append(f"{where}（{gid}）：fields 需为非空字符串数组（实为 {fields!r}）"
+                         " —— 该组已忽略")
+            continue
+        label, icon = g.get("label"), g.get("icon")
+        seen.add(gid)
+        out.append({"id": gid,
+                    "label": label if isinstance(label, str) and label else gid,
+                    "icon": icon if isinstance(icon, str) else "",
+                    "fields": list(fields)})
+        for f in fields:
+            used.setdefault(f, []).append(gid)
+    if not out:
+        warns.append(f"词汇表 {dom}.groups：一组都没收下 —— 该域分组回退框架默认")
+        return None
+    dup = [f"{f}（{'、'.join(gids)}）" for f, gids in used.items() if len(gids) > 1]
+    if dup:
+        warns.append(f"词汇表 {dom}.groups：字段同时出现在多个组里：{'；'.join(sorted(dup))}"
+                     " —— 分组表原样保留（请自行确认是否手误）")
+    return out
+
+
+def _read_pkg_glossary(pkg_dir: str, domains: dict):
+    """真读一次 `<pkg>/editor/glossary/*.json` → ({域: {fields, groups}}, [可读告警])。"""
+    d = pkg_glossary_dir(pkg_dir)
+    decl: dict = {}
+    warns: list = []
+    for name in _pkg_json_files(d):
+        dom = name[:-5]
+        where = f"词汇表 {name}"
+        if dom not in domains:
+            warns.append(f"{where}：域 {dom!r} 不在该包的有效域表里 —— 该文件已忽略")
+            continue
+        try:
+            with open(os.path.join(d, name), encoding="utf-8") as f:
+                raw = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            warns.append(f"{where}：读不了（{e}）—— 该域当作没声明（回退框架默认）")
+            continue
+        except ValueError as e:                                  # 极端坏字节
+            warns.append(f"{where}：读不了（{e}）—— 该域当作没声明（回退框架默认）")
+            continue
+        if not isinstance(raw, dict):
+            warns.append(f"{where}：顶层需为对象（可含 fields / groups，实为 "
+                         f"{type(raw).__name__}）—— 该域当作没声明（回退框架默认）")
+            continue
+        table: dict = {}
+        fields = raw.get("fields")
+        if fields is not None:
+            if not isinstance(fields, dict):
+                warns.append(f"{where}：fields 需为 {{\"字段\": {{…}}}}（实为 "
+                             f"{type(fields).__name__}）—— 该域字段表已忽略")
+            else:
+                kept = {}
+                for field, meta in fields.items():
+                    e = _norm_pkg_entry(dom, str(field), meta, warns, domains)
+                    if e:
+                        kept[str(field)] = e
+                if kept:
+                    table["fields"] = kept
+        groups = _norm_pkg_groups(dom, raw.get("groups"), warns)
+        if groups:
+            table["groups"] = groups
+        if table:
+            decl[dom] = table
+    return decl, warns
+
+
+def _pkg_vocab_cached(pkg_dir) -> tuple:
+    """`(规范化包词汇表, 告警)` —— 按**目录签名**（文件增删改）失效。"""
+    key = _pkg_key(pkg_dir)
+    if not key:
+        return {}, []
+    if len(_PKG_CACHE) > _PKG_CACHE_MAX:
+        _PKG_CACHE.clear()
+    sig = _pkg_dir_sig(pkg_glossary_dir(key))
+    hit = _PKG_CACHE.get(key)
+    if hit is not None and hit[0] == sig:
+        return hit[1], list(hit[2])
+    domains = PK.effective_domains(key)[0]
+    decl, warns = _read_pkg_glossary(key, domains)
+    _PKG_CACHE[key] = (sig, decl, warns)
+    return decl, list(warns)
+
+
+def _pkg_fields(pkg_dir, dom: str) -> dict:
+    """包在该域声明的字段表（未声明 → 空表）。"""
+    if not pkg_dir:
+        return {}
+    return (_pkg_vocab_cached(pkg_dir)[0].get(dom) or {}).get("fields") or {}
+
+
+def declared_vocab(pkg_dir, dom: str, path: str):
+    """**只认包声明**的词汇条目（`fields` 精确路径 → 叶名）→ dict | None。
+
+    框架默认那三份（`GLOSSARY` / `GROUPS` / `WIDGETS`）**不在这里** —— 它们是"默认值"，
+    由调用方在包没声明时兜底。
+    """
+    if not pkg_dir or path is None:
+        return None
+    try:
+        tbl = _pkg_fields(pkg_dir, dom)
+    except Exception:                                            # noqa: BLE001 —— 包声明坏 → 当没声明
+        return None
+    key = str(path)
+    e = tbl.get(key) or tbl.get(key.split(".")[-1])
+    return dict(e) if e else None
+
+
+def package_glossary(pkg_dir) -> dict:
+    """包自带的词汇表（规范化后，深拷贝）。缺目录 / 全坏 → `{}`。
+
+    形状与声明文件一致：只带**声明过的**那半边（`fields` / `groups`），不凭空补空表。
+    """
+    decl, _w = _pkg_vocab_cached(pkg_dir)
+    out: dict = {}
+    for d, t in decl.items():
+        item: dict = {}
+        if t.get("fields"):
+            item["fields"] = {k: dict(v) for k, v in t["fields"].items()}
+        if t.get("groups"):
+            item["groups"] = [dict(g, fields=list(g.get("fields") or [])) for g in t["groups"]]
+        out[d] = item
+    return out
+
+
+def glossary_warnings(pkg_dir) -> list:
+    """读包词汇表时的可读告警（空 = 没声明或声明没问题）。**降级不静默**就看它。"""
+    return list(_pkg_vocab_cached(pkg_dir)[1])
+
+
+def groups_for(dom: str, pkg_dir=None) -> list:
+    """该域的表单分组（深拷贝，调用方随便改）。
+
+    **两层 = 包声明 > 框架默认**：包给了 `groups` 就是该域的**完整分组表**（整表替换，
+    不合并）；包没给（或整段坏）→ 框架 `GROUPS`。不给 `pkg_dir` = 旧行为逐字不变。
+    """
+    pg = (_pkg_vocab_cached(pkg_dir)[0].get(dom) or {}).get("groups") if pkg_dir else None
+    src = pg or GROUPS.get(dom, [])
+    return [dict(g, fields=list(g.get("fields") or [])) for g in src]
+
+
+def all_groups(pkg_dir=None) -> dict:
+    """给前端：{域: [{id,label,icon,fields}]}（包声明了分组的域也一并列出）。"""
+    out = {d: groups_for(d, pkg_dir) for d in GROUPS}
+    if pkg_dir:
+        for dom in _pkg_vocab_cached(pkg_dir)[0]:
+            if dom not in out:
+                g = groups_for(dom, pkg_dir)
+                if g:
+                    out[dom] = g
+    return out
 
 
 # ───────────────────────────────────────────────────────── 控件形态（用对控件，别全靠文本框）
@@ -868,6 +1175,12 @@ WIDGETS = {
 }
 
 # 跨域引用：该字段填的应当是**另一个域的真 key**（编辑器据此给真候选，防拼错）
+#
+# ★ 第 2 层（2026-09-13）起：这份是**框架默认值（回退）**，不是真源 ——
+#   真源是包自己的 `<pkg>/editor/relations.json`（读法见 `editor/relations.py`）。
+#   两层规则：**包声明 > 框架默认**；包**没**声明时逐字段等于改造前（零回归）。
+#   区别有一条很重要：**只有包声明的 ref 会进引用校验**（`relations.ref_errors`），
+#   这份默认值只给「下拉候选」—— 否则既有包的数据会被新校验判红。
 REF_DOMAINS = {
     "skills": "skills",        # monsters.skills —— 招式池
     "drops": "items",          # monsters.drops —— 掉落
@@ -901,8 +1214,16 @@ PANEL_KEYS = ["atk", "def", "matk", "mdef", "spd", "crit", "dodge", "max_hp", "m
 _PANEL_PATHS = {"stat_scale", "panel.stat", "debuff_scale", "stat"}
 
 
-def widget_for(dom: str, path: str) -> str | None:
-    """字段该用哪种控件（None = 按 schema 类型默认渲染）。"""
+def widget_for(dom: str, path: str, pkg_dir=None) -> str | None:
+    """字段该用哪种控件（None = 按 schema 类型默认渲染）。
+
+    **两层 = 包声明 > 框架默认**：包词汇表写了 `widget` 就用它（精确路径 → 叶名），
+    否则域内条目（精确 → 叶名），最后 `WIDGETS` 叶名表。不给 `pkg_dir` = 旧行为逐字不变。
+    """
+    if pkg_dir:
+        pv = declared_vocab(pkg_dir, dom, path)
+        if pv and pv.get("widget"):
+            return pv["widget"]
     e = (GLOSSARY.get(dom) or {}).get(path) or (GLOSSARY.get(dom) or {}).get(str(path).split(".")[-1])
     if e and e.get("widget"):
         return e["widget"]
@@ -925,23 +1246,72 @@ def ref_domain_for(dom: str, path: str) -> str | None:
     return REF_DOMAINS.get(p.split(".")[-1])
 
 
-def suggest_meta(dom: str, path: str) -> dict:
-    """给前端一条「怎么联想」的说明（前端只管取候选）。"""
+def suggest_meta(dom: str, path: str, pkg_dir=None) -> dict:
+    """给前端一条「怎么联想」的说明（前端只管取候选）。
+
+    **两层 = 包声明 > 框架默认**，包侧两处声明的优先级：
+      ① `<pkg>/editor/relations.json`（`relations.declared_ref`）→ `ref_source="package"`
+         —— 该字段会进**引用校验**（`relations.ref_errors`）；
+      ② `<pkg>/editor/glossary/<域>.json` 的条目 `ref` → `ref_source="package_vocab"`
+         —— **只给下拉候选**（校验面归 ①，一处声明一处校验，不两处打架）；
+      ③ 都没命中 → 框架默认 `REF_DOMAINS`（`ref_source="builtin"`，只给候选、不校验）。
+    不给 `pkg_dir` = 旧行为逐字不变。
+    """
     key = str(path)
+    ref = ref_domain_for(dom, path)
+    source = "builtin" if ref else None
+    by = "key"
+    if pkg_dir:
+        try:
+            from . import relations as REL          # 同目录模块（不反向 import，无环）
+            pr = REL.declared_ref(pkg_dir, dom, key)
+        except Exception:                            # noqa: BLE001 —— 包声明坏 → 退回默认
+            pr = None
+        if pr:
+            ref, by, source = pr.get("domain"), pr.get("by", "key"), "package"
+        else:
+            pv = declared_vocab(pkg_dir, dom, key)
+            if pv and pv.get("ref"):
+                ref, by, source = pv["ref"]["domain"], pv["ref"].get("by", "key"), "package_vocab"
     return {
-        "widget": widget_for(dom, path),
-        "ref": ref_domain_for(dom, path),
+        "widget": widget_for(dom, path, pkg_dir),
+        "ref": ref,
+        "ref_by": by,
+        "ref_source": source,
         "panel": key in _PANEL_PATHS,
     }
 
 
-def all_widgets() -> dict:
-    """给前端：{域: {字段: {widget, ref, panel}}}（含叶名回退，前端一次查表）。"""
+def all_widgets(pkg_dir=None) -> dict:
+    """给前端：{域: {字段: {widget, ref, ref_by, ref_source, panel}}}。
+
+    不给 `pkg_dir` → 只认框架默认（旧行为逐字不变）。给了包目录 → **包声明优先**
+    （`<pkg>/editor/relations.json` 与 `<pkg>/editor/glossary/<域>.json` 的字段都进表，
+    包自带的新域一并列出）。
+    """
     out = {}
-    for dom in DOMAIN_SCHEMA:
+    doms = list(DOMAIN_SCHEMA)
+    decl: dict = {}
+    if pkg_dir:
+        try:
+            from . import relations as REL
+            decl = REL.package_relations(pkg_dir)
+        except Exception:                            # noqa: BLE001
+            decl = {}
+        for d in PK.effective_domains(pkg_dir)[0]:
+            if d not in doms:
+                doms.append(d)
+    for dom in doms:
         tbl = {}
-        for key in list(GLOSSARY.get(dom, {})) + sorted(WIDGETS) + sorted(REF_DOMAINS):
-            meta = suggest_meta(dom, key)
+        keys = list(GLOSSARY.get(dom, {})) + sorted(WIDGETS) + sorted(REF_DOMAINS)
+        for k in (decl.get(dom) or {}):
+            if k not in keys and k != "*":
+                keys.append(k)
+        for k in _pkg_fields(pkg_dir, dom):           # 包词汇表的字段（含精确路径）也进表
+            if k not in keys:
+                keys.append(k)
+        for key in keys:
+            meta = suggest_meta(dom, key, pkg_dir)
             if meta["widget"] or meta["ref"] or meta["panel"]:
                 tbl[key] = meta
         out[dom] = tbl
@@ -952,12 +1322,26 @@ def all_widgets() -> dict:
 DOMAIN_SCHEMA = {d: m["schema"] for d, m in PK.DOMAINS.items() if m.get("schema")}
 
 # ───────────────────────────────────────────────────────────────────────── 查询
-def lookup(dom: str, path: str):
-    """单字段词典条目。依次回退：域内精确 → 通用（叶名）。"""
+def lookup(dom: str, path: str, pkg_dir=None):
+    """单字段词典条目。依次回退：**包词汇表**（精确 → 叶名）→ 域内精确 → 通用（叶名）。
+
+    包词汇表命中的条目带 `source="package"`（前端/调用方据此能看出这条是谁说的）；
+    框架侧命中不带 `source`（= 旧行为逐字不变）。不给 `pkg_dir` = 只认框架那份。
+    """
     if not path:
         return None
-    leaf = str(path).split(".")[-1]
-    for key in (str(path), leaf):
+    key0 = str(path)
+    leaf = key0.split(".")[-1]
+    if pkg_dir:
+        try:
+            tbl = _pkg_fields(pkg_dir, dom)
+        except Exception:                                        # noqa: BLE001 —— 包声明坏 → 当没声明
+            tbl = {}
+        for k in (key0, leaf):
+            e = tbl.get(k)
+            if e:
+                return dict(e, dom=dom, path=path, matched=k, source="package", wiki=ref_url(e))
+    for key in (key0, leaf):
         e = (GLOSSARY.get(dom) or {}).get(key)
         if e:
             return dict(e, dom=dom, path=path, matched=key)
@@ -967,8 +1351,12 @@ def lookup(dom: str, path: str):
     return None
 
 
-def all_entries() -> dict:
-    """给前端：域 → {字段: {zh, note, wiki}}（只发用得到的字段）。"""
+def all_entries(pkg_dir=None) -> dict:
+    """给前端：域 → {字段: {zh, note, wiki}}（只发用得到的字段）。
+
+    **两层 = 包声明 > 框架默认**：包词汇表的条目**整条覆盖**同名字段（不做字段级合并），
+    包自带的新域一并列出。不给 `pkg_dir` = 旧行为逐字不变。
+    """
     out = {"*": {}}
     for dom, table in GLOSSARY.items():
         out[dom] = {}
@@ -978,13 +1366,29 @@ def all_entries() -> dict:
                 "note": v.get("note", ""),
                 "wiki": ref_url(v),
             }
+    if pkg_dir:
+        try:
+            decl = _pkg_vocab_cached(pkg_dir)[0]
+        except Exception:                                        # noqa: BLE001
+            decl = {}
+        for dom, t in decl.items():
+            tbl = out.setdefault(dom, {})
+            for k, v in (t.get("fields") or {}).items():
+                tbl[k] = {"zh": v.get("zh", ""), "note": v.get("note", ""), "wiki": ref_url(v)}
     return out
 
 
 def ref_url(entry: dict | None):
-    """词典条目 → 编辑器内 wiki 深链（`wiki:<page>#find=<词>`）。无来源 = None。"""
-    ref = (entry or {}).get("ref")
-    if not ref:
+    """词典条目 → 编辑器内 wiki 深链（`wiki:<page>#find=<词>`）。无来源 = None。
+
+    两处出处都认：条目的 `wiki`（**包词汇表**的显式文档出处 `["页.md", "页内词"]`）优先，
+    否则 `ref`（框架词典沿用的 `(页, 词)` 元组）。⚠ 包词汇表条目里的 `ref` 是**跨域引用**
+    （`{"domain": …, "by": …}`）—— 它不是文档出处，这里**返回 None**，不编一个像样的链接。
+    """
+    src = (entry or {}).get("wiki")
+    ref = src if isinstance(src, (list, tuple)) else (entry or {}).get("ref")
+    if not (isinstance(ref, (list, tuple)) and len(ref) == 2
+            and all(isinstance(x, str) and x for x in ref)):
         return None
     page, term = ref
     return f"wiki:{page}#find={term}"
@@ -1035,12 +1439,15 @@ def _zh_msg(msg: str) -> str:
     return msg
 
 
-def friendly(dom: str, errors) -> list:
+def friendly(dom: str, errors, pkg_dir=None) -> list:
     """把 schema 原始报错翻成「字段中文名 + 可读原因」。
 
     输入两种形态都吃：
       - `["desc: '' should be non-empty"]`（编辑器 validate 的输出）
       - `[{"path": "desc", "message": "..."}]`
+
+    给了 `pkg_dir` 时字段中文名/注脚**先取包词汇表**（包给游戏词汇起了名字就用包的名字）；
+    不给 = 只认框架词典（旧行为逐字不变）。
     """
     out = []
     for e in errors or []:
@@ -1053,7 +1460,7 @@ def friendly(dom: str, errors) -> list:
             if not raw:
                 path, raw = "", s
         path = path.strip().lstrip(".")
-        ent = lookup(dom, path) if path else None
+        ent = lookup(dom, path, pkg_dir) if path else None
         label = (ent or {}).get("zh") or ""
         out.append({
             "path": path,
@@ -1068,15 +1475,18 @@ def friendly(dom: str, errors) -> list:
     return out
 
 
-def missing_required(dom: str, data: dict, schema_def: dict) -> list:
-    """必填项体检（**只判 schema.required + 空值**，不猜业务规则）。"""
+def missing_required(dom: str, data: dict, schema_def: dict, pkg_dir=None) -> list:
+    """必填项体检（**只判 schema.required + 空值**，不猜业务规则）。
+
+    给了 `pkg_dir` 时字段中文名/注脚取包词汇表（同 `friendly`）；不给 = 旧行为逐字不变。
+    """
     data = data or {}
     out = []
     for k in (schema_def or {}).get("required", []) or []:
         v = data.get(k, None)
         bad = (k not in data) or v is None or (isinstance(v, str) and v.strip() == "")
         if bad:
-            ent = lookup(dom, k) or {}
+            ent = lookup(dom, k, pkg_dir) or {}
             out.append({"path": k, "label": ent.get("zh") or "",
                         "note": ent.get("note") or "", "wiki": ent.get("wiki"),
                         "display": f"{k}（{ent.get('zh')}）" if ent.get("zh") else k})

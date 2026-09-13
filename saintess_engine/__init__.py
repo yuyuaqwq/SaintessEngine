@@ -8,7 +8,8 @@
   通用原语  expr/        表达式求值器（数值公式自定义）
             gauge/       计量条（累积/衰减/阈值/免疫窗口）
             formation/   站位与目标选择几何
-            kinds/       技能 / 伤害类别域
+                        （2026-09-13 P4 下沉：中文 kind 词表 kinds/ 已归内容侧，
+                          见游戏仓 `game/data/kinds.py`；引擎只留 config.kind_of 注入面）
   运行时    store/       SQLite 骨架（连接/锁/事务/迁移/Repository）
             command/     命令层骨架（声明注册表/路由/分页/守卫/提示）
             text/        文案模板表（输出侧文本：装载/渲染/缺失自检）
@@ -49,7 +50,7 @@ from .battle import (  # noqa: F401
     landing, schedule, serialize, state_effects, stats,
 )
 from . import (  # noqa: F401
-    clock, command, container, events, expr, formation, gauge, kinds, log, loot, run, session,
+    clock, command, container, events, expr, formation, gauge, log, loot, run, session,
     space, store, text, tlog,
 )
 # 指令声明 / 文案表（声明驱动：可拔插，未装载 = 零行为）
@@ -90,7 +91,7 @@ __all__ = [
     # 子模块
     "battle", "actions", "actors", "ai", "effect_triggers", "effects", "formulas",
     "landing", "schedule", "serialize", "state_effects",
-    "expr", "gauge", "formation", "kinds",
+    "expr", "gauge", "formation",
     "store", "command", "events", "clock", "log", "tlog", "space", "loot", "container", "session",
     "text",
     # 运行形状（准入链 / 进度 / 名单）

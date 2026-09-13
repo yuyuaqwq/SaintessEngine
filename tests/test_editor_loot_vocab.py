@@ -30,6 +30,7 @@ from editor import loot_view as LV           # noqa: E402
 from editor import packages as PK            # noqa: E402
 from editor import server as SRV             # noqa: E402
 from editor import validate as VD            # noqa: E402
+import _domain_fixtures as FX                # noqa: E402  （内容域只能由包声明：B2b）
 from saintess_engine.loot import LootTable   # noqa: E402
 
 REAL_PKG = os.path.join(ROOT, "games", "orlandia")
@@ -82,8 +83,12 @@ def _tmp_pkg(pools: dict, vocab=None, raw_vocab_text=None, name="pkg") -> str:
     root = os.path.join(d, name)
     os.makedirs(os.path.join(root, "content", "data"))
     os.makedirs(os.path.join(root, "content", "rules"))
+    # ★ B2b：`loot_vocab` / `items` / `equip_roster` 都是**内容域**（框架内置集只留引擎域）
+    #   → 声明表与引用目标域都要由包自己声明，`domain_path()` 才认得（真源在包）。
+    FX.declare(root, "loot_vocab", "items", "equip_roster")
     with open(os.path.join(root, "game.json"), "w", encoding="utf-8") as f:
-        json.dump({"id": name, "name": name, "engine": ">=0.1", "domains": ["drop_pools"]}, f)
+        json.dump({"id": name, "name": name, "engine": ">=0.1",
+                   "domains": ["drop_pools", "loot_vocab", "items", "equip_roster"]}, f)
     with open(os.path.join(root, POOLS_REL), "w", encoding="utf-8") as f:
         json.dump(pools, f, ensure_ascii=False)
     if raw_vocab_text is not None:
@@ -149,22 +154,28 @@ def t2_zero_knowledge():
     check("声明文件只认通用键（不认识的值照收，未知键忽略）",
           LV.normalize_vocab({"inline_prefixes": "zzz:", "whatever_key": [1, 2]})["inline_prefixes"] == ("zzz:",)
           and LV.normalize_vocab({"whatever_key": [1, 2]})["declared"] is False, "")
-    check("框架源码里没有具体游戏词汇（本门禁自身不在扫描范围）: 只查通用常量名",
-          "loot_vocab.json" in PK.domain_path(".", LV.VOCAB_DOMAIN).replace(os.sep, "/") and LV.VOCAB_KEYS[0] == "inline_prefixes", "")
+    # ★ B2b：`loot_vocab` 是**内容域**（引擎侧零消费端：只被 editor/loot_view.py:load_vocab()
+    #   读，取值全是内容词汇）→ 从框架内置集**移出**，改由内容包声明（真源在包）。
+    check("框架侧只留通用常量名（域名/键名），不认识任何取值",
+          LV.VOCAB_DOMAIN == "loot_vocab" and LV.VOCAB_KEYS[0] == "inline_prefixes"
+          and "loot_vocab" not in PK.DOMAINS,
+          f"{LV.VOCAB_DOMAIN} / {sorted(PK.DOMAINS)}")
 
-    # 声明表是**框架域**（注册 + schema + 真包那条过校验 + 编辑器通用接口读得到）
-    meta = PK.DOMAINS.get("loot_vocab") or {}
+    # 声明表由**内容包**声明（真包 orlandia 的 editor/domains.json）+ 真包那条过校验 + 通用接口读得到
+    meta = FX.meta_of("loot_vocab")
     entry = PK.get_entry(REAL_PKG, "loot_vocab", "drop_pools")
-    check("声明表域 loot_vocab 已注册且 kind=rules", meta.get("kind") == "rules", str(meta))
+    check("声明表域 loot_vocab 由内容包声明且 kind=rules（框架内置集里没有它）",
+          meta.get("kind") == "rules" and "loot_vocab" in PK.effective_domains(REAL_PKG)[0]
+          and PK.domain_source(REAL_PKG, "loot_vocab") == "package", str(meta))
     check("声明表落 content/rules/（kind 决定的路径，不硬编码）",
-          PK.domain_path("pkg", "loot_vocab").replace(os.sep, "/").endswith("content/rules/loot_vocab.json"),
-          PK.domain_path("pkg", "loot_vocab"))
+          PK.domain_path(REAL_PKG, "loot_vocab").replace(os.sep, "/").endswith("content/rules/loot_vocab.json"),
+          PK.domain_path(REAL_PKG, "loot_vocab"))
     check("真包声明表能被编辑器通用接口读到（get_entry）",
           isinstance(entry, dict) and "inline_prefixes" in entry, str(entry)[:140])
     check("声明表域**故意**无 schema（内容侧取值不该长出框架词汇表）→ 通用校验给空集",
-          (PK.DOMAINS.get("loot_vocab") or {}).get("schema") is None
-          and VD.validate_entry("loot_vocab", entry or {}) == [],
-          f"{meta.get('schema')!r} {VD.validate_entry('loot_vocab', entry or {})[:2]}")
+          meta.get("schema") is None
+          and VD.validate_entry("loot_vocab", entry or {}, REAL_PKG) == [],
+          f"{meta.get('schema')!r} {VD.validate_entry('loot_vocab', entry or {}, REAL_PKG)[:2]}")
     check("声明表在包的 domains 清单里（分发/概览都靠它）",
           "loot_vocab" in (PK.load_manifest(REAL_PKG).get("domains") or []),
           str(PK.load_manifest(REAL_PKG).get("domains")))
@@ -302,9 +313,11 @@ def t6_prefix_domains():
     root = os.path.join(d, "pkg")
     os.makedirs(os.path.join(root, "content", "data"))
     os.makedirs(os.path.join(root, "content", "rules"))
+    # ★ B2b：同上 —— equip_roster / items / loot_vocab 是内容域，由包声明（真源在包）
+    FX.declare(root, "loot_vocab", "equip_roster", "items")
     with open(os.path.join(root, "game.json"), "w", encoding="utf-8") as f:
         json.dump({"id": "pkg", "name": "pkg", "engine": ">=0.1",
-                   "domains": ["drop_pools", "equip_roster"]}, f)
+                   "domains": ["drop_pools", "equip_roster", "items", "loot_vocab"]}, f)
     with open(os.path.join(root, "content", "data", "equip_roster.json"), "w", encoding="utf-8") as f:
         json.dump({"eq_in": {"name": "在册"}, "other": {"name": "别的"}}, f, ensure_ascii=False)
     with open(os.path.join(root, "content", "data", "items.json"), "w", encoding="utf-8") as f:

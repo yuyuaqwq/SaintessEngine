@@ -31,6 +31,9 @@ API
     GET    /api/actions?fresh=1           → 跳过缓存重扫（改了 mech/ 代码后立刻可见）
     GET    /api/glossary                  → 字段词典（中文名 / 注脚 / wiki 深链）
     GET    /api/package/<id>/hints        → 编辑提示（跨域引用候选 + 包内已有取值/键，供联想）
+    GET    /api/package/<id>/relations    → **包的引用/联动声明**（规范化后 + 可读告警）
+    GET    /api/package/<id>/views        → **包的视图声明**（域 → 内置视图名 + 来源）
+    GET    /api/package/<id>/d/<dom>/<key>/view   → 通用视图分派（按 views.json 选内置视图）
     GET    /api/wiki/tree                 → 文档页清单（左导航）
     GET    /api/wiki/page?path=<rel>      → 渲染后的文档页（md → html + 目录）
     GET    /api/wiki/search?q=<词>        → 跨页搜词（配字段时找语义）
@@ -64,7 +67,9 @@ from editor import hints as HN       # noqa: E402
 from editor import loot_view as LV   # noqa: E402
 from editor import instance_view as IV  # noqa: E402
 from editor import packages as PK    # noqa: E402
+from editor import relations as REL  # noqa: E402
 from editor import space_view as SV  # noqa: E402
+from editor import table_view as TV  # noqa: E402
 from editor import validate as VD    # noqa: E402
 from editor import wiki as WK        # noqa: E402
 
@@ -113,13 +118,14 @@ def _entry_stamp(data) -> str:
         return repr(data)
 
 
-def _validate_fast(dom: str, data) -> list:
+def _validate_fast(dom: str, data, pkg_dir=None) -> list:
     """VD.validate_entry 的等价快路径（复用 validator）；不可用时原样回退。"""
+    ck = (str(pkg_dir or ""), dom)
     if VD._js is None:
-        return VD.validate_entry(dom, data)
-    if dom not in _VALIDATORS:
+        return VD.validate_entry(dom, data, pkg_dir)
+    if ck not in _VALIDATORS:
         v = None
-        schema, name = VD.primary_def(dom)
+        schema, name = VD.primary_def(dom, pkg_dir)
         defs = (schema or {}).get("$defs") or {}
         target = defs.get(name) if name else None
         if target:
@@ -131,43 +137,58 @@ def _validate_fast(dom: str, data) -> list:
                     target, resolver=VD._js.RefResolver.from_schema(sub))
             except Exception:                       # noqa: BLE001 —— 复用失败就回退
                 v = None
-        _VALIDATORS[dom] = v
-    v = _VALIDATORS.get(dom)
+        _VALIDATORS[ck] = v
+    v = _VALIDATORS.get(ck)
     if v is None:
-        return VD.validate_entry(dom, data)
+        return VD.validate_entry(dom, data, pkg_dir)
     errs = sorted(v.iter_errors(data), key=lambda e: list(e.absolute_path))
     return [f"{VD._path_join(list(e.absolute_path))}: {e.message}" for e in errs]
 
 
-def _validate_cached(dom: str, key: str, data) -> list:
-    """带缓存的单条校验（内容没变 → 直接用上次结果）。"""
+def _validate_cached(dom: str, key: str, data, pkg_dir=None) -> list:
+    """带缓存的单条校验（内容没变 → 直接用上次结果）。缓存键含包目录。"""
     stamp = _entry_stamp(data)
-    ck = (dom, str(key))
+    ck = (str(pkg_dir or ""), dom, str(key))
     hit = _VAL_CACHE.get(ck)
     if hit is not None and hit[0] == stamp:
         return hit[1]
-    errs = _validate_fast(dom, data)
+    errs = _validate_fast(dom, data, pkg_dir)
     if len(_VAL_CACHE) > _VAL_CACHE_MAX:
         _VAL_CACHE.clear()
     _VAL_CACHE[ck] = (stamp, errs)
     return errs
 
 
-def _domain_status(pkg_dir: str, dom: str) -> dict:
+def _domains_for(pkg_dir: str) -> dict:
+    """该包的**有效域表**（内置 + 包自带 `editor/domains.json`）—— 所有域枚举/读写都走这里。"""
+    domains, _warns = PK.effective_domains(pkg_dir)
+    return domains
+
+
+def _domain_status(pkg_dir: str, dom: str, domains: dict | None = None) -> dict:
     """`PK.domain_status` 的缓存版（结构 / 顺序 / 文案一致）。
 
     两级缓存：①**域文件签名**（mtime_ns + size）命中 → 连条目都不用碰（一次 `stat`），
     这是列表/概览热调用的主路径；②文件变了才逐条走 `_validate_cached`（按内容指纹，
     只重算真改过的那几条）。缓存键含包目录（同一进程里有多个包）。
+
+    第 2 层（2026-09-13）：该域若被包**声明了引用关系**（`editor/relations.json`），
+    校验结果里还要加上**引用校验**（`REL.ref_errors`）—— 它依赖**目标域**的表，签名
+    只看本域文件会读到旧结论，所以这种情况**绕过缓存**（只在真声明了 ref 的域上付代价；
+    没声明的包逐项等于改造前）。
     """
     st = {"domain": dom, "count": 0, "invalid": [], "ok": True}
-    if dom not in PK.DOMAINS:
+    if domains is None:
+        domains = _domains_for(pkg_dir)
+    if dom not in domains:
         return st
-    path = PK.domain_path(pkg_dir, dom)
+    has_refs = any(r.get("ref") for r in
+                   (REL.package_relations(pkg_dir).get(dom) or {}).values())
+    path = PK.domain_path(pkg_dir, dom, domains)
     sig = _file_sig(path)
     ck = (pkg_dir, dom)
     hit = _STATUS_CACHE.get(ck)
-    if sig is not None and hit is not None and hit[0] == sig:
+    if not has_refs and sig is not None and hit is not None and hit[0] == sig:
         return hit[1]
     table = PK.read_json(path, {})
     if not isinstance(table, dict):
@@ -176,11 +197,13 @@ def _domain_status(pkg_dir: str, dom: str) -> dict:
         if not isinstance(v, dict):
             continue
         st["count"] += 1
-        errs = _validate_cached(dom, k, v)
+        errs = _validate_cached(dom, k, v, pkg_dir)
+        if has_refs:
+            errs = errs + REL.ref_errors(pkg_dir, dom, v)
         if errs:
             st["invalid"].append({"key": k, "errors": errs})
     st["ok"] = not st["invalid"]
-    if sig is not None:
+    if sig is not None and not has_refs:
         if len(_STATUS_CACHE) > 500:
             _STATUS_CACHE.clear()
         _STATUS_CACHE[ck] = (sig, st)
@@ -191,9 +214,15 @@ def _hints_cached(pkg_dir: str) -> dict:
     """`HN.build` + `flatten_for_ui` 的缓存版：按**全部域文件的签名**失效。
 
     为什么值得缓存：`hints` 要扫全包（13 域 / 5 千条实测 ~52ms），而它每次「选包 / 保存」
-    都会被调一次；签名只是 13 次 `stat`。
+    都会被调一次；签名只是 13 次 `stat`。域表 = 该包的有效域表（含包自带的新域）。
+    第 2 层（2026-09-13）：`editor/relations.json` / `editor/views.json` 的签名也进缓存键
+    —— 声明改了就立刻重算（`ref_names` 是随关系声明用的）。
     """
-    sig = tuple((d, _file_sig(PK.domain_path(pkg_dir, d))) for d in PK.DOMAINS)
+    domains = _domains_for(pkg_dir)
+    sig = tuple([tuple(sorted(domains))] +
+                [(d, _file_sig(PK.domain_path(pkg_dir, d, domains))) for d in domains] +
+                [(_file_sig(REL.relations_decl_path(pkg_dir)),),
+                 (_file_sig(REL.views_decl_path(pkg_dir)),)])
     hit = _HINTS_CACHE.get(pkg_dir)
     if hit is not None and hit[0] == sig:
         return hit[1]
@@ -205,15 +234,20 @@ def _hints_cached(pkg_dir: str) -> dict:
 
 
 def _package_overview(pkg_dir: str) -> dict:
-    """`PK.package_overview` 的缓存版（把每域的全量校验换成增量缓存）。"""
+    """`PK.package_overview` 的缓存版（把每域的全量校验换成增量缓存；域表走有效域表）。"""
     m = PK.load_manifest(pkg_dir)
-    doms = m.get("domains") or list(PK.DOMAINS)
+    domains, warns = PK.effective_domains(pkg_dir)
+    doms = m.get("domains") or list(domains)
     return {
         "manifest": m,
         "engine_check": PK.engine_check(m),
-        "domains": [{"id": d, **{k: PK.DOMAINS[d][k] for k in ("label", "icon", "kind")},
-                     **_domain_status(pkg_dir, d)}
-                    for d in doms if d in PK.DOMAINS],
+        "domains": [{"id": d, **{k: domains[d][k] for k in ("label", "icon", "kind")},
+                     **_domain_status(pkg_dir, d, domains)}
+                    for d in doms if d in domains],
+        # 包声明面的告警（域声明 ∪ 引用/联动 ∪ 视图 ∪ 词汇表）—— 前端照此提示，不静默
+        "domain_warnings": warns + REL.all_warnings(pkg_dir) + GL.glossary_warnings(pkg_dir),
+        # 该包**自己新增**（内置默认集里没有）的域 id（声明口径见 `/api/domains` 的 from_package）
+        "package_domains": [d for d in domains if d not in PK.DOMAINS],
     }
 
 
@@ -314,10 +348,22 @@ class H(BaseHTTPRequestHandler):
 
     def _api_get(self, parts: list):
         if parts == ["domains"]:
+            # 域注册表（tab 列表）。`?pkg=<id>` → **该包的有效域表**（内置 + 包自带声明），
+            # 不带 = 内置那份（历史行为逐字不变）。
+            q = parse_qs(getattr(self, "_query", ""))
+            pkg_id = (q.get("pkg") or [""])[0]
+            pkg_dir = PK.resolve_package(pkg_id, GAMES_DIR) if pkg_id else None
+            if pkg_id and not pkg_dir:
+                return self._err(404, f"包不存在：{pkg_id}")
+            domains, warns = PK.effective_domains(pkg_dir)
+            decl = PK.package_domains(pkg_dir) if pkg_dir else {}
             return self._send(200, {"ok": True, "domains": [
                 {"id": k, **{x: v[x] for x in ("label", "icon", "kind")},
-                 "has_schema": bool(v.get("schema"))}
-                for k, v in PK.DOMAINS.items()]})
+                 "primary": v.get("primary"),
+                 "has_schema": bool(v.get("schema")),
+                 "from_package": k in decl}
+                for k, v in domains.items()],
+                "warnings": warns})
         if parts == ["packages"]:
             return self._send(200, {"ok": True, "packages": PK.list_packages(GAMES_DIR),
                                     "games_dir": PK.ensure_games_dir(GAMES_DIR)})
@@ -349,11 +395,56 @@ class H(BaseHTTPRequestHandler):
             if not d:
                 return self._err(404, f"包不存在：{parts[1]}")
             return self._send(200, {"ok": True, **_hints_cached(d)})
+        # 第 2 层（2026-09-13）：包的**声明面**照实回前端（规范化结果 + 下拉候选 + 可读告警）
+        if len(parts) == 3 and parts[0] == "package" and parts[2] == "relations":
+            d = PK.resolve_package(parts[1], GAMES_DIR)
+            if not d:
+                return self._err(404, f"包不存在：{parts[1]}")
+            rel = REL.package_relations(d)
+            cand: dict = {}
+            for dom, rules in rel.items():
+                for field, rule in rules.items():
+                    if rule.get("ref"):
+                        t = rule["ref"]
+                        cand[f"{dom}.{field}"] = {
+                            "domain": t["domain"], "by": t["by"],
+                            "candidates": REL.ref_candidates(d, t["domain"], t["by"])}
+            link: dict = {}
+            for dom in list(_domains_for(d)) + (["*"] if "*" in rel else []):
+                L = REL.linkage_for(d, dom)
+                if L:
+                    link[dom] = L
+            return self._send(200, {"ok": True, "relations": rel, "candidates": cand,
+                                    "linkage": link,
+                                    "warnings": REL.relation_warnings(d)})
+        if len(parts) == 3 and parts[0] == "package" and parts[2] == "views":
+            d = PK.resolve_package(parts[1], GAMES_DIR)
+            if not d:
+                return self._err(404, f"包不存在：{parts[1]}")
+            eff: dict = {}
+            for dom in _domains_for(d):
+                name, src, _w = REL.resolve_view(d, dom)
+                if name:
+                    eff[dom] = {"view": name, "source": src,
+                                "route": REL.VIEW_ROUTES.get(REL.resolved_name(name), "view")}
+            return self._send(200, {"ok": True, "views": REL.package_views(d),
+                                    "effective": eff,
+                                    "builtin": dict(REL.BUILTIN_DEFAULT_VIEWS),
+                                    "names": list(REL.VIEW_NAMES),
+                                    "warnings": REL.view_warnings(d)})
         if len(parts) in (2, 3) and parts[0] == "schema":
             # GET /api/schema/<dom>  （历史上这里写成 `len(parts)==3` → 该路由**从未匹配上**，
             # 因为没人调用所以一直没暴露；新建草稿要按 domain 取 schema，故修成 2 段可达）
-            s = VD.load_schema(parts[1])
-            return self._send(200, {"ok": bool(s), "schema": s})
+            # `?pkg=<id>` → 优先用该包的有效域表（包自带域声明可以带自己的 schema）
+            q = parse_qs(getattr(self, "_query", ""))
+            pkg_id = (q.get("pkg") or [""])[0]
+            pkg_dir = PK.resolve_package(pkg_id, GAMES_DIR) if pkg_id else None
+            s = VD.load_schema(parts[1], pkg_dir)
+            # `schema_path()` 的解析顺序是**包内优先 → 框架回退**；包自带那份读不了时
+            # `validate._resolve_schema()` 会降级回退框架 + 给一条可读告警 —— 照实送前端
+            # （容错但**不静默**）。正常情况 `warnings` 恒为 `[]`。
+            return self._send(200, {"ok": bool(s), "schema": s,
+                                    "warnings": VD.schema_warnings(parts[1], pkg_dir)})
         if parts == ["actions"]:
             q = parse_qs(getattr(self, "_query", ""))
             pkg_id = (q.get("pkg") or [""])[0]
@@ -361,9 +452,21 @@ class H(BaseHTTPRequestHandler):
             pkg_dir = PK.resolve_package(pkg_id, GAMES_DIR) if pkg_id else None
             return self._send(200, AC.inventory(pkg_dir, use_cache=not fresh))
         if parts == ["glossary"]:
-            return self._send(200, {"ok": True, "domains": GL.all_entries(),
-                                    "groups": GL.all_groups(),
-                                    "widgets": GL.all_widgets(),
+            # `?pkg=<id>` → **包声明优先**的控件/引用/词汇表（第 2 层：包内 `editor/relations.json`
+            # 改「哪个字段引用哪个域」；包自带词汇表 `editor/glossary/<域>.json` 改
+            # 「字段中文名/注脚/分组/控件」；坏声明降级 + warnings，不静默。不给包 = 旧行为逐字不变）
+            q = parse_qs(getattr(self, "_query", ""))
+            pkg_id = (q.get("pkg") or [""])[0]
+            pkg_dir = PK.resolve_package(pkg_id, GAMES_DIR) if pkg_id else None
+            if pkg_id and not pkg_dir:
+                return self._err(404, f"包不存在：{pkg_id}")
+            return self._send(200, {"ok": True, "domains": GL.all_entries(pkg_dir),
+                                    "groups": GL.all_groups(pkg_dir),
+                                    "widgets": GL.all_widgets(pkg_dir),
+                                    "relations": REL.package_relations(pkg_dir) if pkg_dir else {},
+                                    "views": REL.package_views(pkg_dir) if pkg_dir else {},
+                                    "warnings": (REL.all_warnings(pkg_dir) if pkg_dir else [])
+                                                + GL.glossary_warnings(pkg_dir),
                                     "panel_keys": GL.PANEL_KEYS})
         if len(parts) >= 2 and parts[0] == "wiki":
             q = parse_qs(getattr(self, "_query", ""))
@@ -388,9 +491,10 @@ class H(BaseHTTPRequestHandler):
             if not d:
                 return self._err(404, f"包不存在：{parts[1]}")
             dom = parts[3]
-            if dom not in PK.DOMAINS:
+            domains = _domains_for(d)
+            if dom not in domains:
                 return self._err(404, f"未知域：{dom}")
-            data = PK.read_json(PK.domain_path(d, dom), {})
+            data = PK.read_json(PK.domain_path(d, dom, domains), {})
             out = SV.build_file(data if isinstance(data, dict) else {}, parts[4])
             return self._send(200 if out.get("ok") else 422, out)
         # drop_pools 域级审计：596 池一次算（引擎同一份 LootTable.audit）。
@@ -411,11 +515,16 @@ class H(BaseHTTPRequestHandler):
             if not d:
                 return self._err(404, f"包不存在：{parts[1]}")
             dom = parts[3]
-            if dom not in PK.DOMAINS:
+            domains = _domains_for(d)
+            if dom not in domains:
                 return self._err(404, f"未知域：{dom}")
-            if dom != "drop_pools":
+            # ★ 第 2 层（2026-09-13）：域门槛从**写死的 `dom != "drop_pools"`** 降级为
+            #   「**视图分派**是不是 loot_view」（包声明 > 框架默认）。包不声明时逐项不变：
+            #   drop_pools 的默认就是 loot_view → 照旧 200；其它域 → 照旧 404。
+            _vn, _vs, _vw = REL.resolve_view(d, dom)
+            if REL.resolved_name(_vn or "") != "loot_view":
                 return self._err(404, f"该域没有池预览：{dom}")
-            data = PK.read_json(PK.domain_path(d, dom), {})
+            data = PK.read_json(PK.domain_path(d, dom, domains), {})
             out = LV.build_file(data if isinstance(data, dict) else {}, parts[4],
                                 LV.load_vocab(d))
             return self._send(200 if out.get("ok") else 422, out)
@@ -427,34 +536,67 @@ class H(BaseHTTPRequestHandler):
             if not d:
                 return self._err(404, f"包不存在：{parts[1]}")
             dom = parts[3]
-            if dom not in PK.DOMAINS:
+            domains = _domains_for(d)
+            if dom not in domains:
                 return self._err(404, f"未知域：{dom}")
-            if dom != "instances":
+            # ★ 同上：`dom != "instances"` → 「视图分派是不是 instance_view」。
+            #   不声明时 instances 的默认就是 instance_view → 逐项不变。
+            _vn, _vs, _vw = REL.resolve_view(d, dom)
+            if REL.resolved_name(_vn or "") != "instance_view":
                 return self._err(404, f"该域没有进度视图：{dom}")
-            data = PK.read_json(PK.domain_path(d, dom), {})
+            data = PK.read_json(PK.domain_path(d, dom, domains), {})
             out = IV.build_file(data if isinstance(data, dict) else {}, parts[4])
             return self._send(200 if out.get("ok") else 422, out)
+        # ★ 通用视图分派（第 2 层）：按包内 `editor/views.json`（**包声明 > 框架默认**）选
+        #   **内置**视图（包不写新代码）：loot_view / instance_view / space_view / table / graph。
+        #   `?view=<名>` 可临时指定（不落盘）。没声明 → 404（照旧语义：这个域没有专属视图）。
+        if (len(parts) == 6 and parts[0] == "package" and parts[2] == "d"
+                and parts[5] == "view"):
+            d = PK.resolve_package(parts[1], GAMES_DIR)
+            if not d:
+                return self._err(404, f"包不存在：{parts[1]}")
+            dom = parts[3]
+            domains = _domains_for(d)
+            if dom not in domains:
+                return self._err(404, f"未知域：{dom}")
+            q = parse_qs(getattr(self, "_query", ""))
+            forced = (q.get("view") or [""])[0]
+            name, src, warns = REL.resolve_view(d, dom)
+            if forced:
+                if forced not in REL.VIEW_NAMES:
+                    return self._err(400, f"未知视图：{forced}（内置视图只有 "
+                                          f"{' / '.join(REL.VIEW_NAMES)}）")
+                name, src = forced, "query"
+            if not name:
+                return self._err(404, "该域没有声明视图：%s（在包内 editor/views.json 里写 "
+                                      "{\"域\": {\"view\": \"…\"}}）" % dom)
+            data = PK.read_json(PK.domain_path(d, dom, domains), {})
+            out = _run_view(d, dom, name, data if isinstance(data, dict) else {}, parts[4])
+            return self._send(200 if out.get("ok") else 422,
+                              {**out, "view_name": name, "view_source": src,
+                               "view_warnings": list(warns)})
         if len(parts) >= 4 and parts[0] == "package" and parts[2] == "d":
             d = PK.resolve_package(parts[1], GAMES_DIR)
             if not d:
                 return self._err(404, f"包不存在：{parts[1]}")
             dom = parts[3]
-            if dom not in PK.DOMAINS:
+            domains = _domains_for(d)
+            if dom not in domains:
                 return self._err(404, f"未知域：{dom}")
             if len(parts) == 4:
-                out = PK.list_entries(d, dom)
+                out = PK.list_entries(d, dom, domains)
                 q = parse_qs(getattr(self, "_query", ""))
                 page = _page(out, q)
                 return self._send(200, {"ok": True, **page,
-                                        "status": _domain_status(d, dom)})
+                                        "status": _domain_status(d, dom, domains)})
             if len(parts) == 5:
                 key = parts[4]
                 e = PK.get_entry(d, dom, key)
                 if e is None:
                     return self._err(404, f"条目不存在：{key}")
                 return self._send(200, {"ok": True, "key": key, "data": e,
-                                        "errors": VD.validate_entry(dom, e),
-                                        "schema": VD.load_schema(dom)})
+                                        "errors": VD.validate_entry(dom, e, d),
+                                        "schema": VD.load_schema(dom, d)})
         return self._err(404, "未知接口")
 
     def _mutate(self, method: str):
@@ -517,8 +659,11 @@ class H(BaseHTTPRequestHandler):
                 # /api/package/<id>/validate
                 if len(parts) == 4 and parts[3] == "validate" and method == "POST":
                     rep = []
-                    for dom in PK.load_manifest(d).get("domains") or list(PK.DOMAINS):
-                        st = _domain_status(d, dom)
+                    domains = _domains_for(d)
+                    for dom in PK.load_manifest(d).get("domains") or list(domains):
+                        if dom not in domains:
+                            continue
+                        st = _domain_status(d, dom, domains)
                         if not st["ok"]:
                             rep.append({"domain": dom, "invalid": st["invalid"]})
                     return self._send(200, {"ok": not rep, "problems": rep})
@@ -529,19 +674,20 @@ class H(BaseHTTPRequestHandler):
                 # /api/package/<id>/d/<dom>/[<key>]/check  —— 只校验、不写盘（新建草稿用）
                 if len(parts) in (6, 7) and parts[3] == "d" and parts[-1] == "check" and method == "POST":
                     dom = parts[4]
-                    if dom not in PK.DOMAINS:
+                    if dom not in _domains_for(d):
                         return self._err(404, f"未知域：{dom}")
                     data = body.get("data")
                     if not isinstance(data, dict):
                         return self._err(400, "请求体需为 {\"data\": {...}}")
-                    rep = _check_report(dom, data)
+                    rep = _check_report(dom, data, d)
                     if len(parts) == 7:
                         rep["key"] = parts[5]
                     return self._send(200, rep)
                 # /api/package/<id>/d/<dom>/[key]
                 if len(parts) >= 5 and parts[3] == "d":
                     dom = parts[4]
-                    if dom not in PK.DOMAINS:
+                    domains = _domains_for(d)
+                    if dom not in domains:
                         return self._err(404, f"未知域：{dom}")
                     if len(parts) == 5 and method == "PUT":
                         return self._err(405, "缺少条目 key")
@@ -550,16 +696,18 @@ class H(BaseHTTPRequestHandler):
                         data = body.get("data")
                         if not isinstance(data, dict):
                             return self._err(400, "请求体需为 {\"data\": {...}}")
-                        errs = _validate_cached(dom, key, data)
+                        # schema 校验 + （第 2 层）**包声明的引用校验** —— 包没声明 ref
+                        # 时 `ref_errors` 恒为 []（既有包零回归）。
+                        errs = _validate_cached(dom, key, data, d) + REL.ref_errors(d, dom, data)
                         if errs:
                             return self._err(422, "校验未通过，未写入",
                                              validation={"key": key, "errors": errs,
-                                                         "friendly": GL.friendly(dom, errs),
-                                                         "missing": _missing(dom, data)})
+                                                         "friendly": GL.friendly(dom, errs, d),
+                                                         "missing": _missing(dom, data, d)})
                         PK.put_entry(d, dom, key, data)
                         return self._send(200, {"ok": True, "key": key,
                                                 "domain": dom,
-                                                "count": PK.list_entries(d, dom)["count"]})
+                                                "count": PK.list_entries(d, dom, domains)["count"]})
                     if len(parts) == 6 and method == "DELETE":
                         ok = PK.delete_entry(d, dom, parts[5])
                         return self._send(200 if ok else 404,
@@ -581,20 +729,48 @@ class H(BaseHTTPRequestHandler):
             self._send(200, f.read(), ct)
 
 
-def _missing(dom: str, data: dict) -> list:
-    """必填项体检（schema.required + 空值；与业务规则无关）。"""
-    schema, name = VD.primary_def(dom)
+def _missing(dom: str, data: dict, pkg_dir=None) -> list:
+    """必填项体检（schema.required + 空值；与业务规则无关）。
+
+    第 3 面（2026-09-13）：字段中文名/注脚取**包自带词汇表**
+    （`<pkg>/editor/glossary/<域>.json`，包声明优先）；包没声明 = 逐项等于改造前。
+    """
+    schema, name = VD.primary_def(dom, pkg_dir)
     if not schema or not name:
         return []
     target = (schema.get("$defs") or {}).get(name) or {}
-    return GL.missing_required(dom, data, target)
+    return GL.missing_required(dom, data, target, pkg_dir)
 
 
-def _check_report(dom: str, data: dict) -> dict:
-    """只校验不写盘：原始报错 + 中文可读 + 必填体检。"""
-    errs = VD.validate_entry(dom, data)
+def _check_report(dom: str, data: dict, pkg_dir=None) -> dict:
+    """只校验不写盘：原始报错 + 中文可读 + 必填体检。
+
+    第 2 层（2026-09-13）：如果包**声明了引用关系**（`editor/relations.json`），引用校验
+    也在这里跑（草稿阶段就能发现填错的引用）。没声明 → 逐项等于改造前。
+    报错里的字段中文名/注脚同样**包声明优先**（包自带词汇表）。
+    """
+    errs = VD.validate_entry(dom, data, pkg_dir)
+    if pkg_dir:
+        errs = errs + REL.ref_errors(pkg_dir, dom, data)
     return {"ok": not errs, "domain": dom, "errors": errs,
-            "friendly": GL.friendly(dom, errs), "missing": _missing(dom, data)}
+            "friendly": GL.friendly(dom, errs, pkg_dir), "missing": _missing(dom, data, pkg_dir)}
+
+
+def _run_view(pkg_dir, dom: str, name: str, data: dict, key: str) -> dict:
+    """把 (域, 视图名) 落到**框架内置**实现上 → 视图 JSON（坏数据 → `ok=False`，不炸）。
+
+    内置视图只有 `REL.VIEW_NAMES` 那 5 个（`graph` = `space_view` 别名）；包**不写新代码**。
+    """
+    impl = REL.resolved_name(name)
+    if impl == "loot_view":
+        return LV.build_file(data, key, LV.load_vocab(pkg_dir))
+    if impl == "instance_view":
+        return IV.build_file(data, key)
+    if impl == "space_view":
+        return SV.build_file(data, key)
+    if impl == "table":
+        return TV.build_file(data, key)
+    return {"ok": False, "error": f"未知视图：{name}", "warnings": []}
 
 
 def main(argv=None):
@@ -614,7 +790,10 @@ def main(argv=None):
     print(f"  本地地址   : http://{args.host}:{args.port}/")
     print(f"  游戏包目录 : {gd}")
     print(f"  已有包     : {len(pkgs)} 个" + (f"（{', '.join(p['id'] for p in pkgs)}）" if pkgs else ""))
-    print(f"  可配置域   : {', '.join(k for k in PK.DOMAINS)}")
+    print(f"  内置默认集 : {len(PK.DOMAINS)} 个域（**回退用**，包没声明时才兜底）")
+    print("  域的真源   : 包内 editor/domains.json（与内置默认集合并；同名以包声明为准）")
+    print("  包扩展面   : editor/{domains,relations,views}.json + editor/glossary/<域>.json"
+          "（包声明 > 框架默认；坏声明降级不炸）")
     print(f"  校验器     : {'jsonschema' if VD._js is not None else '内置最小校验器'}")
     print("  Ctrl+C 停止")
     print("=" * 68)

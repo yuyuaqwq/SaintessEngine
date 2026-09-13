@@ -164,6 +164,7 @@ function graphLayout(view, opts) {
 /* ───────────────────────── 状态 ───────────────────────── */
 const S = {
   domains: [], pkgs: [], pkgId: null, pkg: null,
+  domainWarnings: [],            // 包自带域声明的告警（坏声明 / 同名覆盖；服务端给的可读串）
   dom: 'skills', entries: [], status: { invalid: [] },
   entryKey: null, entryData: null, entryOrig: null, schema: null, validationErrors: [],
   entriesTotal: 0,               // 该域总条数（分页续取期间 > entries.length → 列表显示「已取/总数」）
@@ -179,9 +180,9 @@ const S = {
   actionByName: {},              // name → 动作
   glossary: { '*': {} },         // 字段词典：域 → {字段: {zh, note, wiki}}
   glossaryGroups: {},            // 表单分组：域 → [{id,label,icon,fields}]
-  glossaryWidgets: {},           // 控件形态：域 → {字段: {widget, ref, panel}}
+  glossaryWidgets: {},           // 控件形态：域 → {字段: {widget, ref, ref_by, ref_source, panel}}
   panelKeys: [],                 // 引擎面板键（框架协议，给 stat_scale 之类做候选）
-  hints: { fields: {}, refs: {} },   // 包内联想：已有取值 / 键名 / 跨域 key
+  hints: { fields: {}, refs: {}, ref_names: {} },  // 包内联想：已有取值 / 键名 / 跨域 key / 跨域 name
   collapsed: new Set(),          // 折叠的分组（key = 域#组id；跨重渲染与切换保留）
   isNew: false,                  // 当前条目是「新建草稿」（还没落盘）
   friendly: [],                  // 服务端返回的中文可读报错（保存/新建被拦时）
@@ -221,9 +222,8 @@ async function boot() {
   TH().apply();
   refreshThemeIcon();
   restoreLayout();
-  const d = await api('GET', '/api/domains');
-  S.domains = (d.json && d.json.domains) || [];
-  S.dom = (S.domains[0] || {}).id || 'skills';
+  await loadDomains(null, { quiet: true });   // 无包上下文 = 框架内置域表（与旧行为逐字一致）
+  if (!S.domains.some((x) => x.id === S.dom)) S.dom = (S.domains[0] || {}).id || 'skills';
   await loadGlossary();
   await loadPackages();
   renderRail();
@@ -238,8 +238,11 @@ async function boot() {
    schema 只说类型，说不清「谁读 / 写了会不会静默不生效」。词典把每个字段补成
    中文名 + 注脚 + 文档直链；注脚里带 ⚠ 的（无消费者/未核实）在表单里显式标出来。
    ═══════════════════════════════════════════════════════════════════ */
-async function loadGlossary() {
-  const r = await api('GET', '/api/glossary');
+/* 字段词典 + 控件形态。`pkgId` 给了就带 `?pkg=` —— 第 2 层起「哪个字段引用哪个域」
+   由**包声明优先**（`<pkg>/editor/relations.json`，见 editor/relations.py）；不带 = 框架默认。 */
+async function loadGlossary(pkgId) {
+  const q = pkgId ? `?pkg=${encodeURIComponent(pkgId)}` : '';
+  const r = await api('GET', '/api/glossary' + q);
   S.glossary = (r.json && r.json.domains) || { '*': {} };
   S.glossaryGroups = (r.json && r.json.groups) || {};
   S.glossaryWidgets = (r.json && r.json.widgets) || {};
@@ -256,9 +259,9 @@ const grpKey = (gid) => `${S.dom}#${gid}`;
    框架不写任何游戏词汇（`tests/test_no_game_vocabulary.py` 守着这条）。
    ══════════════════════════════════════════════════════════════════════════ */
 async function loadHints() {
-  if (!S.pkgId) { S.hints = { fields: {}, refs: {} }; return; }
+  if (!S.pkgId) { S.hints = { fields: {}, refs: {}, ref_names: {} }; return; }
   const r = await api('GET', `/api/package/${encodeURIComponent(S.pkgId)}/hints`);
-  S.hints = (r.ok && r.json) || { fields: {}, refs: {} };
+  S.hints = (r.ok && r.json) || { fields: {}, refs: {}, ref_names: {} };
 }
 
 function widgetMeta(path) {
@@ -277,6 +280,9 @@ function suggestFor(path) {
   if (leaf === 'name' || leaf === 'id' || leaf === 'tag') return [];
   const meta = widgetMeta(p) || {};
   const refs = (S.hints && S.hints.refs) || {};
+  const refNames = (S.hints && S.hints.ref_names) || {};
+  // 跨域引用 → 目标域的真值。`by=name`（包内 relations.json 声明）比的是**名字**不是 key
+  if (meta.ref && meta.ref_by === 'name' && refNames[meta.ref]) return refNames[meta.ref].slice(0, 200);
   if (meta.ref && refs[meta.ref]) return refs[meta.ref].slice(0, 200);   // 跨域引用 → 目标域真 key
   const fields = ((S.hints && S.hints.fields) || {})[S.dom] || {};
   const slot = fields[p] || fields[p.split('.').pop()] || {};
@@ -315,6 +321,30 @@ const glossIsWarn = (g) => !!(g && /无消费者|未核实|不生效/.test(g.not
 function mdInline(s) {
   return esc(s).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
                .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+
+/* ═══════════════════════════ 域表 ═══════════════════════════
+   域从哪来：**框架内置 8 个引擎域 + 包自带**（<pkg>/editor/domains.json）。
+   （2026-09-13 B2b：内容域不再内置 —— 编辑器默认只给引擎自己的 tab，内容域由包声明带出来。）
+   带包时问服务端要「有效域表」（内置 + 包声明合并，同名以包为准；服务端同时给 warnings），
+   不带包 = 只剩内置那份（启动时先画一遍，选包后再刷）。
+   为什么必须随包刷：包新增的域（天赋树 / 坐骑…）不进这张表就没有 tab、点不进。
+   ═══════════════════════════════════════════════════════════════ */
+async function loadDomains(pkgId, opts) {
+  const q = pkgId ? `?pkg=${encodeURIComponent(pkgId)}` : '';
+  const r = await api('GET', '/api/domains' + q);
+  const list = (r.json && r.json.domains) || [];
+  if (!list.length) return false;                 // 拉不到就保留现有表（不把界面清空）
+  S.domains = list;
+  S.domainWarnings = (r.json && r.json.warnings) || [];
+  if (!S.domains.some((d) => d.id === S.dom)) S.dom = S.domains[0].id;
+  if (!(opts && opts.quiet)) {
+    // 坏声明 / 同名覆盖都要说出来 —— 静默降级会让人以为「包声明没生效」
+    if (S.domainWarnings.length) toast('包域声明：' + S.domainWarnings[0], 'warn');
+    const extra = S.domains.filter((d) => d.from_package).map((d) => d.id);
+    if (extra.length) toast(`该包自带域：${extra.join(' / ')}`, 'ok');
+  }
+  return true;
 }
 
 /* ═══════════════════════════ 域栏 ═══════════════════════════ */
@@ -385,6 +415,8 @@ async function selectPkg(id) {
   if (!r.ok) { toast((r.json && r.json.message) || '打开包失败', 'bad'); return; }
   S.pkg = r.json;
   S.dirtyKeys.clear();
+  await loadDomains(id);             // ★ 域表随包：包自带域声明（新域 / 同名覆盖）在这里合并进来
+  await loadGlossary(id);            // ★ 控件/引用表也随包（包内 relations.json 的引用 → 下拉）
   renderPkgMenu(); renderRail(); renderSettingsForm(); updateStatusbar();
   closeEntry();
   await loadActions(false);          // 动作清单随包（包内可有 mech/）
@@ -394,7 +426,11 @@ async function selectPkg(id) {
 
 async function refreshPkg() {
   const r = await api('GET', '/api/package/' + encodeURIComponent(S.pkgId));
-  if (r.ok) { S.pkg = r.json; renderRail(); renderPkgMenu(); updateStatusbar(); }
+  if (r.ok) {
+    S.pkg = r.json;
+    await loadDomains(S.pkgId, { quiet: true });   // 域声明文件可能刚被改过 → 一起刷新
+    renderRail(); renderPkgMenu(); updateStatusbar();
+  }
 }
 
 async function newPackage() {
@@ -847,6 +883,10 @@ function renderForm() {
       widget: (path) => widgetFor(path),
       suggest: (path) => suggestFor(path),
       suggestKey: (path) => suggestKeysFor(path),
+      // ★ 2026-09-13 收口：把整份 `$defs` 交给渲染器 —— 域内 `$ref`（如 instances.stages、
+      //   drop_pools 的池条目、pois.pois、monster_roster 的引用）才解得开；不传 = 那些字段
+      //   退回 JSON 兜底框。实测：补这一行后「仍需手打 JSON」的位置 12 → 6。
+      defs: (S.schema && S.schema.$defs) || {},
     });
     host.appendChild(h.el);
     // 帮助文字可能因网格窄而被 clamp → 补 title 提示（schema_form.js 不动）

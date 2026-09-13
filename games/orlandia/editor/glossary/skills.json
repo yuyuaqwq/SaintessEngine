@@ -1,0 +1,265 @@
+{
+  "fields": {
+    "formula": {
+      "zh": "结构化公式",
+      "widget": "rows",
+      "group": "dmg",
+      "note": "公式行数组：**一行 = 一段计算**（stat 取用属性 / mult 倍率 / type 伤害类型 / skill_flat 是否吃保底平铺）。与 exprs 二选一，由内容侧求值；实测 6 条技能带它，四键同行出现。"
+    },
+    "formula.stat": {
+      "zh": "公式取用属性",
+      "group": "dmg",
+      "note": "这一行取施法者哪条面板属性（内容侧词汇；实测只用了 atk / matk）。"
+    },
+    "formula.mult": {
+      "zh": "公式倍率",
+      "group": "dmg",
+      "note": "该段乘的系数（实测 1.0）。"
+    },
+    "formula.type": {
+      "zh": "公式伤害类型",
+      "group": "dmg",
+      "note": "该段走的伤害类型（实测只用了 phys；怪物侧同名键有 phys / magi 两档）。"
+    },
+    "formula.skill_flat": {
+      "zh": "吃技能保底平铺",
+      "group": "dmg",
+      "note": "标记该段是否叠加「技能保底平铺值」。⚠ 包内 + 引擎侧逐键搜索**未发现**读 formula[].skill_flat 的点（未核实）；真正实现的保底是 SKILL_UP 的 flat_base / flat_per_lv / flat_per_skill（saintess_engine/battle/formulas.py:138 skill_flat_value）。"
+    },
+    "exprs": {
+      "zh": "伤害表达式",
+      "widget": "lines",
+      "group": "dmg",
+      "note": "表达式串列表（一行一条，如 atk*1.0 / matk*1.8 + player_lv*4），由内容侧求值。实测 145 条技能用它，与 formula 二选一。"
+    },
+    "heal_formula": {
+      "zh": "治疗公式",
+      "widget": "textarea",
+      "group": "dmg",
+      "note": "治疗量公式串（如 matk*1.5 + 25 + player_lv*0.6 + skill_lv*10）。实测 19 条治疗技各自一段，无两条相同。"
+    },
+    "res_cost": {
+      "zh": "核心资源消耗",
+      "widget": "kv",
+      "group": "cost",
+      "note": "{资源 key: 数量}，实测键 energy / zhan_yi / faith / guard_core（38 条）。资源上限走 actor.bonus.cap，消耗折扣走 PASSIVE_PROC 的 domain=cost。"
+    },
+    "owner_class": {
+      "zh": "归属职业",
+      "group": "base",
+      "note": "职业 id（cls_*，实测 7 个）。它**不是技能本体字段**：导出器 derive_skills 追加的 4 个字段之一，包内 content/skills.py:47 `_ADDED_FIELDS` 按它把扁平条目逆折回 PLAYER/BRANCH/TUTOR 三表 —— 改错 = 逆折进错职业（或整条被跳过）。"
+    },
+    "source": {
+      "zh": "来源表",
+      "group": "base",
+      "note": "这条技能原本属于哪张源表：player（基础技 61 条）/ branch（分支技 238 条）/ tutor（导师技 6 条）。同 owner_class：导出器追加字段，决定逆折进哪张表。⚠ 与物品域的 source（获取途径）同名不同义。"
+    },
+    "tier": {
+      "zh": "转职阶",
+      "group": "base",
+      "note": "转职阶（实测 1 / 2 / 3），只有 source=branch 的条目带它，逆折时是 branches 的第一层键；**缺它会被跳过**（content/skills.py:75）。导出器追加字段。"
+    },
+    "branch": {
+      "zh": "转职线名",
+      "group": "base",
+      "note": "转职线名（中文，实测 14 个：影舞者 / 毒刃者 / 挽歌者 / 咏叹者 / 元素使 / 磐石行者 / 盾卫士 / 死灵祭司 …），只有 source=branch 的条目带它，逆折时是 branches 的第二层键。导出器追加字段。"
+    },
+    "faith": {
+      "zh": "信仰值",
+      "group": "res",
+      "note": "技能级的信仰（牧师资源）声明，实测 37 条整数。⚠ 包内 + 宿主逐键搜索**未发现**读技能本字段的点（未核实）；同名**资源 key** faith（信仰值，game/commands/combat.py:109 显示名）走 res_cost / effects[faith] / EFFECT_RULES[\"faith\"].load_tiers 那条链。"
+    },
+    "shaken_gain": {
+      "zh": "破绽条增量",
+      "group": "res",
+      "note": "命中时推「破绽（shaken）」敌身条的字段：BAR_INJECT_FIELDS（content/mech/params.py:126，key=shaken / per_hit=True）→ bar_procs 的 bar_gain 读它注入。实测 24 条（拳师）。**删掉它 = 不再推条**。"
+    },
+    "melody": {
+      "zh": "旋律 kind",
+      "group": "res",
+      "note": "驻留旋律的类别（实测 10 档：atk / def / spd / all / e_atk / e_spd / e_spd_hit / e_all / e_silence …；e_* 是敌方向）。消费点 content/mech/class_mech.py:788 `info.melody` → 映射成光环 key（melody_atk / melody_e_atk …）；⚠ 只有 mech == melody / melody_chant 时才走这条链。"
+    },
+    "melody_pct": {
+      "zh": "旋律基础百分比",
+      "group": "res",
+      "note": "旋律的每层基础百分比（class_mech.py:795 读 info.melody_pct）。实测 9 条。"
+    },
+    "finale": {
+      "zh": "终章 kind",
+      "group": "res",
+      "note": "旋律满层后的「终章」类别（实测 8 档：crit / atk / stun / silence / all / e_atk / e_spd / e_all）。消费点 class_mech.py:797/923（info.finale → 终章映射表）。"
+    },
+    "melody_fin_pct": {
+      "zh": "终章百分比",
+      "group": "res",
+      "note": "终章的数值（class_mech.py:798 info.melody_fin_pct）。实测 5 条。"
+    },
+    "melody_fin_turns": {
+      "zh": "终章持续",
+      "group": "res",
+      "note": "终章状态持续的刻数（class_mech.py:802 info.melody_fin_turns）。实测 2 条。"
+    },
+    "aura_add": {
+      "zh": "光环增量",
+      "group": "res",
+      "note": "光环（aura）声明的增量百分比：content/mech/team_procs.py:449 `_num(params,\"add\") or _num(info,\"aura_add\")`（动作参数优先）。实测 3 条。"
+    },
+    "aura_kind": {
+      "zh": "光环伤害类型",
+      "group": "res",
+      "note": "光环的伤害类型列表（读点 team_procs.py:455 / 478，回落 params.dmg_kind）。实测 1 条。"
+    },
+    "aura_lock": {
+      "zh": "光环目标锁定",
+      "group": "res",
+      "note": "光环是否锁定目标（读点 team_procs.py:457 / 492，回落 params.target_lock）。实测 1 条。"
+    },
+    "aura_mark": {
+      "zh": "光环目标标记",
+      "group": "res",
+      "note": "光环只对带该标记（层数 > 0）的目标生效（读点 team_procs.py:456 / 486，回落 params.target_mark）。实测 1 条（猎印 hunt_mark）。"
+    },
+    "shield_pct": {
+      "zh": "护盾比例",
+      "group": "def",
+      "note": "护盾按最大生命（或 shield_base_stat 指定面板键）取的比例（读点 team_procs 护盾动作，回落 params.shield_pct）。实测 3 条。"
+    },
+    "shield_base_stat": {
+      "zh": "护盾取用属性",
+      "group": "def",
+      "note": "护盾数值取用的面板键（读点 team_procs.py:219 `params.base_stat or info.shield_base_stat`）。实测 1 条（matk）。"
+    },
+    "shield_per_stack": {
+      "zh": "护盾每层增量",
+      "group": "def",
+      "note": "按层缩放的每层增量（读点 team_procs.py:232 / 238）。实测 4 条。"
+    },
+    "shield_res_key": {
+      "zh": "护盾资源 key",
+      "group": "def",
+      "note": "护盾层数取哪个资源的层数（读点 team_procs.py:245 `params.res_key or info.shield_res_key`）。实测 3 条。"
+    },
+    "shield_stacks": {
+      "zh": "护盾固定层数",
+      "group": "def",
+      "note": "不按资源算时写死的层数（读点 team_procs.py:243 info.shield_stacks）。实测 1 条。"
+    },
+    "reduce": {
+      "zh": "减伤数值",
+      "group": "def",
+      "note": "技能级减伤数值（读点 team_procs.py:316 `_num(info,\"reduce\",\"reduce_pct\")`，回落 params.reduce / reduce_pct）。实测 8 条 0.1~0.4。⚠ 与 reduce_all（固定值减伤）/ reduce_pct（比例减伤）区分，三者不是同一字段。"
+    },
+    "reduce_alt": {
+      "zh": "备选减伤数值",
+      "group": "def",
+      "note": "备选减伤分支的数值（读点 team_procs.py:303 `_num(info,\"reduce_alt\")`）。实测 1 条。"
+    },
+    "reduce_alt_res": {
+      "zh": "备选减伤资源",
+      "group": "def",
+      "note": "备选减伤判据用的资源 key（读点 team_procs.py:306）。实测 1 条（zhan_yi）。"
+    },
+    "reduce_alt_ge": {
+      "zh": "备选减伤阈值",
+      "group": "def",
+      "note": "备选减伤的资源层数门槛（读点 team_procs.py:307 `_num(info,\"reduce_alt_ge\")`）。实测 1 条。"
+    },
+    "reflect_pct": {
+      "zh": "反弹比例",
+      "group": "def",
+      "note": "受击反弹比例（读点 team_procs.py:587 `_num(info,\"reflect_pct\")`；反弹基数 = 当次伤害 _fire_ctx[\"dmg\"]）。实测 3 条。"
+    },
+    "vuln_amp": {
+      "zh": "易伤放大",
+      "group": "def",
+      "note": "给目标挂的易伤放大（读点 team_procs.py:400 `_num(info,\"vuln_amp\")`，回落 params.amp / vuln / value）。实测 1 条。"
+    },
+    "kill": {
+      "zh": "击杀结算",
+      "widget": "kv",
+      "group": "mech",
+      "note": "击杀时的额外结算块（自由形状，内容侧解释）：实测 1 条技能（死神之箭）带它，键为 hunt_full / poison / hp_lt。"
+    },
+    "kill.hunt_full": {
+      "zh": "猎印满层",
+      "group": "mech",
+      "note": "击杀结算的前置标记（猎印 hunt_mark 是否需满层）。⚠ 包内 + 引擎侧逐键搜索未发现读取点（未核实）。"
+    },
+    "kill.poison": {
+      "zh": "附加毒层",
+      "group": "mech",
+      "note": "结算时附加的毒层数（实测 5）。⚠ 同上：未核实读取点。"
+    },
+    "kill.hp_lt": {
+      "zh": "生命比例门槛",
+      "group": "mech",
+      "note": "目标生命比例低于该值才触发（实测 0.25）。⚠ 同上：未核实读取点。"
+    },
+    "passive.proc": {
+      "zh": "被动声明 key",
+      "group": "cond",
+      "ref": {
+        "domain": "passive_proc",
+        "by": "key"
+      },
+      "note": "指向 PASSIVE_PROC 的声明 id（本包 42 条）；装配器据此把事件钩子挂进 triggers。实测 53 条技能带 passive 块、53 个不同 proc 名。"
+    }
+  },
+  "groups": [
+    {
+      "id": "base",
+      "label": "基础",
+      "icon": "📌",
+      "fields": ["name", "desc", "kind", "kind_override", "lv", "owner_class", "source",
+                 "tier", "branch"]
+    },
+    {
+      "id": "cost",
+      "label": "消耗与节奏",
+      "icon": "⚡",
+      "fields": ["mp", "no_mp", "cd", "cast", "charge", "res_cost"]
+    },
+    {
+      "id": "dmg",
+      "label": "伤害与命中",
+      "icon": "💥",
+      "fields": ["power", "exprs", "formula", "heal_formula", "hits", "aoe", "target",
+                 "pierce", "crit", "accuracy", "element"]
+    },
+    {
+      "id": "def",
+      "label": "减伤与护盾",
+      "icon": "🛡",
+      "fields": ["reduce_all", "reduce_pct", "reduce", "reduce_alt", "reduce_alt_res",
+                 "reduce_alt_ge", "shield_pct", "shield_base_stat", "shield_per_stack",
+                 "shield_res_key", "shield_stacks", "lifesteal", "hp_pct", "reflect_pct",
+                 "vuln_amp"]
+    },
+    {
+      "id": "res",
+      "label": "职业资源与旋律",
+      "icon": "🎵",
+      "fields": ["faith", "shaken_gain", "melody", "melody_pct", "finale", "melody_fin_pct",
+                 "melody_fin_turns", "aura_add", "aura_kind", "aura_lock", "aura_mark"]
+    },
+    {
+      "id": "mech",
+      "label": "状态与机制",
+      "icon": "🌀",
+      "fields": ["effect", "buff_turns", "sleep", "mech", "mech_val", "mech_chance",
+                 "mech2", "mech2_val", "summon", "team", "stance", "auto", "kill"]
+    },
+    {
+      "id": "hate",
+      "label": "仇恨与嘲讽",
+      "icon": "🎯",
+      "fields": ["hate_mult", "hate_taunt_mult", "hate_lock_turns"]
+    },
+    {
+      "id": "cond",
+      "label": "条件与被动",
+      "icon": "🔗",
+      "fields": ["cond", "passive"]
+    }
+  ]
+}

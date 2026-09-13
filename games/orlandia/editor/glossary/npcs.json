@@ -1,0 +1,206 @@
+{
+  "fields": {
+    "name": {
+      "zh": "显示名",
+      "note": "按名反查靠 `_INDEXES[\"npcs\"]`；实测 5 个名字各有两个 id（如「精灵诗人·夜歌」）→ 引用请用 id。"
+    },
+    "title": {
+      "zh": "头衔",
+      "note": "身份头衔（如 橡木镇镇长）。副本层内那 6 条由装配期统一补「副本中的神秘来客」。"
+    },
+    "icon": {
+      "zh": "图标",
+      "note": "展示用字形（表情符号）。"
+    },
+    "gender": {
+      "zh": "性别",
+      "note": "代词跟随用（v95 #141）。实测只有「女」；不枚举，内容侧词汇会扩。",
+      "widget": "select"
+    },
+    "source": {
+      "zh": "来源表",
+      "note": "导出器注入：town = NPCS（城镇/据点）、wild = WILD_NPCS（野外偶遇）、hidden = HIDDEN_NPCS（隐藏 + 副本层内）。改它 = 改该 NPC 属于哪张运行时表。",
+      "widget": "select"
+    },
+    "inst_stage": {
+      "zh": "副本层内 NPC",
+      "note": "导出器注入，只在 6 条层内 NPC 上为 true（出自 INSTANCE_STAGE_NPCS，装配期折进 HIDDEN_NPCS，只在副本对应层出现）。"
+    },
+    "map": {
+      "zh": "所在地图",
+      "note": "引用串：maps 域 key（如 oak_town），或副本层 map（inst_* 6 个，落 instances 域）；null = 不绑地图（3 条隐藏 NPC）。未展开。"
+    },
+    "roam": {
+      "zh": "游荡地点候选",
+      "note": "每天随机出现在其中一个地点（日期哈希、全服一致）。⚠️ 源侧混用子区域节点 id 与地图 id 两种词汇 —— 原样保留。",
+      "widget": "lines"
+    },
+    "period": {
+      "zh": "出现时段",
+      "note": "城镇 NPC 的时段限制（morning 05-08 / day 08-18 / evening 18-20 / night 20-05）。",
+      "widget": "chips"
+    },
+    "appear": {
+      "zh": "出现概率（城镇）",
+      "note": "每次判定的出现概率（实测 0.75~0.95 五档）。",
+      "widget": "pct"
+    },
+    "condition": {
+      "zh": "出现条件（AND）",
+      "note": "野外/隐藏 NPC 的条件集合，各键为「与」关系；不写 = 不限。引用串（任务/物品/flag）原样保留。",
+      "widget": "kv"
+    },
+    "condition.time": {
+      "zh": "条件·时段",
+      "note": "允许的时段（morning / day / evening / night）。",
+      "widget": "chips"
+    },
+    "condition.season": {
+      "zh": "条件·季节",
+      "note": "允许的季节（spring 3-5 / summer 6-8 / autumn 9-11 / winter 12-2）。",
+      "widget": "chips"
+    },
+    "condition.weather": {
+      "zh": "条件·天气",
+      "note": "限定天气（实测 sunny / rain / storm / snow / fog；晴与多云不写 = 不限）。不枚举 —— 源侧词汇会扩。",
+      "widget": "select"
+    },
+    "condition.min_level": {
+      "zh": "条件·等级下限",
+      "note": "玩家等级 ≥ 它才可能遇到。"
+    },
+    "condition.max_level": {
+      "zh": "条件·等级上限",
+      "note": "玩家等级 ≤ 它才可能遇到。"
+    },
+    "condition.day_of_week": {
+      "zh": "条件·星期",
+      "note": "限定星期（周一 = 0，周日 = 6）。",
+      "widget": "chips"
+    },
+    "condition.quest_done": {
+      "zh": "条件·需已完成任务",
+      "note": "任务 id 引用串（quests 域尚未进包）。未展开。",
+      "widget": "lines"
+    },
+    "condition.quest_active": {
+      "zh": "条件·需进行中任务",
+      "note": "任务 id 引用串（quests 域尚未进包）。未展开。",
+      "widget": "lines"
+    },
+    "condition.flag": {
+      "zh": "条件·需玩家 flag",
+      "note": "玩家对话 flag 名（内容侧词汇）。"
+    },
+    "condition.item": {
+      "zh": "条件·需持有道具",
+      "note": "物品 id 引用串（如 mat_xxx）→ items 域。未展开。"
+    },
+    "chance": {
+      "zh": "出现概率（野外）",
+      "note": "满足基础条件后每 30 分钟独立判定的概率（实测 0.05~1.0）；null = 不判概率。",
+      "widget": "pct"
+    },
+    "cycle": {
+      "zh": "出现周期（天）",
+      "note": "每 N 天出现一次（date.toordinal() % N == 0）。实测 1/3/5/7。"
+    },
+    "duration": {
+      "zh": "在场时长（分钟）",
+      "note": "v127.5 限时 NPC：出现后在场的分钟数（缺省 60）。"
+    },
+    "unlock": {
+      "zh": "解锁条件串",
+      "note": "\"flag:xxx\" / \"item:xxx\" / \"quest:qid\" 三种前缀串 —— 解锁后才可能遇到；导出期不解析前缀。null = 无解锁条件。未展开。"
+    },
+    "unlock_flags": {
+      "zh": "解锁播报",
+      "note": "解锁条件满足时写入的 flag + 播报文案（实测 3 条）。",
+      "widget": "kv"
+    },
+    "unlock_flags.flag": {
+      "zh": "解锁·写入 flag",
+      "note": "满足条件时写进玩家存档的 flag 名（内容侧词汇）。"
+    },
+    "unlock_flags.notice": {
+      "zh": "解锁·播报文案",
+      "note": "满足条件时播给玩家的整段话（含表情符号）。",
+      "widget": "textarea"
+    },
+    "funcs": {
+      "zh": "功能标签",
+      "note": "能力词汇（实测 17 个：quest / shop / craft / heal / lore / trade / info / teach / tutor / apprentice / auction / daily / dialogue / enhance / enchant / portal / rune）。每个词背后是一个尚未进包的系统；空数组或缺失 = 无交互。不枚举。",
+      "widget": "rows"
+    },
+    "quest": {
+      "zh": "挂的任务",
+      "note": "作为发布人（giver）的任务 id 引用串（实测 18 个）→ quests 域尚未进包。未展开。"
+    },
+    "teach_skills": {
+      "zh": "可教技能",
+      "note": "{职业 key → 技能中文名}。职业 key 是 classes 域 key（6/6 命中）；技能名有 14 个在 skills 域解析不到（源侧空引用）。未展开。",
+      "widget": "kv"
+    },
+    "teach_hint": {
+      "zh": "教学提示",
+      "note": "带 teach func 时给玩家的提示文案。",
+      "widget": "textarea"
+    },
+    "dialogue": {
+      "zh": "对白",
+      "note": "初次交谈的默认台词（431/431 条都有）。多段轮换台词走 lines。",
+      "widget": "textarea"
+    },
+    "lines": {
+      "zh": "轮换台词",
+      "note": "多段台词（86 条有；末段由 npcs.py:3123-3125 的补丁循环写入），交谈时轮换。",
+      "widget": "lines"
+    },
+    "desc": {
+      "zh": "简介",
+      "note": "野外/隐藏 NPC 的一句话简介（63 条有）；城镇 NPC 用 title + dialogue。",
+      "widget": "textarea"
+    },
+    "lore": {
+      "zh": "见闻",
+      "note": "带 lore func 时能听到的设定/传闻（101 条有，整段文案）。",
+      "widget": "textarea"
+    }
+  },
+  "groups": [
+    {
+      "id": "identity",
+      "label": "身份",
+      "icon": "🧑",
+      "fields": ["name", "title", "icon", "gender", "source", "inst_stage"]
+    },
+    {
+      "id": "talk",
+      "label": "对白与文案",
+      "icon": "💬",
+      "fields": ["dialogue", "lines", "desc", "lore", "teach_hint"]
+    },
+    {
+      "id": "place",
+      "label": "出现地点与时段",
+      "icon": "📍",
+      "fields": ["map", "roam", "period", "appear"]
+    },
+    {
+      "id": "cond",
+      "label": "出现条件与随机性",
+      "icon": "🌦",
+      "fields": ["condition", "condition.time", "condition.season", "condition.weather",
+                 "condition.min_level", "condition.max_level", "condition.day_of_week",
+                 "condition.quest_done", "condition.quest_active", "condition.flag",
+                 "condition.item", "chance", "cycle", "duration"]
+    },
+    {
+      "id": "ref",
+      "label": "功能与引用",
+      "icon": "🔗",
+      "fields": ["funcs", "quest", "unlock", "unlock_flags", "unlock_flags.flag",
+                 "unlock_flags.notice", "teach_skills"]
+    }
+  ]
+}

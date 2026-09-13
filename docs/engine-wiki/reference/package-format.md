@@ -26,6 +26,10 @@
 ```
 <包目录>/
   game.json                     # 清单：id / name / desc / engine 要求 / domains / entry
+  editor/
+    domains.json                # 域声明（**域的真源在包** —— 见 §十；缺它 = 回退框架默认集）
+  schemas/                      # 本包自带的 JSON Schema（按域名声明引用；缺 = 回退框架 schemas/）
+    skill.schema.json  …
   content/
     data/                       # 【数据域】编辑器读写
       skills.json  classes.json  monsters.json  affixes.json  items.json
@@ -154,11 +158,13 @@ JSON 由导出脚本生成，并由**同步门禁**断言「派生一致」；�
 
 ## 九、奥兰迪亚包：已进包 / 还没进包（2026-09-13 盘点）
 
-**已进包 19 个域 / 4569 条**（框架 `DOMAINS` 一个不缺）：`items` 900 / `equip_roster` 687 /
+**已进包 24 个域 / 5115 条**（★ 2026-09-13 B2b：域的真源**在包里** —— 框架内置集只剩 8 个引擎域，
+其余 16 个由 `games/orlandia/editor/domains.json` 声明）：`items` 900 / `equip_roster` 687 /
 `drop_pools` 596 / `pois` 457 / **`monster_roster` 380** / `monsters` 330 / `skills` 305 /
 `texts` 233 / `commands` 194 / `maps` 121 / **`legendary_effects` 93** / `effect_rules` 85 /
 `affixes` 76 / `passive_proc` 42 / `instances` 27 / `tlogs` 18 / **`pets` 16** / `classes` 8 /
-`loot_vocab` 1。清单与真源模块见 `games/orlandia/README.md`。
+`loot_vocab` 1（+ 收口/D3 批新增：`npcs` 431 / `sets` 92 / `enhance_table` 10 / `panel_rules` 7 /
+`races` 6）。清单与真源模块见 `games/orlandia/README.md`。
 
 ### 9.1 名册类缺口**已补完**（2026-09-13）
 
@@ -206,3 +212,51 @@ JSON 由导出脚本生成，并由**同步门禁**断言「派生一致」；�
 - **不能当**：**可运行的游戏包** —— 没有 `apply.py` / `content/mech/`，`passive_proc` 的 `action`
   与 `effect_rules` 的通道语义在包内查不到 handler（引擎 `fire()` 静默跳过）。
   这就是 §七 的 **P4（代码收口）**：从「数据包」到「可运行包」的那一步。
+
+---
+
+## 十、编辑器扩展：**域的真源在包**（2026-09-13）
+
+一句话：**加一个域 = 改包内 3 个文件**（域声明 + schema + 数据），框架一行不改。
+
+### 10.1 三个文件
+
+| 改哪 | 形状 | 说明 |
+|---|---|---|
+| `editor/domains.json` | `{"mech_verbs": {"label": "机制动词", "kind": "data", "schema": "schemas/mech_verbs.schema.json", "primary": "mech_verb", "icon": "🔧"}}` | 域声明。`kind` 决定落点（`data → content/data/`、`rules → content/rules/`）；`schema` 是**包内相对路径**；`primary` = schema `$defs` 里「一条数据」那个 def 名 |
+| `schemas/<域>.schema.json` | 普通 JSON Schema（draft 2020-12）；`$defs.<primary>` 是单条形状 | 校验与表单渲染都读它。**不给 = 该域不校验**（编辑器照旧可增删改） |
+| `content/data|rules/<域>.json` | `{条目 key: 条目对象}` | 数据本身；编辑器新建包 / 新建条目时会写它 |
+
+> 想给**已有**的域换名字/图标/schema：在 `editor/domains.json` 里写**同名域**即可（只写要改的字段，
+> 其余沿用默认口径）。同名 → **包赢**，但编辑器会给一条可读告警（不静默）。
+
+### 10.2 合并规则（框架那份 = **回退默认集**，不是真源）
+
+```
+effective_domains(pkg) = 包 editor/domains.json  ∪（可选）框架内置默认集
+  · 同名域：包声明优先（框架那份不参与该域取值）；真改了字段 → 一条可读 warning
+  · 框架内置默认集（editor/packages.py 的 BUILTIN_DEFAULT_DOMAINS，**8 个引擎域**：
+    effect_rules / passive_proc / commands / texts / tlogs / maps / drop_pools / instances
+    —— 逐个都能在 `saintess_engine/` 指到消费端；内容域不内置，否则等于「框架里揣着某个游戏的域」）
+     **只在包里没有可用声明时兜底**（第三方包 / 坏包 / 未迁移的老包）—— 它是回退，不是真源
+  · {"$builtin": false}：显式声明「本包的域就这些，不要兜底」（examples/minimal-game 用的就是它）
+  · 坏声明（坏 JSON / 缺 kind / kind 非法 / schema 越界 / 域 id 越界）→ 该条（或整份）忽略 +
+    黄条告警 + 回退默认集，**绝不 500**（「列表里有它、点开 500」是不允许的）
+  · schema 解析：<pkg>/schemas/<声明值> → <pkg>/<声明值> → 框架 schemas/<声明值> → 不校验
+```
+
+**实证（可复现）**：`python tests/test_editor_step3_pkg_first.py` —— 用 monkeypatch 把框架那份
+常量**整个置空**后，`games/orlandia` 仍能列出完整 24 域、能读能写能校验、HTTP 端到端 200
+（= 真源确实在包，框架那份可以被整体拿掉）；同一门禁钉住 `examples/minimal-game` 这个**最小样板**
+（自带 6 域声明 + 6 份 schema，覆盖它声明的**全部**域，照它抄就是新游戏的加域姿势）。
+另一条**反证**在 `python tests/test_editor_package_domains.py`（§4b）：内置集逐名 == 8 个引擎域 +
+**拿掉**包内 `editor/domains.json` → orlandia 的 24 域立刻掉到 8（内容域真的没有了，不是换个来源）。
+
+### 10.3 什么时候才该动框架
+
+- **给某个游戏加/改域** → 只改那个包（§10.1 那三个文件）。框架那份默认集**不用动**。
+- **改内置默认集** → 只有当你要换掉「所有没声明的包的兜底域集」时才动它；那是**所有包**的口径变更，
+  不是给某个游戏加域的手段（`editor/packages.py:49`）。
+- 尚未搬进包的框架侧扩展面：字段词典 `editor/glossary.py`、取值提示 `editor/hints.py`、
+  专属视图分派 `editor/{loot,instance,space}_view.py`（第 2/3 层扩展面，见设计稿）。
+

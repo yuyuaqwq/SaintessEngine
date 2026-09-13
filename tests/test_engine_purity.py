@@ -5,7 +5,7 @@
 
   基础      config.py
   战斗域    battle/（12 模块）
-  通用原语  expr/ gauge/ formation/ kinds/
+  通用原语  expr/ gauge/ formation/（2026-09-13 P4 下沉：中文 kind 词表 kinds/ 已归内容侧）
   运行时    store/ command/ events/ clock/ container/ session/
 
 纯度契约对**全部子模块一致** —— 整包可拷进第三方项目、可独立分发。
@@ -75,7 +75,7 @@ MODULE_ATTRS = [
     ("landing", "battle.landing"), ("schedule", "battle.schedule"),
     ("serialize", "battle.serialize"), ("state_effects", "battle.state_effects"),
     ("stats", "battle.stats"),
-    ("expr", "expr"), ("gauge", "gauge"), ("formation", "formation"), ("kinds", "kinds"),
+    ("expr", "expr"), ("gauge", "gauge"), ("formation", "formation"),
     ("store", "store"), ("command", "command"), ("events", "events"),
     ("clock", "clock"), ("log", "log"), ("tlog", "tlog"), ("space", "space"), ("loot", "loot"),
     ("run", "run"), ("container", "container"), ("session", "session"),

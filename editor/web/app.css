@@ -358,6 +358,7 @@ fieldset.grp>legend{
 .field:has(.array-rows),
 .field:has(.array-row),
 .field:has(.kv-row),
+.field:has(.row-item),
 .field:has(details.extra),
 .field:has(.schema-form),
 .field:has(fieldset.grp),
@@ -401,6 +402,25 @@ textarea.ctl{height:auto;min-height:104px;padding:var(--sp3);resize:vertical;
 .kv-row{display:flex;align-items:center;gap:var(--sp2);margin-bottom:var(--sp2)}
 .kv-row .ctl{flex:1}
 .kv-row .ctl.k{flex:0 0 200px}
+
+/* 键值行（kv）/ 行编辑（rows）—— 容器型控件：每行里还能再递归放子控件。
+   与 .array-rows 同一套视觉语言，只是行里有「可读标题 + 删」和「值的子控件」。 */
+.kv-wrap,.rows-wrap{display:flex;flex-direction:column;gap:var(--sp2);min-width:0}
+.kv-rows,.row-list{display:flex;flex-direction:column;gap:var(--sp2);min-width:0}
+.kv-foot,.rows-foot{display:flex;align-items:center;gap:var(--sp3);font-size:10.5px;color:var(--fg-3);flex-wrap:wrap}
+.kv-n,.rows-n{font-family:var(--mono);color:var(--accent)}
+.kv-tip,.rows-tip{color:var(--fg-3)}
+.row-del{flex:0 0 auto;height:24px;min-width:24px;padding:0 var(--sp2);font-size:11px;line-height:1;
+  background:transparent;border:1px solid var(--line);color:var(--fg-3);border-radius:var(--r-sm);cursor:pointer}
+.row-del:hover{border-color:var(--err-soft);color:var(--err)}
+.row-item{display:flex;flex-direction:column;gap:var(--sp2);padding:var(--sp3);
+  border:1px solid var(--line);border-radius:var(--r-sm);background:color-mix(in srgb,var(--bg-2) 55%,transparent)}
+.row-head{display:flex;align-items:center;gap:var(--sp2)}
+.row-title{flex:1;min-width:0;font-size:11.5px;font-weight:600;color:var(--fg-2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--sp3)}
+/* kv 行 / rows 行上的校验报错（这两类行没有 .field 包裹，靠 data-path 定位） */
+.kv-row.has-error,.row-item.has-error{border-color:var(--err);box-shadow:inset 2px 0 0 var(--err)}
 details.extra{margin-top:2px}
 details.extra>summary{cursor:pointer;color:var(--fg-3);font-size:11px;list-style:none;padding:2px 0}
 details.extra>summary::-webkit-details-marker{display:none}

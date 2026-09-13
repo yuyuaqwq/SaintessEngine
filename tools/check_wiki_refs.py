@@ -179,7 +179,7 @@ def main() -> int:
                     # basename。否则 `game/content_rules/apply.py`（游戏仓文件，不属本仓）
                     # 会被 basename 糊到框架仓 `examples/minimal-game/content/apply.py`
                     # → 行号越界 → 误报「确定性 drift」（实测 4 处假阳性全因此）。
-                    # 而 `saintess_engine/kinds/__init__.py` / `kinds/__init__.py`
+                    # 而 `saintess_engine/text/table.py` / `text/table.py`
                     # 这类真·引擎引用仍能被尾部匹配正确解析。
                     target = None
                     if cands:

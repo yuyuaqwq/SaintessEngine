@@ -34,6 +34,7 @@ sys.path.insert(0, ROOT)
 from editor import server as SRV          # noqa: E402
 from editor import dist as DIST           # noqa: E402
 from editor import packages as PK         # noqa: E402
+import _domain_fixtures as FX             # noqa: E402  （内容域只能由包声明：B2b）
 
 PASS = 0
 FAIL = 0
@@ -103,6 +104,12 @@ def main() -> int:
     # ── 1. 建一个有内容的包
     st, _h, j = req(base, "POST", "/api/packages", {"id": "t_game", "name": "分发测试", "desc": "d"})
     check("建包", st == 200 and j.get("ok"), f"{st}")
+    # ★ B2b：skills / monsters 是**内容域**（框架内置集只留引擎域）→ 由包声明
+    t_dir = j.get("dir")
+    FX.declare(t_dir, "skills", "monsters")
+    _m = PK.load_manifest(t_dir)
+    _m["domains"] = list(PK.DOMAINS) + ["skills", "monsters"]
+    PK.save_manifest(t_dir, _m)
     skill = {"name": "火焰球", "kind": "魔法", "lv": 1, "mp": 8, "power": 1.4,
              "exprs": ["matk*1.4 + player_lv*3"], "desc": "砸出一颗火球。"}
     st, _h, j = req(base, "PUT", "/api/package/t_game/d/skills/sk_fire", {"data": skill})
@@ -195,8 +202,9 @@ def main() -> int:
     same = open(os.path.join(pkg, "content", "data", "skills.json"), "rb").read() == \
         open(os.path.join(dest, "content", "data", "skills.json"), "rb").read()
     check("往返内容逐字节一致（skills.json）", same)
-    check(f"导入报告带域数 / 条目数（域数应为 {len(PK.DOMAINS)}）",
-      (r.get("report") or {}).get("domains") == len(PK.DOMAINS)
+    # ★ B2b：域数 = **该包的有效域表**（内置 8 引擎域 ∪ 包声明的内容域），不再等于内置集
+    check(f"导入报告带域数 / 条目数（域数应为 {len(PK.effective_domains(dest)[0])}）",
+      (r.get("report") or {}).get("domains") == len(PK.effective_domains(dest)[0])
           and (r.get("report") or {}).get("entries") == 2, f"{r.get('report')}")
     check("导入后无临时目录残留",
           not [d for d in os.listdir(gd2) if d.startswith(".import_")], f"{os.listdir(gd2)}")
@@ -299,8 +307,11 @@ def main() -> int:
         man = PK.load_manifest(pdir)
         check(f"[{pid}] game.json 可解析且 id 与目录名一致", man.get("id") == pid, f"{man.get('id')}")
         doms = man.get("domains") or []
-        unknown = [d for d in doms if d not in PK.DOMAINS]
-        check(f"[{pid}] domains 全是已知域", not unknown, f"未知域 {unknown}")
+        # ★ 2026-09-13 收口：已知域 = **这个包的有效域表**（包声明优先 ∪ 内置默认集），
+        #   不再只问内置集 —— 否则「域由包自己声明」的包会被误判成"未知域"。
+        _eff_pkg, _ = PK.effective_domains(pdir)
+        unknown = [d for d in doms if d not in _eff_pkg]
+        check(f"[{pid}] domains 全是已知域（包声明 ∪ 内置默认集）", not unknown, f"未知域 {unknown}")
         for d in doms:
             check(f"[{pid}] 声明域 {d} 有数据文件",
                   os.path.isfile(PK.domain_path(pdir, d)), PK.domain_path(pdir, d))

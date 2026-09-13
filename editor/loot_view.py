@@ -116,11 +116,12 @@ def _domain_keys(pkg_dir: str, domains) -> set:
     except Exception:                          # noqa: BLE001
         return set()
     keys: set = set()
+    domains_eff, _w = PK.effective_domains(pkg_dir)     # 有效域表：内置 + 包自带声明
     for d in domains:
-        if d not in PK.DOMAINS:
+        if d not in domains_eff:
             continue
         try:
-            tbl = PK.read_json(PK.domain_path(pkg_dir, d), {})
+            tbl = PK.read_json(PK.domain_path(pkg_dir, d, domains_eff), {})
         except Exception:                      # noqa: BLE001
             continue
         if isinstance(tbl, dict):

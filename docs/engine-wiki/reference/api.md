@@ -342,18 +342,18 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 | `numbered_units(units)` | `:191` |
 | `formation_view(units, side="enemy")` | `:209` |
 
-### `support/skill_kinds.py` — kind 语义枚举
+### ~~`support/skill_kinds.py`~~ — kind 语义枚举 **（2026-09-13 P4 下沉：本模块已不在引擎里）**
 
-`SkillKind`（`:25`，值 `PHYS/MAGI/HEAL/BUFF/PASSIVE/SUMMON/TRUE/TAUNT`）·
-`is_damage_kind(kind)`（`:77`）· `is_kind(kind, target)`（`:88`）· `seg_of(kind)`（`:97`）·
-`lifesteal_channel_of(kind)`（`:110`）。
+引擎包内**没有** kind 词表模块：`SkillKind` 枚举（值 `PHYS/MAGI/HEAL/BUFF/PASSIVE/SUMMON/TRUE/TAUNT`）·
+`is_damage_kind(kind)` · `is_kind(kind, target)` · `seg_of(kind)` · `lifesteal_channel_of(kind)`
+已整体下沉到**内容侧**（游戏仓 `game/data/kinds.py`；奥兰迪亚内容包 `content/mech/kinds.py`
+是同内容同源的副本）。原实现里的中文枚举值（`PHYS = "物理"` … `TAUNT = "嘲讽"`）随之离开引擎。
 
-⚠️ 这个模块的枚举值**写死了中文**（`PHYS = "物理"` … `TAUNT = "嘲讽"`，`kinds/__init__.py:33-40`），
-而引擎主路径已改用 `config.kind_of(name)` 注入（`config.py:235`）。
-两者是**两套 kind 词表**，若你的内容用别的语言/词表，`skill_kinds` 的 `is_kind` /
-`is_damage_kind` / `seg_of` 就不适用于你的数据。第三方可只用 `config.kind_of`。
-（`support/skill_kinds.py` 是 S3「通用件归位」时从 `game/core/` 搬进来的，
-搬动时未做 kind 去字面量化 —— 见 [_selfcheck.md](../_selfcheck.md)）
+引擎主路径一律经 `config.kind_of(name)` 注入（`config.py:235`）读 kind 值 —— 第三方内容
+自带词表即可，不受任何语言限制。
+（历史上该模块是 S3「通用件归位」时从 `game/core/` 搬进引擎的；P4 实测引擎内部**零消费者**，
+故按「机制归引擎、词表归内容」的边界原则迁回内容侧 —— 见
+[_selfcheck.md](../_selfcheck.md) B1 行）
 
 ### `support/battle_bars.py` — 挂敌身条 + 蓄力三律
 

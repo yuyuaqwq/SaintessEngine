@@ -72,18 +72,31 @@ def _top(bucket: dict, limit: int = _MAX) -> dict:
 
 
 def build(pkg_dir: str) -> dict:
-    """给一个包目录算提示表。空表包 → 三类都是空（前端退回纯手填，不报错）。"""
+    """给一个包目录算提示表。空表包 → 三类都是空（前端退回纯手填，不报错）。
+
+    域表 = 该包的**有效域表**（内置 + 包自带 `editor/domains.json` 声明的新域）——
+    包新增的域也有联想，否则「新域的字段没候选」会让人以为框架坏了。
+
+    第 4 类 `ref_names`（2026-09-13 第 2 层加）：{域: [条目 name 值, ...]} —— 给包的
+    `relations.json` 里 `{"ref": {"domain": …, "by": "name"}}` 做下拉候选（那种字段比的是
+    **名字**而不是 key）。前三类**逐字节不变**（既有的 refs/values/keys 口径不动）。
+    """
     refs: dict = {}
     values: dict = {}
     keys: dict = {}
-    for dom in PK.DOMAINS:
+    ref_names: dict = {}
+    domains, _warns = PK.effective_domains(pkg_dir)
+    for dom in domains:
         try:
-            table = PK.read_json(PK.domain_path(pkg_dir, dom), {})
+            table = PK.read_json(PK.domain_path(pkg_dir, dom, domains), {})
         except Exception:                                    # noqa: BLE001
             table = {}
         if not isinstance(table, dict):
             table = {}
         refs[dom] = sorted(str(k) for k in table)[:400]
+        names = sorted({v["name"] for v in table.values()
+                        if isinstance(v, dict) and isinstance(v.get("name"), str) and v["name"]})
+        ref_names[dom] = names[:400]
         v_bucket: dict = {}
         k_bucket: dict = {}
         for entry in table.values():
@@ -92,11 +105,14 @@ def build(pkg_dir: str) -> dict:
                 _collect_obj_keys(entry, "", k_bucket)
         values[dom] = _top(v_bucket)
         keys[dom] = _top(k_bucket)
-    return {"refs": refs, "values": values, "keys": keys}
+    return {"refs": refs, "values": values, "keys": keys, "ref_names": ref_names}
 
 
 def flatten_for_ui(hints: dict) -> dict:
-    """给前端的形态：字段路径 → 候选列表（把 values 与 keys 合成一张便于前端一次查）。"""
+    """给前端的形态：字段路径 → 候选列表（把 values 与 keys 合成一张便于前端一次查）。
+
+    `ref_names` 原样透传（`by=name` 的引用下拉用）。
+    """
     val, keyd = hints.get("values") or {}, hints.get("keys") or {}
     out = {}
     for dom in set(val) | set(keyd):
@@ -106,4 +122,5 @@ def flatten_for_ui(hints: dict) -> dict:
         for path, ks in (keyd.get(dom) or {}).items():
             merged.setdefault(path, {})["k"] = ks
         out[dom] = merged
-    return {"fields": out, "refs": hints.get("refs") or {}}
+    return {"fields": out, "refs": hints.get("refs") or {},
+            "ref_names": hints.get("ref_names") or {}}

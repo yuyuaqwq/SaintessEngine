@@ -35,7 +35,7 @@ saintess_engine/
 `import` 正常、`Battle` 可构造、可跑完一场战斗（本次文档编写期间实测通过）。
 但**如果你的项目里同时还挂着游戏仓（奥兰迪亚侧）的 `game/` 包**，情况不同：
 `game/__init__.py` 在 import 期登记了引擎的「hook 惰性装配器」，引擎首次读取 hook 时
-会把 `game.content`（整份《奥兰迪亚》内容）拉进来（登记点在 `game/__init__.py:17-19` →
+会把 `game.content`（整份《奥兰迪亚》内容）拉进来（登记点在 `game/__init__.py:20-22` →
 `game/bootstrap.py:196-207` 的 `install()`）。那是**游戏仓**的接线；框架仓里没有 `game/` 包，
 `import saintess_engine` 干净无副作用（由 `tests/test_engine_purity.py` 保证）。
 第三方项目请**直接使用框架仓（或从中拷出的）独立包 `saintess_engine/`**，不要依赖 `game` 包的 `__init__` 副作用。

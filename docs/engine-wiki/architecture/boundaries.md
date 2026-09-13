@@ -96,6 +96,8 @@
 `skill_lookup` / `monster_skill_fn` hook；kind 字面量与 `"攻击"` 改走 `config.kind_of` /
 `basic_fallback`；`"战士"` 默认值拆除；`formula_expr` / `formation` / `skill_kinds` /
 `battle_bars` 四个通用件搬进 `saintess_engine/support/`（**模块化重排后**为顶层并列子包 `expr/` · `gauge/` · `formation/` · `kinds/`）。
+> **2026-09-13 更新（P4 下沉）**：其中 `kinds/` 后来被实测证明「引擎内部零消费者」，
+> 已从引擎**删掉**、词表归内容侧（游戏仓 `game/data/kinds.py`）。现存顶层子包即上列前三者。
 
 ## 当前的边界瑕疵（诚实清单）
 
@@ -103,7 +105,7 @@
 
 | # | 瑕疵 | 位置 | 影响 |
 |---|---|---|---|
-| B1 | `kinds/` 的枚举值写死中文（`PHYS = "物理"` …） | `kinds/__init__.py:33-40` | 与 `config.kind_of` 注入面**两套 kind 词表**；非中文 kind 的游戏用不了 `is_kind` / `is_damage_kind` / `seg_of` |
+| B1 | ~~`kinds/` 的枚举值写死中文（`PHYS = "物理"` …）~~ **2026-09-13 P4 下沉已消除** | 引擎侧无此模块（词表移居内容侧；引擎只经 `config.kind_of` 注入面读 kind 值） | 原「两套 kind 词表」问题随之下线：引擎侧只此一个注入面，非中文 kind 的游戏不受影响 |
 | B2 | `landing._apply_death_guard` / `heal_actor` / `stats` 里硬编码 key：`"death_guard"`、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"` | `landing.py:248,384-407` | 「濒死保护」「禁疗/受疗增幅」三类机制**只认固定 key 名**。要换名只能改引擎（或复用这些名字）。（原「睡眠打醒」硬编码 `"sleep"` —— **2026-09-11 已数据化**为 `wake_on_hit` 字段，不再属本表） |
 | B3 | `effects.act_apply` 里 `if key == "reduce":` 写 `holder["reduce_left"]` | `effects.py:452-453` | 引擎里出现了内容 key 字面量 |
 | B4 | `schedule._settle_time_effects` 里 `pct_boss` / `boss_pct_mult` / `is_boss` / `role == "boss"` / `is_elite` | `schedule.py:267,275-285` | 「Boss」这个内容概念进了引擎（作为数据字段处理，尚可接受，但它是**唯一**被引擎认识的身份标签） |

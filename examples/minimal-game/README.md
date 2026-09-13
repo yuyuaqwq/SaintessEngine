@@ -30,6 +30,13 @@ PY="C:/Users/yuyu/AppData/Roaming/uv/tools/astrbot/Scripts/python.exe"
 examples/minimal-game/
 ├─ README.md              本文：怎么跑 / 各部分作用 / 为什么这样设计 / 踩到的坑
 ├─ main.py                20 行跑完一场战斗：造 actor → Battle(sides=…) → auto_run → 打印
+├─ game.json              包清单（id / name / engine 要求 / domains / entry）—— 编辑器当包打开的凭据
+├─ editor/
+│  └─ domains.json        本游戏的**域声明**（编辑器扩展面的真源，见第 8 节）
+├─ schemas/               本包自带的 JSON Schema（每个域一份，覆盖声明的全部域）
+│  ├─ skill.schema.json  classes.schema.json  monsters.schema.json
+│  ├─ effect_rules.schema.json  passive_proc.schema.json
+│  └─ mech_verbs.schema.json          ← 「本包自己新增的域」的那份
 ├─ content/               你的游戏内容（整包 = 一个"插件"）
 │  ├─ __init__.py         公开入口：apply_game_content / install_engine（import 即接管引擎）
 │  ├─ apply.py            唯一装配入口，幂等：
@@ -40,7 +47,8 @@ examples/minimal-game/
 │  │  │                   + KIND_NAMES（kind 词表）+ FORMULA_SKELETON / SKILL_FLAT（公式参数）
 │  │  ├─ skills.py        技能：普攻 / 玩家技能 / 怪物技能 + 引擎 skill_lookup 接口
 │  │  ├─ classes.py       职业：面板参数 + panel_fn 实现 + build_player 工厂
-│  │  └─ monsters.py      怪物模板 + build_monster 工厂
+│  │  ├─ monsters.py      怪物模板 + build_monster 工厂
+│  │  └─ mech_verbs.json  ★ 编辑器侧的机制动词目录（本包自己新增的域，见第 8 节）
 │  └─ mech/
 │     └─ actions.py       本游戏的机制动词（@register_action）：res_gain / heat_vent / backdraft
 └─ tests/
@@ -187,3 +195,29 @@ mech/actions.py            data/rules.py                      apply.py
   刻意**不采用**这套约定（`PASSIVE_PROC` 则采用了，用来演示"内容侧约定"的两种态度）。
 - 玩家自动战斗用普攻（`auto_run`）；主动技能与资源扣减由 `tests/test_smoke.py` 里
   `human_act("skill", "过载铆钉")` 显式驱动（原因见第 6 节坑 4）。
+
+## 8. ★ 编辑器扩展：本包自带域（**最小样板**）
+
+「编辑器认识哪些域」的答案**在包里**（`editor/domains.json`），不在框架里 —— 所以
+**加一个域 = 只改本包 3 个文件**，框架一行不改。本目录就是那个最小样板，照它抄就行：
+
+| 文件 | 干什么 | 本目录里的例子 |
+|---|---|---|
+| `editor/domains.json` | 域声明（`kind` 决定落 `content/data/` 还是 `content/rules/`） | 6 个域；其中 `mech_verbs` 是**本包自己新增的域**（框架默认集里没有） |
+| `schemas/<域>.schema.json` | 单条形状 → 校验 + 表单渲染；**不给 = 该域不校验** | 6 份，覆盖声明的**全部**域（`classes` 那份是「框架默认集里本来无 schema，本包补上」的示范） |
+| `content/data|rules/<域>.json` | 数据本身（`{条目 key: 条目对象}`） | `content/data/mech_verbs.json`（3 个机制动词） |
+
+三件小事，别踩：
+
+1. **`{"$builtin": false}`** 写在 `editor/domains.json` 顶层 —— 「本包的域就这些，不要框架默认集兜底」。
+   不写（缺省 `true`）时编辑器会把框架那 19 个默认域也列出来兜底（第三方包 / 坏包友好）。
+   本示例写了它，所以编辑器里**只出现本包的 6 个域**。
+2. `schema` 写的是**包内相对路径**；解析顺序 = `<pkg>/schemas/<值>` → `<pkg>/<值>` →
+   框架 `schemas/<值>` → 不校验。想让哪个域严格，就在包内自带一份。
+3. `mech_verbs.json` 是**编辑器侧**的表（列清单 / 校验用）；**运行时的真源仍是
+   `content/mech/actions.py`**。想让运行时也读它，在 `content/apply.py` 里 `json.load` 一下即可
+   （示例刻意不做：保持「运行时 = content/*.py 单源」，避免两处定义漂移）。
+
+验收门禁：`python tests/test_editor_step3_pkg_first.py`（框架仓）—— 里面把框架那份内置默认集
+**整个置空**后仍要求 orlandia 完整可编，并钉住本样板包的 6 域「能列 / 能存 / 自带 schema 全覆盖」。
+规格全文：`docs/engine-wiki/reference/package-format.md` §十。

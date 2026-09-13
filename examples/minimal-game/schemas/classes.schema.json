@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "classes",
+  "description": "铆炉回声 · 职业域 —— 框架内置默认集里这一域本来是「不校验」（schema=null）；本包自带一份，演示「包可以给自己的域补 schema」",
+  "$defs": {
+    "class": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "description": "职业名"},
+        "hp": {"type": "number", "description": "1 级生命"},
+        "hp_per_lv": {"type": "number", "description": "每级生命成长"},
+        "atk": {"type": "number", "description": "1 级物攻"},
+        "atk_per_lv": {"type": "number"},
+        "matk": {"type": "number", "description": "1 级术攻"},
+        "matk_per_lv": {"type": "number"},
+        "def": {"type": "number", "description": "1 级物防"},
+        "def_per_lv": {"type": "number"},
+        "mdef": {"type": "number", "description": "1 级术防"},
+        "mdef_per_lv": {"type": "number"},
+        "spd": {"type": "number", "description": "速度"},
+        "crit": {"type": "number", "minimum": 0, "maximum": 1, "description": "暴击率"},
+        "desc": {"type": "string", "description": "说明（编辑器里显示）"}
+      },
+      "additionalProperties": true
+    }
+  }
+}

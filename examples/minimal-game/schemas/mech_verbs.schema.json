@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "mech_verbs",
+  "description": "铆炉回声 · 机制动词域（**本包自己新增的域**，框架内置默认集里没有）—— 一条 = 一个 @register_action 动词，编辑器据此列清单 + 校验",
+  "$defs": {
+    "mech_verb": {
+      "type": "object",
+      "required": ["key", "name", "desc"],
+      "properties": {
+        "key": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$", "description": "动词名（@register_action 的 key）"},
+        "name": {"type": "string", "minLength": 1, "description": "展示名"},
+        "desc": {"type": "string", "minLength": 1, "description": "这个动词做什么"},
+        "params": {"type": "array", "items": {"type": "string"},
+                   "description": "认的参数名（缺字段 = 无行为，见 guides/write-a-mechanic.md）"},
+        "source": {"type": "string", "description": "实现落在哪个文件"}
+      },
+      "additionalProperties": true
+    }
+  }
+}

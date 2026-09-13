@@ -24,6 +24,7 @@ sys.path.insert(0, ROOT)
 
 from editor import hints as HN          # noqa: E402
 from editor import packages as PK       # noqa: E402
+import _domain_fixtures as FX           # noqa: E402  （内容域只能由包声明：B2b）
 
 PASS = 0
 FAIL = 0
@@ -48,8 +49,11 @@ def main() -> int:
         pkg = os.path.join(gd, "t_game")
         os.makedirs(os.path.join(pkg, "content", "data"), exist_ok=True)
         os.makedirs(os.path.join(pkg, "content", "rules"), exist_ok=True)
+        # ★ B2b：skills / items / monsters 是**内容域**（框架内置集只留引擎域）→ 由包声明
+        FX.declare(pkg, "skills", "items", "monsters")
         PK.write_json(PK.manifest_path(pkg), {"id": "t_game", "name": "t", "engine": ">=0.1",
-                                              "domains": list(PK.DOMAINS)})
+                                              "domains": list(PK.DOMAINS)
+                                              + ["skills", "items", "monsters"]})
         PK.write_json(PK.domain_path(pkg, "skills"), {
             "sk_fire": {"name": "火球", "kind": "魔法", "lv": 1, "desc": "d",
                         "exprs": ["matk*1.4"], "res_cost": {"mana": 3}},

@@ -1,0 +1,16 @@
+{
+  "id": "minimal-game",
+  "name": "铆炉回声（最小示例）",
+  "desc": "第三方插件骨架 + 编辑器扩展最小样板：自创职业/资源/机制，并自带域声明与 schema",
+  "engine": ">=0.1",
+  "entry": "content/apply.py",
+  "domains": [
+    "skills",
+    "classes",
+    "monsters",
+    "effect_rules",
+    "passive_proc",
+    "mech_verbs"
+  ],
+  "created": "2026-09-13"
+}

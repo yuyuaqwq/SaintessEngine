@@ -1,0 +1,103 @@
+{
+  "dragonborn": {
+    "name": "龙裔",
+    "icon": "🐉",
+    "desc": "力量·魔法抗性。龙骨山脉记得一切，我们记得。",
+    "talents": {
+      "magic_reduce": 0.1,
+      "first_hit": 0.15,
+      "first_hit_tag": "🐲龙之吐息x{mult}",
+      "heal_received": -0.1
+    },
+    "talent_names": {
+      "magic_reduce": "龙鳞",
+      "first_hit": "龙之吐息",
+      "heal_received": "孤傲之血"
+    }
+  },
+  "dwarf": {
+    "name": "矮人",
+    "icon": "⛏️",
+    "desc": "力量·体质。岩石般的脊梁，比岩石更硬的脾气。",
+    "talents": {
+      "phys_reduce": 0.1,
+      "block": 0.05,
+      "craft_bonus": 0.1,
+      "spd_mult": 0.95
+    },
+    "talent_names": {
+      "phys_reduce": "石肤",
+      "block": "岩壁格挡",
+      "craft_bonus": "熔炉之心",
+      "spd_mult": "磐石步履"
+    }
+  },
+  "elf": {
+    "name": "银月精灵",
+    "icon": "🧝",
+    "desc": "敏捷·魔法。月光照过的箭矢，永远比风更快。",
+    "talents": {
+      "crit_add": 0.08,
+      "crit_dmg": 0.1,
+      "explore_item": 0.1,
+      "hp_mult": 0.95
+    },
+    "talent_names": {
+      "crit_add": "月之优雅",
+      "crit_dmg": "月华利刃",
+      "explore_item": "森林之友",
+      "hp_mult": "月缺"
+    }
+  },
+  "halfling": {
+    "name": "半身人",
+    "icon": "🍀",
+    "desc": "敏捷·幸运。锅里有热汤，兜里有金币，就是最富足的人。",
+    "talents": {
+      "luck": 0.1,
+      "item_effect": 0.1,
+      "timid_hp": 0.3,
+      "timid_tag": "😰怯战"
+    },
+    "talent_names": {
+      "luck": "幸运儿",
+      "item_effect": "灵巧双手",
+      "timid_hp": "怯战"
+    }
+  },
+  "human": {
+    "name": "人类",
+    "icon": "🧑",
+    "desc": "均衡·多面手。没有天赋就是最好的天赋——什么都能学。",
+    "talents": {
+      "first_upgrade_refund": 1,
+      "prof_bonus": 0.1,
+      "exp_bonus": 0.05,
+      "growth_mult": 0.98
+    },
+    "talent_names": {
+      "first_upgrade_refund": "博学者",
+      "prof_bonus": "副业亲和",
+      "exp_bonus": "勤学",
+      "growth_mult": "凡人之躯"
+    }
+  },
+  "orc": {
+    "name": "兽人",
+    "icon": "👹",
+    "desc": "力量·耐力。活着就是战斗，战斗就是荣耀。",
+    "talents": {
+      "berserk_hp": 0.3,
+      "berserk_tag": "🔥无畏",
+      "lifesteal": 0.05,
+      "hp_mult": 1.08,
+      "magic_reduce": -0.05
+    },
+    "talent_names": {
+      "berserk_hp": "无畏",
+      "lifesteal": "嗜血本能",
+      "hp_mult": "坚韧体魄",
+      "magic_reduce": "鲁莽之心"
+    }
+  }
+}

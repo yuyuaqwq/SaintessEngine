@@ -82,8 +82,9 @@ from saintess_engine.landing import deal_damage, heal_actor
 - 读游戏表
 
 已知的**残留瑕疵**（不要扩散它们）：`landing` 的固定 key（`death_guard` /
-`heal_down` / `sleep`）、`effects` 的 `key == "reduce"`、`battle` 的 `"player"` 阵营名、
-`support/skill_kinds.py` 的中文枚举值。完整清单见
+`heal_down` / `sleep`）、`effects` 的 `key == "reduce"`、`battle` 的 `"player"` 阵营名。
+（原列在这里的 `support/skill_kinds.py` 中文枚举值 **2026-09-13 P4 下沉已消除**——
+词表移居内容侧，引擎侧只留 `config.kind_of` 注入面。）完整清单见
 [../architecture/boundaries.md](../architecture/boundaries.md) 的「边界瑕疵」表。
 
 ## 6. 容错铁律：异常不阻断战斗

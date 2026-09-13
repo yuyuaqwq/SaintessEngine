@@ -1,0 +1,142 @@
+{
+  "fields": {
+    "when": {
+      "zh": "条件行（消耗折扣）",
+      "widget": "rows",
+      "group": "cond",
+      "note": "条件域行数组 —— **只配 `domain=\"cost\"` 用**（本包 42 条声明里实测 1 条：arcane_constant）。每行 = 一个 judge 判据 + 命中后追加的折扣：装配器把它并进 `bonus.cost[\"when\"]`（同时把技能 `passive.mp_mult` 累加进行首的 mp_pct），引擎 `actions._skill_pay_of` 逐行求值。"
+    },
+    "when.judge": {
+      "zh": "条件行判据",
+      "group": "cond",
+      "note": "这一行的判据（字段间 OR，任一命中即算；空 judge = 恒命中）。实测写法：{\"mech_prefix\": [\"arcane\"]} —— 即「奥术系技能享折扣」（engine/actions.py `_cost_judge_hit`）。"
+    },
+    "when.mp_pct": {
+      "zh": "条件魔力折扣",
+      "group": "cond",
+      "note": "命中后追加的 mp 折扣比例（装配器把技能 `passive.mp_mult` 累加进行首的 mp_pct）。引擎 clamp ≤ 0.99，扣费保底 1 点。"
+    },
+    "when.mp_flat": {
+      "zh": "条件固定扣减",
+      "group": "cond",
+      "note": "命中后追加的固定扣减点数（词条装配器写这个形态；引擎扣费 = max(1, floor(声明 × (1 − Σpct)) − Σflat)）。"
+    },
+    "when.res": {
+      "zh": "条件资源折扣",
+      "widget": "kv",
+      "group": "cond",
+      "note": "{资源 key: 折扣比例}，只作用于同名资源的消耗（引擎 `_skill_pay_of` 逐键匹配 res_cost）。"
+    },
+    "judge.kind": {
+      "zh": "谓词名",
+      "group": "cond",
+      "note": "判据谓词名 —— 由动作内部按它分派（内容侧词汇，框架不枚举；实测 11 档：res_ge / mech_eq / mech_prefix / target_mark_any / target_marks_all_ge / target_bar_ge / target_bar_broken / target_debuff_kinds / speed_ratio_ge / per_core / has_effect）。"
+    },
+    "judge.mech": {
+      "zh": "谓词机制名",
+      "group": "cond",
+      "note": "配合 mech_eq（精确相等）/ mech_prefix（前缀匹配）的机制名（实测 arcane / poison_burst / melody_chant / lian_duan / zhan_yi / thunder）。"
+    },
+    "judge.res": {
+      "zh": "谓词资源 key",
+      "group": "cond",
+      "note": "资源类谓词（res_ge / per_core）作用的资源 key（实测 guard_core / zhan_yi / arcane / energy）。"
+    },
+    "judge.ge_field": {
+      "zh": "阈值字段名",
+      "group": "cond",
+      "note": "阈值的**字段名**：真实阈值从技能 `passive` dict 的该字段读（不是写死数字；实测 stacks / surplus / bar_at）。"
+    },
+    "judge.layers_field": {
+      "zh": "层数阈值字段名",
+      "group": "cond",
+      "note": "层数阈值的字段名（同 ge_field 口径：值从技能 passive 读；实测 layers）。"
+    },
+    "judge.bar": {
+      "zh": "敌身条名",
+      "group": "cond",
+      "note": "判条类谓词（target_bar_ge / target_bar_broken）作用的条名（实测 shaken = 破绽）。"
+    },
+    "judge.mark": {
+      "zh": "标记 key",
+      "group": "cond",
+      "note": "单个标记 key（target_mark_any：目标带该标记即命中；实测 hunt_mark / soul_mark）。"
+    },
+    "judge.marks": {
+      "zh": "标记 key 列表",
+      "widget": "lines",
+      "group": "cond",
+      "note": "多个标记 key（target_marks_all_ge：全部达到层数门槛才命中；实测 [\"fire_mark\", \"ice_mark\"]）。"
+    },
+    "judge.key": {
+      "zh": "效果 key",
+      "group": "cond",
+      "note": "has_effect 谓词判的效果 key（effects 里该 key 是 dict = 在位生效；实测 poison）。"
+    },
+    "judge.dot_key": {
+      "zh": "限定 DOT key",
+      "group": "cond",
+      "note": "只对指定 DOT 生效的过滤（dot_calc 域；实测 poison）。"
+    },
+    "judge.not_basic": {
+      "zh": "普攻不吃",
+      "group": "cond",
+      "note": "true = 普攻（info._basic）不参与该判据（实测 1 条）。"
+    },
+    "judge.element": {
+      "zh": "需带元素",
+      "group": "cond",
+      "note": "消耗折扣判据专用（`actions._cost_judge_hit`）：true = 技能 info.element 非空即命中。"
+    },
+    "judge.mech_prefix": {
+      "zh": "机制前缀",
+      "widget": "lines",
+      "group": "cond",
+      "note": "消耗折扣判据专用：技能 info.mech 以其中任一前缀开头即命中（实测 [\"arcane\"]）。"
+    },
+    "judge.name_contains": {
+      "zh": "技能名关键词",
+      "widget": "lines",
+      "group": "cond",
+      "note": "消耗折扣判据专用：技能显示名含其中任一子串即命中（词条装配器写过 [\"元素\", \"奥术\"] / [\"神迹\"]）。"
+    },
+    "judge.ratio_field": {
+      "zh": "比值阈值字段名",
+      "group": "cond",
+      "note": "⚠ 本仓 wiki 未记载该键（**未核实**）：实测 1 条 speed_ratio_ge 用它，而包内实现读的是 `judge.ratio` / `params.ratio` —— 用前先看动作实现。"
+    }
+  },
+  "groups": [
+    {
+      "id": "hook",
+      "label": "事件钩子",
+      "icon": "⚡",
+      "fields": ["event", "action", "also", "agg"]
+    },
+    {
+      "id": "domain",
+      "label": "静态域（上限 / 消耗）",
+      "icon": "🗂",
+      "fields": ["domain", "cap_key", "add"]
+    },
+    {
+      "id": "cond",
+      "label": "判据与条件",
+      "icon": "🔍",
+      "fields": ["judge", "when", "mech_prefix", "ctrl_any", "gap"]
+    },
+    {
+      "id": "res",
+      "label": "资源与计数",
+      "icon": "📦",
+      "fields": ["res", "buff_key", "left_key", "left_init", "used_key", "cost_field",
+                 "gain_field", "bar_field"]
+    },
+    {
+      "id": "act",
+      "label": "动作参数",
+      "icon": "🎛",
+      "fields": ["mode", "form", "spd_pct", "def_pct", "hold"]
+    }
+  ]
+}

@@ -246,16 +246,17 @@ if __name__ == "__main__":
 
 
 def _domain_table(pkg_dir: str) -> tuple:
-    """README 的域清单 + 校验汇总。"""
+    """README 的域清单 + 校验汇总（域表 = 该包的**有效域表**：内置 + 包自带声明）。"""
     rows, invalid_total, total = [], 0, 0
-    doms = PK.load_manifest(pkg_dir).get("domains") or list(PK.DOMAINS)
+    domains, _warns = PK.effective_domains(pkg_dir)
+    doms = PK.load_manifest(pkg_dir).get("domains") or list(domains)
     for d in doms:
-        if d not in PK.DOMAINS:
+        if d not in domains:
             continue
-        st = PK.domain_status(pkg_dir, d)
+        st = PK.domain_status(pkg_dir, d, domains)
         total += st["count"]
         invalid_total += len(st["invalid"])
-        label = PK.DOMAINS[d]["label"]
+        label = domains[d]["label"]
         bad = f"⚠ {len(st['invalid'])} 条不合 schema" if st["invalid"] else "✅"
         rows.append(f"| {label}（`{d}`） | {st['count']} | {bad} |")
     return rows, {"entries": total, "invalid": invalid_total, "domains": len(rows)}

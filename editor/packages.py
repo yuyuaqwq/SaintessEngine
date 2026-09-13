@@ -29,82 +29,130 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FRAMEWORK_ROOT = os.path.dirname(HERE)
 DEFAULT_GAMES_DIR = os.path.join(FRAMEWORK_ROOT, "games")
 
-# ---------------- 域注册表（加一个域 = 加一行） ----------------
+# ---------------- 域注册表：**引擎域内置默认集（回退用，不是真源）** ----------------
+# ⚠️ 域的真源是**包自己的** `<pkg>/editor/domains.json`（读法见下面 `_read_package_domains()` /
+#    `package_domains()` / `effective_domains()`）—— 所以「加一个域」是**纯包侧动作**：
+#    包里写 3 样东西（域声明 + schema + 数据文件），框架一行不改（最小样板见
+#    `examples/minimal-game/`）。这份常量**只做两件事**：
+#      · 包**没有**可用声明时兜底（第三方包 / 坏包 / 未迁移的老包）—— 让编辑器不至于空白；
+#      · 包声明**同名域**时给「没写的字段」补缺省值（写了的字段一律以包为准）。
+#    包声明了同名域 → 这份里的那一域**不再参与取值**（见 `effective_domains()` 里
+#    「包声明覆盖内置」分支，且必进 warnings）；把这份整体置空，自带声明的包照旧完整可编
+#    —— 反证门禁：`tests/test_editor_step3_pkg_first.py`（monkeypatch 置空 + orlandia 全量读写）。
+#
+# ★ 2026-09-13 B2b：**19 → 8，只留「引擎域」**。口径一句话：
+#   **只有引擎侧真有消费端代码的域才内置**（引擎自带一个通用结构件/规则表读它）；
+#   **内容域（某个具体游戏才有的域）一律不内置** —— 它们只能由内容包自己声明
+#   （`games/orlandia/editor/domains.json` 声明 24 个；内容域那 16 个框架一侧一个字都没有）。
+#   移出的 11 个内容域（skills / classes / monsters / affixes / items / loot_vocab /
+#   equip_roster / pois / legendary_effects / pets / monster_roster）过去靠这份兜底才能显示，
+#   等于「框架里揣着某个具体游戏的域」；现在它们在包里，框架侧零字面量。
+#   为什么「引擎域」是这 8 个：每个域在 `saintess_engine/` 里都能指到消费它的代码（逐条见下）。
+#   判定时**只认引擎仓内的消费端**：`editor/*_view.py` 之类编辑器侧的读点不算数
+#   （否则 `loot_vocab` 也会被留下 —— 它只被 `editor/loot_view.py:load_vocab()` 读，
+#   引擎侧一个字没有，取值全是内容词汇：前缀 / 特殊 ref / 去哪个域查）。
+#
 # kind: "data"（content/data/）| "rules"（content/rules/）
-# schema: framework/schemas/<file>；primary: schema $defs 里「一条数据」的 def 名
-DOMAINS = {
-    "skills":   {"label": "技能",   "kind": "data",  "schema": "skill.schema.json",
-                 "primary": "skill", "icon": "⚔️"},
-    "classes":  {"label": "职业",   "kind": "data",  "schema": None, "primary": None,
-                 "icon": "🧙"},
-    "monsters": {"label": "怪物",   "kind": "data",  "schema": "monster.schema.json",
-                 "primary": "monster_skill", "icon": "🐺"},
-    "affixes":  {"label": "词条",   "kind": "data",  "schema": "affix.schema.json",
-                 "primary": "affix", "icon": "💠"},
-    "items":    {"label": "物品",   "kind": "data",  "schema": "item.schema.json",
-                 "primary": "item", "icon": "🎒"},
+# schema: 文件名（**不是**「框架里的路径」）—— 按 `schema_path()` 解析：
+#         <pkg>/schemas/<file> → <pkg>/<file> → 框架 schemas/<file> → None
+#         （包自带优先、框架只留回退；orlandia 的 17 份已搬进 games/orlandia/schemas/）
+# primary: schema $defs 里「一条数据」的 def 名
+BUILTIN_DEFAULT_DOMAINS = {
+    # ── ① effect_rules「声明表」：引擎的效果规则表。消费端
+    #    `battle/state_effects.py:13-15` state_def(key) → `config.get_effect_rules()`；
+    #    装配面 `config.py:26-28`（_LOADED["effect_rules"]）/ `:88-91` load_game_rules /
+    #    `:105-107` get_effect_rules。读点遍布引擎：effects.py:67(cap)/:245/:310(period)/
+    #    :351(consume)/:458(panel)、stats.py:57(stat_scale)、landing.py:128/173/312-313、
+    #    schedule.py:235-243(period)、actions.py:89-97(cd_mult)。不填 = 纯数值无规则（零行为）。
     "effect_rules": {"label": "声明表", "kind": "rules", "schema": "effect_rules.schema.json",
                      "primary": "effect_rule", "icon": "📜"},
+    # ── ② passive_proc「被动声明」：**引擎事件总线/动作注册面**上的声明形状。消费端不是
+    #    「读这张表」（读它的是内容侧装配器），而是引擎的既有面：事件全集
+    #    `battle/effect_triggers.py:52` EVENTS（26 个 = 引擎协议）+ `:61` fire(battle,event,ctx,logs)
+    #    消费 `actor["triggers"][事件]`；动作经 `battle/effects.py:95` register_action / `:135`
+    #    resolve_actions 注册执行（triggers 里的 `action` 直通 handler，见 effects.py:197-201）。
+    #    声明里的键/取值全是**引擎协议词**（event ∈ EVENTS、action = 引擎动词、domain=cap/cost
+    #    = 引擎概念），没有任何游戏专有名词 —— 所以是引擎域，不是内容域。
     "passive_proc": {"label": "被动声明", "kind": "rules",
                      "schema": "passive_proc.schema.json", "primary": "passive_proc",
                      "icon": "🌀"},
-    # 声明驱动（可拔插）：指令与文案 —— 装载后由
-    # `saintess_engine.command.CommandRegistry` / `saintess_engine.text.TextTable` 消费；
-    # 不填这两张表 = 零行为（既有代码照旧）。
-    "commands": {"label": "指令",   "kind": "data",  "schema": "command.schema.json",
+    # ── ③ commands「指令」：引擎通用命令注册表。消费端 `command/registry.py:164`
+    #    class CommandRegistry（`:206` from_data 直接吃这张表）；配套泛用件 `command/router.py`
+    #    / `command/guards.py` / `command/text.py`。不填 = 无指令（零行为）。
+    "commands": {"label": "指令", "kind": "data", "schema": "command.schema.json",
                  "primary": "command", "icon": "⌨️"},
-    "texts":    {"label": "文案",   "kind": "data",  "schema": "text.schema.json",
-                 "primary": "text_entry", "icon": "💬"},
-    # 结构化流水声明：`saintess_engine.tlog.KindTable` 消费（「哪个 kind 有哪些字段」）。
-    # 不填这张表 = 不做校验（零行为）。
-    "tlogs":    {"label": "流水声明", "kind": "data", "schema": "tlog.schema.json",
-                 "primary": "tlog_entry", "icon": "🧾"},
-    # 空间形状：`saintess_engine.space.Space` 消费（节点表 + 拓扑 → 邻接/深度/出入口/必经路径）。
-    # 不给数据 = 不影响任何东西（引擎侧读的是内容自有的地图数据，不读这张表）。
-    "maps":     {"label": "地图",   "kind": "data",  "schema": "maps.schema.json",
-                 "primary": "map", "icon": "🗺"},
-    # 随机产出形状：`saintess_engine.loot.LootTable` 消费（池 + 策略 + 引用解析由内容侧给）。
-    # 引擎零知识：策略名是自由串（内容侧可注册自己的），引用前缀/具体产出全在内容侧。
-    # 预览走 `editor/loot_view.py`（引擎同一份 expand/audit 代码算，见该文件）。
+    # ── ④ texts「文案」：引擎通用文案表。消费端 `text/template.py:129` class TextTable
+    #    （`:176` from_data）+ `safe_format` / `extract_params`（同文件）。不填 = 零行为。
+    "texts": {"label": "文案", "kind": "data", "schema": "text.schema.json",
+              "primary": "text_entry", "icon": "💬"},
+    # ── ⑤ tlogs「流水声明」：引擎结构化流水。「哪个 kind 有哪些字段」的声明表。
+    #    消费端 `tlog/record.py:115` class KindTable（`tlog/core.py:34` 再导出、
+    #    `:47`/`:53` 由 TLog(kinds=KindTable) 吃）。不填 = 不做校验（零行为）。
+    "tlogs": {"label": "流水声明", "kind": "data", "schema": "tlog.schema.json",
+              "primary": "tlog_entry", "icon": "🧾"},
+    # ── ⑥ maps「地图」：引擎空间结构件。消费端 `space/graph.py:42` class Space
+    #    （节点表 + topology → 邻接/深度/出入口/必经路径，`:45` __init__(nodes, topology…)）；
+    #    配套 `space/topology.py`。不给数据 = 不影响任何东西。
+    "maps": {"label": "地图", "kind": "data", "schema": "maps.schema.json",
+             "primary": "map", "icon": "🗺"},
+    # ── ⑦ drop_pools「掉落池」：引擎随机产出结构件。消费端 `loot/pool.py:200` class LootTable
+    #    （`loot/__init__.py` 导出；策略注册 `pool.py:47` register_strategy / STRATEGIES）。
+    #    引擎零知识：策略名是自由串，引用前缀/具体产出全在内容侧。
     "drop_pools": {"label": "掉落池", "kind": "data", "schema": "drop_pools.schema.json",
                    "primary": "pool", "icon": "🎁"},
-    # 引用词汇声明（**声明表**）：某个（产出）域的「哪些引用写法算解得开」由**内容侧**声明，
-    # 框架不认识任何取值 —— 它只把声明机械地转给 `LootTable(inline_prefixes/special_refs/
-    # pool_key_prefixes/resolvable)`。键 = 它服务的**框架域 id**（当前只有 drop_pools），
-    # 值是四类前缀/特殊值 + 「去哪些域里查 ref」。缺文件 = 不声明 = 与没有这功能时一致。
-    # 消费点：`editor/loot_view.py:load_vocab()`（可选增强，坏声明只降级、不 500）。
-    # ⚠ schema=None：声明形状**故意不设 schema** —— 前四个键全是内容侧取值（框架不认识），
-    #    把它们写成 schema 只会长出一份框架侧词汇表；形状与容错在 `loot_view.normalize_vocab()`
-    #    里（坏形状 = 空声明，不是校验错误）。要开 schema 树的话得同时补 glossary 分组。
-    "loot_vocab": {"label": "引用词汇", "kind": "rules", "schema": None,
-                   "primary": None, "icon": "🔤"},
-    # 运行形状：`saintess_engine.run` 消费（准入链 `Admission` / 进度 `Progress` / 名单 `Roster`）。
-    # 一条 = 一个副本：`stages` 顺序即进度节点序，层内要打的怪是节点池。
-    # 进度视图走 `editor/instance_view.py`（引擎同一份 `Progress` 算 节点/剩余/末层/is_last，
-    # 不另写一套；见该文件 docstring 的「为什么值得破一条纪律」）。
+    # ── ⑧ instances「副本」：引擎运行结构件。消费端 `run/progress.py:49` class Progress、
+    #    `run/roster.py:37` class Roster、`run/admission.py:131` class Admission（`run/__init__.py`
+    #    统一导出）。一条 = 一个副本：stages 顺序即进度节点序。
     "instances": {"label": "副本", "kind": "data", "schema": "instances.schema.json",
                   "primary": "instance", "icon": "🏯"},
-    # 装备名册：`drop_pools` 的 `equip:` / `items.roster_id` / `instances.boss_equip_drop` 的引用落点。
-    # 一条 = 一件装备（`eq_*`）。同域另带两张子表：系列套装 `series_sets` 与「装备名 → 固定词条」映射。
-    "equip_roster": {"label": "装备名册", "kind": "data", "schema": "equip_roster.schema.json",
-                     "primary": "equip", "icon": "🛡"},
-    # 交互点：副本/野外房间挂的点（宝箱/机关/调查点…），键 =「地图id:子区域id」，值是点表。
-    # 从前只以内联形式躺在 `instances.stages[].poi_data` 里，本域给它一个权威落点。
-    "pois": {"label": "交互点", "kind": "data", "schema": "pois.schema.json",
-             "primary": "poi_mount", "icon": "📍"},
-    # 传说专属特效：橙装 `legendary` 字段引用的那批特效（与 `affixes` 域**语义不同**，
-    # 所以另立一域；`trigger`/`kind` 故意不枚举 —— 取值留内容侧，框架不抄词汇表）
-    "legendary_effects": {"label": "传说特效", "kind": "data", "schema": "legendary_effects.schema.json",
-                          "primary": "legendary_effect", "icon": "✨"},
-    # 宠物：品种表（蛋掉落规则在导出期连接进条目，不另立顶层表 —— 键空间是品质词，与 `pet_*` 互斥）
-    "pets": {"label": "宠物", "kind": "data", "schema": "pets.schema.json",
-             "primary": "pet", "icon": "🐾"},
-    # 怪物名册：**投影**（不是真源）—— 键 = 怪 id，一条 = 一个怪；把散在五处元组里的怪折叠成对象表。
-    # 跨来源冲突**不静默选一个**：`lv` 给基准值 + `lv_rule` 写清规则，同时用 `lv_variants`/`spawns`
-    # 保留每一处现场（谁把它摆成了几级、在哪个场景）。引擎侧怪物仍由内容侧构造，名册供引用落点与查阅。
-    "monster_roster": {"label": "怪物名册", "kind": "data", "schema": "monster_roster.schema.json",
-                       "primary": "monster", "icon": "🐺"},
+    # 注：以下 11 个是**内容域**（曾内置，2026-09-13 B2b 移出）—— 引擎侧指不到消费端，
+    #     取值/结构都是某个具体游戏的词汇；现在只能由内容包声明（orlandia 在
+    #     `games/orlandia/editor/domains.json` 里声明它们，schema 随包走）：
+    #     skills · classes · monsters · affixes · items · loot_vocab · equip_roster ·
+    #     pois · legendary_effects · pets · monster_roster
 }
+
+# 兼容别名 —— 历史调用点（`editor/server.py`、`editor/glossary.py`、若干测试）仍按 `DOMAINS`
+# 引用这份**内置默认集**；新代码请走 `builtin_default_domains()` / `effective_domains()`。
+DOMAINS = BUILTIN_DEFAULT_DOMAINS
+
+
+def builtin_default_domains() -> dict:
+    """内置默认集（回退用）**副本** —— 别改它：要加域/改域请改包内 `editor/domains.json`。"""
+    return {k: dict(v) for k, v in BUILTIN_DEFAULT_DOMAINS.items()}
+
+
+# ---------------- 包自带的域声明（<pkg>/editor/domains.json） ----------------
+# 这是**域的真源**：玩家写的包能加自己的域（天赋树 / 坐骑 / 钓鱼点…）并自带 schema，
+# 框架那份**引擎域**常量（`BUILTIN_DEFAULT_DOMAINS`，2026-09-13 B2b 起 = 8 个）只是
+# **没声明时的回退**。声明形状与
+# 内置默认集逐字段同：
+#
+#     {"talent_trees": {"label": "天赋树", "kind": "data",
+#                       "schema": "schemas/talent_trees.schema.json",
+#                       "primary": "talent_tree", "icon": "🌳"}}
+#
+# 顶层可选开关（**包的域集就这些**，不要内置默认集兜底）：
+#
+#     {"$builtin": false, "talent_trees": {…}}      # 只认本包声明的域；缺省 true（兜底）
+#     （也可写 `{"domains": {…}, "$builtin": false}` —— 包装写法同样认这个开关；
+#       非布尔值 → 一条可读 warning + 按 true 处理；关掉且声明为空 → 域表为空 + warning，
+#       但**绝不 500**：包概览/域注册表照常 200）
+#
+# 纪律（与 `loot_vocab` 同一套：坏声明只降级、不 500）：
+#   · 缺文件 = 没声明 = 与内置逐字段一致（**不是错误，不告警**）
+#   · 坏 JSON / 坏形状 / 非法 kind / 非法域 id → 该条（或整份）忽略 + 一条**可读 warning**
+#     （绝不抛异常，也绝不静默 —— 见 `package_domain_warnings()` / `effective_domains()`）
+#   · 同名域：**包声明优先**（包可以微调自己那个域的 label / icon / schema），内置那份
+#     不再参与取值，但必进 warnings
+#   · 域 id 会被拼进文件名 → 用正则卡住（防 `../` 逃出包目录）
+DOMAINS_REL = "editor/domains.json"
+DOMAIN_KINDS = ("data", "rules")
+_DOMAIN_ID_RE = re.compile(r"^[a-z][a-z0-9_\-]{0,40}$")
+_OVER_FIELDS = ("label", "kind", "schema", "primary", "icon")
+
+_DOMAINS_CACHE: dict = {}          # 包目录 -> (声明文件签名, {域: meta}, [warning])
+_CACHE_MAX = 500
 
 
 # ---------------- 包清单 ----------------
@@ -112,10 +160,264 @@ def manifest_path(pkg_dir: str) -> str:
     return os.path.join(pkg_dir, "game.json")
 
 
-def domain_path(pkg_dir: str, dom: str) -> str:
-    d = DOMAINS[dom]
-    sub = "data" if d["kind"] == "data" else "rules"
+def domains_decl_path(pkg_dir: str) -> str:
+    """包自带域声明的路径（`<pkg>/editor/domains.json`）。"""
+    return os.path.join(pkg_dir, DOMAINS_REL)
+
+
+def _key(pkg_dir) -> str:
+    return os.path.normpath(os.path.abspath(str(pkg_dir))) if pkg_dir else ""
+
+
+def _decl_sig(pkg_dir: str):
+    """声明文件签名（mtime_ns + size）；文件不在 = None（签名相同 → 直接复用缓存）。"""
+    try:
+        st = os.stat(domains_decl_path(pkg_dir))
+        return (st.st_mtime_ns, st.st_size)
+    except OSError:
+        return None
+
+
+def _safe_rel_name(name: str) -> bool:
+    """相对路径判据（拒绝绝对路径 / 盘符 / `..`）—— 包里声明的东西不许跑出包外。"""
+    n = str(name).replace("\\", "/")
+    if not n or n.startswith("/") or re.match(r"^[A-Za-z]:", n):
+        return False
+    parts = [p for p in n.split("/") if p not in ("", ".")]
+    return bool(parts) and ".." not in parts
+
+
+def _read_package_domains(pkg_dir: str) -> tuple:
+    """真读一次 `<pkg>/editor/domains.json` → (声明表, [warning], 用不用内置默认集)。**只降级，不抛。**
+
+    两种条目：
+      · **新域**（内置没有）—— 必须自带 `kind`（data / rules），label/schema/primary/icon 可省；
+      · **同名覆盖**（内置已有）—— 只需写要改的字段（如 `{"label": "天赋"}`），
+        没写的字段**继承内置那份**（所以「只调 label」不会把 schema 静默弄丢）。
+
+    第三个返回值 = 该包要不要**内置默认集**（`BUILTIN_DEFAULT_DOMAINS`）兜底：
+    声明里写 `"$builtin": false` → 只认本包声明的域（缺省 True，= 历史行为）。
+    """
+    warns: list = []
+    use_builtin = True
+    path = domains_decl_path(pkg_dir)
+    if not os.path.exists(path):
+        return {}, warns, use_builtin         # 没声明 = 与内置一致（正常，不告警）
+    try:
+        with open(path, encoding="utf-8") as f:
+            raw = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        return {}, [f"包域声明读不了（{DOMAINS_REL}）：{e} —— 已回退为内置域表"], use_builtin
+    if not isinstance(raw, dict):
+        return {}, [f"包域声明形状不对（{DOMAINS_REL}）：顶层需为对象 {{域id: {{…}}}}，"
+                    f"实为 {type(raw).__name__} —— 已回退为内置域表"], use_builtin
+    # 顶层 / 包装层里的 `"$builtin": false`（关掉内置默认集；非布尔 → 告警 + 按 true）
+    inner = raw.get("domains") if isinstance(raw.get("domains"), dict) else None
+    for holder in ([raw] + ([inner] if inner is not None else [])):
+        for opt in ("$builtin", "$builtin_defaults"):
+            if opt in holder:
+                v = holder.pop(opt)
+                if isinstance(v, bool):
+                    use_builtin = v
+                else:
+                    warns.append(f"包域声明：{opt}={v!r} 不是布尔值 —— 按 true 处理"
+                                 f"（内置默认集照常兜底）")
+    if inner is not None:                      # 容忍 {"domains": {…}} 包装
+        raw = inner
+    out: dict = {}
+    for did, meta in raw.items():
+        if not isinstance(did, str) or not _DOMAIN_ID_RE.match(did):
+            warns.append(f"包域声明：域 id {did!r} 不合规（小写字母开头，只含小写字母/数字/"
+                         f"下划线/连字符，2~41 字符）—— 该条已忽略")
+            continue
+        if not isinstance(meta, dict):
+            warns.append(f"包域声明 {did}：形状不对（需为对象，含 label/kind/schema/primary/icon）"
+                         f"—— 该条已忽略")
+            continue
+        base = dict(BUILTIN_DEFAULT_DOMAINS[did]) if did in BUILTIN_DEFAULT_DOMAINS else {
+            "label": did, "kind": None, "schema": None, "primary": None, "icon": ""}
+        kind = meta.get("kind", base["kind"])
+        if kind not in DOMAIN_KINDS:
+            warns.append(f"包域声明 {did}：kind={meta.get('kind')!r} 非法（只能是 data / rules）"
+                         f"—— 该条已忽略" if "kind" in meta else
+                         f"包域声明 {did}：缺 kind（新域必须声明 data 或 rules）—— 该条已忽略")
+            continue
+        label, icon = meta.get("label"), meta.get("icon")
+        if label is not None and not isinstance(label, str):
+            warns.append(f"包域声明 {did}：label 不是字符串 —— 沿用内置值")
+            label = None
+        if icon is not None and not isinstance(icon, str):
+            warns.append(f"包域声明 {did}：icon 不是字符串 —— 沿用内置值")
+            icon = None
+        schema = meta.get("schema")
+        if schema is not None and not isinstance(schema, str):
+            warns.append(f"包域声明 {did}：schema 不是字符串 —— 当作「不校验」")
+            schema = None
+        if schema and not _safe_rel_name(schema):
+            warns.append(f"包域声明 {did}：schema={schema!r} 不是安全的相对路径 —— 当作「不校验」")
+            schema = None
+        primary = meta.get("primary")
+        if primary is not None and not isinstance(primary, str):
+            warns.append(f"包域声明 {did}：primary 不是字符串 —— 沿用内置值")
+            primary = None
+        out[did] = {"label": label if label is not None else base["label"],
+                    "kind": kind,
+                    "schema": schema if schema is not None else base["schema"],
+                    "primary": primary if primary is not None else base["primary"],
+                    "icon": icon if icon is not None else base["icon"]}
+    if raw and not out:
+        warns.append("包域声明里没有一条可用（形状全部不合）—— 已回退为内置域表"
+                     if use_builtin else
+                     "包域声明里没有一条可用（形状全部不合），且声明里写了 "
+                     "`\"$builtin\": false` —— 该包域表为空（编辑器不会 500，但没有任何域）")
+    return out, warns, use_builtin
+
+
+def _package_domains_cached(pkg_dir) -> tuple:
+    """带缓存地读包域声明（按文件签名失效）→ (声明表, [warning], 用不用内置默认集)。"""
+    key = _key(pkg_dir)
+    if not key:
+        return {}, [], True
+    sig = _decl_sig(key)
+    hit = _DOMAINS_CACHE.get(key)
+    if hit is not None and hit[0] == sig:
+        return hit[1], list(hit[2]), hit[3]
+    decls, warns, use_builtin = _read_package_domains(key)
+    if len(_DOMAINS_CACHE) > _CACHE_MAX:
+        _DOMAINS_CACHE.clear()
+    _DOMAINS_CACHE[key] = (sig, decls, warns, use_builtin)
+    return decls, warns, use_builtin
+
+
+def package_domains(pkg_dir) -> dict:
+    """包自带的域声明 → {域id: {label, kind, schema, primary, icon}}（**域的真源就是它**）。
+
+    缺文件 / 坏 JSON / 坏形状 → `{}`（回退内置），并记一条**可读 warning**
+    （从 `package_domain_warnings(pkg_dir)` 或 `effective_domains()` 的第二个返回值取）。
+    """
+    decls, _warns, _ub = _package_domains_cached(pkg_dir)
+    return {k: dict(v) for k, v in decls.items()}
+
+
+def package_domain_warnings(pkg_dir) -> list:
+    """读该包域声明时的告警（可读中文串；空 = 没声明或声明没问题）。"""
+    return _package_domains_cached(pkg_dir)[1]
+
+
+def package_uses_builtin_defaults(pkg_dir) -> bool:
+    """该包要不要**内置默认集**兜底（缺省 True；声明里写 `"$builtin": false` → False）。"""
+    return _package_domains_cached(pkg_dir)[2]
+
+
+def declared_domain_ids(pkg_dir) -> list:
+    """该包**自己声明过**（且声明可用）的域 id —— 域的真源是这份，不是框架常量。
+
+    与 `package_domains()` 同一份数据的键序；缺声明 / 坏声明 → `[]`（`[]` = 「靠内置默认集兜底」）。
+    """
+    return list(_package_domains_cached(pkg_dir)[0])
+
+
+def domain_source(pkg_dir, dom: str):
+    """该域在「这个包」视角下的来源：
+
+    `"package"` = 由包自己的 `editor/domains.json` 声明（**真源在包**，内置那份不参与）；
+    `"builtin"` = 包里没声明，只有框架内置默认集兜着（回退）；
+    `None`      = 这个包不认识该域。
+    """
+    decls, _warns, use_builtin = _package_domains_cached(pkg_dir)
+    if dom in decls:
+        return "package"
+    if use_builtin and dom in BUILTIN_DEFAULT_DOMAINS:
+        return "builtin"
+    return None
+
+
+def effective_domains(pkg_dir=None) -> tuple:
+    """包声明 ∪（可选的）内置默认集**合并** → (有效域表, [warning])。
+
+    * **真源在包**：`<pkg>/editor/domains.json` 里写的域、以及同名字段，一律以包为准
+      （内置那份**不再参与该域的取值**）；包声明里写的域也一定在结果里。
+    * **内置默认集只是回退**：包**没**声明时兜底；包声明里有 `"$builtin": false` 时整个不参与
+      （于是「这个包的域」= 它自己声明的那几个，不再夹带框架那 19 个）。
+    * 同名域**只要真改了东西**就进 warnings（形如「域 skills 被包声明覆盖（label: '技能' → '天赋'）」）。
+      逐字段完全相同（= 等值搬迁，如 `games/orlandia/editor/domains.json`）**不算覆盖、不告警** ——
+      否则零回归会被一堆「覆盖（字段值相同）」噪声埋掉。
+    * 关掉内置默认集且声明为空 → 域表为空 + 一条 warning（**不抛、不 500**）。
+    * 合并顺序 = 内置默认集顺序 + 包新增域（追加在末尾），所以既有 tab 的位置不会乱跳。
+    """
+    decls, warns, use_builtin = _package_domains_cached(pkg_dir)
+    merged = builtin_default_domains() if use_builtin else {}
+    for did, meta in decls.items():
+        if did in merged:
+            old = merged[did]
+            diff = "；".join(f"{f}: {old.get(f)!r} → {meta.get(f)!r}"
+                             for f in _OVER_FIELDS if old.get(f) != meta.get(f))
+            if diff:
+                warns.append(f"域 {did} 被包声明覆盖（{diff}）—— 该域的 "
+                             f"label/kind/schema/primary/icon 一律以包内 {DOMAINS_REL} 为准")
+        merged[did] = dict(meta)
+    if not use_builtin and not merged:
+        warns.append(f"包声明里写了 `\"$builtin\": false`（不启用内置默认集），但一条可用域都没有"
+                     f" —— 该包域表为空：请在 {DOMAINS_REL} 里声明自己的域")
+    return merged, list(warns)
+
+
+def domain_meta(pkg_dir, dom: str, domains: dict | None = None):
+    """该包视角下某个域的元数据（包声明优先）；未知域 → None。"""
+    if domains is None:
+        domains, _w = effective_domains(pkg_dir)
+    return (domains or {}).get(dom)
+
+
+def domain_path(pkg_dir: str, dom: str, domains: dict | None = None) -> str:
+    """域数据文件路径 —— 落 `content/data` 还是 `content/rules` 由该域 `kind` 决定
+    （所以**包新增的域自动落对目录**）。未知域 → KeyError（与旧行为一致）。"""
+    d = domain_meta(pkg_dir, dom, domains)
+    if d is None:
+        raise KeyError(f"未知域：{dom}")
+    sub = "rules" if d.get("kind") == "rules" else "data"
     return os.path.join(pkg_dir, "content", sub, f"{dom}.json")
+
+
+def schema_path(pkg_dir, dom: str, domains: dict | None = None):
+    """域 schema 文件路径：**包内优先**（`<pkg>/schemas/<声明值>`，其次 `<pkg>/<声明值>`），
+    找不到再回退框架 `schemas/`（第三方包没自带 schema 时命中的是这条）。
+    没声明 / 找不到 / 路径不安全 → None（= 该域不校验，编辑器照旧可增删改）。
+
+    顺序为什么是「包优先」：包显式声明了文件名就是显式意图（换一款游戏/自己收紧规则），
+    而包自带的那份是**逐字搬来的**（`games/orlandia/schemas/` = 框架 `schemas/` 的
+    sha256 相同副本）→ 解析结果与改造前逐字节一致（零回归）；框架那份**不删**，
+    作为第三方包 / 坏 schema 的**回退**（读取侧的降级见 `validate._resolve_schema()`）。
+    """
+    d = domain_meta(pkg_dir, dom, domains)
+    if not d:
+        return None
+    fn = d.get("schema")
+    if not fn or not isinstance(fn, str):
+        return None
+    if pkg_dir and _safe_rel_name(fn):
+        for cand in (os.path.join(pkg_dir, "schemas", fn),
+                     os.path.join(pkg_dir, fn.replace("\\", "/"))):
+            if os.path.isfile(cand):
+                return cand
+    fw = os.path.join(FRAMEWORK_ROOT, "schemas", fn)
+    return fw if os.path.exists(fw) else None
+
+
+def framework_schema_path(pkg_dir, dom: str, domains: dict | None = None):
+    """**框架 `schemas/<声明值>` 那份**（回退副本）→ 路径 | None。
+
+    只看**包声明的 schema 文件名**，不要求「这个域是框架内置域」——
+    ★ 2026-09-13 B2b：内容域（skills / items …）现在由包声明，内置集里没有它们；
+    若回退仍按「域名 ∈ 内置集」判定，包内 schema 坏了就**降级不到框架那份**了
+    （`validate._resolve_schema()` 的坏 schema 降级路径靠它）。
+    """
+    d = domain_meta(pkg_dir, dom, domains)
+    fn = (d or {}).get("schema")
+    if not fn or not isinstance(fn, str) or not _safe_rel_name(fn):
+        return None
+    fw = os.path.join(FRAMEWORK_ROOT, "schemas", fn)
+    return fw if os.path.exists(fw) else None
 
 
 def read_json(path: str, default):
@@ -170,7 +472,8 @@ def list_packages(root_dir: str | None = None) -> list:
             "name": m.get("name") or name,
             "desc": m.get("desc", ""),
             "engine": m.get("engine", ""),
-            "domains": m.get("domains") or list(DOMAINS),
+            # 清单没声明就用**该包的有效域表**（内置 + 包自带声明）
+            "domains": m.get("domains") or list(effective_domains(p)[0]),
         })
     return out
 
@@ -192,18 +495,38 @@ def resolve_package(pkg_id: str, games_dir_: str | None = None) -> str | None:
 _ID_RE = re.compile(r"^[a-z][a-z0-9_\-]{1,40}$")
 
 
+def _write_domains_decl(pkg_dir: str, doms) -> str:
+    """脚手架：把选中的域**写进包自己的 `editor/domains.json`**（逐字段照内置默认集）。
+
+    为什么要写（而不是让它靠框架那份常量）：**域的真源在包** —— 脚手架产出的包不该
+    「框架哪天改了内置默认集，我的域集就跟着变」。等值声明不产 warning
+    （`effective_domains()` 只对**真改了东西**的同名域告警），所以对既有行为零影响。
+    """
+    decl = {d: dict(BUILTIN_DEFAULT_DOMAINS[d]) for d in doms if d in BUILTIN_DEFAULT_DOMAINS}
+    p = domains_decl_path(pkg_dir)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    write_json(p, decl)
+    return p
+
+
 def create_package(pkg_id: str, name: str, desc: str = "",
                    domains=None, games_dir_: str | None = None) -> dict:
-    """脚手架：建一个游戏包（含选中的域 + apply.py + 冒烟测试骨架）。"""
+    """脚手架：建一个游戏包（含选中的域 + 域声明 + apply.py + 冒烟测试骨架）。"""
     if not _ID_RE.match(pkg_id or ""):
         raise ValueError("包 id 只能小写字母/数字/下划线/连字符，字母开头，2-41 字符")
     root = ensure_games_dir(games_dir_)
     pkg_dir = os.path.join(root, pkg_id)
     if os.path.exists(pkg_dir):
         raise ValueError(f"目标目录已存在：{pkg_dir}")
-    doms = [d for d in (domains or list(DOMAINS)) if d in DOMAINS]
+    # ★ 2026-09-13 B2b：脚手架只认**内置（引擎）域** —— 内容域的元数据（kind/schema/primary）
+    #   归内容包，框架不认识（真源在包）。传进来的未知域不建空壳、也不静默丢：
+    #   原样回报 `unknown_domains`，让调用方去写包内 `<pkg>/editor/domains.json`。
+    want = list(domains) if domains else list(DOMAINS)
+    doms = [d for d in want if d in DOMAINS]
+    unknown = [d for d in want if d not in DOMAINS]
     for d in doms:
         write_json(domain_path(pkg_dir, d), {})
+    _write_domains_decl(pkg_dir, doms)          # 包自带域声明（真源在包，内置那份只是回退）
     os.makedirs(os.path.join(pkg_dir, "content", "mech"), exist_ok=True)
     write_json(manifest_path(pkg_dir), {
         "id": pkg_id, "name": name or pkg_id, "desc": desc,
@@ -212,7 +535,7 @@ def create_package(pkg_id: str, name: str, desc: str = "",
         "created": time.strftime("%Y-%m-%d %H:%M:%S"),
     })
     _write_apply_scaffold(pkg_dir, pkg_id, name or pkg_id)
-    return {"dir": pkg_dir, "id": pkg_id, "domains": doms}
+    return {"dir": pkg_dir, "id": pkg_id, "domains": doms, "unknown_domains": unknown}
 
 
 def _write_apply_scaffold(pkg_dir: str, pkg_id: str, name: str) -> None:
@@ -289,11 +612,16 @@ def apply_game_content(actor: dict) -> dict:
 
 
 # ---------------- 条目 CRUD ----------------
-def list_entries(pkg_dir: str, dom: str) -> dict:
-    """返回 {entries: [{key, name, kind, ...}], count}。"""
-    if dom not in DOMAINS:
+def list_entries(pkg_dir: str, dom: str, domains: dict | None = None) -> dict:
+    """返回 {entries: [{key, name, kind, ...}], count}。
+
+    `domains` 省略 = 按该包的**有效域表**（内置 + 包自带声明）；未知域 → KeyError。
+    """
+    if domains is None:
+        domains, _w = effective_domains(pkg_dir)
+    if dom not in domains:
         raise KeyError(dom)
-    table = read_json(domain_path(pkg_dir, dom), {})
+    table = read_json(domain_path(pkg_dir, dom, domains), {})
     if not isinstance(table, dict):
         table = {}
     rows = []
@@ -335,19 +663,36 @@ def delete_entry(pkg_dir: str, dom: str, key: str) -> bool:
     return True
 
 
-def domain_status(pkg_dir: str, dom: str) -> dict:
-    """域概览：条目数 + 校验结果（供 tab 上的徽标）。"""
+def domain_status(pkg_dir: str, dom: str, domains: dict | None = None) -> dict:
+    """域概览：条目数 + 校验结果（供 tab 上的徽标）。未知域 → 空概览（不抛）。
+
+    第 2 层（2026-09-13）：该域若被包**声明了引用关系**（`<pkg>/editor/relations.json`），
+    校验结果里也带上**引用校验**（`relations.ref_errors`）—— 与 HTTP 侧
+    （`server._domain_status`）同一口径。包没声明 ref → 逐项等于改造前。
+    """
     st = {"domain": dom, "count": 0, "invalid": [], "ok": True}
+    if domains is None:
+        domains, _w = effective_domains(pkg_dir)
+    if dom not in domains:
+        return st
     try:
-        st.update({k: v for k, v in list_entries(pkg_dir, dom).items() if k == "count"})
+        st.update({k: v for k, v in list_entries(pkg_dir, dom, domains).items() if k == "count"})
     except KeyError:
         return st
     from . import validate as V          # 同目录模块
-    table = read_json(domain_path(pkg_dir, dom), {})
+    refs = []
+    try:
+        from . import relations as _REL  # 延迟 import（relations 依赖本模块，避免成环）
+        refs = [r for r in (_REL.package_relations(pkg_dir).get(dom) or {}).values() if r.get("ref")]
+    except Exception:                    # noqa: BLE001 —— 声明面坏 → 不拖累域状态
+        refs = []
+    table = read_json(domain_path(pkg_dir, dom, domains), {})
     for k, v in (table or {}).items():
         if not isinstance(v, dict):
             continue
-        errs = V.validate_entry(dom, v)
+        errs = V.validate_entry(dom, v, pkg_dir)
+        if refs:
+            errs = errs + _REL.ref_errors(pkg_dir, dom, v)
         if errs:
             st["invalid"].append({"key": k, "errors": errs})
     st["ok"] = not st["invalid"]
@@ -355,14 +700,28 @@ def domain_status(pkg_dir: str, dom: str) -> dict:
 
 
 def package_overview(pkg_dir: str) -> dict:
+    """包概览（manifest + 各域条目数/校验状态）。域表走**有效域表**（内置 + 包自带声明）。"""
     m = load_manifest(pkg_dir)
-    doms = m.get("domains") or list(DOMAINS)
+    domains, warns = effective_domains(pkg_dir)
+    # 第 2 层（2026-09-13）：包声明面的告警也一起回（引用/联动 + 视图；没声明 = 空）。
+    # 延迟 import —— `relations` 依赖本模块，模块级互相 import 会成环。
+    try:
+        from . import relations as _REL
+        warns = list(warns) + _REL.all_warnings(pkg_dir)
+    except Exception:                                    # noqa: BLE001 —— 声明面坏 → 不拖累概览
+        warns = list(warns)
+    doms = m.get("domains") or list(domains)
     return {
         "manifest": m,
         "engine_check": engine_check(m),
-        "domains": [{"id": d, **{k: DOMAINS[d][k] for k in ("label", "icon", "kind")},
-                     **domain_status(pkg_dir, d)}
-                    for d in doms if d in DOMAINS],
+        "domains": [{"id": d, **{k: domains[d][k] for k in ("label", "icon", "kind")},
+                     **domain_status(pkg_dir, d, domains)}
+                    for d in doms if d in domains],
+        # 包自带域声明的告警（坏声明 / 同名覆盖）—— 前端照此提示，不静默
+        "domain_warnings": warns,
+        # 该包**自己新增**（内置默认集里没有）的域 id —— 有值 = 纯包侧加出来的域
+        # （「包声明过的域」看 `/api/domains` 的 `from_package`，那个是声明口径，不是差值口径）
+        "package_domains": [d for d in domains if d not in DOMAINS],
     }
 
 

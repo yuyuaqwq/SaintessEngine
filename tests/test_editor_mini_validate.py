@@ -17,13 +17,16 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
+sys.path.insert(0, HERE)
 sys.dont_write_bytecode = True
 
 from editor import validate as VD          # noqa: E402
+import _domain_fixtures as FX              # noqa: E402  （内容域只能由包声明：B2b）
 
 POOLS_JSON = os.path.join(ROOT, "games/orlandia/content/data/drop_pools.json")
 SKILLS_JSON = os.path.join(ROOT, "games/orlandia/content/data/skills.json")
@@ -119,11 +122,24 @@ POOL_INT_N = "boss:inst_abyss_gate"        # rolls[].n 为整数形态
 POOL_RANGE_N = "chest:high"                # rolls[].n 为 [min,max] 形态
 
 
-def _jsonschema_ok(dom, entry):
+_CONTENT_PKG = None          # 声明的内容域（skills / items）的临时包 —— 由 main() 建
+
+
+def _pkg_for(dom):
+    """该域校验要带的包目录。
+
+    ★ B2b：skills / items 是**内容域** —— 框架内置集里没有它们，域元数据（schema 名）
+    只能由**包声明**得到；这个临时包不带 `schemas/`，所以 schema 仍解析到框架
+    `schemas/<file>` 回退副本 → 校验口径与改造前逐字相同。引擎域（drop_pools）走内置那份。
+    """
+    return _CONTENT_PKG if dom in ("skills", "items") else None
+
+
+def _jsonschema_ok(dom, entry, pkg=None):
     """金标准：直接问 jsonschema（本机装了才有）。返回 True/False/None。"""
     if VD._js is None:
         return None
-    schema, name = VD.primary_def(dom)
+    schema, name = VD.primary_def(dom, pkg if pkg is not None else _pkg_for(dom))
     defs = schema.get("$defs") or {}
     sub = dict(schema)
     sub.pop("$id", None)
@@ -133,6 +149,13 @@ def _jsonschema_ok(dom, entry):
 
 def main() -> int:                          # noqa: C901
     print("== 编辑器内置极简校验器（无 jsonschema 的 fallback）门禁 ==")
+
+    # ★ B2b：skills / items 是内容域 —— 建一个「只声明域、不带 schemas/」的临时包，
+    #   让它们的 schema 解析到框架 `schemas/<file>` 回退副本（口径与改造前逐字相同）。
+    global _CONTENT_PKG
+    _tmp = tempfile.mkdtemp(prefix="fw_mini_val_")
+    _CONTENT_PKG = os.path.join(_tmp, "content_pkg")
+    FX.declare(_CONTENT_PKG, "skills", "items")
 
     has_js = VD._js is not None
     print(f"  jsonschema 可用: {has_js}（{'装了，用作金标准对照' if has_js else '没装，对照段跳过'}）")
@@ -308,9 +331,10 @@ def main() -> int:                          # noqa: C901
         disagree = []
         n_bad = 0
         for label, dom, entry in SAMPLES:
+            _pk = _pkg_for(dom)                 # 内容域要带包（真源在包）；引擎域不带
             with _force_mini():
-                mini_ok = not VD.validate_entry(dom, entry)
-            js_ok = _jsonschema_ok(dom, entry)
+                mini_ok = not VD.validate_entry(dom, entry, _pk)
+            js_ok = _jsonschema_ok(dom, entry, _pk)
             if not js_ok:
                 n_bad += 1
             if mini_ok != js_ok:

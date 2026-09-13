@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/races.schema.json",
+  "title": "种族（races）—— 六种族天赋表；天赋键是内容侧词汇，框架不枚举",
+  "description": "一条 = 一个种族（表键 = 种族 id，如 `human` / `elf`）。真源 = 游戏仓 `game/data/races.py:37 RACES`（6 条），经 `scripts/export_game_package.py:derive_races` 单向导出。**面板消费点**：`content/panel.py` 的 `race_stats()`（读 `talents` 做成长倍率 / HP 倍率 / 速度倍率 / 暴击加点 / 各种战斗内天赋）与 `race_name()`。`talents` 的键是内容侧词汇（`growth_mult` / `hp_mult` / `crit_add` / `phys_reduce` / …），**框架不枚举也不解释**：哪些键进面板、哪些进战斗，是内容侧的事（见真源文件头注的天赋分组表）。",
+  "x-primary": "race",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "种族 id（内容侧词汇，小写字母开头）"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/race"
+  },
+  "$defs": {
+    "race": {
+      "type": "object",
+      "title": "种族（RACES 的一条）",
+      "required": [
+        "name",
+        "talents"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "显示名",
+          "description": "种族显示名（内容侧词汇，如 人类 / 银月精灵）。面板 `race_name()` 直接取它做展示。"
+        },
+        "icon": {
+          "type": "string",
+          "title": "图标",
+          "description": "展示用字形（内容侧词汇，可以是任意字符/表情）。"
+        },
+        "desc": {
+          "type": "string",
+          "title": "描述",
+          "description": "种族设定文案（内容侧词汇）。"
+        },
+        "talents": {
+          "type": "object",
+          "title": "天赋表",
+          "description": "天赋名 → 数值（内容侧词汇的键）。**面板只认它认识的键**（`growth_mult` 进基础成长、`hp_mult`/`spd_mult` 进乘区、`crit_add` 进暴击、其余加法属性并入各自 cap），不认识的键由战斗/命令层消费或忽略 —— 键集是内容侧的，框架不解释。",
+          "additionalProperties": true
+        },
+        "talent_names": {
+          "type": "object",
+          "title": "天赋显示名",
+          "description": "天赋键 → 中文名（展示用；面板零消费）。",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

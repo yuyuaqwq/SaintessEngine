@@ -1,0 +1,45 @@
+{
+  "$builtin": false,
+  "skills": {
+    "label": "技能",
+    "kind": "data",
+    "schema": "schemas/skill.schema.json",
+    "primary": "skill",
+    "icon": "⚔️"
+  },
+  "classes": {
+    "label": "职业",
+    "kind": "data",
+    "schema": "schemas/classes.schema.json",
+    "primary": "class",
+    "icon": "🧙"
+  },
+  "monsters": {
+    "label": "怪物",
+    "kind": "data",
+    "schema": "schemas/monsters.schema.json",
+    "primary": "monster",
+    "icon": "🐺"
+  },
+  "effect_rules": {
+    "label": "声明表",
+    "kind": "rules",
+    "schema": "schemas/effect_rules.schema.json",
+    "primary": "effect_rule",
+    "icon": "📜"
+  },
+  "passive_proc": {
+    "label": "被动声明",
+    "kind": "rules",
+    "schema": "schemas/passive_proc.schema.json",
+    "primary": "passive_proc",
+    "icon": "🌀"
+  },
+  "mech_verbs": {
+    "label": "机制动词",
+    "kind": "data",
+    "schema": "schemas/mech_verbs.schema.json",
+    "primary": "mech_verb",
+    "icon": "🔧"
+  }
+}

@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/maps.schema.json",
+  "title": "空间形状（maps）—— 框架模板；节点、角色取值与拓扑名由内容侧定义",
+  "description": "一条 = 一张图。字段语义由 saintess_engine.space 消费（见 docs/engine-wiki/reference/space.md）：节点表 + 拓扑 → 邻接 / 深度 / 出入口 / 必经路径。框架不预设角色取值，也不预设形状名（第三方可 register_topology）。",
+  "$defs": {
+    "map_node": {
+      "type": "object",
+      "title": "一个地点节点",
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_\\-]+$",
+          "description": "节点标识，**图内唯一**（连通表与出入口都按它引用）"
+        },
+        "name": {
+          "type": "string",
+          "description": "显示名（玩家看到的名字；不填则显示 id）"
+        },
+        "role": {
+          "type": "string",
+          "description": "角色取值。**取值由内容侧定义**（框架不设枚举）：典型是「枢纽 / 通道 / 出口」三类，靠本条数据的 roles 映射对上角色名"
+        },
+        "desc": {
+          "type": "string",
+          "description": "说明（编辑器/文档用）"
+        }
+      },
+      "examples": [
+        {
+          "id": "plaza",
+          "name": "中央广场",
+          "role": "hub"
+        }
+      ]
+    },
+    "map": {
+      "type": "object",
+      "title": "一张图（节点表 + 拓扑）",
+      "required": [
+        "name",
+        "nodes"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "图名（显示用）"
+        },
+        "desc": {
+          "type": "string",
+          "description": "说明（编辑器/文档用）"
+        },
+        "topology": {
+          "type": "string",
+          "description": "形状名：`chain`（链状，按声明序相邻）/ `star`（星形，枢纽↔辐条、通道↔出口）。给了 links 时可省略或写 `mesh`（显式连通表，不做派生）；两侧同时给会以连通表为准"
+        },
+        "roles": {
+          "type": "object",
+          "title": "角色映射",
+          "x-widget": "kv",
+          "description": "角色名 → 取值 的映射（如 hub/through/exit）。**缺哪个角色 = 该角色不存在**（零默认值）",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "键 = 角色名（内容侧定，引擎只按名字取几何；典型是 hub / through / exit）。"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "description": "值 = 节点表里 `role` 用到的那个取值（两边得对得上，否则该角色等于没有落点）。"
+          }
+        },
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "description": "节点表。**顺序有意义**：链状/星形的「深度」= 声明序（作者按由近及远排），首节点 = 入口",
+          "items": {
+            "$ref": "#/$defs/map_node"
+          }
+        },
+        "links": {
+          "type": "object",
+          "title": "显式连通表",
+          "x-widget": "kv",
+          "description": "显式连通表 `{节点id: [可达节点id…]}`。一给就用它（拓扑让位）；**不必对称**，编辑器会报不对称但不自动补。逐条 `键 = 本图的一个节点 id`、`值 = 该节点可达的节点 id 表（一行一个）`。",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_\\-]+$",
+            "description": "键 = 本图的一个节点 id（与 `$defs/map_node.id` 同一写法：字母/数字/下划线/连字符）。指向不存在的节点 = 断链，编辑器视图会报。"
+          },
+          "additionalProperties": {
+            "title": "可达节点表",
+            "type": "array",
+            "x-widget": "lines",
+            "description": "该节点能直达的节点 id（**一行一个**）。每一项都得是本图 `nodes[].id` 之一。",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_\\-]+$"
+            }
+          }
+        },
+        "root": {
+          "type": "string",
+          "description": "入口节点 id（默认 = 首节点）。显式连通表的「深度」从它起算"
+        },
+        "gate": {
+          "type": "string",
+          "description": "出入口节点 id（跨图落点 / 出图点）。不填则按角色规则推：首节点是枢纽角色且有出口角色节点 → 那个出口节点；否则首节点"
+        }
+      },
+      "examples": [
+        {
+          "name": "示例镇",
+          "topology": "star",
+          "roles": {
+            "hub": "hub",
+            "through": "through",
+            "exit": "exit"
+          },
+          "nodes": [
+            {
+              "id": "plaza",
+              "name": "中央广场",
+              "role": "hub"
+            },
+            {
+              "id": "smith",
+              "name": "铁匠铺"
+            },
+            {
+              "id": "east_road",
+              "name": "东大街",
+              "role": "through"
+            },
+            {
+              "id": "outskirts",
+              "name": "镇郊",
+              "role": "exit"
+            }
+          ]
+        }
+      ]
+    },
+    "map_table": {
+      "type": "object",
+      "title": "整表：{图id: 图对象}",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9_\\-]+$",
+        "description": "键 = 图 id（编辑器列表里显示的就是它；跨域引用按它认图）。"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/map"
+      },
+      "examples": [
+        {
+          "town_a": {
+            "name": "示例镇",
+            "topology": "star",
+            "nodes": [
+              {
+                "id": "plaza",
+                "role": "hub"
+              },
+              {
+                "id": "outskirts",
+                "role": "exit"
+              }
+            ]
+          },
+          "plain_a": {
+            "name": "示例平原",
+            "topology": "chain",
+            "nodes": [
+              {
+                "id": "plain_a_1"
+              },
+              {
+                "id": "plain_a_2"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "x-primary": "map"
+}

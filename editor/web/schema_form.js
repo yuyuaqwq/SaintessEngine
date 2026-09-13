@@ -7,9 +7,13 @@
  *   boolean                  → <checkbox>
  *   object（有 properties）   → 折叠分组（递归渲染）
  *   object（仅 additionalProperties schema）→ 键值行编辑器（键为 propertyNames.enum 时用 select）
+ *   object + x-widget "kv"   → 强制键值行编辑器（**即使声明了 properties**：键仍是行，值按同名声明给控件）
  *   array（元素为标量）        → 可增删的行列表
  *   array（元素为 enum）       → 多选标签 chips（原先是 JSON 兜底）
- *   array/formula 等复杂项     → JSON 兜底编辑框
+ *   array（元素为对象）        → 行编辑（每行一个 items 子表单 + 行首标题 + 增删）
+ *   array + x-widget "rows"  → 强制行编辑（元素是标量也能一行一个）
+ *   $ref（`#/$defs/x`）      → 就地解引用后再渲染（本仓 schema 的 $ref 全部是同文件内引用）
+ *   其它复杂项（无可推断形状） → JSON 兜底编辑框
  *   const / anyOf            → 常量显示 / 联合输入框
  *   description / $comment   → 字段下方灰字帮助
  *
@@ -29,11 +33,14 @@
  *
  * 可选：控件形态与联想（**数据驱动**，由调用方按字段语义给）
  *   SchemaForm.render(def, value, {
- *     widget:     (path, schema) => 'textarea'|'lines'|'chips'|'pct'|null,
+ *     widget:     (path, schema) => 'textarea'|'lines'|'chips'|'pct'|'kv'|'rows'|null,
  *     suggest:    (path, schema) => ['候选值', ...],      // 文本/数字 → datalist
  *     suggestKey: (path, schema) => ['候选键', ...],      // 对象 → 键的 datalist
  *   });
  *   也认 schema 自带的 `x-widget`。
+ *   `defs`：本地 $ref（`#/$defs/x`）解引用用的定义表 —— 传了就按它解析（不传时用 rootSchema.$defs；
+ *          两者都没有 = $ref 保持旧行为「JSON 兜底」，不抛）。
+ *   SchemaForm.render(def, value, {defs: S.schema.$defs});
  */
 window.SchemaForm = (function () {
   'use strict';
@@ -435,12 +442,20 @@ window.SchemaForm = (function () {
   }
 
   function wArray(schema, path, ctx) {
-    const items = schema.items;
+    const items = deref(schema.items, ctx) || {};
     const scalar = items && (items.type === 'string' || items.type === 'number' ||
                              items.type === 'integer' || items.type === 'boolean');
     const wrap = elem('div');
     // 枚举数组 → 多选标签（比「JSON 兜底编辑」好用得多：勾一下就是一项）
     if (items && items.enum) return wChips(schema, path, ctx);
+    // 对象数组 → 行编辑（每行一个 items 子表单 + 行首标题 + 增删；原先落 JSON 兜底）
+    if (kindOf(items) === 'object') return wRows(schema, path, ctx);
+    // 联合元素（如交互点的「引用串 | 内联对象」）只要有一支是对象 → 也走行编辑（每行按现值挑分支）
+    const branches = items.anyOf || items.oneOf;
+    if (branches && branches.length &&
+        branches.some(function (b) { return kindOf(deref(b, ctx)) === 'object'; })) {
+      return wRows(schema, path, ctx);
+    }
     if (!scalar) {
       wrap.appendChild(elem('div', 'help', '复杂数组 → JSON 兜底编辑'));
       wrap.appendChild(jsonEditor(getIn(ctx.root, path), function (v) {
@@ -485,59 +500,277 @@ window.SchemaForm = (function () {
     return wrap;
   }
 
-  function kvEditor(schema, path, ctx) {
-    const ap = schema.additionalProperties;
-    const keyEnum = (schema.propertyNames && schema.propertyNames.enum) || null;
-    const keyHints = suggestList(schema, path, ctx, true);
-    const wrap = elem('div');
-    const rows = elem('div');
+  /* ##KVROWS_BEGIN## ── 键值行（kv）与行编辑（rows）两个控件 ──────────────────────
+     这两个控件与上面四个（textarea / lines / pct / chips）不同：它们是**容器型**的 ——
+     每行里还要递归放一个子控件（甚至再套一层 kv/rows）。所以先备三件小工具：
+       · deref()        本地 $ref（`#/$defs/x`）解引用（本仓 schema 的 $ref 全是同文件内的）
+       · kvValueSchema()  键值行里「这个键的值」用哪个子形状
+       · rowSchemaOf()    行编辑里「这一行」用哪个子形状（items 是联合时按现值挑一支）
+     纪律：写回**逐键 / 逐行**改（不重建整个对象/数组）→ 键序 = 插入序、行序 = 数组序。
+     ───────────────────────────────────────────────────────────────────────────── */
+
+  /* 本地 $ref 解引用；同层兄弟键覆盖目标（JSON Schema 2020-12：$ref 可与兄弟键并存）。
+     拿不到 $defs / 引用形状不认识 → 原样返回（= 旧行为：走 JSON 兜底，不抛） */
+  function deref(schema, ctx) {
+    if (!schema || typeof schema !== 'object' || typeof schema.$ref !== 'string') return schema;
+    const defs = ctx && ctx.defs;
+    const ref = schema.$ref;
+    if (!defs || ref.indexOf('#/$defs/') !== 0) return schema;
+    const target = defs[ref.slice(8)];
+    if (!target || typeof target !== 'object') return schema;
+    const merged = {};
+    Object.keys(target).forEach(function (k) { merged[k] = target[k]; });
+    Object.keys(schema).forEach(function (k) { if (k !== '$ref') merged[k] = schema[k]; });
+    return merged;
+  }
+
+  /* 无声明时的形状推断（additionalProperties: true = 「随便什么」，按现值给控件） */
+  function inferSchema(v) {
+    if (Array.isArray(v)) return { type: 'array' };
+    if (v && typeof v === 'object') return { type: 'object', additionalProperties: true };
+    if (typeof v === 'number') return { type: Number.isInteger(v) ? 'integer' : 'number' };
+    if (typeof v === 'boolean') return { type: 'boolean' };
+    return { type: 'string' };
+  }
+
+  /* 形状的最小合法值（+ 加一行 / + 加键 用）。object 只铺 required 键 —— 免得塞一堆空键。 */
+  function defaultValue(schema, ctx) {
+    const s = deref(schema, ctx) || {};
+    if (has(s, 'const')) return s.const;
+    if (s.enum && s.enum.length) return s.enum[0];
+    if (s.anyOf || s.oneOf) return defaultValue((s.anyOf || s.oneOf)[0], ctx);
+    let t = s.type;
+    if (Array.isArray(t)) t = t[0];
+    const props = s.properties || null;
+    if (t === 'object' || props) {
+      const o = {};
+      (s.required || []).forEach(function (k) { if (props && has(props, k)) o[k] = defaultValue(props[k], ctx); });
+      return o;
+    }
+    if (t === 'array') return [];
+    if (t === 'boolean') return false;
+    if (t === 'integer' || t === 'number') return has(s, 'minimum') ? s.minimum : 0;
+    return '';
+  }
+
+  /* 键值行：这个键的值用哪个子形状（同名 properties 声明 > additionalProperties > 由现值推断） */
+  function kvValueSchema(schema, key, ctx) {
+    const props = schema && schema.properties;
+    if (props && has(props, key)) return deref(props[key], ctx);
+    const ap = schema && schema.additionalProperties;
+    if (ap && typeof ap === 'object') return deref(ap, ctx);
+    return null;
+  }
+  function kvValueControl(schema, key, cpath, ctx) {
+    let sub = kvValueSchema(schema, key, ctx);
+    if (!sub) {
+      const cur = getIn(ctx.root, cpath);
+      sub = (cur === undefined || cur === null) ? { type: 'string' } : inferSchema(cur);
+    }
+    return renderControl(sub, cpath, ctx);
+  }
+
+  /* 行的可读标题：items 里这些键有值就拿来当标题（name / type / event…），否则「标题 #序号」 */
+  const ROW_TITLE_KEYS = ['name', 'key', 'type', 'id', 'event', 'action', 'kind', 'label', 'stat', 'item', 'pool'];
+  function rowTitleOf(items, val, i) {
+    const props = (items && items.properties) || {};
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      for (let n = 0; n < ROW_TITLE_KEYS.length; n++) {
+        const k = ROW_TITLE_KEYS[n];
+        if (has(props, k) && val[k] !== undefined && val[k] !== null && val[k] !== '') return String(val[k]);
+      }
+    } else if (typeof val === 'string' && val) {
+      return val;
+    }
+    return ((items && items.title) || '行') + ' #' + (i + 1);
+  }
+
+  /* 这一行用哪个子形状：items 是联合（如「引用串 | 内联对象」）时按现值挑一支 */
+  function rowSchemaOf(items, val, ctx) {
+    const it = deref(items, ctx) || {};
+    const br = it.anyOf || it.oneOf;
+    if (!br || !br.length) return it;
+    const isObj = !!(val && typeof val === 'object' && !Array.isArray(val));
+    for (let i = 0; i < br.length; i++) {
+      const b = deref(br[i], ctx) || {};
+      if (isObj && kindOf(b) === 'object') return b;
+      if (!isObj && val !== undefined && val !== null && typeof val !== 'object' && kindOf(b) === typeof val) return b;
+    }
+    for (let i = 0; i < br.length; i++) {          // 新建行（现值未定）：能出子表单的那一支优先
+      const b = deref(br[i], ctx) || {};
+      if (kindOf(b) === 'object') return b;
+    }
+    return deref(br[0], ctx) || {};
+  }
+
+  /* 数组 → 行编辑：一行 = 一个 items 子表单（行首可读标题、行尾「删」、底部「+ 加一行」） */
+  function wRows(schema, path, ctx) {
+    const items = schema.items || {};
+    const wrap = elem('div', 'rows-wrap');
+    const list = elem('div', 'row-list');
+    const foot = elem('div', 'rows-foot');
+    const count = elem('span', 'rows-n', '');
     function draw() {
-      rows.innerHTML = '';
-      const obj = getIn(ctx.root, path) || {};
-      Object.keys(obj).forEach(function (k) {
-        const row = elem('div', 'kv-row');
-        let kc;
-        if (keyEnum) {
-          kc = elem('select', 'ctl k');
-          keyEnum.forEach(function (e) { const o = elem('option'); o.value = e; o.textContent = e; kc.appendChild(o); });
-          kc.value = k;
-        } else {
-          kc = elem('input', 'ctl k'); kc.type = 'text'; kc.value = k;
-          attachList(kc, keyHints, nextUid());          // 键名也联想（channels / stat_scale / judge …）
-        }
-        const vc = renderControl(ap, path.concat([k]), ctx);
-        kc.addEventListener('change', function () {
-          const obj2 = getIn(ctx.root, path);
-          const newKey = kc.value;
-          if (newKey !== k && newKey !== '') {
-            const copy = {}; Object.keys(obj2).forEach(function (kk) { copy[kk === k ? newKey : kk] = obj2[kk]; });
-            setIn(ctx.root, path, copy); ctx.onChange(); draw();
-          }
+      list.innerHTML = '';
+      const arr0 = getIn(ctx.root, path);
+      const arr = Array.isArray(arr0) ? arr0 : [];
+      arr.forEach(function (val, i) {
+        const it = rowSchemaOf(items, val, ctx);
+        const row = elem('div', 'row-item');
+        row.dataset.idx = String(i);
+        row.dataset.path = path.concat([i]).join('.');   // 校验报错 → 能落到这一行上（markErrors）
+        const head = elem('div', 'row-head');
+        const title = elem('span', 'row-title', rowTitleOf(it, val, i));
+        head.appendChild(title);
+        const del = elem('button', 'row-del', '✕');
+        del.title = '删掉第 ' + (i + 1) + ' 行';
+        del.addEventListener('click', function () {
+          const a = (getIn(ctx.root, path) || []).slice();
+          a.splice(i, 1);                                   // 只动这一行，其余顺序不变
+          if (a.length) setIn(ctx.root, path, a); else delIn(ctx.root, path);   // 清空 = 键不存在
+          ctx.onChange(); draw(); ctx.rerender();
         });
-        const del = elem('button', null, '✕');
-        del.addEventListener('click', function () { delIn(ctx.root, path.concat([k])); ctx.onChange(); draw(); ctx.rerender(); });
-        row.appendChild(kc); row.appendChild(vc); row.appendChild(del);
-        rows.appendChild(row);
+        head.appendChild(del);
+        row.appendChild(head);
+        /* 行体：对象 → 直接铺字段（标题已在行首，不再套一层 fieldset）；标量/其它 → 递归控件 */
+        const body = (kindOf(it) === 'object')
+          ? objBody(it, path.concat([i]), ctx, elem('div', 'row-body'))
+          : renderControl(it, path.concat([i]), ctx);
+        if (body && body.addEventListener) {                 // 行内改名 → 行首标题跟着走
+          const refresh = function () { title.textContent = rowTitleOf(it, getIn(ctx.root, path.concat([i])), i); };
+          body.addEventListener('input', refresh);
+          body.addEventListener('change', refresh);
+        }
+        row.appendChild(body);
+        list.appendChild(row);
       });
-      const add = elem('button', 'addbtn', '+ 添加键');
+      const add = elem('button', 'addbtn row-add', '+ 加一行');
       add.addEventListener('click', function () {
-        const obj2 = getIn(ctx.root, path) || {};
-        let nk = 'new_key', i = 1;
-        while (has(obj2, nk)) { nk = 'new_key' + (i++); }
-        if (keyEnum) { for (const e of keyEnum) { if (!has(obj2, e)) { nk = e; break; } } }
-        setIn(ctx.root, path.concat([nk]), ap && ap.type === 'integer' ? 0 : '');
+        const a = (getIn(ctx.root, path) || []).slice();
+        a.push(defaultValue(rowSchemaOf(items, undefined, ctx), ctx));   // 追加（不重建已有行）
+        setIn(ctx.root, path, a);
         ctx.onChange(); draw(); ctx.rerender();
       });
-      rows.appendChild(add);
+      foot.innerHTML = '';
+      count.textContent = arr.length ? arr.length + ' 行' : '（空）';
+      foot.appendChild(count);
+      foot.appendChild(elem('span', 'rows-tip', '一行 = 一条（顺序即数据顺序）'));
+      foot.appendChild(add);
     }
     draw();
-    wrap.appendChild(rows);
+    wrap.appendChild(list);
+    wrap.appendChild(foot);
     return wrap;
   }
 
+  /* 对象 → 键值行编辑器（一行 = 一个键 + 一个值；值本身是对象/数组就递归成子卡片 / 子行）
+     键：propertyNames.enum → 下拉；否则文本 + propertyNames.description 提示 + 候选 datalist。
+     键序：逐键 set/delete（重命名**原位替换**）→ 写回后键序稳定，不重建对象。 */
+  function kvEditor(schema, path, ctx) {
+    const props = schema.properties || null;
+    const pnm = schema.propertyNames || null;
+    const keyEnum = (pnm && pnm.enum) || null;
+    const freeKeys = schema.additionalProperties !== false;   // 还能不能加 schema 没声明的键
+    /* 键的候选：包侧联想（suggestKey）打底，再补 schema 声明的键名 */
+    const keyHints = suggestList(schema, path, ctx, true).slice();
+    if (props) Object.keys(props).forEach(function (k) { if (keyHints.indexOf(k) < 0) keyHints.push(k); });
+    const wrap = elem('div', 'kv-wrap');
+    const rows = elem('div', 'kv-rows');
+    const foot = elem('div', 'kv-foot');
+    const count = elem('span', 'kv-n', '');
+    function curObj() {
+      const o = getIn(ctx.root, path);
+      return (o && typeof o === 'object' && !Array.isArray(o)) ? o : null;
+    }
+    /* 下一个可用的键名：枚举/声明里没用过的 → 否则 new_key / new_key2…（追加在末尾） */
+    function nextKey() {
+      const used = curObj() ? Object.keys(curObj()) : [];
+      if (keyEnum) for (let i = 0; i < keyEnum.length; i++) if (used.indexOf(keyEnum[i]) < 0) return keyEnum[i];
+      if (props) { const ks = Object.keys(props); for (let i = 0; i < ks.length; i++) if (used.indexOf(ks[i]) < 0) return ks[i]; }
+      let nk = 'new_key', i = 2;                       // new_key / new_key2 / new_key3 …
+      while (used.indexOf(nk) >= 0) nk = 'new_key' + (i++);
+      return nk;
+    }
+    function draw() {
+      rows.innerHTML = '';
+      const obj = curObj() || {};
+      const keys = Object.keys(obj);
+      keys.forEach(function (k) {
+        const row = elem('div', 'kv-row');
+        row.dataset.key = k;
+        row.dataset.path = path.concat([k]).join('.');   // 校验报错 → 能落到这一行上（markErrors）
+        let kc;
+        if (keyEnum) {
+          kc = elem('select', 'ctl k');
+          keyEnum.forEach(function (e) { const o = elem('option'); o.value = String(e); o.textContent = String(e); kc.appendChild(o); });
+          kc.value = k;
+        } else {
+          kc = elem('input', 'ctl k');                    // 键名手填 + 联想（channels / stat_scale / judge …）
+          kc.type = 'text';
+          kc.value = k;
+          if (pnm && pnm.description) kc.title = pnm.description;   // 这个键该怎么写 → propertyNames 的说明
+          attachList(kc, keyHints, nextUid());
+        }
+        kc.addEventListener('change', function () {
+          const cur = curObj() || {};
+          const nk = kc.value;
+          if (nk === k) return;
+          if (nk === '' || has(cur, nk)) {                // 空键 / 重键 → 退回原名（不静默吞掉）
+            kc.classList.add('bad'); kc.value = k; return;
+          }
+          kc.classList.remove('bad');
+          const copy = {};                                 // 原位替换 → 键序不变
+          Object.keys(cur).forEach(function (kk) { copy[kk === k ? nk : kk] = cur[kk]; });
+          setIn(ctx.root, path, copy);
+          ctx.onChange(); draw(); ctx.rerender();
+        });
+        row.appendChild(kc);
+        row.appendChild(kvValueControl(schema, k, path.concat([k]), ctx));
+        const del = elem('button', 'row-del', '✕');
+        del.title = '删掉这一行（键 = ' + k + '）';
+        del.addEventListener('click', function () {
+          const cur = curObj();
+          if (cur) {
+            delete cur[k];                                 // 逐键删：其它键一个不动
+            if (!Object.keys(cur).length) delIn(ctx.root, path);   // 清空 = 键不存在（不留空 {}）
+          }
+          ctx.onChange(); draw(); ctx.rerender();
+        });
+        row.appendChild(del);
+        rows.appendChild(row);
+      });
+      /* 加一行：直接把「键 + 该键的默认值」写回（**不会先写一个 {} 把键丢了**） */
+      const declared = keyEnum || (props ? Object.keys(props) : null);
+      const allUsed = !!(declared && declared.length &&
+        declared.every(function (k) { return keys.indexOf(k) >= 0; }));
+      const add = elem('button', 'addbtn kv-add', '+ 加一行');
+      if (!freeKeys && allUsed) {                          // additionalProperties: false 且声明的键都用完了
+        add.disabled = true;
+        add.title = 'schema 声明的键都在表里（此表不允许自由键）';
+      } else {
+        add.addEventListener('click', function () {
+          const nk = nextKey();
+          const sub = kvValueSchema(schema, nk, ctx) || { type: 'string' };
+          setIn(ctx.root, path.concat([nk]), defaultValue(sub, ctx));
+          ctx.onChange(); draw(); ctx.rerender();
+        });
+      }
+      rows.appendChild(add);
+      count.textContent = keys.length ? keys.length + ' 项' : '（空）';
+    }
+    draw();
+    foot.appendChild(count);
+    foot.appendChild(elem('span', 'kv-tip', '一行 = 一个键；值的控件按该键的声明给'));
+    wrap.appendChild(rows);
+    wrap.appendChild(foot);
+    return wrap;
+  }
+  /* ##KVROWS_END## */
+
   // ------------------------------------------------------------ dispatch
   function renderControl(schema, path, ctx) {
-    // ① 调用方指定的控件形态（按字段语义：长文案 / 一行一条 / 比值 / 多选）
+    schema = deref(schema, ctx) || {};
+    // ① 调用方指定的控件形态（按字段语义：长文案 / 一行一条 / 比值 / 多选 / 键值行 / 行编辑）
     const w = widgetOf(schema, path, ctx);
     if (w === 'textarea') return wTextarea(schema, path, ctx);
     if (w === 'lines' && kindOf(schema) === 'array') return wLines(schema, path, ctx);
@@ -545,6 +778,10 @@ window.SchemaForm = (function () {
     if (w === 'pct' && (kindOf(schema) === 'number' || kindOf(schema) === 'integer')) {
       return wPct(schema, path, ctx);
     }
+    // kv：对象 → 键值行。**声明了 properties 也照样走键值行**（键 = 行，未声明的键走 additionalProperties）
+    if (w === 'kv' && (kindOf(schema) === 'object' || schema.properties)) return kvEditor(schema, path, ctx);
+    // rows：数组 → 行编辑（元素是标量也能一行一个）
+    if (w === 'rows' && kindOf(schema) === 'array') return wRows(schema, path, ctx);
     // ② schema 自带的长文本启发（maxLength 很大 = 明显是文案，不是代号）
     if (kindOf(schema) === 'string' && schema && schema.maxLength >= 120) {
       return wTextarea(schema, path, ctx);
@@ -584,6 +821,34 @@ window.SchemaForm = (function () {
     return f;
   }
 
+  /* 把一个对象形状的字段铺进容器（objControl 的字段集 / rows 的行体共用同一套渲染）。
+     容器里**不丢 schema 未声明的现存键**（别的域/别的人加的键）→ 归入「其他字段」JSON 兜底。 */
+  function objBody(schema, path, ctx, box) {
+    const props = schema.properties || {};
+    const required = schema.required || [];
+    Object.keys(props).forEach(function (k) {
+      box.appendChild(field(props[k], k, path.concat([k]), ctx, { required: required.indexOf(k) >= 0 }));
+    });
+    const val = getIn(ctx.root, path);
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      const extraKeys = Object.keys(val).filter(function (k) { return !has(props, k); });
+      if (extraKeys.length) {
+        const det = elem('details', 'extra');
+        const sum = elem('summary', null, '其他字段（schema 未声明，' + extraKeys.length + ' 项）');
+        det.appendChild(sum);
+        const sub = {};
+        extraKeys.forEach(function (k) { sub[k] = val[k]; });
+        det.appendChild(jsonEditor(sub, function (parsed) {
+          extraKeys.forEach(function (k) { delIn(ctx.root, path.concat([k])); });
+          Object.keys(parsed).forEach(function (k) { setIn(ctx.root, path.concat([k]), parsed[k]); });
+          ctx.onChange(); ctx.rerender();
+        }));
+        box.appendChild(det);
+      }
+    }
+    return box;
+  }
+
   function objControl(schema, path, ctx) {
     const props = schema.properties || null;
     const ap = schema.additionalProperties;
@@ -599,29 +864,7 @@ window.SchemaForm = (function () {
     const fs = elem('fieldset', 'grp');
     const lg = elem('legend', null, (schema.title || '字段') + (path.length ? ' (' + path[path.length - 1] + ')' : ''));
     fs.appendChild(lg);
-    const required = schema.required || [];
-    Object.keys(props).forEach(function (k) {
-      fs.appendChild(field(props[k], k, path.concat([k]), ctx, { required: required.indexOf(k) >= 0 }));
-    });
-    // schema 未声明的现存字段（数据允许 additionalProperties）→ JSON 兜底
-    const val = getIn(ctx.root, path);
-    if (val && typeof val === 'object' && !Array.isArray(val)) {
-      const extraKeys = Object.keys(val).filter(function (k) { return !has(props, k); });
-      if (extraKeys.length) {
-        const det = elem('details', 'extra');
-        const sum = elem('summary', null, '其他字段（schema 未声明，' + extraKeys.length + ' 项）');
-        det.appendChild(sum);
-        const sub = {};
-        extraKeys.forEach(function (k) { sub[k] = val[k]; });
-        det.appendChild(jsonEditor(sub, function (parsed) {
-          extraKeys.forEach(function (k) { delIn(ctx.root, path.concat([k])); });
-          Object.keys(parsed).forEach(function (k) { setIn(ctx.root, path.concat([k]), parsed[k]); });
-          ctx.onChange(); ctx.rerender();
-        }));
-        fs.appendChild(det);
-      }
-    }
-    return fs;
+    return objBody(schema, path, ctx, fs);
   }
 
   // -------------------------------------------------------------- public
@@ -662,6 +905,7 @@ window.SchemaForm = (function () {
   function render(rootSchema, rootValue, opts) {
     const ctx = {
       root: rootValue,
+      defs: (opts && opts.defs) || (rootSchema && rootSchema.$defs) || null,   // 本地 $ref 解引用用（`#/$defs/x`）
       onChange: (opts && opts.onChange) || function () {},
       rerender: function () { if (opts && opts.onRerender) opts.onRerender(); },
       // 控件形态 + 联想（透传给每个控件；不传 = 全部按 schema 类型默认渲染）
@@ -712,11 +956,15 @@ window.SchemaForm = (function () {
   }
 
   function markErrors(container, errors) {
-    container.querySelectorAll('.field.has-error').forEach(function (e) { e.classList.remove('has-error'); });
+    container.querySelectorAll('.field.has-error, .kv-row.has-error, .row-item.has-error').forEach(function (e) {
+      e.classList.remove('has-error');
+    });
     (errors || []).forEach(function (e) {
       let p = String(e.path || '').replace(/^\$\.?/, '').replace(/\[(\d+)\]/g, '.$1');
       if (!p) return;
-      const node = container.querySelector('.field[data-path="' + p.replace(/"/g, '\\"') + '"]');
+      /* 先找字段格（.field）；kv 行 / rows 行没有 .field 包裹 → 退回到该行（data-path 同一套写法） */
+      const node = container.querySelector('.field[data-path="' + p.replace(/"/g, '\\"') + '"]') ||
+                   container.querySelector('[data-path="' + p.replace(/"/g, '\\"') + '"]');
       if (node) node.classList.add('has-error');
     });
   }
