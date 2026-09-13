@@ -109,7 +109,7 @@ def pet_exp_gain(host, qq_id, exp, monster):
         db.pet_update(qq_id, satiety=max(0, pet["satiety"] - 2), last_sat_time=pet["last_sat_time"])
         # 宠物分得经验（24 章四：击杀怪宠物分得经验，取怪物基础经验 20%）
         # v173.2：加等级差乘区（宠物 vs 怪，复用玩家非线性曲线），封顶 Lv.50
-        p_gain = max(1, int(monster["exp"] * 0.2 * C.pet_exp_mult(int(pet.get("level", 1) or 1), monster["lv"])))
+        p_gain = max(1, int(monster["exp"] * 0.2 * C.pet_exp_mult(int(pet.get("level", 1) or 1), _mon_lv(monster))))
         p_exp = pet["exp"] + p_gain
         p_lv = pet["level"]
         p_lvup = False
@@ -224,7 +224,7 @@ def roll_blueprint_drop(host, group_id, qq_id, player, monster, gold):
         _luck_bp = min(float(_lst_bp.get("luck", 0) or 0), 0.5)
     except Exception:
         _luck_bp = 0.0
-    drop_equip, drop_bp, _drop_gold, _drop_exp = C.roll_drop(monster["lv"], monster["role"], _luck_bp)
+    drop_equip, drop_bp, _drop_gold, _drop_exp = C.roll_drop(_mon_lv(monster), monster["role"], _luck_bp)
     # 阶段九：半身人幸运儿——金币掉落 +15%
     if host.race_stats(player.get("race")).get("gold_bonus"):
         gold = int(gold * (1 + host.race_stats(player.get("race"))["gold_bonus"]))
@@ -580,6 +580,20 @@ def grant_worldboss_drop(host, group_id, qq_id, key):
 
 # ============ 大编排（命令层壳调用）：完整同步结算，返回结构化结果 ============
 
+def _mon_lv(monster) -> int:
+    """怪等级读口：**actor dict（引擎口径 `level`）与原始怪 dict（`lv`）都认**。
+
+    ★ 2026-09-13 P0 修复（B10 收口后独立发现，**改前既有**）：命令层胜利结算传进来的是
+      **actor dict**（`bridge.monster_to_actor` 把 `lv → level` 且**不透传 lv`），本文件
+      原来 3 处直接 `monster["lv"]` → 每次击杀在结算段抛 `KeyError: 'lv'`
+      （玩家拿不到经验/金币/掉落/胜利面板）。修复后同一用例出正常结算面板；
+      原始怪 dict（`lv` 在位）逐字同前。
+    """
+    if not isinstance(monster, dict):
+        return 1
+    return int(monster.get("lv") or monster.get("level") or 1)
+
+
 def victory_settle(host, group_id, qq_id, player, monster, result, extra_kills=None):
     """方案 A 主段编排：原 _handle_victory 1803–2201 段（加成+掉落+exp 结算+面板行骨架）
     按原顺序逐段原样串起；2202–2297 段（公会任务/升级/quest/野王/塔卫/成就/rule/
@@ -602,7 +616,7 @@ def victory_settle(host, group_id, qq_id, player, monster, result, extra_kills=N
     exp = monster.get("exp", 0)
     gold = monster.get("gold", 0)
     # ---- 段1 等级差曲线 ----
-    exp, _exp_note = exp_curve(exp, monster["lv"], player["level"])
+    exp, _exp_note = exp_curve(exp, _mon_lv(monster), player["level"])
     # ---- 段2 组队 ----
     exp, party_bonus_line = party_exp_bonus(host, group_id, qq_id, exp)
     # ---- 段3 公会 ----
