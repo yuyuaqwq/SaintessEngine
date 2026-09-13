@@ -226,8 +226,11 @@ def apply_game_content(actor: dict, ctx: dict | None = None) -> dict:
     单步异常**不阻断**后续装配、不上抛（「装配异常不阻断开战」）；失败项记 `LAST_ERRORS`。
     幂等保险丝：`_content_applied`（见模块 docstring）。
     """
-    if not isinstance(actor, dict):
-        return actor
+    if not isinstance(actor, dict) or not actor:
+        return actor          # ★ 兜底与真源逐字一致：**空 actor（含 None / {}）直接返回**，
+                              #   不落 `_MARK`（宿主原来是 `if not actor: return actor`；
+                              #   这里多一条 isinstance 是非 dict 时也安全返回 —— 只收不放宽语义）。
+                              #   边界由 `tests/test_apply_game_content.py` A4 钉住。
     if actor.get(_MARK):
         return actor          # 已装配 → 整链跳过（幂等；**不可换键名**，见模块 docstring）
 
