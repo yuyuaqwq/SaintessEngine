@@ -92,6 +92,13 @@ DOMAINS = {
     # 从前只以内联形式躺在 `instances.stages[].poi_data` 里，本域给它一个权威落点。
     "pois": {"label": "交互点", "kind": "data", "schema": "pois.schema.json",
              "primary": "poi_mount", "icon": "📍"},
+    # 传说专属特效：橙装 `legendary` 字段引用的那批特效（与 `affixes` 域**语义不同**，
+    # 所以另立一域；`trigger`/`kind` 故意不枚举 —— 取值留内容侧，框架不抄词汇表）
+    "legendary_effects": {"label": "传说特效", "kind": "data", "schema": "legendary_effects.schema.json",
+                          "primary": "legendary_effect", "icon": "✨"},
+    # 宠物：品种表（蛋掉落规则在导出期连接进条目，不另立顶层表 —— 键空间是品质词，与 `pet_*` 互斥）
+    "pets": {"label": "宠物", "kind": "data", "schema": "pets.schema.json",
+             "primary": "pet", "icon": "🐾"},
 }
 
 

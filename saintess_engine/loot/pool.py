@@ -371,8 +371,13 @@ class LootTable:
                         continue
                     if get(sub) is not None:
                         continue
+                    # 内联前缀在 roll 行同样默认跳过；但内容侧声明了「这族内联引用有域落点」时照判
+                    # （与 `_audit_ref` 里的例外同一开关：回调上的 `judged_inline_prefixes`）
                     if sub.startswith(self.inline_prefixes):
-                        continue
+                        judged = (getattr(resolvable, "judged_inline_prefixes", ())
+                                  if resolvable is not None else ())
+                        if not any(str(sub).startswith(p) for p in (judged or ())):
+                            continue
                     # roll 的 pool 字段是「子池 key 或引用」：两者都不是 → 断链
                     # （参考实现同样把"既不在池表、也不是内联引用/特殊值"的 roll 判为断链）
                     self._audit_ref(sub, pool_key, pool, issues, resolvable, strict=True)
@@ -385,11 +390,17 @@ class LootTable:
 
         * `strict=True`（roll 的子池字段用）：回调说"不认识"（`None`）也算断链
         * 回调返回**字符串** → 用它当措辞（内容侧自己的词汇表说话，引擎不猜）
+        * **内联前缀的例外**：内联前缀默认「内容侧自管、审计跳过」（它们还参与 `expand()` 外列）。
+          但内容侧可以**额外**声明「这族内联引用其实指向某个域」——做法是给回调挂一个
+          `judged_inline_prefixes`（前缀元组），命中它的内联引用**照判**（更严）。
+          没挂这个属性 = 完全维持旧行为（不判），所以对既有包零影响。
         """
         if ref in self.special_refs:
             return
         if isinstance(ref, str) and ref.startswith(self.inline_prefixes):
-            return
+            judged = getattr(resolvable, "judged_inline_prefixes", ()) if resolvable is not None else ()
+            if not any(str(ref).startswith(p) for p in (judged or ())):
+                return
         if self.pool(ref) is not None:
             return
         if resolvable is None:

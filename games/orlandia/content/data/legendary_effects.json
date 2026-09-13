@@ -1,0 +1,956 @@
+{
+  "abyss_anchor": {
+    "name": "深渊锚护",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "abyss_res": 0.08,
+      "elem_res": 0.06
+    },
+    "desc": "深渊抗性＋8%，元素抗性＋6%"
+  },
+  "ancient_king": {
+    "name": "王权处决",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.35,
+      "execute_threshold": 0.3,
+      "tag": "👑王权处决"
+    },
+    "desc": "对生命 <30% 的目标＋35% 伤害"
+  },
+  "ao_lan_pearl": {
+    "name": "海渊之珠",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "ice_dmg": 0.2
+    },
+    "desc": "冰属性伤害＋20%"
+  },
+  "arcane_echo": {
+    "name": "秘法回响",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.15,
+    "effect": {
+      "next_skill_dmg": 0.15
+    },
+    "desc": "施放技能 15% 概率使下次技能伤害＋15%"
+  },
+  "arcane_ward": {
+    "name": "奥术屏障",
+    "kind": "defense",
+    "trigger": "battle_start",
+    "effect": {
+      "shield_hp_pct": 0.15,
+      "turns": 3
+    },
+    "desc": "战斗开始获得 15% 最大生命护盾（3 刻）"
+  },
+  "aura_seal": {
+    "name": "风暴之印",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "thunder_dmg": 0.2
+    },
+    "desc": "雷属性伤害＋20%"
+  },
+  "beast_ward": {
+    "name": "兽性庇护",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "thorns": 0.05
+    },
+    "desc": "反伤＋5%"
+  },
+  "bing_hao_zhan_ren": {
+    "name": "永冻之心",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "ice_dmg": 0.15,
+      "tenacity": 0.05
+    },
+    "desc": "冰属性伤害＋15%、韧性＋5%"
+  },
+  "blazing_sun": {
+    "name": "烈日灼烧",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.15,
+    "effect": {
+      "element": "fire",
+      "pct": 0.08,
+      "burn_pct": 0.015,
+      "burn_turns": 3
+    },
+    "desc": "攻击附加 8% 火属性伤害，15% 概率使目标灼烧（每刻损 1.5% 最大生命，3 刻）"
+  },
+  "blood_oath_echo": {
+    "name": "血誓回响",
+    "kind": "defense",
+    "trigger": "on_taken",
+    "chance": 0.2,
+    "effect": {
+      "heal_pct": 0.02,
+      "atk_up": 0.1
+    },
+    "desc": "受击 20%：回复 2% 最大生命，下次攻击＋10%"
+  },
+  "captain_insight": {
+    "name": "船长洞察",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "luck": 0.06
+    },
+    "desc": "幸运＋6%"
+  },
+  "chain_overload": {
+    "name": "连锁过载",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.15,
+    "effect": {
+      "extra_atk": 0.6,
+      "element": "thunder"
+    },
+    "desc": "攻击 15% 概率连锁过载：追加 60% 雷属性伤害"
+  },
+  "chu_huo": {
+    "name": "初火余烬",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.2,
+    "effect": {
+      "element": "fire",
+      "pct": 0.08,
+      "burn_pct": 0.015,
+      "burn_turns": 3
+    },
+    "desc": "攻击附加 8% 火属性伤害，20% 概率使目标灼烧（每刻损 1.5% 最大生命，3 刻）"
+  },
+  "cloud_rage_core": {
+    "name": "云怒雷核",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "thunder_dmg": 0.2
+    },
+    "desc": "雷属性伤害＋20%"
+  },
+  "crimson_fang": {
+    "name": "猩红獠牙",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "lifesteal": 0.1,
+      "crit_dmg": -0.1
+    },
+    "desc": "吸血＋10%，代价暴击伤害－10%"
+  },
+  "crimson_tide": {
+    "name": "猩红潮汐",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "lifesteal": 0.1,
+      "crit_dmg": -0.1
+    },
+    "desc": "吸血＋10%，代价暴击伤害－10%"
+  },
+  "dark_star_gauntlet": {
+    "name": "暗星连打",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "effect": {
+      "mark_pct": 0.03,
+      "max_mark": 4,
+      "next_atk_mult": 1.2,
+      "tag": "🌑暗星连打"
+    },
+    "desc": "攻击命中叠 1 层暗星（上限 4 层，每层伤害 +3%），叠满后下一次攻击额外 +120% 伤害并清空"
+  },
+  "dawn_crown": {
+    "name": "晨曦祝福",
+    "kind": "defense",
+    "trigger": "turn_start",
+    "effect": {
+      "pct": 0.02
+    },
+    "desc": "每刻回复 2% 生命"
+  },
+  "dawn_grace": {
+    "name": "晨光恩泽",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "hp_pct": 0.04
+    },
+    "desc": "最大生命＋4%"
+  },
+  "dawn_light": {
+    "name": "黎明破晓",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.5,
+      "enemy_contains": [
+        "深渊"
+      ],
+      "tag": "🌅黎明破晓"
+    },
+    "desc": "对深渊系敌人＋50% 伤害"
+  },
+  "death_wall": {
+    "name": "死亡防线",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "tenacity": 0.08,
+      "hp_pct": -0.05
+    },
+    "desc": "韧性＋8%，代价最大生命－5%——以血肉为墙"
+  },
+  "deep_frost": {
+    "name": "深寒",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.2,
+    "effect": {
+      "element": "ice",
+      "pct": 0.08,
+      "slow": 0.2,
+      "slow_turns": 2
+    },
+    "desc": "攻击附加 8% 冰属性伤害并减速目标（速度－20%，2 刻）"
+  },
+  "divine_execution": {
+    "name": "神罚处决",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.6,
+      "execute_threshold": 0.3,
+      "tag": "⚡神罚处决"
+    },
+    "desc": "对生命 <30% 的目标额外＋60% 伤害"
+  },
+  "dragon_annihilation": {
+    "name": "灭龙",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.25,
+      "enemy_contains": [
+        "龙"
+      ],
+      "tag": "🐉灭龙"
+    },
+    "desc": "对龙系敌人＋25% 伤害"
+  },
+  "dragon_scale": {
+    "name": "龙鳞庇护",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "elem_res": 0.15,
+      "abyss_res": 0.05,
+      "hp_pct": -0.1
+    },
+    "desc": "全元素抗性＋15%、深渊抗性＋5%，代价最大生命－10%"
+  },
+  "dragon_tongue": {
+    "name": "龙语印记",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "effect": {
+      "mark_pct": 0.02,
+      "max_mark": 5
+    },
+    "desc": "攻击叠加龙语印记(每层＋2% 伤害，上限 5 层)"
+  },
+  "earth_heart": {
+    "name": "大地护佑",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "dmg_reduce": 0.05,
+      "hp_pct": 0.05
+    },
+    "desc": "受击伤害－5%，最大生命＋5%"
+  },
+  "element_apostle_crown": {
+    "name": "使徒荣光",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "hp_pct": 0.06
+    },
+    "desc": "最大生命＋6%"
+  },
+  "element_apostle_pendant": {
+    "name": "使徒之印",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "crit_dmg": 0.2
+    },
+    "desc": "暴击伤害＋20%"
+  },
+  "element_apostle_robe": {
+    "name": "使徒庇护",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "dmg_reduce": 0.05
+    },
+    "desc": "受击伤害－5%"
+  },
+  "element_apostle_wand": {
+    "name": "元素共鸣",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "thunder_dmg": 0.15,
+      "ice_dmg": 0.15
+    },
+    "desc": "雷/冰属性伤害＋15%"
+  },
+  "ember_furnace": {
+    "name": "熔炉余烬",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.2,
+    "effect": {
+      "burn_pct": 0.01,
+      "burn_turns": 2
+    },
+    "desc": "攻击命中 20%：灼烧 1% 最大生命×2 刻"
+  },
+  "ember_ward": {
+    "name": "灰烬壁垒",
+    "kind": "defense",
+    "trigger": "on_taken",
+    "chance": 0.2,
+    "effect": {
+      "pct": 0.5
+    },
+    "desc": "受击 20% 概率触发灰烬壁垒：反弹 50% 伤害"
+  },
+  "executioner": {
+    "name": "处刑者",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.4,
+      "execute_threshold": 0.3,
+      "tag": "⚔️处刑者"
+    },
+    "desc": "对生命 <30% 的目标＋40% 伤害"
+  },
+  "frost_veil": {
+    "name": "霜结之纱",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "ice_dmg": 0.2,
+      "spd_pct": 0.05
+    },
+    "desc": "冰属性伤害＋20%，速度＋5%"
+  },
+  "frozen_heart": {
+    "name": "深渊守望",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "abyss_resist": 0.1,
+      "hp_pct": 0.05
+    },
+    "desc": "深渊抗性＋10%、最大生命＋5%"
+  },
+  "gale_dirge": {
+    "name": "挽歌连矢",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.25,
+    "effect": {
+      "extra_atk": 0.5,
+      "enemy_contains": [
+        "召唤"
+      ],
+      "tag": "🌪️挽歌连矢"
+    },
+    "desc": "攻击命中 25% 追加一支 50% 伤害的疾风矢（优先攻击召唤物）"
+  },
+  "giant_slayer": {
+    "name": "巨人屠戮",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.25,
+      "enemy_contains": [
+        "巨人"
+      ],
+      "tag": "🗿巨人屠戮"
+    },
+    "desc": "对巨人系敌人＋25% 伤害"
+  },
+  "goblin_crown": {
+    "name": "咕噜王的威仪",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "hp_pct": 0.06
+    },
+    "desc": "最大生命＋6%"
+  },
+  "gold_hook": {
+    "name": "金钩锋锐",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "crit_dmg": 0.3
+    },
+    "desc": "暴击伤害＋30%"
+  },
+  "grim_ward": {
+    "name": "亡者守护",
+    "kind": "defense",
+    "trigger": "passive",
+    "effect": {
+      "dmg_taken_mult": 0.93,
+      "cond": "hp_gt_50"
+    },
+    "desc": "生命 >50% 时受击伤害－7%"
+  },
+  "helga_relic": {
+    "name": "霜语",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "ice_dmg": 0.15
+    },
+    "desc": "冰属性伤害＋15%"
+  },
+  "holy_edict": {
+    "name": "圣谕回响",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "heal_power": 0.15,
+      "shield_hp_pct": 0.12
+    },
+    "desc": "治疗量＋15%，治疗溢出 15% 转化为护盾（上限 12% 最大生命）"
+  },
+  "iron_bastion": {
+    "name": "铁壁意志",
+    "kind": "defense",
+    "trigger": "on_taken",
+    "chance": 0.2,
+    "effect": {
+      "pct": 0.25
+    },
+    "desc": "受击 20% 使敌人下一次攻击－25%"
+  },
+  "jack_hook": {
+    "name": "处决狂潮",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.8,
+      "execute_threshold": 0.3,
+      "tag": "💀处决狂潮"
+    },
+    "desc": "对生命 <30% 的目标额外＋80% 伤害"
+  },
+  "jade_wealth": {
+    "name": "翡翠生财",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "gold_bonus": 0.05
+    },
+    "desc": "金币收益＋5%"
+  },
+  "jin_he_heart": {
+    "name": "烬核余温",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "crit_dmg": 0.25
+    },
+    "desc": "暴击伤害＋25%"
+  },
+  "judgment_chain": {
+    "name": "审判之链",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.25,
+    "effect": {
+      "purge": 2
+    },
+    "desc": "攻击 25% 驱散目标 2 层增益"
+  },
+  "kingdom_lion_heart": {
+    "name": "王狮之心",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.08,
+      "cond": "hp_gt_70",
+      "tag": "🦁王狮之心"
+    },
+    "desc": "生命 >70% 时伤害＋8%"
+  },
+  "lang_tear": {
+    "name": "澜歌",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "ice_dmg": 0.2
+    },
+    "desc": "冰属性伤害＋20%"
+  },
+  "last_breath": {
+    "name": "最后喘息",
+    "kind": "defense",
+    "trigger": "passive",
+    "effect": {
+      "revive": true,
+      "revive_hp": 0.2,
+      "tag": "🌙最后喘息"
+    },
+    "desc": "每场 1 次：受到致命伤害时以 20% 最大生命存活"
+  },
+  "life_spring": {
+    "name": "生命泉涌",
+    "kind": "defense",
+    "trigger": "turn_start",
+    "effect": {
+      "pct": 0.03
+    },
+    "desc": "每刻回复 3% 最大生命"
+  },
+  "lighthouse_ward": {
+    "name": "灯塔守望",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "dmg_reduce": 0.03
+    },
+    "desc": "受击伤害－3%"
+  },
+  "mark_hunt": {
+    "name": "猎杀印记",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.25,
+      "enemy_marked": true,
+      "tag": "🎯猎杀印记"
+    },
+    "desc": "对标记/被集火目标＋25% 伤害"
+  },
+  "memory_tear": {
+    "name": "记忆撕裂",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.15,
+    "effect": {
+      "silence": 1
+    },
+    "desc": "攻击 15% 撕裂目标记忆，使其沉默 1 刻"
+  },
+  "moon_bow": {
+    "name": "月神眷顾",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "crit": 0.1
+    },
+    "desc": "暴击率＋10%"
+  },
+  "moon_shadow": {
+    "name": "月影庇护",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "dodge": 0.04
+    },
+    "desc": "闪避＋4%"
+  },
+  "morning_dew": {
+    "name": "晨露滋养",
+    "kind": "defense",
+    "trigger": "turn_start",
+    "effect": {
+      "pct": 0.01
+    },
+    "desc": "每刻回复 1% 魔力"
+  },
+  "moro_crown": {
+    "name": "深渊腐蚀",
+    "kind": "defense",
+    "trigger": "on_taken",
+    "chance": 0.15,
+    "effect": {
+      "pct": 0.1,
+      "turns": 2
+    },
+    "desc": "受击 15% 使敌人攻击－10%(2 刻)"
+  },
+  "mortal_wound": {
+    "name": "致伤重击",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.2,
+    "effect": {
+      "heal_down": 3
+    },
+    "desc": "攻击 20% 使目标重伤：受治疗－30%（3 刻）"
+  },
+  "mu_ying_blade": {
+    "name": "暮影",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "crit": 0.08
+    },
+    "desc": "暴击率＋8%"
+  },
+  "mu_ying_soul": {
+    "name": "龙魂低吟",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "crit": 0.08
+    },
+    "desc": "暴击率＋8%"
+  },
+  "night_eater_mask": {
+    "name": "蚀夜",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "dodge": 0.08
+    },
+    "desc": "暗夜闪避＋8%"
+  },
+  "night_prayer": {
+    "name": "夜祷",
+    "kind": "defense",
+    "trigger": "turn_start",
+    "effect": {
+      "pct": 0.03
+    },
+    "desc": "每刻回复 3% 最大生命"
+  },
+  "night_watch": {
+    "name": "长夜守望",
+    "kind": "defense",
+    "trigger": "on_taken",
+    "chance": 0.05,
+    "effect": {
+      "heal_pct": 0.01
+    },
+    "desc": "受击 5%：回复 1% 最大生命"
+  },
+  "oath_sword": {
+    "name": "誓约之刃",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 1.0,
+    "effect": {
+      "heal_pct": 0.02,
+      "on_crit": true
+    },
+    "desc": "暴击时回复 2% 最大生命"
+  },
+  "obsidian_aegis": {
+    "name": "黑曜壁垒",
+    "kind": "defense",
+    "trigger": "on_taken",
+    "chance": 0.1,
+    "effect": {
+      "pct": 0.08,
+      "turns": 3
+    },
+    "desc": "受击 10% 获得 8% 最大生命护盾（3 刻）"
+  },
+  "ranger_precision": {
+    "name": "巡林精准",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "precise": 0.06
+    },
+    "desc": "精准＋6%"
+  },
+  "rong_lu_heart": {
+    "name": "大地心跳",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "crit": 0.06,
+      "hp_pct": 0.08
+    },
+    "desc": "暴击率＋6%，最大生命＋8%"
+  },
+  "sanctum_light": {
+    "name": "圣殿辉光",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.15,
+    "effect": {
+      "mon_atk_down_pct": 0.08,
+      "turns": 1
+    },
+    "desc": "攻击命中 15%：敌人攻击－8%（1 刻）"
+  },
+  "sea_breeze": {
+    "name": "海风祝福",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "dodge": 0.03
+    },
+    "desc": "闪避率＋3%"
+  },
+  "shadow_raid": {
+    "name": "影袭连刺",
+    "kind": "attack",
+    "trigger": "on_crit",
+    "chance": 0.5,
+    "effect": {
+      "extra_atk": 0.4,
+      "lifesteal": 0.02,
+      "tag": "🗡️影袭连刺"
+    },
+    "desc": "暴击后 50% 概率追加一次 40% 伤害的追击，并回复 2% 最大生命"
+  },
+  "shuang_lang_zhi_wang_ya": {
+    "name": "霜墙防线",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "elem_resist": 0.1,
+      "tenacity": 0.05
+    },
+    "desc": "全元素抗性＋10%、韧性＋5%——以寒霜筑起无形防线"
+  },
+  "silver_bell_rod": {
+    "name": "愿者上钩",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "luck": 0.1
+    },
+    "desc": "垂钓者的眷顾：掉落收益＋10%"
+  },
+  "siphon": {
+    "name": "汲魂",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.2,
+    "effect": {
+      "purge": 1,
+      "heal_pct": 0.03
+    },
+    "desc": "攻击 20% 驱散目标 1 层增益并回复 3% 最大生命"
+  },
+  "soul_devourer": {
+    "name": "噬魂者",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.15,
+    "effect": {
+      "heal_pct": 0.06
+    },
+    "desc": "攻击 15% 将 6% 伤害转为生命"
+  },
+  "star_destruction": {
+    "name": "星陨湮灭",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.3,
+      "enemy_contains": [
+        "深渊"
+      ],
+      "tag": "☄️星陨湮灭"
+    },
+    "desc": "对深渊系敌人＋30% 伤害"
+  },
+  "star_shatter": {
+    "name": "碎星拳劲",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.25,
+    "effect": {
+      "dmg_mult": 1.5,
+      "ignore_def": 0.3,
+      "debuff": "def",
+      "pct": 0.15,
+      "turns": 2,
+      "tag": "💥碎星拳劲"
+    },
+    "desc": "攻击 25% 造成 150% 伤害的破甲重拳（无视 30% 防御），并降低目标防御 15%（2 刻）"
+  },
+  "starfall": {
+    "name": "星陨",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.1,
+    "effect": {
+      "mult": 2.0,
+      "aoe": true
+    },
+    "desc": "攻击 10% 概率触发星陨：全体 200% 伤害"
+  },
+  "steady_core": {
+    "name": "磐石之心",
+    "kind": "defense",
+    "trigger": "on_taken",
+    "chance": 0.15,
+    "effect": {
+      "cc_resist": 0.5,
+      "heal_pct": 0.03
+    },
+    "desc": "受击 15% 免疫眩晕/减速且回复 3% 最大生命"
+  },
+  "storm_crown": {
+    "name": "风暴之冠",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "thunder_dmg": 0.2
+    },
+    "desc": "雷属性伤害＋20%"
+  },
+  "storm_herald": {
+    "name": "风暴使者",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "thunder_dmg": 0.15,
+      "elem_res": 0.05
+    },
+    "desc": "雷属性伤害＋15%，元素抗性＋5%"
+  },
+  "summon_pact": {
+    "name": "召唤契约",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.2,
+    "effect": {
+      "summon": 1
+    },
+    "desc": "攻击 20% 概率召唤契约生物助战"
+  },
+  "sun_blaze": {
+    "name": "烈日迸发",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.15,
+    "effect": {
+      "element": "fire",
+      "pct": 0.8
+    },
+    "desc": "攻击 15% 概率造成 80% 额外火属性伤害"
+  },
+  "surge_ready": {
+    "name": "蓄势待发",
+    "kind": "attack",
+    "trigger": "battle_start",
+    "effect": {
+      "next_atk_up": 0.15
+    },
+    "desc": "战斗开始：下一次攻击＋15%"
+  },
+  "thunder_mark": {
+    "name": "雷鸣印记",
+    "kind": "attack",
+    "trigger": "on_hit",
+    "chance": 0.2,
+    "effect": {
+      "mark_pct": 0.02,
+      "max_mark": 5
+    },
+    "desc": "攻击 20% 叠加雷鸣印记（每层＋2% 伤害，上限 5 层）"
+  },
+  "time_lord_ring": {
+    "name": "时光流转",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "crit_dmg": 0.18
+    },
+    "desc": "暴击伤害＋18%"
+  },
+  "time_lord_scepter": {
+    "name": "时之低语",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "cdr": 0.08
+    },
+    "desc": "冷却缩减＋8%"
+  },
+  "top_hunter": {
+    "name": "猎首者",
+    "kind": "attack",
+    "trigger": "passive",
+    "effect": {
+      "dmg_mult": 1.15,
+      "enemy_role": "elite",
+      "tag": "🏹猎首者"
+    },
+    "desc": "对精英敌人＋15% 伤害"
+  },
+  "war_cry": {
+    "name": "战吼",
+    "kind": "attack",
+    "trigger": "battle_start",
+    "effect": {
+      "atk_up": 2,
+      "tag": "📣战吼"
+    },
+    "desc": "战斗开始战吼：攻击大幅提升（2 刻）"
+  },
+  "wolf_howl": {
+    "name": "狼嚎",
+    "kind": "attack",
+    "trigger": "battle_start",
+    "effect": {
+      "cond": "battle_start",
+      "dmg_mult": 1.1,
+      "tag": "🐺狼嚎"
+    },
+    "desc": "战斗开始时嚎叫：本场战斗伤害＋10%"
+  },
+  "xing_he_fa_zhang": {
+    "name": "冰嚎",
+    "kind": "attack",
+    "trigger": "stat",
+    "effect": {
+      "ice_dmg": 0.2,
+      "crit": 0.05
+    },
+    "desc": "冰属性伤害＋20%、暴击率＋5%"
+  },
+  "xing_hui_zhi_guan": {
+    "name": "星辉守护",
+    "kind": "defense",
+    "trigger": "stat",
+    "effect": {
+      "crit_dmg": 0.15,
+      "dodge": 0.05
+    },
+    "desc": "暴击伤害＋15%、闪避＋5%"
+  }
+}

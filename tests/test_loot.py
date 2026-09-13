@@ -252,6 +252,21 @@ def t5_expand_audit():
                  or "池类型不对")["ok"] is True)
     check("audit_pretty 出字符串", "掉落池审计" in clean.audit_pretty())
 
+    # 内联前缀默认「内容侧自管、不判」；内容侧声明「这族内联引用其实有域落点」时**照判**（opt-in）
+    au_plain = t.audit()
+    check("审计：内联前缀默认跳过（无回调时 gold:1:9 / item:x 都不报）",
+          not any("gold:" in m or "item:" in m for _l, _k, m in au_plain["issues"]))
+
+    def rsv_judged(ref, pool):                 # noqa: ARG001
+        return str(ref).endswith("_ok")
+
+    rsv_judged.judged_inline_prefixes = ("item:",)      # 只声明 item: 这一族要判
+    au3 = t.audit(resolvable=rsv_judged)
+    check("★ 审计：回调声明 judged_inline_prefixes 后，该族内联引用照判（item:x → 断链）",
+          any("item:x" in m for _l, _k, m in au3["issues"]))
+    check("审计：没被声明的那族内联前缀照旧跳过（gold:1:9 不报）",
+          not any("gold:1:9" in m for _l, _k, m in au3["issues"]))
+
 
 # ---------------------------------------------------------------- 6 档位阶梯
 def t6_tier():

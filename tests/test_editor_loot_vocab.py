@@ -376,6 +376,28 @@ def t6_prefix_domains():
     check("前缀→域 不改变展开数（只影响审计判定）",
           a["expanded_count"] == b["expanded_count"] and a["expanded_unique"] == b["expanded_unique"],
           f"{a['expanded_count']} vs {b['expanded_count']}")
+
+    # ⑨ 内联前缀 + 「前缀→域」：内联引用默认「内容侧自管、不判」，但两者同时声明时**照判**
+    #    （引擎侧靠回调上的 `judged_inline_prefixes` 开启例外；entries 与 roll 行两条路径都要生效）
+    pools2 = {"p2": {"type": "table", "rolls": [{"pool": "tok:raw_in"}, {"pool": "tok:__nope__"}]},
+              "p3": {"type": "weighted", "entries": [{"item": "tok:raw_in", "weight": 1},
+                                                     {"item": "tok:__nope__", "weight": 1}]}}
+    declare({"version": 1, "inline_prefixes": ["tok:"], "ref_prefix_domains": {"tok:": "items"}})
+    vv = LV.load_vocab(root)
+    rsv = LV._make_resolvable(vv)
+    check("回调上挂出了「要判的内联前缀」（引擎靠它开例外）",
+          getattr(rsv, "judged_inline_prefixes", None) == ("tok:",),
+          str(getattr(rsv, "judged_inline_prefixes", None)))
+    msgs2 = [i["message"] for i in LV.audit_file(pools2, vv)["issues"]]
+    check("内联前缀 + 前缀→域：坏值被抓住（entries 1 条 + roll 行 1 条）",
+          sum("tok:__nope__" in m for m in msgs2) == 2, str(msgs2))
+    check("内联前缀 + 前缀→域：好值不报（`raw_in` 在 items 表里）",
+          not any("tok:raw_in" in m for m in msgs2), str(msgs2))
+
+    # ⑩ 只声明 inline、没有域映射 → 内联引用照旧跳过（对既有包零影响）
+    declare({"version": 1, "inline_prefixes": ["tok:"]})
+    msgs3 = [i["message"] for i in LV.audit_file(pools2, LV.load_vocab(root))["issues"]]
+    check("只声明 inline 没有域映射 → 内联引用照旧不判（零影响）", not msgs3, str(msgs3))
     shutil.rmtree(d, ignore_errors=True)
 
 

@@ -1,0 +1,257 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/pets.schema.json",
+  "title": "宠物（pets）—— 框架模板；品质档 / 定位词 / 技能类型词等取值全是内容侧词汇",
+  "description": "一条 = 一个品种（表键 = 品种 id，形如 `pet_*`；与条目自带 `key` 同值）。框架**零知识**：品质档名、定位词、技能类型词、台词与所有数值都由内容侧声明，框架不枚举任何取值、也不解释它们怎么生效。品种的「蛋掉落规则」由内容侧另一张表在**导出期按品种 id 连接**进条目字段 `egg_roll`（源表形态见 $defs/pet_egg_roll_table）；没有规则的品种**不写该字段**。",
+  "x-primary": "pet",
+  "$defs": {
+    "pet": {
+      "type": "object",
+      "title": "宠物品种（源品种池的一条）",
+      "required": [
+        "key",
+        "name",
+        "quality",
+        "focus",
+        "skill_type",
+        "skill_interval",
+        "skill_value",
+        "spd"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^pet_[a-z0-9_]+$",
+          "title": "品种 id",
+          "description": "品种 id（内容侧词汇）。与**表键同值**：导出期断言两者相等，不等就拒绝导出（防「键改了、字段没改」的半改状态）。它是内容侧跨表引用的落点（掉落表、任务奖励、图鉴都按它引用）→ **改它 = 断引用 + 丢玩家已有的该品种记录**（内容侧按它建图鉴与宠物行）。"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "名称",
+          "description": "品种显示名（内容侧词汇）。内容侧在孵化时把它**抄进**玩家宠物行 → 改名只影响**新**孵化的，已有玩家记录仍是旧名。"
+        },
+        "icon": {
+          "type": "string",
+          "title": "图标",
+          "description": "展示用字形（内容侧词汇，可以是任意字符/表情）。缺该字段时界面按通用图标兜底。"
+        },
+        "quality": {
+          "type": "string",
+          "minLength": 1,
+          "title": "品质档",
+          "description": "品质档名。**取值是内容侧词汇，框架不枚举**（不同游戏档数/命名不同，枚举会锁死扩展）。内容侧按它查定价与成长档。"
+        },
+        "focus": {
+          "type": "string",
+          "minLength": 1,
+          "title": "定位词",
+          "description": "内容侧的定位 / 分类词（描述这个品种偏向什么）。⚠ 逐键搜索内容侧**没有**读它的代码：它是展示与分类用字段，不驱动任何数值。"
+        },
+        "skill_name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "技能名",
+          "description": "该品种技能的显示名（内容侧词汇）。面板把它和执行细节拼成一行展示。"
+        },
+        "skill_interval": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "触发间隔",
+          "description": "每隔这么多个「时间单位」触发一次技能（整数 ≥ 1）。⚠ 「时间单位」是内容侧叫法与语义，框架不解释、不换算。"
+        },
+        "skill_type": {
+          "type": "string",
+          "minLength": 1,
+          "title": "技能类型",
+          "description": "内容侧技能类型词 —— 决定这条技能**怎么算**（伤害 / 治疗 / 概率挡下一次…）。框架不预设任何类型名，也**不校验**它是否真被内容侧实现过：拼错不报错，只会静默不生效。"
+        },
+        "skill_value": {
+          "type": "number",
+          "minimum": 0,
+          "title": "技能数值",
+          "description": "配合 `skill_type` 的系数（内容侧语义：0~1 的比值在界面上按百分比显示）。框架**不设上限** —— 倍率型技能的系数可能大于 1，加了上限就是替内容侧做决定。"
+        },
+        "spd": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "速度",
+          "description": "该品种的速度值（整数 ≥ 1）。⚠ 逐键搜索内容侧当前**没有**读它的代码（数据层保留字段）—— 改它不会改变行为，除非内容侧接上。"
+        },
+        "source": {
+          "type": "string",
+          "title": "获取渠道",
+          "description": "该品种获取渠道的**说明文本**（内容侧词汇，自由串）。⚠ 它是文案不是引用：真实渠道在内容侧的掉落规则/任务表/生活系统里，改这段文字**不改变**发放结果。"
+        },
+        "desc": {
+          "type": "string",
+          "title": "描述",
+          "description": "展示文案。本域**不强制非空**（更不强制存在）—— 缺省即没有描述。"
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": "随机台词池",
+          "description": "该品种的随机台词池（至少 1 条）。⚠ 逐键搜索内容侧取用它的函数当前**没有调用点** —— 数据层保留，接上才生效；空数组属坏数据（要表达「没有台词」请**删字段**）。"
+        },
+        "egg_roll": {
+          "$ref": "#/$defs/pet_egg_roll",
+          "title": "蛋掉落规则（派生）",
+          "description": "由内容侧「蛋掉落规则」源表在**导出期按品种 id 连接**而来（源表形态见 $defs/pet_egg_roll_table）—— **不是**源品种行自带的字段。整行原样照搬（含它自己的 `key`），导出期断言 `egg_roll.key` == 表键。**没有规则的品种不写此字段**：缺省 = 该品种不走「打怪掷蛋」这条渠道，与「有一行空规则」是两回事。"
+        }
+      },
+      "examples": [
+        {
+          "key": "pet_example_a",
+          "name": "示例伙伴甲",
+          "icon": "🐾",
+          "quality": "white",
+          "focus": "定位词甲",
+          "skill_name": "示例招式",
+          "skill_interval": 3,
+          "skill_type": "example_type_a",
+          "skill_value": 0.4,
+          "spd": 50,
+          "source": "示例渠道：某类怪掉落",
+          "desc": "示例：一个带技能的品种条目。",
+          "lines": [
+            "示例台词一",
+            "示例台词二",
+            "示例台词三"
+          ],
+          "egg_roll": {
+            "key": "pet_example_a",
+            "rate": 0.015,
+            "name_kw": [
+              "示例关键词"
+            ]
+          }
+        },
+        {
+          "key": "pet_example_b",
+          "name": "示例伙伴乙",
+          "icon": "🐾",
+          "quality": "blue",
+          "focus": "定位词乙",
+          "skill_name": "示例招式二",
+          "skill_interval": 4,
+          "skill_type": "example_type_b",
+          "skill_value": 0.55,
+          "spd": 65,
+          "source": "示例渠道：任务奖励",
+          "desc": "示例：没有蛋掉落规则的品种（不写 egg_roll）。",
+          "lines": [
+            "示例台词"
+          ]
+        }
+      ]
+    },
+    "pet_egg_roll": {
+      "type": "object",
+      "title": "一条蛋掉落规则（源表的一行）",
+      "required": [
+        "key",
+        "rate"
+      ],
+      "additionalProperties": true,
+      "description": "内容侧语义：**命中条件全部满足**才按 `rate` 掷一次概率（即 role / name_kw / is_elite / is_boss 之间是「与」，name_kw 内部是「或」）。框架只描述形状，不解释也不校验这些条件。",
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^pet_[a-z0-9_]+$",
+          "title": "适用品种 id",
+          "description": "这条规则适用的品种 id —— 必须是 `$defs/pet_table` 里的键（导出期已按它连接进该品种的 `egg_roll`；悬空规则在导出期就被拒绝）。"
+        },
+        "rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "title": "掷中概率",
+          "description": "条件全中时掷中的概率（0~1 的比值）。"
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1,
+          "title": "限定怪物定位",
+          "description": "只对「怪物定位 == 这个值」的怪生效（内容侧词汇，框架不枚举）。**缺字段 = 不限定位**。"
+        },
+        "name_kw": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": "限定怪物名关键词",
+          "description": "怪物名含其中**任一**关键词才生效（内容侧词汇）。⚠ 这是**按名**的弱引用 —— 指向别处的怪物名册（不是本包内的键引用），框架不解析。**缺字段 = 不限名字**。"
+        },
+        "is_elite": {
+          "type": "boolean",
+          "title": "仅精英怪",
+          "description": "true = 只对精英怪生效。**缺字段 = 不判精英**（不是 false 的等价写法：缺省与显式 false 在内容侧语义相同，但缺省能让条目更短）。"
+        },
+        "is_boss": {
+          "type": "boolean",
+          "title": "仅首领",
+          "description": "true = 只对首领怪生效。**缺字段 = 不判首领**。"
+        }
+      },
+      "examples": [
+        {
+          "key": "pet_example_a",
+          "rate": 0.015,
+          "name_kw": [
+            "示例关键词"
+          ]
+        },
+        {
+          "key": "pet_example_b",
+          "rate": 0.065,
+          "is_elite": true
+        }
+      ]
+    },
+    "pet_table": {
+      "type": "object",
+      "title": "品种池整表：{品种 id: 品种}（条目本体见 $defs/pet）",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^pet_[a-z0-9_]+$",
+        "description": "键 = 品种 id（小写 ASCII + 下划线，前缀固定）。本 pattern **只挡「不像品种 id」的形状**，不限制取值词汇（加什么品种、叫什么由内容侧定）。为什么要锁前缀：这层键空间是内容侧跨表引用（掉落 / 任务奖励 / 图鉴）唯一的落点，形状一致才能被机械引用。"
+      },
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "pet_egg_roll_table": {
+      "type": "object",
+      "title": "蛋掉落规则**源表**形态：{品种 id: 一条规则}（导出期按 id 连接进 pet.egg_roll；整表不单独落盘）",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^pet_[a-z0-9_]+$",
+        "description": "键 = 品种 id（与 $defs/pet_table 同一键空间）—— 这是「池 id → 品种」的连接键。"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/pet_egg_roll"
+      },
+      "examples": [
+        {
+          "pet_example_a": {
+            "key": "pet_example_a",
+            "rate": 0.015,
+            "name_kw": [
+              "示例关键词"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

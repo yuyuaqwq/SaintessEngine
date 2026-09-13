@@ -235,6 +235,13 @@ def _make_resolvable(v: dict):
             return None
         return True if ref in keys else False
 
+    # 「内联前缀」默认是「内容侧自管、审计跳过」；但内容侧**同时**声明了「前缀→域」时，
+    # 这族内联引用其实是有落点的 → 给回调挂上引擎认的属性，让它们**照判**（更严）。
+    # 不挂 = 完全旧行为（对没声明的包零影响）。
+    inline = tuple(v["inline_prefixes"])
+    judged = tuple(p for p in pre if any(p.startswith(ip) or ip.startswith(p) for ip in inline))
+    if judged:
+        resolvable.judged_inline_prefixes = judged
     return resolvable
 
 
