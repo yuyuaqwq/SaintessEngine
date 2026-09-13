@@ -82,14 +82,40 @@ def undeclared_keys(data, schema, pre=""):
     return bad
 
 
+def _allows_null(schema) -> bool:
+    """该字段的 schema 是否**显式允许 null**（`type` 里含 "null"，或任何一支 anyOf/oneOf 允许）。"""
+    if not isinstance(schema, dict):
+        return False
+    t = schema.get("type")
+    if t == "null" or (isinstance(t, list) and "null" in t):
+        return True
+    for key in ("anyOf", "oneOf"):
+        for sub in (schema.get(key) or []):
+            if _allows_null(sub):
+                return True
+    return False
+
+
 def missing_required(data, schema, pre=""):
-    """schema.required 里声明、但数据缺的字段路径（**只查已声明的对象层级**）。"""
+    """schema.required 里声明、但数据缺的字段路径（**只查已声明的对象层级**）。
+
+    ⚠️ 2026-09-13 修：原来把 `值 is None` 也算「缺」—— 但 JSON Schema 的 `required` 只管
+    **键在不在**，「必填但可空」是合法组合（`type: ["integer","null"]`：键必须在，值可以是 null，
+    编辑器**不会**因此被拦）。原来的口径比编辑器更严 → 对「隐藏怪专属条目 lv 用 null」这类
+    正当数据**假红**。现在：值为 null 只在 schema **不允许 null** 时才算缺。
+    """
     out = []
     if not isinstance(data, dict):
         return out
+    props = schema.get("properties") or {}
     for k in (schema.get("required") or []):
-        v = data.get(k, None)
-        if k not in data or v is None or (isinstance(v, str) and v.strip() == ""):
+        if k not in data:
+            out.append(pre + str(k))
+            continue
+        v = data[k]
+        if v is None and not _allows_null(props.get(k)):
+            out.append(pre + str(k))
+        elif isinstance(v, str) and v.strip() == "":
             out.append(pre + str(k))
     for k, sub in (schema.get("properties") or {}).items():
         if not isinstance(sub, dict) or k not in data:
@@ -165,6 +191,16 @@ def main():
           all("free." not in x for x in got), f"{got}")
     check("检查器自检：required 缺失能报", missing_required({"a": ""}, fix_schema) == ["a"],
           f"{missing_required({'a': ''}, fix_schema)}")
+    # required 的语义 = 键在不在（JSON Schema 口径）；「必填但可空」不该被误报
+    nullable = {"required": ["lv"], "properties": {"lv": {"type": ["integer", "null"]}}}
+    not_nullable = {"required": ["lv"], "properties": {"lv": {"type": "integer"}}}
+    check("检查器自检：必填 + 可空（type 含 null）→ 值为 null **不算缺**",
+          missing_required({"lv": None}, nullable) == [], f"{missing_required({'lv': None}, nullable)}")
+    check("检查器自检：必填 + 不可空 → 值为 null 算缺",
+          missing_required({"lv": None}, not_nullable) == ["lv"],
+          f"{missing_required({'lv': None}, not_nullable)}")
+    check("检查器自检：键整个缺失 → 两种 schema 下都算缺",
+          missing_required({}, nullable) == ["lv"] and missing_required({}, not_nullable) == ["lv"])
 
     # 2. schema 侧体检：物品域的 primary def 可解析
     item_def, item_fname = load_schema("items")

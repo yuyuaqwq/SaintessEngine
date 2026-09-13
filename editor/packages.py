@@ -99,6 +99,11 @@ DOMAINS = {
     # 宠物：品种表（蛋掉落规则在导出期连接进条目，不另立顶层表 —— 键空间是品质词，与 `pet_*` 互斥）
     "pets": {"label": "宠物", "kind": "data", "schema": "pets.schema.json",
              "primary": "pet", "icon": "🐾"},
+    # 怪物名册：**投影**（不是真源）—— 键 = 怪 id，一条 = 一个怪；把散在五处元组里的怪折叠成对象表。
+    # 跨来源冲突**不静默选一个**：`lv` 给基准值 + `lv_rule` 写清规则，同时用 `lv_variants`/`spawns`
+    # 保留每一处现场（谁把它摆成了几级、在哪个场景）。引擎侧怪物仍由内容侧构造，名册供引用落点与查阅。
+    "monster_roster": {"label": "怪物名册", "kind": "data", "schema": "monster_roster.schema.json",
+                       "primary": "monster", "icon": "🐺"},
 }
 
 

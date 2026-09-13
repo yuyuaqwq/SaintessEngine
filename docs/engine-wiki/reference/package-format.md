@@ -154,23 +154,26 @@ JSON 由导出脚本生成，并由**同步门禁**断言「派生一致」；�
 
 ## 九、奥兰迪亚包：已进包 / 还没进包（2026-09-13 盘点）
 
-**已进包 16 个域 / 4080 条**（框架 `DOMAINS` 一个不缺）：`items` 900 / `equip_roster` 687 /
-`drop_pools` 596 / `pois` 457 / `monsters` 330 / `skills` 305 / `texts` 233 / `commands` 194 /
-`maps` 121 / `effect_rules` 85 / `affixes` 76 / `passive_proc` 42 / `instances` 27 / `tlogs` 18 /
-`classes` 8 / `loot_vocab` 1。清单与真源模块见 `games/orlandia/README.md`。
+**已进包 19 个域 / 4569 条**（框架 `DOMAINS` 一个不缺）：`items` 900 / `equip_roster` 687 /
+`drop_pools` 596 / `pois` 457 / **`monster_roster` 380** / `monsters` 330 / `skills` 305 /
+`texts` 233 / `commands` 194 / `maps` 121 / **`legendary_effects` 93** / `effect_rules` 85 /
+`affixes` 76 / `passive_proc` 42 / `instances` 27 / `tlogs` 18 / **`pets` 16** / `classes` 8 /
+`loot_vocab` 1。清单与真源模块见 `games/orlandia/README.md`。
 
-### 9.1 需要**拍板**的一件（不是干活问题，是形状问题）
+### 9.1 名册类缺口**已补完**（2026-09-13）
 
-**「怪物名册」的权威形状**。游戏侧的「怪物」不是一张表 —— 是散在 `subareas.py` / `instances.py` /
-`mesh_rooms_*.py` 的 **840 条六元组模板**（`[id, 中文名, role, lv, [技能id], [掉落名]]`，
-355 个唯一 id，**168 个 id 的 lv 跨表不一致**，10 个中文名对应两个 id）。两个候选：
+三张「引用有落点」的名册都进包了：`equip_roster`(687) / `pois`(457) / **`monster_roster`(380)**。
+其中怪物名册按设计稿 `workspace/editor-large-package-next/overnight/design-monster_roster.md` 落地：
 
-| 候选 | 做法 | 代价 |
-|---|---|---|
-| A. 六元组 → 对象表（键 = 怪 id） | 新建 `monster_roster` 域，条目 = `{id,name,role,lv,skills,drops}`；框架 schema 里已有 `monster_template` def 就是描述六元组的 | 要先定「同一个 id 在两处 lv 不同时以谁为准」（或如实保留 `lv_by_source`） |
-| B. 只建索引，不建名册 | 只导 `MONSTER_MODS`(140) + `HIDDEN_MONSTERS`(25) + 一张 `{中文名 → id}` 索引，供 `mon:`/`elite:` 按名引用解析 | 怪物本体仍不在包里，跨表引用只能解析到「名字对得上」的程度 |
-
-定了形状就能一次消掉 `instances` 的 148 条怪 id 悬空 + `drop_pools` 的 363 条按名引用。
+* 键 = 怪 id；覆盖 = 355 六元组 id + 24 隐藏怪表专属 + 1 只个体补正表专属（380 条）；
+* 跨来源冲突**不静默选一个**：`lv` 只是**基准值**，规则写在 `lv_rule`（当前 = `field_min`：野外记录最小值），
+  每一处现场留在 `lv_variants`（语义化 scope，不用行号）与 `spawns`（`source/map/subarea/slot/line` 证据链）；
+  **168 个等级冲突全量保留**；`name`/`role` 取多数值 + `*_variants`；`skills`/`drops` 取**并集**；
+  14 个重名如实落 `name_peers`（不静默选一个）；
+* **唯一待鱼鱼拍板的**：`lv_rule` 的取值（现在是「野外最小」）。想换成「副本值 / 多数值」只改导出器里那**一个常量**，
+  名册的对照字段不用动。
+* 闭合验收（`dragonfall/tests/test_monster_roster_closure.py`，已进仓）：`instances` 121 个怪 id 全命中、
+  `drop_pools` 的 345 个 `mon:`/`elite:` 名字全命中、重名/等级对照结构齐全。
 
 ### 9.2 属「下一个域批次」的内容表（不影响当前包可用性）
 
@@ -185,9 +188,9 @@ JSON 由导出脚本生成，并由**同步门禁**断言「派生一致」；�
 | 世界人物 | `NPCS`(362+47+22) · `DIALOGUES`(39) · `FACTIONS`(23) | `npcs` / `dialogues` / `factions` |
 | 事件/世界 | `EXPLORE_EVENTS`(146) · `DAILY_MAP_EVENTS`(20) · `WORLD_BOSS_POOL` · `TRIAL_FLOORS`(30) | `events` / `world` |
 | 经济 | `SHOP_*`(88) · `GUILD_SHOP_ITEMS` · `HONOR_SHOP` · `AUCTION_POOL` | `shop` |
-| 伙伴/坐骑 | `PET_POOL`(26) · `MOUNT_*`(22) · `SUMMONS`(5) | `pets` / `mounts` / `summons` |
+| 伙伴/坐骑 | ~~`PET_POOL`(26)~~ **✅已进包（`pets` 16）** · `MOUNT_*`(22) · `SUMMONS`(5) | 余下 `mounts` / `summons`（`SUMMONS` 只有 5 条，可并入 `mounts` 一起开） |
 | 生活技能 | `FISH_TIERS` · `FISH_POOL`(30) · `FISHING_SPOTS`(11) · `GATHER_*` · `MINING_*` | `fish` / `gather` |
-| 其它 | `PROPS`(374) · `PORTALS`(11) · `RACES`(6) · `TIPS`(58) · `LEGENDARY_EFFECTS`(93) · `SETS`(92) · `MONSTER_MODS`(140) | 按需 |
+| 其它 | `PROPS`(374) · `PORTALS`(11) · `RACES`(6) · `TIPS`(58) · ~~`LEGENDARY_EFFECTS`(93)~~ **✅已进包** · `SETS`(92) · ~~`MONSTER_MODS`(140)~~ **✅已并入 `monster_roster`** | 按需 |
 
 **不建议进包**（属派生表/索引，进了就是第二份定义）：`MATERIALS_BY_NAME`(686) ·
 `EQUIP_ROSTER_BY_NAME`(686) · `INSTANCE_STAGE_MAPS`/`INSTANCE_STAGE_NPCS`（已装配进 `instances.stages[]`）·
