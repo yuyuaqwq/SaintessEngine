@@ -10,13 +10,14 @@
 
 ## 一、包里有什么
 
-**24 个域 / 5115 条**，约 2 MB：
+**50 个域 / 8163 条**，约 3 MB：
 
-> ★ 2026-09-13 B2b：域的表**真源在本包的 `editor/domains.json`**（24 域）—— 框架内置集只剩
+> ★ 2026-09-13 B2b：域的表**真源在本包的 `editor/domains.json`**（50 域）—— 框架内置集只剩
 > 8 个**引擎域**（effect_rules / passive_proc / commands / texts / tlogs / maps / drop_pools /
 > instances，每个都能在 `saintess_engine/` 指到消费端）；**内容域不内置**，只能由包声明
-> （反证：拿掉本包那份声明 → 编辑器只认识那 8 个）。下表是 19 域那批的历史盘点，
-> 其后新增的 5 个域：`npcs` 431 / `sets` 92 / `enhance_table` 10 / `panel_rules` 7 / `races` 6。
+> （反证：拿掉本包那份声明 → 编辑器只认识那 8 个）。下表是 19 域那批的历史盘点；
+> 其后新增 31 个域：`npcs` 431 / `sets` 92 / `enhance_table` 10 / `panel_rules` 7 / `races` 6，
+> 以及 2026-09-13 **B3–B7 五路并行批次**的 26 个域（见下方「§一之二」）。
 
 | 域 | 条数 | 文件 | 真源（游戏仓 `dragonfall/`） | 备注 |
 |---|---:|---|---|---|
@@ -40,9 +41,25 @@
 | classes | 8 | `content/data/classes.json` | `game/data/classes.py::CLASSES` | 职业（含 `tutor` 元组 → list） |
 | loot_vocab | 1 | **`content/rules/loot_vocab.json`** | `game/drop_engine.py` 的三张声明常量 | 掉落池**引用词汇声明**（内容侧告诉审计「哪些引用解得开」） |
 
-`game.json` 声明：`id=orlandia` / `engine=">=0.1"` / `domains=[24 个域]` / `created=2026-09-12`。
-**没有 `entry`**：本包是纯数据包（机制尚未移植），一旦声明 `entry` 就必须有那个文件
-——`tests/test_editor_dist.py` 守这条不变量。
+`game.json` 声明：`id=orlandia` / `engine=">=0.1"` / `domains=[50 个域]` / `created=2026-09-12` /
+`entry=content/apply.py`（2026-09-13 机制入口移植进包起，`entry` 是**管辖字段**：声明了就必须有那个文件，
+`tests/test_editor_dist.py` 守这条不变量）。
+
+### §一之二、B3–B7 并行批次新增的 26 个域（2026-09-13，共 3048 条）
+
+| 线 | 域 → 条数 | 真源（游戏仓 `dragonfall/`） |
+|---|---|---|
+| B3 NPC·剧情 | `quests` 238 · `events` 146 · `tips` 58 · `dialogues` 39 · `event_templates` 19 | `game/data/{quests,events,tips,dialogues}.py` · `game/core/event_templates.py` |
+| B4 世界·探索 | `subareas` 628 · `worlds` 121 · `instance_investigation` 90 | `game/data/subareas.py` · `game/data/maps.py::MAPS` · `game/data/instance_investigation.py` |
+| B5 生活·养成 | `craft` 426 · `skill_up` 305 · `alchemy` 91 · `cooking` 59 · `props` 59 · `runes` 16 · `job_guide` 7 | `game/data/{craft,skill_up,alchemy,cooking,props,runes,job_guide}.py` |
+| B6 商店·经济 | `achievements` 119 · `shop` 89 · `title_conds` 50 · `achievement_conds` 47 · `shop_stock` 35 · `smith_stock` 4 | `game/data/{achievements,shop}.py` · `game/core/{title_conds,achievement_conds,shop_stock,smith_stock}.py` |
+| B7 怪物·战斗 | `monster_mods` 140 · `stats` 100 · `item_templates` 99 · `potion_effects` 55 · `wild_king` 8 | `game/data/monster_mods.py` · `game/core/{stats,item_templates,potion_effects}.py` · `game/data/wild_king_data.py` |
+
+**并入而不另立域（带证据的判断，2026-09-13）**：
+- `dungeon_pois` → 已 100% 在 `pois` 域（`pois.json` 55/55 键 `source="dungeon"`，条目逐字段相同）；
+- `instance_stage_maps` → 已 100% 在 `instances` 域（`stages` 66 层逐层逐值 0 差异）；
+- `drops` → 真源 `game/core/drops.py` 是**纯逻辑**（12 个函数），掉落数据本体已在 `drop_pools`(596)
+  与 `monsters`/地图的 `drops` 字段里；掉率规则是函数内字面量 → 要成域须先在游戏侧数据化（另立任务）。
 
 **引用闭合情况**（包内跨域引用，编辑器侧逐条判）：
 

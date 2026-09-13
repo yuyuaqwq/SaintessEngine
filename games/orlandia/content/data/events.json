@@ -1,0 +1,3173 @@
+{
+  "abandoned_minecart": {
+    "id": "abandoned_minecart",
+    "weight": 5,
+    "name": "废弃矿车",
+    "desc": "一辆锈迹斑斑的矿车翻倒在废弃的轨道旁，车斗朝天。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "铁矿石",
+            "精铁",
+            "秘银"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "⛏️ 【废弃矿车】你掀开矿车，车斗底部还卡着几块矿石——矿工们漏掉的！\n🎒 获得矿石：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "⛏️ 【废弃矿车】你翻了翻矿车——除了锈渣和碎石，什么也没有。",
+            "⛏️ 【废弃矿车】轨道一直延伸到黑漆漆的矿洞口，你犹豫了一下，没敢往里走。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "animal": {
+    "id": "animal",
+    "weight": 9,
+    "name": "迷路的小动物",
+    "desc": "一只小动物从灌木丛探出头来，好奇地打量着你。",
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "兽肉",
+        "狼皮",
+        "兔毛",
+        "兔皮"
+      ],
+      "n": 1,
+      "header": "🐿️ 【迷路的小动物】你喂了它一点干粮，小家伙蹭了蹭你的手，留下一份谢礼跑了。\n🎒 获得：{mats}！{extra}",
+      "bp_line": ""
+    },
+    "source": "explore"
+  },
+  "beehive": {
+    "id": "beehive",
+    "weight": 4,
+    "name": "野蜂巢",
+    "desc": "一截老树桩上挂着硕大的野蜂巢，蜜蜂嗡嗡地进进出出。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "蜂蜜"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "🐝 【野蜂巢】你用烟熏走蜂群，掰下一角蜂巢——金黄的蜜浆淌了出来！\n🎒 获得：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "damage",
+        "params": {
+          "pct": 0.06,
+          "min": 3,
+          "header": "🐝 【野蜂巢】你刚伸手，蜂群就炸了窝！你抱头鼠窜，还是被蛰了好几下。\n损失 {dmg} 点生命(当前 ❤️ {hp}/{max_hp})"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "campfire_ashes": {
+    "id": "campfire_ashes",
+    "weight": 5,
+    "name": "余烬篝火",
+    "desc": "一堆尚有余温的篝火，火星还在灰烬里明灭。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "兽肉",
+            "麦酒"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "🔥 【余烬篝火】篝火旁散落着前人没带走的干粮——你也不客气了！\n🎒 获得：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "🔥 【余烬篝火】你拨了拨灰烬，火星亮了一下又暗下去。烤火的人应该刚走不久。",
+            "🔥 【余烬篝火】你在篝火边坐下歇了歇脚，灰烬的余温让人安心。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "cart_wreck": {
+    "id": "cart_wreck",
+    "weight": 5,
+    "name": "翻倒的货车",
+    "desc": "一辆翻倒在路边的货车，车斗里的货物散了一地。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "面粉",
+            "麦酒",
+            "风干肉"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "🛒 【翻倒的货车】车斗裂了个口子，几袋货物滚落在草丛里，没人回来取。\n🎒 获得：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "🛒 【翻倒的货车】你翻遍了散落的货物——全是碎陶片和破麻袋，白忙一场。",
+            "🛒 【翻倒的货车】车辕上的马早没了踪影，只有轮子还在风里打转。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "deep_altar_whisper": {
+    "id": "deep_altar_whisper",
+    "weight": 4,
+    "name": "石坛低语",
+    "desc": "一座古老石坛静静立在深渊尽头，坛身的刻纹正泛着若有若无的光。",
+    "maps": [
+      "abyss_altar"
+    ],
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "shrine_bless",
+        "params": {
+          "pct": 6,
+          "header": "🕯️ 【石坛低语】你走近石坛，坛身的刻纹骤然亮起，低语在你耳边盘旋——不是威胁，更像一句古老的祝祷。你依着刻纹的指引俯身行礼，一股温热的力道顺着指尖涌遍全身。\n✨ 下次战斗攻击力 +{pct}% ！（深渊的注视）"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "🕯️ 【石坛低语】你在石坛前站了很久，低语却渐渐弱了下去——像潮水退去。你只隐约听清一个词：‘回……来……’不知是说给谁听。",
+            "🕯️ 【石坛低语】坛身刻纹在你靠近时亮了一瞬，随即归于沉寂。你不敢惊扰，悄悄退出了祭坛的范围。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "deep_lake_echo": {
+    "id": "deep_lake_echo",
+    "weight": 4,
+    "name": "湖底回声",
+    "desc": "幽暗的湖面下传来一声悠长的回响，像是湖底有什么在应答。",
+    "maps": [
+      "deep_lake"
+    ],
+    "template": "exp_gain",
+    "params": {
+      "min": 30,
+      "scale_lv": 4,
+      "header": "🌊 【湖底回声】你贴着水面侧耳倾听，一声悠长的回响从湖底荡上来——那是数百年前沉入湖中的诵唱，被水光封存至今。你不知不觉听完了一整段，古老的知识顺着水波流进脑海。\n✨ 经验 +{exp}！（湖底岁月的馈赠）"
+    },
+    "source": "explore"
+  },
+  "deep_molten_ember": {
+    "id": "deep_molten_ember",
+    "weight": 3,
+    "name": "岩浆泡凝晶",
+    "desc": "岩浆表面鼓起一个巨大的气泡，‘啵’地炸开，溅起一串暗红的火星。",
+    "maps": [
+      "molten_abyss",
+      "lava_bed"
+    ],
+    "template": "rare_find",
+    "params": {
+      "mats": [
+        "深渊犬牙",
+        "熔岩核心",
+        "烬核",
+        "火蝠翼"
+      ],
+      "n": 1,
+      "header": "🌋 【岩浆泡凝晶】岩浆泡炸开的瞬间热浪扑面，你眯眼躲闪，却发现岩缝里有什么东西被这阵热浪‘吹’了出来：一枚暗红的晶核，滋滋冒着热气！\n✨ 稀有发现！🎒 获得稀有材料：{mats}！{extra}"
+    },
+    "source": "explore"
+  },
+  "deep_spore_cloud": {
+    "id": "deep_spore_cloud",
+    "weight": 4,
+    "name": "孢子云爆",
+    "desc": "一株摇摇欲坠的巨蕈猛地一颤——它要炸了！",
+    "maps": [
+      "fungus_forest"
+    ],
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "孢子囊",
+        "幽光菇",
+        "荧光粉"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🍄 【孢子云爆】巨蕈‘嘭’地炸开一团发光的孢子云！孢子雨落在你肩头，沾在衣摆上星星点点，像披了一层会呼吸的星尘。你眼疾手快，兜住了一捧最亮的。\n🎒 获得材料：{mats}！{extra}"
+    },
+    "source": "explore"
+  },
+  "drifting_bottle": {
+    "id": "drifting_bottle",
+    "weight": 4,
+    "name": "漂流瓶",
+    "desc": "河边的芦苇丛里卡着一只漂流瓶，瓶口封着蜡。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.4,
+      "hit": {
+        "template": "loot_gold",
+        "params": {
+          "min": 10,
+          "max": 30,
+          "scale_lv": 1,
+          "header": "🍾 【漂流瓶】你敲开蜡封，倒出一张字条和几枚金币——字条上写着“谢天谢地，终于有人捡到了”。\n💰 获得 {gold} 金币！"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "🍾 【漂流瓶】瓶里的字条被水泡得只剩一团墨迹，你看了看，又把它塞了回去。",
+            "🍾 【漂流瓶】你打开瓶子——里面只有半瓶河水，和一只溺水的甲虫。你把它放生了。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "east_dragon_bone_echo": {
+    "id": "east_dragon_bone_echo",
+    "weight": 4,
+    "name": "龙骨回响",
+    "desc": "一根巨大的龙骨横亘荒野，断口处隐隐有残响。",
+    "maps": [
+      "bone_wild",
+      "dragonsfall_valley",
+      "dragon_ridge_old_road",
+      "ancient_battlefield"
+    ],
+    "template": "exp_gain",
+    "params": {
+      "min": 30,
+      "scale_lv": 4,
+      "header": "🦴 【龙骨回响】你贴近龙骨，仿佛听见百年前的一场龙战在你耳边炸响——那股古老的力量久久回荡在血脉里。\n✨ 经验 +{exp} ！（龙裔的馈赠）"
+    },
+    "source": "explore"
+  },
+  "east_dragon_scale": {
+    "id": "east_dragon_scale",
+    "weight": 4,
+    "name": "龙鳞余温",
+    "desc": "崖壁缝隙里嵌着一片仍旧温热的鳞片，泛着暗红的光。",
+    "maps": [
+      "dragon_ridge",
+      "dragon_roost",
+      "redridge_plateau"
+    ],
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "幼龙鳞"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🐉 【龙鳞余温】你刚触到鳞片，一股温热顺着指尖传来——像是有龙刚刚在此歇过脚。你小心把它摘下。\n🎒 获得稀有材料：{mats}！{extra}"
+    },
+    "source": "explore"
+  },
+  "east_dragonborn_altar": {
+    "id": "east_dragonborn_altar",
+    "weight": 4,
+    "name": "龙裔祭坛遗迹",
+    "desc": "峡谷拐角立着一座半塌的龙裔祭坛，坛心石槽里积着雨水与龙语刻痕。",
+    "maps": [
+      "dragonborn_valley_trail"
+    ],
+    "template": "shrine_bless",
+    "params": {
+      "pct": 5,
+      "header": "🛕 【龙裔祭坛遗迹】你按龙裔的礼节将手按上坛心，石槽里的积水泛起一圈涟漪，一道温热的力量顺着掌心涌入！\n✨ 龙裔的祝福降临——下次战斗攻击力 +{pct}% ！"
+    },
+    "source": "explore"
+  },
+  "east_dragonborn_fossil": {
+    "id": "east_dragonborn_fossil",
+    "weight": 4,
+    "name": "龙鳞化石",
+    "desc": "谷壁的岩层里嵌着一枚巴掌大的鳞状化石，在谷风里泛着幽光。",
+    "maps": [
+      "dragonborn_valley_trail"
+    ],
+    "template": "rare_find",
+    "params": {
+      "mats": [
+        "龙鳞",
+        "幼龙鳞"
+      ],
+      "n": 1,
+      "header": "🐉 【龙鳞化石】你沿着岩层纹路小心凿下那枚化石——剥落的石壳下，竟是一枚货真价实的古龙鳞！\n🎒 获得稀有材料：{mats}！{extra}"
+    },
+    "source": "explore"
+  },
+  "east_storm_lighthouse": {
+    "id": "east_storm_lighthouse",
+    "weight": 5,
+    "name": "灯塔残基",
+    "desc": "崖顶立着半截被雷劈裂的灯塔残基，焦黑的石缝里爬满海蚀的藤壶。",
+    "maps": [
+      "storm_cliff"
+    ],
+    "template": "dialog",
+    "params": {
+      "texts": [
+        "🗼 【灯塔残基】你爬上残基，海风灌满衣袖。焦黑的石壁上隐约刻着『潮起三更，灯亮一炷』——守塔人早已不在，潮水却依旧准时。",
+        "🗼 【灯塔残基】一道闪电劈在{name}外的海面，残基的影子在电光里拉得老长。你扶着焦黑的石壁，听见塔基深处传来空洞的水声。"
+      ]
+    },
+    "source": "explore"
+  },
+  "east_storm_thunder_rock": {
+    "id": "east_storm_thunder_rock",
+    "weight": 4,
+    "name": "雷击燧石",
+    "desc": "崖边一块被雷劈过的燧石裂成两半，断面泛着焦黑与幽蓝的光。",
+    "maps": [
+      "storm_cliff"
+    ],
+    "template": "random_choice",
+    "params": {
+      "chance": 0.45,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "羽毛",
+            "魔法粉尘",
+            "水晶"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "⚡ 【雷击燧石】你敲开燧石的断面，焦壳里竟裹着几样被雷火淬炼过的材料！\n🎒 获得：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "damage",
+        "params": {
+          "pct": 0.05,
+          "min": 4,
+          "header": "⚡ 【雷击燧石】你刚俯身去捡，头顶炸开一声闷雷——一道电弧顺着地面蹿上你的指尖！\n你浑身一麻，损失 {dmg} 点生命(当前 ❤️ {hp}/{max_hp})"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "echo_cave": {
+    "id": "echo_cave",
+    "weight": 3,
+    "name": "回音洞穴",
+    "desc": "崖壁下有个幽深的洞穴，洞口的风呜呜作响，像在回应什么。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "set_state",
+        "params": {
+          "key": "bless_{qid}",
+          "value": {
+            "pct": 5
+          },
+          "header": "🔮 【回音洞穴】你朝洞内大喊一声，回音层层叠叠地涌回，仿佛整个山都在回应你！\n你感到一股力量涌遍全身——✨ 下次战斗攻击力 +5%！"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "🔮 【回音洞穴】你喊了一声“喂——”，洞穴只回了一声懒洋洋的“喂……”，再无下文。",
+            "🔮 【回音洞穴】洞穴深处似乎有水滴声，你往里走了几步，又觉得阴森，退了回来。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "egg_ash_phoenix": {
+    "id": "egg_ash_phoenix",
+    "weight": 6,
+    "name": "烬中凤凰",
+    "desc": "灰烬堆里突然腾起一团金色的火焰。",
+    "template": "loot_materials",
+    "maps": [
+      "cinder_mountain",
+      "ash_temple",
+      "forge_valley"
+    ],
+    "params": {
+      "mats": [
+        "烬火余烬"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🔥 【烬中凤凰】灰烬堆里腾起一团火焰，一只通体流火的鸟振翅而起！\n它在空中盘旋一圈，抖落一片燃烧的羽毛，然后化作点点火星消散。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_aurora_veil": {
+    "id": "egg_aurora_veil",
+    "weight": 3,
+    "name": "极光帷幕",
+    "desc": "夜空骤然被一道横贯天际的极光撕开。",
+    "template": "shrine_bless",
+    "params": {
+      "pct": 8,
+      "header": "🌌 【极光帷幕】一道七彩极光横贯夜空，光幕如巨神垂落的帷幕缓缓舞动。你仰头凝望，极光的光屑落在肩头，渗入血脉——✨ 下次战斗攻击力 +{pct}% ！（极光加护）"
+    },
+    "source": "egg"
+  },
+  "egg_blacksmith_ghost": {
+    "id": "egg_blacksmith_ghost",
+    "weight": 5,
+    "name": "铁匠的鬼魂",
+    "desc": "深夜的炉火旁，一个半透明的老铁匠正敲打着空气。",
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "精铁锭"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🔨 【铁匠的鬼魂】“让让，别挡着火！”老铁匠的鬼魂不耐烦地挥挥手。\n他生前是方圆百里最好的铁匠——打完一锤，他随手丢给你一块精铁锭：“拿去，算我心情好。”\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_cathedral_choir": {
+    "id": "egg_cathedral_choir",
+    "weight": 6,
+    "name": "圣堂唱诗班",
+    "desc": "空无一人的圣堂里，传来圣洁的合唱声。",
+    "template": "exp_gain",
+    "maps": [
+      "dawn_city",
+      "dawn_cathedral",
+      "gold_plain"
+    ],
+    "params": {
+      "min": 30,
+      "scale_lv": 4,
+      "header": "⛪ 【圣堂唱诗班】无人的圣堂里，圣歌从穹顶倾泻而下，像天使在合唱。\n你静静听完，感到灵魂被涤荡——✨ 经验 +{exp}！（圣歌祝福）"
+    },
+    "source": "egg"
+  },
+  "egg_cloud_whale": {
+    "id": "egg_cloud_whale",
+    "weight": 5,
+    "name": "云海鲸影",
+    "desc": "云海翻涌，一头巨大的鲸影从云层中缓缓游过。",
+    "template": "loot_materials",
+    "maps": [
+      "cloud_sea",
+      "cloud_sanctum",
+      "sky_ladder_path"
+    ],
+    "params": {
+      "mats": [
+        "云絮"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🐋 【云海鲸影】云鲸甩尾，卷起一阵云雾——一片洁白的云絮打着旋儿落在你面前。\n你伸手接住，它轻得像一个梦。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_dove_messenger": {
+    "id": "egg_dove_messenger",
+    "weight": 5,
+    "name": "白鸽信使",
+    "desc": "一只白鸽扑棱着落在你肩头，腿上绑着一只小瓶。",
+    "template": "loot_materials",
+    "maps": [
+      "gold_plain",
+      "white_abbey",
+      "lost_library"
+    ],
+    "params": {
+      "mats": [
+        "圣水"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🕊️ 【白鸽信使】白鸽在你面前盘旋一圈，轻轻把绑着的小瓶放进你手心，又衔着你衣角往某个方向点了点才飞走。\n小瓶里盛着圣洁的圣水——像是某个虔诚之人的托付。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_dragon_scale": {
+    "id": "egg_dragon_scale",
+    "weight": 5,
+    "name": "龙脊鳞光",
+    "desc": "龙脊山崖上，一片鳞片在夕阳下闪着金光。",
+    "template": "loot_materials",
+    "maps": [
+      "dragon_pass",
+      "dragon_ridge",
+      "dragon_roost",
+      "storm_cliff"
+    ],
+    "params": {
+      "mats": [
+        "幼龙鳞"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🐉 【龙脊鳞光】崖壁上嵌着一片幼龙蜕下的鳞片，还带着温度。\n你费了点力气把它撬下来——这可是锻造师抢着要的好东西！\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_dragon_shadow": {
+    "id": "egg_dragon_shadow",
+    "weight": 6,
+    "name": "龙影掠过",
+    "desc": "你头顶的天空骤然一暗，一道巨大的龙影横掠而过。",
+    "template": "exp_gain",
+    "maps": [
+      "dragon_ridge",
+      "storm_cliff",
+      "dragonsfall_valley"
+    ],
+    "params": {
+      "min": 40,
+      "scale_lv": 5,
+      "header": "🐉 【龙影掠过】巨大的龙翼在你头顶展开又收起，投下一片遮天的阴影。龙虽远去，那股威严却深深烙进你的血脉——✨ 经验 +{exp} ！（顶礼龙威）"
+    },
+    "source": "egg"
+  },
+  "egg_elf_spring": {
+    "id": "egg_elf_spring",
+    "weight": 5,
+    "name": "精灵泉水",
+    "desc": "林间岩石间涌出一泓碧绿的泉水，泛着微光。",
+    "template": "heal_full",
+    "maps": [
+      "silverwood",
+      "starlake",
+      "moon_temple",
+      "emerald_valley"
+    ],
+    "params": {
+      "header": "💧 【精灵泉水】你捧起泉水喝了一口——清甜得像吞下了一整个春天！\n❤️ 生命全满！💙 魔力全满！（精灵的馈赠）"
+    },
+    "source": "egg"
+  },
+  "egg_fairy_dance": {
+    "id": "egg_fairy_dance",
+    "weight": 3,
+    "name": "精灵之舞",
+    "desc": "林间空地泛起一圈柔光，十几个光点手拉手跳起古老的圆舞。",
+    "template": "combo",
+    "params": {
+      "steps": [
+        {
+          "template": "dialog",
+          "params": {
+            "texts": [
+              "🧚 【精灵之舞】拇指大的光之精灵手拉手围成圆圈，跳起古老的圆舞。光点随舞步起伏明灭，像星辰坠落人间。"
+            ]
+          }
+        },
+        {
+          "template": "exp_gain",
+          "params": {
+            "min": 35,
+            "scale_lv": 4,
+            "header": "🧚 精灵们跳完最后一圈，化作点点流光没入你眉心——你感到一阵前所未有的清明！\n✨ 经验 +{exp}！（精灵的赠礼）"
+          }
+        }
+      ]
+    },
+    "source": "egg"
+  },
+  "egg_frost_spirit": {
+    "id": "egg_frost_spirit",
+    "weight": 5,
+    "name": "霜原雪灵",
+    "desc": "寒风里，一团小小的雪光在雪地上蹦跳。",
+    "template": "loot_materials",
+    "maps": [
+      "frost_horn",
+      "frost_field",
+      "winter_lake",
+      "cold_ridge"
+    ],
+    "params": {
+      "mats": [
+        "霜花"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "❄️ 【霜原雪灵】雪光蹦到你面前，抖了抖身子——几朵完美的霜花从它身上飘落。\n你小心翼翼接住，它发出银铃般的笑声，融进了风雪里。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_glow_school": {
+    "id": "egg_glow_school",
+    "weight": 4,
+    "name": "发光的鱼群",
+    "desc": "入夜的海面忽然亮起一片幽蓝荧光，成群的鱼聚成旋涡。",
+    "maps": [
+      "coral_reef"
+    ],
+    "template": "rare_find",
+    "params": {
+      "mats": [
+        "荧光鳞"
+      ],
+      "n": 1,
+      "header": "🐠 【发光的鱼群】幽蓝荧光自海面亮起——发光的鱼群聚成旋涡，绕着你游了三圈，像在跳一支古老的海之舞。旋涡散去时，一片闪着幽光的鳞片轻轻落进你手心。\n🎒 获得稀有材料：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_goblin_caravan": {
+    "id": "egg_goblin_caravan",
+    "weight": 3,
+    "name": "地精商队",
+    "desc": "一阵叮铃哐啷的响动，七八只地精推着一辆超载的小车颠颠地冲了过来。",
+    "template": "loot_gold_mats",
+    "params": {
+      "min": 60,
+      "max": 120,
+      "scale_lv": 3,
+      "mats": [
+        "精铁锭"
+      ],
+      "blueprint_chance": 0.15,
+      "header": "🛒 【地精商队】一个急弯，整车的货物哗啦翻了一地！地精们手忙脚乱捡了半天，最后把一袋金币和一堆杂物塞给你：“赔、赔罪！别告诉别人我们翻车了！”\n💰 获得 {gold} 金币！{mat_line}{bp_line}",
+      "mat_line": "\n🎒 还有一块精铁锭：{mat}！",
+      "bp_line": "\n📜 货物里滚出一张图纸：{bp}！"
+    },
+    "source": "egg"
+  },
+  "egg_harbor_siren": {
+    "id": "egg_harbor_siren",
+    "weight": 5,
+    "name": "雾中歌声",
+    "desc": "海雾深处传来若有若无的歌声，直往人心里钻。",
+    "template": "loot_gold",
+    "maps": [
+      "nameless_harbor",
+      "mist_trench",
+      "shipwreck_graveyard"
+    ],
+    "params": {
+      "min": 40,
+      "max": 80,
+      "scale_lv": 3,
+      "header": "🧜 【雾中歌声】歌声越来越近，你握紧武器屏住呼吸——雾气散开，却只留下一只被浪冲上来的宝箱。\n💰 获得 {gold} 金币！"
+    },
+    "source": "egg"
+  },
+  "egg_iron_ghost": {
+    "id": "egg_iron_ghost",
+    "weight": 6,
+    "name": "酒桶幽灵",
+    "desc": "码头边的空酒桶里传来敲击声。",
+    "template": "loot_materials",
+    "maps": [
+      "ironharbor",
+      "harbor_docks"
+    ],
+    "params": {
+      "mats": [
+        "麦酒"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🍺 【酒桶幽灵】你敲了敲酒桶，一个半透明的酒保从桶里探出头：“老规矩，喝一杯再走？”\n你接过他递来的麦酒——入口居然还有温度！他满意地点点头，沉回桶里。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_jumping_scarecrow": {
+    "id": "egg_jumping_scarecrow",
+    "weight": 6,
+    "name": "会跳的稻草人",
+    "desc": "麦田里的稻草人，竟当着你的面跳了起来！",
+    "template": "loot_gold",
+    "maps": [
+      "oak_plain",
+      "white_deer_forest",
+      "windmill_plain"
+    ],
+    "params": {
+      "min": 30,
+      "max": 60,
+      "scale_lv": 2,
+      "header": "🌾 【会跳的稻草人】稻草人猛地从麦田里蹦起，甩了甩稻草脑袋，冲你挤眉弄眼——然后从草帽里抖出几枚金币，朝你鞠了一躬又杵回原地，跟没事人似的。\n💰 获得 {gold} 金币！"
+    },
+    "source": "egg"
+  },
+  "egg_lost_mimic_cub": {
+    "id": "egg_lost_mimic_cub",
+    "weight": 5,
+    "name": "迷路的宝箱怪幼崽",
+    "desc": "路边一只小小的宝箱在抽噎，箱盖开开合合。",
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "魔法粉尘"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🎁 【迷路的宝箱怪幼崽】你蹲下一看，原来是个迷了路的小宝箱怪在哭。你喂了它一块干粮，它破涕为笑，从箱底掏出一把魔法粉尘塞给你：“谢、谢！”说罢连滚带爬地钻进了草丛。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_lucky_clover": {
+    "id": "egg_lucky_clover",
+    "weight": 4,
+    "name": "四叶草精灵",
+    "desc": "草丛里钻出一个巴掌大的小精灵，举着一片四叶草。",
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "幸运符"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🍀 【四叶草精灵】“给你给你！”小精灵把四叶草塞进你手里，咯咯笑着钻回草丛。\n据说被它送过四叶草的人，接下来几天运气都不会差。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_meteor_shower": {
+    "id": "egg_meteor_shower",
+    "weight": 2,
+    "name": "流星雨",
+    "desc": "夜空忽然下起流星雨，无数光痕拖着长尾划过天穹。",
+    "template": "rare_find",
+    "params": {
+      "mats": [
+        "星辉石",
+        "秘银"
+      ],
+      "n": 2,
+      "header": "☄️ 【流星雨】无数流星拖着长尾坠向地平线，其中几颗砸在近处，溅起点点星火！你循着余温捡起散落的碎片——每一块都泛着幽幽星光。\n🎒 获得稀有材料：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_mimic_chest": {
+    "id": "egg_mimic_chest",
+    "weight": 6,
+    "name": "宝箱怪",
+    "desc": "路边躺着一只看起来毫无防备的宝箱。",
+    "template": "combo",
+    "params": {
+      "steps": [
+        {
+          "template": "damage",
+          "params": {
+            "pct": 0.08,
+            "min": 5,
+            "header": "👹 【宝箱怪】你刚打开箱盖，一排锯齿就咬了上来！“嗷——！”\n你甩开它，损失 {dmg} 点生命(当前 ❤️ {hp}/{max_hp})"
+          }
+        },
+        {
+          "template": "loot_materials",
+          "params": {
+            "mats": [
+              "魔法粉尘",
+              "附魔粉尘"
+            ],
+            "n": 1,
+            "bp_line": "",
+            "header": "👹 你反手把它砸了个稀巴烂——箱底掉出一些亮晶晶的粉尘！\n🎒 获得：{mats}！{extra}"
+          }
+        }
+      ]
+    },
+    "source": "egg"
+  },
+  "egg_mirage_fleet": {
+    "id": "egg_mirage_fleet",
+    "weight": 4,
+    "name": "海市蜃楼",
+    "desc": "海雾深处，浮现出整支古老船队的幻影。",
+    "maps": [
+      "storm_strait"
+    ],
+    "template": "loot_gold_mats",
+    "params": {
+      "min": 60,
+      "max": 120,
+      "scale_lv": 4,
+      "mats": [
+        "风暴贝"
+      ],
+      "blueprint_chance": 0.12,
+      "header": "🌫️ 【海市蜃楼】海雾深处浮现出整支古老船队的幻影，帆影幢幢，仿佛从百年前破浪而来。幻影缓缓消散，浪涛却把一只湿漉漉的皮囊推到你脚边——那是沉没船队最后的财富。\n💰 获得 {gold} 金币！{mat_line}{bp_line}",
+      "mat_line": "\n🐚 还有一枚风暴贝：{mat}！",
+      "bp_line": "\n📜 皮囊底层压着一张泛黄的图纸：{bp}！"
+    },
+    "source": "egg"
+  },
+  "egg_moon_doll": {
+    "id": "egg_moon_doll",
+    "weight": 6,
+    "name": "月光人偶",
+    "desc": "月光下，一座精致的人偶雕像似乎动了一下。",
+    "template": "loot_materials",
+    "maps": [
+      "moon_gate",
+      "silverwood",
+      "starlake",
+      "moon_glade"
+    ],
+    "params": {
+      "mats": [
+        "月之泪"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🎭 【月光人偶】月光洒下人偶的脸庞，它缓缓睁开眼睛，朝你行了一个古老的精灵礼。\n一滴晶莹的泪从它眼角滑落，凝成一颗月之泪，落在你掌心。\n🎒 获得稀有材料：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_moon_glade": {
+    "id": "egg_moon_glade",
+    "weight": 4,
+    "name": "月光林隙",
+    "desc": "乌云散开，一道月光从林隙直泻而下，在林间投下一个银色的光圈。",
+    "maps": [
+      "black_forest"
+    ],
+    "template": "combo",
+    "params": {
+      "steps": [
+        {
+          "template": "dialog",
+          "params": {
+            "texts": [
+              "🌙 【月光林隙】月光如柱，从树冠的缺口直泻而下。光柱里浮着无数萤火般的微光，缓缓升腾，像大地在呼吸。"
+            ]
+          }
+        },
+        {
+          "template": "stamina_gift",
+          "params": {
+            "min": 10,
+            "max": 15,
+            "header": "🌙 你走进光柱，月光沁入四肢百骸，一身疲惫被洗得干干净净！\n⚡ 体力 +{gain}（当前 ⚡ {stamina}/{max}）"
+          }
+        }
+      ]
+    },
+    "source": "egg"
+  },
+  "egg_moon_rabbit": {
+    "id": "egg_moon_rabbit",
+    "weight": 4,
+    "name": "月下玉兔",
+    "desc": "月光下，一只毛茸茸的兔子正用后腿站立，对着月亮发呆。",
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "兔毛"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🐰 【月下玉兔】你悄悄靠近，它回头看了你一眼——然后拔下一撮自己最软的毛递给你！\n“给、给你！别告诉别人我在这！”说完一溜烟跑了。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_oak_whisper": {
+    "id": "egg_oak_whisper",
+    "weight": 8,
+    "name": "会说话的老橡树",
+    "desc": "一棵苍老巨大的橡树，树皮上隐约浮着一张脸。",
+    "template": "loot_materials",
+    "maps": [
+      "oak_town",
+      "oak_plain",
+      "white_deer_forest"
+    ],
+    "params": {
+      "mats": [
+        "橡木种子"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🌳 【会说话的老橡树】“冒险者，站住。”\n苍老的橡树开口了，沙哑的声音像风穿过枝桠。它讲了一段百年前的旧事，随后落下一颗种子到你手心。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_old_chest": {
+    "id": "egg_old_chest",
+    "weight": 5,
+    "name": "搁浅的宝箱",
+    "desc": "浪花把一个锈迹斑斑的宝箱推上了岸。",
+    "template": "loot_gold",
+    "params": {
+      "min": 50,
+      "max": 100,
+      "scale_lv": 3,
+      "header": "📦 【搁浅的宝箱】宝箱被水泡得发胀，锁扣锈得不成样子——你一锤子就砸开了！\n💰 获得 {gold} 金币！（里面还泡着一只可怜的小螃蟹，你把它放回了海里）"
+    },
+    "source": "egg"
+  },
+  "egg_pearl_goddess": {
+    "id": "egg_pearl_goddess",
+    "weight": 5,
+    "name": "珍珠女神泪",
+    "desc": "浅海礁石上，一颗巨大的珍珠贝微微张开。",
+    "template": "loot_materials",
+    "maps": [
+      "pearl_city",
+      "coral_reef",
+      "mermaid_bay"
+    ],
+    "params": {
+      "mats": [
+        "深渊珍珠"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🦪 【珍珠女神泪】珍珠贝在你靠近时缓缓张开——里面躺着一颗深蓝发光的珍珠，像一滴凝固的海。\n传说这是珍珠女神的泪，你屏住呼吸收下了它。\n🎒 获得稀有材料：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_rainbow_end": {
+    "id": "egg_rainbow_end",
+    "weight": 3,
+    "name": "彩虹尽头",
+    "desc": "雨刚停，一道彩虹横跨天际——而它的尽头，竟真的落在地平线上。",
+    "template": "loot_gold_mats",
+    "params": {
+      "min": 80,
+      "max": 160,
+      "scale_lv": 4,
+      "mats": [
+        "琥珀精华"
+      ],
+      "blueprint_chance": 0,
+      "header": "🌈 【彩虹尽头】你循着虹光一路找过去，在虹脚处发现一只半埋在土里的旧陶罐——罐里满当当的金砂在阳光下流转着七彩！\n💰 获得 {gold} 金币！{mat_line}{bp_line}",
+      "mat_line": "\n🎒 陶罐里还凝着一块琥珀精华：{mat}！",
+      "bp_line": ""
+    },
+    "source": "egg"
+  },
+  "egg_rainbow_koi": {
+    "id": "egg_rainbow_koi",
+    "weight": 4,
+    "name": "彩虹锦鲤",
+    "desc": "水面下闪过一道七彩的鱼影。",
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "精灵果"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🌈 【彩虹锦鲤】彩虹锦鲤跃出水面，在空中划出一道七彩弧线！\n它落回水里前，吐出一颗饱满的精灵果——像是专门留给你的。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_royal_fox": {
+    "id": "egg_royal_fox",
+    "weight": 6,
+    "name": "王都白狐",
+    "desc": "王都的石板路上，一只白狐回头看了你一眼。",
+    "template": "loot_gold_mats",
+    "maps": [
+      "dawn_city",
+      "king_road",
+      "holy_trial"
+    ],
+    "params": {
+      "min": 25,
+      "max": 50,
+      "scale_lv": 2,
+      "mats": [
+        "圣水"
+      ],
+      "blueprint_chance": 0,
+      "header": "🦊 【王都白狐】白狐在前方引路，七拐八绕把你带到一处废弃的旧宅后院——墙根下埋着一只小陶罐！\n💰 获得 {gold} 金币！{mat_line}{bp_line}",
+      "mat_line": "\n🎒 还翻出：{mat}！",
+      "bp_line": ""
+    },
+    "source": "egg"
+  },
+  "egg_sleigh_ghost": {
+    "id": "egg_sleigh_ghost",
+    "weight": 5,
+    "name": "雪橇幽灵",
+    "desc": "风雪里，一架无人驾驶的雪橇拖着银铃疾驰而过。",
+    "template": "stamina_gift",
+    "maps": [
+      "frost_field",
+      "winter_lake",
+      "cold_spine_snow_trail"
+    ],
+    "params": {
+      "min": 8,
+      "max": 12,
+      "header": "🛷 【雪橇幽灵】雪橇擦肩而过，铃铛叮当作响。它在你面前绕了一圈，撒下一把暖融融的雪——说是雪，触手竟温的。雪末落进身体，疲惫一扫而空！\n⚡ 体力 +{gain}（当前 ⚡ {stamina}/{max}）"
+    },
+    "source": "egg"
+  },
+  "egg_stained_light": {
+    "id": "egg_stained_light",
+    "weight": 4,
+    "name": "彩窗光影",
+    "desc": "午后的阳光穿过彩窗，在大理石地面上投下七彩光斑。",
+    "maps": [
+      "dawn_cathedral"
+    ],
+    "template": "shrine_bless",
+    "params": {
+      "pct": 6,
+      "header": "🌈 【彩窗光影】阳光穿过彩窗，在地面投下七彩光斑。光斑缓缓流动，竟在你脚下汇成了一圈光环——像圣光为你加冕！\n✨ 下次战斗攻击力 +{pct}% ！（圣光祝福）"
+    },
+    "source": "egg"
+  },
+  "egg_star_fall": {
+    "id": "egg_star_fall",
+    "weight": 4,
+    "name": "星陨碎片",
+    "desc": "一颗流星坠落在不远处，砸出一个冒着热气的小坑。",
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "星辉石"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "☄️ 【星陨碎片】流星落地的余温还没散，坑底嵌着一块泛光的星辉石！\n你捡起它，入手微烫——这是天上掉下来的宝贝。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_sunrise_gold": {
+    "id": "egg_sunrise_gold",
+    "weight": 5,
+    "name": "日出金辉",
+    "desc": "第一缕朝阳破开云层，金辉洒满大地。",
+    "template": "shrine_bless",
+    "params": {
+      "pct": 5,
+      "header": "🌅 【日出金辉】你迎着朝阳而立，金辉落在肩头，仿佛神明为你镀上了一层祝福——✨ 下次战斗攻击力 +5% ！"
+    },
+    "source": "egg"
+  },
+  "egg_swamp_wisp": {
+    "id": "egg_swamp_wisp",
+    "weight": 5,
+    "name": "沼泽鬼火",
+    "desc": "沼泽深处，几点幽绿的光在雾气中飘荡。",
+    "template": "loot_materials",
+    "maps": [
+      "misty_swamp",
+      "silver_brook"
+    ],
+    "params": {
+      "mats": [
+        "幽灵之尘"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "💚 【沼泽鬼火】鬼火在你面前聚成一团，绕着你转了三圈——像在打量你。\n它忽然炸开，化作一把发光的灰尘落进你伸出的手里。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_time_traveler": {
+    "id": "egg_time_traveler",
+    "weight": 5,
+    "name": "时光旅人",
+    "desc": "一个衣着古怪的人拦住你，自称来自一百年前。",
+    "template": "combo",
+    "params": {
+      "steps": [
+        {
+          "template": "dialog",
+          "params": {
+            "texts": [
+              "⏳ 【时光旅人】“我来自一百年前！”他信誓旦旦，“那时的{name}还没有这座桥。”\n他讲了一段早已被遗忘的历史，你听得入了神。"
+            ]
+          }
+        },
+        {
+          "template": "loot_gold",
+          "params": {
+            "min": 15,
+            "max": 35,
+            "scale_lv": 1,
+            "header": "⏳ 讲完故事，他塞给你一枚旧时代的钱币：“留个纪念，反正我那边也用不上了。”\n💰 获得 {gold} 金币！"
+          }
+        }
+      ]
+    },
+    "source": "egg"
+  },
+  "egg_tree_echo": {
+    "id": "egg_tree_echo",
+    "weight": 4,
+    "name": "树洞回声",
+    "desc": "古树粗壮的树干上，裂着一道深不见底的树洞。",
+    "maps": [
+      "ancient_tree"
+    ],
+    "template": "combo",
+    "params": {
+      "steps": [
+        {
+          "template": "dialog",
+          "params": {
+            "texts": [
+              "🌳 【树洞回声】你对着幽深的树洞喊了一声——回声竟化作苍老悠远的旋律，像整棵树在哼唱一首千年以前的歌。"
+            ]
+          }
+        },
+        {
+          "template": "rare_find",
+          "params": {
+            "mats": [
+              "精灵果"
+            ],
+            "n": 1,
+            "header": "🌳 旋律渐歇，树洞深处滚出一颗饱满的精灵果，落在你手心——像是古树的谢礼。\n🎒 获得稀有材料：{mats}！{extra}"
+          }
+        }
+      ]
+    },
+    "source": "egg"
+  },
+  "egg_twin_moon": {
+    "id": "egg_twin_moon",
+    "weight": 4,
+    "name": "双月同天",
+    "desc": "夜空里竟然同时挂着两轮月亮！",
+    "template": "exp_gain",
+    "params": {
+      "min": 20,
+      "scale_lv": 3,
+      "header": "🌕🌕 【双月同天】两轮月亮悬在夜空，银辉洒满大地——百年难遇的奇景！\n月光沁入身体，你感到前所未有的清明——✨ 经验 +{exp}！（月光祝福）"
+    },
+    "source": "egg"
+  },
+  "egg_under_king": {
+    "id": "egg_under_king",
+    "weight": 5,
+    "name": "地底蘑菇王",
+    "desc": "幽暗的菌林深处，一株巨大的蘑菇散发着柔光。",
+    "template": "loot_materials",
+    "maps": [
+      "fungus_forest",
+      "under_market",
+      "deep_tunnel"
+    ],
+    "params": {
+      "mats": [
+        "幽光菇"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🍄 【地底蘑菇王】巨大的蘑菇王微微颤动，像在呼吸。它头顶裂开一道缝，滚出一朵发光的蘑菇到你脚边。\n🎒 获得稀有材料：{mats}！{extra}"
+    },
+    "source": "egg"
+  },
+  "egg_whispering_wind": {
+    "id": "egg_whispering_wind",
+    "weight": 3,
+    "name": "低语的风",
+    "desc": "风停了，却仿佛有什么在耳边低语。",
+    "template": "dialog",
+    "params": {
+      "texts": [
+        "🍃 风在你耳边低语，说着听不懂的话。你侧耳倾听——它似乎只是在说：“赶路吧，前方有好事等你。”",
+        "🍃 一片叶子打着旋儿落在你肩头，风里传来一声轻笑。你抬头，天空湛蓝，什么都没有。"
+      ]
+    },
+    "source": "egg"
+  },
+  "egg_white_deer": {
+    "id": "egg_white_deer",
+    "weight": 7,
+    "name": "白鹿现身",
+    "desc": "林间雾气散开，一匹通体雪白的鹿静静伫立。",
+    "template": "loot_gold",
+    "maps": [
+      "white_deer",
+      "white_deer_forest"
+    ],
+    "params": {
+      "min": 30,
+      "max": 60,
+      "scale_lv": 2,
+      "header": "🦌 【白鹿现身】白鹿与你对视片刻，缓缓回眸——它眼中倒映着一片金色的光。\n你感觉好运正在降临！白鹿消失前，地上留下了一小袋金币。\n💰 获得 {gold} 金币！"
+    },
+    "source": "egg"
+  },
+  "firefly": {
+    "id": "firefly",
+    "weight": 7,
+    "name": "萤火虫小径",
+    "desc": "夜色里，成群的萤火虫在{name}的林间起舞，仿佛一片流动的星河。",
+    "season_boost": "summer",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.35,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "萤火虫"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "✨ 【萤火虫小径】你追着一串萤火虫跑进{name}的小径深处，用帽子扑住了几只！\n🎒 获得：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "✨ 【萤火虫小径】夜色里，成群的萤火虫在{name}的林间起舞，仿佛一片流动的星河。你驻足看了许久。",
+            "✨ 【萤火虫小径】一只胆大的萤火虫落在你的肩头，一闪一闪，像在说悄悄话。",
+            "✨ 【萤火虫小径】你追着一串萤火虫跑进小径深处，差点踩进泥坑——好险！"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "floating_bridge": {
+    "id": "floating_bridge",
+    "weight": 4,
+    "name": "摇晃浮桥",
+    "desc": "一座用绳索和木板搭成的浮桥横在河面上，晃晃悠悠。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.7,
+      "hit": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "🌉 【摇晃浮桥】你小心翼翼地过了桥，木板在脚下吱嘎作响，还好有惊无险。",
+            "🌉 【摇晃浮桥】桥身晃得厉害，你抓着绳索屏住呼吸，一步一步挪到了对岸。"
+          ]
+        }
+      },
+      "miss": {
+        "template": "stamina_cost",
+        "params": {
+          "cost": 5,
+          "header": "🌉 【摇晃浮桥】走到桥中央，一块木板突然断裂！你扑通一声掉进河里，狼狈地游回岸边。\n⚡ 体力 -{cost}（当前 ⚡ {stamina}/{max}）"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "frost_flower": {
+    "id": "frost_flower",
+    "weight": 3,
+    "name": "霜花",
+    "desc": "背阴的石缝里凝着几朵晶莹的霜花，在晨光里闪着细碎的光。",
+    "season": "winter",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.6,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "霜花"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "❄️ 【霜花】你屏住呼吸，小心翼翼地摘下一朵霜花——它在你手心凉丝丝地化了一半。\n🎒 获得：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "❄️ 【霜花】你伸手去摘，霜花却在指尖融成了一滴水，什么也没留下。",
+            "❄️ 【霜花】石缝里的霜花美得剔透，你看了半天，终究没舍得碰。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "gen_abandoned_trench": {
+    "id": "gen_abandoned_trench",
+    "weight": 4,
+    "name": "废弃战壕",
+    "desc": "一道废弃的战壕蜿蜒在荒野里，壕底散落着锈蚀的残骸。",
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "精铁锭",
+        "铁矿石",
+        "魔法粉尘"
+      ],
+      "n": 2,
+      "bp_line": "",
+      "header": "⛏️ 【废弃战壕】你跳进战壕翻了翻，从泥土和锈渣里扒出几件还算完好的旧物——当年的军备遗落在时光里，如今成了你的收获。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "explore"
+  },
+  "gen_boot_note": {
+    "id": "gen_boot_note",
+    "weight": 5,
+    "name": "旧靴子里的纸条",
+    "desc": "路边躺着一只烂靴子，靴筒里隐约塞着什么。",
+    "template": "region_lore",
+    "params": {
+      "flag": "gen_boot_note",
+      "texts": [
+        "👢 【旧靴子里的纸条】路边的烂靴子里塞着一张纸条，字迹歪歪扭扭：『亲爱的妈妈，我没死，我发了笔小财，再过一个月就回家。别担心。——你总闯祸的儿子』落款已经模糊。你把纸条放回靴子里，轻轻拍了拍(见闻已记)。",
+        "👢 【旧靴子里的纸条】靴子里压着半张信纸：『捡到这张纸的人，请告诉铁匠铺后面的老汤——歪脖子树下埋着我欠他的十二枚银币。我记着呢，让他别骂了。』你看完，把它放回原处，像那封信还有要等的人(见闻已记)。"
+      ],
+      "seen_texts": [
+        "👢 【旧靴子里的纸条】你路过那只旧靴子，纸条还在，只是边角更皱了。你没再打开，让它替主人守着那份心事。",
+        "👢 【旧靴子里的纸条】靴子里多了几片落叶，像是有人替它盖了床被子。你替它拂了拂灰，继续赶路。"
+      ]
+    },
+    "source": "explore"
+  },
+  "gen_cliff_eagle_nest": {
+    "id": "gen_cliff_eagle_nest",
+    "weight": 4,
+    "name": "山崖鹰巢",
+    "desc": "悬崖高处悬着一个巨大的鹰巢，巢里似乎有什么反光。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.4,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "夜枭羽毛",
+            "兽肉",
+            "兔毛"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "🦅 【山崖鹰巢】你攀上崖壁，趁老鹰外出叼走巢边落着的一把材料——回头一看，老鹰正在云里盯着你呢，赶紧溜！\n🎒 获得：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "damage",
+        "params": {
+          "pct": 0.06,
+          "min": 3,
+          "header": "🦅 【山崖鹰巢】你刚攀到半途，护巢的老鹰俯冲下来，一翅膀把你拍在崖壁上！你灰头土脸地滑回地面。\n损失 {dmg} 点生命(当前 ❤️ {hp}/{max_hp})"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "gen_creek_song": {
+    "id": "gen_creek_song",
+    "weight": 4,
+    "name": "山涧歌谣",
+    "desc": "山涧那头飘来一支歌谣，调子轻快，词却听不真切。",
+    "template": "dialog",
+    "params": {
+      "texts": [
+        "🎵 【山涧歌谣】山涧那头飘来一支歌谣，只辨得出反复唱着一句『月亮落在水中央』。你循着歌声绕过巨石——溪边空无一人，只有水声哗哗，像在接着唱。",
+        "🎵 【山涧歌谣】你听见有人在溪边唱歌，嗓音清亮，唱的是支古老的采药谣：『山上有座仙人桥，桥下流水不知老……』你听完了整段，也没找到唱歌的人。也许山涧本来就会唱歌，只是今天心情好。",
+        "🎵 【山涧歌谣】溪水声里夹着断断续续的哼唱，你跟着哼了两句，歌声竟停了——过了好一会儿，又响起来，像是在等你的下一句。你索性放开嗓子唱完一整支，歌声落下时，风里传来一声极轻的笑。"
+      ]
+    },
+    "source": "explore"
+  },
+  "gen_dried_herbs": {
+    "id": "gen_dried_herbs",
+    "weight": 5,
+    "name": "晒干的草药捆",
+    "desc": "路边晾着一捆扎得整整齐齐的干草药，像是谁忘在了这里。",
+    "template": "loot_gold_mats",
+    "params": {
+      "min": 5,
+      "max": 20,
+      "scale_lv": 1,
+      "mats": [
+        "草药",
+        "林语之叶",
+        "浆果"
+      ],
+      "header": "🌿 【晒干的草药捆】路边晾着一捆扎得整整齐齐的干草药，绳结上系着片小木牌：『晒好忘收了——捡到的朋友请拿去，就当谢你替我看过这片好太阳。』木牌下还压着一只小布袋，里面竟装着几枚金币。\n💰 获得 {gold} 金币！{mat_line}{bp_line}",
+      "mat_line": "\n🎒 草药捆里还夹着一份：{mat}！",
+      "bp_line": ""
+    },
+    "source": "explore"
+  },
+  "gen_fog_bell": {
+    "id": "gen_fog_bell",
+    "weight": 5,
+    "name": "雾中钟声",
+    "desc": "浓雾深处传来一声悠远的钟响，不疾不徐。",
+    "template": "region_lore",
+    "params": {
+      "flag": "gen_fog_bell",
+      "texts": [
+        "🔔 【雾中钟声】浓雾里传来一声悠远的钟响，不疾不徐，像是某个沉在水底多年的小镇在翻身。你循声走了半里，雾却散得无影无踪——只有靴底沾着的露水记得那声音(见闻已记)。",
+        "🔔 【雾中钟声】钟声在雾里响了七下，第七下拖得很长，像一声叹息。老辈人说，雾里的钟是敲给迷途者听的——听见的人，今夜不会走错路(见闻已记)。"
+      ],
+      "seen_texts": [
+        "🔔 【雾中钟声】雾又起时，钟声果然如约而至。你不再去找它了，只是站在原地，把这一声听完。",
+        "🔔 【雾中钟声】这一次钟声只响了三下便停了。你笑了笑——雾里的小镇，大概也有自己的作息。"
+      ]
+    },
+    "source": "explore"
+  },
+  "gen_lost_pup": {
+    "id": "gen_lost_pup",
+    "weight": 4,
+    "name": "迷路的小兽",
+    "desc": "一只湿漉漉的小家伙蹲在路边，可怜巴巴地望着你。",
+    "template": "exp_gain",
+    "params": {
+      "min": 12,
+      "scale_lv": 2,
+      "header": "🐾 【迷路的小兽】一只毛茸茸的小家伙蹲在路边，冻得直哆嗦。你脱下外套裹住它，循着爪印把它送回了暖和的窝。它钻进干草堆前回头看了你一眼——那一眼，让你的心也变得软软的。\n✨ 经验 +{exp}"
+    },
+    "source": "explore"
+  },
+  "gen_old_message": {
+    "id": "gen_old_message",
+    "weight": 4,
+    "name": "老人的口信",
+    "desc": "一位赶路的老者叫住你，想托你捎句话。",
+    "template": "dialog",
+    "params": {
+      "texts": [
+        "🗣️ 【老人的口信】路边坐着一位赶路的老者，托你捎句话：『到了下个镇子，替我跟酒馆老板娘说，麦酒钱我下次一定补上——她做的腌肉，是全大陆最香的。』说完他眯着眼笑了，像在回味那碟腌肉。",
+        "🗣️ 【老人的口信】一位背着旧行囊的老人叫住你：『小友，帮我带个话给东边镇上的草药师——就说当年他说那株银叶草活不过冬天，我偏把它养到了今年春天。他欠我三个铜板的赌注，也该还了。』他得意地捋了捋胡子。",
+        "🗣️ 【老人的口信】老人从怀里掏出一枚温热的铜币塞给你：『拿着，路上渴了买碗水喝。见着我孙女的话，告诉她爷爷好着呢，叫她别往东边跑——那边有狼。』他絮絮叨叨，像要把攒了一路的话都倒给你。"
+      ]
+    },
+    "source": "explore"
+  },
+  "gen_rainbow": {
+    "id": "gen_rainbow",
+    "weight": 4,
+    "name": "雨后彩虹",
+    "desc": "雨刚停，一道彩虹横跨天际，空气里满是泥土与青草的气息。",
+    "template": "heal_full",
+    "params": {
+      "header": "🌈 【雨后彩虹】雨刚停，一道七色的虹桥横跨天际，阳光把水汽染成碎金。你深深吸了一口雨后的空气，仿佛连骨头里的疲惫都被洗去了。\n❤️ 生命全满！💙 魔力全满！"
+    },
+    "source": "explore"
+  },
+  "gen_roadside_keg": {
+    "id": "gen_roadside_keg",
+    "weight": 4,
+    "name": "路边歇脚桶",
+    "desc": "路边支着一只木桶，桶盖上刻着字，像是留给过路人的。",
+    "template": "stamina_gift",
+    "params": {
+      "min": 5,
+      "max": 10,
+      "header": "🍺 【路边歇脚桶】路边支着一只木桶，桶盖上刻着一行字：『过路的朋友请随意，喝完记得把盖子盖好。』桶里的麦酒还带着凉意，喝下去，连日赶路的疲乏一下子散了。\n⚡ 体力 +{gain}（当前 ⚡ {stamina}/{max}）"
+    },
+    "source": "explore"
+  },
+  "gen_stone_bridge": {
+    "id": "gen_stone_bridge",
+    "weight": 5,
+    "name": "溪边石桥",
+    "desc": "一座青苔斑驳的石桥横跨溪流，桥下的水声轻柔。",
+    "template": "dialog",
+    "params": {
+      "texts": [
+        "🌉 【溪边石桥】你倚在石桥的石栏上，听桥下溪水淙淙。几只蜻蜓点过水面，荡开一圈圈细碎的涟漪。",
+        "🌉 【溪边石桥】石桥上游人踩出的青苔滑溜溜的，你扶着布满刻痕的石栏慢慢走过——想象着几百年前，是否也有人在此驻足。"
+      ]
+    },
+    "source": "explore"
+  },
+  "gen_tree_rings": {
+    "id": "gen_tree_rings",
+    "weight": 5,
+    "name": "老树桩年轮",
+    "desc": "一棵被伐倒的老树桩，断面上一圈圈的年轮清晰可见。",
+    "template": "region_lore",
+    "params": {
+      "flag": "gen_tree_rings",
+      "texts": [
+        "🌳 【老树桩年轮】你数着树桩上的年轮，一圈比一圈细密——这棵树活了不知多少岁，见证过这片土地的无数次枯荣。你轻轻抚过那些纹路(见闻已记)。"
+      ],
+      "seen_texts": [
+        "🌳 【老树桩年轮】你再次路过树桩，几只蚂蚁正沿着年轮的纹理排成一队行进，像是遵循着什么古老的路线。"
+      ]
+    },
+    "source": "explore"
+  },
+  "gen_whiskey_keg": {
+    "id": "gen_whiskey_keg",
+    "weight": 4,
+    "name": "半埋酒桶",
+    "desc": "路边土里半埋着一只酒桶，桶口已经朽了一半。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_gold",
+        "params": {
+          "min": 10,
+          "max": 30,
+          "scale_lv": 1,
+          "header": "🍺 【半埋酒桶】你撬开酒桶，里面滚出几枚泛着绿锈的旧钱币——大概是谁喝醉后顺手埋的私房钱！\n💰 获得 {gold} 金币！"
+        }
+      },
+      "miss": {
+        "template": "damage",
+        "params": {
+          "pct": 0.04,
+          "min": 3,
+          "header": "🍺 【半埋酒桶】你一脚踢开桶盖，成群的蜈蚣和蛀虫「呼啦」涌了出来！你吓了一跳，腿肚子被咬了几口。\n损失 {dmg} 点生命(当前 ❤️ {hp}/{max_hp})"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "gold_slime": {
+    "id": "gold_slime",
+    "weight": 8,
+    "name": "金色史莱姆",
+    "desc": "一只通体金黄的史莱姆！",
+    "template": "loot_gold_mats",
+    "params": {
+      "min": 200,
+      "max": 400,
+      "scale_lv": 30,
+      "mats": [
+        "琥珀精华"
+      ],
+      "blueprint_chance": 0,
+      "header": "✨ 【金色史莱姆】一只通体金黄的史莱姆蹦跳着挡住去路！\n你三两下把它敲扁——金色的浆液迸溅出来！\n💰 获得 {gold} 金币！{mat_line}{bp_line}",
+      "mat_line": "\n🎒 获得稀有材料：{mat}！",
+      "bp_line": ""
+    },
+    "source": "egg"
+  },
+  "herb": {
+    "id": "herb",
+    "weight": 12,
+    "name": "草药丛",
+    "desc": "一片长势喜人的野生草药，炼金师会为它们出个好价钱。",
+    "season_boost": "spring",
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "草药",
+        "林语之叶",
+        "谷地露水",
+        "浆果"
+      ],
+      "n": 1,
+      "header": "🌿 【草药丛】你发现一片野生草药，采摘了一些！\n🎒 获得材料：{mats}！{extra}",
+      "bp_line": ""
+    },
+    "source": "explore"
+  },
+  "hunter_hut": {
+    "id": "hunter_hut",
+    "weight": 5,
+    "name": "猎户小屋",
+    "desc": "一间挂着兽皮和弓弩的猎人小屋，门虚掩着。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "风干肉"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "🏹 【猎户小屋】屋梁下挂着几串风干肉，你取了一串，在桌上留了几枚铜板。\n🎒 获得：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "🏹 【猎户小屋】屋里空无一人，炉膛的灰还是温的——主人应该刚出门不久。",
+            "🏹 【猎户小屋】墙角的猎犬冲你吠了两声，又懒洋洋地趴了回去。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "isle_lighthouse_dusk": {
+    "id": "isle_lighthouse_dusk",
+    "weight": 5,
+    "name": "黄昏灯塔",
+    "desc": "落日把沙滩染成金色，岛尖的灯塔正一盏一盏亮起来。",
+    "maps": [
+      "sunset_isle"
+    ],
+    "template": "dialog",
+    "params": {
+      "texts": [
+        "🌅 【黄昏灯塔】落日沉到海平面，灯塔的灯亮了起来，把整片沙滩染成暖橘色。你坐在礁石上看完了一整场日落——海风把这一天的疲惫都吹散了。",
+        "🌅 【黄昏灯塔】守塔人在塔顶哼着歌，声音顺着风飘下来，和潮声混在一起。你听着听着，脚步都慢了下来，像怕惊碎这一刻的黄昏。",
+        "🌅 【黄昏灯塔】你捡到一只漂上岸的玻璃瓶，瓶里塞着张字条：‘无论多远，看到这盏灯，就知道家还在。’你把它放回瓶里，重新封好，让潮水带去下一个岸边。"
+      ]
+    },
+    "source": "explore"
+  },
+  "lost_camp": {
+    "id": "lost_camp",
+    "weight": 9,
+    "name": "废弃营地",
+    "desc": "一处被遗弃的营地，篝火余烬尚温，帐篷里似乎还有前人留下的物资。",
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "狼皮",
+        "兽肉",
+        "铁矿石",
+        "野猪牙",
+        "魔法粉尘"
+      ],
+      "n": 2,
+      "blueprint_chance": 0.15,
+      "header": "🏕️ 【废弃营地】你翻找着前人的遗物——篝火余烬还带着温度。\n🎒 获得材料：{mats}！{extra}",
+      "bp_line": "\n📜 帐篷角落里还压着一张图纸：{bp}！"
+    },
+    "source": "explore"
+  },
+  "merchant": {
+    "id": "merchant",
+    "weight": 1,
+    "name": "流浪商人",
+    "desc": "一个行色匆匆的商队掉队者拦住你，想低价出手几件压箱底的好货。",
+    "template": "merchant",
+    "params": {},
+    "source": "explore"
+  },
+  "meteor": {
+    "id": "meteor",
+    "weight": 5,
+    "name": "陨石坑",
+    "desc": "地面凹陷着一个冒着热气的陨石坑，坑底嵌着一块奇异的金属。",
+    "template": "combo",
+    "params": {
+      "steps": [
+        {
+          "template": "loot_materials",
+          "params": {
+            "mats": [
+              "铁矿石",
+              "秘银",
+              "精铁",
+              "星辉石"
+            ],
+            "n": 1,
+            "header": "☄️ 【陨石坑】坑底嵌着一块奇异的金属，你费了番力气把它撬了出来。\n🎒 获得矿石：{mats}！{extra}",
+            "bp_line": ""
+          }
+        },
+        {
+          "template": "exp_gain",
+          "params": {
+            "min": 20,
+            "scale_lv": 2,
+            "header": "✨ 经验 +{exp}"
+          }
+        }
+      ]
+    },
+    "source": "explore"
+  },
+  "mid_border_flag": {
+    "id": "mid_border_flag",
+    "weight": 4,
+    "name": "换防军旗",
+    "desc": "堡楼上升起一面崭新的军旗，老旗手正把褪色的旧旗仔细叠好。",
+    "maps": [
+      "border_castle"
+    ],
+    "template": "region_lore",
+    "params": {
+      "flag": "mid_border_flag",
+      "texts": [
+        "🚩 【换防军旗】号角刚歇，旗台上正在换旗。老旗手把褪了色的旧旗叠得方方正正，像对待一位退役的老兵：『这面旗在城头守了十一年，兽人三回攻城，它一回没倒过。』他把旧旗锁进木箱，又朝新旗行了个礼(见闻已记)。",
+        "🚩 【换防军旗】新旗升上旗杆的瞬间，城头的士兵齐齐挺直了腰。风把旗面扯得猎猎作响，旗角绣着边境堡的旧纹章——一道剑痕贯穿盾徽，是百年前守城战留下的纪念(见闻已记)。"
+      ],
+      "seen_texts": [
+        "🚩 【换防军旗】你再次路过旗台，新旗的旗角已被沙暴磨出了毛边。老旗手蹲在台阶上补旗，头也不抬：『边关的旗，旧得快。』"
+      ]
+    },
+    "source": "explore"
+  },
+  "mid_border_mess": {
+    "id": "mid_border_mess",
+    "weight": 4,
+    "name": "战地伙房",
+    "desc": "伙房里飘出热腾腾的香气，换防下来的士兵正围着一口大锅喝汤。",
+    "maps": [
+      "border_castle"
+    ],
+    "template": "heal_full",
+    "params": {
+      "header": "🍲 【战地伙房】你帮伙夫搬了两筐木柴，他硬塞给你一碗冒尖的热汤——大骨头炖干菜，胡椒放得足，辣得人天灵盖发亮。你蹲在{name}的伙房门口连喝三碗，连日赶路的疲乏一扫而空！\n❤️ 生命全满！💙 魔力全满！（边关的热汤）"
+    },
+    "source": "explore"
+  },
+  "mid_border_patrol": {
+    "id": "mid_border_patrol",
+    "weight": 5,
+    "name": "城墙巡逻",
+    "desc": "一队巡逻兵踏着整齐的步子从你身边经过，带队的伍长多看了你一眼。",
+    "maps": [
+      "border_castle"
+    ],
+    "template": "dialog",
+    "params": {
+      "texts": [
+        "🛡️ 【城墙巡逻】带队的伍长朝你一点头：『边境堡的规矩，宁肯多绕十里路，不让一个兽人摸到墙根。』话没说完，远处号角又响了一声，他带着队伍小跑着拐进了城墙的阴影里。",
+        "🛡️ 【城墙巡逻】换防的队伍在城门洞里交错而过——上去的挺着胸，下来的盔甲上还挂着夜露。有个年轻士兵边走边打哈欠，被老兵拍了一下后脑勺：『站直了，堡里堡外都看着呢。』",
+        "🛡️ 【城墙巡逻】你在墙根下歇脚，听见城头传来报数的声音，一声接一声，从这头传到那头。有人笑着骂了句什么，又被风卷走了。边关的夜晚，靠的就是这一声声应答。"
+      ]
+    },
+    "source": "explore"
+  },
+  "mid_holy_butterfly": {
+    "id": "mid_holy_butterfly",
+    "weight": 5,
+    "name": "圣光蝶群",
+    "desc": "一群体型硕大的蝴蝶在圣光里翩跹，鳞粉如金粉般洒落。",
+    "season_boost": "spring",
+    "maps": [
+      "gold_plain",
+      "dawn_cathedral",
+      "white_abbey"
+    ],
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "圣水",
+            "精灵果"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "🦋 【圣光蝶群】你张开手掌，一只蝶轻巧地落上来，停稳后留下一滴晶莹的圣露和一枚泛着微光的果实。\n🎒 获得：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "🦋 【圣光蝶群】蝶群环绕着你打旋，金色的鳞粉沾满肩头，像披了一层圣光。",
+            "🦋 【圣光蝶群】你试着去捉，蝶群呼啦一下散开，又在不远处重新聚拢，似在戏弄你。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "mid_king_tomb": {
+    "id": "mid_king_tomb",
+    "weight": 4,
+    "name": "王陵石像低语",
+    "desc": "古老石像的眼窝深处，似乎传来若有若无的低语。",
+    "maps": [
+      "king_road",
+      "lost_library",
+      "dusk_ridge_road"
+    ],
+    "template": "exp_gain",
+    "params": {
+      "min": 25,
+      "scale_lv": 3,
+      "header": "🗿 【王陵石像低语】你驻足倾听，石像似乎在你耳边道出半句遗失的古史。那段文字在你脑中盘旋良久——✨ 经验 +{exp} ！（古老知识的馈赠）"
+    },
+    "source": "explore"
+  },
+  "mid_knight_target": {
+    "id": "mid_knight_target",
+    "weight": 4,
+    "name": "骑士训练靶",
+    "desc": "训练场边立着一排人形木靶，靶心满是旧创。",
+    "maps": [
+      "knight_yard",
+      "ironshield_hills",
+      "gold_plain"
+    ],
+    "template": "random_choice",
+    "params": {
+      "chance": 0.55,
+      "hit": {
+        "template": "exp_gain",
+        "params": {
+          "min": 15,
+          "scale_lv": 2,
+          "header": "⚔️ 【骑士训练靶】你抄起练习木剑，照着教官的架势对着木靶连劈三下——虎口发麻，却打得酣畅淋漓！\n✨ 经验 +{exp} ！（练习的成果）"
+        }
+      },
+      "miss": {
+        "template": "stamina_gift",
+        "params": {
+          "min": 4,
+          "max": 8,
+          "header": "⚔️ 【骑士训练靶】你绕着训练场跑了几圈，又骑了会儿马——虽没练出什么功夫，倒把身子活动开了。\n⚡ 体力 +{gain}（当前 ⚡ {stamina}/{max}）"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "mid_old_tomb": {
+    "id": "mid_old_tomb",
+    "weight": 5,
+    "name": "无名墓碑",
+    "desc": "荒草丛里立着一块无名的墓碑，碑前放着一束新摘的野花。",
+    "maps": [
+      "old_battlefield"
+    ],
+    "template": "dialog",
+    "params": {
+      "texts": [
+        "🪦 【无名墓碑】碑上没有名字，只刻着一把断剑的纹样。一个老兵坐在碑边，把怀里的勋章擦了又擦：『百族战争那会儿，人太多了，记不全名字。』他没再说下去，你也没问。",
+        "🪦 【无名墓碑】你蹲下拨开荒草，碑脚下压着半块干粮和一小壶酒——不知是谁年年都来。你把采到的野花轻轻放在碑前，风里隐约传来一声叹息，又像只是风声。",
+        "🪦 【无名墓碑】你数了数，这样的无名碑在荒草里连成一片，像一支沉默的军队。碑身朝着同一个方向——那是当年敌人来的方向。"
+      ]
+    },
+    "source": "explore"
+  },
+  "mid_old_wisp": {
+    "id": "mid_old_wisp",
+    "weight": 3,
+    "name": "战壕磷火",
+    "desc": "暮色里，几点幽绿的磷火在战壕间飘荡，忽聚忽散。",
+    "maps": [
+      "old_battlefield"
+    ],
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "rare_find",
+        "params": {
+          "mats": [
+            "幽魂尘"
+          ],
+          "n": 1,
+          "header": "💚 【战壕磷火】你壮着胆子走近，磷火并不伤人——它绕着你转了一圈，忽然炸开，化作一把发光的尘末落进你掌心。老人们说，那是战死者的魂在谢你肯来听他们说话。\n🎒 获得稀有材料：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "💚 【战壕磷火】磷火在前方的战壕里忽明忽暗，你追了几步，它却一头扎进土里不见了。有人说这是战死者的魂，也有人说——是灰旗会的人深更半夜在旧军械库烧账本，火光映的。你摇摇头，把后半句抛在脑后。",
+            "💚 【战壕磷火】你站在战壕边看了很久。磷火聚了又散，散了又聚，像一群找不到归处的旅人。你对着它们举了举水囊，转身离开。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "mid_river_fisher": {
+    "id": "mid_river_fisher",
+    "weight": 5,
+    "name": "渔舟分鱼",
+    "desc": "一条小渔舟泊在芦苇边，老渔夫正收网，网里扑腾得水花四溅。",
+    "maps": [
+      "silver_river"
+    ],
+    "template": "loot_gold_mats",
+    "params": {
+      "min": 15,
+      "max": 35,
+      "scale_lv": 2,
+      "mats": [
+        "河豚毒素"
+      ],
+      "blueprint_chance": 0,
+      "header": "🎣 【渔舟分鱼】老渔夫收上网，冲你扬了扬下巴：『搭把手，网里的分你一份。』你卷起裤腿下水帮他拽网——网里滚出一条鼓着肚子的河豚，把老头吓了一跳！他手忙脚乱地解网，最后摸出几枚铜板塞给你，又让你把那条河豚拎走：『记得别乱吃！』\n💰 获得 {gold} 金币！{mat_line}",
+      "mat_line": "\n🎒 还拎走一份：{mat}！",
+      "bp_line": ""
+    },
+    "source": "explore"
+  },
+  "mid_river_heron": {
+    "id": "mid_river_heron",
+    "weight": 4,
+    "name": "水鸟惊飞",
+    "desc": "芦苇丛里惊起一群白羽水鸟，贴着水面掠过，带起一串水花。",
+    "maps": [
+      "silver_river"
+    ],
+    "template": "stamina_gift",
+    "params": {
+      "min": 5,
+      "max": 8,
+      "header": "🦢 【水鸟惊飞】你追着那群水鸟沿河跑了一程——它们在水面点出一串涟漪，又在更远处落回芦苇丛，像在等你。这一通跑没追上鸟，倒把筋骨跑开了。\n⚡ 体力 +{gain}（当前 ⚡ {stamina}/{max}）"
+    },
+    "source": "explore"
+  },
+  "mid_river_lantern": {
+    "id": "mid_river_lantern",
+    "weight": 4,
+    "name": "河灯顺流",
+    "desc": "暮色四合，几点河灯顺流而下，在河面上拖出细碎的光影。",
+    "maps": [
+      "silver_river"
+    ],
+    "template": "region_lore",
+    "params": {
+      "flag": "mid_river_lantern",
+      "texts": [
+        "🏮 【河灯顺流】暮色里，几盏河灯从上游漂下来，烛火在河风里明明灭灭。你蹲在{name}岸边看了许久——据说银铃河的人放灯，是给远行的人照路，灯不灭，人就不算走远(见闻已记)。",
+        "🏮 【河灯顺流】一个放灯的老妇人见你好奇，递给你一盏：『写上想说的话，河神替你带到下游去。』你提笔又放下——有些话，还是留在心里稳妥些(见闻已记)。"
+      ],
+      "seen_texts": [
+        "🏮 【河灯顺流】你再次路过河岸，一盏河灯搁浅在芦苇丛里，烛火早已燃尽，只剩一截焦黑的竹签。你把它扶正，让水载着它继续往下游漂。"
+      ]
+    },
+    "source": "explore"
+  },
+  "mid_west_hunter": {
+    "id": "mid_west_hunter",
+    "weight": 5,
+    "name": "独行猎人",
+    "desc": "一个背着长弓的独行猎人坐在岩石上处理猎物，远远朝你点了点头。",
+    "maps": [
+      "west_ridge_wilds"
+    ],
+    "template": "exp_gain",
+    "params": {
+      "min": 20,
+      "scale_lv": 3,
+      "header": "🏹 【独行猎人】猎人分你一块烤好的兽肉，一边剔骨头一边讲荒原的规矩：怎么辨风向、怎么读狼的脚印、哪片洼地雨后能挖到水。你听得入神，记了一肚子荒野的门道。\n✨ 经验 +{exp}！（荒野的学问）"
+    },
+    "source": "explore"
+  },
+  "mid_west_station": {
+    "id": "mid_west_station",
+    "weight": 4,
+    "name": "废弃驿站",
+    "desc": "一座废弃的驿站立在荒原路边，半扇门被风滚草堵住，墙上的留言板还钉着旧纸片。",
+    "maps": [
+      "west_ridge_wilds"
+    ],
+    "template": "region_lore",
+    "params": {
+      "flag": "mid_west_station",
+      "texts": [
+        "🏚️ 【废弃驿站】你拨开风滚草推门进去，屋里落满沙土，留言板上还钉着几十年前的旧纸片：『往西三十里，有水』『驼队平安，勿念』『狼多，结伴走』。你把自己的见闻也添了一笔，算作过路的记号(见闻已记)。",
+        "🏚️ 【废弃驿站】驿站的马厩塌了一半，槽里积着干涸的雨水。墙根下有人用炭笔写了一行小字：『第二次路过，这里还是没人。』笔迹新旧不一，看来惦记这间驿站的不止你一个(见闻已记)。"
+      ],
+      "seen_texts": [
+        "🏚️ 【废弃驿站】你再次路过，风滚草又堆到了门口。留言板上多了两行新字，是别的旅人留下的——这荒原上的驿站，竟还有人接力记着。"
+      ]
+    },
+    "source": "explore"
+  },
+  "mushroom_ring": {
+    "id": "mushroom_ring",
+    "weight": 4,
+    "name": "蘑菇圈",
+    "desc": "林间空地上长着一个完美的蘑菇圈，菌盖泛着幽幽的蓝光。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.35,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "幽光菇"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "🍄 【蘑菇圈】传说蘑菇圈是精灵的舞场——你试探着采下一朵蓝光蘑菇，圈里的光暗了一分。\n🎒 获得稀有材料：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "🍄 【蘑菇圈】你绕着蘑菇圈走了三圈，始终没敢采——老猎人说，圈里的东西碰不得。",
+            "🍄 【蘑菇圈】蘑菇圈在月光下泛着光，像一圈小小的星环，你看了好久才离开。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "mystery_chest": {
+    "id": "mystery_chest",
+    "weight": 30,
+    "name": "神秘宝匣",
+    "desc": "埋藏千年的宝匣。",
+    "template": "mystery_chest",
+    "params": {},
+    "source": "egg"
+  },
+  "night_owl": {
+    "id": "night_owl",
+    "weight": 3,
+    "name": "夜枭鸣叫",
+    "desc": "夜色深处传来一声悠长的鸟鸣，像是夜的叹息。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.4,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "夜枭羽毛"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "🦉 【夜枭鸣叫】一只夜枭从头顶掠过，抖落一片暗纹流转的羽毛。\n🎒 获得：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "🦉 【夜枭鸣叫】“咕——咕——”夜枭的鸣叫在{name}上空回荡，你莫名打了个寒颤。",
+            "🦉 【夜枭鸣叫】你循声望去，一双金色的眼睛在树梢一闪，消失在夜色里。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "night_visitor": {
+    "id": "night_visitor",
+    "weight": 10,
+    "name": "神秘访客",
+    "desc": "雾中出现的神秘身影。",
+    "template": "set_flag",
+    "params": {
+      "flag": "h_abyss_whisper",
+      "key": "saw_the_rift",
+      "header": "🌫️ 【神秘访客】雾气突然涌起，一道模糊的身影拦住了你。\n“深渊的裂隙……正在低语……去找它。”\n身影说完便消散在雾中，你隐约感到，某个秘密被揭开了(隐藏线索已记入见闻)。"
+    },
+    "source": "egg"
+  },
+  "north_aurora_shard": {
+    "id": "north_aurora_shard",
+    "weight": 4,
+    "name": "极光碎片",
+    "desc": "极光在天边翻涌，一片微光从空中打着旋儿落下。",
+    "season": "winter",
+    "maps": [
+      "frost_field",
+      "permafrost_field",
+      "frostwhisper_canyon"
+    ],
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "霜花"
+      ],
+      "n": 2,
+      "bp_line": "",
+      "header": "🌌 【极光碎片】你伸手去接那片微光，它落进掌心凝成两朵剔透的霜花——像是极光冻成的冰晶。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "explore"
+  },
+  "north_cinder_geyser": {
+    "id": "north_cinder_geyser",
+    "weight": 4,
+    "name": "烬山热泉",
+    "desc": "岩缝里涌出一汪冒着热气的泉水，泉边结着淡黄的硫磺霜。",
+    "maps": [
+      "cinder_mountain"
+    ],
+    "template": "stamina_gift",
+    "params": {
+      "min": 6,
+      "max": 12,
+      "header": "♨️ 【烬山热泉】你脱下靴子把脚浸进热泉，滚烫的泉水蒸得骨头都酥了，一路跋涉的疲乏一扫而空！\n⚡ 体力 +{gain}（当前 ⚡ {stamina}/{max}）"
+    },
+    "source": "explore"
+  },
+  "north_cinder_pilgrim": {
+    "id": "north_cinder_pilgrim",
+    "weight": 4,
+    "name": "灰袍朝圣者",
+    "desc": "灰烬地里跪着一位裹着灰袍的老者，正朝着烬山祭坛的方向叩拜。",
+    "maps": [
+      "cinder_mountain"
+    ],
+    "template": "region_lore",
+    "params": {
+      "flag": "north_cinder_pilgrim",
+      "texts": [
+        "🧎 【灰袍朝圣者】灰袍老者没有回头，只低声说：『三百年前，我爷爷亲眼看着英雄王走进封印，我来替他还愿。』他往你手心放了一撮烬山的灰，又俯身叩拜下去(见闻已记)。",
+        "🧎 【灰袍朝圣者】老者的额头在灰地里磕出浅浅的坑，膝边供着三炷香，香火在火山灰的雾气里笔直升起。他抬眼看了看你，又望向烬山祭坛的方向。"
+      ],
+      "seen_texts": [
+        "🧎 【灰袍朝圣者】你再次路过，老者已经不在了——灰地里只剩一行朝向祭坛的膝印，和石缝里三炷未熄的香。",
+        "🧎 【灰袍朝圣者】灰烬地里又多了一串新的膝印，朝圣者络绎不绝，像是替什么人来看一眼这座山。"
+      ]
+    },
+    "source": "explore"
+  },
+  "north_forge_anvil_echo": {
+    "id": "north_forge_anvil_echo",
+    "weight": 4,
+    "name": "古锻锤回响",
+    "desc": "一座废弃的矮人锻炉边立着半截铁砧，砧面上还留着深深浅浅的锤印。",
+    "maps": [
+      "forge_valley"
+    ],
+    "template": "exp_gain",
+    "params": {
+      "min": 30,
+      "scale_lv": 3,
+      "header": "🔨 【古锻锤回响】你抡起铁砧边的旧锤试了试手，每一记都有古老的锤声隔着岁月与你对答，锻造的诀窍随火星涌进脑海！\n✨ 经验 +{exp} ！（古矮人的馈赠）"
+    },
+    "source": "explore"
+  },
+  "north_forge_slag": {
+    "id": "north_forge_slag",
+    "weight": 4,
+    "name": "炉渣里的闪光",
+    "desc": "熔炉谷的废渣堆旁散落着几块闪着金属光泽的碎料，像是铁匠们漏掉的。",
+    "maps": [
+      "forge_valley"
+    ],
+    "template": "loot_gold_mats",
+    "params": {
+      "min": 12,
+      "max": 35,
+      "scale_lv": 1,
+      "mats": [
+        "精铁锭",
+        "精铁",
+        "铁矿石"
+      ],
+      "mat_line": "\n🎒 还扒出一份能用的好料：{mat}！",
+      "bp_line": "",
+      "header": "🔨 【炉渣里的闪光】你拨开滚烫的炉渣堆，翻出几枚被火燎得发亮的钱币和一块矮人漏下的坯料！\n💰 获得 {gold} 金币！{mat_line}{bp_line}"
+    },
+    "source": "explore"
+  },
+  "north_frozen_cave": {
+    "id": "north_frozen_cave",
+    "weight": 4,
+    "name": "冻湖冰洞",
+    "desc": "湖面结着厚厚的冰，岸边的礁石下裂出一个幽蓝的冰洞。",
+    "season": "winter",
+    "maps": [
+      "winter_lake",
+      "frost_fang",
+      "cold_spine_snow_trail"
+    ],
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "霜花",
+            "雪狼皮",
+            "秘银"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "❄️ 【冻湖冰洞】冰洞里嵌着一些闪亮的东西，你砸开冰壳——竟是几块冻了几百年的寒冰矿藏！\n🎒 获得：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "damage",
+        "params": {
+          "pct": 0.05,
+          "min": 4,
+          "header": "❄️ 【冻湖冰洞】你探头往里张望，脚下一滑，整条腿踩进了冰窟窿里！冰水刺骨，你连滚带爬地挣出来。\n损失 {dmg} 点生命(当前 ❤️ {hp}/{max_hp})"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "north_gallery_relief": {
+    "id": "north_gallery_relief",
+    "weight": 4,
+    "name": "先祖浮雕",
+    "desc": "长廊岩壁上刻着一幅矮人先祖的浮雕，壁龛深处似乎有什么在反光。",
+    "maps": [
+      "dwarf_long_gallery"
+    ],
+    "template": "rare_find",
+    "params": {
+      "mats": [
+        "精铁锭",
+        "秘银",
+        "精金"
+      ],
+      "n": 1,
+      "header": "🗿 【先祖浮雕】你踮脚探进浮雕的壁龛，摸到一块冰凉的金属——是先祖留给后人的藏料，封存了不知多少年！\n🎒 获得稀有材料：{mats}！{extra}"
+    },
+    "source": "explore"
+  },
+  "north_gallery_rune_wind": {
+    "id": "north_gallery_rune_wind",
+    "weight": 5,
+    "name": "符文隧道风",
+    "desc": "穿堂风呜呜地灌过长廊，岩壁上的发光符文随着风声明灭不定。",
+    "maps": [
+      "dwarf_long_gallery"
+    ],
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "exp_gain",
+        "params": {
+          "min": 25,
+          "scale_lv": 2,
+          "header": "💨 【符文隧道风】风掠过符文，光纹如水波般漾开——你恍惚读懂了半句刻在风里的古语，灵光一闪！\n✨ 经验 +{exp} ！（符文低语的顿悟）"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "💨 【符文隧道风】风从长廊深处呼啸而来，卷起一片细碎的石粉。你眯着眼等它过去，什么也没发生。",
+            "💨 【符文隧道风】符文在风里明明灭灭，像矮人在打一串古老的暗号。你侧耳听了半天，只听懂了风声。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "north_wolf_howl": {
+    "id": "north_wolf_howl",
+    "weight": 5,
+    "name": "雪原狼嚎",
+    "desc": "寒风卷着雪粒扑来，远方传来一声悠长的狼嚎。",
+    "season": "winter",
+    "maps": [
+      "frost_field",
+      "black_forest",
+      "ancient_tree"
+    ],
+    "template": "dialog",
+    "params": {
+      "texts": [
+        "🐺 【雪原狼嚎】狼嚎在冰原上空回荡，一声比一声近。你握紧武器，却见雪丘后跃出一头灰狼——它定定地看了你片刻，转身消失在风雪里。",
+        "🐺 【雪原狼嚎】你来时的方向响起长啸，像是狼群呼朋引伴。你紧了紧衣领，脚下的雪咯吱作响。"
+      ]
+    },
+    "source": "explore"
+  },
+  "old_boot": {
+    "id": "old_boot",
+    "weight": 3,
+    "name": "破旧皮靴",
+    "desc": "路边躺着一只破旧的皮靴，鞋口朝天，不知道被谁丢在这里。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.4,
+      "hit": {
+        "template": "loot_gold",
+        "params": {
+          "min": 5,
+          "max": 15,
+          "scale_lv": 1,
+          "header": "👢 【破旧皮靴】你嫌弃地踢了踢靴子，里面竟滚出几枚金币！\n💰 获得 {gold} 金币！"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "👢 【破旧皮靴】你好奇地拎起靴子闻了闻——好家伙，那味儿直冲天灵盖！赶紧扔了。",
+            "👢 【破旧皮靴】靴子里只有一只风干的袜子和几根草，你默默把它踢回了路边。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "old_map": {
+    "id": "old_map",
+    "weight": 12,
+    "name": "泛黄藏宝图",
+    "desc": "一张泛黄的藏宝图。",
+    "template": "set_flag",
+    "params": {
+      "flag": "h_lost_library",
+      "key": "got_old_map",
+      "header": "🗺️ 【泛黄藏宝图】你在一棵老树的树洞里发现一张泛黄的藏宝图！\n图上画着一条通往圣堂地窖深处的地下通道，边缘写着：\n“三页旧纸，一扇石门——书页不齐，石门不开。”\n你收好藏宝图(隐藏线索：失落图书馆·书页之一 已记入见闻)。"
+    },
+    "source": "egg"
+  },
+  "old_tree_hollow": {
+    "id": "old_tree_hollow",
+    "weight": 6,
+    "name": "老树洞",
+    "desc": "一棵百年老树的根部有个黑黢黢的树洞，像藏着秘密。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_gold",
+        "params": {
+          "min": 5,
+          "max": 20,
+          "scale_lv": 1,
+          "header": "🌳 【老树洞】你伸手探进树洞，摸到几枚不知谁藏的金币！\n💰 获得 {gold} 金币！"
+        }
+      },
+      "miss": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "古木枝",
+            "林语之叶",
+            "谷地露水"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "🌳 【老树洞】树洞里积着落叶和碎枝，你扒拉出一把能用的材料。\n🎒 获得：{mats}！{extra}"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "old_well": {
+    "id": "old_well",
+    "weight": 5,
+    "name": "荒废古井",
+    "desc": "一口被藤蔓爬满的古井，井口黑洞洞的，仿佛藏着什么。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_gold",
+        "params": {
+          "min": 8,
+          "max": 25,
+          "scale_lv": 1,
+          "header": "🕳️ 【荒废古井】你放下木桶打水，却捞上来一个沉甸甸的钱袋！\n💰 获得 {gold} 金币！"
+        }
+      },
+      "miss": {
+        "template": "damage",
+        "params": {
+          "pct": 0.06,
+          "min": 3,
+          "header": "🕳️ 【荒废古井】井水冰凉，你探头张望——一张惨白的脸从井底浮起！\n你吓得连退几步，撞在井沿上，损失 {dmg} 点生命(当前 ❤️ {hp}/{max_hp})"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "omen": {
+    "id": "omen",
+    "weight": 8,
+    "name": "古老的遗迹",
+    "desc": "废墟的残垣上刻着陌生的符文，像是某位守护者留下的警示。",
+    "template": "exp_gain",
+    "params": {
+      "min": 15,
+      "scale_lv": 3,
+      "header": "🏛️ 【古老遗迹】你在废墟中发现一段古老符文，隐约蕴含着知识的力量！\n✨ 经验 +{exp}"
+    },
+    "source": "explore"
+  },
+  "rain": {
+    "id": "rain",
+    "weight": 7,
+    "name": "突如其来的雨",
+    "desc": "天空骤然阴沉，豆大的雨点砸了下来。",
+    "template": "set_state",
+    "params": {
+      "key": "rain_{gid}_{qid}",
+      "value": "ts",
+      "header": "🌧️ 【突如其来的雨】豆大的雨点砸下来，你躲进树荫避雨。\n雨后的空气格外清新——你感到一阵清明(接下来 30 分钟探索遇怪率小幅提升)。"
+    },
+    "source": "explore"
+  },
+  "sea_black_wreck": {
+    "id": "sea_black_wreck",
+    "weight": 4,
+    "name": "黑潮沉船",
+    "desc": "退潮的黑浪间露出一截断裂的桅杆，一艘古船搁浅在暗礁上。",
+    "maps": [
+      "black_tide_strait"
+    ],
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "幽灵帆布",
+            "水手骨牌",
+            "潮汐碎片"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "⚓ 【黑潮沉船】你攀上搁浅的古船，甲板早已朽烂，货舱里却还压着几只没被黑潮卷走的木箱。你撬开一只，里面是水手们的旧物——被海水泡得发白，却还能用。\n🎒 获得材料：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "damage",
+        "params": {
+          "pct": 0.05,
+          "min": 4,
+          "header": "⚓ 【黑潮沉船】你刚踩上船帮，朽烂的木板就‘咔嚓’断裂！你连人带板摔进黑潮里，呛了好几口咸水，才被浪头推回礁石上。\n损失 {dmg} 点生命(当前 ❤️ {hp}/{max_hp})"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "sea_mist_reef": {
+    "id": "sea_mist_reef",
+    "weight": 4,
+    "name": "退潮礁洼",
+    "desc": "雾潮退去，暗礁间露出一汪汪浅浅的水洼，水底有什么在闪光。",
+    "maps": [
+      "mist_tide_passage"
+    ],
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "潮汐贝壳",
+        "海盐结晶",
+        "珊瑚枝"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🌫️ 【退潮礁洼】雾潮退去，礁石间的水洼像一面面碎镜子。你弯腰一捞，捞起一枚被潮水打磨得温润的贝壳——雾里讨生活的水手都说，这是潮汐留下的买路钱。\n🎒 获得材料：{mats}！{extra}"
+    },
+    "source": "explore"
+  },
+  "sea_tide_beacon": {
+    "id": "sea_tide_beacon",
+    "weight": 4,
+    "name": "海潮信标",
+    "desc": "礁石顶上立着一座残破的灯塔，灯芯早已熄灭。",
+    "maps": [
+      "coral_reef",
+      "storm_sea",
+      "shipwreck_graveyard",
+      "mist_trench",
+      "storm_strait",
+      "mermaid_bay"
+    ],
+    "template": "region_lore",
+    "params": {
+      "flag": "sea_tide_beacon",
+      "texts": [
+        "🏮 【海潮信标】你爬上礁石，点亮早已熄灭的灯塔。只见四面八方都有船影向这里靠拢——原来迷航的船只都循着信标寻找归路。这盏灯，救的不只是船(见闻已记)。"
+      ],
+      "seen_texts": [
+        "🏮 【海潮信标】你再次站上礁石，远处巨浪拍碎在崖下。灯塔静默地立着，仿佛在等你下次点燃。"
+      ]
+    },
+    "source": "explore"
+  },
+  "sea_whale_song": {
+    "id": "sea_whale_song",
+    "weight": 5,
+    "name": "鲸歌回荡",
+    "desc": "海面浮着大片白沫，一道低沉悠长的鲸歌从深蓝的水下传来。",
+    "maps": [
+      "whale_domain"
+    ],
+    "template": "region_lore",
+    "params": {
+      "flag": "sea_whale_song",
+      "texts": [
+        "🐋 【鲸歌回荡】一道鲸歌从深海传来，低得像是海自己在哼唱。浮沫随歌扩散，你看见一头灰蓝的巨影在水下缓缓游过——它绕着你所在的船底转了一圈，才沉回深处(见闻已记)。",
+        "🐋 【鲸歌回荡】你趴在船舷边，鲸歌贴着水面滚滚而来，震得胸腔发麻。海面浮起一串气泡，像是那头鲸在回应你的倾听(见闻已记)。"
+      ],
+      "seen_texts": [
+        "🐋 【鲸歌回荡】鲸歌再次从深蓝的水下传来。你不再张望，只是闭上眼，让那歌声带着船走完这一程。",
+        "🐋 【鲸歌回荡】这次鲸歌短促了许多，像一声招呼。你朝海面挥了挥手——浪花轻轻拍了一下船舷，算作回礼。"
+      ]
+    },
+    "source": "explore"
+  },
+  "shooting_star": {
+    "id": "shooting_star",
+    "weight": 60,
+    "name": "流星许愿",
+    "desc": "一道流星划过夜空！",
+    "template": "set_state",
+    "params": {
+      "key": "wish_{gid}_{qid}",
+      "value": "ts",
+      "header": "🌠 【流星许愿】一道流星拖着长尾划过{name}的夜空！\n你赶紧闭上眼睛许愿——流星似乎回应了你！\n━━━━━━━━━━━━\n💡 快决定吧：『许愿 经验』『许愿 金币』『许愿 材料』"
+    },
+    "source": "egg"
+  },
+  "sky_cloud_drift": {
+    "id": "sky_cloud_drift",
+    "weight": 5,
+    "name": "云海浮岛",
+    "desc": "云海缓缓流淌，一座小小的浮岛载着一棵孤树，从你面前漂过。",
+    "maps": [
+      "cloud_sea"
+    ],
+    "template": "region_lore",
+    "params": {
+      "flag": "sky_cloud_drift",
+      "texts": [
+        "☁️ 【云海浮岛】一座巴掌大的浮岛载着棵孤树，慢悠悠地从云海里漂过。树梢挂着一串不知谁系的红绳，在风里轻轻晃——像云海深处某个旅人留下的路标(见闻已记)。",
+        "☁️ 【云海浮岛】云浪翻涌间，你看见一截白玉似的台阶从云里露出又没入，不知通向哪里。老人们说，那是云海在给有缘人指路(见闻已记)。"
+      ],
+      "seen_texts": [
+        "☁️ 【云海浮岛】云海依旧缓缓流淌。你看着孤树远去，忽然觉得，它漂了这么多年，大概早就习惯了这样的旅程。",
+        "☁️ 【云海浮岛】这次浮岛漂得更远了些。你目送它没入云浪，像送别一位赶路的旧友。"
+      ]
+    },
+    "source": "explore"
+  },
+  "sky_rainbow_dew": {
+    "id": "sky_rainbow_dew",
+    "weight": 3,
+    "name": "虹云凝露",
+    "desc": "一朵虹色的云停在你头顶，云底垂下几缕光丝，凝成露珠滴落。",
+    "maps": [
+      "rainbow_cloud"
+    ],
+    "template": "rare_find",
+    "params": {
+      "mats": [
+        "彩虹露",
+        "彩虹鳞"
+      ],
+      "n": 1,
+      "header": "🌈 【虹云凝露】虹云低垂，光丝在云底凝成七色的露珠，一颗颗滚落。你张开斗篷去接——露珠落在布面上，竟凝成一片薄薄的虹色鳞片，入手微凉，流光溢彩。\n✨ 稀有发现！🎒 获得稀有材料：{mats}！{extra}"
+    },
+    "source": "explore"
+  },
+  "sky_starlight_ladder": {
+    "id": "sky_starlight_ladder",
+    "weight": 4,
+    "name": "星辉台阶",
+    "desc": "天梯径的尽头，星辉在石阶上流淌，像有人刚把一整条银河铺在了脚下。",
+    "maps": [
+      "starlight_terrace",
+      "sky_ladder_path"
+    ],
+    "template": "exp_gain",
+    "params": {
+      "min": 35,
+      "scale_lv": 4,
+      "header": "🌌 【星辉台阶】你踏上星辉流淌的石阶，每一步都像踩在凝固的星光上。登到高处回望，云海在脚下翻涌，来路灯火连成一条细细的光线——那一刻，你忽然明白了‘登天’二字的分量。\n✨ 经验 +{exp}！（仰望星空的顿悟）"
+    },
+    "source": "explore"
+  },
+  "sky_storm_charge": {
+    "id": "sky_storm_charge",
+    "weight": 4,
+    "name": "雷淬之池",
+    "desc": "雷暴云压得极低，一道闪电劈在不远处的水洼里，水洼滋滋地泛着电光。",
+    "maps": [
+      "storm_plateau"
+    ],
+    "template": "shrine_bless",
+    "params": {
+      "pct": 8,
+      "header": "⛈️ 【雷淬之池】一道闪电直直劈进你面前的水洼，电光四溅！你鬼使神差地伸手探入——电流顺着指尖窜遍全身，却没有痛感，只有一股滚烫的力量在血脉里翻涌。\n✨ 下次战斗攻击力 +{pct}% ！（雷神的淬炼）"
+    },
+    "source": "explore"
+  },
+  "south_beehive": {
+    "id": "south_beehive",
+    "weight": 4,
+    "name": "蜂箱纠纷",
+    "desc": "一窝野蜂正在老树根下筑巢，蜂群嗡嗡地躁动不安。",
+    "maps": [
+      "oak_plain",
+      "white_deer_forest",
+      "emerald_forest"
+    ],
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "蜂蜜"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "🐝 【蜂箱纠纷】蜂群乱作一团，你趁乱垫着布巾掰下一块蜜脾——金黄的蜜浆顺着手腕淌下来！\n🎒 获得：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "damage",
+        "params": {
+          "pct": 0.05,
+          "min": 3,
+          "header": "🐝 【蜂箱纠纷】你还没靠近，蜂群就气势汹汹地扑了上来！你满头是包地落荒而逃。\n损失 {dmg} 点生命(当前 ❤️ {hp}/{max_hp})"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "south_docks_net_salvage": {
+    "id": "south_docks_net_salvage",
+    "weight": 5,
+    "name": "潮汐渔网",
+    "desc": "潮水把一张破渔网冲上码头，网眼上缠满了海草和碎贝。",
+    "maps": [
+      "harbor_docks"
+    ],
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "海藻",
+        "蟹壳",
+        "海鸥羽毛",
+        "乌贼腕足"
+      ],
+      "n": 2,
+      "bp_line": "",
+      "header": "🕸️ 【潮汐渔网】潮水把一张破渔网冲上{name}的码头，网眼上缠满海草和碎贝。你蹲下来耐心拆解，倒出几样还能用的海货——今天的潮水待你不薄。\n🎒 获得：{mats}！{extra}"
+    },
+    "source": "explore"
+  },
+  "south_docks_sea_fog": {
+    "id": "south_docks_sea_fog",
+    "weight": 5,
+    "name": "雾中船骸",
+    "desc": "海雾漫过栈桥，一艘半沉的旧船搁浅在浅滩，桅杆斜斜指着天。",
+    "maps": [
+      "harbor_docks"
+    ],
+    "template": "dialog",
+    "params": {
+      "texts": [
+        "🌊 【雾中船骸】海雾漫过{name}的栈桥，一艘半沉的旧船搁浅在浅滩，桅杆斜斜指着天。浪头拍过船舷，发出空洞的响——像这艘船还在等一个永远不会回来的主人。",
+        "🌊 【雾中船骸】你蹲在码头边看雾里的船骸，一只海鸥落在断桅上，抖了抖羽毛。它偏头看你一眼，仿佛在说：这船的故事，早就随潮水散尽了。",
+        "🌊 【雾中船骸】雾散开一角，船骸锈红的船名『晚潮号』露了出来。你想起酒馆里听过的故事——那艘船满载着归乡的人，却再没能靠岸。"
+      ]
+    },
+    "source": "explore"
+  },
+  "south_gold_panning": {
+    "id": "south_gold_panning",
+    "weight": 4,
+    "name": "溪流淘金",
+    "desc": "清澈的溪水在碎石间奔流，水底似乎有什么在闪光。",
+    "maps": [
+      "silver_valley",
+      "white_deer_forest",
+      "oak_plain"
+    ],
+    "template": "random_choice",
+    "params": {
+      "chance": 0.45,
+      "hit": {
+        "template": "loot_gold",
+        "params": {
+          "min": 15,
+          "max": 45,
+          "scale_lv": 1,
+          "header": "💰 【溪流淘金】你弯腰舀起一捧沙砾，在手里淘了淘——竟淘出几枚金灿灿的砂金！\n💰 获得 {gold} 金币！"
+        }
+      },
+      "miss": {
+        "template": "stamina_gift",
+        "params": {
+          "min": 3,
+          "max": 6,
+          "header": "💪 【溪流淘金】你找了半天只捞到一把水草——不过这一通弯腰捞，倒让自己活动开了筋骨。\n⚡ 体力 +{gain}（当前 ⚡ {stamina}/{max}）"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "south_gorge_wind_runes": {
+    "id": "south_gorge_wind_runes",
+    "weight": 5,
+    "name": "风蚀石刻",
+    "desc": "峭壁的背风面刻着一串古老的路标符文，像是古商队留下的。",
+    "maps": [
+      "rockfall_gorge"
+    ],
+    "template": "exp_gain",
+    "params": {
+      "min": 15,
+      "scale_lv": 2,
+      "header": "🌬️ 【风蚀石刻】{name}的峭壁背风面刻着一串古老的路标符文——是几百年前走这条山道的商队留下的。你逐道辨认，渐渐读出其中的门道：哪段路碎石松动、哪处风口可以借力。这份老道的行路智慧让你受益匪浅。\n✨ 经验 +{exp} ！（风蚀石刻的馈赠）"
+    },
+    "source": "explore"
+  },
+  "south_mine_cave_echo": {
+    "id": "south_mine_cave_echo",
+    "weight": 5,
+    "name": "塌方回响",
+    "desc": "废弃矿道深处传来规律的敲击声，叮、叮、叮，像有人在凿石。",
+    "maps": [
+      "hill_mine"
+    ],
+    "template": "region_lore",
+    "params": {
+      "flag": "south_mine_cave_echo",
+      "texts": [
+        "⛏️ 【塌方回响】你举灯走进{name}深处的废弃矿道，前方传来规律的敲击声——叮、叮、叮，不紧不慢，像有人在凿石。你循声摸了一段路，声音却戛然而止，只剩脚下坍塌的碎石堆。听老矿工说，那是多年前被埋在里面的人，还在敲着求救的讯号(见闻已记)。"
+      ],
+      "seen_texts": [
+        "⛏️ 【塌方回响】你再次走进这条矿道，敲击声又响起来，这次断断续续，像力气快用尽了。你在塌方处放下半壶清水和几块干粮，转身离开——无论那是什么，愿它安息。",
+        "⛏️ 【塌方回响】这次矿道里安静得很，只有水滴声。你发现塌方处的碎石堆被人挪动过，露出半截矿灯的提手——也许那位老矿工，终于把路凿通了。"
+      ]
+    },
+    "source": "explore"
+  },
+  "south_mine_pickaxe": {
+    "id": "south_mine_pickaxe",
+    "weight": 4,
+    "name": "矿工遗物",
+    "desc": "矿道拐角倚着一柄锈迹斑斑的旧镐，镐柄上的名字早已磨平。",
+    "maps": [
+      "hill_mine"
+    ],
+    "template": "rare_find",
+    "params": {
+      "mats": [
+        "深渊水晶"
+      ],
+      "n": 1,
+      "header": "💎 【矿工遗物】{name}的矿道拐角倚着一柄锈迹斑斑的旧镐，镐柄上的名字磨得只剩一点轮廓。你顺着镐头所指的岩缝望去——幽蓝的光一闪，一块深渊水晶嵌在石壁里，像一滴凝固的星光。你小心把它撬了下来。\n🎒 获得稀有材料：{mats}！{extra}"
+    },
+    "source": "explore"
+  },
+  "south_ridge_hunter_trap": {
+    "id": "south_ridge_hunter_trap",
+    "weight": 4,
+    "name": "猎人兽夹",
+    "desc": "草丛里卧着一副铁齿兽夹，旁边的绊索上还挂着挣扎过的痕迹。",
+    "maps": [
+      "boar_ridge"
+    ],
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "兽肉",
+            "野猪牙"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "🪤 【猎人兽夹】你绕过铁齿兽夹，发现旁边一头肥硕的野猪撞进了绊索，挣了半天已经脱力。你干脆利落地解决了它，扛走今天的收获——猎人的陷阱，倒便宜了你这个过路的。\n🎒 获得：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "damage",
+        "params": {
+          "pct": 0.05,
+          "min": 3,
+          "header": "🪤 【猎人兽夹】你只顾盯着远处的野猪群，一脚踩进草丛里的兽夹！铁齿咬住靴子，疼得你直吸凉气。一个老猎人闻声赶来，笑呵呵地帮你撬开夹子：“小伙子，野猪岭的草里，处处都是我们下的套。”\n损失 {dmg} 点生命(当前 ❤️ {hp}/{max_hp})"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "south_ridge_mud_pond": {
+    "id": "south_ridge_mud_pond",
+    "weight": 4,
+    "name": "泥塘挣扎",
+    "desc": "野猪岭的低洼处积着一片烂泥塘，水面泛着浑浊的泡。",
+    "maps": [
+      "boar_ridge"
+    ],
+    "template": "stamina_gift",
+    "params": {
+      "min": 5,
+      "max": 9,
+      "header": "💦 【泥塘挣扎】{name}的低洼处积着一片烂泥塘，你一脚踩空陷了进去！泥浆没到膝盖，你连蹬带刨地把自己拔出来——浑身糊满泥巴，却也折腾得筋骨活泛。\n⚡ 体力 +{gain}（当前 ⚡ {stamina}/{max}）"
+    },
+    "source": "explore"
+  },
+  "south_scarecrow": {
+    "id": "south_scarecrow",
+    "weight": 5,
+    "name": "麦田稻草人",
+    "desc": "麦田边立着一尊破旧的稻草人，袖子里似乎塞着什么。",
+    "maps": [
+      "oak_plain",
+      "white_deer_forest",
+      "windmill_plain"
+    ],
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "谷地露水",
+            "草药",
+            "麦酒"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "🌾 【麦田稻草人】你走近细看，稻草人的口袋里塞着一把风干的草药和半壶麦酒，像是过路人留的。\n🎒 获得：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "🌾 【麦田稻草人】一阵风过，稻草人摆动手臂，像是在跟麦浪打招呼。你看了会儿，心里莫名安宁。",
+            "🌾 【麦田稻草人】你冲稻草人喊了一声，它当然没有回答——只有麻雀从它肩头惊飞。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "south_swamp_night_glow": {
+    "id": "south_swamp_night_glow",
+    "weight": 4,
+    "name": "夜雾菇丛",
+    "desc": "雾气深处，一丛伞面泛着幽蓝微光的菌菇静静生长。",
+    "maps": [
+      "misty_swamp"
+    ],
+    "template": "rare_find",
+    "params": {
+      "mats": [
+        "夜雾菇"
+      ],
+      "n": 2,
+      "header": "🍄 【夜雾菇丛】雾里隐约透出一片幽蓝的光——一丛夜雾菇撑开伞盖，夜露在伞沿凝成细珠。你屏住呼吸小心摘下两朵，揣进怀里。\n🎒 获得稀有材料：{mats}！{extra}"
+    },
+    "source": "explore"
+  },
+  "south_swamp_old_tree": {
+    "id": "south_swamp_old_tree",
+    "weight": 5,
+    "name": "雾中老树",
+    "desc": "雾气里立着一棵盘根错节的老树，枝桠像一只指向沼泽深处的手。",
+    "maps": [
+      "misty_swamp"
+    ],
+    "template": "region_lore",
+    "params": {
+      "flag": "south_swamp_old_tree",
+      "texts": [
+        "🌫️ 【雾中老树】瘴气浮动的{name}里，一棵老树把枝桠拧成一只指向深处的手。你凑近看，树皮上刻着一行褪色的字：『雾起时，跟着鸟走。』不知是哪位前辈留下的忠告(见闻已记)。"
+      ],
+      "seen_texts": [
+        "🌫️ 【雾中老树】你再次路过那棵老树，雾比上次更浓。树梢歇着一只灰鹭，见了你也不飞，只歪头打量——你朝它点点头，转身继续赶路。",
+        "🌫️ 【雾中老树】雾散了些，你才发现老树的根须间埋着半截断靴，靴口长满了青苔。想来是哪位失足旅人留下的，你默默把靴子扶正，算是替他收了个尾。"
+      ]
+    },
+    "source": "explore"
+  },
+  "south_wind_road_shrine": {
+    "id": "south_wind_road_shrine",
+    "weight": 4,
+    "name": "风神小龛",
+    "desc": "路碑旁立着一座半人高的石龛，龛内供着一枚转动的旧风铃。",
+    "maps": [
+      "silver_wind_road"
+    ],
+    "template": "shrine_bless",
+    "params": {
+      "pct": 5,
+      "header": "🍃 【风神小龛】{name}的路碑旁，一座半人高的石龛立在风里，龛内供着一枚转动的旧风铃——商队路过都会在此歇脚。你学着他们的规矩，在龛前放下一枚石子，闭眼许了个愿。风铃叮的一声，一阵暖风绕着你转了三个圈，像有只无形的手拍了拍你的肩。\n✨ 风神祝福降临：下次战斗攻击力 +{pct}% ！"
+    },
+    "source": "explore"
+  },
+  "spider_web": {
+    "id": "spider_web",
+    "weight": 4,
+    "name": "巨型蛛网",
+    "desc": "两棵大树之间挂着一张巨大的蛛网，网心似乎缠着什么东西。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "loot_gold",
+        "params": {
+          "min": 15,
+          "max": 40,
+          "scale_lv": 2,
+          "header": "🕸️ 【巨型蛛网】你用树枝小心翼翼地挑开蛛网——里面缠着一只鼓鼓的钱袋！\n💰 获得 {gold} 金币！"
+        }
+      },
+      "miss": {
+        "template": "damage",
+        "params": {
+          "pct": 0.08,
+          "min": 4,
+          "header": "🕸️ 【巨型蛛网】你刚碰到蛛网，一只毛茸茸的巨蛛就从网心扑来，狠狠咬了你一口！\n你逃出几步，损失 {dmg} 点生命(当前 ❤️ {hp}/{max_hp})"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "spring": {
+    "id": "spring",
+    "weight": 14,
+    "name": "神秘泉水",
+    "desc": "一汪冒着微光的泉水，喝下后感觉浑身的疲惫都被涤荡干净了。",
+    "season_boost": "spring",
+    "template": "heal_full",
+    "params": {
+      "header": "💧 【神秘泉水】你发现一汪泛着微光的泉水，饮下后浑身舒畅！\n❤️ 生命全满！💙 魔力全满！"
+    },
+    "source": "explore"
+  },
+  "stone_tablet": {
+    "id": "stone_tablet",
+    "weight": 4,
+    "name": "神秘石碑",
+    "desc": "一块半埋进土里的石碑，碑面刻着模糊的古老文字。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.4,
+      "hit": {
+        "template": "combo",
+        "params": {
+          "steps": [
+            {
+              "template": "set_flag",
+              "params": {
+                "flag": "h_lost_library",
+                "key": "tablet_page",
+                "header": "🪦 【神秘石碑】碑文的笔迹竟与藏宝图上的如出一辙——你读懂了一段失落图书馆的记载！\n📖 一段隐秘的知识流入脑海(隐藏线索已记入见闻)。"
+              }
+            },
+            {
+              "template": "loot_materials",
+              "params": {
+                "mats": [
+                  "泛黄书页"
+                ],
+                "n": 1,
+                "bp_line": "",
+                "cap_name": "泛黄书页",
+                "cap_count": 3,
+                "fallback_mats": [
+                  "古木枝",
+                  "林语之叶"
+                ],
+                "header": "🪦 碑座下的泥土里，露出半张泛黄的书页！\n🎒 获得：{mats}！{extra}"
+              }
+            }
+          ]
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "🪦 【神秘石碑】你蹲下来研究了半天，只认出几个模糊的符文——大概是什么古老的警告。",
+            "🪦 【神秘石碑】碑面上的文字已经被风雨磨得看不清了，你摇了摇头，继续赶路。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "trap": {
+    "id": "trap",
+    "weight": 10,
+    "name": "隐蔽的陷阱",
+    "desc": "脚下突然一空，你踩进了猎人的捕兽坑！",
+    "template": "damage",
+    "params": {
+      "pct": 0.15,
+      "min": 5,
+      "header": "🕳️ 【陷阱】脚下突然一空，你掉进了猎人废弃的陷阱！\n你摔伤了，损失 {dmg} 点生命(当前 ❤️ {hp}/{max_hp})"
+    },
+    "source": "explore"
+  },
+  "treasure": {
+    "id": "treasure",
+    "weight": 18,
+    "name": "闪闪发光的宝箱",
+    "desc": "树丛里藏着一个落了灰的宝箱，锁扣上刻着冒险者行会的旧徽记！",
+    "template": "loot_gold_mats",
+    "params": {
+      "min": 15,
+      "max": 50,
+      "scale_lv": 2,
+      "blueprint_chance": 0.7,
+      "explore_item_bonus": true,
+      "header": "🎁 【宝箱】你在{name}的草丛里发现一个宝箱！\n💰 获得 {gold} 金币！{mat_line}{bp_line}",
+      "mat_line": "",
+      "bp_line": "\n📜 还翻出一张图纸：{bp}！"
+    },
+    "source": "explore"
+  },
+  "wandering": {
+    "id": "wandering",
+    "weight": 8,
+    "name": "迷路的旅人",
+    "desc": "一位迷路的旅人向你求助，想用随身物品换取指路。",
+    "template": "wandering",
+    "params": {},
+    "source": "explore"
+  },
+  "west_silver_leaf": {
+    "id": "west_silver_leaf",
+    "weight": 4,
+    "name": "月下银叶",
+    "desc": "月光下，一株银叶灌木泛着柔和的银辉，叶片似薄银。",
+    "maps": [
+      "silverwood",
+      "moon_glade",
+      "moonshadow_wood"
+    ],
+    "template": "loot_materials",
+    "params": {
+      "mats": [
+        "月之泪",
+        "林语之叶"
+      ],
+      "n": 1,
+      "bp_line": "",
+      "header": "🌿 【月下银叶】你屏住呼吸，小心摘下一片银叶——叶脉上的月光随之褪去，凝成一点晶莹。\n🎒 获得稀有材料：{mats}！{extra}"
+    },
+    "source": "explore"
+  },
+  "west_tree_hollow": {
+    "id": "west_tree_hollow",
+    "weight": 4,
+    "name": "精灵树洞回信",
+    "desc": "一棵巨树的根部有个树洞，洞口塞着一封没写完的信。",
+    "maps": [
+      "silverwood",
+      "starlake",
+      "emerald_valley",
+      "windvale"
+    ],
+    "template": "random_choice",
+    "params": {
+      "chance": 0.5,
+      "hit": {
+        "template": "region_lore",
+        "params": {
+          "flag": "west_tree_hollow",
+          "texts": [
+            "🌳 【精灵树洞回信】你读到一封写给月亮的信，字迹娟秀，笔触温柔——远方的精灵把一段心事藏在了这里。你看罢轻轻把信放回原处(见闻已记)。"
+          ]
+        }
+      },
+      "miss": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "古木枝",
+            "林语之叶",
+            "谷地露水"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "🌳 【精灵树洞回信】树洞里积着几片干枯的树叶和碎枝，你顺手捡起能用的带走。\n🎒 获得：{mats}！{extra}"
+        }
+      }
+    },
+    "source": "explore"
+  },
+  "west_wind_chime": {
+    "id": "west_wind_chime",
+    "weight": 3,
+    "name": "林间风铃",
+    "desc": "一串晶莹的风铃挂在林间枝头，风过时叮当作响。",
+    "maps": [
+      "starlake",
+      "windvale",
+      "moon_glade"
+    ],
+    "template": "shrine_bless",
+    "params": {
+      "pct": 5,
+      "header": "🔔 【林间风铃】风铃清越地响了三声，像精灵在祝你一程。你感到一丝若有若无的力量缠上掌心——✨ 下次战斗攻击力 +5% ！"
+    },
+    "source": "explore"
+  },
+  "windfall": {
+    "id": "windfall",
+    "weight": 10,
+    "name": "意外之财",
+    "desc": "地上散落着几枚金币，像是某位粗心商人翻车时掉的。",
+    "template": "loot_gold",
+    "params": {
+      "min": 10,
+      "max": 40,
+      "scale_lv": 1,
+      "header": "💰 【意外之财】你在地上发现几枚散落的金币，大概是某位粗心商人的损失！\n获得 {gold} 金币！"
+    },
+    "source": "explore"
+  },
+  "windmill": {
+    "id": "windmill",
+    "weight": 4,
+    "name": "破风车",
+    "desc": "一座扇叶残缺的旧风车，吱呀吱呀地转着。",
+    "template": "random_choice",
+    "params": {
+      "chance": 0.4,
+      "hit": {
+        "template": "loot_materials",
+        "params": {
+          "mats": [
+            "面粉"
+          ],
+          "n": 1,
+          "bp_line": "",
+          "header": "🌾 【破风车】风车房里堆着几袋落灰的面粉，你顺手扛走一袋！\n🎒 获得材料：{mats}！{extra}"
+        }
+      },
+      "miss": {
+        "template": "dialog",
+        "params": {
+          "texts": [
+            "🌾 【破风车】残破的风车在风中吱呀作响，像在哼一首没人听过的老歌。",
+            "🌾 【破风车】你爬上风车想看看风景，结果只看到一片荒草和远山。"
+          ]
+        }
+      }
+    },
+    "source": "explore"
+  }
+}

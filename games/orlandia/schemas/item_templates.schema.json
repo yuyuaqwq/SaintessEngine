@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/item_templates.schema.json",
+  "title": "物品模板（item_templates）—— 道具效果模板注册表的元数据：模板名 → 战斗内可用性",
+  "description": "一条 = 一个道具模板（表键 = 模板名）。真源 = 游戏仓 `game/core/item_templates.py:28 META`（由 `@register(name, battle_ok)` 装饰器 :37-43 与 :446 / :606 两处直写共同填充 —— `TEMPLATES` 存函数、`META` 存元数据），经 `scripts/export_domains/monster_combat.py:derive_item_templates` 单向导出（条目原样、零注入），实测 **99 条**（64 true / 35 false）。语义：`items.py` 条目的 `effect` 字段 = 本表的键（如 `heal` / `battle_start_resource` / `bait_glow`），命令层拿它决定「战斗中能不能用」。**唯一消费端**：`game/commands/economy.py:5823` `meta = IT.META.get(tpl_name, {\"battle_ok\": False})` → :5863（副本战斗内）与 :5912（普通战斗内）两道 `if not meta[\"battle_ok\"]` 闸门。**本域只搬 META**：真源里另有四张**效果名/状态名词汇表**（`_BAIT_INFO` :578 3 条、`_BUFF_KEYS` :356 56 条、`_V130_ITEM_EFFECTS` :413 23 个、`_PURIFY_DEBUFF_KEYS` :752 8 个）指向 items / effects 域，本批未展开（见报告 §4）。",
+  "x-primary": "item_template",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "模板名（内容侧词汇；= 真源 `TEMPLATES` 的键 = `items.py` 条目 `effect` 字段的取值）。实测含 `heal` / `mana` / `food_effect` / `pet_egg` / `battle_start_resource` / `bait_glow` 等 99 个；**不枚举**：加一个玩法就是注册一个新模板。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/item_template"
+  },
+  "$defs": {
+    "item_template": {
+      "type": "object",
+      "title": "道具模板元数据（item_templates 一条）",
+      "required": [
+        "battle_ok"
+      ],
+      "additionalProperties": true,
+      "description": "实测**只有一个字段** `battle_ok`（注册器 `item_templates.py:41 META[name] = {\"battle_ok\": battle_ok}`；:446 的 `special` 族批量注册一律 true、:606 的鱼饵循环一律 false）。导出器在派生期断言「每条都带 battle_ok」（少了它 → 消费端 `economy.py:5823` 的 `.get` 兜底会把战斗内可用性判断静默翻转，所以宁可直接拦在导出）。",
+      "properties": {
+        "battle_ok": {
+          "type": "boolean",
+          "x-widget": "select",
+          "title": "战斗中可用",
+          "description": "`true` = 战斗内也能用（恢复类 heal/mana/stamina 与战斗药水 special 族，实测 64 条）；`false` = 仅战斗外/场景类（食物、鱼饵、开启类、传送类等，实测 35 条）。改它 = 改 `commands/economy.py` 在战斗内的拦截结果。"
+        }
+      }
+    }
+  }
+}

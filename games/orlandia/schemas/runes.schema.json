@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/runes.schema.json",
+  "title": "符文（runes）—— 一条 = 一个符文（表键 = 符文 id `rn_*`），效果 key 与制作配方由导出器折进来",
+  "description": "真源 = 游戏仓 `game/data/runes.py:3 RUNES`（**import 之后的运行时表**，16 条），由 `scripts/export_domains/life_growth.py:derive_runes` 单向导出；另把 `game/data/runes.py:285 RUNE_CRAFT`（16 条制作配方，与 RUNES 键一一对应）注入为 `craft`，把 `:232 RUNE_CONFLICTS`（3 对互斥 effect）折成每条符文的 `conflicts`（**导出期注入**）。**本域只搬运、不解释**：`effect` 是引擎侧效果词汇（16 个取值里 **14 个在 effect_rules 域解析不到** —— 符文效果是另一套词汇）、`craft.mat` 是物品 id（→ items 域），导出期不展开。⚠️ JSON 化说明：`lvl` 的键在真源是 **int** 1/2/3，JSON 对象键只能是字符串 → 包内是 `\"1\"/\"2\"/\"3\"`（宿主 `json_clean` 的 JSON 往返所致，非本域改名）。未进包的：`RUNE_DROP` / `RUNE_CRAFT_SHARDS` / `RUNE_LEVEL_ROMAN` / `RUNE_SHARD_KEY`（引擎侧常量）、`RUNE_EFFECT_NAMES`（与各符文 `name` 实测 16/16 逐条相等的冗余展示表）。",
+  "x-primary": "rune",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "符文 id（内容侧词汇；实测 16 条**全部** `rn_*` 前缀）"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/rune"
+  },
+  "$defs": {
+    "rune": {
+      "type": "object",
+      "title": "符文（一条）",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "符文名",
+          "description": "显示名（16/16 条都有；与 `effect` 在 `RUNE_EFFECT_NAMES` 里的中文名逐条相等）。"
+        },
+        "icon": {
+          "type": "string",
+          "title": "图标",
+          "description": "展示用字形（表情符号）。"
+        },
+        "quality": {
+          "type": "string",
+          "enum": [
+            "blue",
+            "purple",
+            "orange"
+          ],
+          "x-widget": "select",
+          "title": "品质",
+          "description": "符文品质（实测 blue 8 / purple 6 / orange 2）= `RUNE_DROP` / `RUNE_CRAFT_SHARDS` 的键集，也是掉落率与碎片消耗的分档键。"
+        },
+        "effect": {
+          "type": "string",
+          "title": "效果 key（引擎词汇）",
+          "description": "引擎侧效果标识（16 个取值，**与符文 id 一一对应**）。⚠️ 实测 **14/16 在 effect_rules 域解析不到**（符文效果不走 effect_rules 那套声明）→ 本域不声明 ref，导出期不展开。"
+        },
+        "desc": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "效果说明",
+          "description": "带 `{v}` 占位的效果文案（实测 14/16 条含 `{v}`，渲染时按当前等级代入 `lvl` 的值）。"
+        },
+        "cost": {
+          "type": "integer",
+          "minimum": 0,
+          "title": "售价/制作基价（金币）",
+          "description": "金币基价（实测 800 / 900 / 1000 / 1500）。制作费 = `cost // 2`（源侧 v136 注释）；碎片与素材消耗按品质查 `RUNE_CRAFT_SHARDS` / `craft`。"
+        },
+        "lvl": {
+          "type": "object",
+          "x-widget": "kv",
+          "title": "各等级数值",
+          "description": "等级 → 效果数值（实测 **16/16 条都是 1/2/3 三级**）。⚠️ **JSON 里键是字符串**（`\"1\"/\"2\"/\"3\"`）—— 真源是 int 键，JSON 对象键只能是字符串（宿主 json_clean 往返所致）。值实测三种：float（39 个）/ int（3 个）/ 数值列表（6 个，如 `rn_chain` 的 `[0.1, 0.7]`）。",
+          "propertyNames": {
+            "pattern": "^[0-9]+$"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              }
+            ]
+          }
+        },
+        "craft": {
+          "type": "object",
+          "title": "制作配方（素材）",
+          "x-widget": "kv",
+          "description": "**由导出器注入**（源数据是另一张表 `RUNE_CRAFT`，与 RUNES 键一一对应，实测 16/16 覆盖、0 悬空、0 多余）：`{mat: 物品 id, count: 数量}`。⚠️ 这是「符文制作」的素材，**不是 craft 域的配方引用**。",
+          "required": [
+            "mat",
+            "count"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "mat": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "title": "素材（物品 id）",
+              "description": "**items 域 key**（实测 3 个互异值 100% 命中：裂鬃獠牙 / 巨魔獠牙 / 兽人獠牙）。导出期不展开。"
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "数量",
+              "description": "素材数量（实测 2 / 3 / 4；按品质分档）。"
+            }
+          }
+        },
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-widget": "lines",
+          "title": "互斥效果",
+          "description": "**由导出器注入**（源数据是 `RUNE_CONFLICTS` 的 3 对 pairs，按 effect 折成对手列表，排序；可无损反推回那 3 对）：装了这个符文就不能同时装哪些效果的符文。实测只有 6 个 effect 有对手（burn↔freeze / barrier↔thorns / scavenger↔exp_bless）→ 另外 10 条符文没有这个键。"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,330 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/quests.schema.json",
+  "title": "任务（quests）—— 主线/支线/每日三表合表；giver/map/objective/reward 一律是引用串与声明",
+  "description": "一条 = 一个任务（表键 = 任务 id，如 `q1_1` / `s12` / `hq7_1`；每日任务**没有 id**，键 = 名字，见 `key_note`）。真源 = 游戏仓 `game/data/quests.py` 三张 list（经 `scripts/export_domains/npc_story.py:derive_quests` 单向导出，2026-09-13 实测 238 条 = 主线 `:3 MAIN_QUESTS` 70 + 支线 `:939 SIDE_QUESTS` 144 + 每日 `:3325 DAILY_QUESTS` 24；三表键空间零交集）。三张表在引擎侧是同族（同形状条目、同一套 objective/reward 语义），「找一个任务」的通用写法是按表扫 id（`game/services/quests_flow.py:140` 等 20+ 处），所以导出成一张 keyed 表并注入 `source` 记回表归属。**本域只搬运、不解释**：`giver`（NPC id）/ `map`（地图 id）/ `objective.*`（怪名/NPC id/地图 id/物品名）/ `reward_item`（物品名或 `eq:名称`）/ `next`（任务 id）都是引用串，导出期不展开。",
+  "x-primary": "quest",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^([a-z][a-z0-9_]*|[\\u4e00-\\u9fff]+[0-9]*)$",
+    "description": "任务 id（主线 `q<章>_<序>` / 支线 `s<n>` / 公会告示 `hq<档>_<序>`）；**每日任务没有 id**，源侧就是按 `name` 认的（`game/services/quests.py:54` 按名匹配、`:200` 按名过滤池），所以它的键 = 名字（中文）——不造 id，否则引擎按名匹配时对不上。包内中文键已有先例（`skills.json` 238 个、`drop_pools.json` 的 `elite:<中文名>`）。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/quest"
+  },
+  "$defs": {
+    "quest": {
+      "type": "object",
+      "title": "任务（三表合表的一条）",
+      "required": [
+        "source",
+        "name",
+        "desc",
+        "objective",
+        "reward_exp",
+        "reward_gold"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "main",
+            "side",
+            "daily"
+          ],
+          "title": "来源表",
+          "description": "由导出器注入（源数据里没有这个字段）—— `main` = `MAIN_QUESTS`（主线 70）、`side` = `SIDE_QUESTS`（支线/告示 144）、`daily` = `DAILY_QUESTS`（每日 24）。改它 = 改该任务的发布通道（主线链 / 支线菜单 / 每日面板）。"
+        },
+        "id": {
+          "type": "string",
+          "title": "任务 id",
+          "description": "主线/支线条目自带（与表键同值）；**每日任务没有这个字段**（源侧无 id 设计）。"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "任务名",
+          "description": "展示名（内容侧词汇，如 初出茅庐 / 日常讨伐）。每日任务的表键就是它。"
+        },
+        "giver": {
+          "type": "string",
+          "title": "发布 NPC",
+          "description": "NPC id 引用串（npcs 域 key；实测 91 个不同值，全部命中本包 npcs 域 431 键）。对话树靠 `need.quest_pending/quest_done` 与它联动（`core/dialogue.py:122` 校 giver 防串台）。"
+        },
+        "map": {
+          "type": "string",
+          "title": "所属地图",
+          "description": "地图 id 引用串（maps 域 key，如 `oak_town` / `white_deer`；实测支线 144/144 全部命中 maps 域）。主线条目不带（跟随主线链）。"
+        },
+        "desc": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "任务描述",
+          "description": "任务面板里的一行目标描述（内容侧文案，如「击败 5 只绿史莱姆」）。"
+        },
+        "story": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "接取剧情",
+          "description": "发布时的剧情文本（多写成『NPC名：「台词」』）—— 对话树的 `text_from: story` 直接抽这里生成接取台词（`game/core/dialogue.py:94` 剥名取引号内容）。主线/支线 214 条都有；每日任务无此字段。"
+        },
+        "ending": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "交付剧情",
+          "description": "交付时的剧情文本；主线 70 条都有（支线改用 `deliver_text`）。"
+        },
+        "deliver_text": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "支线交付文本",
+          "description": "支线交付时的剧情段落（实测 88 条；与主线 `ending` 对应）。"
+        },
+        "endings": {
+          "type": "object",
+          "title": "多结局文案",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "x-widget": "kv",
+          "description": "分支任务的多套结局文案（实测 1 条 `q10_5`：键 = 分支 key 如 `chose_inheritor`，值 = 该结局的整段文本）。"
+        },
+        "objective": {
+          "type": "object",
+          "minProperties": 1,
+          "title": "目标（可多键复合）",
+          "description": "任务完成条件；键集由引擎判据决定（实测 197 种组合）。值是**引用串**（怪名 / NPC id / 地图 id / 物品名）或数字，原样保留。",
+          "additionalProperties": true,
+          "properties": {
+            "kill": {
+              "type": "string",
+              "title": "击杀（怪名）",
+              "description": "怪物中文名（monster_roster 域的 `name`；不是 id），常配 `count`。"
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "数量",
+              "description": "与 `kill`/`collect` 同现的目标数量。"
+            },
+            "collect": {
+              "type": "string",
+              "title": "收集（物品/材料名）",
+              "description": "物品或材料名（按名解析；常配 `count`/`collect_count`）。"
+            },
+            "collect_count": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "收集数量"
+            },
+            "talk": {
+              "type": "string",
+              "title": "对话（NPC id）",
+              "description": "NPC id 引用串（如 `npc_guild_clerks`）—— 和它说话即完成。"
+            },
+            "explore": {
+              "type": "string",
+              "title": "探索（地图 id）",
+              "description": "地图 id 引用串 —— 走到该图即完成。"
+            },
+            "find": {
+              "type": "string",
+              "title": "寻获（地图 id）",
+              "description": "常与 `map` + `chance` 同现：在该图按概率触发寻获。"
+            },
+            "map": {
+              "type": "string",
+              "title": "目标地图",
+              "description": "与 `find`/`use` 同现的地图 id 引用串。"
+            },
+            "chance": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "title": "触发概率",
+              "x-widget": "pct",
+              "description": "探索/寻获型目标每次判定的概率（实测 23 条）。"
+            },
+            "use": {
+              "type": "string",
+              "title": "使用（道具名）",
+              "description": "使用指定道具（按名解析）。"
+            },
+            "kill_any": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "击杀任意怪物数",
+              "description": "不限怪的击杀计数（每日/周常悬赏常用）。"
+            },
+            "kill_elite": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "击杀精英数"
+            },
+            "kill_boss": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "击杀首领数"
+            }
+          }
+        },
+        "reward_exp": {
+          "type": "integer",
+          "minimum": 0,
+          "title": "经验奖励",
+          "description": "发放的经验值（`game/commands/world.py::_grant_quest_rewards`）。"
+        },
+        "reward_gold": {
+          "type": "integer",
+          "minimum": 0,
+          "title": "金币奖励"
+        },
+        "reward_item": {
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "title": "物品奖励",
+          "description": "**字符串或列表两种写法**（实测 119 单值 / 4 列表=随机抽一个）：普通物品/材料名按 `resolve(\"items\")→resolve(\"materials\")` 双表按名查；`eq:名称` 前缀 = 名册装备精确生成（`equip_roster.py`）。前缀与名不展开。"
+        },
+        "reward_pet": {
+          "type": "string",
+          "title": "宠物奖励",
+          "description": "宠物 id（pets 域 key，如 `pet_turtle`；实测 5 条）。"
+        },
+        "reward_mount": {
+          "type": "string",
+          "title": "坐骑奖励",
+          "description": "坐骑 id（实测 1 条 `hq7_3` → `mount_fogbird`；坐骑域尚未进包）。"
+        },
+        "title": {
+          "type": "string",
+          "title": "称号奖励",
+          "description": "称号 id（实测 1 条 `q1_6` → `iron_adventurer`；称号数据在 achievements/titles，尚未进包）。"
+        },
+        "next": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "title": "后续任务",
+          "description": "任务 id 引用串 —— 本任务完成后的下一个（主线链，实测 70 条且命中本域键）。**`null` = 主线到此为止**（实测 1 条 `q12_6` 终章「黎明之后」，脚本链的终点）—— 源侧就是 null，导出期不补默认值。"
+        },
+        "chain": {
+          "type": "string",
+          "title": "支线系列",
+          "description": "支线所属的剧情系列名（实测 103 条，取值如「圣战真相」/「美食与美酒」）——**系列名不是 id**，同系列的多条支线共用一个名字（`unlock` 用它做链条解锁）。"
+        },
+        "unlock": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "x-widget": "rows",
+          "title": "解锁条件",
+          "description": "条件对象列表（实测 79 条支线有它），键 = 条件类型、值 = 引用：`{\"side\": \"s9\"}`（该支线完成后解锁）/ `{\"main\": \"q7_1\"}`（主线到点解锁）。导出期不展开、不校验闭合。"
+        },
+        "min_level": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "等级下限",
+          "description": "玩家等级 ≥ 它才可接（实测 3~100 共 53 档）。"
+        },
+        "suggest_lv": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "推荐等级",
+          "description": "面板显示的推荐等级（实测 7 条；纯展示，不参与判定）。"
+        },
+        "min_lv": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "抽取等级下限（每日）",
+          "description": "每日任务池的等级过滤（实测 18 条有它，取值 20/50/80；缺省 = 新手池）。"
+        },
+        "require_stats": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "x-widget": "kv",
+          "title": "要求统计量",
+          "description": "按玩家累计统计解锁（实测 2 条：`{\"fish_count\": 10}` 钓鱼次数 / `{\"craft_count\": 20}` 制作次数）。"
+        },
+        "progress_text": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "过程叙述",
+          "description": "任务进行中的叙事段落（实测 90 条支线；支线的「story」在数据里叫这个）。"
+        },
+        "branch": {
+          "type": "object",
+          "title": "分支抉择",
+          "additionalProperties": true,
+          "description": "交付时的分支选择（实测 2 条支线）。`prompt` = 抉择前提示文案；`options` = 每个分支的 `{key, label, text, reward_*}`。",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "x-widget": "textarea",
+              "title": "抉择提示"
+            },
+            "options": {
+              "type": "array",
+              "x-widget": "rows",
+              "title": "分支选项",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "title": "分支 key"
+                  },
+                  "label": {
+                    "type": "string",
+                    "title": "选项标签"
+                  },
+                  "text": {
+                    "type": "string",
+                    "x-widget": "textarea",
+                    "title": "分支剧情"
+                  },
+                  "reward_exp": {
+                    "type": "integer",
+                    "title": "分支经验"
+                  },
+                  "reward_gold": {
+                    "type": "integer",
+                    "title": "分支金币"
+                  },
+                  "reward_item": {
+                    "type": "string",
+                    "title": "分支物品"
+                  },
+                  "title": {
+                    "type": "string",
+                    "title": "分支称号"
+                  },
+                  "flag": {
+                    "type": "string",
+                    "title": "分支 flag"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "board": {
+          "type": "boolean",
+          "title": "告示板委托",
+          "description": "`true` = 该条不走普通支线菜单，须去告示板指名接取（实测 1 条 `s_board_cat`；`game/services/quests_flow.py:93` 的注释写明了这个口径）。"
+        }
+      }
+    }
+  }
+}

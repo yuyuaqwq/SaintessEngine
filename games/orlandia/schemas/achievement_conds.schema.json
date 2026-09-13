@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/achievement_conds.schema.json",
+  "title": "成就条件（achievement_conds）—— 47 个条件类型的注册表；一条 = 一个 cond.type",
+  "description": "一条 = 一个条件类型（表键 = `cond.type`，实测 47 条）。真源 = 游戏仓 `game/core/achievement_conds.py:22 COND_CHECKS`（`register():25` 装饰器注册的**运行时表**；v99.5 起消灭 `game/core/achievements.py cond_met()` 里 41 种 type 的 if 硬编码），经 `scripts/export_domains/shop_econ.py:derive_achievement_conds` 单向导出。函数签名统一为 `fn(player, stats, profs, extra, cond) -> bool`（未知 type / 异常 → False）。**`fields` / `used_by` 是实测派生**（不是源侧字段）：拿 `achievements` 域**同一份真源** `game/data/achievements.py ACHIEVEMENTS` 里出现的 `cond` 键集与条数统计出来的 —— 见 `fields` / `used_by` 的说明。**导出期闭合断言**：成就数据里出现的每个 `cond.type` 都必须已注册（实测 44 个已注册类型在被用；注册了却没成就用的 3 个类型 `hidden_class` / `hidden_class_lv` / `skill_has` 照导，`used_by=0`）。**消费点**：`core/achievements.py cond_met()` → `COND_CHECKS[type](player, stats, profs, extra, cond)`。",
+  "x-primary": "cond",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "条件类型（内容侧词汇，实测全小写字母/数字/下划线，如 `kills` / `inst_all8` / `prof_count` / `main_quest_done`）。它就是成就条目 `cond.type` 的取值空间。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/cond"
+  },
+  "$defs": {
+    "cond": {
+      "type": "object",
+      "title": "成就条件类型（COND_CHECKS 的一条）",
+      "required": [
+        "cond_type",
+        "doc",
+        "fields",
+        "used_by"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "cond_type": {
+          "type": "string",
+          "minLength": 1,
+          "title": "条件类型",
+          "description": "与表键相同（便于按条目自读）；判定时由成就条目的 `cond.type` 查表。"
+        },
+        "doc": {
+          "type": "string",
+          "title": "判定说明",
+          "description": "该条件函数 docstring 的**原文**（实测 47/47 都有，长度 3~297 字；源侧带版本沿革与坑位注，如 `evolve` 的「原判 evolve_path 导致 ach_evolve3 永不可达」）。多段注保留换行，不裁剪。"
+        },
+        "fields": {
+          "type": "array",
+          "title": "该类型读的 cond 键",
+          "description": "**实测**：`ACHIEVEMENTS` 里用这个类型的条目，其 `cond` 出现过的键（含 `type` 自己），字典序。如 `[\"key\",\"value\"]`。注册了却零使用的类型 = `[]`（实测 3 条）。",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "used_by": {
+          "type": "integer",
+          "minimum": 0,
+          "title": "使用它的成就数",
+          "description": "**实测**：`ACHIEVEMENTS` 里 `cond.type` 等于它的成就条数（合计 119 = 成就总数；0 = 该类型当前没被用）。"
+        }
+      }
+    }
+  }
+}

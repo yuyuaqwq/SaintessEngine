@@ -176,19 +176,19 @@ def main():
                     if m.get("schema")}
     pkg_files = sorted(f for f in os.listdir(PKG_SCHEMAS) if f.endswith(".schema.json"))
     fw_files = sorted(f for f in os.listdir(FW_SCHEMAS) if f.endswith(".schema.json"))
-    # ★ 2026-09-13 收口：包自带**新域** schema（框架侧没有对应文件；域由包声明、schema 随包走）。
-    #   D3 面板批次 4 份 + 收口批 `npcs`（NPC 域导出进包）。
-    NEW_DOMAIN_SCHEMAS = {"races.schema.json", "sets.schema.json",
-                          "enhance_table.schema.json", "panel_rules.schema.json",
-                          "npcs.schema.json"}
-    check(f"包内 schemas/ = 框架那 {len(fw_files)} 份 + 新域 {len(NEW_DOMAIN_SCHEMAS)} 份",
-          len(pkg_files) == len(fw_files) + len(NEW_DOMAIN_SCHEMAS),
-          f"{len(pkg_files)} 份 / 框架 {len(fw_files)} 份 / {len(schemas_meta)} 个声明了 schema 的域")
+    # ★ 2026-09-13 收口：新域 schema 名单**不写死** —— 包侧域会持续增长（B3–B7 一轮 +26 域），
+    #   写死白名单每加一批就红一次，加漏了还会变成「绿着少查」。口径改成**集合关系**：
+    #   ① 框架那 17 份一份不少地搬进包；② 包内多出来的**必须恰好等于**包声明里非 null 的 schema 集合。
+    _decl_schemas = {m["schema"] for m in schemas_meta.values()}
+    check(f"包内 schemas/ = 框架那 {len(fw_files)} 份 + 包声明新增 "
+          f"{len(_decl_schemas - set(fw_files))} 份",
+          set(pkg_files) == set(fw_files) | _decl_schemas,
+          f"{len(pkg_files)} 份 / 框架 {len(fw_files)} 份 / 包声明 {len(_decl_schemas)} 份")
     check("框架那 17 份全在包内（一份不少）", set(fw_files) <= set(pkg_files),
           sorted(set(fw_files) - set(pkg_files)))
-    check("包内多出来的正好是新域那 4 份（别的域不许偷偷多）",
-          set(pkg_files) - set(fw_files) == NEW_DOMAIN_SCHEMAS,
-          sorted(set(pkg_files) - set(fw_files)))
+    check("包内多出来的**恰好**是包声明那批（不多不少，别的文件不许偷偷混进来）",
+          set(pkg_files) - set(fw_files) == _decl_schemas - set(fw_files),
+          sorted(set(pkg_files) ^ (set(fw_files) | _decl_schemas)))
     check("框架 schemas/ 的 17 份**还在**（回退没被删）", len(fw_files) == 17, len(fw_files))
     # ★ 2026-09-13 收口：口径从「逐字节相同」升级成两条更准的（原口径成立的前提已经到期 —— 包侧
     #   schema 本批给 15 处自由形状补了子形状，是**该演进**的那半边；而框架侧那份是

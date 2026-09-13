@@ -1,0 +1,1258 @@
+{
+  "anvil_fort": {
+    "weapons": [
+      [
+        "铁砧战锤",
+        "mace",
+        68,
+        "purple"
+      ],
+      [
+        "霜狼长剑",
+        "sword",
+        65,
+        "purple"
+      ]
+    ],
+    "materials": [
+      "mat_jing_jin",
+      "mat_bing_jing",
+      "mat_yue_hua_chou",
+      "mat_jing_zhi_ge",
+      "mat_hei_tie_ding"
+    ]
+  },
+  "anvil_fort_2": {
+    "items": [
+      "i_dwarf_liquor",
+      "i_stew",
+      "i_elf_fruit",
+      "i_treat_m"
+    ],
+    "kind": "tavern"
+  },
+  "anvil_fort_3": {
+    "items": [
+      "i_dwarf_liquor",
+      "i_stone_upgrade",
+      "i_stone_refine",
+      "i_stone_blessed"
+    ],
+    "kind": "smith"
+  },
+  "aurora_town": {
+    "weapons": [
+      [
+        "霜狼长剑",
+        "sword",
+        65,
+        "purple"
+      ],
+      [
+        "北风长弓",
+        "bow",
+        65,
+        "purple"
+      ]
+    ]
+  },
+  "aurora_town_4": {
+    "items": [
+      "i_bread",
+      "i_ale",
+      "i_scroll_escape",
+      "i_elf_fruit"
+    ],
+    "kind": "tavern"
+  },
+  "black_forest_4": {
+    "kind": "general"
+  },
+  "cold_ridge": {
+    "weapons": [
+      [
+        "北风长弓",
+        "bow",
+        65,
+        "purple"
+      ],
+      [
+        "霜狼长剑",
+        "sword",
+        65,
+        "purple"
+      ]
+    ]
+  },
+  "cold_ridge_1": {
+    "items": [
+      "i_treat_l",
+      "i_mana_l",
+      "i_treat_holy",
+      "i_scroll_escape",
+      "i_life_elixir",
+      "i_salve_l",
+      "i_holy_potion",
+      "i_emergency_salve"
+    ],
+    "kind": "general"
+  },
+  "cold_ridge_2": {
+    "items": [
+      "i_bread",
+      "i_stew",
+      "i_deer_burger"
+    ],
+    "kind": "tavern"
+  },
+  "cold_ridge_3": {
+    "items": [
+      "i_treat_l",
+      "i_mana_l",
+      "i_scroll_escape",
+      "i_stew"
+    ],
+    "kind": "general"
+  },
+  "dawn_city": {
+    "weapons": [
+      [
+        "圣光长剑",
+        "sword",
+        28,
+        "blue"
+      ],
+      [
+        "晨曦法杖",
+        "staff",
+        28,
+        "blue"
+      ],
+      [
+        "王都长弓",
+        "bow",
+        32,
+        "purple"
+      ],
+      [
+        "圣殿战锤",
+        "mace",
+        34,
+        "purple"
+      ]
+    ],
+    "materials": [
+      "mat_sheng_hui_rong",
+      "mat_ying_ying_ge",
+      "mat_gang_tie_ding",
+      "mat_ling_mu"
+    ],
+    "equip": [
+      "eq_sheng_guang_zhi_shi_tou_kui",
+      "eq_feng_xing_pi_mao",
+      "eq_sheng_guang_zhi_shi_xiong_jia",
+      "eq_sheng_guang_xiong_jia",
+      "eq_sheng_tang_wei_shi_hu_tui",
+      "eq_sheng_guang_zhi_shi_hu_tui",
+      "eq_sheng_guang_zhi_shi_zhan_xue",
+      "eq_xun_jie_zhan_xue",
+      "eq_feng_xing_zhi_jie",
+      "eq_mao_lian_hu_wan",
+      "eq_sheng_guang_li_zan_hui_zhang",
+      "eq_zhu_fu_hui_ji",
+      "eq_deng_ta_zhi_guang"
+    ]
+  },
+  "dawn_city_3": {
+    "items": [
+      "i_holy_water",
+      "i_holy_charm",
+      "i_scroll_purify",
+      "i_key_crypt"
+    ],
+    "kind": "tavern"
+  },
+  "dawn_city_5": {
+    "items": [
+      "i_treat_m",
+      "i_treat_l",
+      "i_mana_m",
+      "i_mana_l",
+      "i_str_potion",
+      "i_def_potion",
+      "i_spd_potion",
+      "mat_kong_ping",
+      "i_treat_strong",
+      "i_moon_dew",
+      "mat_mo_fa_fen_chen"
+    ],
+    "kind": "herb"
+  },
+  "deep_tunnel": {
+    "weapons": [
+      [
+        "铁砧战锤",
+        "mace",
+        68,
+        "purple"
+      ]
+    ]
+  },
+  "deep_tunnel_2": {
+    "items": [
+      "i_treat_l",
+      "i_mana_l",
+      "i_stew",
+      "i_stone_upgrade"
+    ],
+    "kind": "misc"
+  },
+  "deep_tunnel_3": {
+    "items": [
+      "i_ale",
+      "i_dwarf_liquor",
+      "i_stew"
+    ],
+    "kind": "tavern"
+  },
+  "dragon_kin": {
+    "weapons": [
+      [
+        "龙脊大剑",
+        "sword",
+        85,
+        "purple"
+      ],
+      [
+        "龙语法杖",
+        "staff",
+        85,
+        "purple"
+      ]
+    ]
+  },
+  "dragon_kin_3": {
+    "items": [
+      "i_ale",
+      "i_meat_skewer",
+      "i_elf_fruit"
+    ],
+    "kind": "tavern"
+  },
+  "dragon_pass": {
+    "weapons": [
+      [
+        "龙脊大剑",
+        "sword",
+        85,
+        "purple"
+      ],
+      [
+        "龙语法杖",
+        "staff",
+        85,
+        "purple"
+      ]
+    ]
+  },
+  "dragon_pass_2": {
+    "items": [
+      "i_ale",
+      "i_meat_skewer",
+      "i_stew",
+      "i_treat_m",
+      "i_dragon_scale_potion"
+    ],
+    "kind": "tavern"
+  },
+  "dwarf_long_gallery_5": {
+    "kind": "smith"
+  },
+  "ember_camp": {
+    "weapons": [
+      [
+        "龙脊大剑",
+        "sword",
+        85,
+        "purple"
+      ],
+      [
+        "龙语法杖",
+        "staff",
+        85,
+        "purple"
+      ]
+    ]
+  },
+  "ember_camp_1": {
+    "items": [
+      "i_treat_l",
+      "i_mana_l",
+      "i_treat_holy",
+      "i_scroll_escape"
+    ],
+    "kind": "general"
+  },
+  "ember_camp_2": {
+    "items": [
+      "i_stew",
+      "i_treat_l",
+      "i_mana_l",
+      "i_elf_fruit"
+    ],
+    "kind": "tavern"
+  },
+  "ember_camp_4": {
+    "items": [
+      "i_treat_l",
+      "i_mana_l",
+      "i_treat_holy",
+      "i_stew",
+      "i_scroll_escape"
+    ],
+    "kind": "general"
+  },
+  "frost_horn": {
+    "weapons": [
+      [
+        "霜狼长剑",
+        "sword",
+        65,
+        "purple"
+      ],
+      [
+        "北风长弓",
+        "bow",
+        65,
+        "purple"
+      ],
+      [
+        "铁砧战锤",
+        "mace",
+        68,
+        "purple"
+      ]
+    ]
+  },
+  "frost_horn_3": {
+    "items": [
+      "i_ale",
+      "i_dwarf_liquor",
+      "i_stew",
+      "i_deer_burger"
+    ],
+    "kind": "tavern"
+  },
+  "frost_horn_5": {
+    "items": [
+      "i_holy_water",
+      "i_treat_holy"
+    ],
+    "kind": "tavern"
+  },
+  "harbor_docks_1": {
+    "kind": "general"
+  },
+  "ironharbor": {
+    "weapons": [
+      [
+        "弯刀",
+        "sword",
+        14,
+        "blue"
+      ],
+      [
+        "水手短刃",
+        "dagger",
+        12,
+        "blue"
+      ],
+      [
+        "海风长弓",
+        "bow",
+        18,
+        "purple"
+      ],
+      [
+        "铁指虎",
+        "fist",
+        14,
+        "blue"
+      ],
+      [
+        "水手弯刀",
+        "sword",
+        22,
+        "blue"
+      ],
+      [
+        "远洋长弓",
+        "bow",
+        22,
+        "blue"
+      ],
+      [
+        "银铃杖",
+        "staff",
+        24,
+        "blue"
+      ],
+      [
+        "铁锚战锤",
+        "mace",
+        22,
+        "blue"
+      ],
+      [
+        "铁链拳套",
+        "fist",
+        22,
+        "blue"
+      ]
+    ],
+    "materials": [
+      "mat_tie_kuang_shi",
+      "mat_jing_tie",
+      "mat_mi_yin",
+      "mat_yin_ling_si",
+      "mat_ren_pi_ge",
+      "mat_lie_huo_mu",
+      "mat_lie_feng_zhi_mu",
+      "mat_qing_tong"
+    ],
+    "equip": [
+      "eq_du_kou_xiong_jia",
+      "eq_du_kou_hu_tui",
+      "eq_du_kou_zhi_xue",
+      "eq_tie_gang_bu_mao",
+      "eq_tie_gang_pi_jia",
+      "eq_tie_gang_guo_tui",
+      "eq_tie_gang_bu_xue",
+      "eq_tie_gang_shou_huan",
+      "eq_tie_gang_zhui_shi",
+      "eq_tie_gang_zhan_kui",
+      "eq_tie_gang_pi_xue",
+      "eq_chao_xi_zhi_huan",
+      "eq_ye_ying_xiong_zhen"
+    ]
+  },
+  "ironharbor_10": {
+    "items": [
+      "i_treat_s",
+      "i_treat_m",
+      "i_mana_s",
+      "i_mana_m",
+      "i_herb_juice",
+      "i_bandage"
+    ],
+    "kind": "herb"
+  },
+  "ironharbor_4": {
+    "items": [
+      "i_scroll_teleport",
+      "i_holy_charm",
+      "i_stone_refine"
+    ],
+    "kind": "misc"
+  },
+  "ironharbor_5": {
+    "items": [
+      "i_ale",
+      "i_dock_rum",
+      "i_meat_skewer",
+      "i_stew"
+    ],
+    "kind": "tavern"
+  },
+  "ironharbor_6": {
+    "items": [
+      "i_scroll_escape",
+      "i_stone_upgrade",
+      "i_stone_refine",
+      "it_glow_bait",
+      "it_dough_bait",
+      "it_blood_bait",
+      "i_shuang_bei_jin_bi_fu",
+      "i_fu_huo_yu_mao"
+    ],
+    "kind": "general"
+  },
+  "ironharbor_8": {
+    "items": [
+      "i_meat_skewer",
+      "i_stew",
+      "i_scroll_teleport",
+      "mat_yin_lin_yu",
+      "mat_jin_li"
+    ],
+    "kind": "general"
+  },
+  "ironharbor_9": {
+    "items": [
+      "i_stone_upgrade",
+      "i_stone_refine",
+      "i_stone_blessed"
+    ],
+    "kind": "smith"
+  },
+  "ironshield_town": {
+    "weapons": [
+      [
+        "圣光长剑",
+        "sword",
+        28,
+        "blue"
+      ],
+      [
+        "晨曦法杖",
+        "staff",
+        28,
+        "blue"
+      ],
+      [
+        "疾风长弓",
+        "bow",
+        28,
+        "blue"
+      ]
+    ],
+    "materials": [
+      "mat_mi_yin",
+      "mat_jing_jin",
+      "mat_fu_wen_duan",
+      "mat_ying_zhi_ge",
+      "mat_gang_tie_ding"
+    ],
+    "equip": [
+      "eq_mi_wu_hu_tui",
+      "eq_mi_wu_dou_mao",
+      "eq_mi_wu_xiong_jia",
+      "eq_mi_wu_zhan_xue",
+      "eq_mi_wu_xiang_lian",
+      "eq_sheng_guang_xiong_jia",
+      "eq_fei_cui_hu_fu",
+      "eq_fei_cui_zhi_xin",
+      "eq_xun_jie_zhan_xue",
+      "eq_feng_xing_pi_mao",
+      "eq_sheng_guang_hu_tui",
+      "eq_mao_lian_hu_wan"
+    ]
+  },
+  "ironshield_town_2": {
+    "items": [
+      "i_treat_s",
+      "i_mana_s",
+      "i_bread",
+      "i_ale"
+    ],
+    "kind": "tavern"
+  },
+  "ironshield_town_3": {
+    "items": [
+      "i_treat_m",
+      "i_treat_l",
+      "i_mana_m",
+      "i_mana_l",
+      "i_stew",
+      "i_str_potion",
+      "i_stone_upgrade",
+      "i_key_trial"
+    ],
+    "kind": "smith"
+  },
+  "jade_port": {
+    "weapons": [
+      [
+        "圣光长剑",
+        "sword",
+        28,
+        "blue"
+      ],
+      [
+        "晨曦法杖",
+        "staff",
+        28,
+        "blue"
+      ],
+      [
+        "圣光猎弓",
+        "bow",
+        38,
+        "blue"
+      ],
+      [
+        "圣光战锤",
+        "mace",
+        44,
+        "blue"
+      ]
+    ],
+    "equip": [
+      "eq_fei_cui_pi_jia",
+      "eq_fei_cui_hu_tui",
+      "eq_fei_cui_tou_kui",
+      "eq_fei_cui_zhan_xue",
+      "eq_fei_cui_xiang_lian",
+      "eq_xun_lin_xiong_jia",
+      "eq_xun_lin_hu_tui",
+      "eq_xun_lin_zhi_xue",
+      "eq_sheng_guang_zhan_kui",
+      "eq_fei_cui_hu_fu",
+      "eq_fei_cui_zhi_xin",
+      "eq_sheng_guang_zhu_fu_zhi_huan"
+    ]
+  },
+  "jade_port_2": {
+    "items": [
+      "i_scroll_teleport",
+      "i_meat_skewer",
+      "i_stew",
+      "i_elf_fruit"
+    ],
+    "kind": "general"
+  },
+  "jade_port_3": {
+    "items": [
+      "i_ale",
+      "i_dwarf_liquor",
+      "i_stew"
+    ],
+    "kind": "tavern"
+  },
+  "jade_port_dock": {
+    "kind": "general"
+  },
+  "maple_village": {
+    "weapons": [
+      [
+        "铁剑",
+        "sword",
+        2,
+        "white"
+      ],
+      [
+        "猎弓",
+        "bow",
+        2,
+        "white"
+      ],
+      [
+        "学徒法杖",
+        "staff",
+        2,
+        "white"
+      ]
+    ]
+  },
+  "maple_village_4": {
+    "items": [
+      "i_bread",
+      "i_ale",
+      "i_scroll_escape",
+      "i_elf_fruit"
+    ],
+    "kind": "tavern"
+  },
+  "moon_court": {
+    "weapons": [
+      [
+        "月语长弓",
+        "bow",
+        52,
+        "purple"
+      ],
+      [
+        "银叶法杖",
+        "staff",
+        52,
+        "purple"
+      ],
+      [
+        "月光短刃",
+        "dagger",
+        50,
+        "purple"
+      ]
+    ]
+  },
+  "moon_court_3": {
+    "items": [
+      "i_bread",
+      "i_ale",
+      "i_elf_fruit",
+      "i_treat_m",
+      "i_mana_m",
+      "i_key_moon"
+    ],
+    "kind": "tavern"
+  },
+  "moon_gate": {
+    "weapons": [
+      [
+        "月语长弓",
+        "bow",
+        52,
+        "purple"
+      ],
+      [
+        "银叶法杖",
+        "staff",
+        52,
+        "purple"
+      ],
+      [
+        "月光短刃",
+        "dagger",
+        50,
+        "purple"
+      ]
+    ]
+  },
+  "moon_gate_2": {
+    "items": [
+      "i_bread",
+      "i_ale",
+      "i_elf_fruit"
+    ],
+    "kind": "tavern"
+  },
+  "moon_gate_3": {
+    "items": [
+      "i_scroll_escape",
+      "i_meat_skewer",
+      "i_elf_fruit"
+    ],
+    "kind": "general"
+  },
+  "nameless_harbor": {
+    "weapons": [
+      [
+        "潮汐法杖",
+        "staff",
+        58,
+        "purple"
+      ],
+      [
+        "海神三叉戟",
+        "mace",
+        58,
+        "purple"
+      ]
+    ]
+  },
+  "nameless_harbor_2": {
+    "items": [
+      "i_dock_rum",
+      "i_stew",
+      "i_treat_l",
+      "i_treat_holy",
+      "mat_hai_shen_dao_wen"
+    ],
+    "kind": "tavern"
+  },
+  "nameless_harbor_3": {
+    "items": [
+      "i_scroll_teleport",
+      "i_meat_skewer",
+      "i_stew",
+      "i_dock_rum"
+    ],
+    "kind": "general"
+  },
+  "oak_plain_5": {
+    "kind": "cook"
+  },
+  "oak_town": {
+    "weapons": [
+      [
+        "铁剑",
+        "sword",
+        2,
+        "white"
+      ],
+      [
+        "猎弓",
+        "bow",
+        2,
+        "white"
+      ],
+      [
+        "学徒法杖",
+        "staff",
+        2,
+        "white"
+      ],
+      [
+        "橡木短棍",
+        "mace",
+        2,
+        "white"
+      ],
+      [
+        "布拳套",
+        "fist",
+        2,
+        "white"
+      ]
+    ],
+    "materials": [
+      "mat_tie_kuang_shi",
+      "mat_shi_cai",
+      "mat_jing_tie",
+      "mat_cu_tie",
+      "mat_sen_lin_ya_ma_bu",
+      "mat_qing_xiang_mu"
+    ],
+    "equip": [
+      "eq_pi_jia",
+      "eq_jiu_pi_xue",
+      "eq_xiang_mu_hu_tui",
+      "eq_mao_pi_mao",
+      "eq_xiang_mu_jie_zhi",
+      "eq_xiang_mu_xiang_lian",
+      "eq_hu_lin_xiong_jia",
+      "eq_hu_lin_hu_tui",
+      "eq_hu_lin_zhi_xue",
+      "eq_cu_bu_tou_jin",
+      "eq_chen_lu_jie_zhi",
+      "eq_chen_lu_xiang_lian",
+      "eq_cu_gang_xiong_jia",
+      "eq_cu_gang_hu_tui",
+      "eq_cu_gang_zhan_xue",
+      "eq_lin_yu_xiong_yi",
+      "eq_lin_yu_hu_tui",
+      "eq_lin_yu_fa_xue"
+    ]
+  },
+  "oak_town_3": {
+    "items": [
+      "i_stone_upgrade"
+    ],
+    "kind": "smith"
+  },
+  "oak_town_4": {
+    "items": [
+      "i_bread",
+      "i_ale",
+      "i_meat_skewer"
+    ],
+    "kind": "tavern"
+  },
+  "oak_town_5": {
+    "items": [
+      "i_treat_micro",
+      "i_treat_light",
+      "i_treat_s",
+      "i_mana_s",
+      "i_herb_juice",
+      "i_bandage"
+    ],
+    "kind": "herb"
+  },
+  "pearl_city": {
+    "weapons": [
+      [
+        "海神三叉戟",
+        "mace",
+        58,
+        "purple"
+      ],
+      [
+        "银叶法杖",
+        "staff",
+        52,
+        "purple"
+      ]
+    ]
+  },
+  "pearl_city_2": {
+    "items": [
+      "i_treat_l",
+      "i_mana_l",
+      "i_treat_holy",
+      "i_phoenix_tear"
+    ],
+    "kind": "tavern"
+  },
+  "pearl_city_3": {
+    "items": [
+      "i_scroll_teleport",
+      "i_holy_charm",
+      "i_stone_refine",
+      "i_stone_blessed"
+    ],
+    "kind": "misc"
+  },
+  "pearl_city_4": {
+    "items": [
+      "i_scroll_escape",
+      "i_scroll_teleport",
+      "i_holy_charm",
+      "i_stone_upgrade"
+    ],
+    "kind": "general"
+  },
+  "pearl_city_5": {
+    "items": [
+      "i_meat_skewer",
+      "i_stew",
+      "i_scroll_teleport"
+    ],
+    "kind": "misc"
+  },
+  "shell_town": {
+    "weapons": [
+      [
+        "圣光长剑",
+        "sword",
+        28,
+        "blue"
+      ],
+      [
+        "圣光法杖",
+        "staff",
+        40,
+        "blue"
+      ],
+      [
+        "圣裁长剑",
+        "sword",
+        42,
+        "blue"
+      ]
+    ]
+  },
+  "shell_town_1": {
+    "items": [
+      "i_scroll_teleport",
+      "i_meat_skewer",
+      "i_stew",
+      "i_treat_l"
+    ],
+    "kind": "general"
+  },
+  "shell_town_2": {
+    "items": [
+      "i_meat_skewer",
+      "i_stew",
+      "i_scroll_teleport",
+      "i_elf_fruit"
+    ],
+    "kind": "general"
+  },
+  "shell_town_3": {
+    "items": [
+      "i_ale",
+      "i_dwarf_liquor",
+      "i_elf_fruit"
+    ],
+    "kind": "tavern"
+  },
+  "silver_brook": {
+    "weapons": [
+      [
+        "弯刀",
+        "sword",
+        14,
+        "blue"
+      ],
+      [
+        "海风长弓",
+        "bow",
+        18,
+        "purple"
+      ]
+    ]
+  },
+  "silver_brook_2": {
+    "items": [
+      "i_bread",
+      "i_ale",
+      "i_apple_wine"
+    ],
+    "kind": "cook"
+  },
+  "silver_brook_3": {
+    "items": [
+      "i_bread",
+      "i_ale",
+      "i_meat_skewer"
+    ],
+    "kind": "tavern"
+  },
+  "silver_brook_4": {
+    "items": [
+      "i_scroll_escape",
+      "i_meat_skewer",
+      "i_stew",
+      "it_glow_bait",
+      "it_dough_bait",
+      "it_blood_bait"
+    ],
+    "kind": "general"
+  },
+  "star_song": {
+    "weapons": [
+      [
+        "月语长弓",
+        "bow",
+        52,
+        "purple"
+      ],
+      [
+        "银叶法杖",
+        "staff",
+        52,
+        "purple"
+      ]
+    ]
+  },
+  "star_song_2": {
+    "items": [
+      "i_scroll_escape",
+      "i_elf_fruit",
+      "i_stew"
+    ],
+    "kind": "general"
+  },
+  "star_song_3": {
+    "items": [
+      "i_bread",
+      "i_ale",
+      "i_elf_fruit"
+    ],
+    "kind": "tavern"
+  },
+  "under_market": {
+    "weapons": [
+      [
+        "铁砧战锤",
+        "mace",
+        68,
+        "purple"
+      ],
+      [
+        "霜狼长剑",
+        "sword",
+        65,
+        "purple"
+      ]
+    ]
+  },
+  "under_market_1": {
+    "items": [
+      "i_scroll_escape",
+      "i_stew",
+      "i_meat_skewer",
+      "i_key_gray_dwarf"
+    ],
+    "kind": "general"
+  },
+  "under_market_2": {
+    "items": [
+      "i_scroll_teleport",
+      "i_holy_charm",
+      "i_stone_refine"
+    ],
+    "kind": "misc"
+  },
+  "under_market_3": {
+    "items": [
+      "i_ale",
+      "i_dwarf_liquor",
+      "i_stew"
+    ],
+    "kind": "tavern"
+  },
+  "under_market_mouth": {
+    "kind": "general"
+  },
+  "white_deer": {
+    "weapons": [
+      [
+        "铁剑",
+        "sword",
+        2,
+        "white"
+      ],
+      [
+        "猎鹿弓",
+        "bow",
+        6,
+        "blue"
+      ],
+      [
+        "学徒之杖",
+        "staff",
+        6,
+        "blue"
+      ],
+      [
+        "橡木短棍",
+        "mace",
+        2,
+        "white"
+      ],
+      [
+        "皮革拳套",
+        "fist",
+        6,
+        "green"
+      ],
+      [
+        "精铁长剑",
+        "sword",
+        18,
+        "blue"
+      ],
+      [
+        "硬木战弓",
+        "bow",
+        18,
+        "blue"
+      ],
+      [
+        "祈愿法杖",
+        "staff",
+        18,
+        "blue"
+      ],
+      [
+        "铁头战锤",
+        "mace",
+        18,
+        "blue"
+      ],
+      [
+        "厚皮拳套",
+        "fist",
+        18,
+        "blue"
+      ],
+      [
+        "猎风长弓",
+        "bow",
+        24,
+        "blue"
+      ]
+    ],
+    "materials": [
+      "mat_tie_kuang_shi",
+      "mat_jing_tie",
+      "mat_mi_yin",
+      "mat_qing_tong",
+      "mat_yue_guang_mian",
+      "mat_jing_tie_ding",
+      "mat_sen_lin_ya_ma_bu"
+    ],
+    "equip": [
+      "eq_bai_lu_pi_mao",
+      "eq_bai_lu_xiong_jia",
+      "eq_bai_lu_hu_tui",
+      "eq_bai_lu_pi_xue",
+      "eq_bai_lu_zhi_jie",
+      "eq_bai_lu_diao_zhu",
+      "eq_tie_wei_zhan_kui",
+      "eq_shao_bing_xiong_jia",
+      "eq_xun_lin_zhe_hu_tui",
+      "eq_ji_feng_qing_xue",
+      "eq_chun_cao_shou_huan",
+      "eq_du_ya_gu_lian"
+    ]
+  },
+  "white_deer_3": {
+    "items": [
+      "i_stone_upgrade",
+      "i_key_old_king"
+    ],
+    "kind": "smith"
+  },
+  "white_deer_4": {
+    "items": [
+      "i_holy_water",
+      "i_holy_charm",
+      "i_scroll_purify"
+    ],
+    "kind": "tavern"
+  },
+  "white_deer_5": {
+    "items": [
+      "i_ale",
+      "i_meat_skewer",
+      "i_stew",
+      "i_deer_burger",
+      "i_deer_cheese"
+    ],
+    "kind": "tavern"
+  },
+  "white_deer_6": {
+    "items": [
+      "i_treat_m",
+      "i_mana_m",
+      "i_treat_light",
+      "i_herb_juice",
+      "i_bandage",
+      "i_salve_s",
+      "i_salve_m",
+      "i_antidote_pill",
+      "i_flash_powder",
+      "i_ironwall_salve"
+    ],
+    "kind": "herb"
+  },
+  "white_deer_7": {
+    "items": [
+      "i_bread",
+      "i_stew",
+      "i_blessed_pastry",
+      "i_mushroom_soup",
+      "i_tree_honey",
+      "i_fish_soup",
+      "i_dragon_pepper"
+    ],
+    "kind": "cook"
+  },
+  "white_deer_8": {
+    "items": [
+      "i_stone_upgrade",
+      "i_stone_refine"
+    ],
+    "kind": "enhance"
+  },
+  "wild_trade": {
+    "items": [
+      "i_treat_s",
+      "i_mana_s",
+      "i_bread",
+      "i_ale",
+      "i_meat_skewer",
+      "i_scroll_escape"
+    ]
+  },
+  "wind_city": {
+    "weapons": [
+      [
+        "龙脊大剑",
+        "sword",
+        85,
+        "purple"
+      ],
+      [
+        "龙语法杖",
+        "staff",
+        85,
+        "purple"
+      ]
+    ]
+  },
+  "wind_city_2": {
+    "items": [
+      "i_treat_l",
+      "i_mana_l",
+      "i_treat_holy",
+      "i_life_spring",
+      "i_phoenix_tear"
+    ],
+    "kind": "tavern"
+  }
+}

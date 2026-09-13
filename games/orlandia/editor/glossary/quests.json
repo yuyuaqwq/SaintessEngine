@@ -1,0 +1,288 @@
+{
+  "fields": {
+    "source": {
+      "zh": "来源表",
+      "note": "导出器注入：`main` = 主线条目（`quests.py:3 MAIN_QUESTS`）、`side` = 支线/公会告示（`:939 SIDE_QUESTS`）、`daily` = 每日任务（`:3325 DAILY_QUESTS`）。改它 = 改该任务的发布通道（主线链 / 支线菜单 / 每日面板）。",
+      "widget": "select"
+    },
+    "id": {
+      "zh": "任务 id",
+      "note": "主线/支线自带（与表键同值）；**每日任务没有这个字段**（源侧无 id 设计，键 = 名字）。"
+    },
+    "name": {
+      "zh": "任务名",
+      "note": "展示名（如 初出茅庐 / 日常讨伐）。每日任务的**表键就是它**（`services/quests.py:54` 按名匹配）。"
+    },
+    "giver": {
+      "zh": "发布 NPC",
+      "note": "NPC id 引用串（实测 91 个值全部命中本包 npcs 域 431 键）。对话树靠 `need.quest_pending/quest_done` 与它联动，`core/dialogue.py:122` 用 giver 防串台。",
+      "ref": {
+        "domain": "npcs",
+        "by": "key"
+      }
+    },
+    "map": {
+      "zh": "地图",
+      "note": "地图 id 引用串（maps 域 key，如 `oak_town`）。条目级 = 该支线的所属地图（支线 144/144 都有）；`objective.map` = 目标地图。",
+      "ref": {
+        "domain": "maps",
+        "by": "key"
+      }
+    },
+    "chain": {
+      "zh": "支线系列",
+      "note": "支线的剧情系列名（103 条，如「圣战真相」/「美食与美酒」）——**系列名不是 id**，同系列多条支线共用一个名字（`unlock` 的链条解锁靠它）。"
+    },
+    "board": {
+      "zh": "告示板委托",
+      "note": "`true` = 不走普通支线菜单，须去告示板指名接取（实测 1 条 `s_board_cat`）。"
+    },
+    "desc": {
+      "zh": "任务描述",
+      "note": "任务面板里的一行目标描述（如「击败 5 只绿史莱姆」）。",
+      "widget": "textarea"
+    },
+    "story": {
+      "zh": "接取剧情",
+      "note": "发布时的剧情文本（多写成『NPC名：「台词」』）—— 对话树的 `text_from: story` 直接抽这里生成接取台词（`core/dialogue.py:94` 剥名取引号内容）。主线/支线 214 条都有；每日无此字段。",
+      "widget": "textarea"
+    },
+    "ending": {
+      "zh": "交付剧情",
+      "note": "交付时的剧情文本；主线 70 条都有（支线改用 `deliver_text`）。",
+      "widget": "textarea"
+    },
+    "deliver_text": {
+      "zh": "支线交付文本",
+      "note": "支线交付时的剧情段落（88 条；与主线 `ending` 对应）。",
+      "widget": "textarea"
+    },
+    "endings": {
+      "zh": "多结局文案",
+      "note": "分支任务的多套结局文案（1 条 `q10_5`：键 = 分支 key 如 `chose_inheritor`，值 = 该结局整段文本）。",
+      "widget": "kv"
+    },
+    "objective": {
+      "zh": "目标",
+      "note": "完成条件，可多键复合（实测 197 种组合）。值是**引用串**（怪名 / NPC id / 地图 id / 物品名）或数字，导出期不展开。",
+      "widget": "kv"
+    },
+    "kill": {
+      "zh": "击杀（怪名）",
+      "note": "怪物**中文名**（monster_roster 域的 `name`，不是 id），常配 `count`。"
+    },
+    "count": {
+      "zh": "数量",
+      "note": "与 `kill`/`collect` 同现的目标数量。"
+    },
+    "collect": {
+      "zh": "收集（物品/材料名）",
+      "note": "物品或材料名（按名解析；常配 `count`/`collect_count`）。"
+    },
+    "collect_count": {
+      "zh": "收集数量",
+      "note": "`objective.collect_count`。"
+    },
+    "talk": {
+      "zh": "对话（NPC id）",
+      "note": "NPC id 引用串（如 `npc_guild_clerks`）—— 和它说话即完成。"
+    },
+    "explore": {
+      "zh": "探索（地图 id）",
+      "note": "地图 id 引用串 —— 走到该图即完成。"
+    },
+    "find": {
+      "zh": "寻获",
+      "note": "常与 `map` + `chance` 同现：在该图按概率触发寻获。"
+    },
+    "chance": {
+      "zh": "触发概率",
+      "note": "探索/寻获型目标每次判定的概率（实测 23 条）。",
+      "widget": "pct"
+    },
+    "use": {
+      "zh": "使用（道具名）",
+      "note": "使用指定道具（按名解析）。"
+    },
+    "kill_any": {
+      "zh": "击杀任意怪物数",
+      "note": "不限怪的击杀计数（每日/周常悬赏常用）。"
+    },
+    "kill_elite": {
+      "zh": "击杀精英数",
+      "note": "`objective.kill_elite`。"
+    },
+    "kill_boss": {
+      "zh": "击杀首领数",
+      "note": "`objective.kill_boss`。"
+    },
+    "reward_exp": {
+      "zh": "经验奖励",
+      "note": "发放的经验值（`commands/world.py::_grant_quest_rewards`）。"
+    },
+    "reward_gold": {
+      "zh": "金币奖励",
+      "note": "发放的金币数。"
+    },
+    "reward_item": {
+      "zh": "物品奖励",
+      "note": "**字符串或列表两种写法**（119 单值 / 4 列表=随机抽一个）：普通名按 `resolve(\"items\")→resolve(\"materials\")` 双表按名查；`eq:名称` 前缀 = 名册装备精确生成（equip_roster.py）。前缀与名不展开。",
+      "widget": "lines"
+    },
+    "reward_pet": {
+      "zh": "宠物奖励",
+      "note": "宠物 id（pets 域 key，如 `pet_turtle`；5 条）。",
+      "ref": {
+        "domain": "pets",
+        "by": "key"
+      }
+    },
+    "reward_mount": {
+      "zh": "坐骑奖励",
+      "note": "坐骑 id（1 条 `hq7_3` → `mount_fogbird`；坐骑域尚未进包）。"
+    },
+    "title": {
+      "zh": "称号奖励",
+      "note": "称号 id（1 条 `q1_6` → `iron_adventurer`；称号数据尚未进包）。"
+    },
+    "next": {
+      "zh": "后续任务",
+      "note": "任务 id 引用串 —— 本任务完成后的下一个（主线链，70 条且命中本域键）。**`null` = 主线终点**（1 条 `q12_6` 终章；源侧就是 null，不补默认值）。",
+      "ref": {
+        "domain": "quests",
+        "by": "key"
+      }
+    },
+    "unlock": {
+      "zh": "解锁条件",
+      "note": "条件对象列表（79 条支线有它）：键 = 条件类型、值 = 引用 —— `{\"side\": \"s9\"}`（该支线完成后解锁）/ `{\"main\": \"q7_1\"}`。导出期不展开、不校验闭合。",
+      "widget": "rows"
+    },
+    "side": {
+      "zh": "解锁·前置支线",
+      "note": "`unlock[].side` —— 支线 id 引用串。"
+    },
+    "main": {
+      "zh": "解锁·前置主线",
+      "note": "`unlock[].main` —— 主线任务 id 引用串。"
+    },
+    "min_level": {
+      "zh": "等级下限",
+      "note": "玩家等级 ≥ 它才可接（实测 3~100 共 53 档）。"
+    },
+    "suggest_lv": {
+      "zh": "推荐等级",
+      "note": "面板显示的推荐等级（7 条；纯展示，不参与判定）。"
+    },
+    "min_lv": {
+      "zh": "抽取等级下限（每日）",
+      "note": "每日任务池的等级过滤（18 条，取值 20/50/80；缺省 = 新手池）。"
+    },
+    "require_stats": {
+      "zh": "要求统计量",
+      "note": "按玩家累计统计解锁（2 条：`{\"fish_count\": 10}` 钓鱼次数 / `{\"craft_count\": 20}` 制作次数）。",
+      "widget": "kv"
+    },
+    "progress_text": {
+      "zh": "过程叙述",
+      "note": "任务进行中的叙事段落（90 条支线；支线的「story」在数据里叫这个）。",
+      "widget": "textarea"
+    },
+    "branch": {
+      "zh": "分支抉择",
+      "note": "交付时的分支选择（2 条支线）：`prompt` = 抉择前提示，`options` = 每个分支的 `{key,label,text,reward_*}`。",
+      "widget": "kv"
+    },
+    "prompt": {
+      "zh": "抉择提示",
+      "note": "`branch.prompt` —— 抉择前的场景文案。",
+      "widget": "textarea"
+    },
+    "label": {
+      "zh": "分支标签",
+      "note": "`branch.options[].label` —— 分支按钮上的短标签（如「带他回家」）。"
+    },
+    "key": {
+      "zh": "分支 key",
+      "note": "`branch.options[].key` —— 分支标识（字符串数字，如 `\"1\"`/`\"2\"`）。"
+    },
+    "branch.options": {
+      "zh": "分支选项",
+      "note": "交付时的分支选择（实测 2 条支线有 branch）：每项 {key, label, text, reward_*}。key 是分支标识、label 是选项标签、text 是选后叙述，reward_* 是该分支的奖励。"
+    }
+  },
+  "groups": [
+    {
+      "id": "identity",
+      "label": "身份与归属",
+      "icon": "📜",
+      "fields": [
+        "source",
+        "id",
+        "name",
+        "giver",
+        "map",
+        "chain",
+        "board"
+      ]
+    },
+    {
+      "id": "goal",
+      "label": "目标条件",
+      "icon": "🎯",
+      "fields": [
+        "objective",
+        "kill",
+        "count",
+        "collect",
+        "collect_count",
+        "talk",
+        "explore",
+        "find",
+        "chance",
+        "use",
+        "kill_any",
+        "kill_elite",
+        "kill_boss",
+        "min_level",
+        "suggest_lv",
+        "min_lv",
+        "require_stats",
+        "unlock",
+        "side",
+        "main"
+      ]
+    },
+    {
+      "id": "text",
+      "label": "剧情文案",
+      "icon": "💬",
+      "fields": [
+        "desc",
+        "story",
+        "ending",
+        "deliver_text",
+        "progress_text",
+        "endings",
+        "branch",
+        "prompt",
+        "label",
+        "key"
+      ]
+    },
+    {
+      "id": "reward",
+      "label": "奖励与后续",
+      "icon": "🎁",
+      "fields": [
+        "reward_exp",
+        "reward_gold",
+        "reward_item",
+        "reward_pet",
+        "reward_mount",
+        "title",
+        "next"
+      ]
+    }
+  ]
+}

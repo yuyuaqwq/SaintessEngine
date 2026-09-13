@@ -1,0 +1,177 @@
+{
+  "equip:eq_bai_lu_diao_zhu": {
+    "stock": 5,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "equip:eq_bai_lu_hu_tui": {
+    "stock": 5,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "equip:eq_bai_lu_pi_mao": {
+    "stock": 5,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "equip:eq_bai_lu_pi_xue": {
+    "stock": 5,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "equip:eq_bai_lu_xiong_jia": {
+    "stock": 5,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "equip:eq_bai_lu_zhi_jie": {
+    "stock": 5,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "equip:eq_jiu_pi_xue": {
+    "stock": 5,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "equip:eq_mao_pi_mao": {
+    "stock": 5,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "equip:eq_pi_jia": {
+    "stock": 5,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "equip:eq_xiang_mu_hu_tui": {
+    "stock": 5,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "equip:eq_xiang_mu_jie_zhi": {
+    "stock": 5,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "equip:eq_xiang_mu_xiang_lian": {
+    "stock": 5,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "item:i_def_potion": {
+    "stock": 5,
+    "per_day": 2,
+    "restock_hours": 6
+  },
+  "item:i_dragon_scale_potion": {
+    "stock": 5,
+    "per_day": 2,
+    "restock_hours": 6
+  },
+  "item:i_fu_huo_yu_mao": {
+    "stock": 3,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "item:i_holy_charm": {
+    "stock": 5,
+    "per_day": 2,
+    "restock_hours": 6
+  },
+  "item:i_life_elixir": {
+    "stock": 5,
+    "per_day": 2,
+    "restock_hours": 6
+  },
+  "item:i_mana_l": {
+    "stock": 10,
+    "per_day": 5,
+    "restock_hours": 6
+  },
+  "item:i_phoenix_tear": {
+    "stock": 3,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "item:i_scroll_escape": {
+    "stock": 10,
+    "per_day": 5,
+    "restock_hours": 6
+  },
+  "item:i_scroll_purify": {
+    "stock": 3,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "item:i_scroll_teleport": {
+    "stock": 10,
+    "per_day": 5,
+    "restock_hours": 6
+  },
+  "item:i_shuang_bei_jin_bi_fu": {
+    "stock": 5,
+    "per_day": 2,
+    "restock_hours": 6
+  },
+  "item:i_spd_potion": {
+    "stock": 5,
+    "per_day": 2,
+    "restock_hours": 6
+  },
+  "item:i_stone_blessed": {
+    "stock": 3,
+    "per_day": 1,
+    "restock_hours": 12
+  },
+  "item:i_stone_refine": {
+    "stock": 8,
+    "per_day": 3,
+    "restock_hours": 6
+  },
+  "item:i_stone_upgrade": {
+    "stock": 10,
+    "per_day": 5,
+    "restock_hours": 6
+  },
+  "item:i_str_potion": {
+    "stock": 5,
+    "per_day": 2,
+    "restock_hours": 6
+  },
+  "item:i_treat_holy": {
+    "stock": 10,
+    "per_day": 5,
+    "restock_hours": 6
+  },
+  "item:i_treat_l": {
+    "stock": 10,
+    "per_day": 5,
+    "restock_hours": 6
+  },
+  "mat:mat_bing_jing": {
+    "stock": 20,
+    "per_day": 10,
+    "restock_hours": 6
+  },
+  "mat:mat_jing_jin": {
+    "stock": 20,
+    "per_day": 10,
+    "restock_hours": 6
+  },
+  "mat:mat_jing_tie": {
+    "stock": 30,
+    "per_day": 15,
+    "restock_hours": 6
+  },
+  "mat:mat_mi_yin": {
+    "stock": 20,
+    "per_day": 10,
+    "restock_hours": 6
+  },
+  "mat:mat_tie_kuang_shi": {
+    "stock": 30,
+    "per_day": 15,
+    "restock_hours": 6
+  }
+}

@@ -1,0 +1,228 @@
+{
+  "anchor": {
+    "dur_hours": 24,
+    "unique": true
+  },
+  "apply_mark": {
+    "mark": "fire",
+    "stacks": 2,
+    "react_bonus": 1.3
+  },
+  "bag_expand": {
+    "slots": 5,
+    "per_char_limit": 3
+  },
+  "battle_start_resource": {
+    "key": "rage",
+    "amount": 2
+  },
+  "block_pot": {
+    "pct": 0.15
+  },
+  "buff_extend": {
+    "extend_turns": 2
+  },
+  "buff_phys_next": {
+    "pct": 0.4
+  },
+  "cc_immune": {
+    "turns": 3
+  },
+  "collection": {
+    "codex": true
+  },
+  "compass": {
+    "dur_min": 30,
+    "chest_quality_up": 1,
+    "no_stack": true
+  },
+  "crit_dmg_pot": {
+    "pct": 0.25
+  },
+  "def_down": {
+    "pct": 0.15,
+    "turns": 2
+  },
+  "dodge_pot": {
+    "pct": 0.15
+  },
+  "dot_amp": {
+    "turns": 2,
+    "layer_per_hit": 1
+  },
+  "execute_pot": {
+    "pct": 0.3,
+    "hp_threshold": 0.3
+  },
+  "firework": {
+    "daily_limit": 1,
+    "cooldown_min": 10
+  },
+  "fish_net": {
+    "catch_mult": 2,
+    "no_stack_with_bait": true
+  },
+  "full_tension": {
+    "turns": 1
+  },
+  "garden_slot": {
+    "slot_add": 1,
+    "per_house_limit": 3
+  },
+  "grapple": {
+    "reach_unexplored": true,
+    "free_move": true
+  },
+  "harvest_boost": {
+    "dur_min": 30,
+    "quality_up": 1,
+    "no_stack": true
+  },
+  "heal_up": {
+    "pct": 0.2
+  },
+  "invuln": {
+    "turns": 1,
+    "stun_after": 1,
+    "limit": 1
+  },
+  "lantern": {
+    "dur_min": 30,
+    "treasure_boost": 0.5,
+    "night_only": true
+  },
+  "lifesteal_pot": {
+    "pct": 0.15
+  },
+  "magic_resist": {
+    "pct": 0.15
+  },
+  "mail": {
+    "fee_rate": 0.05,
+    "no_bound": true
+  },
+  "mana_cost_down": {
+    "pct": 0.1,
+    "turns": 3
+  },
+  "mana_restore": {
+    "mana_pct": 0.25,
+    "cost_reduce": 0.25,
+    "turns": 2
+  },
+  "morph": {
+    "atk_up": 0.3,
+    "matk_up": 0.3,
+    "dmg_taken_up": 0.15,
+    "turns": 3,
+    "limit": 1
+  },
+  "next_atk_up": {
+    "pct": 0.5
+  },
+  "pene_magi_pot": {
+    "pct": 0.15
+  },
+  "pene_pot": {
+    "pct": 0.15
+  },
+  "pet_rename": {
+    "per_pet_limit": 1
+  },
+  "phoenix": {
+    "revive_hp": 0.3,
+    "dmg_reduce": 0.2,
+    "turns": 3,
+    "limit": 1
+  },
+  "purify_immune": {
+    "purify": true,
+    "immune": [
+      "silence",
+      "stun"
+    ],
+    "turns": 3
+  },
+  "re_roll_affix": {
+    "same_tier": true
+  },
+  "reaction": {
+    "trigger_react": true,
+    "fallback_matk": 0.9
+  },
+  "reforge": {
+    "keep_enhance": true,
+    "per_item_limit": 1,
+    "no_orange": true
+  },
+  "rename": {
+    "monthly_limit": 1
+  },
+  "reset_voucher": {
+    "free_reset": true
+  },
+  "resource_amp": {
+    "key": "rage",
+    "amount": 2,
+    "turns": 3,
+    "trigger": "on_hit"
+  },
+  "resource_charge": {
+    "res_gain": 2,
+    "cd_reduce": 1
+  },
+  "restore_resource": {
+    "key": "rage",
+    "amount": 3
+  },
+  "restore_resource_full": {
+    "key": "rage",
+    "penalty_pct": 0.2,
+    "penalty_turns": 2
+  },
+  "scout": {
+    "info": "map_specialty"
+  },
+  "seed_planter": {
+    "seed_pack": true
+  },
+  "shield_big": {
+    "pct": 0.15
+  },
+  "shield_small": {
+    "pct": 0.1
+  },
+  "steal_buff": {
+    "turns": 2,
+    "no_target_no_consume": true
+  },
+  "summon": {
+    "tid": "ember_wisp",
+    "turns": 3,
+    "limit": 1,
+    "hp_ratio": 0.3,
+    "atk_ratio": 0.35,
+    "def_ratio": 0.3,
+    "bodyguard": 0.3
+  },
+  "thorns_pot": {
+    "pct": 0.3
+  },
+  "toy_form": {
+    "dur_min": 30,
+    "form": "npc",
+    "no_stat": true
+  },
+  "trap": {
+    "ctrl": "freeze",
+    "turns": 1,
+    "boss_downgrade": "slow",
+    "shatter_bonus": 1.5
+  },
+  "vuln": {
+    "per_debuff": 0.12,
+    "max_debuff": 3,
+    "max_bonus": 0.36,
+    "turns": 3
+  }
+}

@@ -1,0 +1,299 @@
+{
+  "anchor": {
+    "battle_ok": false
+  },
+  "apply_mark": {
+    "battle_ok": true
+  },
+  "armor_break_pot": {
+    "battle_ok": true
+  },
+  "bag_expand": {
+    "battle_ok": false
+  },
+  "bait_blood": {
+    "battle_ok": false
+  },
+  "bait_dough": {
+    "battle_ok": false
+  },
+  "bait_glow": {
+    "battle_ok": false
+  },
+  "battle_start_resource": {
+    "battle_ok": false
+  },
+  "block_pot": {
+    "battle_ok": true
+  },
+  "buff_atk": {
+    "battle_ok": true
+  },
+  "buff_atk_big": {
+    "battle_ok": true
+  },
+  "buff_atk_big_def": {
+    "battle_ok": true
+  },
+  "buff_atk_def": {
+    "battle_ok": true
+  },
+  "buff_atk_food": {
+    "battle_ok": true
+  },
+  "buff_atk_small": {
+    "battle_ok": true
+  },
+  "buff_crit": {
+    "battle_ok": true
+  },
+  "buff_crit_big": {
+    "battle_ok": true
+  },
+  "buff_crit_food": {
+    "battle_ok": true
+  },
+  "buff_crit_small": {
+    "battle_ok": true
+  },
+  "buff_def": {
+    "battle_ok": true
+  },
+  "buff_def_food": {
+    "battle_ok": true
+  },
+  "buff_extend": {
+    "battle_ok": true
+  },
+  "buff_matk": {
+    "battle_ok": true
+  },
+  "buff_matk_crit": {
+    "battle_ok": true
+  },
+  "buff_matk_food": {
+    "battle_ok": true
+  },
+  "buff_matk_strong": {
+    "battle_ok": true
+  },
+  "buff_phys_next": {
+    "battle_ok": true
+  },
+  "buff_spd": {
+    "battle_ok": true
+  },
+  "buff_spd_food": {
+    "battle_ok": true
+  },
+  "buff_spd_small": {
+    "battle_ok": true
+  },
+  "cc_immune": {
+    "battle_ok": true
+  },
+  "clear_red": {
+    "battle_ok": false
+  },
+  "collection": {
+    "battle_ok": false
+  },
+  "compass": {
+    "battle_ok": false
+  },
+  "crit_dmg_pot": {
+    "battle_ok": true
+  },
+  "dodge_pot": {
+    "battle_ok": true
+  },
+  "dot_amp": {
+    "battle_ok": true
+  },
+  "enhance_boost": {
+    "battle_ok": false
+  },
+  "execute_pot": {
+    "battle_ok": true
+  },
+  "firework": {
+    "battle_ok": false
+  },
+  "fish_net": {
+    "battle_ok": false
+  },
+  "food": {
+    "battle_ok": true
+  },
+  "food_buff": {
+    "battle_ok": true
+  },
+  "food_effect": {
+    "battle_ok": true
+  },
+  "food_spd_up_small": {
+    "battle_ok": true
+  },
+  "full_tension": {
+    "battle_ok": true
+  },
+  "garden_slot": {
+    "battle_ok": false
+  },
+  "grapple": {
+    "battle_ok": false
+  },
+  "harvest_boost": {
+    "battle_ok": false
+  },
+  "heal": {
+    "battle_ok": true
+  },
+  "heal_mana": {
+    "battle_ok": true
+  },
+  "heal_up": {
+    "battle_ok": true
+  },
+  "holy_shield": {
+    "battle_ok": true
+  },
+  "invuln": {
+    "battle_ok": true
+  },
+  "lantern": {
+    "battle_ok": false
+  },
+  "lifesteal_pot": {
+    "battle_ok": true
+  },
+  "lucky": {
+    "battle_ok": false
+  },
+  "magic_resist": {
+    "battle_ok": true
+  },
+  "mail": {
+    "battle_ok": false
+  },
+  "mana": {
+    "battle_ok": true
+  },
+  "mana_cost_down": {
+    "battle_ok": true
+  },
+  "mana_restore": {
+    "battle_ok": true
+  },
+  "morph": {
+    "battle_ok": true
+  },
+  "mount": {
+    "battle_ok": false
+  },
+  "next_atk_up": {
+    "battle_ok": true
+  },
+  "none": {
+    "battle_ok": false
+  },
+  "open_chest": {
+    "battle_ok": false
+  },
+  "open_rune_chest": {
+    "battle_ok": false
+  },
+  "pene_magi_pot": {
+    "battle_ok": true
+  },
+  "pene_pot": {
+    "battle_ok": true
+  },
+  "pet_egg": {
+    "battle_ok": false
+  },
+  "pet_rename": {
+    "battle_ok": false
+  },
+  "phoenix": {
+    "battle_ok": true
+  },
+  "purify": {
+    "battle_ok": true
+  },
+  "purify_immune": {
+    "battle_ok": true
+  },
+  "re_roll_affix": {
+    "battle_ok": false
+  },
+  "reaction": {
+    "battle_ok": true
+  },
+  "reforge": {
+    "battle_ok": false
+  },
+  "rename": {
+    "battle_ok": false
+  },
+  "reset_voucher": {
+    "battle_ok": false
+  },
+  "resource_amp": {
+    "battle_ok": true
+  },
+  "resource_charge": {
+    "battle_ok": true
+  },
+  "restore_resource": {
+    "battle_ok": true
+  },
+  "restore_resource_full": {
+    "battle_ok": true
+  },
+  "return_vila": {
+    "battle_ok": false
+  },
+  "rock_shield": {
+    "battle_ok": true
+  },
+  "scout": {
+    "battle_ok": false
+  },
+  "seed_planter": {
+    "battle_ok": false
+  },
+  "shield_big": {
+    "battle_ok": true
+  },
+  "skill_tome": {
+    "battle_ok": false
+  },
+  "stamina": {
+    "battle_ok": true
+  },
+  "steal_buff": {
+    "battle_ok": true
+  },
+  "summon": {
+    "battle_ok": true
+  },
+  "teleport_portal": {
+    "battle_ok": false
+  },
+  "thorns_pot": {
+    "battle_ok": true
+  },
+  "toy_form": {
+    "battle_ok": false
+  },
+  "trap": {
+    "battle_ok": true
+  },
+  "vuln": {
+    "battle_ok": true
+  },
+  "weapon_pick": {
+    "battle_ok": false
+  }
+}

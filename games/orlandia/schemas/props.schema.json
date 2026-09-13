@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/props.schema.json",
+  "title": "场景元素（props）—— 一条 = 一个可见可交互的静态元素（表键 = prop id），挂载点由导出器折进来",
+  "description": "真源 = 游戏仓 `game/data/props.py:12 PROPS`（**import 之后的运行时表**，59 条），由 `scripts/export_domains/life_growth.py:derive_props` 单向导出；另把 `game/data/props.py:606 SUBAREA_PROPS`（315 个挂载点 → 621 条挂载）折成每条 prop 的 `mounts`（**导出期注入**）。设计口径（源文件头）：PROPS 是「看得见、可直接交互」的静态元素（`交互 <名称>` 给氛围描写），POI 才是「要探索才可能发现」的隐藏元素（走 pois 域）。**本域只搬运、不解释**：`mounts.where` 的「地图id:子区域id」是引用串（→ maps 域 + subareas 域），`effect.pool` 的元素是物品 id（→ items 域），导出期不展开、不校验闭合。消费者在游戏侧：`game/commands/` 的交互路由按 prop id 取名与台词、`SUBAREA_PROPS` 决定每个子区域挂哪些元素（每个子区域 0-3 个，源侧有「别撒太密」的克制约定）。",
+  "x-primary": "prop",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "prop id（内容侧词汇；实测 59 条全是小写英文下划线，无前缀）"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/prop"
+  },
+  "$defs": {
+    "prop": {
+      "type": "object",
+      "title": "场景元素（一条）",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "默认名",
+          "description": "默认显示名（59/59 条都有）。挂在具体子区域时可用 `mounts[].name` 覆盖成专属名（实测 621 条挂载里 535 条带专属名）。"
+        },
+        "icon": {
+          "type": "string",
+          "title": "图标",
+          "description": "展示用字形（表情符号；59/59 条都有）。"
+        },
+        "desc": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "场景描写",
+          "description": "看它时给的氛围描写（59/59 条都有）。"
+        },
+        "texts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "x-widget": "lines",
+          "title": "交互台词",
+          "description": "交互时轮换的台词（59/59 条都有；**实测每条恒 2 条**，无空串）。"
+        },
+        "effect": {
+          "title": "交互效果",
+          "description": "三形态（实测：`null` 46 条 / 字符串 2 条 / 字典 11 条）：`null` = 纯氛围、无收益；字符串是引擎认识的彩蛋钩子（实测 `wish` 许愿 / `refresh` 汲水）；字典带数值收益。**不枚举**：彩蛋钩子集会随版本扩。",
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "heal",
+                    "material"
+                  ],
+                  "x-widget": "select",
+                  "title": "效果类型",
+                  "description": "`heal` = 每日一次回复（6 条）/ `material` = 每日一次摸材料（5 条）。"
+                },
+                "daily": {
+                  "type": "boolean",
+                  "title": "每日一次",
+                  "description": "实测 11/11 条字典效果都写 `true`（每日限一次）。"
+                },
+                "pct": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "x-widget": "pct",
+                  "title": "回复比例",
+                  "description": "`type=heal` 时的回复百分比（实测 0.10 / 0.15）。"
+                },
+                "pool": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]*$"
+                  },
+                  "x-widget": "lines",
+                  "title": "素材池（物品 id）",
+                  "description": "`type=material` 时的候选物品（**items 域 key**，实测 3~4 个/条；导出期不展开）。"
+                },
+                "found_text": {
+                  "type": "string",
+                  "x-widget": "textarea",
+                  "title": "摸到时的提示",
+                  "description": "触发时播的提示文案（11/11 条都有）。"
+                }
+              }
+            }
+          ]
+        },
+        "mounts": {
+          "type": "array",
+          "x-widget": "rows",
+          "title": "挂载点",
+          "description": "**由导出器注入**（源数据是另一张表 `SUBAREA_PROPS`，形状是「地点 → prop 列表」，折成「prop → 地点列表」）：这条元素出现在哪些子区域。`where` = `\"地图id:子区域id\"`（实测 315 个挂载点两段 100% 命中 maps / subareas 域）；`name` = 该处的专属名（只在源侧元组形式上有 —— 字符串形式**不补默认值**，键直接不写）。实测 57/59 条被挂过；`rock_formation` / `wishing_well` 两条从未挂载 → 没有这个键。",
+          "items": {
+            "type": "object",
+            "required": [
+              "where"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "where": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$",
+                "title": "挂载点",
+                "description": "`\"地图id:子区域id\"` —— 两段都是内容侧 id（引用串，不展开）。"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "title": "专属名",
+                "description": "该子区域里的专属名（源侧元组形式 `(prop_id, 专属名)` 的后半；缺省 = 用 `name` 默认名）。"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

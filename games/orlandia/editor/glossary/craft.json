@@ -1,0 +1,88 @@
+{
+  "fields": {
+    "name": {
+      "zh": "配方名",
+      "note": "显示名。恒等式：426/426 条 == 该配方 roster_id 在 equip_roster 域那条的 name（「配方名 = 装备名」）。⚠️ 13 个名字各对应两条配方（如「北风长弓」/「古王剑」）→ 引用请用 key，别按名。"
+    },
+    "slot": {
+      "zh": "装备位",
+      "note": "产物装备位，取值 = 引擎表 EQUIP_SLOTS 的 7 个（weapon 128 / armor 72 / boots 54 / helm 50 / legs 48 / necklace 41 / ring 33）。",
+      "widget": "select"
+    },
+    "quality": {
+      "zh": "品质",
+      "note": "产物品质：purple 190 / blue 188 / orange 37 / white 7 / green 4（= 品质表 QUALITY 的 5 档，闭集）。",
+      "widget": "select"
+    },
+    "lv": {
+      "zh": "需求等级",
+      "note": "玩家等级门槛（锻造面板按它过滤）。实测 2~96。"
+    },
+    "gold": {
+      "zh": "金币耗费",
+      "note": "锻造费。实测 0~14000，有 1 条为 0（源侧合法值「不收金币」，导出期不补默认）。"
+    },
+    "mats": {
+      "zh": "材料（物品 id → 数量）",
+      "note": "键 = items 域 key（137 个互异值全是 mat_*，100% 命中），值 = 数量（1~20，每条 1~4 种）。未展开。",
+      "widget": "kv",
+      "ref": {
+        "domain": "items",
+        "by": "key"
+      }
+    },
+    "roster_id": {
+      "zh": "产物装备（名册 id）",
+      "note": "产物 = equip_roster 域 key（eq_*），413 个互异值 100% 命中、0 悬空。产物属性在 equip_roster 域那条上，本域只给 id。未展开。",
+      "ref": {
+        "domain": "equip_roster",
+        "by": "key"
+      }
+    },
+    "blueprint": {
+      "zh": "图纸（显示名串）",
+      "note": "解锁用的图纸 —— 是显示名字符串、不是 id：261/261 条恒等于 name + 「图纸」。按名在 items 域只命中 16 条（245 条无对应道具 = 源侧缺口）。缺省 = 材料直锻。未展开。"
+    },
+    "weapon_type": {
+      "zh": "武器类型",
+      "note": "仅武器位有（128 条 = weapon 128 一一对应），取值 = WEAPON_TYPES 8 个（sword/staff/bow/mace/dagger/fist/spear/shield）。缺省 = 非武器。",
+      "widget": "select"
+    },
+    "desc": {
+      "zh": "风味描述",
+      "note": "426/426 条都有、无空串；多按产地复述（如「风翼群岛的苍穹工匠之作」）。",
+      "widget": "textarea"
+    },
+    "aliases": {
+      "zh": "旧世界输入别名",
+      "note": "导出器注入（真源是 craft.py:4635 CRAFT_RECIPE_ALIASES 那张表）：玩家在旧世界输入的老名字，game/core/craft.py:40 反查回配方 id。实测只在 3 条配方上有（3/3 命中、0 冲突）。",
+      "widget": "lines"
+    }
+  },
+  "groups": [
+    {
+      "id": "identity",
+      "label": "配方身份",
+      "icon": "📛",
+      "fields": ["name", "slot", "quality", "lv", "weapon_type"]
+    },
+    {
+      "id": "output",
+      "label": "产物",
+      "icon": "🛡",
+      "fields": ["roster_id", "desc"]
+    },
+    {
+      "id": "cost",
+      "label": "成本",
+      "icon": "🪵",
+      "fields": ["mats", "gold"]
+    },
+    {
+      "id": "unlock",
+      "label": "解锁与别名",
+      "icon": "🔓",
+      "fields": ["blueprint", "aliases"]
+    }
+  ]
+}

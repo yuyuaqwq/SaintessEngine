@@ -1,0 +1,257 @@
+{
+  "fields": {
+    "start": {
+      "zh": "起始节点",
+      "note": "进入对话时展示的节点 id，必须是 `nodes` 里的键（源侧 39/39 命中）。不在 → `core/dialogue.py:24` 静默回退到 start，玩家会看到别的开场白。"
+    },
+    "nodes": {
+      "zh": "节点表",
+      "note": "`{节点 id: 节点}`；节点 id 是**树内局部词汇**（不需要全局唯一）。条目顺序 = 源顺序。"
+    },
+    "text": {
+      "zh": "文案",
+      "note": "本域里 `text` 是各式文案：节点默认台词 / 条件变体台词 / 选项文本 / `hint` 动作的提示语。节点台词的三层来源 = `texts` 变体 → `text_from` → `text`（`core/dialogue.py:107`）。",
+      "widget": "textarea"
+    },
+    "texts": {
+      "zh": "条件台词变体",
+      "note": "按序取**第一个** `need` 满足的变体（顺序即优先级，别重排）。实测 223 条，每条恰是 `{need, text}`。",
+      "widget": "rows"
+    },
+    "text_from": {
+      "zh": "台词来源",
+      "note": "`\"story\"`（唯一取值）＝ 无变体命中时从**当前主线任务**的 `story` 抽台词自动生成（剥『NPC名：』前缀、取引号内；giver 不一致不用，防串台）。多任务 NPC 加任务 = 纯数据。",
+      "widget": "select"
+    },
+    "options": {
+      "zh": "选项",
+      "note": "玩家可见的选项（`need` 不满足的被过滤；`side_menu` 项展开成动态子选项 —— `core/dialogue.py:67`）。顺序即展示顺序。",
+      "widget": "rows"
+    },
+    "next": {
+      "zh": "跳转节点",
+      "note": "本树节点 id，或哨兵 `\"__end__\"` = 结束对话。实测 1,973/1,973 命中二者（悬空 = 点下去没反应）。"
+    },
+    "fail_next": {
+      "zh": "失败跳转",
+      "note": "`action` 判定失败时改跳这个节点（实测 16 条，都与 `apprentice_check` 同现；成功才走 `next`）。"
+    },
+    "need": {
+      "zh": "显示条件（AND）",
+      "note": "全部满足才显示该选项/才用该变体；不写 = 不限。键名是 `core/dialogue_conds.py CONDITIONS` 注册表里的条件类型 —— **未注册的键生产环境按「永远可见」放行并告警**（`core/dialogue.py:46`），笔误不会炸但会静默放开。",
+      "widget": "kv"
+    },
+    "action": {
+      "zh": "选中动作（声明式）",
+      "note": "选中后执行的副作用，`core` 不碰 DB、落地在命令层（`commands/talk_actions.py` 注册表 + 少量命令层分支）。一个选项可挂多个动作。",
+      "widget": "kv"
+    },
+    "side_menu": {
+      "zh": "动态子菜单",
+      "note": "该选项**不显示自己**，由命令层回调展开成一组动态子选项（如「接『支线名』(目标)」）；无活儿可接 → 整项不出现（v127.6）。实测 4 条，只带 `after`。",
+      "widget": "kv"
+    },
+    "after": {
+      "zh": "子菜单返回节点",
+      "note": "子选项执行完回到哪个节点（取值都是本树节点 id）。"
+    },
+    "quest_done": {
+      "zh": "条件·已完成任务",
+      "note": "任务 id 引用串（quests 域）；**空串 `\"\"` = 按「当前主线」动态判断**。"
+    },
+    "quest_active": {
+      "zh": "条件·任务进行中",
+      "note": "任务 id 引用串；空串 = 当前主线进行中/待交付。"
+    },
+    "quest_pending": {
+      "zh": "条件·任务待接取",
+      "note": "任务 id 引用串；空串 = 当前主线待接取（且校验发布者 == 对话 NPC，v101.23）。"
+    },
+    "quest_ready": {
+      "zh": "条件·任务待交付",
+      "note": "任务 id 引用串；空串 = 当前主线 ready。实测出现最多（223 次，配「✅ 任务完成了！」选项）。"
+    },
+    "not_quest_done": {
+      "zh": "条件·任务未完成",
+      "note": "任务 id 引用串 —— 未完成过才显示（避免重复念老台词）。"
+    },
+    "quest_any_active": {
+      "zh": "条件·有任一任务在进行",
+      "note": "与具体任务无关的开关式条件。"
+    },
+    "side_available": {
+      "zh": "条件·有支线可接",
+      "note": "有可接支线才显示（配 `side_offer` 动作 / `side_menu` 子菜单）。"
+    },
+    "side_ready": {
+      "zh": "条件·有支线可交",
+      "note": "有可交付支线才显示（配 `side_take` 动作）。"
+    },
+    "apprentice": {
+      "zh": "条件·已收徒（专业 key）",
+      "note": "专业 key（如 `gather` 采集）—— 已拜该师父才显示。"
+    },
+    "not_apprentice": {
+      "zh": "条件·未收徒（专业 key）",
+      "note": "尚未拜该专业师父时显示。"
+    },
+    "is_novice": {
+      "zh": "条件·仍是新手职业",
+      "note": "未转职（`cls_novice`）才显示。"
+    },
+    "not_novice": {
+      "zh": "条件·已非新手职业",
+      "note": "完成首次转职后才显示。"
+    },
+    "class_any": {
+      "zh": "条件·职业白名单",
+      "note": "职业 key 列表（classes 域 key）；当前职业命中任一即满足。",
+      "widget": "lines"
+    },
+    "evolve_ready": {
+      "zh": "条件·可转职",
+      "note": "达到该转职档位/等级才显示（实测 `{tier, level}`）。",
+      "widget": "kv"
+    },
+    "tier": {
+      "zh": "转职档位",
+      "note": "档位（`need.evolve_ready.tier` / `action.evolve_class.tier`）。"
+    },
+    "level": {
+      "zh": "所需等级",
+      "note": "`need.evolve_ready` 的等级下限。"
+    },
+    "path": {
+      "zh": "分支路径",
+      "note": "`action.evolve_class` 的目标分支（整数）。"
+    },
+    "quest_take": {
+      "zh": "动作·接下当前主线",
+      "note": "实测出现最多（170 次）—— 接下当前主线任务（与 `text_from: story` 的接取台词配套）。"
+    },
+    "set_flag": {
+      "zh": "动作·设置对话 flag",
+      "note": "写入玩家对话 flag（持久；彩蛋解锁/分支记录用，如 `pledged` / `quest_hint`；109 次）。flag 名是内容侧词汇，与 npcs 域 `unlock_flags.flag` 同一命名空间。"
+    },
+    "flag": {
+      "zh": "flag 名",
+      "note": "玩家对话 flag（内容侧词汇；写入方 = `set_flag` / npcs 域 `unlock_flags`）。"
+    },
+    "side_offer": {
+      "zh": "动作·打开支线清单",
+      "note": "展开可接支线清单（常与条件 `side_available` 配套）。"
+    },
+    "side_take": {
+      "zh": "动作·交付支线",
+      "note": "交付选中的支线（配条件 `side_ready`）。"
+    },
+    "evolve_class": {
+      "zh": "动作·转职",
+      "note": "按档位/分支转职（实测 `{tier, path}`；42 次）。",
+      "widget": "kv"
+    },
+    "apprentice_check": {
+      "zh": "动作·拜师考核",
+      "note": "清点玩家是否交足考核材料；不满足 → 跳 `fail_next`（实测 16 条）。",
+      "widget": "kv"
+    },
+    "tutor_skill": {
+      "zh": "动作·师父教技能",
+      "note": "花金币学技能（实测 11 条；与 npcs 域 `teach_skills` 同一套师徒玩法）。技能名按名解析（skills 域有 14 个教技能名解析不到，是源侧空引用）。",
+      "widget": "kv"
+    },
+    "consume_item": {
+      "zh": "动作·消耗物品",
+      "note": "交付时扣除（实测 8 条，与 `apprentice_check` 配套）。",
+      "widget": "kv"
+    },
+    "give_item": {
+      "zh": "动作·给物品",
+      "note": "给玩家物品（实测 8 条；`key` 支持中文名/物品 id）。",
+      "widget": "kv"
+    },
+    "unlock_prof": {
+      "zh": "动作·解锁专业",
+      "note": "专业 key（如 `gather`；8 条）。"
+    },
+    "unlock_class": {
+      "zh": "动作·解锁职业",
+      "note": "职业 key（classes 域 key，如 `cls_zhan_shi`；7 条）。"
+    },
+    "give_prof_exp": {
+      "zh": "动作·给专业经验",
+      "note": "专业经验值（8 条，如 50）。"
+    },
+    "open_shop": {
+      "zh": "动作·打开商店",
+      "note": "提示打开商店界面（6 条；商店数据 smith_stock/shop_stock 尚未进包）。"
+    },
+    "hint": {
+      "zh": "动作·提示语",
+      "note": "选中后回给玩家的一行提示（2 条，内容侧文案）。",
+      "widget": "textarea"
+    },
+    "skill": {
+      "zh": "技能名",
+      "note": "技能中文名（skills 域按名解析）。"
+    },
+    "cost": {
+      "zh": "学费（金币）",
+      "note": "`action.tutor_skill.cost`。"
+    },
+    "need_lv": {
+      "zh": "等级要求",
+      "note": "`action.tutor_skill.need_lv`。"
+    },
+    "item": {
+      "zh": "物品/材料名",
+      "note": "`apprentice_check.item` / `consume_item.item` —— 中文名，按名解析（`store/inventory.py` 的名反查）。"
+    },
+    "count": {
+      "zh": "数量",
+      "note": "`apprentice_check.count` / `consume_item.count` / `give_item.count`。"
+    },
+    "key": {
+      "zh": "物品（名或 id）",
+      "note": "`action.give_item.key` —— 中文名或物品 id 都行。"
+    }
+  },
+  "groups": [
+    {
+      "id": "tree",
+      "label": "树结构",
+      "icon": "🌳",
+      "fields": ["start", "nodes"]
+    },
+    {
+      "id": "talk",
+      "label": "台词",
+      "icon": "💬",
+      "fields": ["text", "texts", "text_from"]
+    },
+    {
+      "id": "flow",
+      "label": "选项与跳转",
+      "icon": "🔀",
+      "fields": ["options", "next", "fail_next", "side_menu", "after"]
+    },
+    {
+      "id": "cond",
+      "label": "显示条件",
+      "icon": "🚪",
+      "fields": ["need", "quest_done", "quest_active", "quest_pending", "quest_ready",
+                 "not_quest_done", "quest_any_active", "side_available", "side_ready",
+                 "apprentice", "not_apprentice", "is_novice", "not_novice", "class_any",
+                 "evolve_ready", "tier", "level"]
+    },
+    {
+      "id": "act",
+      "label": "选中动作",
+      "icon": "⚙️",
+      "fields": ["action", "quest_take", "set_flag", "flag", "side_offer", "side_take",
+                 "evolve_class", "path", "apprentice_check", "tutor_skill", "skill",
+                 "cost", "need_lv", "consume_item", "give_item", "key", "count",
+                 "unlock_prof", "unlock_class", "give_prof_exp", "open_shop", "hint"]
+    }
+  ]
+}

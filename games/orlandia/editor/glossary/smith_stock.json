@@ -1,0 +1,71 @@
+{
+  "fields": {
+    "quality_weights": {
+      "zh": "品质抽取权重",
+      "note": "QUALITY_WEIGHTS：品质档位 → 权重（实测白20/绿25/蓝35/紫15/橙5）。抽取走 QUALITY_TIERS.pick_weights —— 档位顺序的唯一真源在 game/core/quality_tiers.py。",
+      "widget": "kv",
+      "group": "rules"
+    },
+    "shelf_rules": {
+      "zh": "货架规则组",
+      "note": "货架件数 / 等级窗口 / 补货周期 / 份数档位 + 品质权重（后两项与顶层 quality_weights 同源同一份）。",
+      "widget": "kv",
+      "group": "rules"
+    },
+    "shelf_rules.stock_count": {
+      "zh": "每城货架件数",
+      "note": "STOCK_COUNT（实测 8 = 2 武器 + 3 防具 + 2 饰品 + 1 随机；v170 从 4 扩到 8）。",
+      "group": "rules"
+    },
+    "shelf_rules.stock_window": {
+      "zh": "城镇等级窗口",
+      "note": "STOCK_WINDOW（实测 5 = 城镇推荐等级 ±5 的候选池窗口）。",
+      "group": "rules"
+    },
+    "shelf_rules.restock_hours": {
+      "zh": "补货周期（小时）",
+      "note": "RESTOCK_HOURS（实测 6）：到点保留未售罄件 + 补新品填满件数。",
+      "group": "rules"
+    },
+    "shelf_rules.qty_by_quality": {
+      "zh": "按品质的份数",
+      "note": "QTY_BY_QUALITY：品质 → 每件份数（实测只配紫/橙 = 1；其余品质走 random.randint(2, 3)）。",
+      "widget": "kv",
+      "group": "rules"
+    },
+    "shelf_rules.quality_weights": {
+      "zh": "品质抽取权重（同顶层）",
+      "note": "与顶层 quality_weights 同源同一份（逐字节相同）—— 只为「一条 = 一组规则」的完整性在组内重复一次。",
+      "widget": "kv",
+      "group": "rules"
+    },
+    "npc_names": {
+      "zh": "城镇铁匠署名",
+      "note": "SMITH_NPC_NAMES：城镇地图 id → 铁匠 NPC 名（实测 9 城）—— 上架时命名成「XX 的作品」。键指向 maps 域城镇 id（未展开）。",
+      "widget": "kv",
+      "group": "town"
+    },
+    "town_levels": {
+      "zh": "城镇推荐等级",
+      "note": "_SMITH_TOWN_LEVELS：城镇地图 id → 推荐等级（实测 11 城；v135 方案文档窗口中心值，v168 补了铁盾镇/铁砧要塞）。town_level() 优先查它，未命中才回退地图等级。",
+      "widget": "kv",
+      "group": "town"
+    }
+  },
+  "groups": [
+    {
+      "id": "rules",
+      "label": "货架规则",
+      "icon": "⚒️",
+      "fields": ["shelf_rules", "shelf_rules.stock_count", "shelf_rules.stock_window",
+                 "shelf_rules.restock_hours", "shelf_rules.qty_by_quality",
+                 "shelf_rules.quality_weights", "quality_weights"]
+    },
+    {
+      "id": "town",
+      "label": "城镇",
+      "icon": "🏘",
+      "fields": ["npc_names", "town_levels"]
+    }
+  ]
+}

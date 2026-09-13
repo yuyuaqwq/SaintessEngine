@@ -1,0 +1,77 @@
+{
+  "fields": {
+    "name": {
+      "zh": "符文名",
+      "note": "显示名（16/16 条；与 RUNE_EFFECT_NAMES 里该 effect 的中文名逐条相等）。"
+    },
+    "icon": {
+      "zh": "图标",
+      "note": "展示用字形（表情符号）。"
+    },
+    "quality": {
+      "zh": "品质",
+      "note": "blue 8 / purple 6 / orange 2 —— 掉落率（RUNE_DROP）与碎片消耗（RUNE_CRAFT_SHARDS）都按它分档。",
+      "widget": "select"
+    },
+    "effect": {
+      "zh": "效果 key（引擎词汇）",
+      "note": "引擎侧效果标识（16 个取值，与符文 id 一一对应）。14/16 在 effect_rules 域解析不到 → 本域不声明 ref、不展开。"
+    },
+    "desc": {
+      "zh": "效果说明",
+      "note": "带 {v} 占位的文案（14/16 条含 {v}），渲染时按当前等级代入 lvl 的值。",
+      "widget": "textarea"
+    },
+    "cost": {
+      "zh": "售价/制作基价",
+      "note": "金币基价（实测 800/900/1000/1500）；制作费 = cost // 2（源侧 v136 注释）。"
+    },
+    "lvl": {
+      "zh": "各等级数值",
+      "note": "等级 → 数值（16/16 条都是 1/2/3 三级）。⚠️ JSON 里键是字符串 \"1\"/\"2\"/\"3\"（真源是 int 键，JSON 对象键只能是字符串）；值实测 float / int / 数值列表（rn_chain 的 [0.1, 0.7]）三种。",
+      "widget": "kv"
+    },
+    "craft": {
+      "zh": "制作配方（素材）",
+      "note": "导出器注入（真源 runes.py:285 RUNE_CRAFT，与 RUNES 键一一对应、16/16 覆盖 0 悬空）：{mat: 物品 id, count: 数量}。⚠️ 是「符文制作」的素材，不是 craft 域的配方引用。",
+      "widget": "kv"
+    },
+    "craft.mat": {
+      "zh": "制作·素材",
+      "note": "items 域 key（实测 3 个互异值 100% 命中）。未展开。",
+      "ref": {
+        "domain": "items",
+        "by": "key"
+      }
+    },
+    "craft.count": {
+      "zh": "制作·数量",
+      "note": "素材数量（实测 2 / 3 / 4，按品质分档）。"
+    },
+    "conflicts": {
+      "zh": "互斥效果",
+      "note": "导出器注入（真源 RUNE_CONFLICTS 的 3 对 pairs 按 effect 折成对手列表，可无损反推）：只有 6 个 effect 有对手（burn↔freeze / barrier↔thorns / scavenger↔exp_bless）→ 另外 10 条符文无此键。",
+      "widget": "lines"
+    }
+  },
+  "groups": [
+    {
+      "id": "identity",
+      "label": "身份",
+      "icon": "🔯",
+      "fields": ["name", "icon", "quality", "effect", "desc"]
+    },
+    {
+      "id": "numbers",
+      "label": "数值",
+      "icon": "📈",
+      "fields": ["cost", "lvl"]
+    },
+    {
+      "id": "craft",
+      "label": "制作与互斥",
+      "icon": "🔨",
+      "fields": ["craft", "craft.mat", "craft.count", "conflicts"]
+    }
+  ]
+}

@@ -1,0 +1,2225 @@
+{
+  "ach_abyss_clear": {
+    "id": "ach_abyss_clear",
+    "cat": "战斗",
+    "name": "传说终结者",
+    "title": "传说终结者",
+    "desc": "通关深渊裂隙副本",
+    "cond": {
+      "type": "inst_id",
+      "inst": "inst_abyss_gate"
+    },
+    "reward": {
+      "items": {
+        "i_chest_mithril": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_alchemy10": {
+    "id": "ach_alchemy10",
+    "cat": "探索",
+    "name": "炼金试炼",
+    "title": "炼金试炼",
+    "desc": "炼金 10 次",
+    "cond": {
+      "type": "prof_count",
+      "key": "alchemy_count",
+      "value": 10
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_mo_fa_fen_chen": 2
+      }
+    }
+  },
+  "ach_alchemy50": {
+    "id": "ach_alchemy50",
+    "cat": "探索",
+    "name": "点金术士",
+    "title": "点金术士",
+    "desc": "累计炼金 50 次",
+    "cond": {
+      "type": "prof_count",
+      "key": "alchemy_count",
+      "value": 50
+    },
+    "points": 1,
+    "reward": {
+      "items": {
+        "i_chest_wood": 1,
+        "mat_mo_fa_fen_chen": 5
+      }
+    }
+  },
+  "ach_apprentice1": {
+    "id": "ach_apprentice1",
+    "cat": "副业",
+    "name": "拜师学艺",
+    "title": "拜师学艺",
+    "desc": "完成任意 1 位导师的拜师进修",
+    "cond": {
+      "type": "apprentice",
+      "value": 1
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_cao_yao": 2
+      }
+    }
+  },
+  "ach_apprentice4": {
+    "id": "ach_apprentice4",
+    "cat": "副业",
+    "name": "博采众长",
+    "title": "博采众长",
+    "desc": "完成 4 位导师的拜师进修",
+    "cond": {
+      "type": "apprentice",
+      "value": 4
+    },
+    "reward": {
+      "items": {
+        "mat_jing_tie": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_apprentice8": {
+    "id": "ach_apprentice8",
+    "cat": "副业",
+    "name": "全知全能",
+    "title": "全知全能",
+    "desc": "完成全部 8 位导师的拜师进修",
+    "cond": {
+      "type": "apprentice",
+      "value": 8
+    },
+    "points": 1,
+    "bonus": {
+      "prof_exp_mult": 1.1
+    },
+    "reward": {
+      "items": {
+        "i_chest_iron": 1
+      }
+    }
+  },
+  "ach_area10": {
+    "id": "ach_area10",
+    "cat": "探索",
+    "name": "大陆探险家",
+    "title": "大陆探险家",
+    "desc": "到访 10 个不同区域",
+    "cond": {
+      "type": "visited",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "mat_tie_kuang_shi": 3
+      }
+    },
+    "points": 1
+  },
+  "ach_area2": {
+    "id": "ach_area2",
+    "cat": "探索",
+    "name": "初来乍到",
+    "title": "初来乍到",
+    "desc": "到达第 2 个区域",
+    "cond": {
+      "type": "visited",
+      "value": 2
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_cao_yao": 2
+      }
+    }
+  },
+  "ach_area_all": {
+    "id": "ach_area_all",
+    "cat": "探索",
+    "name": "环游大陆",
+    "title": "环游大陆",
+    "desc": "到访 30 张地图",
+    "cond": {
+      "type": "visited",
+      "value": 30
+    },
+    "reward": {
+      "items": {
+        "i_chest_wood": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "spd": 5
+    }
+  },
+  "ach_bard_all": {
+    "id": "ach_bard_all",
+    "cat": "隐藏",
+    "name": "史诗聆听者",
+    "title": "史诗聆听者",
+    "desc": "聆听吟游诗人的歌谣",
+    "cond": {
+      "type": "flag",
+      "flag": "heard_song"
+    },
+    "reward": {
+      "items": {
+        "i_chest_mithril": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 2
+  },
+  "ach_bestiary50": {
+    "id": "ach_bestiary50",
+    "cat": "探索",
+    "name": "图鉴收集者",
+    "title": "图鉴收集者",
+    "desc": "解锁 50 个图鉴条目",
+    "cond": {
+      "type": "bestiary",
+      "value": 50
+    },
+    "reward": {
+      "items": {
+        "i_chest_wood": 1
+      }
+    },
+    "points": 1
+  },
+  "ach_bestiary_all": {
+    "id": "ach_bestiary_all",
+    "cat": "探索",
+    "name": "博物学家",
+    "title": "博物学家",
+    "desc": "解锁全部图鉴",
+    "cond": {
+      "type": "bestiary_all"
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "mdef": 5
+    }
+  },
+  "ach_boss1": {
+    "id": "ach_boss1",
+    "cat": "战斗",
+    "name": "屠龙者",
+    "title": "屠龙者",
+    "desc": "击杀 1 个区域 Boss",
+    "cond": {
+      "type": "boss",
+      "value": 1
+    },
+    "reward": {
+      "items": {
+        "mat_jing_tie": 3,
+        "i_chest_wood": 1
+      }
+    },
+    "points": 1
+  },
+  "ach_boss10": {
+    "id": "ach_boss10",
+    "cat": "战斗",
+    "name": "弑君者",
+    "title": "弑君者",
+    "desc": "累计击杀 10 个区域 Boss",
+    "cond": {
+      "type": "boss",
+      "value": 10
+    },
+    "points": 1,
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    }
+  },
+  "ach_boss5": {
+    "id": "ach_boss5",
+    "cat": "战斗",
+    "name": "Boss 猎手",
+    "title": "Boss 猎手",
+    "desc": "击杀 5 个区域 Boss",
+    "cond": {
+      "type": "boss",
+      "value": 5
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "atk": 15
+    }
+  },
+  "ach_bp20": {
+    "id": "ach_bp20",
+    "cat": "探索",
+    "name": "博闻强识",
+    "title": "博闻强识",
+    "desc": "累计学习 20 张图纸",
+    "cond": {
+      "type": "blueprints_learned",
+      "value": 20
+    },
+    "points": 1,
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 3
+      }
+    }
+  },
+  "ach_chest50": {
+    "id": "ach_chest50",
+    "cat": "探索",
+    "name": "宝箱猎人",
+    "title": "宝箱猎人",
+    "desc": "累计开启 50 个宝箱",
+    "cond": {
+      "type": "chests_opened",
+      "value": 50
+    },
+    "points": 1,
+    "reward": {
+      "items": {
+        "i_chest_gold": 1,
+        "mat_tu_zhi_can_ye": 3
+      }
+    }
+  },
+  "ach_collect_moon": {
+    "id": "ach_collect_moon",
+    "cat": "隐藏",
+    "name": "夜钓月华",
+    "title": "月夜守望者",
+    "desc": "夜晚钓到收藏鱼月华水母",
+    "cond": {
+      "type": "collect_fish",
+      "key": "mat_moon_jelly"
+    },
+    "reward": {
+      "items": {
+        "i_chest_mithril": 1,
+        "mat_tu_zhi_can_ye": 1
+      }
+    },
+    "points": 2
+  },
+  "ach_collect_rainbow": {
+    "id": "ach_collect_rainbow",
+    "cat": "隐藏",
+    "name": "虹彩邂逅",
+    "title": "虹彩幸运儿",
+    "desc": "钓到传说收藏鱼虹彩龙鲤",
+    "cond": {
+      "type": "collect_fish",
+      "key": "mat_rainbow_kite"
+    },
+    "reward": {
+      "items": {
+        "i_chest_mithril": 1,
+        "mat_tu_zhi_can_ye": 1
+      }
+    },
+    "points": 2
+  },
+  "ach_collect_star": {
+    "id": "ach_collect_star",
+    "cat": "隐藏",
+    "name": "星海遗民",
+    "title": "星海旅人",
+    "desc": "在迷雾海沟/龙鲸海域/风暴之海钓到收藏鱼星骸遗鳞",
+    "cond": {
+      "type": "collect_fish",
+      "key": "mat_star_remnant"
+    },
+    "reward": {
+      "items": {
+        "i_chest_mithril": 1,
+        "mat_tu_zhi_can_ye": 1
+      }
+    },
+    "points": 2
+  },
+  "ach_cook50": {
+    "id": "ach_cook50",
+    "cat": "探索",
+    "name": "厨艺大师",
+    "title": "厨艺大师",
+    "desc": "累计烹饪 50 次",
+    "cond": {
+      "type": "prof_count",
+      "key": "cook_count",
+      "value": 50
+    },
+    "points": 1,
+    "reward": {
+      "items": {
+        "i_chest_wood": 1,
+        "mat_shou_rou": 8
+      }
+    }
+  },
+  "ach_craft10": {
+    "id": "ach_craft10",
+    "cat": "探索",
+    "name": "锻造初心",
+    "title": "锻造初心",
+    "desc": "锻造 10 件装备",
+    "cond": {
+      "type": "prof_count",
+      "key": "craft_count",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "mat_tie_kuang_shi": 3
+      }
+    },
+    "points": 1
+  },
+  "ach_craft100": {
+    "id": "ach_craft100",
+    "cat": "探索",
+    "name": "神锻名家",
+    "title": "神锻名家",
+    "desc": "锻造 100 件装备",
+    "cond": {
+      "type": "prof_count",
+      "key": "craft_count",
+      "value": 100
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_demon100": {
+    "id": "ach_demon100",
+    "cat": "战斗",
+    "name": "恶魔猎手",
+    "title": "恶魔猎手",
+    "desc": "击杀 100 只恶魔/魔像系怪物",
+    "cond": {
+      "type": "kills_type",
+      "keywords": [
+        "恶魔",
+        "魔像"
+      ],
+      "value": 100
+    },
+    "reward": {
+      "items": {
+        "mat_mi_yin": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_dragon50": {
+    "id": "ach_dragon50",
+    "cat": "战斗",
+    "name": "龙之仇敌",
+    "title": "龙之仇敌",
+    "desc": "击杀 50 只龙系怪物",
+    "cond": {
+      "type": "kills_type",
+      "keyword": "龙",
+      "value": 50
+    },
+    "reward": {
+      "items": {
+        "i_chest_gold": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_dragon_skill": {
+    "id": "ach_dragon_skill",
+    "cat": "隐藏",
+    "name": "龙语学徒",
+    "title": "龙语学徒",
+    "desc": "掌握 10 个分支技能",
+    "cond": {
+      "type": "branch_skills",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "mat_shen_yuan_jing_gang": 2
+      }
+    },
+    "points": 2
+  },
+  "ach_elite20": {
+    "id": "ach_elite20",
+    "cat": "战斗",
+    "name": "精英克星",
+    "title": "精英克星",
+    "desc": "击杀 20 只精英怪物",
+    "cond": {
+      "type": "elite",
+      "value": 20
+    },
+    "reward": {
+      "items": {
+        "i_chest_iron": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "crit": 0.02
+    }
+  },
+  "ach_elite5": {
+    "id": "ach_elite5",
+    "cat": "战斗",
+    "name": "精英猎手",
+    "title": "精英猎手",
+    "desc": "击杀 5 只精英怪物",
+    "cond": {
+      "type": "elite",
+      "value": 5
+    },
+    "reward": {
+      "items": {
+        "mat_qiang_hua_shi": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_elite50": {
+    "id": "ach_elite50",
+    "cat": "战斗",
+    "name": "精英屠戮者",
+    "title": "精英屠戮者",
+    "desc": "累计击杀 50 只精英怪物",
+    "cond": {
+      "type": "elite",
+      "value": 50
+    },
+    "points": 1,
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_shen_yuan_jing_gang": 1
+      }
+    }
+  },
+  "ach_enhance100": {
+    "id": "ach_enhance100",
+    "cat": "副业",
+    "name": "强化宗师",
+    "title": "强化宗师",
+    "desc": "累计强化 100 次装备",
+    "cond": {
+      "type": "prof_count",
+      "key": "enhance_count",
+      "value": 100
+    },
+    "points": 1,
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_qiang_hua_shi": 5
+      }
+    }
+  },
+  "ach_event10": {
+    "id": "ach_event10",
+    "cat": "社交",
+    "name": "国战勇士",
+    "title": "国战勇士",
+    "desc": "参与 10 次世界事件",
+    "cond": {
+      "type": "world_event",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "mat_mi_yin": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_event_all": {
+    "id": "ach_event_all",
+    "cat": "隐藏",
+    "name": "世界的见证者",
+    "title": "世界的见证者",
+    "desc": "累计参与 30 次世界事件",
+    "cond": {
+      "type": "event_all",
+      "value": 30
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 2
+  },
+  "ach_evolve1": {
+    "id": "ach_evolve1",
+    "cat": "成长",
+    "name": "首次转职",
+    "title": "首次转职",
+    "desc": "完成首次转职",
+    "cond": {
+      "type": "evolve",
+      "value": 1
+    },
+    "points": 1,
+    "reward": {
+      "exp": 1000,
+      "items": {
+        "i_chest_wood": 1
+      }
+    }
+  },
+  "ach_evolve2": {
+    "id": "ach_evolve2",
+    "cat": "成长",
+    "name": "资深斗士",
+    "title": "资深斗士",
+    "desc": "完成二次转职",
+    "cond": {
+      "type": "evolve",
+      "value": 2
+    },
+    "reward": {
+      "items": {
+        "i_chest_iron": 1
+      }
+    },
+    "points": 1
+  },
+  "ach_evolve3": {
+    "id": "ach_evolve3",
+    "cat": "成长",
+    "name": "传奇斗士",
+    "title": "传奇斗士",
+    "desc": "完成三次转职",
+    "cond": {
+      "type": "evolve",
+      "value": 3
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "atk": 12
+    }
+  },
+  "ach_faction1": {
+    "id": "ach_faction1",
+    "cat": "社交",
+    "name": "选择阵营",
+    "title": "选择阵营",
+    "desc": "加入 1 个阵营",
+    "cond": {
+      "type": "faction",
+      "value": 1
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_tie_kuang_shi": 2
+      }
+    }
+  },
+  "ach_faction_rank1": {
+    "id": "ach_faction_rank1",
+    "cat": "社交",
+    "name": "大陆之柱",
+    "title": "大陆之柱",
+    "desc": "累计阵营贡献达到 500",
+    "cond": {
+      "type": "faction_rank1"
+    },
+    "reward": {
+      "items": {
+        "i_chest_gold": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "atk": 8,
+      "def": 8,
+      "matk": 8,
+      "mdef": 8,
+      "spd": 8
+    }
+  },
+  "ach_faction_top": {
+    "id": "ach_faction_top",
+    "cat": "社交",
+    "name": "阵营先锋",
+    "title": "阵营先锋",
+    "desc": "累计阵营贡献达到 100",
+    "cond": {
+      "type": "faction_top"
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "atk": 8
+    }
+  },
+  "ach_first_fight": {
+    "id": "ach_first_fight",
+    "cat": "战斗",
+    "name": "初试锋芒",
+    "title": "初试锋芒",
+    "desc": "完成首次战斗",
+    "cond": {
+      "type": "kills",
+      "value": 1
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_shou_rou": 3
+      }
+    }
+  },
+  "ach_fish10": {
+    "id": "ach_fish10",
+    "cat": "探索",
+    "name": "垂钓新手",
+    "title": "垂钓新手",
+    "desc": "垂钓 10 次",
+    "cond": {
+      "type": "prof_count",
+      "key": "fish_count",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "mat_yin_lin_yu": 3
+      }
+    },
+    "points": 1
+  },
+  "ach_fish100": {
+    "id": "ach_fish100",
+    "cat": "探索",
+    "name": "垂钓大师",
+    "title": "垂钓大师",
+    "desc": "垂钓 100 次",
+    "cond": {
+      "type": "prof_count",
+      "key": "fish_count",
+      "value": 100
+    },
+    "reward": {
+      "items": {
+        "mat_mi_yin": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_fish500": {
+    "id": "ach_fish500",
+    "cat": "探索",
+    "name": "沧海钓客",
+    "title": "沧海钓客",
+    "desc": "累计垂钓 500 次",
+    "cond": {
+      "type": "prof_count",
+      "key": "fish_count",
+      "value": 500
+    },
+    "points": 1,
+    "reward": {
+      "items": {
+        "i_chest_iron": 1,
+        "mat_mi_yin": 3
+      }
+    }
+  },
+  "ach_fish_king": {
+    "id": "ach_fish_king",
+    "cat": "探索",
+    "name": "鱼王猎手",
+    "title": "鱼王猎手",
+    "desc": "钓上传说中的鱼王",
+    "cond": {
+      "type": "fish_king"
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 1
+      }
+    },
+    "points": 1
+  },
+  "ach_flawless": {
+    "id": "ach_flawless",
+    "cat": "战斗",
+    "name": "完美主义者",
+    "title": "完美主义者",
+    "desc": "未受伤通关 1 个副本",
+    "cond": {
+      "type": "flawless"
+    },
+    "reward": {
+      "items": {
+        "i_chest_iron": 1
+      }
+    },
+    "points": 1
+  },
+  "ach_gather10": {
+    "id": "ach_gather10",
+    "cat": "探索",
+    "name": "采集新手",
+    "title": "采集新手",
+    "desc": "采集 10 次",
+    "cond": {
+      "type": "prof_count",
+      "key": "gather_count",
+      "value": 10
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_cao_yao": 3
+      }
+    }
+  },
+  "ach_gather100": {
+    "id": "ach_gather100",
+    "cat": "探索",
+    "name": "采集达人",
+    "title": "采集达人",
+    "desc": "采集 100 次",
+    "cond": {
+      "type": "prof_count",
+      "key": "gather_count",
+      "value": 100
+    },
+    "reward": {
+      "items": {
+        "mat_jing_tie": 3
+      }
+    },
+    "points": 1
+  },
+  "ach_gather500": {
+    "id": "ach_gather500",
+    "cat": "探索",
+    "name": "草木知音",
+    "title": "草木知音",
+    "desc": "累计采集 500 次",
+    "cond": {
+      "type": "prof_count",
+      "key": "gather_count",
+      "value": 500
+    },
+    "points": 1,
+    "reward": {
+      "items": {
+        "i_chest_wood": 1,
+        "mat_cao_yao": 10
+      }
+    }
+  },
+  "ach_goblin100": {
+    "id": "ach_goblin100",
+    "cat": "战斗",
+    "name": "哥布林克星",
+    "title": "哥布林克星",
+    "desc": "击杀 100 只哥布林",
+    "cond": {
+      "type": "kills_type",
+      "keyword": "哥布林",
+      "value": 100
+    },
+    "reward": {
+      "items": {
+        "mat_tie_kuang_shi": 3
+      }
+    },
+    "points": 1
+  },
+  "ach_goblin_friend": {
+    "id": "ach_goblin_friend",
+    "cat": "隐藏",
+    "name": "地精挚友",
+    "title": "地精挚友",
+    "desc": "参与 20 次世界事件",
+    "cond": {
+      "type": "world_event",
+      "value": 20
+    },
+    "reward": {
+      "items": {
+        "i_chest_iron": 1
+      }
+    },
+    "points": 2
+  },
+  "ach_guild1": {
+    "id": "ach_guild1",
+    "cat": "社交",
+    "name": "加入公会",
+    "title": "加入公会",
+    "desc": "加入 1 个公会",
+    "cond": {
+      "type": "guild",
+      "value": 1
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_tie_kuang_shi": 2
+      }
+    }
+  },
+  "ach_guild3": {
+    "id": "ach_guild3",
+    "cat": "社交",
+    "name": "公会精英",
+    "title": "公会精英",
+    "desc": "公会达到 3 级",
+    "cond": {
+      "type": "guild_lv",
+      "value": 3
+    },
+    "reward": {
+      "items": {
+        "mat_mi_yin": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_guild5": {
+    "id": "ach_guild5",
+    "cat": "社交",
+    "name": "公会栋梁",
+    "title": "公会栋梁",
+    "desc": "公会达到 5 级",
+    "cond": {
+      "type": "guild_lv",
+      "value": 5
+    },
+    "reward": {
+      "items": {
+        "i_chest_iron": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "hp": 20
+    }
+  },
+  "ach_h3_ember": {
+    "id": "ach_h3_ember",
+    "cat": "隐藏",
+    "name": "灰烬守墓人",
+    "title": "灰烬守墓人",
+    "desc": "完成隐藏任务 H3·烬火的余温",
+    "cond": {
+      "type": "quest_done",
+      "key": "s_hidden_ember"
+    },
+    "reward": {
+      "items": {
+        "i_chest_mithril": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 2
+  },
+  "ach_h4_library": {
+    "id": "ach_h4_library",
+    "cat": "隐藏",
+    "name": "图书馆的书记官",
+    "title": "图书馆的书记官",
+    "desc": "完成隐藏任务 H4·失落的图书馆",
+    "cond": {
+      "type": "quest_done",
+      "key": "s_hidden_library"
+    },
+    "reward": {
+      "items": {
+        "i_chest_mithril": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 2
+  },
+  "ach_hidden3": {
+    "id": "ach_hidden3",
+    "cat": "探索",
+    "name": "秘境猎手",
+    "title": "秘境猎手",
+    "desc": "进入 2 个隐藏区域",
+    "cond": {
+      "type": "hidden_area",
+      "value": 2
+    },
+    "reward": {
+      "items": {
+        "i_chest_iron": 1
+      }
+    },
+    "points": 1
+  },
+  "ach_hidden_hunter": {
+    "id": "ach_hidden_hunter",
+    "cat": "隐藏",
+    "name": "传说猎人",
+    "title": "传说猎人",
+    "desc": "击败全部 25 种隐藏怪物",
+    "cond": {
+      "type": "hidden_monsters_all"
+    },
+    "reward": {
+      "items": {
+        "i_chest_dragon": 1,
+        "mat_tu_zhi_can_ye": 3
+      }
+    },
+    "points": 2
+  },
+  "ach_inst1": {
+    "id": "ach_inst1",
+    "cat": "战斗",
+    "name": "副本新星",
+    "title": "副本新星",
+    "desc": "通关任意副本 1 次",
+    "cond": {
+      "type": "inst_clear",
+      "value": 1
+    },
+    "points": 1,
+    "reward": {
+      "exp": 1000,
+      "items": {
+        "i_chest_wood": 1
+      }
+    }
+  },
+  "ach_inst10": {
+    "id": "ach_inst10",
+    "cat": "战斗",
+    "name": "副本达人",
+    "title": "副本达人",
+    "desc": "通关任意副本 10 次",
+    "cond": {
+      "type": "inst_clear",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1
+      }
+    },
+    "points": 1
+  },
+  "ach_inst5": {
+    "id": "ach_inst5",
+    "cat": "战斗",
+    "name": "地城征服者",
+    "title": "地城征服者",
+    "desc": "累计通关 5 次副本",
+    "cond": {
+      "type": "inst_clear",
+      "value": 5
+    },
+    "points": 1,
+    "reward": {
+      "items": {
+        "i_chest_iron": 1,
+        "mat_jing_tie": 5
+      }
+    }
+  },
+  "ach_inst_all8": {
+    "id": "ach_inst_all8",
+    "cat": "战斗",
+    "name": "副本大师",
+    "title": "副本大师",
+    "desc": "累计通关 8 个副本",
+    "cond": {
+      "type": "inst_all8"
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "atk": 5,
+      "def": 5,
+      "matk": 5,
+      "mdef": 5,
+      "spd": 5
+    }
+  },
+  "ach_kill10": {
+    "id": "ach_kill10",
+    "cat": "战斗",
+    "name": "新手猎人",
+    "title": "新手猎人",
+    "desc": "累计击杀 10 只怪物",
+    "cond": {
+      "type": "kills",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "mat_cao_yao": 3
+      }
+    },
+    "points": 1
+  },
+  "ach_kill100": {
+    "id": "ach_kill100",
+    "cat": "战斗",
+    "name": "百人斩",
+    "title": "百人斩",
+    "desc": "累计击杀 100 只怪物",
+    "cond": {
+      "type": "kills",
+      "value": 100
+    },
+    "reward": {
+      "items": {
+        "mat_jing_tie": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_kill2000": {
+    "id": "ach_kill2000",
+    "cat": "战斗",
+    "name": "怪物克星",
+    "title": "怪物克星",
+    "desc": "累计击杀 2000 只怪物",
+    "cond": {
+      "type": "kills",
+      "value": 2000
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "atk": 10
+    }
+  },
+  "ach_kill500": {
+    "id": "ach_kill500",
+    "cat": "战斗",
+    "name": "狩猎大师",
+    "title": "狩猎大师",
+    "desc": "累计击杀 500 只怪物",
+    "cond": {
+      "type": "kills",
+      "value": 500
+    },
+    "reward": {
+      "items": {
+        "i_chest_wood": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "atk": 5
+    }
+  },
+  "ach_learn10": {
+    "id": "ach_learn10",
+    "cat": "成长",
+    "name": "技能收藏家",
+    "title": "技能收藏家",
+    "desc": "学习 10 个技能",
+    "cond": {
+      "type": "learned",
+      "value": 10
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_cao_yao": 2
+      }
+    }
+  },
+  "ach_learn30": {
+    "id": "ach_learn30",
+    "cat": "成长",
+    "name": "技能大师",
+    "title": "技能大师",
+    "desc": "学习 30 个技能",
+    "cond": {
+      "type": "learned",
+      "value": 30
+    },
+    "reward": {
+      "items": {
+        "mat_jing_tie": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_learn_all": {
+    "id": "ach_learn_all",
+    "cat": "成长",
+    "name": "全知全能",
+    "title": "全知全能",
+    "desc": "学完全部可用技能",
+    "cond": {
+      "type": "learned_all"
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "crit": 0.03
+    }
+  },
+  "ach_lore_all": {
+    "id": "ach_lore_all",
+    "cat": "隐藏",
+    "name": "历史学家",
+    "title": "历史学家",
+    "desc": "读懂失落图书馆的石碑记载",
+    "cond": {
+      "type": "flag",
+      "flag": "tablet_page"
+    },
+    "reward": {
+      "items": {
+        "i_chest_mithril": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 2
+  },
+  "ach_lv10": {
+    "id": "ach_lv10",
+    "cat": "成长",
+    "name": "崭露头角",
+    "title": "崭露头角",
+    "desc": "达到 10 级",
+    "cond": {
+      "type": "level",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "mat_tie_kuang_shi": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_lv100": {
+    "id": "ach_lv100",
+    "cat": "成长",
+    "name": "百级传说",
+    "title": "百级传说",
+    "desc": "达到 100 级",
+    "cond": {
+      "type": "level",
+      "value": 100
+    },
+    "reward": {
+      "items": {
+        "i_chest_gold": 1,
+        "mat_tu_zhi_can_ye": 3
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "atk": 10,
+      "def": 10,
+      "matk": 10,
+      "mdef": 10,
+      "spd": 10
+    }
+  },
+  "ach_lv20": {
+    "id": "ach_lv20",
+    "cat": "成长",
+    "name": "名声鹊起",
+    "title": "名声鹊起",
+    "desc": "达到 20 级",
+    "cond": {
+      "type": "level",
+      "value": 20
+    },
+    "reward": {
+      "items": {
+        "mat_jing_tie": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_lv30": {
+    "id": "ach_lv30",
+    "cat": "成长",
+    "name": "小有名气",
+    "title": "小有名气",
+    "desc": "达到 30 级",
+    "cond": {
+      "type": "level",
+      "value": 30
+    },
+    "reward": {
+      "items": {
+        "i_chest_wood": 1
+      }
+    },
+    "points": 1
+  },
+  "ach_lv40": {
+    "id": "ach_lv40",
+    "cat": "成长",
+    "name": "资深冒险者",
+    "title": "资深冒险者",
+    "desc": "达到 40 级",
+    "cond": {
+      "type": "level",
+      "value": 40
+    },
+    "reward": {
+      "items": {
+        "mat_qiang_hua_shi": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_lv50": {
+    "id": "ach_lv50",
+    "cat": "成长",
+    "name": "大陆精英",
+    "title": "大陆精英",
+    "desc": "达到 50 级",
+    "cond": {
+      "type": "level",
+      "value": 50
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1
+      }
+    },
+    "points": 1
+  },
+  "ach_lv60": {
+    "id": "ach_lv60",
+    "cat": "成长",
+    "name": "传奇之路",
+    "title": "传奇之路",
+    "desc": "达到 60 级",
+    "cond": {
+      "type": "level",
+      "value": 60
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "atk": 8
+    }
+  },
+  "ach_main12": {
+    "id": "ach_main12",
+    "cat": "隐藏",
+    "name": "黎明继承者",
+    "title": "黎明之光继承者",
+    "desc": "完成主线第 12 章",
+    "cond": {
+      "type": "main_done"
+    },
+    "reward": {
+      "items": {
+        "i_chest_dragon": 1,
+        "mat_tu_zhi_can_ye": 3
+      }
+    },
+    "points": 2,
+    "bonus": {
+      "atk": 15,
+      "def": 15,
+      "matk": 15,
+      "mdef": 15,
+      "spd": 15
+    }
+  },
+  "ach_mine100": {
+    "id": "ach_mine100",
+    "cat": "探索",
+    "name": "矿工精神",
+    "title": "矿工精神",
+    "desc": "挖掘 100 次",
+    "cond": {
+      "type": "prof_count",
+      "key": "mine_count",
+      "value": 100
+    },
+    "reward": {
+      "items": {
+        "mat_qiang_hua_shi": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_mine500": {
+    "id": "ach_mine500",
+    "cat": "探索",
+    "name": "群山之子",
+    "title": "群山之子",
+    "desc": "累计挖掘 500 次",
+    "cond": {
+      "type": "prof_count",
+      "key": "mine_count",
+      "value": 500
+    },
+    "points": 1,
+    "reward": {
+      "items": {
+        "i_chest_iron": 1,
+        "mat_qiang_hua_shi": 5
+      }
+    }
+  },
+  "ach_mythril": {
+    "id": "ach_mythril",
+    "cat": "隐藏",
+    "name": "秘银追寻者",
+    "title": "秘银追寻者",
+    "desc": "进入隐藏地图",
+    "cond": {
+      "type": "hidden_area",
+      "value": 1
+    },
+    "reward": {
+      "items": {
+        "i_chest_mithril": 1,
+        "mat_tu_zhi_can_ye": 1
+      }
+    },
+    "points": 2
+  },
+  "ach_no_death": {
+    "id": "ach_no_death",
+    "cat": "隐藏",
+    "name": "百战不殆",
+    "title": "百战不殆",
+    "desc": "战斗胜利 100 次无败绩",
+    "cond": {
+      "type": "kills",
+      "value": 100,
+      "no_death": true
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 2
+  },
+  "ach_party1": {
+    "id": "ach_party1",
+    "cat": "社交",
+    "name": "首次组队",
+    "title": "首次组队",
+    "desc": "完成 1 次组队",
+    "cond": {
+      "type": "party",
+      "value": 1
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_cao_yao": 2
+      }
+    }
+  },
+  "ach_party10": {
+    "id": "ach_party10",
+    "cat": "社交",
+    "name": "默契搭档",
+    "title": "默契搭档",
+    "desc": "组队完成 10 次",
+    "cond": {
+      "type": "party",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "mat_jing_tie": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_party50": {
+    "id": "ach_party50",
+    "cat": "社交",
+    "name": "铁杆队友",
+    "title": "铁杆队友",
+    "desc": "组队完成 50 次",
+    "cond": {
+      "type": "party",
+      "value": 50
+    },
+    "reward": {
+      "items": {
+        "i_chest_wood": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "atk": 3,
+      "def": 3,
+      "matk": 3,
+      "mdef": 3,
+      "spd": 3
+    }
+  },
+  "ach_pro_alchemy10": {
+    "id": "ach_pro_alchemy10",
+    "cat": "副业",
+    "name": "贤者之石",
+    "title": "贤者之石",
+    "desc": "炼金达到 Lv.10",
+    "cond": {
+      "type": "prof_lv",
+      "key": "alchemy",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "i_chest_iron": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "mp": 30
+    }
+  },
+  "ach_pro_alchemy3": {
+    "id": "ach_pro_alchemy3",
+    "cat": "副业",
+    "name": "炼金学徒",
+    "title": "炼金学徒",
+    "desc": "炼金达到 Lv.3",
+    "cond": {
+      "type": "prof_lv",
+      "key": "alchemy",
+      "value": 3
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_mo_fa_fen_chen": 3
+      }
+    }
+  },
+  "ach_pro_alchemy6": {
+    "id": "ach_pro_alchemy6",
+    "cat": "副业",
+    "name": "药剂师",
+    "title": "药剂师",
+    "desc": "炼金达到 Lv.6",
+    "cond": {
+      "type": "prof_lv",
+      "key": "alchemy",
+      "value": 6
+    },
+    "reward": {
+      "items": {
+        "mat_shui_jing": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_pro_cooking10": {
+    "id": "ach_pro_cooking10",
+    "cat": "副业",
+    "name": "食神",
+    "title": "食神",
+    "desc": "烹饪达到 Lv.10",
+    "cond": {
+      "type": "prof_lv",
+      "key": "cooking",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "i_chest_wood": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "spd": 3
+    }
+  },
+  "ach_pro_cooking3": {
+    "id": "ach_pro_cooking3",
+    "cat": "副业",
+    "name": "厨房新手",
+    "title": "厨房新手",
+    "desc": "烹饪达到 Lv.3",
+    "cond": {
+      "type": "prof_lv",
+      "key": "cooking",
+      "value": 3
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_shou_rou": 3
+      }
+    }
+  },
+  "ach_pro_cooking6": {
+    "id": "ach_pro_cooking6",
+    "cat": "副业",
+    "name": "料理人",
+    "title": "料理人",
+    "desc": "烹饪达到 Lv.6",
+    "cond": {
+      "type": "prof_lv",
+      "key": "cooking",
+      "value": 6
+    },
+    "reward": {
+      "items": {
+        "mat_shui_jing": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_pro_craft10": {
+    "id": "ach_pro_craft10",
+    "cat": "副业",
+    "name": "神锻名家",
+    "title": "神锻名家",
+    "desc": "锻造达到 Lv.10",
+    "cond": {
+      "type": "prof_lv",
+      "key": "craft",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "def": 8
+    }
+  },
+  "ach_pro_craft3": {
+    "id": "ach_pro_craft3",
+    "cat": "副业",
+    "name": "铁匠学徒",
+    "title": "铁匠学徒",
+    "desc": "锻造达到 Lv.3",
+    "cond": {
+      "type": "prof_lv",
+      "key": "craft",
+      "value": 3
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_tie_kuang_shi": 3
+      }
+    }
+  },
+  "ach_pro_craft6": {
+    "id": "ach_pro_craft6",
+    "cat": "副业",
+    "name": "锻造师",
+    "title": "锻造师",
+    "desc": "锻造达到 Lv.6",
+    "cond": {
+      "type": "prof_lv",
+      "key": "craft",
+      "value": 6
+    },
+    "reward": {
+      "items": {
+        "mat_jing_tie": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_pro_enchant10": {
+    "id": "ach_pro_enchant10",
+    "cat": "副业",
+    "name": "附魔巨匠",
+    "title": "附魔巨匠",
+    "desc": "附魔达到 Lv.10",
+    "cond": {
+      "type": "prof_lv",
+      "key": "enchant",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "matk": 8
+    }
+  },
+  "ach_pro_enchant3": {
+    "id": "ach_pro_enchant3",
+    "cat": "副业",
+    "name": "符文学徒",
+    "title": "符文学徒",
+    "desc": "附魔达到 Lv.3",
+    "cond": {
+      "type": "prof_lv",
+      "key": "enchant",
+      "value": 3
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_mo_fa_fen_chen": 3
+      }
+    }
+  },
+  "ach_pro_enchant6": {
+    "id": "ach_pro_enchant6",
+    "cat": "副业",
+    "name": "附魔师",
+    "title": "附魔师",
+    "desc": "附魔 30 件装备",
+    "cond": {
+      "type": "prof_count",
+      "key": "enchant_count",
+      "value": 30
+    },
+    "reward": {
+      "items": {
+        "mat_mo_fa_fen_chen": 3
+      }
+    },
+    "points": 1
+  },
+  "ach_pro_enhance10": {
+    "id": "ach_pro_enhance10",
+    "cat": "副业",
+    "name": "铁匠名家",
+    "title": "铁匠名家",
+    "desc": "强化达到 Lv.10",
+    "cond": {
+      "type": "prof_lv",
+      "key": "enhance",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "atk": 8
+    }
+  },
+  "ach_pro_enhance3": {
+    "id": "ach_pro_enhance3",
+    "cat": "副业",
+    "name": "磨刀学徒",
+    "title": "磨刀学徒",
+    "desc": "强化达到 Lv.3",
+    "cond": {
+      "type": "prof_lv",
+      "key": "enhance",
+      "value": 3
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_qiang_hua_shi": 2
+      }
+    }
+  },
+  "ach_pro_enhance50": {
+    "id": "ach_pro_enhance50",
+    "cat": "副业",
+    "name": "强化大师",
+    "title": "强化大师",
+    "desc": "强化 50 次装备",
+    "cond": {
+      "type": "prof_count",
+      "key": "enhance_count",
+      "value": 50
+    },
+    "reward": {
+      "items": {
+        "mat_qiang_hua_shi": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_pro_enhance6": {
+    "id": "ach_pro_enhance6",
+    "cat": "副业",
+    "name": "装备精工",
+    "title": "装备精工",
+    "desc": "强化达到 Lv.6",
+    "cond": {
+      "type": "prof_lv",
+      "key": "enhance",
+      "value": 6
+    },
+    "reward": {
+      "items": {
+        "mat_mi_yin": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_pro_fishing10": {
+    "id": "ach_pro_fishing10",
+    "cat": "副业",
+    "name": "深海渔神",
+    "title": "深海渔神",
+    "desc": "垂钓达到 Lv.10",
+    "cond": {
+      "type": "prof_lv",
+      "key": "fishing",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "i_chest_wood": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "crit": 0.02
+    }
+  },
+  "ach_pro_fishing3": {
+    "id": "ach_pro_fishing3",
+    "cat": "副业",
+    "name": "垂钓新手",
+    "title": "垂钓新手",
+    "desc": "垂钓达到 Lv.3",
+    "cond": {
+      "type": "prof_lv",
+      "key": "fishing",
+      "value": 3
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_yin_lin_yu": 3
+      }
+    }
+  },
+  "ach_pro_fishing6": {
+    "id": "ach_pro_fishing6",
+    "cat": "副业",
+    "name": "捕鱼能手",
+    "title": "捕鱼能手",
+    "desc": "垂钓达到 Lv.6",
+    "cond": {
+      "type": "prof_lv",
+      "key": "fishing",
+      "value": 6
+    },
+    "reward": {
+      "items": {
+        "mat_mi_yin": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_pro_gather10": {
+    "id": "ach_pro_gather10",
+    "cat": "副业",
+    "name": "万物采集大师",
+    "title": "万物采集大师",
+    "desc": "采集达到 Lv.10",
+    "cond": {
+      "type": "prof_lv",
+      "key": "gather",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "i_chest_wood": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "hp": 30
+    }
+  },
+  "ach_pro_gather3": {
+    "id": "ach_pro_gather3",
+    "cat": "副业",
+    "name": "采药人",
+    "title": "采药人",
+    "desc": "采集达到 Lv.3",
+    "cond": {
+      "type": "prof_lv",
+      "key": "gather",
+      "value": 3
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_cao_yao": 3
+      }
+    }
+  },
+  "ach_pro_gather6": {
+    "id": "ach_pro_gather6",
+    "cat": "副业",
+    "name": "草药专家",
+    "title": "草药专家",
+    "desc": "采集达到 Lv.6",
+    "cond": {
+      "type": "prof_lv",
+      "key": "gather",
+      "value": 6
+    },
+    "reward": {
+      "items": {
+        "mat_jing_tie": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_pro_mining10": {
+    "id": "ach_pro_mining10",
+    "cat": "副业",
+    "name": "群山之王",
+    "title": "群山之王",
+    "desc": "挖掘达到 Lv.10",
+    "cond": {
+      "type": "prof_lv",
+      "key": "mining",
+      "value": 10
+    },
+    "reward": {
+      "items": {
+        "i_chest_iron": 1
+      }
+    },
+    "points": 1,
+    "bonus": {
+      "atk": 8
+    }
+  },
+  "ach_pro_mining3": {
+    "id": "ach_pro_mining3",
+    "cat": "副业",
+    "name": "挖矿工",
+    "title": "挖矿工",
+    "desc": "挖掘达到 Lv.3",
+    "cond": {
+      "type": "prof_lv",
+      "key": "mining",
+      "value": 3
+    },
+    "points": 1,
+    "reward": {
+      "exp": 100,
+      "items": {
+        "mat_tie_kuang_shi": 3
+      }
+    }
+  },
+  "ach_pro_mining6": {
+    "id": "ach_pro_mining6",
+    "cat": "副业",
+    "name": "矿脉猎手",
+    "title": "矿脉猎手",
+    "desc": "挖掘达到 Lv.6",
+    "cond": {
+      "type": "prof_lv",
+      "key": "mining",
+      "value": 6
+    },
+    "reward": {
+      "items": {
+        "mat_qiang_hua_shi": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_prof10": {
+    "id": "ach_prof10",
+    "cat": "成长",
+    "name": "大师之路",
+    "title": "大师之路",
+    "desc": "任意副业达到 Lv.10",
+    "cond": {
+      "type": "prof_any10"
+    },
+    "reward": {
+      "items": {
+        "i_chest_iron": 1
+      }
+    },
+    "points": 1
+  },
+  "ach_quest100": {
+    "id": "ach_quest100",
+    "cat": "社交",
+    "name": "百事通",
+    "title": "百事通",
+    "desc": "累计完成 100 个任务",
+    "cond": {
+      "type": "quests_done",
+      "value": 100
+    },
+    "points": 1,
+    "reward": {
+      "items": {
+        "i_chest_silver": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    }
+  },
+  "ach_register": {
+    "id": "ach_register",
+    "cat": "成长",
+    "name": "初出茅庐",
+    "title": "初出茅庐",
+    "desc": "注册角色",
+    "cond": {
+      "type": "registered"
+    },
+    "reward": {
+      "items": {
+        "mat_cao_yao": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_saint_save": {
+    "id": "ach_saint_save",
+    "cat": "隐藏",
+    "name": "圣女守护者",
+    "title": "圣女守护者",
+    "desc": "救下圣女(完成主线 q6_1·圣女的信任)",
+    "cond": {
+      "type": "main_quest_done",
+      "key": "q6_1"
+    },
+    "reward": {
+      "items": {
+        "i_chest_mithril": 1,
+        "mat_tu_zhi_can_ye": 1
+      }
+    },
+    "points": 2
+  },
+  "ach_slime100": {
+    "id": "ach_slime100",
+    "cat": "战斗",
+    "name": "史莱姆猎人",
+    "title": "史莱姆猎人",
+    "desc": "击杀 100 只史莱姆",
+    "cond": {
+      "type": "kills_type",
+      "keyword": "史莱姆",
+      "value": 100
+    },
+    "reward": {
+      "items": {
+        "mat_cao_yao": 3
+      }
+    },
+    "points": 1
+  },
+  "ach_stardust_set": {
+    "id": "ach_stardust_set",
+    "cat": "隐藏",
+    "name": "星尘守望者",
+    "title": "星尘守望者",
+    "desc": "获得星尘套 4 件套",
+    "cond": {
+      "type": "set_has",
+      "key": "星尘套",
+      "value": 4
+    },
+    "reward": {
+      "items": {
+        "i_chest_mithril": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 2
+  },
+  "ach_starfall_sword": {
+    "id": "ach_starfall_sword",
+    "cat": "隐藏",
+    "name": "星陨之剑主",
+    "title": "星陨之剑主",
+    "desc": "获得传说武器·星陨之剑",
+    "cond": {
+      "type": "item_has",
+      "key": "eq_starfall_sword"
+    },
+    "reward": {
+      "items": {
+        "i_chest_dragon": 1,
+        "mat_tu_zhi_can_ye": 3
+      }
+    },
+    "points": 2
+  },
+  "ach_truth": {
+    "id": "ach_truth",
+    "cat": "隐藏",
+    "name": "真相追寻者",
+    "title": "真相追寻者",
+    "desc": "发现主线真相(第 9 章)",
+    "cond": {
+      "type": "flag",
+      "flag": "saw_the_rift"
+    },
+    "reward": {
+      "items": {
+        "i_chest_mithril": 1,
+        "mat_tu_zhi_can_ye": 2
+      }
+    },
+    "points": 2
+  },
+  "ach_undead100": {
+    "id": "ach_undead100",
+    "cat": "战斗",
+    "name": "亡灵使者",
+    "title": "亡灵使者",
+    "desc": "击杀 100 只亡灵系怪物",
+    "cond": {
+      "type": "kills_type",
+      "keywords": [
+        "亡灵",
+        "骷髅",
+        "僵尸",
+        "幽灵"
+      ],
+      "value": 100
+    },
+    "reward": {
+      "items": {
+        "mat_qiang_hua_shi": 2
+      }
+    },
+    "points": 1
+  },
+  "ach_wish_met": {
+    "id": "ach_wish_met",
+    "cat": "隐藏",
+    "name": "流星祈愿者",
+    "title": "流星祈愿者",
+    "desc": "触发流星许愿并选择任一祝福",
+    "cond": {
+      "type": "wish_met"
+    },
+    "reward": {
+      "items": {
+        "i_chest_iron": 1
+      }
+    },
+    "points": 2
+  },
+  "ach_worldboss": {
+    "id": "ach_worldboss",
+    "cat": "战斗",
+    "name": "世界 Boss 猎手",
+    "title": "世界 Boss 猎手",
+    "desc": "参与讨伐世界 Boss",
+    "cond": {
+      "type": "worldboss"
+    },
+    "reward": {
+      "items": {
+        "i_chest_silver": 1
+      }
+    },
+    "points": 1
+  }
+}

@@ -209,13 +209,6 @@
     "primary": "subarea",
     "icon": "🗺️"
   },
-  "instance_stage_maps": {
-    "label": "副本层地图",
-    "kind": "data",
-    "schema": "instance_stage_maps.schema.json",
-    "primary": "stage_map",
-    "icon": "🏰"
-  },
   "instance_investigation": {
     "label": "副本调查点",
     "kind": "data",
@@ -229,13 +222,6 @@
     "schema": "worlds.schema.json",
     "primary": "world",
     "icon": "🌍"
-  },
-  "dungeon_pois": {
-    "label": "副本兴趣点",
-    "kind": "data",
-    "schema": "dungeon_pois.schema.json",
-    "primary": "dungeon_poi",
-    "icon": "📍"
   },
   "craft": {
     "label": "配方",
@@ -341,13 +327,6 @@
     "schema": "item_templates.schema.json",
     "primary": "item_template",
     "icon": "📐"
-  },
-  "drops": {
-    "label": "掉落",
-    "kind": "data",
-    "schema": "drops.schema.json",
-    "primary": "drop",
-    "icon": "🎰"
   },
   "potion_effects": {
     "label": "药水效果",

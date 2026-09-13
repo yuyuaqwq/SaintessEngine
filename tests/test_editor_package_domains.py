@@ -261,8 +261,12 @@ def main():
     #   D3 面板 4 个 races/sets/enhance_table/panel_rules + 收口批 npcs）真源**只在包侧**
     #   （框架里塞某个具体游戏的域 = 不该有）。口径 = 内置那份 ∪ 包声明的：24 个。
     PKG_ONLY_DOMAINS = set(e_o) - set(PK.DOMAINS)
+    # 域数**不写死**（2026-09-13 起包侧域会持续增长：B3–B7 一轮 +26 域）。这条守的是
+    # 「有效域表 == 内置那份 ∪ 包声明那份」这个集合关系，不是某个历史数字。
     check(f"orlandia 有效域表 = 内置 {len(PK.DOMAINS)}（引擎域）+ 包声明 {len(PKG_ONLY_DOMAINS)}"
-          f" == 24", len(e_o) == 24 and len(e_o) == len(PK.DOMAINS) + len(PKG_ONLY_DOMAINS),
+          f" = {len(e_o)}",
+          len(e_o) == len(PK.DOMAINS) + len(PKG_ONLY_DOMAINS)
+          and set(e_o) == set(PK.DOMAINS) | PKG_ONLY_DOMAINS,
           len(e_o))
     check(f"orlandia 里属于内置那份的 {len(PK.DOMAINS)} 域逐字段等于内置（内容不变的搬迁）",
           {k: v for k, v in e_o.items() if k in PK.DOMAINS} == PK.DOMAINS,
@@ -333,8 +337,8 @@ def main():
     _clear_caches()
     try:
         e_nd, w_nd = PK.effective_domains(_copy)
-        check(f"拿掉包内 domains.json → 有效域表 == 内置 {len(PK.DOMAINS)}（24 → 8）",
-              set(e_nd) == set(PK.DOMAINS) and len(e_nd) == 24 - 16,
+        check(f"拿掉包内 domains.json → 有效域表 == 内置 {len(PK.DOMAINS)}",
+              set(e_nd) == set(PK.DOMAINS),
               f"{len(e_nd)} {sorted(e_nd)[:4]}")
         check("内容域在拿掉声明后**真的没有了**（不是换了个来源）",
               not (_content & set(e_nd)) and not (_content & set(PK.DOMAINS)))
@@ -345,8 +349,8 @@ def main():
         with open(_decl_path, "w", encoding="utf-8", newline="\n") as f:
             f.write(_decl_text)
         _clear_caches()
-    check("声明写回后 orlandia 仍是 24 域（反证可逆，不污染真仓）",
-          len(PK.effective_domains(REAL_ORLANDIA)[0]) == 24)
+    check(f"声明写回后 orlandia 仍是 {len(e_o)} 域（反证可逆，不污染真仓）",
+          len(PK.effective_domains(REAL_ORLANDIA)[0]) == len(e_o))
 
     # ── 5. HTTP 端到端
     print("\n【5. HTTP 端到端：新域每条路都通（不能有 500）】")

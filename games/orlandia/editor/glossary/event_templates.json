@@ -1,0 +1,31 @@
+{
+  "fields": {
+    "func": {
+      "zh": "实现函数名",
+      "note": "游戏仓 `game/core/event_templates.py` 里的 Python 函数（实测恒为 `\"tpl_\" + <模板名>`），签名 `fn(ctx) -> str`（返回展示文本）。**函数体不进包** —— 本域只是注册表投影，运行时执行仍走游戏侧 `execute_event_template`。"
+    },
+    "line": {
+      "zh": "定义行号",
+      "note": "函数在 `game/core/event_templates.py` 的定义行（给人回查用）。源文件一改行号就变 —— `--check` 会报不一致，这正是它要的效果。"
+    },
+    "doc": {
+      "zh": "函数文档",
+      "note": "函数 docstring 的归一化全文。**`params` 的键就写在里面**（如 `loot_gold` 的 `params: min/max/scale_lv/header`）—— 本域唯一的「参数说明」来源，不另做人工摘要。",
+      "widget": "textarea"
+    }
+  },
+  "groups": [
+    {
+      "id": "impl",
+      "label": "实现",
+      "icon": "🧩",
+      "fields": ["func", "line"]
+    },
+    {
+      "id": "doc",
+      "label": "文档",
+      "icon": "📖",
+      "fields": ["doc"]
+    }
+  ]
+}
