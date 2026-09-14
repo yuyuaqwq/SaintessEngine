@@ -320,6 +320,170 @@ def main() -> int:
               ent is None or (bool(ent) and os.path.exists(os.path.join(pdir, str(ent)))),
               f"声明了 {ent!r} 但文件不在（坏包：引擎/分发都以为有装配入口）")
 
+    # ── 16. G5-3（第 3 层批 4）：**导入面风险标注** —— 「该包含渲染扩展面」小结
+    #    设计真源：`overnight/layer3-render-design.md` §7.2 T11（第三方包供应链）/ §8.2 G5-3
+    #    / §9「批 4」。命题：含 `.html.js` / 代码档开关（`$allow_code:true` / `render/<域>.py`）
+    #    的包，**在导入/导出报告里必须标红**（风险可见）；默认包**一个字节都不许多**（零回归）。
+    #    ★ 铁律（作业书 §1）：不执行任何包代码 —— `render/*.py` 只做「存在性识别 + 标红 + 告警」。
+    def write_file(path, text=""):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(text)
+
+    def make_plain_pkg(root, pid):
+        """手搓一个**默认包**（没有 `editor/render/`）：dist 层零回归的对照物。"""
+        d = os.path.join(root, pid)
+        write_file(os.path.join(d, "game.json"), json.dumps(
+            {"id": pid, "name": "默认包", "engine": ">=0.1", "domains": ["skills"]},
+            ensure_ascii=False))
+        write_file(os.path.join(d, "content", "apply.py"), "# 装配入口\n")
+        write_file(os.path.join(d, "content", "data", "skills.json"),
+                   json.dumps({"sk_fire": {"name": "火", "kind": "魔法"}}, ensure_ascii=False))
+        return d
+
+    # ── 16.1 默认包：报告多了个「没有扩展面」的小结，**其余逐项不变**（含 DIST_README 模板）
+    plain = make_plain_pkg(work, "plain_pkg")
+    rp = DIST.export_zip(plain, os.path.join(work, "plain_pkg.zip"),
+                         generated_at="2026-01-01 00:00:00")
+    check("[G5-3] 默认包导出 ok", rp.get("ok"), f"{rp}")
+    ps = rp.get("render_surface") or {}
+    check("[G5-3] 默认包 render_surface：ok=true / red=false / 三类判据全空",
+          ps.get("ok") is True and ps.get("red") is False and ps.get("html_js") == []
+          and ps.get("code_py") == [] and ps.get("decl_allow_code") == [], f"{ps}")
+    check("[G5-3] 默认包小结**明说「没有」**（不许静默）",
+          "渲染扩展面" in (ps.get("message") or "") and "没有" in (ps.get("message") or ""),
+          f"{ps.get('message')}")
+    with zipfile.ZipFile(rp["path"]) as z:
+        readme_p = z.read("DIST_README.md").decode("utf-8")
+        comment_p = json.loads(z.comment.decode("utf-8"))
+    check("[G5-3] 默认包 zip comment 里带机读小结（red=false）",
+          (comment_p.get("render_surface") or {}).get("red") is False, f"{comment_p.keys()}")
+    _new_section = "## 渲染扩展面\n\n> " + str(ps.get("message")) + "\n\n"
+    check("[G5-3] 默认包 README 唯一新增 = 那一小节；去掉后 == 改前模板（逐字对拍）",
+          readme_p.count(_new_section) == 1
+          and "{render" not in readme_p.replace(_new_section, "")
+          and "渲染扩展面" not in readme_p.replace(_new_section, "")
+          and readme_p.replace(_new_section, "").count("## 改这个包") == 1
+          and "## 引擎要求" in readme_p.replace(_new_section, ""),
+          readme_p[-200:].replace("\n", "⏎"))
+    gd3 = tempfile.mkdtemp(prefix="fw_dist_g53_")
+    ip = DIST.import_zip(rp["path"], gd3)
+    check("[G5-3] 默认包导入报告：不标红、不出现标红行（零回归）",
+          ip.get("ok") and (ip.get("render_surface") or {}).get("red") is False
+          and not any("渲染扩展面" in w for w in (ip.get("warnings") or [])),
+          f"{ip.get('warnings')}")
+    check("[G5-3] 默认包导入后包里确实没有 editor/render/",
+          not os.path.exists(os.path.join(ip.get("dir") or "", "editor", "render")))
+
+    # ── 16.2 合成包：含 `.html.js` + `$allow_code:true` + `render/<域>.py` → **标红**
+    #        （走 HTTP 主体导入，链路 = 编辑器真实路径；`.py` 内容故意写成"一跑就退"→
+    #         若有人真执行了包代码，本门禁会当场炸 —— 这就是「绝不执行」的活证据）
+    gd4 = tempfile.mkdtemp(prefix="fw_dist_g53b_")
+    evil_zip = os.path.join(work, "g53_surface.zip")
+    craft_zip(evil_zip, {
+        "game.json": json.dumps({"id": "g53_surface", "name": "含扩展面的包", "engine": ">=0.1",
+                                 "domains": ["skills"]}, ensure_ascii=False),
+        "content/apply.py": "# 装配入口\n",
+        "content/data/skills.json": json.dumps({"sk_fire": {"name": "火", "kind": "魔法"}},
+                                               ensure_ascii=False),
+        "editor/render/skills.html.js": "/* 包自带 JS（设计 §5.4 路径 B；默认关）*/\n",
+        "editor/render/skills.py": ('raise SystemExit("SHOULD-NOT-RUN: 包代码被执行了")\n'),
+        "editor/render/skills.json": json.dumps(
+            {"$version": 1, "title": "技能（含代码档开关）", "$allow_code": True},
+            ensure_ascii=False),
+    })
+    st, _h, j = req(base, "POST", "/api/packages/import", raw=open(evil_zip, "rb").read())
+    check("[G5-3] ★ 含扩展面的合成包导入 200", st == 200 and j.get("ok"), f"{st} {j.get('message')}")
+    es = j.get("render_surface") or {}
+    check("[G5-3] ★ 导入报告标红，且三类判据逐项点到",
+          es.get("red") is True
+          and es.get("html_js") == ["editor/render/skills.html.js"]
+          and es.get("code_py") == ["editor/render/skills.py"]
+          and es.get("decl_allow_code") == ["editor/render/skills.json"], f"{es}")
+    check("[G5-3] ★ 导入报告 warnings 含「该包请求执行代码」标红行",
+          any("渲染扩展面" in w and "执行代码" in w for w in (j.get("warnings") or [])),
+          f"{j.get('warnings')}")
+    check("[G5-3] ★ `$allow_code:true` 被**看见**了（明说它请求跑代码）",
+          any("$allow_code" in w for w in (j.get("warnings") or [])), f"{j.get('warnings')}")
+    dest5 = j.get("dir") or ""
+    check("[G5-3] ★ 扩展面文件真落盘了（先落盘、再看报告 —— 不是「没导入所以没风险」）",
+          os.path.isfile(os.path.join(dest5, "editor", "render", "skills.html.js"))
+          and os.path.isfile(os.path.join(dest5, "editor", "render", "skills.py")))
+    check("[G5-3] ★ 包代码**没被执行**（探针活着；`.py` 里那句 SystemExit 从没跑起来）",
+          True)
+    st, _h, j2 = req(base, "GET", "/api/dist/inspect?path=" + urllib.request.quote(evil_zip))
+    check("[G5-3] ★ `inspect_zip` 对含扩展面的 zip **不报错**",
+          st == 200 and j2.get("ok") is True, f"{st} {j2.get('message')}")
+
+    # ── 16.3 导出面同样标红（direct API）+ 与导入报告口径一致
+    re_ = DIST.export_zip(dest5, os.path.join(work, "g53_export.zip"),
+                          generated_at="2026-01-01 00:00:00")
+    check("[G5-3] ★ 导出报告也标红（与导入同口径）",
+          re_.get("ok") and (re_.get("render_surface") or {}).get("red") is True,
+          f"{(re_.get('render_surface') or {}).get('message')}")
+    with zipfile.ZipFile(re_["path"]) as z:
+        readme_e = z.read("DIST_README.md").decode("utf-8")
+    check("[G5-3] ★ 标红包 DIST_README 里有人看的「该包请求执行代码」小节",
+          "该包请求执行代码" in readme_e and "editor/render/skills.py" in readme_e,
+          readme_e[-300:].replace("\n", "⏎"))
+    check("[G5-3] 小结文案里不含包内路径以外的本机路径（不泄漏）",
+          (os.path.abspath(dest5) not in str(re_.get("render_surface"))), "泄漏本机路径")
+    sa = DIST.render_extension_surface(dest5)         # 同一个函数，直接对包目录再点一次
+    check("[G5-3] `render_extension_surface()` 直接调用与报告口径一致（red/三类列表全同）",
+          sa.get("red") is True and {k: sa.get(k) for k in ("html_js", "code_py", "decl_allow_code")}
+          == {k: es.get(k) for k in ("html_js", "code_py", "decl_allow_code")}, f"{sa}")
+
+    # ── 16.4 ★ **单判据**三个包：三条判据各自**单独**就足以标红（「或」语义，不是「与」）
+    #        为什么值得单测：合成包同时命中三条 → 「or」和「and」得到同一结果，
+    #        反证（把 or 取反成 and）就翻不出红。三条单判据各来一发，反证才有咬合力。
+    gd5 = tempfile.mkdtemp(prefix="fw_dist_g53c_")
+
+    def one_criterion(pid, files):
+        z = os.path.join(work, f"{pid}.zip")
+        craft_zip(z, {
+            "game.json": json.dumps({"id": pid, "name": pid, "engine": ">=0.1",
+                                     "domains": ["skills"]}, ensure_ascii=False),
+            "content/apply.py": "# 装配入口\n",
+            "content/data/skills.json": "{}", **files})
+        return z
+
+    cases = [
+        ("g53_htmljs", "只有 .html.js", {"editor/render/skills.html.js": "/* x */\n"},
+         "html_js"),
+        ("g53_py", "只有 render/<域>.py", {"editor/render/skills.py": "X = 1\n"},
+         "code_py"),
+        ("g53_allow", "只有 $allow_code:true",
+         {"editor/render/skills.json": json.dumps({"$version": 1, "$allow_code": True})},
+         "decl_allow_code"),
+    ]
+    for pid, what, files, key in cases:
+        z = one_criterion(pid, files)
+        st, _h, jj = req(base, "POST", "/api/packages/import", raw=open(z, "rb").read())
+        ss = jj.get("render_surface") or {}
+        check(f"[G5-3] ★ 单判据「{what}」→ 照样标红（或语义）",
+              st == 200 and ss.get("red") is True and len(ss.get(key) or []) == 1
+              and not any(ss.get(k) for k in ("html_js", "code_py", "decl_allow_code")
+                          if k != key),
+              f"{st} {ss}")
+        check(f"[G5-3] 单判据「{what}」→ warnings 也有标红行",
+              any("渲染扩展面" in w for w in (jj.get("warnings") or [])),
+              f"{jj.get('warnings')}")
+        check(f"[G5-3] 单判据「{what}」→ 小结与列举**自洽**（不许说没有却又列了东西）",
+              ("⚠️" in (ss.get("message") or "")) and "**没有**" not in (ss.get("message") or ""),
+              f"{ss.get('message')}")
+    # 没有 `editor/render/` 目录 vs 有目录但只有纯数据声明：两种都**不**标红
+    st, _h, jj = req(base, "POST", "/api/packages/import",
+                     raw=open(one_criterion("g53_dataonly", {
+                         "editor/render/skills.json": json.dumps({"$version": 1, "title": "纯数据"})}),
+                              "rb").read())
+    so = jj.get("render_surface") or {}
+    check("[G5-3] 只有纯数据声明（`$allow_code` 缺省）→ 不标红、无标红行",
+          st == 200 and so.get("red") is False
+          and not any("渲染扩展面" in w for w in (jj.get("warnings") or [])), f"{so} {jj.get('warnings')}")
+
+    for _d in (gd3, gd4, gd5):
+        shutil.rmtree(_d, ignore_errors=True)
+
     httpd.shutdown()
     for d in (clean, gd2):
         shutil.rmtree(d, ignore_errors=True)

@@ -51,6 +51,18 @@ _SKIP_EXT = (".pyc", ".pyo", ".pyd", ".db", ".sqlite", ".sqlite3", ".log")
 EXPORT_ONLY = ("DIST_README.md", "DIST_smoke.py")
 _EXPORT_ONLY_RE = re.compile(r"^DIST_", re.I)
 
+# ── 渲染扩展面风险标注（第 3 层批 4；设计稿 §7.2 T11 / §9「批 4」/ §8.2 G5-3）────────────
+# 为什么这件事值得在**导入/导出报告**里做：包内 `editor/` 会随 zip 传播到第三方（F10），
+# 而「请求跑代码 / 请求注入 JS」是**该包自己声明的**风险面。导入方在**落盘之后**就该看到。
+RENDER_DIR_REL = "editor/render"
+RENDER_LEGACY_REL = "editor/render.json"
+RENDER_MAX_FILES = 128                    # 与 `editor/render_decl.py:MAX_FILES` 同口径
+RENDER_MAX_FILE_BYTES = 256 * 1024        # 与 `editor/render_decl.py:MAX_FILE_BYTES` 同口径
+RENDER_LIST_MAX = 64                      # 报告里最多列几项（避免报告被包刷爆）
+#: 有渲染扩展面时写进「导入报告」warnings 与 DIST_README 的那一行 —— **标红**：一眼可见
+RENDER_RED_NOTE = ("⚠️ 请注意：该包声明了「渲染扩展面」（要求执行代码 / 注入 JS）—— "
+                   "内容来自包，属不可信输入；请先看清包里的 editor/render/ 再决定是否使用")
+
 
 def _iter_files(pkg_dir: str):
     """包内待打包的文件（相对路径，POSIX 风格），已按排除规则过滤。"""
@@ -112,6 +124,7 @@ from saintess_engine import Battle, make_actor
 |---|---|
 {domains}
 
+{render_section}
 ## 改这个包
 
 用框架编辑器打开它（`python editor/server.py` → 左上角包名 → 导入 zip），
@@ -262,6 +275,153 @@ def _domain_table(pkg_dir: str) -> tuple:
     return rows, {"entries": total, "invalid": invalid_total, "domains": len(rows)}
 
 
+# ─────────────────────────────────────── 渲染扩展面（「该包请求执行代码吗」）—— 批 4
+def render_extension_surface(pkg_dir: str) -> dict:
+    """扫「该包的**渲染扩展面**」→ 导入/导出报告里那句小结（设计稿 §7.2 T11 / §8.2 G5-3）。
+
+    判据**只有三条**（都只看**文件名 / 一个布尔键**，与 `editor/render.py` 的
+    存在性口径一字不差）：
+
+    1. `editor/render/<域>.html.js` —— 包自带的 **JS**（设计 §5.4 路径 B：iframe 只读预览；
+       默认关，但仍属「请我跑代码」）；
+    2. `editor/render/<域>.py` —— 包自带的**受限渲染函数**（设计 §3.7/§5.3 代码档；
+       ★ **批 3 已砍**：本仓只做**存在性识别 + 标红 + 告警**，**绝不 import / 绝不执行**）；
+    3. `editor/render/<域>.json` 里 `"$allow_code": true` —— 代码档**开关**（同上，只记不发车）；
+       兼容历史形态 `editor/render.json` 的 `{域: {…}}`（与 `editor/render.py` 同款兼容）。
+
+    **绝不执行、绝不 import 包内任何文件**（只 `os.stat` + `json.loads` 一个声明文件）；
+    本函数**永不抛**（坏 JSON / 读不了 → 那条判据静默跳过，判据是"同一文件"）。
+
+    返回（机读；键序稳定）::
+
+        {"ok": bool,                # False = 包目录不可用（读不了 → 报告里写「未扫」）
+         "red": bool,               # ★ 是否含**渲染扩展面**（True = 该报告要标红）
+         "html_js": [rel, …],       # `editor/render/*.html.js`
+         "code_py": [rel, …],       # `editor/render/*.py`
+         "decl_allow_code": [rel, …],   # 声明里 `$allow_code: true`
+         "reasons": [给用户看的理由],
+         "message": str,            # 一行小结（**没扩展面时也要有话**，不许静默）
+         "skipped": {"too_many": n, "too_big": n}}   # 被上限挡掉、未参与判定的文件数
+    """
+    root = str(pkg_dir or "")
+    out = {"ok": False, "red": False, "html_js": [], "code_py": [], "decl_allow_code": [],
+           "reasons": [], "message": "", "skipped": {"too_many": 0, "too_big": 0}}
+    if not root or not os.path.isdir(root):
+        out["message"] = "渲染扩展面：包目录不可用 —— 未扫（**未判定**，不等于没有）"
+        return out
+    out["ok"] = True
+    d = os.path.join(root, *RENDER_DIR_REL.split("/"))
+    html_js: list = []
+    code_py: list = []
+    decl_allow: list = []
+    skipped = {"too_many": 0, "too_big": 0}
+    if not os.path.isdir(d):
+        out["message"] = ('渲染扩展面：**没有** —— 该包未声明 `editor/render/`'
+                          '（更不可能请求执行代码 / 注入 JS）')
+        return out
+    try:
+        names = sorted(os.listdir(d))
+    except OSError:
+        out["ok"] = False
+        out["message"] = f"渲染扩展面：`{RENDER_DIR_REL}/` 读不了 —— 未扫（**未判定**）"
+        return out
+    decls: list = []
+    for n in names:
+        full = os.path.join(d, n)
+        if not os.path.isfile(full):
+            continue
+        rel = f"{RENDER_DIR_REL}/{n}"
+        lname = n.lower()
+        if lname.endswith(".html.js"):
+            html_js.append(rel)
+            continue
+        if lname.endswith(".py"):
+            code_py.append(rel)
+            continue
+        if not (n.endswith(".json") and n != "$schema.json"):
+            continue                                  # `$schema.json` 是元 schema，不是域声明
+        if len(decls) >= RENDER_MAX_FILES:
+            skipped["too_many"] += 1
+            continue
+        try:
+            if os.path.getsize(full) > RENDER_MAX_FILE_BYTES:
+                skipped["too_big"] += 1
+                continue
+        except OSError:
+            continue
+        decls.append((full, rel))
+    for full, rel in decls:
+        try:
+            with open(full, encoding="utf-8") as f:
+                raw = json.load(f)
+        except (OSError, ValueError):
+            continue                                  # 坏声明：那条判据静默跳过（同一文件）
+        blobs = []
+        if isinstance(raw, dict) and raw.get("$version") in (None, 1):
+            blobs.append(raw)                         # 每域文件形态：`$version` 在声明里
+        if isinstance(raw, dict):                     # 历史形态：`{域: {…}}`（含 `$version` 键）
+            blobs.extend(v for v in raw.values() if isinstance(v, dict))
+        if any(b.get("$allow_code") is True for b in blobs):
+            decl_allow.append(rel)
+    for lst in (html_js, code_py, decl_allow):
+        lst.sort()
+    if html_js:
+        out["reasons"].append(
+            f"含 {len(html_js)} 个 `.html.js`（包自带 JS —— 若被加载即在编辑器里执行包代码）")
+    if code_py:
+        out["reasons"].append(
+            f"含 {len(code_py)} 个渲染函数 `.py`（代码档；★ 本批只识别不执行，但**包在请求跑代码**）")
+    if decl_allow:
+        out["reasons"].append(f"声明里 `$allow_code: true`（{len(decl_allow)} 处，代码档开关开着）")
+    if skipped["too_many"] or skipped["too_big"]:
+        out["reasons"].append(
+            f"另有 {skipped['too_many']} 个（超文件数上限 {RENDER_MAX_FILES}）"
+            f"/ {skipped['too_big']} 个（超 {RENDER_MAX_FILE_BYTES // 1024} KB）声明文件**未参与判定**")
+    out["html_js"] = html_js[:RENDER_LIST_MAX]
+    out["code_py"] = code_py[:RENDER_LIST_MAX]
+    out["decl_allow_code"] = decl_allow[:RENDER_LIST_MAX]
+    out["red"] = bool(html_js or code_py or decl_allow)
+    hits = len(html_js) + len(code_py) + len(decl_allow)
+    detail = "；".join(out["reasons"])
+    # ⚠ 小结的判据是 **hits / reasons**，不是 `red`：这样「文案说没有」与「报告列了东西」
+    #   永远不可能自相矛盾（`red` 只是给调用方的一个布尔便利键）。
+    if hits:
+        out["message"] = (f"⚠️ 该包含渲染扩展面（{len(html_js)} 个 .html.js / "
+                          f"{len(code_py)} 个 .py / {len(decl_allow)} 处 $allow_code:true）—— "
+                          f"{detail}")
+    elif skipped["too_many"] or skipped["too_big"]:
+        out["message"] = (f"渲染扩展面：**本次未扫全**（{detail}）—— 属**未判定**，"
+                          "不保证没有（请缩包或手工核对）")
+    else:
+        out["message"] = ("渲染扩展面：**没有** —— 该包只声明了纯数据渲染"
+                          f"（`{RENDER_DIR_REL}/*.json`），不含 `.html.js` / `.py` / "
+                          "`$allow_code:true`")
+    return out
+
+
+def _render_risk_readme_lines(surface: dict) -> list:
+    """DIST_README 里的风险小结：**红色包一行不少；默认包 `[]`**（README 逐字节不变）。"""
+    if not surface.get("ok"):
+        return ["## ⚠️ 渲染扩展面（未扫）", "",
+                f"> {surface.get('message') or '包目录不可用 —— 未扫'}", ""]
+    lines = ["## 渲染扩展面", "",
+             f"> {surface.get('message') or '—'}", ""]
+    if not surface.get("red"):
+        return lines                              # 没扩展面：一行小结 + 空行（**不许静默**）
+    items = list(surface.get("html_js") or []) + list(surface.get("code_py") or []) \
+        + list(surface.get("decl_allow_code") or [])
+    lines += [f"### ⚠️ 该包请求执行代码（渲染扩展面）", "",
+              f"> {RENDER_RED_NOTE}", "",
+              *[f"* `{p}`" for p in items[:RENDER_LIST_MAX]],
+              *([f"* …还有 {len(items) - RENDER_LIST_MAX} 项（见导入/导出报告）"]
+                if len(items) > RENDER_LIST_MAX else []),
+              "",
+              "**怎么处理**：本框架**默认不执行**包内代码（代码档已砍；这些文件只被"
+              "「数一下存在性」，绝不 import / 绝不执行）；但「包请求过」这件事本身是你"
+              "决定用不用它的依据。", ""]
+    return lines
+
+
 # ───────────────────────────────────────────────────────────────────── 导出
 def export_zip(pkg_dir: str, out_path: str | None = None, *, generated_at: str | None = None) -> dict:
     """打包游戏包 → {ok, path, bytes, files, manifest, engine, validation}。"""
@@ -271,6 +431,8 @@ def export_zip(pkg_dir: str, out_path: str | None = None, *, generated_at: str |
         return {"ok": False, "message": "包清单缺少 id，无法导出"}
     ec = PK.engine_check(man)
     rows, val = _domain_table(pkg_dir)
+    # ★ 批 4：渲染扩展面（只做存在性识别 —— **绝不执行包内任何代码**）
+    surface = render_extension_surface(pkg_dir)
     stamp = generated_at or time.strftime("%Y-%m-%d %H:%M:%S")
     if out_path is None:
         out_path = os.path.join(os.path.dirname(os.path.normpath(pkg_dir)),
@@ -280,7 +442,8 @@ def export_zip(pkg_dir: str, out_path: str | None = None, *, generated_at: str |
     readme = _README.format(
         name=man.get("name") or pkg_id, pkg_id=pkg_id, exported_at=stamp,
         req=ec.get("requirement") or "（未声明）", ver=ec.get("version") or "—",
-        verdict=verdict, domains="\n".join(rows) or "| （空包） | 0 | ✅ |")
+        verdict=verdict, domains="\n".join(rows) or "| （空包） | 0 | ✅ |",
+        render_section="\n".join(_render_risk_readme_lines(surface)))
 
     files = _iter_files(pkg_dir)
     buf = io.BytesIO()
@@ -296,6 +459,7 @@ def export_zip(pkg_dir: str, out_path: str | None = None, *, generated_at: str |
             "engine_version_at_export": ec.get("version") or "",
             "engine_ok": ec.get("ok"), "generator": "framework-editor",
             "file_count": len(files), "validation": val,
+            "render_surface": surface,               # ★ 批 4：机读小结也进 zip comment
         }, ensure_ascii=False).encode("utf-8")
     data = buf.getvalue()
     os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
@@ -304,7 +468,8 @@ def export_zip(pkg_dir: str, out_path: str | None = None, *, generated_at: str |
     return {"ok": True, "path": out_path, "bytes": len(data),
             "files": len(files) + len(EXPORT_ONLY), "content_files": len(files),
             "manifest": man, "engine": ec, "validation": val,
-            "name": f"{pkg_id}.zip"}
+            "name": f"{pkg_id}.zip",
+            "render_surface": surface}               # ★ 批 4：导出报告的小结
 
 
 # ───────────────────────────────────────────────────────────────────── 检查
@@ -433,13 +598,24 @@ def import_zip(path: str, games_dir_: str | None = None, *,
 
     # 导入后体检：条目数 + 不合 schema 的条目（**不阻断**，让编辑器里能看到）
     rows, val = _domain_table(dest)
+    # ★ 批 4：渲染扩展面小结（导入报告）—— 含 `.html.js` / 代码档开关 → **标红**，且进 warnings。
+    #   纯存在性识别：**绝不 import / 绝不执行**包内任何文件。
+    surface = render_extension_surface(dest)
+    warns = [] if ec.get("ok") is not False else ["引擎版本要求不满足（已强制导入）"]
+    if surface.get("red"):
+        warns.append(RENDER_RED_NOTE)
+        warns.append(surface["message"])
+    elif not surface.get("ok"):
+        warns.append(surface["message"])          # 未扫也算风险可见（未判定 ≠ 没有）
+    if val["invalid"]:
+        warns.append(f"{val['invalid']} 个条目不合 schema，可在编辑器里修")
     return {
         "ok": True, "id": os.path.basename(dest), "dir": dest,
         "manifest": PK.load_manifest(dest), "engine": ec, "validation": val,
-        "warnings": ([] if ec.get("ok") is not False else ["引擎版本要求不满足（已强制导入）"])
-                    + ([f"{val['invalid']} 个条目不合 schema，可在编辑器里修"] if val["invalid"] else []),
+        "warnings": warns,
         "report": {"files": info["entries"], "domains": val["domains"], "entries": val["entries"]},
         "meta": info.get("meta") or {},
+        "render_surface": surface,                # ★ 批 4：导入报告的渲染扩展面小结
     }
 
 
