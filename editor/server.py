@@ -32,8 +32,10 @@ API
     GET    /api/glossary                  → 字段词典（中文名 / 注脚 / wiki 深链）
     GET    /api/package/<id>/hints        → 编辑提示（跨域引用候选 + 包内已有取值/键，供联想）
     GET    /api/package/<id>/relations    → **包的引用/联动声明**（规范化后 + 可读告警）
-    GET    /api/package/<id>/views        → **包的视图声明**（域 → 内置视图名 + 来源）
-    GET    /api/package/<id>/d/<dom>/<key>/view   → 通用视图分派（按 views.json 选内置视图）
+    GET    /api/package/<id>/views        → **包的视图声明**（域 → 内置视图名 + 来源 + render 小节）
+    GET    /api/package/<id>/render       → ★第 3 层**渲染声明面**（只读声明，不执行包代码、不读条目）
+    GET    /api/package/<id>/d/<dom>/<key>/view   → 通用视图分派
+                                          （`?view=` > render 声明 > views.json > 内置默认；坏声明降级）
     GET    /api/wiki/tree                 → 文档页清单（左导航）
     GET    /api/wiki/page?path=<rel>      → 渲染后的文档页（md → html + 目录）
     GET    /api/wiki/search?q=<词>        → 跨页搜词（配字段时找语义）
@@ -70,6 +72,7 @@ from editor import loot_view as LV   # noqa: E402
 from editor import instance_view as IV  # noqa: E402
 from editor import packages as PK    # noqa: E402
 from editor import relations as REL  # noqa: E402
+from editor import render as RENDER  # noqa: E402  （第 3 层·批 1：声明面；零引擎 import）
 from editor import space_view as SV  # noqa: E402
 from editor import table_view as TV  # noqa: E402
 from editor import validate as VD    # noqa: E402
@@ -246,8 +249,9 @@ def _package_overview(pkg_dir: str) -> dict:
         "domains": [{"id": d, **{k: domains[d][k] for k in ("label", "icon", "kind")},
                      **_domain_status(pkg_dir, d, domains)}
                     for d in doms if d in domains],
-        # 包声明面的告警（域声明 ∪ 引用/联动 ∪ 视图 ∪ 词汇表）—— 前端照此提示，不静默
-        "domain_warnings": warns + REL.all_warnings(pkg_dir) + GL.glossary_warnings(pkg_dir),
+        # 包声明面的告警（域声明 ∪ 引用/联动 ∪ 视图 ∪ 词汇表 ∪ 渲染声明）—— 前端照此提示，不静默
+        "domain_warnings": (warns + REL.all_warnings(pkg_dir) + GL.glossary_warnings(pkg_dir)
+                            + RENDER.render_warnings(pkg_dir, domains)),
         # 该包**自己新增**（内置默认集里没有）的域 id（声明口径见 `/api/domains` 的 from_package）
         "package_domains": [d for d in domains if d not in PK.DOMAINS],
     }
@@ -419,6 +423,34 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, {"ok": True, "relations": rel, "candidates": cand,
                                     "linkage": link,
                                     "warnings": REL.relation_warnings(d)})
+        # ★ 第 3 层·批 1（声明面）：**只读声明**的 render 接口 —— 不执行任何包代码、不读条目数据。
+        #   契约 §3.1：`{ok, package, code_enabled, domains, effective, limits, warnings}`，响应 ≤ 64 KB。
+        if len(parts) == 3 and parts[0] == "package" and parts[2] == "render":
+            d = PK.resolve_package(parts[1], GAMES_DIR)
+            if not d:
+                return self._err(404, f"包不存在：{parts[1]}")
+            domains = _domains_for(d)
+            decls = RENDER.declarations(d, domains)
+            eff: dict = {}
+            for dom in domains:
+                name, src, _w = REL.resolve_view(d, dom)
+                info = decls["domains"].get(dom)
+                if info and info.get("active"):
+                    eff[dom] = {"render": True, "extends": info.get("extends"),
+                                "active": True, "source": "render"}
+                else:
+                    eff[dom] = {"render": bool(info),
+                                "extends": (info or {}).get("extends"),
+                                "active": False,
+                                "source": {"package": "views", "builtin": "builtin"}.get(src, "none")}
+            body = {"ok": True, "package": parts[1], "code_enabled": decls["code_enabled"],
+                    "domains": decls["domains"], "effective": eff, "limits": decls["limits"],
+                    "warnings": decls["warnings"]}
+            if len(json.dumps(body, ensure_ascii=False).encode("utf-8")) > 64 * 1024:
+                # 契约 §3.1 的「响应 ≤ 64 KB」：裁剪 effective（只留有 render 分派的域），**不静默**
+                body["effective"] = {k: v for k, v in eff.items() if v["render"]}
+                body["warnings"] = list(body["warnings"]) + ["响应超过 64 KB：effective 已裁剪"]
+            return self._send(200, body)
         if len(parts) == 3 and parts[0] == "package" and parts[2] == "views":
             d = PK.resolve_package(parts[1], GAMES_DIR)
             if not d:
@@ -429,10 +461,19 @@ class H(BaseHTTPRequestHandler):
                 if name:
                     eff[dom] = {"view": name, "source": src,
                                 "route": REL.VIEW_ROUTES.get(REL.resolved_name(name), "view")}
+            # ★ 第 3 层·批 1：**render 小节**（该域有没有声明过、活没活、要不要跑代码）——
+            #   前端第 5 档的显隐判据；没声明 = `declared: []`（既有键一个不动，零回归）
+            _rd = RENDER.declarations(d, _domains_for(d))
             return self._send(200, {"ok": True, "views": REL.package_views(d),
                                     "effective": eff,
                                     "builtin": dict(REL.BUILTIN_DEFAULT_VIEWS),
                                     "names": list(REL.VIEW_NAMES),
+                                    "render": {
+                                        "declared": sorted(_rd["domains"]),
+                                        "active": sorted(k for k, v in _rd["domains"].items()
+                                                         if v.get("active")),
+                                        "code_enabled": _rd["code_enabled"],
+                                        "warnings": _rd["warnings"]},
                                     "warnings": REL.view_warnings(d)})
         if len(parts) in (2, 3) and parts[0] == "schema":
             # GET /api/schema/<dom>  （历史上这里写成 `len(parts)==3` → 该路由**从未匹配上**，
@@ -468,7 +509,8 @@ class H(BaseHTTPRequestHandler):
                                     "relations": REL.package_relations(pkg_dir) if pkg_dir else {},
                                     "views": REL.package_views(pkg_dir) if pkg_dir else {},
                                     "warnings": (REL.all_warnings(pkg_dir) if pkg_dir else [])
-                                                + GL.glossary_warnings(pkg_dir),
+                                                + GL.glossary_warnings(pkg_dir)
+                                                + (RENDER.render_warnings(pkg_dir) if pkg_dir else []),
                                     "panel_keys": GL.PANEL_KEYS})
         if len(parts) >= 2 and parts[0] == "wiki":
             q = parse_qs(getattr(self, "_query", ""))
@@ -578,14 +620,61 @@ class H(BaseHTTPRequestHandler):
                     return self._err(400, f"未知视图：{forced}（内置视图只有 "
                                           f"{' / '.join(REL.VIEW_NAMES)}）")
                 name, src = forced, "query"
+            # ★ 第 3 层·批 1（声明面）：分派优先级 = `?view=`（既有，最高）> **render 声明**
+            #   > `views.json` > `BUILTIN_DEFAULT_VIEWS`。声明**坏** / `when` 不满足 / 树建不出
+            #   → **仍然 200**（回退可渲染态 + 黄条，`view_warnings` 带 `{stage, message}`），
+            #   **不 500、不白屏**。
+            _info = (RENDER.declarations(d, domains)["domains"] or {}).get(dom) or {}
+            _declared = bool(_info)
+            _decl_warns = list(_info.get("warnings") or [])
+            if not forced and _declared and _info.get("active"):
+                data = PK.read_json(PK.domain_path(d, dom, domains), {})
+                _tree = _run_view(d, dom, "package-render",
+                                  data if isinstance(data, dict) else {}, parts[4],
+                                  domains=domains)
+                if _tree.get("ok"):
+                    _extra = []
+                    if name:
+                        _decl, _ = RENDER.declared(d, dom, domains)
+                        _extra.append(f"该域 `editor/views.json` 的视图声明（{name}）被 render 声明"
+                                      f"覆盖 —— 以 render 为准（$extends="
+                                      f"{(_decl or {}).get('extends') or 'form'}）")
+                    return self._send(200, {
+                        "ok": True, "view_name": "package-render", "view_source": "package-render",
+                        "view_warnings": (list(warns) + _extra
+                                          + [w for w in (_tree.get("warnings") or [])]),
+                        # 契约 §3.2：`view` = 受限渲染树（前端只做白名单渲染 + esc()，不 eval）
+                        "view": _tree})
+                # L3：树建不出 → 回退第 2 层（仍然 200）；第 2 层也没分派 → `view: null` + 黄条
+                _stage = {"stage": _tree.get("stage") or "decl",
+                          "message": _tree.get("message") or "自定义渲染失败 —— 已回退内置视图"}
+                _tw = list(warns) + list(_tree.get("warnings") or []) + [_stage]
+                if not name:
+                    return self._send(200, {"ok": True, "view_name": None, "view_source": "none",
+                                            "view_warnings": _tw, "view": None,
+                                            "render_stage": _stage["stage"]})
+                data = PK.read_json(PK.domain_path(d, dom, domains), {})
+                out = _run_view(d, dom, name, data if isinstance(data, dict) else {}, parts[4])
+                return self._send(200 if out.get("ok") else 422,
+                                  {**out, "view_name": name, "view_source": src,
+                                   "view_warnings": _tw, "render_stage": _stage["stage"]})
+            # L1：声明了但**读不出 / 不合法**（active=false）→ 走第 2 层 + 黄条（不静默）
+            _decl_stage = [{"stage": "decl",
+                            "message": "该域的 render 声明本次不可用（声明坏了 / 不合法）"
+                                       " —— 已回退第 2 层视图"}] if _declared else []
             if not name:
+                if _declared:
+                    return self._err(404, f"该域没有可用的视图分派：{dom}"
+                                          "（render 声明本次不可用，第 2 层也没有视图）",
+                                     view_warnings=_decl_warns + _decl_stage,
+                                     render_stage="decl")
                 return self._err(404, "该域没有声明视图：%s（在包内 editor/views.json 里写 "
                                       "{\"域\": {\"view\": \"…\"}}）" % dom)
             data = PK.read_json(PK.domain_path(d, dom, domains), {})
             out = _run_view(d, dom, name, data if isinstance(data, dict) else {}, parts[4])
             return self._send(200 if out.get("ok") else 422,
                               {**out, "view_name": name, "view_source": src,
-                               "view_warnings": list(warns)})
+                               "view_warnings": list(warns) + _decl_warns + _decl_stage})
         if len(parts) >= 4 and parts[0] == "package" and parts[2] == "d":
             d = PK.resolve_package(parts[1], GAMES_DIR)
             if not d:
@@ -767,11 +856,19 @@ def _check_report(dom: str, data: dict, pkg_dir=None) -> dict:
             "friendly": GL.friendly(dom, errs, pkg_dir), "missing": _missing(dom, data, pkg_dir)}
 
 
-def _run_view(pkg_dir, dom: str, name: str, data: dict, key: str) -> dict:
+def _run_view(pkg_dir, dom: str, name: str, data: dict, key: str,
+              domains: dict | None = None) -> dict:
     """把 (域, 视图名) 落到**框架内置**实现上 → 视图 JSON（坏数据 → `ok=False`，不炸）。
 
     内置视图只有 `REL.VIEW_NAMES` 那 5 个（`graph` = `space_view` 别名）；包**不写新代码**。
+
+    ★ 第 3 层·批 1（声明面）：新增 `name="package-render"` 分支 —— 走**纯声明**渲染树
+    （`editor/render.py`，不执行任何包代码）。声明坏 / 树建不出 → 返回 `ok=False` + `stage`，
+    由调用方按 L3 回退第 2 层（**永远不是 500**）。
     """
+    if name == "package-render":
+        return RENDER.build(pkg_dir, dom, key, data if isinstance(data, dict) else {},
+                            domains=domains)
     impl = REL.resolved_name(name)
     if impl == "loot_view":
         return LV.build_file(data, key, LV.load_vocab(pkg_dir))

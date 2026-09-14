@@ -161,6 +161,259 @@ function graphLayout(view, opts) {
 }
 /* ##GRAPH_LAYOUT_END## */
 
+/* ═══════════════ 第 3 层·第 5 档：受限渲染树 → DOM（**纯函数** · 只用传入的 doc · 不碰 S） ═══════════════
+   设计真源：`overnight/layer3-render-design.md` §4「受限渲染树」+ §9 批 1。
+   包侧只给**声明**（`editor/render/<域>.json`），服务端 `editor/render.py` 把它编译成一棵树；
+   前端这一段的职责只有两件：**白名单渲染** + **esc（textContent 写入）**。
+
+   * 没有 `innerHTML`、没有 `eval` / `new Function`、没有模板求值（插值已在**服务端**算完）；
+   * 文本叶一律走 `textContent`（浏览器不会再把它当 HTML 解析）；
+   * 唯一允许的富文本 = 三个行内标记 `**粗**` / `*斜*` / `` `等宽` ``，用 `createElement('b'|'i'|'code')` 生成；
+   * 不认识的块类型 / 缺字段 → 跳过（服务端已经滤过一遍，这里只做最后一道兜底）。
+
+   `tests/js/render_tree_test.js` 用下面的 BEGIN/END 标记把这一段抠出来，配一个**假 document** 真跑
+   （本文件是浏览器脚本，不是 module）。★ 往这一块里加东西时不要用 `document` / `window` / `S` ——
+   那些在抠出来跑时会直接 ReferenceError（这正是想要的门禁）。
+   ══════════════════════════════════════════════════════════════════════════════════════════════ */
+/* ##RENDER_TREE_BEGIN## */
+const RT_KINDS = ['fields', 'text', 'list', 'table', 'kv'];
+const RT_TONES = ['info', 'ok', 'warn', 'bad'];
+
+/** 色调白名单（未知 → info；**不把包给的串直接当 class**） */
+function rtTone(t) { return RT_TONES.indexOf(t) >= 0 ? t : 'info'; }
+
+/** 值 → 展示串（对象转紧凑 JSON；**绝不**当 HTML） */
+function rtText(v) {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'boolean') return v ? '是' : '否';
+  if (typeof v === 'object') { try { return JSON.stringify(v); } catch (e) { return String(v); } }
+  return String(v);
+}
+
+/** 建元素（文本一律 textContent 写入 —— 这是「不注入」的根） */
+function rtEl(doc, tag, cls, text) {
+  const e = doc.createElement(tag);
+  if (cls) String(cls).split(/\s+/).forEach((c) => { if (c) e.classList.add(c); });
+  if (text !== undefined && text !== null) e.textContent = rtText(text);
+  return e;
+}
+
+function rtAppend(parent, nodes) {
+  (nodes || []).forEach((n) => { if (n) parent.appendChild(n); });
+  return parent;
+}
+
+/** 数组兜底：树是**服务端产物**，但前端仍不假设形状（坏形状 → 空数组，不抛） */
+function rtArr(v) { return Array.isArray(v) ? v : []; }
+
+/** 三个行内标记 → b/i/code 节点数组（其余按纯文本；**不用 innerHTML**） */
+function rtInline(doc, text) {
+  const src = String(text === null || text === undefined ? '' : text);
+  const parts = src.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+  const out = [];
+  parts.forEach((seg) => {
+    if (!seg) return;
+    if (/^\*\*[^*]+\*\*$/.test(seg)) out.push(rtEl(doc, 'b', '', seg.slice(2, -2)));
+    else if (/^\*[^*]+\*$/.test(seg)) out.push(rtEl(doc, 'i', '', seg.slice(1, -1)));
+    else if (/^`[^`]+`$/.test(seg)) out.push(rtEl(doc, 'code', '', seg.slice(1, -1)));
+    else out.push(rtEl(doc, 'span', '', seg));
+  });
+  return out;
+}
+
+/** 只读路径取值（`a.b[0]`；`[*]` 不展示 —— 与服务端插值同一条口径） */
+function rtPath(data, path) {
+  if (!data || typeof path !== 'string') return undefined;
+  const segs = path.match(/[A-Za-z_][A-Za-z0-9_]*|\[\d+\]|\[\*\]/g) || [];
+  let cur = data;
+  for (let i = 0; i < segs.length; i++) {
+    const s = segs[i];
+    if (s === '[*]') return undefined;
+    if (s.charAt(0) === '[') {
+      const idx = parseInt(s.slice(1, -1), 10);
+      if (!Array.isArray(cur) || idx < 0 || idx >= cur.length) return undefined;
+      cur = cur[idx];
+    } else {
+      if (cur === null || typeof cur !== 'object' || !(s in cur)) return undefined;
+      cur = cur[s];
+    }
+  }
+  return cur;
+}
+
+/** 黄条：字符串告警与 `{stage, message}`（契约 §3.2 的降级形状）都吃 */
+function rtWarnBar(doc, warns) {
+  const list = (warns || []).map((w) => (typeof w === 'string' ? w
+    : rtText((w && w.message) || '') + (w && w.stage ? `（stage=${w.stage}）` : '')))
+    .filter((s) => s);
+  if (!list.length) return null;
+  const box = rtEl(doc, 'div', 'rt-warn');
+  box.appendChild(rtEl(doc, 'span', 'rt-warn-ico', '⚠'));
+  const ul = doc.createElement('div');
+  list.slice(0, 12).forEach((s) => ul.appendChild(rtEl(doc, 'div', 'rt-warn-line', s)));
+  if (list.length > 12) ul.appendChild(rtEl(doc, 'div', 'rt-warn-line dim', `……还有 ${list.length - 12} 条`));
+  box.appendChild(ul);
+  return box;
+}
+
+function rtFields(doc, b, data) {
+  const cols = (b.columns >= 1 && b.columns <= 4) ? b.columns : 1;
+  const grid = rtEl(doc, 'div', `rt-grid rt-cols-${cols}`);
+  rtArr(b.items).forEach((it) => {
+    if (!it || !it.path) return;
+    const cell = rtEl(doc, 'div', 'rt-field');
+    const lab = rtEl(doc, 'label', 'rt-flabel', it.label || it.path);
+    lab.appendChild(rtEl(doc, 'span', 'rt-path mono dim', it.path));
+    if (it.readonly) lab.appendChild(rtEl(doc, 'span', 'rt-tag', '只读'));
+    if (it.required) lab.appendChild(rtEl(doc, 'span', 'rt-tag rt-tag-req', '必填'));
+    if (it.hidden) lab.appendChild(rtEl(doc, 'span', 'rt-tag', '隐藏'));
+    cell.appendChild(lab);
+    const v = rtPath(data, it.path);
+    const shown = (v === undefined || v === null || v === '') ? '—' : rtText(v);
+    cell.appendChild(rtEl(doc, 'div', 'rt-fval' + (it.has_value ? '' : ' dim'), shown));
+    if (it.hint) cell.appendChild(rtEl(doc, 'div', 'rt-hint dim', it.hint));
+    grid.appendChild(cell);
+  });
+  return grid;
+}
+
+function rtKv(doc, b) {
+  const table = rtEl(doc, 'div', 'rt-kv');
+  rtArr(b.rows).forEach((r) => {
+    const row = rtEl(doc, 'div', 'rt-kv-row');
+    row.appendChild(rtEl(doc, 'div', 'rt-kv-k', (r && r.label) || ''));
+    row.appendChild(rtEl(doc, 'div', 'rt-kv-v', (r && r.value) || ''));
+    table.appendChild(row);
+  });
+  if (!rtArr(b.rows).length) table.appendChild(rtEl(doc, 'div', 'rt-empty dim', b.empty || '（空）'));
+  return table;
+}
+
+function rtTable(doc, b) {
+  const wrap = rtEl(doc, 'div', 'rt-tablewrap');
+  const t = doc.createElement('table');
+  t.classList.add('rt-table');
+  const heads = rtArr(b.headers);
+  if (heads.length) {
+    const thead = doc.createElement('thead');
+    const tr = doc.createElement('tr');
+    heads.forEach((h) => tr.appendChild(rtEl(doc, 'th', '', h)));
+    thead.appendChild(tr);
+    t.appendChild(thead);
+  }
+  const tbody = doc.createElement('tbody');
+  rtArr(b.rows).forEach((r) => {
+    const tr = doc.createElement('tr');
+    rtArr(r && r.cells).forEach((c) => tr.appendChild(rtEl(doc, 'td', '', c)));
+    tbody.appendChild(tr);
+  });
+  t.appendChild(tbody);
+  wrap.appendChild(t);
+  if (!rtArr(b.rows).length) wrap.appendChild(rtEl(doc, 'div', 'rt-empty dim', b.empty || '（空）'));
+  return wrap;
+}
+
+function rtList(doc, b) {
+  const box = rtEl(doc, 'div', 'rt-list');
+  rtArr(b.list).forEach((it) => {
+    const card = rtEl(doc, 'div', 'rt-card');
+    const head = rtEl(doc, 'div', 'rt-card-head');
+    head.appendChild(rtEl(doc, 'span', 'rt-card-title', (it && it.title) || ''));
+    rtArr(it && it.badges).forEach((bd) => {
+      head.appendChild(rtEl(doc, 'span', 'rt-badge rt-badge-' + rtTone(bd && bd.tone), (bd && bd.text) || ''));
+    });
+    card.appendChild(head);
+    if (it && it.subtitle) card.appendChild(rtEl(doc, 'div', 'rt-card-sub dim', it.subtitle));
+    const fs = rtArr(it && it.fields);
+    if (fs.length) {
+      const grid = rtEl(doc, 'div', 'rt-grid rt-cols-2');
+      fs.forEach((f) => {
+        if (!f || !f.path) return;
+        const cell = rtEl(doc, 'div', 'rt-field');
+        cell.appendChild(rtEl(doc, 'span', 'rt-flabel', f.label || f.path));
+        cell.appendChild(rtEl(doc, 'span', 'rt-fval dim', f.has_value ? '有值' : '空'));
+        grid.appendChild(cell);
+      });
+      card.appendChild(grid);
+    }
+    box.appendChild(card);
+  });
+  if (!rtArr(b.list).length) box.appendChild(rtEl(doc, 'div', 'rt-empty dim', b.empty || '（空）'));
+  return box;
+}
+
+/** 一个块 → 元素（不认识的 kind → null，**不抛**） */
+function rtBlock(doc, b, data) {
+  if (!b || typeof b !== 'object' || RT_KINDS.indexOf(b.kind) < 0) return null;
+  let root;
+  let body;
+  if (b.label) {
+    root = doc.createElement('details');
+    root.classList.add('rt-block');
+    if (!b.collapsed) root.open = true;
+    const sum = doc.createElement('summary');
+    sum.classList.add('rt-sum');
+    if (b.icon) sum.appendChild(rtEl(doc, 'span', 'rt-ico', b.icon));
+    sum.appendChild(rtEl(doc, 'span', '', b.label));
+    root.appendChild(sum);
+    body = rtEl(doc, 'div', 'rt-body');
+    root.appendChild(body);
+  } else {
+    root = rtEl(doc, 'div', 'rt-block');
+    body = root;
+  }
+  if (b.note) body.appendChild(rtEl(doc, 'p', 'rt-note dim', b.note));
+  if (b.kind === 'text') {
+    const p = rtEl(doc, 'p', 'rt-text');
+    rtAppend(p, rtInline(doc, b.text || ''));
+    body.appendChild(p);
+  } else if (b.kind === 'fields') body.appendChild(rtFields(doc, b, data));
+  else if (b.kind === 'kv') body.appendChild(rtKv(doc, b));
+  else if (b.kind === 'table') body.appendChild(rtTable(doc, b));
+  else body.appendChild(rtList(doc, b));
+  return root;
+}
+
+/** 树 → host（返回 false = 树不可用，调用方走降级） */
+function renderTree(doc, host, tree, data) {
+  if (!host) return false;
+  host.textContent = '';                       // 清空（不用 innerHTML）
+  if (!tree || typeof tree !== 'object' || tree.ok !== true) {
+    host.appendChild(rtEl(doc, 'p', 'rt-empty dim',
+      '自定义渲染本次不可用 —— 已回退内置视图（可切「表单」档继续编辑）。'));
+    return false;
+  }
+  const warns = rtArr(tree.warnings).slice();
+  if (tree.truncated) warns.push('渲染结果因超出限额被截断（truncated）—— 完整内容请看 JSON 档。');
+  const bar = rtWarnBar(doc, warns);
+  if (bar) host.appendChild(bar);
+  const head = rtEl(doc, 'div', 'rt-head');
+  if (tree.icon) head.appendChild(rtEl(doc, 'span', 'rt-ico', tree.icon));
+  head.appendChild(rtEl(doc, 'span', 'rt-title', tree.title || tree.domain || ''));
+  if (tree.decl_sha) head.appendChild(rtEl(doc, 'span', 'rt-sha mono dim', '声明 ' + tree.decl_sha));
+  host.appendChild(head);
+  const tabs = rtArr(tree.tabs);
+  tabs.forEach((tab, i) => {
+    let box = host;
+    if (tabs.length > 1) {                     // 多分组 → 原生 <details>（不需要 JS 事件）
+      const det = doc.createElement('details');
+      det.classList.add('rt-tab');
+      if (i === 0) det.open = true;
+      const sum = doc.createElement('summary');
+      sum.textContent = rtText((tab && tab.label) || `分组 ${i + 1}`);
+      det.appendChild(sum);
+      host.appendChild(det);
+      box = det;
+    }
+    rtArr(tab && tab.blocks).forEach((b) => {
+      const n = rtBlock(doc, b, data);
+      if (n) box.appendChild(n);
+    });
+  });
+  return true;
+}
+/* ##RENDER_TREE_END## */
+
 /* ───────────────────────── 状态 ───────────────────────── */
 const S = {
   domains: [], pkgs: [], pkgId: null, pkg: null,
@@ -188,6 +441,11 @@ const S = {
   friendly: [],                  // 服务端返回的中文可读报错（保存/新建被拦时）
   graphCache: {},                // 拓扑视图：'包|条目' → /graph 响应（切条目不重复拉；保存后失效）
   graphBusy: {},                 // 拓扑视图：'包|条目' → 正在拉（防重复请求）
+  renderInfo: null,              // 第 3 层声明面：GET /api/package/<id>/render 的响应（第 5 档显隐判据）
+  renderCache: {},               // 自定义渲染：'包|条目' → /view 响应（切条目不重复拉；保存后失效）
+  renderBusy: {},                // 自定义渲染：'包|条目' → 正在拉（防重复请求）
+  renderDisabled: new Set(),     // L4：前端本次会话禁用 render 的域（渲染树应用时抛异常 → 停用；可恢复）
+  renderCodeWarnedFor: null,     // 「该包请求执行代码」提示只弹一次（按包 id 去重）
 };
 
 /* ───────────────────────── API ───────────────────────── */
@@ -424,6 +682,7 @@ async function selectPkg(id) {
   closeEntry();
   await loadActions(false);          // 动作清单随包（包内可有 mech/）
   await loadHints();                 // 联想数据随包（跨域 key + 已有取值）
+  await loadRenderInfo();            // ★ 第 3 层：渲染声明面随包（第 5 档的显隐判据）
   await loadDomain(S.dom);
 }
 
@@ -432,6 +691,7 @@ async function refreshPkg() {
   if (r.ok) {
     S.pkg = r.json;
     await loadDomains(S.pkgId, { quiet: true });   // 域声明文件可能刚被改过 → 一起刷新
+    await loadRenderInfo();                        // 渲染声明文件同理（第 5 档显隐判据）
     renderRail(); renderPkgMenu(); updateStatusbar();
   }
 }
@@ -807,6 +1067,7 @@ function closeEntry() {
                                        // 各种 querySelector('.field[data-path=...]') 会命中它（踩过）
   $('diffHost').innerHTML = '';
   $('graphHost').innerHTML = '';       // 拓扑图同理：留着上一张图会「闪一下旧内容」
+  $('renderHost').textContent = '';    // 第 3 层同理；**不用 innerHTML**（树的文本一律 textContent）
   $('saveStatus').textContent = '';
   renderList();
 }
@@ -843,14 +1104,120 @@ async function openEntry(key) {
   updateStatusbar();
 }
 
-/* ═══════════════════════════ 条目渲染（四档） ═══════════════════════════
-   表单 / JSON / 变更 / 拓扑。第四档「拓扑」只在 maps 域出现（其它域仍是三段式）。 */
+/* ═══════════════ 第 3 层（批 1·声明面）：第 5 档「自定义」 ═══════════════
+   包在 `editor/render/<域>.json` 里写**纯声明**（版面 / 字段覆盖 / 派生名 / 交互槽），
+   服务端 `editor/render.py` 只读声明 + 条目数据 → 一棵受限渲染树（**不执行任何包代码**）。
+   这一档的显隐判据（设计稿 §6.1 / U7）= `GET /api/package/<id>/render` 的
+   `domains[域].active` —— **按域**显示标签页、按条目决定内容（避免标签页忽隐忽现）。
+   L4（前端应用树时抛异常）→ 该域**本次会话**禁用 render + toast（JSON 档永不可禁用）。 */
+async function loadRenderInfo() {
+  S.renderInfo = null;
+  if (!S.pkgId) return;
+  const r = await api('GET', `/api/package/${encodeURIComponent(S.pkgId)}/render`);
+  S.renderInfo = (r.ok && r.json && typeof r.json === 'object') ? r.json : null;
+  if (S.renderInfo && S.renderInfo.code_enabled && S.renderCodeWarnedFor !== S.pkgId) {
+    // 契约 §3.1：该包**有**「会跑包代码」的面（`$allow_code` / `.html.js`）→ 显式提示（每包一次）
+    S.renderCodeWarnedFor = S.pkgId;
+    toast('该包声明了「会执行代码」的渲染面（本编辑器默认只走纯声明档）', 'warn');
+  }
+}
+
+/** 该域的**声明面**说它有 render（第 5 档按钮的显隐判据 —— L4 停用时按钮仍留着，好点回来） */
+function renderDeclared() {
+  if (!S.renderInfo) return false;
+  const info = (S.renderInfo.domains || {})[S.dom];
+  return !!(info && info.active);
+}
+
+/** 这一档现在能不能画：声明面 active + 本会话没被 L4 停用 */
+function renderable() { return renderDeclared() && !S.renderDisabled.has(S.dom); }
+
+const renderKey = (key) => `${S.pkgId}|${key}`;
+
+/** 拉一棵渲染树（按条目缓存；保存后失效）。只在「还在看这一条」时落笔。 */
+async function loadRenderTree(key) {
+  const ck = renderKey(key);
+  if (S.renderBusy[ck]) return;
+  S.renderBusy[ck] = true;
+  let j;
+  try {
+    const r = await api('GET', `${dPath(S.dom)}/${encodeURIComponent(key)}/view`);
+    j = (r.json && typeof r.json === 'object')
+      ? r.json : { ok: false, view_source: '', view: null, view_warnings: [`读取失败（HTTP ${r.status}）`] };
+  } catch (e) {
+    j = { ok: false, view: null, view_warnings: ['读取失败：' + e.message] };
+  }
+  S.renderBusy[ck] = false;
+  S.renderCache[ck] = j;
+  if (S.mode !== 'render' || S.entryKey !== key) return;
+  renderCustom();
+}
+
+function renderCustom() {
+  const host = $('renderHost');
+  if (!S.entryKey) {
+    host.textContent = '';
+    host.appendChild(rtEl(document, 'p', 'rt-empty dim', '先打开一条条目，这里会按包声明渲染它。'));
+    return;
+  }
+  if (S.renderDisabled.has(S.dom)) {
+    // L4：上次应用树时抛了异常 → 该域本次会话停用；给一条**可点回来**的路（不许白屏）
+    host.textContent = '';
+    host.appendChild(rtEl(document, 'p', 'rt-empty dim',
+      '自定义渲染已停用（上次渲染应用时出错）—— 表单与 JSON 档照常可用。'));
+    const btn = rtEl(document, 'button', 'btn ghost sm', '重新启用并重试');
+    btn.onclick = () => { S.renderDisabled.delete(S.dom); renderEntry(); };
+    host.appendChild(btn);
+    return;
+  }
+  const j = S.renderCache[renderKey(S.entryKey)];
+  if (!j) {
+    host.textContent = '';
+    host.appendChild(rtEl(document, 'p', 'rt-empty dim', '正在按声明渲染…'));
+    loadRenderTree(S.entryKey);
+    return;
+  }
+  const warns = (j.view_warnings || []).concat((j.render_stage && j.render_stage !== 'decl')
+    ? [{ stage: j.render_stage, message: '自定义渲染失败 —— 已回退内置视图' }] : []);
+  const tree = (j.view && typeof j.view === 'object') ? j.view : null;
+  if (j.view_source !== 'package-render' || !tree) {
+    // 降级（L1/L3）：仍然给出**可读黄条** + 一个「回到表单」的去路，绝不白屏
+    host.textContent = '';
+    const bar = rtWarnBar(document, warns.length ? warns
+      : ['该条目本次没有走自定义渲染 —— 已回退内置视图。']);
+    if (bar) host.appendChild(bar);
+    host.appendChild(rtEl(document, 'p', 'rt-empty dim',
+      '自定义渲染本次不可用（声明坏了 / 条件不满足 / 渲染失败）—— 表单与 JSON 档照常可用。'));
+    return;
+  }
+  try {
+    renderTree(document, host, tree, S.entryData || {});
+    if (warns.length) {                        // 树渲染成功但声明面有告警 → 顶部黄条（不静默）
+      const bar = rtWarnBar(document, warns);
+      if (bar) host.insertBefore(bar, host.firstChild);
+    }
+  } catch (e) {
+    // L4：应用树时抛异常 → 该域本次会话禁用 render，退回表单 + toast（**不是白屏**）
+    S.renderDisabled.add(S.dom);
+    S.mode = 'form';
+    renderEntry();
+    toast('自定义渲染已停用（点「自定义」档可恢复）：' + (e && e.message ? e.message : e), 'bad');
+  }
+}
+
+/* ═══════════════════════════ 条目渲染（五档） ═══════════════════════════
+   表单 / JSON / 变更 / 拓扑 / 自定义。第四档「拓扑」只在 maps 域出现；
+   第五档「自定义」只在**该域有有效 render 声明**时出现（第 3 层·批 1）。 */
 function renderEntry() {
   const graphable = isMaps();
+  const custom = renderable();
+  const customTab = renderDeclared();
   if (!graphable && S.mode === 'graph') S.mode = 'form';     // 切到别的域 → 拓扑档自动收回
+  if (!custom && S.mode === 'render') S.mode = 'form';       // 声明没了 / 被停用 → 自定义档收回
   els('#modeSwitch button').forEach((b) => {
     b.classList.toggle('on', b.dataset.mode === S.mode);
     if (b.dataset.mode === 'graph') b.classList.toggle('hidden', !graphable);
+    if (b.dataset.mode === 'render') b.classList.toggle('hidden', !customTab);
   });
   const isForm = S.mode === 'form', isJson = S.mode === 'json';
   // 只有表单档且该域有分组时才显示「分组折叠」按钮
@@ -859,10 +1226,12 @@ function renderEntry() {
   $('jsonHost').classList.toggle('hidden', !isJson);
   $('diffHost').classList.toggle('hidden', S.mode !== 'diff');
   $('graphHost').classList.toggle('hidden', S.mode !== 'graph');
+  $('renderHost').classList.toggle('hidden', S.mode !== 'render');
 
   if (isJson) { $('jsonHost').value = JSON.stringify(S.entryData, null, 2); return; }
   if (S.mode === 'diff') { renderDiff(); return; }
   if (S.mode === 'graph') { renderGraph(); return; }
+  if (S.mode === 'render') { renderCustom(); return; }
   renderForm();
 }
 
@@ -1445,8 +1814,10 @@ async function save() {
   toast((wasNew ? '已新建 ' : '已保存 ') + S.entryKey, 'ok');
   // 拓扑图是按**磁盘数据**算的 → 这一条的缓存作废；正开着图就重画一次
   delete S.graphCache[graphKey(S.entryKey)];
+  delete S.renderCache[renderKey(S.entryKey)];      // 自定义渲染同理（树里带条目数据的展示串）
   await refreshPkg(); await loadDomain(S.dom); await loadHints();   // 值变了 → 联想候选跟着更新
   if (S.mode === 'graph') renderGraph();
+  if (S.mode === 'render') renderCustom();
 }
 
 async function del() {
@@ -1457,6 +1828,7 @@ async function del() {
   if (!r.ok) { toast('删除失败', 'bad'); return; }
   toast('已删除 ' + S.entryKey, 'ok');
   delete S.graphCache[graphKey(S.entryKey)];
+  delete S.renderCache[renderKey(S.entryKey)];
   closeEntry();
   await refreshPkg(); await loadDomain(S.dom); await loadHints();
 }

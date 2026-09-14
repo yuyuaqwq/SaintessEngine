@@ -100,6 +100,10 @@
             <button data-mode="diff">变更</button>
             <!-- 第四档：拓扑视图 —— **只在 maps 域出现**（renderEntry() 按域切 hidden） -->
             <button data-mode="graph" class="hidden" title="节点 + 拓扑 → 图（地图域专用）">🗺 拓扑</button>
+            <!-- 第五档：自定义渲染（第 3 层·批 1 声明面）—— **只在该域有有效 render 声明时出现**；
+                 只画包声明的那棵受限树，纯声明、不跑包代码（见 editor/render.py） -->
+            <button data-mode="render" class="hidden"
+                    title="按包内 editor/render/&lt;域&gt;.json 的声明渲染（纯声明，不执行包代码）">🧩 自定义</button>
           </div>
           <div class="segmented groups-ctl hidden" id="groupCtl" role="group" aria-label="分组折叠">
             <button id="btnGroupsOpen" title="展开全部分组">⤴ 展开</button>
@@ -114,6 +118,7 @@
           <textarea class="json-host mono hidden" id="jsonHost" spellcheck="false"></textarea>
           <div class="diff-host hidden" id="diffHost"></div>
           <div class="graph-host hidden" id="graphHost"></div>
+          <div class="render-host hidden" id="renderHost"></div>
         </div>
 
         <footer class="actionbar">
