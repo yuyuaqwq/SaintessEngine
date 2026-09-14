@@ -40,7 +40,6 @@ I2 合规：包内不 import 宿主顶层；唯一的未进包符号（`build_mo
 """
 from __future__ import annotations
 
-import importlib
 import sys
 import time
 
@@ -63,9 +62,10 @@ from .skills import skill_info             # 包内直取（技能链 D3 已进�
 #                        `content/drops.py`，尚未落地）⇒ 登记的**缺口**：注入槽优先 →
 #                        包内 `content.drops`（若已落地）→ 已加载宿主聚合层 `game.content`。
 # `content/_pkgref.py::PkgModule` 保持「属性访问时解析」的取件时机（与旧替身逐字同时机）。
+# ★ B2-INTFIX（2026-09-14）：宿主聚合层句柄**只有一个家** = 包内唯一规范落点
+#   `content/persistence/handles.py::_host_content()`（注入 → `sys.modules` → importlib → 抛）。
+#   本文件原来的私有 `_load_host_mod()` / `_host_c()` 兜底链（第四份同义实现）已删。
 # ============================================================
-_HOST_PKG = "data.plugins.dragonfall.game"
-_HOST_PKG_FALLBACK = "game"
 _INJECTED = {}
 _HOST_C = None
 
@@ -84,26 +84,17 @@ def bind_host(**objs):
         _INJECTED[k] = v
 
 
-def _load_host_mod(name: str):
-    """取宿主子模块：`sys.modules` 已加载 → importlib；取不到**抛**（拒绝静默空跑）。"""
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = sys.modules.get("%s.%s" % (prefix, name))
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module("%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("cmds_instance_router：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
-
-
 def _host_c():
-    """宿主内容聚合层（只喂**未进包**符号；注入优先 → 已加载模块 → import）。"""
+    """宿主内容聚合层（只喂**未进包**符号）：注入槽 `c` → **唯一规范落点**。
+
+    B2-INTFIX：兜底不再是本地 `_load_host_mod("content")`，而是
+    `content/persistence/handles.py::_host_content()`（注入 → `sys.modules` → importlib → 抛）。
+    惰性 import：`content.persistence` 在 EAGER 窗口不可取（见该函数 docstring）。
+    """
     if _HOST_C is not None:
         return _HOST_C
-    return _load_host_mod("content")
+    from .persistence.handles import _host_content
+    return _host_content()
 
 
 def _build_monster():

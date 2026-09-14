@@ -27,8 +27,9 @@
 1. 宿主模块引用 → 包内取件：
    · `from .. import db` → 包内句柄 `from ._pkgref import DB as db`（B1/B2-C2；正文 `db.xxx(...)` 一字未改）；
    · `from .. import content as C` → 见 `EventContext._C()`：仍返回**宿主内容聚合层模块**（同名同对象），
-     取件口改走包内既有解析 `content/reward.py:_host_content()`（注入优先 → `sys.modules` → importlib，
-     绝不静默空跑）—— 宿主侧 `tpl_merchant`（故意留宿主，见上 ★）与冻结对拍用例都经 `ctx._C()` 取
+     取件口 = **唯一规范落点** `content/persistence/handles.py:_host_content()`（B2-INTFIX：
+     注入优先 → `sys.modules` → importlib → 抛，绝不静默空跑）—— 宿主侧 `tpl_merchant`
+     （故意留宿主，见上 ★）与冻结对拍用例都经 `ctx._C()` 取
      `generate_equip` / `TRADER_DEAL_CHANCE` / `QUALITY`，对象与改造前逐字相同。
 2. 宿主边界函数 → 同名惰性包装 / 包内直取：
    · `from ..content_rules.gameplay import check_player_level_up`（写库 + 写背包，属「接人性」，
@@ -57,8 +58,8 @@ import random
 # ============================================================
 # ① 宿主取件（B2-C2：原 `_host_*` 宿主替身机械已删）
 #   · `db` → 包内句柄 `content/_pkgref.py:DB`（见下）
-#   · `C`  → 见 `EventContext._C()`：仍返回**宿主内容聚合层模块**（同名同对象；取件口改走
-#           `content/reward.py:_host_content()`）
+#   · `C`  → 见 `EventContext._C()`：仍返回**宿主内容聚合层模块**（同名同对象；取件口 =
+#           **唯一规范落点** `content/persistence/handles.py:_host_content()`，B2-INTFIX）
 # ============================================================
 from ._pkgref import DB as db
 
@@ -136,12 +137,16 @@ class EventContext:
     def _C(self):
         """真源 `from .. import content as C; return C` —— 返回**宿主内容聚合层模块**。
 
-        B2-C2：取件口改走包内既有的宿主内容 API 解析 `content/reward.py:_host_content()`
-        （注入优先 → `sys.modules` → importlib，绝不静默空跑）—— 与改造前 `_Host*("content")`
-        返回**同一个对象**（都是已加载的 `game.content` 模块）；宿主 `tpl_merchant` 与
+        B2-C2：取件口改走包内既有的宿主内容 API 解析；**B2-INTFIX（2026-09-14）**收敛到
+        **唯一规范落点** `content/persistence/handles.py::_host_content()`（注入优先 →
+        `sys.modules` → importlib → 抛，绝不静默空跑）—— 与改造前 `_Host*("content")` 返回
+        **同一个对象**（都是已加载的 `game.content` 模块）；宿主 `tpl_merchant` 与
         `tests/test_v184_loot_tiers.py` 的冻结对拍用例都经此取 `generate_equip` /
-        `TRADER_DEAL_CHANCE` / `QUALITY`。"""
-        from .reward import _host_content
+        `TRADER_DEAL_CHANCE` / `QUALITY`。
+
+        惰性 import（函数体内）：`content/persistence/__init__` 在 EAGER 窗口要读宿主
+        `C.MAP_BY_ID`，本模块又在 `game/core/__init__` 装配链上 ⇒ 只能运行期取（同 `_pkgref` 口径）。"""
+        from .persistence.handles import _host_content
         return _host_content()
 
     def param(self, key, default=None):

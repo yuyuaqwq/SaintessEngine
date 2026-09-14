@@ -143,6 +143,41 @@ def _host_module(name: str):
     raise RuntimeError("%s：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (__name__, name, last))
 
 
+def _host_content():
+    """宿主内容聚合层 `game.content` —— **全仓唯一规范落点**（B2-INTFIX，2026-09-14）。
+
+    真源写法 = 包内各文件里的「函数内 `from .. import content as C`」。本函数是它的唯一包内
+    等价物：解析顺序与本模块 `_host_module("content")` 逐字相同 ——
+
+        ① 注入槽：`bind_host(content=<模块|零参可调用>)`（wave 2 宿主壳 import 期注入；`None` 不覆盖）
+        ② `sys.modules`：`data.plugins.dragonfall.game.content` → `game.content`
+        ③ `importlib`：同样两个包名，逐个试
+        ④ 都取不到 → **抛 `RuntimeError`**（「拒绝静默空跑」；**绝不**返回 `None`、**绝不**静默降级）
+
+    为什么住这里（B2-INTFIX 落点裁定，完整理由见 `out/W-INTFIX.md` §1）：
+      · 它返回的是**宿主**模块句柄，不是包内模块 —— `content/_pkgref.py` 的 `PkgModule` 是
+        「**包内**惰性模块句柄」（实例全是 `content.persistence.*`，且没有注入面），语义不符；
+      · 本模块就是包内既有的**宿主面解析区**：`_host_module` / `_host_attr` / `_host_attrs` /
+        `_HostMod` / `C = _HostMod("content")` 全在这，「宿主 content 聚合层」句柄本来就在这；
+      · 要求的三步解析顺序本模块**已经实现**（`_host_module`），本函数只是给它一个规范名
+        —— 零新机制、零新状态，不产生第二个注入面。
+
+    背景（B2 四线并行造成的接口错位）：该名一度住在 `content/reward.py`，C4 落地「删宿主替身
+    机械」时把它一并删了，而 `content/settlement.py` · `content/flow/instance_battle.py` ·
+    `content/cmds_instance_router.py` 各自留了一份语义相同的**私有**实现
+    ⇒ `content/event_templates.py` 的 `from .reward import _host_content` 被切断（ImportError，
+    7 个测试文件红）。四份实现全部收敛到本函数后，该句柄只有一个家。
+
+    ⚠️ 调用点必须**惰性 import**（函数体内 `from .persistence.handles import _host_content`）：
+    本模块经 `content/persistence/__init__.py`（EAGER 窗口里要读宿主 `C.MAP_BY_ID`）暴露，
+    在 `game/core/__init__` 装配链上不能 import 期取。
+
+    返回对象 = **已加载的宿主 `game.content` 模块本体**；与改造前三条私有实现的首分支
+    （`sys.modules`）返回的是**同一个对象**（逐调用点 `is` 证据见 `out/W-INTFIX.md` §3）。
+    """
+    return _host_module("content")
+
+
 def _host_attr(mod: str, attr: str):
     """宿主模块属性 —— 真源「函数内 `from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
     m = _host_module(mod)

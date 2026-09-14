@@ -31,9 +31,7 @@ random 调用顺序/落库顺序**一字未改**）：
     段21 的 need/exp_pct 用重读后的 player（这是「计划半边」做不到逐字节等价的原因）
 """
 import functools
-import importlib
 import random
-import sys
 import time
 
 # ---- B14-2 L5：数据名读点切包内门面（`C.<数据名>` → 门面直取；函数名/缺口名仍留 `C.<名>`）----
@@ -78,14 +76,17 @@ from . import catalog_b143 as _b143   # B14-3 收口名（宠物/公会/势力/�
 #      `exp_to_next` / `mount_effects` …）—— 缺口登记见 `out/W-B2C3.md`（`drops` 归 C2 落点
 #      `content/drops.py`；其余函数读口属「待函数单元」）
 #      取不到 → 抛（拒绝静默空跑）
+#      ★ B2-INTFIX（2026-09-14）：本层句柄**只有一个家** = 包内唯一规范落点
+#        `content/persistence/handles.py::_host_content()`（注入 → `sys.modules` → importlib → 抛）。
+#        本文件原来的私有 `_load_host_mod("content")` / `_host_content()` 已删（同一句柄的
+#        第三份实现，是 C2↔C4 接口错位的成因之一）；`_HostFace.C` 只保留**自己的**注入槽
+#        `content`（宿主壳 wave 2 预留，行为不变）+ 规范落点兜底。
 #
 # ★ 调用约定兼容（过渡期，宿主侧冻结；B2-C3 与宿主壳必须同时可用）：
 #   宿主壳恒以 `_host()` 作**首参**调用；包内直取调用方（B2 各簇读点）按**真源签名**调
 #   （没有 host 参数）。`@_host_tolerant` 让两种约定都成立且行为一致：首参不是宿主面句柄时，
 #   自动左对齐补上包内自解析句柄。**函数签名/正文/返回值一字未改**（装饰器只做取件归一）。
 # ============================================================
-_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（AstrBot 插件加载路径）
-_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
 _INJECTED = {}
 
 
@@ -102,26 +103,6 @@ def _slot(key, fallback):
     if v is not None:
         return v
     return fallback()
-
-
-def _load_host_mod(name):
-    """取宿主子模块（`game.content`）：`sys.modules` → importlib；取不到抛。"""
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = sys.modules.get("%s.%s" % (prefix, name))
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module("%s.%s" % (prefix, name))
-        except Exception as exc:                                  # noqa: BLE001
-            last = exc
-    raise RuntimeError("settlement：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
-
-
-def _host_content():
-    """宿主内容聚合层 `game.content`（真源 `from .. import content as C`）—— 只喂未进包函数读口。"""
-    return _load_host_mod("content")
 
 
 def _pkg_db():
@@ -158,6 +139,9 @@ class _HostFace:
 
     @property
     def C(self):
+        # B2-INTFIX：兜底 = **唯一规范落点** `content/persistence/handles.py::_host_content()`
+        # （惰性 import：content.persistence 在 EAGER 窗口不可取，见该函数 docstring）。
+        from .persistence.handles import _host_content
         return _slot("content", _host_content)
 
     @property

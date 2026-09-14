@@ -75,10 +75,8 @@
 """
 from __future__ import annotations
 
-import importlib
 import json
 import os
-import sys
 from typing import Optional
 
 from . import instance_run as IR
@@ -140,24 +138,10 @@ def _resolve_db_update():
 #                         （与宿主端口 `getattr(C, "build_monster", None)` 逐字同宽容度）
 # 缺省从「裸 `boss_script` 模块」升级为本端口 = 与宿主壳注入的 `script_api` **同形同源**，
 # 否则读点改包内直取后 Boss 剧本会退化（阶段模板不合并 / 援军变木桩）。
+# ★ B2-INTFIX（2026-09-14）：宿主聚合层句柄**只有一个家** = 包内唯一规范落点
+#   `content/persistence/handles.py::_host_content()`（注入 → `sys.modules` → importlib → 抛）。
+#   本文件原来的私有 `_host_content()`（第三份同义实现）已删 —— 它是 C2↔C4 接口错位的成因之一。
 # ============================================================
-_HOST_PKG = "data.plugins.dragonfall.game"
-_HOST_PKG_FALLBACK = "game"
-
-
-def _host_content():
-    """宿主内容聚合层 `game.content`：`sys.modules` → importlib → 抛。"""
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = sys.modules.get("%s.content" % prefix)
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module("%s.content" % prefix)
-        except Exception as exc:                                  # noqa: BLE001
-            last = exc
-    raise RuntimeError("instance_battle：宿主聚合层 content 取不到（%s）——拒绝静默空跑" % (last,))
 
 
 def _resolve_build_monster():
@@ -174,6 +158,7 @@ def _resolve_build_monster():
         if fn is not None:
             return fn
     try:
+        from ..persistence.handles import _host_content   # B2-INTFIX：唯一规范落点（惰性 import）
         return getattr(_host_content(), "build_monster", None)
     except Exception:                                             # noqa: BLE001
         return None
