@@ -22,7 +22,7 @@
 
 引擎零知识
 ----------
-只认「key / 正则 / 分类 / 顺序 / 可见性」这类通用形状字段；指令名、文案、
+只认「key / 正则 / 分类 / 顺序 / 优先级 / 可见性」这类通用形状字段；指令名、文案、
 守卫语义一律由使用方给。守卫只记**名字**，语义由使用方自己实现（框架不认「角色」）。
 """
 from __future__ import annotations
@@ -61,6 +61,9 @@ class CommandSpec:
     * `page_size` —— 该指令列表输出的每页条数（0 = 不适用）
     * `visible`   —— 是否出现在帮助/目录
     * `order`     —— 帮助排序（小在前；同值按注册序）
+    * `priority`  —— **命中优先级**（大在前；同值按注册序）。与 `order` 各管一头：
+                     `order` 只排帮助/目录（`visible()`），`priority` 只排命中
+                     （`hits()` / `hit()`），互不参与对方的排序
     * `extra`     —— 使用方自定义附加数据（框架不解释、原样带回）
     """
     key: str
@@ -72,6 +75,7 @@ class CommandSpec:
     page_size: int = 0
     visible: bool = True
     order: int = 0
+    priority: int = 0
     extra: dict = field(default_factory=dict)
 
     # ---------- 构造 ----------
@@ -96,6 +100,10 @@ class CommandSpec:
             order = int(data.get("order") or 0)
         except (TypeError, ValueError):
             order = 0
+        try:
+            priority = int(data.get("priority") or 0)   # "50" / 50 两种写法都认
+        except (TypeError, ValueError):
+            priority = 0
         return cls(
             key=str(key or ""),
             patterns=pats,
@@ -106,6 +114,7 @@ class CommandSpec:
             page_size=page_size,
             visible=bool(data.get("visible", True)),
             order=order,
+            priority=priority,
             extra=dict(data.get("extra") or {}),
         )
 
@@ -124,6 +133,8 @@ class CommandSpec:
             out["visible"] = False
         if self.order:
             out["order"] = self.order
+        if self.priority:
+            out["priority"] = self.priority
         if self.extra:
             out["extra"] = dict(self.extra)
         return out
@@ -240,12 +251,13 @@ class CommandRegistry:
 
     # ============================================================ 匹配
     def hits(self, text: str, *, mode: str = "search") -> tuple:
-        """命中该文本的**全部**声明（注册序）—— 互斥矩阵自检用。"""
+        """命中该文本的**全部**声明（`priority` 降序，同值保持注册序）—— 互斥矩阵自检用。"""
         t = (text or "").strip()
-        return tuple(s for s in self.specs() if s.hits(t, mode=mode))
+        got = [s for s in self.specs() if s.hits(t, mode=mode)]
+        return tuple(sorted(got, key=lambda s: -s.priority))
 
     def hit(self, text: str, *, mode: str = "search") -> Optional[CommandSpec]:
-        """命中该文本的**第一条**声明；无 → None（宿主 registry 优先顺序由使用方给）。"""
+        """命中该文本的**第一条**声明（`priority` 最高者，同值取注册序）；无 → None。"""
         got = self.hits(text, mode=mode)
         return got[0] if got else None
 
