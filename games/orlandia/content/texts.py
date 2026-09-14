@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 """包内文案表装载器（`content/texts.py`）—— 游戏仓 `game/core/texts.py`（96 行）**逐字端口**（B13-L7）。
 
-**唯一真源不变**：玩家的每一句文案仍只存在于宿主 `game/data/text_specs.json` 一处。
-本模块只搬「装载代码」，一个字都没改文案（铁律 2：数据一律导出器产出 / 代码只传槽位）。
-宿主薄壳（`game/core/texts.py`）把**宿主那份声明文件路径**注入进来（`bind_spec_path`），
-所以宿主行为逐字不变；包内默认路径 = `content/data/texts.json`（= 同一份声明文件的**导出投影**，
-实测 233 键逐字相同；供包独立运行/可迁移用）。
+**唯一真源已在包内**（★ P4′-B，2026-09-14）：`content/data/text_specs.json`
+（对象 key 即文案标识；`_` 开头的是元信息，不入表）。本模块只做装载，一个字都没改文案
+（铁律 2：数据一律导出器产出 / 代码只传槽位）。
+本模块**自己定位**真源（`_HERE` 推出，不依赖宿主目录、不依赖任何环境变量），
+宿主薄壳（`game/core/texts.py`）反过来取本模块的 `SPEC_PATH` 再注入（`bind_spec_path`，
+取件式）—— 所以「宿主行为逐字不变」+「包自足」两条同时成立。
+包内另有 `content/data/texts.json`：同一份声明的**导出投影**（无 `_meta`/`_categories`，
+233 键逐值相同；给编辑器/域导出用，**不是**装载器真源）。
 
 装载语义（与真源逐字相同）
 --------------------------
@@ -15,7 +18,7 @@
 
 ⚠️ 路径取件为什么是「thunk」而不是常量
 ------------------------------------
-`tests/test_texts_table.py:697` 会 `T.SPEC_PATH = 坏文件; T.reload()` 验证修复路径 ——
+`tests/test_texts_table.py` 会 `T.SPEC_PATH = 坏文件; T.reload()` 验证修复路径 ——
 所以路径必须是**调用时**从宿主薄壳模块取的（`bind_spec_path(source=lambda: SPEC_PATH)`），
 常量拷贝会让「改宿主 SPEC_PATH」失效（测试当场红）。
 """
@@ -31,13 +34,20 @@ _HOST_PKG = "data.plugins.dragonfall.game"
 _HOST_PKG_FALLBACK = "game"
 
 _HERE = os.path.dirname(os.path.abspath(__file__))          # <pkg>/content
-# 包内默认真源：宿主 `game/data/text_specs.json` 的导出投影（content/data/texts.json）
-SPEC_PATH = os.path.join(_HERE, "data", "texts.json")
+# 包内真源：本模块自己定位（宿主 `game/data/text_specs.json` 只是构建期镜像）
+SPEC_PATH = os.path.join(_HERE, "data", "text_specs.json")
+# 导出投影（编辑器/域导出用；非装载真源）
+PROJECTION_PATH = os.path.join(_HERE, "data", "texts.json")
 
 _SPEC_SOURCE = None     # 调用方注入的路径取件（宿主薄壳绑宿主模块的 SPEC_PATH）
 _LOG_INJ = None         # 调用方注入的日志器（宿主 `log_setup.LOG`）
 _TABLE = None           # type: TextTable | None
 _LOAD_ERROR = ""        # 最近一次装载失败原因（空 = 正常）
+
+
+def canonical_path() -> str:
+    """真源路径的本包标识（不随注入变；门禁/运维用）。"""
+    return SPEC_PATH
 
 
 def bind_spec_path(source=None, path=None) -> None:
@@ -142,5 +152,6 @@ def load_error() -> str:
     return _LOAD_ERROR
 
 
-__all__ = ["SPEC_PATH", "spec_path", "bind_spec_path", "bind_log",
+__all__ = ["SPEC_PATH", "PROJECTION_PATH", "spec_path", "canonical_path",
+           "bind_spec_path", "bind_log",
            "table", "reload", "text", "static", "audit", "load_error"]
