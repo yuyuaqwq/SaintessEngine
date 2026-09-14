@@ -359,5 +359,6 @@ def resolve_map_for(world_id: str, map_id: str) -> Optional[dict]:
         if data is None:
             return None
         return data.get("maps", {}).get(map_id)
-    MAP_BY_ID = _host_attr("data", "MAP_BY_ID")  # ★ 保留宿主句柄（B14-2 L8：身份断言未解，见文件头注）
+    from . import catalog_space as _cs          # ★ B16-W11d：包内门面（原 `_host_attr("data", …)`；
+    MAP_BY_ID = _cs.MAP_BY_ID                   #   删表后 `C.MAP_BY_ID` 同一对象 = 本门面，身份断言仍成立）
     return MAP_BY_ID.get(map_id)

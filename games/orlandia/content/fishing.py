@@ -139,8 +139,8 @@ FISH_POOL: list = [{k: v for k, v in _e.items() if k != "seq"}
 # ============================================================
 # ③ 宿主取件（模块级名字与真源逐名相同；正文零改动）
 # ============================================================
-FISH_COLLECT = _HostAttr("data.fishing", "FISH_COLLECT")          # v101.25i6 别名：= QUALITY_ORDER
-FISH_QUALITY_ORDER = _HostAttr("data", "FISH_QUALITY_ORDER")      # v184：垂钓档位/权重唯一真相源
+from .catalog_rules import FISH_COLLECT   # ★ B16-W11d：包内门面（无域 → dump）          # v101.25i6 别名：= QUALITY_ORDER
+from .catalog_b143 import QUALITY_ORDER as FISH_QUALITY_ORDER   # ★ B16-W11d：真源 = `QUALITY_ORDER` 别名      # v184：垂钓档位/权重唯一真相源
 FISH_TIERS = _HostAttr("core.quality_tiers", "FISH_TIERS")        # v116 季节限定：垂钓随季节变化
 current_season = _HostAttr("core.time_weather", "current_season")
 

@@ -142,11 +142,11 @@ class _HostAttr:
 
 
 db = _HostMod("db")
-EQUIP_ROSTER = _HostAttr("data", "EQUIP_ROSTER")
-EQUIP_ROSTER_BY_NAME = _HostAttr("data", "EQUIP_ROSTER_BY_NAME")
-QUALITY = _HostAttr("data", "QUALITY")
-ECON_CONFIG = _HostAttr("data", "ECON_CONFIG")
-WEAPON_FLAVOR = _HostAttr("data", "WEAPON_FLAVOR")
+# ★ B16-W11d：五张表改包内门面直取（原 `_HostAttr("data", …)` 盲区形态）
+from .catalog_b143 import QUALITY, WEAPON_FLAVOR
+from .catalog_items import EQUIP_ROSTER, EQUIP_ROSTER_BY_NAME
+from . import catalog_life as _clife
+ECON_CONFIG = _clife.ECON_CONFIG
 equip_stats = _HostAttr("core.stats", "equip_stats")
 equip_value = _HostAttr("core.stats", "equip_value")
 QUALITY_TIERS = _HostAttr("core.quality_tiers", "QUALITY_TIERS")
@@ -202,8 +202,9 @@ _SUBAREAS = {}
 def _ensure_maps():
     global _MAP_BY_ID, _SUBAREAS
     if not _MAP_BY_ID:
-        _MAP_BY_ID = _host_attr("data", "MAP_BY_ID")
-        _SUBAREAS = _host_attr("data", "SUBAREAS")
+        from . import catalog_space as _cs          # ★ B16-W11d：包内门面（原 `_host_attr("data", …)`）
+        _MAP_BY_ID = _cs.MAP_BY_ID
+        _SUBAREAS = _cs.SUBAREAS
 
 
 # db 惰性：模块级 `db = _HostMod("db")`（见上），正文 `db.xxx` 一字未改。

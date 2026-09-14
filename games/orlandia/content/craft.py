@@ -115,9 +115,12 @@ class _HostAttr:
 # ============================================================
 generate_equip = _HostAttr("core.drops", "generate_equip")
 generate_roster_equip = _HostAttr("core.drops", "generate_roster_equip")
-CRAFT_RECIPES = _HostAttr("data.craft", "CRAFT_RECIPES")
-CRAFT_RECIPE_ALIASES = _HostAttr("data.craft", "CRAFT_RECIPE_ALIASES")
-MATERIALS = _HostAttr("data", "MATERIALS")
+# ★ B16-W11d：三张数据表改包内门面直取（原 `_HostAttr("data…")`）——
+#   `CRAFT_RECIPES`/`CRAFT_RECIPE_ALIASES` ← catalog_rules 的**插入序** dump（`craft` 域是字典序、不可逆）；
+#   `MATERIALS` ← catalog_items（域 `items`）。
+from . import catalog_items as _citems
+from .catalog_rules import CRAFT_RECIPES, CRAFT_RECIPE_ALIASES
+MATERIALS = _citems.MATERIALS
 resolve = _HostAttr("core.index", "resolve")
 _display = _HostAttr("core.index", "display")
 

@@ -289,7 +289,7 @@ def prof_exp_need(lv):
     - 满级周期估算：等待型（可挂机）约 1 个月，制造型（体力限制）约 2-3 个月
     - 存量玩家兼容：exp 按级内进度存储，曲线变更只影响后续升级需求，已满级不受影响
     """
-    FORMULA_SKELETON = _host_attr("data", "FORMULA_SKELETON")  # 真源 `from ..data import …`（P2F-1 延迟取件）
+    from .catalog_rules import FORMULA_SKELETON   # ★ B16-W11d：包内门面（原 `_host_attr("data", …)` 检测器盲区形态）
     _p = FORMULA_SKELETON["prof_exp_need"]
     return _p["a"] * lv * lv + _p["b"] * lv
 
