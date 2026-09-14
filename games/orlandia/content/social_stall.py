@@ -47,7 +47,7 @@ from . import catalog_space as _cs       # MAP_BY_ID
 # ① 宿主替身口（存储层 / 宿主常量）
 # ============================================================
 _HOST_DB = None
-_HOST_STORE_SOCIAL = None   # 宿主 `game.store.social`（market_sell_atomic 不在 db 门面上）
+_HOST_STORE_SOCIAL = None   # 注入槽：`game.store.social`—— 未注入 → 包内直取 `content/persistence/social.py`（market_sell_atomic 不在 db 门面上）
 _MAPS = None            # 遗留注入位（B14-2 L6 起 `MAP_BY_ID()` 走包内门面 catalog_space）
 _HOUSE_LEVELS = None    # 遗留注入位（B14-2 L6 起 `HOUSE_LEVELS()` 走包内门面 catalog_life）
 _QUALITY = None         # `QUALITY`（装备品质色表）—— 包内无域 ⇒ 仍走宿主句柄（缺口）
@@ -323,7 +323,12 @@ def market_sell_place(group_id, qq_id, item_name, price):
     item_key, data = found
     # v116 审计修复 H0-A2：原 market_add + remove_item 两次独立调用，崩溃会致
     # 物品复制/少货得金。改走 store.social.market_sell_atomic 单事务原子上架。
-    _store_social = _HOST_STORE_SOCIAL if _HOST_STORE_SOCIAL is not None else _resolve_host("store.social")
+    # ★ REPOINT-PKG（2026-09-15，B4R B 组第 5 项）：兜底由宿主子模块 `game.store.social`
+    #   改**包内直取** `content/persistence/social.py`（宿主那边是 `import *` 委托薄壳
+    #   ⇒ 同一函数对象）；注入槽 `bind_host(store_social=…)` 原样保留。
+    _store_social = _HOST_STORE_SOCIAL
+    if _store_social is None:
+        from .persistence import social as _store_social   # 包内直取（调用时取件，与旧口径同时机）
     if not _store_social.market_sell_atomic(group_id, qq_id, item_key, data, price):
         return False, item_name, f"背包里没有『{item_name}』！『背包』查看～"
     return True, data["name"], None

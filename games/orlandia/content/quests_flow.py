@@ -12,8 +12,8 @@
 |---|---|---|
 | 函数体内 `from .. import db` + `db.xxx(...)` | 模块级 `db` = **惰性宿主代理** `_HostDB` | 正文里 `db.xxx(...)` **一行未改**；宿主由 `bind_host(db)` 注入，或按 `sys.modules` 找**已加载**的宿主模块（绝不 import，防在包侧另起一份宿主模块树） |
 | 函数体内 `from .. import content as C` + `C.<名>` | 模块级 `C = _Dom()`（W6 后**只剩函数名句柄 `resolve`**：`ALL_WILD` → 包内派生式读口 `content/wild.py`；`FACTIONS` / `AREA_FACTION` → 门面 `catalog_b143.py`；其余数据名走 `catalog_*.py`） | 逐符号归属见下表 |
-| 函数体内 `from ..content_rules.gameplay import check_player_level_up` | 模块级同名包装 `check_player_level_up(...)` | 升级结算写库 = 宿主；正文调用点不动 |
-| 函数体内 `from ..core.stat_bonus import stat_bonus` | 模块级同名包装 `stat_bonus(...)` | 外部增幅聚合 = 宿主（读称号/成就/收藏册） |
+| 函数体内 `from ..content_rules.gameplay import check_player_level_up` | 模块级同名包装 `check_player_level_up(...)` → ★ REPOINT-PKG 起兜底**包内直取** `content/gameplay_rules.py` | 宿主薄壳 `game/content_rules/gameplay.py` 是同名单再导出（同一函数对象）；正文调用点不动 |
+| 函数体内 `from ..core.stat_bonus import stat_bonus` | 模块级同名包装 `stat_bonus(...)` → ★ REPOINT-PKG 起兜底**包内直取** `content/stat_bonus.py` | 宿主薄壳 `game/core/stat_bonus.py` 是同名单再导出（同一函数对象）；正文调用点不动 |
 | 函数体内 `from ..reward import grant_reward` | 模块级同名包装 `grant_reward(*a, **k)` | 发放实现 = 宿主 `game/reward.py` |
 | 函数体内 `from .quests import bump_daily_progress as _bump_daily_progress` | 模块级同名包装 `_bump_daily_progress(...)` | 每日委托计数 = 宿主 `game/services/quests.py`（**同级服务，本批未搬**） |
 | 函数体内 `from ..services.quests import DAILY_META_KEYS, settle_daily_quest` | `DAILY_META_KEYS` = `_HostAttr("services.quests", …)`（支持 `in`）；`settle_daily_quest` = 同名包装 | 同上；`DAILY_META_KEYS` 只被 `if dkey in DAILY_META_KEYS` 用 ⇒ 用带 `__contains__` 的惰性对象，正文那一行不动 |
@@ -81,8 +81,8 @@ SIDE_QUEST_ORDER = [q["id"] for q in _cq.SIDE_QUESTS]
 # ============================================================
 _HOST_DB = None            # 宿主存储层（真源 `from .. import db`）
 _HOST_C = None             # 宿主内容聚合层（真源 `from .. import content as C`）—— W6 后只喂 `resolve`（函数名句柄；ALL_WILD / FACTIONS / AREA_FACTION 均已有包内读口）
-_HOST_LEVEL_UP = None      # `game.content_rules.gameplay.check_player_level_up`
-_HOST_STAT_BONUS = None    # `game.core.stat_bonus.stat_bonus`
+_HOST_LEVEL_UP = None      # 注入槽：`game.content_rules.gameplay.check_player_level_up`（宿主薄壳波2 可注入）—— 未注入 → 包内直取 `content/gameplay_rules.py`
+_HOST_STAT_BONUS = None    # 注入槽：`game.core.stat_bonus.stat_bonus`（宿主薄壳波2 可注入）—— 未注入 → 包内直取 `content/stat_bonus.py`
 _HOST_GRANT = None         # `game.reward.grant_reward`
 _HOST_QUESTS_SVC = None    # `game.services.quests`（每日委托：bump_daily_progress / settle_daily_quest / DAILY_META_KEYS）
 
@@ -165,16 +165,30 @@ DAILY_META_KEYS = _HostAttr("services.quests", "DAILY_META_KEYS")
 
 
 def check_player_level_up(group_id, qq_id, player):
-    """升级结算（真源 函数体内 `from ..content_rules.gameplay import check_player_level_up`）。"""
-    fn = _HOST_LEVEL_UP if _HOST_LEVEL_UP is not None \
-        else getattr(_resolve_host("content_rules.gameplay"), "check_player_level_up")
+    """升级结算（真源 函数体内 `from ..content_rules.gameplay import check_player_level_up`）。
+
+    ★ REPOINT-PKG（2026-09-15，B4R B 组第 2 项）：兜底由「宿主子模块
+      `game.content_rules.gameplay`」改为**包内直取** `content/gameplay_rules.py`
+      —— 宿主那边是同名单再导出（同一函数对象），包内不再指向宿主薄壳。
+      注入槽 `bind_host(level_up=…)` 原样保留（宿主薄壳波2 仍可用它覆盖；取件时机 = 调用时，不变）。
+    """
+    fn = _HOST_LEVEL_UP
+    if fn is None:
+        from .gameplay_rules import check_player_level_up as fn   # 包内直取（调用时取件，与旧口径同时机）
     return fn(group_id, qq_id, player)
 
 
 def stat_bonus(group_id, qq_id, player):
-    """外部面板增幅聚合（真源 函数体内 `from ..core.stat_bonus import stat_bonus`）。"""
-    fn = _HOST_STAT_BONUS if _HOST_STAT_BONUS is not None \
-        else getattr(_resolve_host("core.stat_bonus"), "stat_bonus")
+    """外部面板增幅聚合（真源 函数体内 `from ..core.stat_bonus import stat_bonus`）。
+
+    ★ REPOINT-PKG（2026-09-15，B4R B 组第 3 项）：兜底由「宿主子模块
+      `game.core.stat_bonus`」改为**包内直取** `content/stat_bonus.py` —— 宿主那边是
+      同名单再导出（同一函数对象），包内不再指向宿主薄壳。
+      注入槽 `bind_host(stat_bonus_fn=…)` 原样保留。
+    """
+    fn = _HOST_STAT_BONUS
+    if fn is None:
+        from .stat_bonus import stat_bonus as fn                  # 包内直取（调用时取件，与旧口径同时机）
     return fn(group_id, qq_id, player)
 
 

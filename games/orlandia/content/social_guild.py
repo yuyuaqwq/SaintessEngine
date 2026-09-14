@@ -15,7 +15,7 @@
 | 真源写法 | 包内写法 | 说明 |
 |---|---|---|
 | `from .. import db` + `db.xxx(...)` | 模块级 `db` = **惰性宿主代理** `_HostDB`（属性访问时才解析宿主模块） | 正文里 `db.xxx(...)` **一行未改**；宿主由 `bind_host(db)` 注入，或按 `sys.modules` 找**已加载**的宿主模块（绝不 import，防包侧另起一份宿主模块树） |
-| `from ..store.social import guild_get_member / guild_set_role / guild_spend_contribute`（不在 `db` 门面上） | `_store_social()`（注入优先 → 已加载模块） | 同上；这三个原语在 `game/store/social.py`，`game/db.py` 聚合面没导出 |
+| `from ..store.social import guild_get_member / guild_set_role / guild_spend_contribute`（不在 `db` 门面上） | `_store_social()`（注入优先 → ★ REPOINT-PKG 起兜底**包内直取** `content/persistence/social.py`） | 这三个原语在宿主 `game/store/social.py`（= `from content.persistence.social import *` 的委托薄壳 ⇒ 同一批函数对象）；`game/db.py` 聚合面没导出 |
 | `from .. import content as C` + `C.GUILD_CONFIG` | `_cfg()`（`bind_host(config=…)` 注入优先 → ★ W4 兜底改**包内门面** `content/catalog_b143.py:GUILD_CONFIG`） | 数值配置仍由宿主薄壳注入（L7 配置面）；原兜底读宿主 `game.data.guild.GUILD_CONFIG` 已切门面（门禁逐键逐值相等）⇒ `game/data` 删后本模块仍可活 |
 | `from ..data import guild as _G` + `_G.GUILD_ROLES / GUILD_SHOP_ITEMS / GUILD_SKILLS` | 读包内 `content/data/guild.json`（`guild_roles()` / `guild_shop_items()` / `guild_skills()`） | 域真源 = `game/data/guild.py`，单向导出器 `scripts/export_domains/b9_social.py:derive_guild` |
 
@@ -54,7 +54,7 @@ from . import catalog_b143 as _cat_b143
 # ① 宿主替身口（存储层 / 公会原语 / 数值配置）
 # ============================================================
 _HOST_DB = None            # 宿主存储层（真源 `from .. import db`）
-_HOST_STORE_SOCIAL = None  # 宿主 `game.store.social`（guild_get_member / guild_set_role / guild_spend_contribute）
+_HOST_STORE_SOCIAL = None  # 注入槽：`game.store.social`（公会三原语）—— 未注入 → 包内直取 `content/persistence/social.py`
 _CONFIG = None             # GUILD_CONFIG——宿主薄壳注入优先；未注入 → 包内门面 `catalog_b143`（★ W4）
 
 _HOST_PKG = "data.plugins.dragonfall.game"
@@ -98,8 +98,18 @@ db = _HostDB()
 
 
 def _store_social():
-    """宿主 `game.store.social`（公会三个原语）。"""
-    return _HOST_STORE_SOCIAL if _HOST_STORE_SOCIAL is not None else _resolve_host("store.social")
+    """公会三个原语（`guild_get_member` / `guild_set_role` / `guild_spend_contribute`）。
+
+    ★ REPOINT-PKG（2026-09-15，B4R B 组第 5 项）：兜底由「宿主子模块 `game.store.social`」
+      改为**包内直取** `content/persistence/social.py`（B17 已整域进包；宿主
+      `game/store/social.py` 只剩 `from content.persistence.social import *` 的委托薄壳
+      ⇒ 同一批函数对象）。注入槽 `bind_host(store_social=…)` 原样保留；
+      取件时机 = 调用时（与旧 `_resolve_host` 口径一致）。
+    """
+    if _HOST_STORE_SOCIAL is not None:
+        return _HOST_STORE_SOCIAL
+    from .persistence import social as _pkg_social   # 包内直取（调用时取件，与旧口径同时机）
+    return _pkg_social
 
 
 def _cfg():
@@ -188,7 +198,7 @@ def _is_leader(g, qq_id):
 
 
 def guild_get_member(gid, qq_id):
-    """宿主 `store.social.guild_get_member` 薄转（不在 `db` 门面上）。"""
+    """公会成员行取值（包内 `content/persistence/social.py` 直取；不在 `db` 门面上）。"""
     return _store_social().guild_get_member(gid, qq_id)
 
 

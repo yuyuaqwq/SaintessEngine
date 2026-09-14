@@ -142,6 +142,17 @@ C = _ContentFace()
 #    `setattr(宿主壳, "build_battle"/"act", 桩)`（实证 `tests/test_texts_table.py:554/1022`：
 #    「战斗异常」与「同归于尽」两条冻结分支）。只认包内模块会让这些桩**静默失效** = 行为变化
 #    （实测：文案门禁 61/63）。故逐名解析：**外部替换过的宿主壳属性优先**，否则包内直取。
+#
+# ★ REPOINT-PKG（2026-09-15，B4R B 组第 1 项）口径裁定 —— **本项包内无可改的 code 级引用**：
+#   · B4R 把本文件的 `_HOST_IB_MODS` 记成对 `game.commands`（`game/commands/__init__.py`，26 行
+#     聚合门）的引用，实为**前缀误配**：这两个字面量的目标是 `game.commands.instance_battle`
+#     （B2 冻结表第 3 行单元，宿主壳 = `game/commands/instance_battle.py`），**不是**那个聚合门；
+#   · 聚合门 `game/commands/__init__.py` 在包内**零 code 级引用**（实测：全包 grep
+#     `game.commands` / `commands.commands` 取件形态 0 命中；包内 16 处 `from .commands import …`
+#     全指包内 `content/commands.py`）⇒ 删壳不阻塞于包内；
+#   · 这两个字面量本身也已**包内直取**：真源 = `content.flow.instance_battle`（第 50 行 `_PKG_IB`），
+#     宿主壳只在「被外部替换」时优先 —— 那是**宿主薄壳已删之前**必须留的波1 monkeypatch 面
+#     （删了即 61/63）。待宿主侧删壳 + tests 侧改绑（RPT 线）后，本块可整段删除。
 # ------------------------------------------------------------
 _HOST_IB_MODS = ("data.plugins.dragonfall.game.commands.instance_battle",
                  "game.commands.instance_battle")

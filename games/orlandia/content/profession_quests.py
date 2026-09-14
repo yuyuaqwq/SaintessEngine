@@ -19,8 +19,8 @@
 | `from .. import db` | 模块级 `db` = 惰性宿主代理 `_HostDB` | `db.xxx(...)` 正文一行未改 |
 | `from .. import content as C` | ★ B14-2 L8：**已切净**（`C.DAILY_QUESTS` → 包内门面 `catalog_quests.DAILY_QUESTS`）⇒ `C` 替身删；`bind_host(content=…)` 注入面按宿主薄壳协议保留 | 读 `DAILY_QUESTS`，源序 = `_DAILY_QUESTS_ORDER`（门禁逐值+列表序 OK） |
 | `from ..core import texts as T` | 模块级 `T` = 惰性宿主代理（宿主薄壳用 `lazy_module(_host_texts)` 注入） | `T.text(...)` / `T.static(...)` 一字未改 |
-| `from ..core.stat_bonus import stat_bonus` | 模块级 `stat_bonus` = 惰性调用代理 | 称号加成，签名/语义不变 |
-| `from ..content_rules.gameplay import check_player_level_up` | 模块级 `check_player_level_up` = 惰性调用代理 | 升级判定，返回 `(logs, player)` 不变 |
+| `from ..core.stat_bonus import stat_bonus` | 模块级 `stat_bonus` = 惰性调用代理 → ★ REPOINT-PKG 起兜底**包内直取** `content/stat_bonus.py` | 称号加成，签名/语义不变（宿主 `game/core/stat_bonus.py` 是同名单再导出 ⇒ 同一函数对象） |
+| `from ..content_rules.gameplay import check_player_level_up` | 模块级 `check_player_level_up` = 惰性调用代理 → ★ REPOINT-PKG 起兜底**包内直取** `content/gameplay_rules.py` | 升级判定，返回 `(logs, player)` 不变（宿主 `game/content_rules/gameplay.py` 是同名单再导出 ⇒ 同一函数对象） |
 
 不变式
 ------
@@ -46,8 +46,8 @@ import random
 _HOST_DB = None            # 真源 `from .. import db`
 _HOST_CONTENT = None       # 真源 `from .. import content as C`
 _HOST_TEXTS = None         # 真源 `from ..core import texts as T`
-_HOST_LEVEL_UP = None      # 真源 `from ..content_rules.gameplay import check_player_level_up`
-_HOST_STAT_BONUS = None    # 真源 `from ..core.stat_bonus import stat_bonus`
+_HOST_LEVEL_UP = None      # 注入槽（真源 `from ..content_rules.gameplay import …`）—— 未注入 → 包内直取 `content/gameplay_rules.py`
+_HOST_STAT_BONUS = None    # 注入槽（真源 `from ..core.stat_bonus import stat_bonus`）—— 未注入 → 包内直取 `content/stat_bonus.py`
 
 _HOST_PKG = "data.plugins.dragonfall.game"
 _HOST_PKG_FALLBACK = "game"
@@ -117,17 +117,29 @@ from . import catalog_quests as _cq          # noqa: E402  DAILY_QUESTS（源序
 
 
 def check_player_level_up(*args, **kwargs):
-    """真源 `from ..content_rules.gameplay import check_player_level_up`（函数体内惰性 import）。"""
+    """真源 `from ..content_rules.gameplay import check_player_level_up`（函数体内惰性 import）。
+
+    ★ REPOINT-PKG（2026-09-15，B4R B 组第 2 项）：兜底由宿主子模块
+      `game.content_rules.gameplay` 改**包内直取** `content/gameplay_rules.py`
+      （宿主是同名单再导出 ⇒ 同一函数对象）。注入槽 `bind_host(level_up=…)` 原样保留。
+    """
     if _HOST_LEVEL_UP is not None:
         return _HOST_LEVEL_UP(*args, **kwargs)
-    return getattr(_resolve_host("content_rules.gameplay"), "check_player_level_up")(*args, **kwargs)
+    from .gameplay_rules import check_player_level_up as _fn   # 包内直取
+    return _fn(*args, **kwargs)
 
 
 def stat_bonus(*args, **kwargs):
-    """真源 `from ..core.stat_bonus import stat_bonus`（函数体内惰性 import）。"""
+    """真源 `from ..core.stat_bonus import stat_bonus`（函数体内惰性 import）。
+
+    ★ REPOINT-PKG（2026-09-15，B4R B 组第 3 项）：兜底由宿主子模块 `game.core.stat_bonus`
+      改**包内直取** `content/stat_bonus.py`（宿主是同名单再导出 ⇒ 同一函数对象）。
+      注入槽 `bind_host(stat_bonus=…)` 原样保留。
+    """
     if _HOST_STAT_BONUS is not None:
         return _HOST_STAT_BONUS(*args, **kwargs)
-    return getattr(_resolve_host("core.stat_bonus"), "stat_bonus")(*args, **kwargs)
+    from .stat_bonus import stat_bonus as _fn                  # 包内直取
+    return _fn(*args, **kwargs)
 
 
 # ============================================================

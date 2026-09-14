@@ -31,6 +31,18 @@ import sys
 
 #: 宿主存档层**部署适配件**（唯一装配点：读 `GWEN_GAME_DB`/插件目录 → `handles.bind(db_path=…)`）。
 #: 不在本批 35 个纯薄壳里；包内文档明写「库路径是部署信息，由宿主 store_factory 注入」。
+#:
+#: ★ REPOINT-PKG（2026-09-15，B4R B 组第 5/6 项）口径裁定 —— **「宿主薄壳已删」对本项不适用**：
+#:   `game/store/store_factory.py`（37 行）**不是薄壳**，是宿主对包内 `content.persistence` 的
+#:   **唯一装配点**（零 SQL / 零业务分支，只算 `DB_PATH = $GWEN_GAME_DB | <插件目录>/game_data.db`
+#:   并 `handles.bind(db_path=…, clock=…, flush_log=…)`）。库路径是**部署信息**，包内算不出
+#:   （包侧 `__file__` 在框架仓，默认路径会变成另一个文件），故**不可包内化**。
+#:   实测证据：把本块改成不 import 宿主 → 只 `import game.content` 的入口拿不到 db_path 注入
+#:   → `handles.db_path()` 抛 → 数值门禁红 1/18（原因写在 `_warm_host_store` docstring）。
+#:   ⇒ B 组第 5 项（`game.store`）：包内真正的 code 级消费者只有 `store.social` 取件两处，
+#:     本批已改包内直取（`content/social_guild.py` / `content/social_stall.py`）；
+#:     第 6 项（`game.store.store_factory`）**归宿主侧线**（部署适配件迁移/改名时同步本元组）。
+#:   ★ 本条 import 是**已加载优先**（在册即返回）⇒ 宿主侧删壳后此处自动静默降级，不炸。
 _HOST_FACTORY = (
     "data.plugins.dragonfall.game.store.store_factory",
     "game.store.store_factory",
