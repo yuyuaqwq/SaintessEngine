@@ -52,9 +52,11 @@ AGGREGATE_MODULES = (
     "content.runes",
     "content.factions",
     "content.pets",
+    "content.time_weather",   # ★ 必须在 fishing 之前：`current_season` 的宿主解析落点是 time_weather
+    "content.gems",
+    "content.worlds",
     "content.mounts",
     "content.fishing",
-    "content.time_weather",
     "content.craft",
     "content.loot",
     # ② catalog_* 门面（数据名）
