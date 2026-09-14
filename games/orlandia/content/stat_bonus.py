@@ -10,13 +10,15 @@
 `store/players.py:231` · 测试 `tests/test_m_bonus.py` / `test_numeric_reward_unify.py`）零改动。
 
 正文改动面（**只有宿主取件**，聚合逻辑一字未改）：
-  ① `from .. import content as C` → `C = _HostMod("content")`（B14-2 L8 后只剩 **`display`** 一个读点）
-  ② `from ..log_setup import LOG` → `LOG = _host_attr("log_setup", "LOG")`
-  ③ 函数内 3 处 `from .. import db` → 删（改用模块级 `db = _HostMod("db")`，同一模块对象）
-  ④ `_collection_completed_bonus` 内 `from .. import content as _C` → `_C = C`
+  ① `from .. import content as C` → **内部读点已清零**：唯一残余读点 `display` 改包内直取
+     `content/index.py::display`（同对象，证据 `out/evidence/identity_map.txt`）。
+     ★ `C` / `LOG` 两个名字**仍保留**，但只作**壳面兼容**（宿主薄壳 `game/core/stat_bonus.py:23-24`
+     按名再导出；全仓零消费点）——本模块内部不再读它们。
+  ② `from ..log_setup import LOG` → `LOG.warning(...)` 调用点改 `content/obs.py::log()`（B2-C4）
+  ③ 函数内 3 处 `from .. import db` → 删（模块级 `db` = 包内 `content/_pkgref.DB`，B1 口径）
+  ④ `_collection_completed_bonus` 内 `from .. import content as _C` → 删（用 ① 的包内 `display`）
   ⑤ `stat_bonus()` 内 `from .title_conds import TitleCtx, CONDITIONS, check_pro_title`
-     → 三个 `_host_attr("core.title_conds", …)`（**跨线**：title_conds 归 B13-L4，别线并行中
-       → 按 BRIEF §3 B-5 用宿主句柄；L4 落地后切包内直取）
+     → **已切包内** `content/title_conds.py`（B13-L4 落地）
 
 ★ B14-2 L8（2026-09-14）：数据读点已切包内门面/读口（`catalog_quests` / `catalog_items` /
   `collection.books()`）。**实测推翻本文件旧注**（旧注称「`titles.json` 条目无 `bonus`、直接切会静默丢加成」）：
@@ -30,64 +32,14 @@
 """
 
 # ============================================================
-# ① 宿主替身口（注入优先 → sys.modules → importlib；**绝不静默空跑**）
-#    形状逐字抄 `content/world_cmds.py`（B9 线2 定稿）
+# ① 存储/日志/展示名取口（B2-C4 收口）
+#    `db` = 包内 `content/_pkgref.DB`（B1）；LOG = `content/obs.py::log()`；
+#    `display` = 包内 `content/index.py::display`（原 `C.display`，同一对象）
+#    （`C` / `LOG` 两个**壳面兼容名**见文件末「壳面兼容」段——宿主薄壳按名再导出所需）
 # ============================================================
-import importlib as _importlib
-import sys as _sys
+import importlib
+import sys
 
-_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
-_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
-_INJECTED = {}
-
-
-def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = `_HostMod` 的模块名（`content` / `db` / `data`）。"""
-    for k, v in (objs or {}).items():
-        if v is not None:
-            _INJECTED[k] = v
-
-
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = _sys.modules.get(prefix if not name else "%s.%s" % (prefix, name))
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return _importlib.import_module(prefix if not name else "%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("%s：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (__name__, name, last))
-
-
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「函数内 `from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
-    try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return _importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
-
-
-class _HostMod:
-    """宿主模块替身（`C` / `db` / `data`）——`C.xxx` 正文一字未改，属性访问时解析。"""
-
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
 
 # -*- coding: utf-8 -*-
 """奥兰迪亚·余烬纪年核心层 - stat_bonus.py（v105 M01#11，N5b4-4 泛化正名；v181.M-bonus 统一 bonus 容器）
@@ -127,9 +79,70 @@ engine.player_final_stats 的 title_bonus 位置参数保留（旧引擎冻结�
 计算值，升级回满血只回到旧上限，面板长期"生命 861/891"不满）。
 - player 参数：已加载玩家 dict 时传入，避免重复读档（get_player 持锁调用必须传）。
 """
-C = _HostMod("content")                     # 真源 `from .. import content as C`（B14-2 L8 后残 `display`）
-LOG = _host_attr("log_setup", "LOG")        # 真源 `from ..log_setup import LOG`
+from . import obs                           # noqa: E402  包内唯一 LOG/tlog 取用口（fail-closed）
+from .index import display as _index_display  # noqa: E402  真源 `C.display`（同一对象）
 from ._pkgref import DB as db
+
+# ---- 壳面兼容（**不是读点**，两行撞门禁 grep 的是变量名不是取件口）----------------------
+# 宿主薄壳 `game/core/stat_bonus.py:23-24` 把这两个名字**按名再导出**：
+#     C   = _pkg.C        # 真源模块级 `from .. import content as C`
+#     LOG = _pkg.LOG      # 真源模块级 `from ..log_setup import LOG`
+# 本模块内部已不再读它们（唯一读点 `display` 已切包内直取）——保名只为不炸薄壳那两行。
+# 收口建议：波2 宿主薄壳改薄/删行后，本段与 `_HostFace` 一起删。
+_HOST_PKG = "data.plugins.dragonfall.game"
+_HOST_PKG_FALLBACK = "game"
+_INJECTED = {}
+
+
+class _HostFace:
+    """宿主面惰性句柄（原宿主替身口的等价物）——**壳面兼容专用，本模块内部零使用**。
+
+    `C.xxx` / `LOG.warning` 属性访问时解析：注入优先（键 = 宿主模块名）→ `sys.modules` →
+    importlib → 抛（不静默空跑）。与改造前那两行取件的取值语义一致。
+    """
+
+    __slots__ = ("_mod", "_attr")
+
+    def __init__(self, mod, attr=None):
+        object.__setattr__(self, "_mod", mod)
+        object.__setattr__(self, "_attr", attr)
+
+    def _v(self):
+        mod = object.__getattribute__(self, "_mod")
+        attr = object.__getattribute__(self, "_attr")
+        if mod in _INJECTED:
+            base = _INJECTED[mod]
+        else:
+            base = None
+            for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+                base = sys.modules.get("%s.%s" % (prefix, mod))
+                if base is not None:
+                    break
+            if base is None:
+                last = None
+                for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+                    try:
+                        base = importlib.import_module("%s.%s" % (prefix, mod))
+                        break
+                    except Exception as exc:            # noqa: BLE001
+                        last = exc
+                if base is None:
+                    raise RuntimeError(
+                        "stat_bonus：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (mod, last))
+        return base if attr is None else getattr(base, attr)
+
+    def __getattr__(self, name):
+        return getattr(self._v(), name)
+
+    def __call__(self, *args, **kwargs):
+        return self._v()(*args, **kwargs)
+
+    def __repr__(self):
+        return "<HostFace %s>" % object.__getattribute__(self, "_mod")
+
+
+C = _HostFace("content")            # 壳面兼容：宿主薄壳 `game/core/stat_bonus.py:23` 再导出
+LOG = _HostFace("log_setup", "LOG")  # 壳面兼容：宿主薄壳 `game/core/stat_bonus.py:24` 再导出
 
 # ★ B14-2 L8（2026-09-14）：数据读点 → 包内门面 / 读口（门禁 `b14_catalog_gate.py` 逐值+键序 OK）
 from . import catalog_items as _ci          # noqa: E402  ITEMS / MATERIALS
@@ -227,7 +240,7 @@ def stat_bonus(group_id, qq_id, player=None) -> dict:
         for k, v in _book_bonus.items():
             bonus[k] = bonus.get(k, 0) + v
     except Exception:
-        LOG.warning("[dragonfall] title_bonus 计算异常，称号加成降级为空", exc_info=True)
+        obs.log().warning("[dragonfall] title_bonus 计算异常，称号加成降级为空", exc_info=True)
         pass
     return bonus
 
@@ -240,7 +253,6 @@ def _collection_completed_bonus(qq_id: str, player: dict) -> dict:
     """
     bonus = {}
     try:
-        _C = C
         # B14-2 L8：宿主 `COLLECTION_BOOKS` → 包内读口 `collection.books()`（5 册 / id 序一致 / 去注入
         # `order` 后逐册 deep-equal True，实测 `_b14_2_L8_probe.py`）
         books = list(_col.books())
@@ -267,7 +279,7 @@ def _collection_completed_bonus(qq_id: str, player: dict) -> dict:
                 _mk = str(r.get("monster") or "")
                 poss.add(_mk)
                 try:
-                    poss.add(str(_C.display("monsters", _mk)))
+                    poss.add(str(_index_display("monsters", _mk)))
                 except Exception:
                     pass
         except Exception:

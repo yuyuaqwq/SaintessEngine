@@ -14,7 +14,7 @@
 | 真源写法 | 包内替身 | 说明 |
 |---|---|---|
 | `from .. import content as C` → `C.DIALOGUES.get(npc_id)` | 包内域读口 `_dialogues()`（读 `content/data/dialogues.json`） | ★ 数据读口（I1）：`dialogues` 有同名域且**逐键逐值 == 真源**（实测 `deep equal: True`，39 键；域为字典序、消费按 key 取 ⇒ 顺序无语义），与 `content/talk_actions.py:127` / `content/quests_flow.py:254` 同款读法 |
-| `from ..log_setup import LOG`（模块级） | `LOG = _LazyHostAttr("log_setup", "LOG")`（属性转发 → `LOG.warning`） | 宿主日志层**不搬**；与 `content/combat_cmds.py:189` 同款（fail-loud 原文未改） |
+| `from ..log_setup import LOG`（模块级） | `content/obs.py::log()`（B2-C4：包内唯一日志取用口，fail-closed）；调用点 `LOG.warning(...)` → `obs.log().warning(...)` | 宿主日志层**不搬**（平台件；接口表第 10 行） |
 | `from ..data import MAIN_QUESTS`（`node_text` 内） | `_main_quests()`：包内 `quests` 域 `source=="main"` 子集 | 真源写法是「按 id 扫表」（`next(q for q in MAIN_QUESTS if q["id"] == mid)`）⇒ 顺序无语义；与 `content/quests_flow.py:264`（`_Dom.MAIN_QUESTS`）**同一口径**（实测 70 条 id 全等 + 逐条逐值相等） |
 
 `from .dialogue_conds import CONDITIONS` 原样保留（包内直取；它已随本线进包）。
@@ -74,74 +74,9 @@ def _main_quests() -> list:
 
 
 # ============================================================
-# 宿主取件口（只一处：日志层）—— 注入优先 → sys.modules → importlib
+# 日志取件口（B2-C4 收口）—— `content/obs.py` = 包内唯一 LOG/tlog 取用口（fail-closed）
 # ============================================================
-_HOST_PKG = "data.plugins.dragonfall.game"
-_HOST_PKG_FALLBACK = "game"
-_INJECTED = {}
-
-
-def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = `_LazyHostAttr` 的模块名（`log_setup`）。"""
-    for k, v in (objs or {}).items():
-        if v is not None:
-            _INJECTED[k] = v
-
-
-def _host_module(name: str):
-    if name in _INJECTED:
-        return _INJECTED[name]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = sys.modules.get("%s.%s" % (prefix, name))
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module("%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("dialogue：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
-
-
-def _host_attr(mod: str, attr: str):
-    m = _host_module(mod)
-    try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
-
-
-class _LazyHostAttr:
-    """宿主模块属性替身（惰性）——属性访问转发（`LOG.warning`），首次解析后缓存。
-
-    与 `content/combat_cmds.py:146` 同款（宿主常量/单例运行期不变）。
-    """
-
-    __slots__ = ("_mod", "_attr", "_val")
-
-    def __init__(self, mod, attr):
-        self._mod, self._attr, self._val = mod, attr, None
-
-    def _v(self):
-        v = self._val
-        if v is None:
-            v = _host_attr(self._mod, self._attr)
-            self._val = v
-        return v
-
-    def __repr__(self): return repr(self._v())
-    def __bool__(self): return bool(self._v())
-    def __getattr__(self, attr): return getattr(self._v(), attr)
-
-
-LOG = _LazyHostAttr("log_setup", "LOG")     # 真源 `from ..log_setup import LOG`
+from . import obs                                 # noqa: E402
 
 
 def get_dialogue(npc_id: str):
@@ -186,7 +121,7 @@ def check_need(need, ctx: dict) -> bool:
                      or os.environ.get("GWEN_TEST_MODE") == "1")
             if _test:
                 raise ValueError(_msg)
-            LOG.warning(_msg)
+            obs.log().warning(_msg)
             continue  # 未知条件放行（向后兼容，旧数据不崩）
         if not fn(ctx, v):
             return False

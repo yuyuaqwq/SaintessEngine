@@ -6,7 +6,7 @@
 归属变化（B15-W1，2026-09-14）
 ------------------------------
 * **改前**：`_INDEXES` 是**宿主装配产物** —— 宿主 `game/data/_assembly.py:179-278` 用宿主表建好，
-  放在宿主 `game.data._INDEXES` 上；包内 `_indexes()` 反向去读宿主（`_host_module("data")._INDEXES`）
+  放在宿主 `game.data._INDEXES` 上；包内 `_indexes()` 反向去读宿主（`data` 句柄的 `_INDEXES`）
   ⇒ 删掉宿主 `game/data`，`resolve/display` 立刻死。
 * **改后**：`_INDEXES` = **包内自建**（`content/index_build.py` 逐字端口那份构建逻辑，表来源 = 包内
   门面 / 域读口）；`_indexes()` 首次访问时构建一次，之后同一只字典（宿主 `_assembly` 的
@@ -67,27 +67,26 @@ def lazy_host_module(full_name: str):
     return _Mod()
 
 
-def _host_module(name: str):
-    if name in _INJECTED:
-        return _INJECTED[name]
+def _data_mod():
+    """宿主 `data` 模块句柄（决策项 U1；接口表第 9 行冻结机制 = 注入名 `data`）。"""
+    if "data" in _INJECTED:
+        return _INJECTED["data"]
     for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = sys.modules.get("%s.%s" % (prefix, name))
+        m = sys.modules.get("%s.data" % prefix)
         if m is not None:
             return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module("%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("index：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
+    raise RuntimeError("index：宿主 `data` 句柄未注入（宿主薄壳 bind_host(data=…) 负责）——拒绝静默空跑")
 
 
 def _host_data():
     """宿主 `data` 模块 —— **只给「无域缺口表」兜底 + 宿主兼容镜像**（`index_build._gap_tables` 第 ③ 级、
     `_mirror_to_host`）。主构建路径（15/17 张表）的**取值**完全不碰宿主；宿主不可导入 → 抛，
-    调用处各自吞掉（缺口表 → `missing`；镜像 → 跳过）。"""
-    return _host_module("data")
+    调用处各自吞掉（缺口表 → `missing`；镜像 → 跳过）。
+
+    决策项 U1（接口表第 9 行）：`game.data` 与 `game.content.py` 谁是真源**不在本波裁定**；
+    本波只落**机制** = 注入句柄 `data`（宿主薄壳 `game/core/index.py:28` 注入）→ `sys.modules`
+    已加载的宿主 `data`（**不 import 宿主模块树**）→ 抛（不静默空跑）。"""
+    return _data_mod()
 
 
 def _indexes() -> dict:

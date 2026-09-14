@@ -34,15 +34,56 @@ import time
 import uuid
 
 from . import misc_cmds as _M
+from . import obs
 from . import texts as T
 from .catalog_b143 import QUALITY
 from .catalog_items import MATERIALS
 from .catalog_legacy import SIGNIN_CONFIG
 from .catalog_quests import ACHIEVEMENTS
 from .commands import register
-from .world_cmds import C, _host_attr, db
+from . import achievements as _ach
+from . import index as _idx
+from ._pkgref import DB as db
 
 __all__ = ["help_cmd", "game_tip", "signin", "achievements", "feedback_cmd"]
+
+# ============================================================
+# `core.drops` 取件口（B2-C4 过渡件）—— 接口表第 5 行冻结落点 = `content/drops.py`（B2-C2 在搬）；
+# 未落地则回退宿主 `game.core.drops`（与宿主聚合层 `C.generate_equip` **同一对象**，
+# 证据 `out/evidence/identity_map.txt`）。两侧都取不到 → 抛（不静默空跑）。
+# ============================================================
+_HOST_PKG = "data.plugins.dragonfall.game"
+_HOST_PKG_FALLBACK = "game"
+_DROPS = None
+
+
+def _drops():
+    """`core.drops` 面（**包内直取** `content/drops.py`（接口表第 5 行冻结落点，B2-C2 已落地）；宿主同对象为过渡保险）。"""
+    global _DROPS
+    if _DROPS is None:
+        import importlib
+        import sys
+        try:
+            _DROPS = importlib.import_module("content.drops")
+        except ImportError:
+            last = None
+            for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+                m = sys.modules.get("%s.core.drops" % prefix)
+                if m is not None:
+                    _DROPS = m
+                    break
+            if _DROPS is None:
+                for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+                    try:
+                        _DROPS = importlib.import_module("%s.core.drops" % prefix)
+                        break
+                    except Exception as exc:                    # noqa: BLE001
+                        last = exc
+            if _DROPS is None:
+                raise RuntimeError("cmds_misc：core.drops 取不到（%s）——拒绝静默空跑" % (last,))
+    return _DROPS
+
+
 
 
 def _shell(env):
@@ -54,9 +95,13 @@ def _shell(env):
 
 
 def _log():
-    """日志口 = 宿主 `log_setup.LOG`（唯一日志入口）；取不到时退回 stdlib logger（编辑器/裸跑）。"""
+    """日志口 = `content/obs.py::log()`（B2-C4：包内唯一取用口）。
+
+    取不到（未注入且宿主模块未加载 = fail-closed）时退回 stdlib logger —— **保留改造前语义**
+    （编辑器/裸跑路径，原文照旧）。
+    """
     try:
-        return _host_attr("log_setup", "LOG")
+        return obs.log()
     except Exception:                                        # noqa: BLE001
         import logging
         return logging.getLogger("orlandia.cmds_misc")
@@ -117,7 +162,7 @@ def signin(env):
     # F1 P1-4 原子签到认领 + 每日运势 + 幸运符消解 + 金币/节日口径全在 `misc_cmds.signin_start`。
     # 幸运符的**材料键**在这里给：包内 materials 域不存在（键集无法从 items 域反推），
     # 这一行就是真源 `C.resolve("materials", 幸运符)` + `key in C.MATERIALS` 的原样表达。
-    _luck = C.resolve("materials", _M.LUCK_MATERIAL_NAME)
+    _luck = _idx.resolve("materials", _M.LUCK_MATERIAL_NAME)
     st = _M.signin_start(group_id, qq_id, today, yesterday, SIGNIN_CONFIG,
                          _luck if _luck in MATERIALS else None)
     if st is None:
@@ -153,7 +198,7 @@ def signin(env):
             _wq = dict(zip(("green", "blue", "purple"),
                            SIGNIN_CONFIG["week_quality_weights"]))
             q = QUALITY_TIERS.pick_weights(_wq, rng=random)
-            equip = C.generate_equip(random.choice(["weapon", "armor", "ring"]), player["level"], q)
+            equip = _drops().generate_equip(random.choice(["weapon", "armor", "ring"]), player["level"], q)
             db.add_item(group_id, qq_id, f"eq_{uuid.uuid4().hex[:8]}", equip)
             lines.append(T.text("signin.week_reward", streak=streak,
                                 color=QUALITY[equip["quality"]]["color"],
@@ -171,7 +216,7 @@ def achievements(env):
     raw = shell._strip_cmd(env.raw, "成就").strip()
     # v101.22 成就奖励手动领取：『成就 领取』（发放实现仍在宿主 core：`claim_achievement_rewards`）
     if raw.startswith("领取"):
-        lines, err = C.claim_achievement_rewards(group_id, qq_id)
+        lines, err = _ach.claim_achievement_rewards(group_id, qq_id)
         return [_M.claim_reply(lines, err)]
     try:
         rows = db.get_achievements(group_id, qq_id)
@@ -182,7 +227,7 @@ def achievements(env):
     # 分类筛选 / 进度 / 奖励文案拼装全在 `misc_cmds.achievement_panel`；
     # 表与成就点由宿主给（源列表序 + `core/achievements.py:achievement_points`）。
     lines = _M.achievement_panel(raw, ACHIEVEMENTS, unlocked, claimed,
-                                C.achievement_points(qq_id))
+                                _ach.achievement_points(qq_id))
     lines.append("")
     lines.append(shell._tip("achievement"))
     return lines

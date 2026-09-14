@@ -16,20 +16,21 @@
 
 正文改动面（**只有五类，全部登记**；差异面自检 `overnight/w1213_l3_check.py`）
 ------------------------------------------------------------------------
-1. 函数体内**宿主 import** → 同位置惰性替身（4 行）：
-   `from . import _identity` → `_identity = _host_module("commands._identity")`；
-   `from .combat import CombatCmds` → `CombatCmds = _host_attr("commands.combat", "CombatCmds")`；
-   `from ..core.race_talent_display import format_talent`（2 处）→ `_host_attr(...)`；
-   `from ..core.battle_cond_labels import COND_LABELS` → `_host_attr(...)`。
+1. 函数体内**宿主 import** → **包内直取/同位置惰性取件**（B2-C4 收口）：
+   `from . import _identity`（包内 `content/_identity.py`，B2-C4 真搬）；
+   `from .combat import CombatCmds` → `_combat_cmds_cls()`（宿主独有类，包内无同对象）；
+   `from ..core.race_talent_display import format_talent`（2 处）→ 包内 `content/race_talent_display.py`；
+   `from ..core.battle_cond_labels import COND_LABELS` → 包内 `content/battle_cond_labels.py`。
 2. 命令开头那两行「取 (group_id, qq_id) + `self._player(...)`」→ 提到宿主薄壳当参数传进来（20 个命令；
    `bind_identity` / `races` 无此行，包内签名与宿主一致）。
 3. 数据读口（I1）：`C.display(...)`（13）· `C.resolve("classes"/"skills", ...)`（4）·
    `C.CLASS_NOVICE`（7）· `C.PCT_STATS`（2）→ **包内读口** `content/tables.py` 的同名符号。
    等价性实测：`display`/`resolve` 在 classes 400 输入 / skills 415 输入上 **0 处不等**
    （`overnight/w1213_l3_probe.py`）。
-4. `db` / `C`（宿主聚合层）→ `_HostMod` 惰性代理。**B14-2 L3（2026-09-14）已把本文件 63 处数据读点
-   切到包内门面**（`from . import catalog_{core,quests,space} as _cat_*`；只改「取值来源」，
-   数值 / 文案 / 遍历顺序一字未动）。残余 `C` 只服务函数读口 + 2 张缺口表（见下）。
+4. `db` → 包内 `content/_pkgref.DB`（B1 口径）；`C` 聚合层**已删**：**B14-2 L3（2026-09-14）已把本文件
+   63 处数据读点切到包内门面**（`from . import catalog_{core,quests,space} as _cat_*`），
+   B2-C4（2026-09-14）再把残余 `C.<函数名>` 读口全切**包内直取**（`_ach` / `_idx` / `_stats`，
+   与宿主聚合层同一对象，证据 `out/evidence/identity_map.txt`）。
 5. 技能详情 `from .combat import CombatCmds` 那处：宿主 `CombatCmds._EFFECT_CN` 是**类级常量表**，
    B10 L5 已定「常量表原样留宿主类」（包内 `self._X` 读同一份）→ 本模块经上表第 1 类替身读同一对象。
 
@@ -43,13 +44,12 @@
 * **残余 `C.<名>` —— ★ W4（2026-09-14）已清零（原缺口两名切包内门面）**：`C.QUALITY`（1 处：装备面板品质
   颜色/名）· `C.EQUIP_SLOTS`（2 处：装备面板槽位名）→ `content/catalog_b143.py`（B14-3 建 `equipment`
   域，门禁逐键逐值+键序不等 0）。真源宿主 `game/data/equipment.py`；原缺口见 `overnight/W-B14-B.md` / `W-B14-E.md`。
-* 函数读口仍是宿主（同一批不改）：`C.resolve("races", …)`（1 处，包内 `tables.resolve` 无 races 索引）·
-  `C.check_achievements` · `C.exp_to_next` · ~~`data.battle_rules.EFFECT_RULES`~~（★ W12 收口已切
-  包内门面 `catalog_rules.EFFECT_RULES`）。
-* **跨线依赖**（按 WAVE11-13_BRIEF §3-B-5：别线在并行搬 → 用宿主句柄惰性替身，别直接 import）：
-  `format_talent` → 待 **B13-L6** 落地 `content/race_talent_display.py` 后切包内直取；
-  `COND_LABELS` → 待 **B13-L6** 的 `content/battle_cond_labels.py`；
-  `C.check_achievements` → 待 **B13-L4**（`achievement_conds` / `achievements` 进包）。
+* ~~函数读口仍是宿主~~ → **B2-C4 已切包内直取**：`resolve`（`content/index.py`，含 races 索引）·
+  `check_achievements`（`content/achievements.py`）· `exp_to_next`（`content/stats.py`）·
+  `EFFECT_RULES`（★ W12 已切包内门面 `catalog_rules.EFFECT_RULES`）。
+* **跨线依赖已解锁**（B13-L6 / B13-L4 / B13-L7 均已落地）：`format_talent` →
+  `content/race_talent_display.py`；`COND_LABELS` → `content/battle_cond_labels.py`；
+  `check_achievements` → `content/achievements.py`（本文件 `_ach`）。
 * `EFFECT_RULES`（模块级 `_RES_CN` 用）：宿主 `data/battle_rules.py` 表，包内无同名读口
   （包内 `content/rules/effect_rules.json` 是**引擎 hook 装配面**，不是读口）→ 惰性取宿主属性
   （与 `content/combat_cmds.py:337` 同款），待常数模块进包后切。
@@ -83,8 +83,8 @@ from . import catalog_b143 as _cat_b143
 
 
 # ============================================================
-# ① 宿主替身口（注入优先 → sys.modules → importlib；**绝不静默空跑**）
-#    —— 与 `content/world_cmds.py` / `content/combat_cmds.py` 同款（B8.2 线3 `bind_host` 约定）
+# ① 宿主面取件口（B2-C4 收口）—— B2 单元读点已全部**包内直取**；
+#    本口只剩 `commands.combat.CombatCmds` 一个**宿主独有类**（见 `_combat_cmds_cls`）。
 # ============================================================
 _HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
 _HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
@@ -92,57 +92,42 @@ _INJECTED = {}
 
 
 def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = `_HostMod` 的模块名（`content` / `db`）。"""
+    """宿主薄壳 import 期注入（幂等；签名/时机逐字不变）——键 = 宿主面名（`content` / `db`）。"""
     for k, v in (objs or {}).items():
         if v is not None:
             _INJECTED[k] = v
 
 
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身，真源 `from .. import X` 那一类）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
+def _combat_cmds_cls():
+    """宿主 `commands.combat.CombatCmds` 类 —— 本文件唯一残留的宿主取件面。
+
+    判据（`out/evidence/hostface_map.txt` + `probe_c4_faces.py`）：`CombatCmds` 类**包内无同对象**
+    （`content/combat_cmds.py` 是该类**方法**的逐字端口 = 模块级函数；类本体 + 类级常量表
+    `_EFFECT_CN` 按 B10-L5 定留宿主类）⇒ 只能惰性取宿主。解析：注入优先 → `sys.modules` →
+    `importlib` → 抛（不静默空跑）。
+    """
+    if "combat" in _INJECTED:
+        return _INJECTED["combat"]
     for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        full = prefix if not name else "%s.%s" % (prefix, name)
-        m = sys.modules.get(full)
+        m = sys.modules.get("%s.commands.combat" % prefix)
         if m is not None:
             return m
     last = None
     for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
         try:
-            return importlib.import_module(prefix if not name else "%s.%s" % (prefix, name))
+            return importlib.import_module("%s.commands.combat" % prefix)
         except Exception as exc:                # noqa: BLE001
             last = exc
-    raise RuntimeError("player_cmds：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
+    raise RuntimeError("player_cmds：宿主模块 commands.combat 取不到（%s）——拒绝静默空跑" % (last,))
 
 
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「函数内 `from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
-    try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
-
-
-class _HostMod:
-    """宿主模块替身（`C` / `db`）——`C.xxx` / `db.xxx` 正文一字未改，属性访问时解析。"""
-
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
-
-
-C = _HostMod("content")     # 真源 `from .. import content as C`（聚合层**同对象**）
 from ._pkgref import DB as db
+# B2-C4：`C.<函数名>` 读点全部改**包内直取**（与宿主聚合层**同一对象**，见
+# `out/evidence/identity_map.txt`：`C.resolve`/`C.display` → `content.index`；
+# `C.check_achievements`/`C.achievement_points` → `content.achievements`；`C.exp_to_next` → `content.stats`）
+from . import achievements as _ach            # noqa: E402
+from . import index as _idx                   # noqa: E402
+from . import stats as _stats                 # noqa: E402
 
 # W12 收口：真源宿主顶层 `from ..data.battle_rules import EFFECT_RULES`（资源名单源）
 #   → 包内门面直取（`rules/effect_rules.json`，85 条；键序由门面序声明守卫）
@@ -452,7 +437,7 @@ async def register(self, event: AstrMessageEvent, group_id, qq_id):
         if not tok:
             continue
         if not _race_done:
-            r = C.resolve("races", tok)
+            r = _idx.resolve("races", tok)
             if r not in _cat_core.RACES:
                 # 简称兼容：输入"精灵"匹配"银月精灵"
                 r = next((rid for rid, ri in _cat_core.RACES.items() if tok in ri["name"]), r)
@@ -518,7 +503,7 @@ async def register(self, event: AstrMessageEvent, group_id, qq_id):
         db.set_skill_bar(qq_id, bar)
     player = self._player(group_id, qq_id)
     # 阶段九：注册成就（14 章 2.3 冒险者起步）
-    C.check_achievements(group_id, qq_id, player)
+    _ach.check_achievements(group_id, qq_id, player)
     init_display = "、".join(display("skills", s) for s in init_skills)
     # 注册欢迎语种族行：图标+名称+天赋明细（#50 种族说明模糊——原本只有一行哲学 desc，
     # 玩家看不出种族实际给什么；改为把天赋逐条列在注册回执，与『种族』一览同口径）
@@ -587,7 +572,7 @@ async def register(self, event: AstrMessageEvent, group_id, qq_id):
     )
 
 async def bind_identity(self, event: AstrMessageEvent):
-    _identity = _host_module("commands._identity")
+    from . import _identity
     raw_sender = event.get_sender_id() or ""
     # 已经是 QQ 号（旧平台或已映射）→ 无需绑定
     if not _identity.is_openid(raw_sender):
@@ -669,7 +654,7 @@ async def profile(self, event: AstrMessageEvent, group_id, qq_id, player):
         else:
             eq_lines.append(f"  {_cat_b143.EQUIP_SLOTS[slot]}：—")
     eq_str = "\n".join(eq_lines) if eq_lines else "  无"
-    need = C.exp_to_next(player["level"])
+    need = _stats.exp_to_next(player["level"])
     exp_pct = min(100, int(player["exp"] / need * 100)) if need else 0
     lines = [
         f"⚔️ 【{player['name']}】",
@@ -1058,7 +1043,7 @@ async def _evolve_hidden_generic(self, event, group_id, qq_id, player, cls_id, t
                      max_hp=st["max_hp"], max_mp=st["max_mp"], hp=st["max_hp"], mp=st["max_mp"],
                      learned_skills=init_skills)
     player = self._player(group_id, qq_id)
-    C.check_achievements(group_id, qq_id, player)
+    _ach.check_achievements(group_id, qq_id, player)
     learned = [display('skills', sk) for sk in new_grant]
     title = self._branch_title(cls_id, tgt_tier, path)
     lore = cls.get("lore", "")
@@ -1555,7 +1540,7 @@ def _skill_detail_message(self, player: dict, skill_name: str) -> str | None:
     if info.get("effect"):
         # v63/#99 汉化：effect key → 中文 tag（与技能列表 _skill_tag 同源映射；
         # 此前 spd_buff/atk_all 等英文 key 原样泄漏到『技能详情·特效』行）
-        CombatCmds = _host_attr("commands.combat", "CombatCmds")
+        CombatCmds = _combat_cmds_cls().CombatCmds
         eff_cn = CombatCmds._EFFECT_CN.get(info["effect"], info["effect"])
         lines.append(f"特效：{eff_cn}")
     if info.get("team"):
@@ -1654,7 +1639,7 @@ def _skill_learn_msg(self, group_id, player: dict, skill_name: str) -> str:
     spent = player.get("skill_spent", 0) + cost
     db.update_player(group_id, player["qq_id"], skill_points=pts - cost, learned_skills=learned, skill_spent=spent)
     # 阶段九：学习技能成就判定
-    C.check_achievements(group_id, player["qq_id"], player)
+    _ach.check_achievements(group_id, player["qq_id"], player)
     if info.get("kind") == "被动":
         return (
             f"✨ 消耗 {cost} 技能点，学会了被动技能『{display_name}』！\n"

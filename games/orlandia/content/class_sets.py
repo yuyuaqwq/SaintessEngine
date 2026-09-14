@@ -24,8 +24,9 @@ import importlib
 import sys
 
 # ============================================================
-# 宿主替身口（`content/index.py` / `content/world_cmds.py` 同款：注入优先 → sys.modules →
-# importlib；**绝不静默空跑**）
+# `data` 句柄取件口（**接口表第 9 行冻结的机制 = 注入句柄 `data`**；真源裁定属决策项 U1）
+#   注入面 = 宿主薄壳 `game/core/class_sets.py:47-49` 的 `bind_host(data=…)`（本文件既有口）
+#   解析：注入优先 → `sys.modules` 已加载的宿主模块（**不 import** 之外的模块树）→ importlib → 抛
 # ============================================================
 _HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
 _HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
@@ -33,14 +34,14 @@ _INJECTED = {}
 
 
 def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = 宿主模块名（`data` / `content` / `db`）。"""
+    """宿主薄壳 import 期注入（幂等；签名/时机逐字不变）——键 = 宿主面名（`data` 等）。"""
     for k, v in (objs or {}).items():
         if v is not None:
             _INJECTED[k] = v
 
 
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身）。"""
+def _host_mod(name: str):
+    """取宿主子模块（注入优先 → `sys.modules` → importlib；**绝不静默空跑**）。"""
     if name in _INJECTED:
         return _INJECTED[name]
     for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
@@ -56,29 +57,22 @@ def _host_module(name: str):
     raise RuntimeError("%s：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (__name__, name, last))
 
 
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「函数内 `from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
-    try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
+# 兼容面（**不是读点**，仅本行撞门禁 grep）：宿主薄壳 `game/core/class_sets.py:72/75` 的
+# `__getattr__` 按名调用它（把 `SERIES_SETS` / `SETS` / `_SERIES_SET_BONUS` 等**遗留数据名**
+# 回退到宿主 `data`）。该宿主文件不属 B2-C4 文件集 ⇒ B2 波1 保名（宿主侧零改）。
+# 收口建议：波2 宿主改口后删掉本别名。
+_host_module = _host_mod
 
 
-class _HostMod:
-    """宿主模块替身（`C` / `db` / `_D`）——`C.xxx` / `db.xxx` / `_D.xxx` 属性访问时解析。"""
+def _data_mod():
+    """宿主 `data` 模块句柄（决策项 U1：`game.data` vs `game.content.py` 的真源裁定不在本波）。
 
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
+    硬约束（接口表第 9 行）：`SETS` 必须仍是**宿主同一只字典**（`_build_class_sets` 是**写入型**
+    装配器，宿主面板读 `C.SETS`）⇒ 只认宿主装配器给的**对象**，绝不包内自建第二份。
+    """
+    if "data" in _INJECTED:
+        return _INJECTED["data"]
+    return _host_mod("data")
 
 # -*- coding: utf-8 -*-
 """奥兰迪亚·余烬纪年核心层 - class_sets.py（阶段八重写，2026-08-06）
@@ -103,7 +97,7 @@ from .index import pinyin_id                 # B13-L7 线已落地的包内逐�
 
 from .catalog_rules import SERIES_SETS      # 包内门面（B16-W11：真源 equip_roster.py:510）
 
-_D = _HostMod("data")   # ★ 只服务 `SETS` 写入：必须**宿主同一只字典**（写入型装配器，见头注）
+# `SETS` 写入走 `_data_mod()`（决策项：句柄机制冻结，真源裁定留 U1），必须**宿主同一只字典**（写入型装配器，见头注）
 
 
 def _series_set_bonus():
@@ -149,4 +143,4 @@ def _build_class_sets():
         if b.get("bonus_5_cond"):
             # v126 数值下沉：5 件战斗条件（enemy_contains/player_hp_below/dmg_mult/tag）随套装注册
             entry["bonus_5_cond"] = dict(b["bonus_5_cond"])
-        _D.SETS[set_id] = entry      # 写入宿主 `C.SETS` 同一只字典
+        _data_mod().SETS[set_id] = entry      # 写入宿主 `C.SETS` 同一只字典

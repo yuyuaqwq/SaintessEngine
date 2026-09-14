@@ -8,71 +8,16 @@
 `from ..core.race_talent_display import format_talent`）零改动。
 
 正文改动面（3 处宿主取件，其余逐字）：
-  ① `format_talent` 内 `from ..log_setup import LOG` → `LOG = _host_attr("log_setup", "LOG")`（平台/运维面，留宿主）
+  ① `format_talent` 内 `from ..log_setup import LOG` → `content/obs.py::log()`（B2-C4：包内唯一取用口；平台/运维面留宿主）
   ②/③ `_d_berserk_hp` / `_d_timid_hp` 内 `from ..data.races import RACE_ATTACK_MULT`
      → ★ **B16-W11b（2026-09-14）**：`from .catalog_rules import RACE_ATTACK_MULT`（包内门面）
      —— `races` 域只有 `name/icon/desc/talents/talent_names`（无攻击系数表）⇒ 门面字面量、登记 `NOT_YET_DOMAINED`。
 """
 
 # ============================================================
-# ① 宿主替身口（注入优先 → sys.modules → importlib；**绝不静默空跑**）
-#    形状逐字抄 `content/world_cmds.py`（B9 线2 定稿）
+# ① 日志取件口（B2-C4 收口）—— `content/obs.py` = 包内唯一 LOG/tlog 取用口（fail-closed）
 # ============================================================
-import importlib as _importlib
-import sys as _sys
-
-_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
-_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
-_INJECTED = {}
-
-
-def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = `_HostMod` 的模块名（`content` / `db` / `data`）。"""
-    for k, v in (objs or {}).items():
-        if v is not None:
-            _INJECTED[k] = v
-
-
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = _sys.modules.get(prefix if not name else "%s.%s" % (prefix, name))
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return _importlib.import_module(prefix if not name else "%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("%s：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (__name__, name, last))
-
-
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「函数内 `from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
-    try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return _importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
-
-
-class _HostMod:
-    """宿主模块替身（`C` / `db` / `data`）——`C.xxx` 正文一字未改，属性访问时解析。"""
-
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
+from . import obs                                 # noqa: E402
 
 # -*- coding: utf-8 -*-
 """奥兰迪亚·余烬纪年核心层 - race_talent_display.py（v98.3：种族天赋展示格式化注册表）
@@ -103,8 +48,7 @@ def format_talent(k, v, name):
     """
     fn = DISPLAY.get(k)
     if fn is None:
-        LOG = _host_attr("log_setup", "LOG")
-        LOG.warning(
+        obs.log().warning(
             f"[dragonfall] 种族天赋无展示注册: {k}（data/races.py 新增天赋需在 "
             "race_talent_display.py 注册 format 函数）"
         )

@@ -19,38 +19,32 @@
 
 正文改动面（**只有两类**，差异面自检见 `overnight/b9_l2_check.py`）
 ----------------------------------------------------------------
-1. 函数体内**延迟 import 的宿主模块** → 同位置换成惰性替身
-   `from ..services.travel import level_warn` → `level_warn = _host_attr("services.travel", "level_warn")`
+1. 函数体内**延迟 import 的宿主模块** → 同位置换成**包内直取**（B2-C4 收口；见下表）
+   `from ..services.travel import level_warn` → `content/travel.py`（同对象）
 2. 命令方法开头那两行「取 (group_id, qq_id) + `self._player(...)`」→ 提到宿主薄壳当参数传进来
    （共 31 处）：宿主薄壳因此真的在做「取玩家」。
 
-宿主替身口（B8.2 线3 `content/talk_actions.py:bind_host` 同款约定 + sys.modules/importlib 兜底）
-----------------------------------------------------------------------------------------------
-| 真源写法 | 包内替身 |
-|---|---|
-| `from .. import content as C` —— **数据名读点** | **包内门面**（见表下 B14-2 L2 段） |
-| `C.<函数名>`（小写）与未进域常量 | `C = _HostMod("content")`（宿主聚合层**同对象**，见缺口） |
-| `from .. import db`（`db.xxx` 133 处） | `db = _HostMod("db")` |
-| 函数内 `from ..services.X import f` / `from ..core import Y` | `_host_attr(...)`（同位置、调用时解析） |
-| `from .talk_actions import ACTIONS, check_action_keys` | `_host_attr("commands.talk_actions", ...)` |
-| `C.PORTALS`（13 处，B9 线2 已切） | 包内域读口 `PORTALS`（`content/data/portals.json`，域归属 L5；本线 = 消费方） |
+宿主面取件口（B2-C4 收口后）
+----------------------------
+| 真源写法 | 包内替身 | 证据 |
+|---|---|---|
+| `from .. import content as C` —— 数据名读点 | **包内门面**（B14-2 L2 段，31 名） | 门禁 `overnight/_b14_2_L2.json` |
+| 宿主聚合层上的全部**函数名**（小写名） | **包内直取**：`_pois` / `_maps` / `_wild` / `_dlg` / `_timed` / `_tw` / `_worlds` / `_portals` / `_fac` / `_idx` / `_ach` | `out/evidence/identity_map.txt`（逐名「包内同一对象」） |
+| `from .. import db`（`db.xxx` 133 处） | 包内 `content/_pkgref.DB`（B1 口径） | 同上 |
+| 函数内 `from ..services.battle_bridge import …` | 包内 `content/bridge.py`（同对象） | `probe_c4_faces.py` |
+| `from .talk_actions import ACTIONS, check_action_keys` | `ACTIONS` = **包内** `content/talk_actions.py`；`check_action_keys` = **冻结注入名**（宿主独有，留宿主读点） | 接口表第 4 行 |
+| 掉落族四个函数名（`build_monster_group` / `generate_roster_equip` 等） | `_drops()`：**包内直取** `content/drops.py`（接口表第 5 行冻结落点，B2-C2 已落地）；宿主 `game.core.drops` 为同对象过渡保险 | 接口表第 5 行 + `identity_map.txt` |
+| 兼容面两个旧替身口名（`content/cmds_world.py:49` 的 F401 再导出） | 仅保留**名字**（值 = None，零调用点），使该 import 不炸 | 见下文 ⚠️ |
 
-**B14 第二段 L2（2026-09-14）**：`C.<数据名>` 读点切包内门面直取 —— 模块顶 `from . import
-catalog_core/items/life/quests/space as _cat_*`（31 个名字，逐名来源表见 `overnight/W-B14-{A..E}.md`；
-门禁 `overnight/_b14_2_L2.json` = 31 名 OK 31 · 门面缺 0 · 不等 0，含键序）。门面值与宿主 `C`
-逐键相等（含键插入序）⇒ 取值来源变了、**行为一字未变**。
-
-⚠️ 残余 `C.<名>` —— ★ W4（2026-09-14，本线收口）已**清零**：原「未进域常量/派生表 9 名」
-（`ALL_WILD`(22 处) · `MAP_CONNECTIONS`(7) · `FACTION_ORDER`(5) · `FACTIONS`(4) ·
-`PERIOD_CN`(3) · `LEGACY_MAP_ALIAS`(2) · `REPUTATION_TIERS`(1) · `POIS`(1) · `CHRONICLES`(1)）
-逐名切包内读口 / 门面（来源见下表；门禁逐名含键序不等 0）：
-* `ALL_WILD` → 包内读口 `content/wild.py`（`_wild.ALL_WILD`；真源 `core/wild.py:26` 派生式，
-  键集/键序/逐条值与宿主 `_wild.ALL_WILD` 全等 —— 本文件 3 处 `.items()` 遍历依赖序）。
-* `PERIOD_CN` → 包内读口 `content/time_weather.py:PERIOD_CN`（真源就是它本身；名同值同）。
-* 其余 7 名 → 包内门面 `content/catalog_b143.py`（B14-3 建 `game_config.*` 组 / `pois` 域）。
-* `C.` 上**只剩函数**（小写名，非本段范围）：`C.subarea_pois` / `C.prop_entry` / `C.portal_cost` /
-  `C.town_npc_visible` / `C.wild_npc_findable` / `C.map_route` / `C.get_timed` /
-  `C.current_period` / `C.generate_roster_equip`（经 `_C` 别名）…
+⚠️ **残留的门禁命中（2 类，逐条说明）**：
+* `content/cmds_world.py:49` 的 F401 再导出（**包内不属于 B2-C4 文件集**，不就地改）——
+  本文件为此保留两个**旧替身口名**（值 = None，全仓零调用点）：删掉它们本文件的兼容别名段即可整体删除。
+  收口建议：`content/cmds_world.py:49` 去掉那两个名字（**一行**）。
+* 包内 `content/index.py` / `content/maps.py` 各有一个**惰性宿主模块工厂函数**（名字里的
+  `host` 片段撞上本批 grep）= **注入面提供者**（不是读点）：5 个宿主薄壳按名调用它
+  （`game/core/{index,maps,mounts,factions,exploration,position,pets}.py`）
+  ⇒ 宿主侧一字节不动的前提下**不能删**；它是 B1 批遗留（B1 判据也列了这个名）。
+  收口建议：包内改名 + 波2 宿主 5 处改口（一行一处）。
 
 包内直取（**不是**宿主）：`IR`（`content/flow/instance_run.py`，逐字端口）、`TIER_GROWTH`
 （`content/tables.py`）、`player_final_stats`（`content/panel.py`）、`skill_info`（`content/skills.py`）、
@@ -88,65 +82,107 @@ from .prof_config import gather_map_min_lv  # ★ B15b：宿主函数进包（�
 
 
 # ============================================================
-# ① 宿主替身口（注入优先 → sys.modules → importlib；**绝不静默空跑**）
+# ① 宿主面取件口（B2-C4 收口）—— 本文件 B2 读点全部包内直取；只剩两件：
+#    · `_drops()`：`core.drops` 面（B2-C2 线待落 `content/drops.py`，未落则回退宿主同对象）
+#    · 兼容面两个旧替身口名（`content/cmds_world.py:49` 的 F401 再导出用，**零调用点**，见头注 ⚠️）
 # ============================================================
 _HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
 _HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
 _INJECTED = {}
 
+#: `core.drops` 面的包内落点（接口表第 5 行冻结：`content/drops.py`，B2-C2 线负责落地）
+_DROPS_PKG = "content.drops"
+_DROPS = None
+
 
 def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = `_HostMod` 的模块名（`content` / `db`）。"""
+    """宿主薄壳 import 期注入（幂等；签名/时机逐字不变）——键 = 宿主面名（`content` / `db`）。"""
     for k, v in (objs or {}).items():
         if v is not None:
             _INJECTED[k] = v
 
 
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身，真源 `from .. import X` 那一类）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        full = prefix if not name else "%s.%s" % (prefix, name)
-        m = sys.modules.get(full)
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+def _drops():
+    """`core.drops` 取件口 —— **包内直取**：`content/drops.py`（接口表第 5 行冻结落点）。
+
+    B2-C2 线已落地该模块（框架仓提交 `99258b0`「drops 8 个真函数搬进包」）⇒ 本口实际取到的
+    就是包内实现；宿主 `game.core.drops` 仅作**同对象过渡保险**（落地前的树 / 裸包场景），
+    两侧都取不到 → 抛（不静默空跑）。证据：`out/evidence/identity_map.txt` +
+    `out/evidence/integ_drops.txt`（落地后取件来源实测 = `content.drops`）。
+    """
+    global _DROPS
+    if _DROPS is None:
         try:
-            return importlib.import_module(prefix if not name else "%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("world_cmds：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
+            _DROPS = importlib.import_module(_DROPS_PKG)
+        except ImportError:
+            last = None
+            for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+                m = sys.modules.get("%s.core.drops" % prefix)
+                if m is not None:
+                    _DROPS = m
+                    break
+            if _DROPS is None:
+                for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+                    try:
+                        _DROPS = importlib.import_module("%s.core.drops" % prefix)
+                        break
+                    except Exception as exc:                    # noqa: BLE001
+                        last = exc
+            if _DROPS is None:
+                raise RuntimeError("world_cmds：core.drops 取不到（%s）——拒绝静默空跑" % (last,))
+    return _DROPS
 
 
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「函数内 `from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
-    try:
-        return getattr(m, attr)
-    except AttributeError:
+def _check_action_keys(action):
+    """对话动作未知键防御（真源 `from .talk_actions import check_action_keys`）——**宿主独有**。
+
+    接口表第 4 行冻结：`check_action_keys` 留宿主（读宿主日志层 + `GWEN_*` 环境变量 = 接人性）。
+    取件 = 注入（宿主壳 `game/commands/talk_actions.py` import 期，波2）→ `sys.modules` 过渡兜底
+    → **同改造前的 importlib 兜底**（旧替身就是注入→sys.modules→importlib；宿主未加载的测试/工具
+    路径靠它，见 `tests/test_numeric_reward_unify.py`）→ 抛（不静默空跑）。
+    """
+    fn = _INJECTED.get("check_action_keys")
+    if fn is None:
+        mod = None
         for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
+            mod = sys.modules.get("%s.commands.talk_actions" % prefix)
+            if mod is not None:
+                break
+        if mod is None:
+            last = None
+            for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+                try:
+                    mod = importlib.import_module("%s.commands.talk_actions" % prefix)
+                    break
+                except Exception as exc:                # noqa: BLE001
+                    last = exc
+            if mod is None:
+                raise RuntimeError(
+                    "world_cmds：宿主模块 commands.talk_actions 取不到（%s）——拒绝静默空跑" % (last,))
+        fn = getattr(mod, "check_action_keys", None)
+    if fn is None:
+        raise RuntimeError("world_cmds：check_action_keys 取不到（未注入且宿主模块未加载）——拒绝静默空跑")
+    return fn(action)
 
 
-class _HostMod:
-    """宿主模块替身（`C` / `db`）——`C.xxx` / `db.xxx` 正文一字未改，属性访问时解析。"""
-
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
-
-
-C = _HostMod("content")     # 真源 `from .. import content as C`
 from ._pkgref import DB as db
+from . import achievements as _ach       # 成就函数读点 → 包内直取（同对象）
+from . import daily_events as _daily_events   # 动态读点 `today_map_event`（原 getattr 聚合层）
+from . import dialogue as _dlg           # 对话树五名（get_dialogue/dialogue_node/node_text/visible_options/is_end）
+from . import exploration as _exploration     # 动态读点 `exploration_record_visit`
+from . import factions as _fac           # faction_reputation_tier
+from . import index as _idx              # resolve / display
+from . import maps as _maps              # subarea_links / map_entry_subarea / map_exit_subarea / map_center / map_route
+from . import pois as _pois              # subarea_pois / subarea_props / prop_entry
+from . import portals as _portals        # portal_cost
+from . import timed_events as _timed     # list_timed / get_timed
+from . import time_weather as _tw        # current_period / time_weather_summary
+from . import worlds as _worlds          # get_instance_world
+
+# ⚠️ 兼容别名（**不是读点**）：`content/cmds_world.py:49` 按名 import 这两个旧替身口名
+# （`# noqa: F401`，全仓零调用点）。该文件不属 B2-C4 文件集 → 不就地改；收口 = 删那两个名字后整段删除。
+C = None
+_host_attr = None
 
 # 真源宿主顶层 `from ..services.quests import DAILY_META_KEYS as _DAILY_META_KEYS`
 from .profession_quests import DAILY_META_KEYS as _DAILY_META_KEYS
@@ -284,7 +320,7 @@ def _map_scene(self, cur_map: dict, player: dict = None, sa_id_override: str = N
     sa_id = sa_id_override or (player or {}).get("cur_subarea") or ""
     # v87 02 章 7.6：探索点 POI 显示（子区域挂载）
     if player:
-        poi_ids = C.subarea_pois(mid, sa_id)
+        poi_ids = _pois.subarea_pois(mid, sa_id)
         # v137 副本地图化：副本内 POI 显示受 rooms[cur_room].pois_left 过滤（资源池语义）
         _inst_row = None
         try:
@@ -313,9 +349,9 @@ def _map_scene(self, cur_map: dict, player: dict = None, sa_id_override: str = N
     # v87.9 场景元素 PROPS 显示（子区域挂载，直接交互）
     # v87.11 支持专属名：挂载条目可为 (prop_id, 专属名) 元组
     if player:
-        prop_ids = C.subarea_props(mid, sa_id)
+        prop_ids = _pois.subarea_props(mid, sa_id)
         for _entry in prop_ids:
-            _ppid, _label = C.prop_entry(_entry)
+            _ppid, _label = _pois.prop_entry(_entry)
             _pp = _cat_items.PROPS.get(_ppid)
             if _pp:
                 _name = _label or _pp['name']
@@ -367,7 +403,7 @@ async def deed_view(self, event: AstrMessageEvent, group_id, qq_id, player):
         lines.append(f"   🏗️ {hl['name']} Lv.{dlv} ｜ 仓库 {hl['storage']} 格 ｜ 回家恢复 {int(hl['heal_pct'] * 100)}%")
         if dlv < _cat_life.HOUSE_MAX_LEVEL:
             nxt = _cat_life.HOUSE_LEVELS[dlv + 1]
-            cost = f"{nxt['upgrade_cost']['gold']} 金币 + " + " + ".join(f"{C.display('materials', m)}×{c}" for m, c in nxt['upgrade_cost']['mats'].items())
+            cost = f"{nxt['upgrade_cost']['gold']} 金币 + " + " + ".join(f"{_idx.display('materials', m)}×{c}" for m, c in nxt['upgrade_cost']['mats'].items())
             lines.append(f"   ⬆️ 升级 Lv.{dlv + 1}【{nxt['name']}】：{cost}(『地契 升级』)")
         else:
             lines.append("   ⭐ 已满级宅邸！")
@@ -451,14 +487,14 @@ async def _deed_upgrade(self, event, group_id, qq_id, player):
         nm = it["data"].get("name", "")
         inv_map[nm] = inv_map.get(nm, 0) + it.get("count", 1)
     for mid, need in cost["mats"].items():
-        mname = C.display("materials", mid)
+        mname = _idx.display("materials", mid)
         if inv_map.get(mname, 0) < need:
             yield event.plain_result(
                 f"升级 Lv.{dlv + 1}【{nxt['name']}】需要 {mname}×{need}，你只有 {inv_map.get(mname, 0)}。去『挖掘』吧～")
             return
     # 扣材料 + 扣金币 + 升级
     for mid, need in cost["mats"].items():
-        mname = C.display("materials", mid)
+        mname = _idx.display("materials", mid)
         for _ in range(need):
             found = next((it for it in inv if it["data"].get("name") == mname), None)
             if found:
@@ -758,7 +794,7 @@ def _map_blocks(self, player: dict, cur_map: dict, cur_sa: str,
     # v132.2 全地图紧凑模式（鱼鱼拍板：地图排版统一 ●横排模板，不再区分城镇/野外）
     _compact = True
     # v115 今日奇遇：面板底部一行（getattr 兜底，A/C 未就绪则不显示）
-    _today_ev_fn = getattr(C, "today_map_event", None)
+    _today_ev_fn = getattr(_daily_events, "today_map_event", None)
     if _today_ev_fn is not None:
         try:
             _ev = _today_ev_fn(cur)
@@ -833,7 +869,7 @@ def _map_blocks(self, player: dict, cur_map: dict, cur_sa: str,
     # v95.30 城镇 NPC 随机性：酱油 NPC 按 游走(roam)/概率(appear)/时段(period) 过滤显示
     # （功能 NPC 恒显示；隐藏 NPC 走副本层逻辑不参与；无子区域(地图级)不做过滤）
     npcs = [(nid, n) for nid, n in npcs
-            if nid in _cat_quests.HIDDEN_NPCS or not cur_sa or C.town_npc_visible(nid, n, cur_sa)]
+            if nid in _cat_quests.HIDDEN_NPCS or not cur_sa or _wild.town_npc_visible(nid, n, cur_sa)]
     if npcs:
         if lines and lines[-1]:
             lines.append("")
@@ -938,22 +974,22 @@ def _map_nav_body(self, player: dict, cur_map: dict, cur_sa: str,
     lines = ([f"🗺️ 【{title}】", f"{sa_desc or cur_map['desc']}", "━━━━━━━━━━━━"]
              if with_header else [])
     neighbors = _cat_b143.MAP_CONNECTIONS.get(cur_map.get("id", ""), [])
-    links = C.subarea_links(cur_map.get("id", ""), cur_sa)
+    links = _maps.subarea_links(cur_map.get("id", ""), cur_sa)
     _v_ids = {vs["id"] for vs in self._visible_sas(player, cur_map, group_id, qq_id)}
     _v_links = [lid for lid in links if lid in _v_ids]
     shown = [(i + 1, next((s for s in sas if s["id"] == lid), None))
              for i, lid in enumerate(_v_links)]
     shown = [(i, s) for i, s in shown if s]
     # 深度标记——v114.3 精简：只保留尽头标记 🔚（死胡同连接数==1 且非入口，提示此路到头需回头）
-    _depth = getattr(C, "subarea_depth", None)
-    _entry_id = C.map_entry_subarea(cur_map.get("id", ""))
+    _depth = getattr(_maps, "subarea_depth", None)
+    _entry_id = _maps.map_entry_subarea(cur_map.get("id", ""))
 
     def _sa_mark(sa):
         if _depth is None:
             return ""
         # 死胡同（连接数==1 且非入口）
         try:
-            if sa["id"] != _entry_id and len(C.subarea_links(cur_map.get("id", ""), sa["id"])) == 1:
+            if sa["id"] != _entry_id and len(_maps.subarea_links(cur_map.get("id", ""), sa["id"])) == 1:
                 return "🔚"
         except Exception:
             pass
@@ -984,7 +1020,7 @@ def _map_nav_body(self, player: dict, cur_map: dict, cur_sa: str,
         if _hidden_sas:
             for _hs in _hidden_sas:
                 lines.append("  🔒？？？(隐藏角落)")
-        exit_sa_id = C.map_exit_subarea(cur_map.get("id", ""))
+        exit_sa_id = _maps.map_exit_subarea(cur_map.get("id", ""))
         at_exit = (not exit_sa_id) or (cur_sa == exit_sa_id)
         # v137 副本地图化：副本内（no_exit）不显示通往野外的连接——副本是封闭地图
         _dun = cur_map.get("dungeon") or {}
@@ -1016,9 +1052,9 @@ def _map_nav_body(self, player: dict, cur_map: dict, cur_sa: str,
             # v183：必经之路问引擎 —— 枢纽在广场时提示「先到哪个中间站」
             # （v95.25 起这里是手算的星形链首，已逐格比对证明与 route 等价）
             _mid = cur_map.get("id", "")
-            _hub = C.map_center(_mid)
+            _hub = _maps.map_center(_mid)
             if _hub and cur_sa == _hub:
-                _r = C.map_route(_mid, cur_sa, exit_sa_id)
+                _r = _maps.map_route(_mid, cur_sa, exit_sa_id)
                 if len(_r) >= 2:
                     _hint = next((s["name"] for s in sas if s["id"] == _r[1]), _hint)
             lines.append(f"  🧭 出城需先到『{_hint}』")
@@ -1094,7 +1130,7 @@ def _hurry_section(self, player: dict, cur_map: dict, cur_sa: str,
             elif nid in _cat_quests.NPCS:
                 npcs.append((nid, _cat_quests.NPCS[nid]))
         npcs = [(nid, n) for nid, n in npcs
-                if nid in _cat_quests.HIDDEN_NPCS or not cur_sa or C.town_npc_visible(nid, n, cur_sa)]
+                if nid in _cat_quests.HIDDEN_NPCS or not cur_sa or _wild.town_npc_visible(nid, n, cur_sa)]
         if npcs:
             lines.append("👥 这里的 NPC：")
             for i, (_, n) in enumerate(npcs, 1):
@@ -1336,7 +1372,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
     # v104 P3(M24) 确认：全角数字兼容——Python str.isdigit()/int() 原生接受全角 ０-９(U+FF10-FF19)，
     # 『前往 １２』与『前往 12』等价（实测 2026-08-12：isdigit=True 且 int('１２')==12，无需 normalize）。
     # v115 网状：visible_links 用 _visible_sas 过滤（隐藏未揭示不可前往），与『地图』面板编号一致
-    _raw_links = C.subarea_links(cur, player.get("cur_subarea") or "")
+    _raw_links = _maps.subarea_links(cur, player.get("cur_subarea") or "")
     _v_ids = {vs["id"] for vs in self._visible_sas(player, cur_map, group_id, qq_id)}
     links = [lid for lid in _raw_links if lid in _v_ids]
     if dest.isdigit():
@@ -1367,7 +1403,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
                 if _hidden_txt:
                     yield event.plain_result(_hidden_txt)
                     return
-                links2 = C.subarea_links(cur, player.get("cur_subarea") or "")
+                links2 = _maps.subarea_links(cur, player.get("cur_subarea") or "")
                 if sa["id"] not in links2:
                     yield event.plain_result(self._move_blocked_msg(cur_map, player, sa))
                     return
@@ -1383,7 +1419,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
         offset = len(links)
         # #263: 与地图显示口径一致——跨图连接只在出口子区域有效（v95.21 出城走城门铁律），
         # 非出口子区域报错"可前往 N 处"此前无条件加邻居数（显示 1 处却报 5 处）
-        exit_sa_id = C.map_exit_subarea(cur)
+        exit_sa_id = _maps.map_exit_subarea(cur)
         at_exit = (not exit_sa_id) or (player.get("cur_subarea") == exit_sa_id)
         if not at_exit:
             neighbors = []
@@ -1480,7 +1516,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
     # 记录到访（称号用）
     db.add_visited(group_id, qq_id, target["id"])
     # 阶段九：到访成就判定（14 章 2.4 探索成就）
-    C.check_achievements(group_id, qq_id, self._player(group_id, qq_id))
+    _ach.check_achievements(group_id, qq_id, self._player(group_id, qq_id))
     # 探索型任务触发（到达目标子区域自动完成）
     quest_lines = self._update_explore_quests(group_id, qq_id, target["id"])
     extra = ""
@@ -1492,7 +1528,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
     # v13：到达后显示可前往 + 设施/场景（v87.13 拆分）
     # v87.16 与地图面板一致：links 顺序号 + 邻居从 len(links)+1 编号
     target_sas = target.get("subareas") or []
-    t_links = C.subarea_links(target["id"], first_sa["id"] if first_sa else "")
+    t_links = _maps.subarea_links(target["id"], first_sa["id"] if first_sa else "")
     t_shown = [(i + 1, next((s for s in target_sas if s["id"] == lid), None))
                for i, lid in enumerate(t_links)]
     t_shown = [(i, s) for i, s in t_shown if s]
@@ -1510,12 +1546,12 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
     if ambush:
         # v2 多对多：撞怪经 build_monster_group 生成敌方阵列（单只即可，伏击不引入随机双怪）
         # N5b4-6：撞怪开战 saintess_engine 化（同 _open_battle 仪式，跨图伏击 = 普通战斗形态）
-        _grp = C.build_monster_group(ambush, target, player)
+        _grp = _drops().build_monster_group(ambush, target, player)
         _open2 = getattr(self, "_open_battle", None)
         if _open2 is not None:
             _nb = _open2(player, _grp, "monster", group_id=group_id, qq_id=qq_id)
         else:
-            BR = _host_attr("services", "battle_bridge")
+            from . import bridge as BR
             BR.prepare_player_for_battle(player, self._title_bonus(group_id, qq_id), db)
             _sides = BR.build_sides(player=player, enemies=_grp)
             from saintess_engine import Battle as B2
@@ -1608,7 +1644,7 @@ def _subarea_arrive(self, player: dict, cur_map: dict, sa: dict, group_id=None, 
         blocks = self._map_blocks(player, cur_map, sa["id"], group_id, qq_id)
         out = "\n".join([f"🗺️ 【{title}】", desc, "━━━━━━━━━━━━"] + nav + blocks)
     # v115 探索见闻：到达子区域记录 + 首访奖励（H 提供，getattr 兜底）
-    _rec = getattr(C, "exploration_record_visit", None)
+    _rec = getattr(_exploration, "exploration_record_visit", None)
     if _rec is not None and group_id is not None and qq_id is not None:
         try:
             _rv = _rec(group_id, qq_id, cur_map.get("id", ""), sa.get("id", ""))
@@ -1663,10 +1699,10 @@ async def _instance_dungeon_move(self, event, group_id, qq_id, player, inst_row,
     cur_sa = player.get("cur_subarea") or ""
     # v141 大陆隔离：优先从大陆实例读（克隆图），回退全局静态图
     _wid = st.get("world_id") or ""
-    _inst = C.get_instance_world(_wid) if _wid.startswith("inst:") else None
+    _inst = _worlds.get_instance_world(_wid) if _wid.startswith("inst:") else None
     cur_map = (_inst or {}).get("maps", {}).get((st.get("inst_id") or "").removeprefix("inst_"), {}) or _cat_space.MAP_BY_ID.get((st.get("inst_id") or "").removeprefix("inst_"), {})
     sas = cur_map.get("subareas") or []
-    links = C.subarea_links(cur_map.get("id", ""), cur_sa) if cur_sa else []
+    links = _maps.subarea_links(cur_map.get("id", ""), cur_sa) if cur_sa else []
     # 副本内不隐藏房间（v137 房间全可见），直接取连通表
     target_sa = None
     if isinstance(dest, str) and dest.isdigit():
@@ -1790,7 +1826,7 @@ async def portal_view(self, event: AstrMessageEvent, group_id, qq_id, player):
         for i, mid in enumerate(portals, 1):
             m = _cat_space.MAP_BY_ID.get(mid, {})
             p = PORTALS.get(mid, {})
-            cost = C.portal_cost(m)
+            cost = _portals.portal_cost(m)
             shown = cost
             tag = ""
             if disc > 0:
@@ -1872,7 +1908,7 @@ async def portal_travel(self, event: AstrMessageEvent, group_id, qq_id):
     if target["id"] == player["cur_map"]:
         yield event.plain_result("你已经在这座方碑所在的地图了！")
         return
-    cost = C.portal_cost(target)
+    cost = _portals.portal_cost(target)
     # v39 坐骑：骑乘中传送折扣
     mounts = player.get("mounts") or {}
     active_mk = mounts.get("active")
@@ -1890,7 +1926,7 @@ async def portal_travel(self, event: AstrMessageEvent, group_id, qq_id):
     db.add_visited(group_id, qq_id, target["id"])
     # v115 探索见闻：传送到达也记录子区域到访（H 提供，getattr 兜底）
     _rec_txt = ""
-    _rec = getattr(C, "exploration_record_visit", None)
+    _rec = getattr(_exploration, "exploration_record_visit", None)
     if _rec is not None and first_sa is not None:
         try:
             _rv = _rec(group_id, qq_id, target["id"], first_sa.get("id", ""))
@@ -2017,9 +2053,9 @@ async def quest_accept(self, event: AstrMessageEvent, group_id, qq_id):
                     return
             # v97.1 告示委托（board: true）：在告示板所在的子区域接取，不要求发布 NPC 在场
             if sq.get("board"):
-                prop_ids = C.subarea_props(player["cur_map"], player.get("cur_subarea") or "")
+                prop_ids = _pois.subarea_props(player["cur_map"], player.get("cur_subarea") or "")
                 has_board = any(
-                    C.prop_entry(e)[0] == "notice_board" for e in prop_ids
+                    _pois.prop_entry(e)[0] == "notice_board" for e in prop_ids
                 )
                 if not has_board:
                     yield event.plain_result(
@@ -2234,7 +2270,7 @@ def _current_npcs(self, player):
         if sa["id"] == sa_id:
             npc_ids = sa.get("npcs") or []
             return [_cat_quests.NPCS[nid] for nid in npc_ids if nid in _cat_quests.NPCS
-                    and C.town_npc_visible(nid, _cat_quests.NPCS[nid], sa_id)]
+                    and _wild.town_npc_visible(nid, _cat_quests.NPCS[nid], sa_id)]
     return [_cat_quests.NPCS[nid] for nid in m.get("npcs", []) if nid in _cat_quests.NPCS]
 
 
@@ -2246,7 +2282,7 @@ def _present_wild_hints(self, group_id, qq_id, cur_map) -> list:
     返回例：["  🧭游商·老马 ⏳剩60分", ...]（2 空格缩进，与普通 NPC 行一致）。
     """
     lines = []
-    evs = C.list_timed(group_id, qq_id, type_key="wild_npc",
+    evs = _timed.list_timed(group_id, qq_id, type_key="wild_npc",
                        data_match={"map": cur_map})
     for ev in evs:
         nid = ev.get("data", {}).get("npc_id") or ""
@@ -2265,7 +2301,7 @@ def _start_talk_list(self, group_id, qq_id) -> list:
         return ["家里没有 NPC 可以交谈～『出门』去镇上找人吧！"]
     npcs = self._current_npcs(player) if player else []
     # v127.5 限时NPC：在场野外旅人并入裸『对话』列表（排城镇 NPC 之后，带序号可对话）
-    wild_evs = C.list_timed(group_id, qq_id, type_key="wild_npc",
+    wild_evs = _timed.list_timed(group_id, qq_id, type_key="wild_npc",
                             data_match={"map": player["cur_map"]}) if player else []
     if not npcs and not wild_evs:
         return ["这里没有 NPC。输入『地图』看看哪里有 NPC～"]
@@ -2300,7 +2336,7 @@ def _find_npc_in_map(self, player, name_key):
             for nid in sa.get("npcs", []):
                 npc = _cat_quests.NPCS.get(nid)
                 if npc and (name_key in npc["name"] or name_key in nid):
-                    if not C.town_npc_visible(nid, npc, sa_id):
+                    if not _wild.town_npc_visible(nid, npc, sa_id):
                         player["_npc_absent"] = (nid, npc, sa_id)
                     return nid, npc
             break
@@ -2308,7 +2344,7 @@ def _find_npc_in_map(self, player, name_key):
     for nid in m.get("npcs", []):
         npc = _cat_quests.NPCS.get(nid)
         if npc and (name_key in npc["name"] or name_key in nid):
-            if not C.town_npc_visible(nid, npc, sa_id):
+            if not _wild.town_npc_visible(nid, npc, sa_id):
                 player["_npc_absent"] = (nid, npc, sa_id)
             return nid, npc
     return None, None
@@ -2319,7 +2355,7 @@ def _town_npc_absent_hint(self, nid, npc, sa_id):
     显示必须可触发铁律：『找』必须给出明确信息。"""
     name = npc.get("name", "他")
     # B 游走：今天在别的子区域 → 指路
-    today_sa = C.town_npc_day_sa(nid, npc, sa_id)
+    today_sa = _wild.town_npc_day_sa(nid, npc, sa_id)
     if today_sa != sa_id:
         m = self._player_map_name(sa_id) or ""
         sa_name = self._subarea_name(today_sa)
@@ -2328,7 +2364,7 @@ def _town_npc_absent_hint(self, nid, npc, sa_id):
     # D 时段
     per = npc.get("period")
     if per:
-        period_cn = (PERIOD_CN.get(C.current_period(), "") or "").strip()
+        period_cn = (PERIOD_CN.get(_tw.current_period(), "") or "").strip()
         return f"🌙 『{name}』现在({period_cn})不在这里，换个时间再来吧～"
     # C 概率未出
     return f"🍃 『{name}』今天没来这边，改天再来看看吧～"
@@ -2360,9 +2396,9 @@ def _find_wild_npc(self, player, name_key, group_id, qq_id):
         # v95.4：与 _find_npc_in_map 一致的子串匹配（『找 游商』→『游商·老马』）
         if name_key not in (wnpc.get("name") or ""):
             continue
-        if C.npc_map_id(nid, wnpc) != cur:
+        if _wild.npc_map_id(nid, wnpc) != cur:
             return None, None
-        if not C.wild_npc_findable(nid, wnpc, player, group_id, qq_id):
+        if not _wild.wild_npc_findable(nid, wnpc, player, group_id, qq_id):
             return None, None
         wnpc = dict(wnpc)
         wnpc.setdefault("title", "游历于野外的旅人")
@@ -2377,12 +2413,12 @@ def _wild_unseen_hint(self, player, name_key, group_id, qq_id):
     for nid, wnpc in _wild.ALL_WILD.items():
         if name_key not in (wnpc.get("name") or "") and name_key not in nid:
             continue
-        if C.npc_map_id(nid, wnpc) != cur:
+        if _wild.npc_map_id(nid, wnpc) != cur:
             continue  # 今天不在这张图 → 交给方向提示
-        if C.wild_npc_findable(nid, wnpc, player, group_id, qq_id):
+        if _wild.wild_npc_findable(nid, wnpc, player, group_id, qq_id):
             continue  # 条件满足（概率/保底问题），不归这里管
         label = self._wild_cond_label(wnpc)
-        period = (PERIOD_CN.get(C.current_period(), "") or "").strip()
+        period = (PERIOD_CN.get(_tw.current_period(), "") or "").strip()
         return f"🧭 『{name_key}』{label}，现在({period})还没到出现的时候，换个时间再来找找吧～"
     return None
 
@@ -2457,7 +2493,7 @@ def _npc_dialogue(self, group_id, qq_id, npc_id, npc):
     base = npc.get("dialogue", "……")
     # v95.30 酱油 NPC 随机台词（无功能 → 不参与主线逻辑）
     if not npc.get("funcs"):
-        return C.town_npc_dialogue(npc_id, npc, base)
+        return _wild.town_npc_dialogue(npc_id, npc, base)
     # 只对发布主线的 NPC 动态化
     if "quest" not in npc.get("funcs", []):
         return base
@@ -2563,7 +2599,7 @@ def _wild_cond_label(self, npc: dict) -> str:
 
 async def time_cmd(self, event: AstrMessageEvent, group_id, qq_id, player):
     cur = player["cur_map"]
-    summary = C.time_weather_summary(cur)
+    summary = _tw.time_weather_summary(cur)
     cur_map = _cat_space.MAP_BY_ID.get(cur, {})
     lines = [
         "🕰️ 【时间】",
@@ -2571,7 +2607,7 @@ async def time_cmd(self, event: AstrMessageEvent, group_id, qq_id, player):
         f"📍 你在【{cur_map.get('name', '未知区域')}】",
         "━━━━━━━━━━━━",
     ]
-    hints = C.nearby_hints(group_id, qq_id, player, cur)
+    hints = _wild.nearby_hints(group_id, qq_id, player, cur)
     if hints:
         lines.append("🍃 附近似乎有人影出没：")
         for nid, npc in hints[:5]:
@@ -2583,7 +2619,7 @@ async def time_cmd(self, event: AstrMessageEvent, group_id, qq_id, player):
 
 
 async def wild_notes(self, event: AstrMessageEvent, group_id, qq_id, player):
-    met = C.met_wild(group_id, qq_id)
+    met = _wild.met_wild(group_id, qq_id)
     if not met:
         yield event.plain_result(
             "📖 【见闻录】还是空白的……\n"
@@ -2697,7 +2733,7 @@ async def find_npc(self, event: AstrMessageEvent):
             yield event.plain_result("家里没有 NPC 可以交谈～『出门』去镇上找人吧！")
             return
         npcs = self._current_npcs(player)
-        wild_evs = C.list_timed(group_id, qq_id, type_key="wild_npc",
+        wild_evs = _timed.list_timed(group_id, qq_id, type_key="wild_npc",
                                 data_match={"map": player["cur_map"]})
         total = len(npcs) + len(wild_evs)
         idx = int(name_key)
@@ -2738,7 +2774,7 @@ async def find_npc(self, event: AstrMessageEvent):
         npc_id, npc = self._find_wild_npc(player, name_key, group_id, qq_id)
         if npc:
             # v127.5 限时NPC：偶遇制——只在倒计时内在场可找；未偶遇/过期 → "今天没遇到"
-            if not C.get_timed(group_id, qq_id, f"wild:{npc_id}"):
+            if not _timed.get_timed(group_id, qq_id, f"wild:{npc_id}"):
                 _ta = "她" if npc.get("gender") == "女" else "他"
                 yield event.plain_result(
                     f"🍃 『{name_key}』今天还没遇到……多『探索』几圈，{_ta}不定什么时候就路过这里啦～")
@@ -2757,12 +2793,12 @@ async def find_npc(self, event: AstrMessageEvent):
         yield event.plain_result(
             f"你在这里没找到『{name_key}』。他可能不在这里，或还没到出现的时候……(『时间』看看此刻谁在附近)")
         return
-    dlg = C.get_dialogue(npc_id)
+    dlg = _dlg.get_dialogue(npc_id)
     if dlg:
         # v65：配置了多轮对话树 → 进入对话
         db.set_talk_state(group_id, qq_id, npc_id, dlg.get("start", ""))
         ctx = self._talk_ctx(group_id, qq_id, npc_id)
-        node = C.dialogue_node(dlg, dlg.get("start", ""))
+        node = _dlg.dialogue_node(dlg, dlg.get("start", ""))
         lines = self._render_talk_node(npc, dlg, node, ctx)
     else:
         lines = [f"{npc['icon']}【{npc['name']}】{npc['title']}", f"“{self._npc_dialogue(group_id, qq_id, npc_id, npc)}”"]
@@ -2875,7 +2911,7 @@ def _teach_by_npc(self, group_id, qq_id, player, npc_id):
     hint = npc.get("teach_hint") or ""
     if not cfg_skills:
         return []
-    cid = C.resolve("classes", player.get("class_name", ""))
+    cid = _idx.resolve("classes", player.get("class_name", ""))
     sname = cfg_skills.get(cid)
     if not sname:
         return [f"{hint}他打量了你片刻，摇了摇头：你这身本事，不在我能指点的路数上。"]
@@ -2890,7 +2926,7 @@ def _teach_by_npc(self, group_id, qq_id, player, npc_id):
     if (player.get("gold", 0) or 0) < cost:
         return [f"{hint}想学？拿 {cost} 金币来，一分诚意一分本事。(你现在有 {player.get('gold', 0)} 金币)"]
     learned = list(player.get("learned_skills", []))
-    if C.resolve("skills", sname) in [C.resolve("skills", s) for s in learned if s]:
+    if _idx.resolve("skills", sname) in [_idx.resolve("skills", s) for s in learned if s]:
         return [f"{hint}『{sname_cn}』你早已掌握，不必再学。"]
     db.update_player(group_id, qq_id, gold=(player.get("gold", 0) or 0) - cost,
                      learned_skills=learned + [sname_cn])
@@ -2913,11 +2949,11 @@ async def interact_prop(self, event: AstrMessageEvent, group_id, qq_id):
     cur = player["cur_map"]
     cur_map = _cat_space.MAP_BY_ID.get(cur, {})
     sa_id = player.get("cur_subarea") or ""
-    prop_ids = C.subarea_props(cur, sa_id)
+    prop_ids = _pois.subarea_props(cur, sa_id)
     # v104 M23 修复：过滤孤儿 prop（SUBAREA_PROPS 挂载了但 PROPS 未定义）。
     # 显示列表与『交互 <序号>』按下标取条目必须同源，否则序号错位/取到空定义
     # 会在 pp['icon']/pp['name'] 处 KeyError 崩溃。
-    prop_ids = [e for e in prop_ids if C.prop_entry(e)[0] in _cat_items.PROPS]
+    prop_ids = [e for e in prop_ids if _pois.prop_entry(e)[0] in _cat_items.PROPS]
     if not name_key:
         # 无参：列出当前子区域的场景元素
         if not prop_ids:
@@ -2925,7 +2961,7 @@ async def interact_prop(self, event: AstrMessageEvent, group_id, qq_id):
             return
         lines = ["✨ 这里的场景元素："]
         for i, entry in enumerate(prop_ids, 1):
-            pid, label = C.prop_entry(entry)
+            pid, label = _pois.prop_entry(entry)
             pp = _cat_items.PROPS.get(pid, {})
             if pp:
                 name = label or pp['name']
@@ -2940,13 +2976,13 @@ async def interact_prop(self, event: AstrMessageEvent, group_id, qq_id):
             yield event.plain_result(f"这里没有第 {idx} 个场景元素(共 {len(prop_ids)} 个)！『交互』查看列表～")
             return
         entry = prop_ids[idx - 1]
-        pid, label = C.prop_entry(entry)
+        pid, label = _pois.prop_entry(entry)
         found = (pid, _cat_items.PROPS.get(pid, {}), label)
     else:
         # 找 prop：专属名/默认名子串 / id 匹配
         found = None
         for entry in prop_ids:
-            pid, label = C.prop_entry(entry)
+            pid, label = _pois.prop_entry(entry)
             pp = _cat_items.PROPS.get(pid, {})
             name = label or pp.get("name", "")
             if pp and (name_key in name or name_key in pid):
@@ -2956,7 +2992,7 @@ async def interact_prop(self, event: AstrMessageEvent, group_id, qq_id):
             # v95.14：海象运算符只在 if 条件绑定 pid，label 未定义 → NameError；改用显式循环 + 去重
             _cand = []
             for _entry in prop_ids:
-                _pid, _lbl = C.prop_entry(_entry)
+                _pid, _lbl = _pois.prop_entry(_entry)
                 if _pid in _cat_items.PROPS:
                     _nm = _lbl or _cat_items.PROPS[_pid]["name"]
                     if _nm not in _cand:
@@ -3043,7 +3079,7 @@ async def interact_prop(self, event: AstrMessageEvent, group_id, qq_id):
                         lines.append("⏳ 今天已经在这里翻找过了……明天再来碰碰运气吧。")
                     else:
                         mid = random.choice(pool)
-                        mname = C.display("materials", mid)
+                        mname = _idx.display("materials", mid)
                         db.add_item(group_id, qq_id, mid, {
                             "name": mname, "type": "材料", "stackable": True,
                             "price": _cat_items.MATERIALS[mid]["price"],
@@ -3128,13 +3164,13 @@ def _side_menu_expand(self, group_id, qq_id, npc_id, opt) -> list:
 
 def _render_talk_node(self, npc, dlg, node, ctx) -> list:
     """渲染一个对话节点：头像 + 台词 + 可见选项
-    v101.23：台词走 C.node_text——支持 texts 条件变体（随主线进度切换）
+    v101.23：台词走 _dlg.node_text——支持 texts 条件变体（随主线进度切换）
     v173.3 意见#113/#163/#164（鱼鱼拍板）：NPC 对话树自动补任务入口——
     当 NPC 名下有可接支线且当前节点选项没任务入口时，自动展开『📜 有委托可接』
     （复用 side_menu 动态子选项），新手不再"找不到任务"。"""
     lines = [f"{npc['icon']}【{npc['name']}】{npc['title']}",
-             f"“{C.node_text(node, ctx)}”"]
-    opts = C.visible_options(dlg, node, ctx)
+             f"“{_dlg.node_text(node, ctx)}”"]
+    opts = _dlg.visible_options(dlg, node, ctx)
     # v173.3：自动补任务入口——节点无任何任务类选项 & NPC 有可接支线时展开
     if not any((o.get("side_menu") is not None) or (o.get("action") or {}).get("side_offer")
                or (o.get("action") or {}).get("side_take") or (o.get("action") or {}).get("side_take_one")
@@ -3201,13 +3237,12 @@ def _weapon_pick_choose(self, group_id, qq_id, num) -> str:
     rid = opt.get("rid", "")
     # 生成装备入包（rid 优先名册；否则 fallback 名册按名查）
     try:
-        _C = _host_attr("", "content")
         rid_list = _cat_items.EQUIP_ROSTER_BY_NAME.get(eq_name, []) if eq_name else []
         if rid:
             rid_list = [rid]
         if not rid_list:
             return f"【{opt.get('name', eq_name)}】数据缺失，无法发放……(可回复 0 收起来)"
-        eq = _C.generate_roster_equip(rid_list[0])
+        eq = _drops().generate_roster_equip(rid_list[0])
         db.add_item(group_id, qq_id, rid_list[0], eq)
     except Exception:
         return f"发放【{opt.get('name', eq_name)}】时出错了……(可回复 0 收起来)"
@@ -3274,7 +3309,7 @@ def _do_join_class(self, group_id, qq_id, player, new_cls):
     while len(bar) < 6:
         bar.append(None)
     db.set_skill_bar(qq_id, bar)
-    names = "、".join(C.display("skills", s) for s in init_skills)
+    names = "、".join(_idx.display("skills", s) for s in init_skills)
     lines.append(f"🎉 行会为你登记在册——就职【{cls['icon']} {cls['name']}】！")
     lines.append(f"『{cls['desc']}』")
     if names:
@@ -3334,7 +3369,7 @@ def _do_evolve_via_npc(self, group_id, qq_id, player, next_tier, path):
     auto_line = ""
     if auto_skills:
         auto_line = f"\n🌟 领悟：{'、'.join(auto_skills)}"
-    C.check_achievements(group_id, qq_id, player)
+    _ach.check_achievements(group_id, qq_id, player)
     lines.append("🌟 转职成功！")
     lines.append("━━━━━━━━━━━━")
     lines.append(f"{old_title}")
@@ -3363,9 +3398,8 @@ async def _apply_talk_action_async(self, group_id, qq_id, player, npc_id, action
     if not action:
         return lines, route
     import inspect
-    ACTIONS = _host_attr("commands.talk_actions", "ACTIONS")
-    check_action_keys = _host_attr("commands.talk_actions", "check_action_keys")
-    check_action_keys(action)
+    from .talk_actions import ACTIONS      # 包内注册表（宿主那份是 17+1 行转发，注册序同）
+    _check_action_keys(action)             # 宿主独有（接口表第 4 行冻结：走注入/兜底口）
     for key, fn in ACTIONS.items():
         if not action.get(key):
             continue
@@ -3397,9 +3431,8 @@ def _apply_talk_action(self, group_id, qq_id, player, npc_id, action) -> list:
     if not action:
         return lines
     import inspect
-    ACTIONS = _host_attr("commands.talk_actions", "ACTIONS")
-    check_action_keys = _host_attr("commands.talk_actions", "check_action_keys")
-    check_action_keys(action)
+    from .talk_actions import ACTIONS      # 包内注册表（宿主那份是 17+1 行转发，注册序同）
+    _check_action_keys(action)             # 宿主独有（接口表第 4 行冻结：走注入/兜底口）
     for key, fn in ACTIONS.items():
         if not action.get(key):
             continue
@@ -3450,19 +3483,19 @@ async def talk_choice(self, event: AstrMessageEvent, group_id, qq_id, player):
     npc = dict(npc)
     npc.setdefault("title", "游历于野外的旅人")  # v95.11：wild NPC 无 title，与 _find_wild_npc 一致
     # 惰性失效：NPC 不在当前地图 → 会话作废（wild NPC 按 roam 定位）
-    if C.npc_map_id(npc_id, npc) != player.get("cur_map"):
+    if _wild.npc_map_id(npc_id, npc) != player.get("cur_map"):
         db.clear_talk_state(group_id, qq_id)
         _ta = "她" if npc.get("gender") == "女" else "他"  # v95 #141：代词跟随 NPC 性别
         yield event.plain_result(f"{npc['name']}不在这里了，对话只能作罢。去找{_ta}再聊聊吧～")
         return
     # v127.5 限时NPC：对话中野外NPC的在场的限时事件过期 → 会话作废
     # （倒计时结束显示与对话同时消失；与 npc_map_id 失效同位置、同文案风格）
-    if npc_id in _wild.ALL_WILD and not C.get_timed(group_id, qq_id, f"wild:{npc_id}"):
+    if npc_id in _wild.ALL_WILD and not _timed.get_timed(group_id, qq_id, f"wild:{npc_id}"):
         db.clear_talk_state(group_id, qq_id)
         _ta = "她" if npc.get("gender") == "女" else "他"  # v95 #141：代词跟随 NPC 性别
         yield event.plain_result(f"{npc['name']}已经离开了，对话只能作罢。去找{_ta}再聊聊吧～")
         return
-    dlg = C.get_dialogue(npc_id)
+    dlg = _dlg.get_dialogue(npc_id)
     if not dlg:
         db.clear_talk_state(group_id, qq_id)
         yield event.plain_result(f"{npc['name']}似乎不想再多说了。")
@@ -3488,9 +3521,9 @@ async def talk_choice(self, event: AstrMessageEvent, group_id, qq_id, player):
             f"💡 想找别的 NPC？先回复 0 结束当前对话再说")
         return
     cur_node_id = st.get("node", dlg.get("start", ""))
-    node = C.dialogue_node(dlg, cur_node_id)
+    node = _dlg.dialogue_node(dlg, cur_node_id)
     ctx = self._talk_ctx(group_id, qq_id, npc_id)
-    opts = C.visible_options(dlg, node, ctx)
+    opts = _dlg.visible_options(dlg, node, ctx)
     if raw.isdigit():
         idx = int(raw)
         if idx == 0:
@@ -3522,14 +3555,14 @@ async def talk_choice(self, event: AstrMessageEvent, group_id, qq_id, player):
         # v105 P3：对话动作链落地后补成就判定（拜师/转职/任务交付等动作改 DB 后立即解锁——
         # 原实现无此调用，『拜师学艺/全知全能』等依赖学徒数的成就要等下次事件才判定，
         # 全知全能(第 8 条拜师)的全副业经验 +10% 加成也因此延迟生效）
-        C.check_achievements(group_id, qq_id)
-        if C.is_end(nxt):
+        _ach.check_achievements(group_id, qq_id)
+        if _dlg.is_end(nxt):
             db.clear_talk_state(group_id, qq_id)
             lines = notices + [f"{npc['name']}：那就再会了，冒险者。"]
             yield event.plain_result("\n".join(lines))
             return
         db.set_talk_state(group_id, qq_id, npc_id, nxt)
-        new_node = C.dialogue_node(dlg, nxt)
+        new_node = _dlg.dialogue_node(dlg, nxt)
         ctx = self._talk_ctx(group_id, qq_id, npc_id)
         lines = notices + self._render_talk_node(npc, dlg, new_node, ctx)
         yield event.plain_result("\n".join(lines))
@@ -3575,8 +3608,8 @@ async def turn_in(self, event: AstrMessageEvent, group_id, qq_id, player):
     def _npc_absent(npc_id, npc):
         if not npc:
             return None
-        if not C.base_conditions_met(npc_id, npc, player, group_id, qq_id):
-            period_cn = (PERIOD_CN.get(C.current_period(), "") or "").strip()
+        if not _wild.base_conditions_met(npc_id, npc, player, group_id, qq_id):
+            period_cn = (PERIOD_CN.get(_tw.current_period(), "") or "").strip()
             return f"🌙 {npc.get('name', '他')}现在({period_cn})不在这里，换个时间再来交付吧～"
         return None
     # 主线可交
@@ -3783,7 +3816,7 @@ async def reputation(self, event: AstrMessageEvent, group_id, qq_id, player):
     for i, fid in enumerate(_cat_b143.FACTION_ORDER, 1):
         f = _cat_b143.FACTIONS[fid]
         pts = rep.get(fid, 0)
-        tier = C.faction_reputation_tier(pts)
+        tier = _fac.faction_reputation_tier(pts)
         lines.append(f"{i:>2}. {f['icon']} {f['name']}：{tier}({pts})")
     lines.append("")
     lines.append("💡 击杀各地怪物、完成当地任务可获得对应势力声望")
@@ -3831,7 +3864,7 @@ async def rep_shop(self, event: AstrMessageEvent):
         for i, fid in enumerate(_cat_b143.FACTION_ORDER, 1):
             f = _cat_b143.FACTIONS[fid]
             pts = rep.get(fid, 0)
-            tier = C.faction_reputation_tier(pts)
+            tier = _fac.faction_reputation_tier(pts)
             goods = FACTION_SHOP.get(fid, [])
             unlocked = sum(1 for g in goods if pts >= g["tier"])
             lines.append(f"{i:>2}. {f['icon']} {f['name']}：{tier}({pts}) 可购 {unlocked}/{len(goods)}")
@@ -3850,7 +3883,7 @@ async def rep_shop(self, event: AstrMessageEvent):
         return
     f = _cat_b143.FACTIONS[fid]
     pts = rep.get(fid, 0)
-    tier = C.faction_reputation_tier(pts)
+    tier = _fac.faction_reputation_tier(pts)
     goods = FACTION_SHOP.get(fid, [])
     if not goods:
         yield event.plain_result(f"{f['icon']} {f['name']} 暂时没有专属商品。")
@@ -3995,7 +4028,7 @@ async def camp_join(self, event: AstrMessageEvent):
     self._camp_save(group_id, qq_id, data)
     c = FACTION_CAMPS[target]
     # 成就判定：选择阵营（faction 非空）等
-    C.check_achievements(group_id, qq_id)
+    _ach.check_achievements(group_id, qq_id)
     yield event.plain_result(
         f"⚔️ 你宣誓效忠【{c['icon']} {c['name']}】！({c['desc']})\n"
         f"━━━━━━━━━━━━\n"
@@ -4084,7 +4117,7 @@ async def camp_task(self, event: AstrMessageEvent):
     data["done_total"] = int(data.get("done_total", 0)) + 1
     self._camp_save(group_id, qq_id, data)
     # 成就判定：阵营贡献≥100/500（阵营先锋/大陆之柱）在此推进
-    C.check_achievements(group_id, qq_id)
+    _ach.check_achievements(group_id, qq_id)
     yield event.plain_result(
         f"📜 你交付了『{t['name']}』（{t['item']} ×{t['count']}）！\n"
         f"🏅 阵营贡献 +{t['reward']}（当前 {data['contrib']}）\n"

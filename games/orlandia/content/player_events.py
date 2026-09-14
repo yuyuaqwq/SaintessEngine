@@ -6,7 +6,7 @@
 ★ B12-L4（2026-09-14）：宿主两文件薄壳化 =「加载包 + 注入宿主替身 + 同名 re-export」，
 调用点与调用签名**一字不变**：
     命令层 `game/commands/instance.py:2520-2521/2998-2999`（`fire` + `import 订阅方` 触发注册）
-    包内   `content/combat_cmds.py:2296-2304/2615-2628`（`_host_attr("services.player_event_bus","fire")`）
+    包内   `content/combat_cmds.py:2296-2304/2615-2628`（经宿主面取件口取 `fire`，同名同签名）
     测试   `tests/test_player_event_bus.py:16`（EVENTS/register/fire/clear_registry）·
            `tests/test_l3_player_events.py:18-19/100`（fire + 订阅方 + `_sub_levelup`）
 
@@ -77,78 +77,31 @@ from saintess_engine.events import EventBus
 from . import catalog_b143 as _cat_b143
 
 # ============================================================
-# ① 宿主替身口（注入优先 → sys.modules → importlib；**绝不静默空跑**）
+# ① 宿主面取件口（B2-C4 收口）
+#    · LOG → `content/obs.py`（包内唯一取用口）；`db` → 包内 `content/_pkgref.DB`（B1 口径）
+#    · 订阅方那 8 个函数 → **包内直取**（与宿主模块级同名 import **同一对象**，
+#      证据 `out/evidence/hostface_map.txt` / `probe_c4_faces.py`）
 # ============================================================
-_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
-_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
 _INJECTED = {}
 
 
 def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = `_HostMod` 的模块名（`db` / `content`）/ `log`。"""
+    """宿主薄壳 import 期注入（幂等；签名/时机逐字不变）——键 = 宿主面名（`log` / `db` / `c`）。"""
     for k, v in (objs or {}).items():
         if v is not None:
             _INJECTED[k] = v
 
 
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身，真源 `from .. import X` 那一类）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
-    import importlib
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        full = prefix if not name else "%s.%s" % (prefix, name)
-        m = sys.modules.get(full)
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module(prefix if not name else "%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("player_events：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
-
-
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「模块级 `from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    return getattr(_host_module(mod), attr)
-
-
-class _HostMod:
-    """宿主模块替身（`db` / `C`）——`db.xxx` / `C.xxx` 正文一字未改，属性访问时解析。"""
-
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return _host_attr(self._name, attr)
-
-
-class _HostFn:
-    """宿主函数替身 —— 真源模块级 `from ..<mod> import <fn>` 的同义物（调用时解析）。"""
-
-    def __init__(self, mod, attr):
-        self._mod, self._attr = mod, attr
-
-    def __call__(self, *a, **k):
-        return _host_attr(self._mod, self._attr)(*a, **k)
-
-    def __repr__(self):
-        return "<host fn %s.%s>" % (self._mod, self._attr)
-
-
-from ._pkgref import DB as db
-
-# 订阅方真源模块级 import 的 8 个宿主函数（逐名同义替身；调用时解析）
-check_player_level_up = _HostFn("content_rules.gameplay", "check_player_level_up")
-check_achievements = _HostFn("core.achievements", "check_achievements")
-stat_bonus = _HostFn("core.stat_bonus", "stat_bonus")
-wild_king_on_kill = _HostFn("core.wild_king", "wild_king_on_kill")
-guild_kill_progress = _HostFn("services.guild", "guild_kill_progress")
-quest_kill_progress = _HostFn("services.quests_flow", "quest_kill_progress")
-tower_guard_on_kill = _HostFn("services.tower_progress", "tower_guard_on_kill")
-weekly_bump_kill = _HostFn("services.weekly_progress", "weekly_bump_kill")
+from . import obs                                                        # noqa: E402
+from ._pkgref import DB as db                                            # noqa: E402
+from .achievements import check_achievements                             # noqa: E402  真源 `core.achievements`
+from .flow.tower_progress import tower_guard_on_kill                     # noqa: E402  真源 `services.tower_progress`
+from .flow.weekly_progress import weekly_bump_kill                       # noqa: E402  真源 `services.weekly_progress`
+from .gameplay_rules import check_player_level_up                        # noqa: E402  真源 `content_rules.gameplay`
+from .quests_flow import quest_kill_progress                             # noqa: E402  真源 `services.quests_flow`
+from .social_guild import guild_kill_progress                            # noqa: E402  真源 `services.guild`
+from .stat_bonus import stat_bonus                                       # noqa: E402  真源 `core.stat_bonus`
+from .wild_king import wild_king_on_kill                                 # noqa: E402  真源 `core.wild_king`
 
 
 # ============================================================
@@ -161,11 +114,14 @@ EVENTS = ("battle_victory", "battle_defeat", "monster_killed")
 
 
 def _logger():
-    """宿主 logger（真源 `from ..log_setup import LOG`；注入优先）——未注入 → None（引擎门面 logger，同默认）。"""
+    """宿主 logger（真源 `from ..log_setup import LOG`）——注入优先 → `content/obs.py` → None。
+
+    未接上/取不到 → None（引擎门面默认 logger，与改造前逐字一致：原 `except Exception: return None`）。
+    """
     if "log" in _INJECTED:
         return _INJECTED["log"]
     try:
-        return _host_attr("log_setup", "LOG")
+        return obs.log()
     except Exception:                          # noqa: BLE001
         return None
 

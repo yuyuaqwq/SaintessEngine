@@ -12,16 +12,17 @@
 --------------------------------------------------------------------------------------
 | 真源写法 | 包内写法 | 说明 |
 |---|---|---|
-| `from .log_setup import LOG`（模块级） | `_log()`（惰性宿主取件） | 日志门面留宿主（平台适配）；`LOG.warning(...)` 改 `_log().warning(...)` |
-| `def _c(): import game.content as C; return C` | 同上位置 → `return _host_content()` | 内容 API（读表口）：注入优先 → 宿主 `game.content` 模块 |
-| `from .store.inventory import _key_to_id`（`_grant_items` 内） | `_key_to_id = _host_key_to_id()` | 同位置同惰性时机 |
-| `from .import db`（`grant_items_batch` / `grant_reward` 内） | 模块级 `db = _HostDB()`（属性访问时解析） | 正文里 `db.xxx(...)` **一行未改**；**实际落库走注入的 db 句柄** |
-| `from . import tlog_setup as _tlog`（`grant_reward` 的 try 内） | 模块级 `_tlog = _HostMod("tlog_setup")` | 流水埋点入口留宿主（平台适配）；`_tlog.emit("drop.grant", …)` 时序不变 |
-| `from .content_rules.gameplay import check_player_level_up`（函数内） | `check_player_level_up = _host_levelup()` | 升级结算：注入优先 → 宿主模块 |
-| `from .core.stat_bonus import stat_bonus`（函数内） | `stat_bonus = _host_stat_bonus()` | 属性加成：注入优先 → 宿主模块 |
+| `from .log_setup import LOG`（模块级） | `_log()` → `content/obs.py::log()` | B2-C4：包内唯一日志取用口（fail-closed）；`LOG.warning(...)` 调用点 `_log().warning(...)` 不变 |
+| `def _c(): import game.content as C; return C` | **删**（B2-C4）：读表口逐名改包内直取（`EQUIP_ROSTER`/`ITEMS`/`MATERIALS`/`TITLES`/`make_pet_egg`/`make_mount_rein`，证据 `out/evidence/identity_map.txt`） |
+| `from .store.inventory import _key_to_id`（`_grant_items` 内） | `_key_to_id = _host_key_to_id()` | 同位置同惰性时机（B1 已切包内 `content/persistence/inventory.py`） |
+| `from .import db`（`grant_items_batch` / `grant_reward` 内） | 模块级 `db = _HostDB()`（属性访问时解析） | 正文里 `db.xxx(...)` **一行未改**；兜底 = 包内 `content/_pkgref.DB`（B1 口径） |
+| `from . import tlog_setup as _tlog`（`grant_reward` 的 try 内） | `content/obs.py::emit(...)` | B2-C4（接口表第 14 行）：解析在 try 之外（未接上 → 抛，不被 `except` 吞掉） |
+| `from .content_rules.gameplay import check_player_level_up`（函数内） | `check_player_level_up = _host_levelup()` | 升级结算：B1 已切包内 `content/gameplay_rules.py` |
+| `from .core.stat_bonus import stat_bonus`（函数内） | `stat_bonus = _host_stat_bonus()` | 属性加成：B1 已切包内 `content/stat_bonus.py` |
+| `C.generate_roster_equip`（2 处） | `_drops().generate_roster_equip` | `core.drops` 面：**包内直取** `content/drops.py`（接口表第 5 行冻结落点，B2-C2 已落地）；宿主同对象为过渡保险 |
 
-宿主模块解析（`_host_module`）：`bind_host` 注入优先 → `sys.modules`（两个宿主包名）→ `importlib`；
-**绝不静默空跑**（取不到就抛）—— 与 `content/affix.py` / `content/flow/weekly_progress.py` 同款。
+宿主模块解析：`bind_host` 注入优先 → `sys.modules`（两个宿主包名）→ `importlib`；**绝不静默空跑**
+（取不到就抛）—— 与 `content/affix.py` / `content/flow/weekly_progress.py` 同款。
 
 不变式
 ------
@@ -37,88 +38,92 @@ import importlib
 import sys
 import uuid
 
-# ============================================================
-# 宿主替身口（注入优先 → sys.modules → importlib；绝不静默空跑）
-# ============================================================
+from . import obs                                                        # noqa: E402  B2-C4：LOG/tlog 唯一取用口
+from .catalog_items import (EQUIP_ROSTER, EQUIP_ROSTER_BY_NAME,          # noqa: E402  B2-C4：`C.<名>` 包内直取
+                            ITEMS, MATERIALS)
+from .catalog_quests import TITLES                                       # noqa: E402  真源 `C.TITLES`
+from .mounts import make_mount_rein                                      # noqa: E402  真源 `C.make_mount_rein`
+from .pets import make_pet_egg                                           # noqa: E402  真源 `C.make_pet_egg`
 
+# ============================================================
+# 宿主面取件口（B2-C4 收口）—— 注入优先（宿主薄壳 `game/reward.py:91` 的 `bind_host`）→ 包内兜底
+#   本文件 B2 读点：LOG → `content/obs.py`；tlog → `content/obs.py::emit`；`C.<名>` → 包内直取；
+#   残留只剩 `core.drops` 面（B2-C2 待落地 `content/drops.py`，见 `_drops()`）。
+# ============================================================
 _HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
 _HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
 _INJECTED = {}
 
 
 def bind_host(**objs):
-    """宿主替身注入（幂等；宿主薄壳 import 期调用）。键 = `db` / `content` / `log` / `tlog` /
-    `key_to_id` / `levelup` / `stat_bonus`；值 = **模块/对象**（定值）或**零参可调用**（活源，
-    每次取用时调用一次 → 等价真源「函数内惰性 import 宿主」的时机）。`None` 忽略。"""
+    """宿主替身注入（幂等；宿主薄壳 import 期调用；签名/语义逐字不变）。键 = `db` / `content` /
+    `log` / `tlog` / `key_to_id` / `levelup` / `stat_bonus`；值 = **模块/对象**（定值）或
+    **零参可调用**（活源，每次取用时调用一次 → 等价真源「函数内惰性 import 宿主」的时机）。
+    `None` 忽略。"""
     for k, v in (objs or {}).items():
         if v is not None:
             _INJECTED[k] = v
 
 
 def _resolve(key: str, fallback):
-    """注入优先（可调用 = 活源 → 调一次；模块/对象 = 定值）→ 否则走 `fallback()` 的宿主解析。"""
+    """注入优先（可调用 = 活源 → 调一次；模块/对象 = 定值）→ 否则走 `fallback()`（包内兜底）。"""
     v = _INJECTED.get(key)
     if v is not None:
         return v() if callable(v) else v
     return fallback()
 
 
-def _host_module(name: str):
-    """取宿主子模块（已加载的 `sys.modules` → importlib 两个宿主包名）；取不到 → 抛（不静默空跑）。"""
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = sys.modules.get("%s.%s" % (prefix, name))
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module("%s.%s" % (prefix, name))
-        except Exception as exc:                    # noqa: BLE001
-            last = exc
-    raise RuntimeError("%s：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (__name__, name, last))
-
-
-def _host_attr(name: str, attr: str):
-    """宿主子模块的属性（真源「函数内 `from ..<mod> import <attr>`」的同义替身）。"""
-    return getattr(_host_module(name), attr)
-
-
 def _host_db():
-    """宿主存储层模块（真源 `from .import db`）。"""
-    from ._pkgref import DB as _pdb     # B1：包内直取（原 `_host_module("db")`）
+    """存储层句柄（真源 `from .import db`）—— 注入优先 → 包内 `content/_pkgref.DB`（B1 口径）。"""
+    from ._pkgref import DB as _pdb
     return _resolve("db", lambda: _pdb)
 
 
 class _HostDB:
-    """惰性宿主存储层代理（真源 `from .import db`）——`db.xxx` 正文不动，属性访问时解析。"""
+    """惰性存储层代理（真源 `from .import db`）——`db.xxx` 正文不动，属性访问时解析。"""
 
     def __getattr__(self, name):
         return getattr(_host_db(), name)
 
 
-class _HostMod:
-    """惰性宿主模块代理（真源 `from . import <mod> as _x`）——`_x.yyy` 正文不动。"""
-
-    def __init__(self, name: str, key: str):
-        self._name = name
-        self._key = key
-
-    def __getattr__(self, name):
-        return getattr(_resolve(self._key, lambda: _host_module(self._name)), name)
-
-
 db = _HostDB()                       # 真源 `from .import db`（两处，函数内）
-_tlog = _HostMod("tlog_setup", "tlog")   # 真源 `from . import tlog_setup as _tlog`（grant_reward 的 try 内）
+
+#: `core.drops` 面的包内落点（接口表第 5 行冻结：`content/drops.py`，B2-C2 线负责落地）
+_DROPS_PKG = "content.drops"
+_DROPS = None
+
+
+def _drops():
+    """`core.drops` 取件口（B2-C4）—— **包内直取** `content/drops.py`（接口表第 5 行冻结落点，
+    B2-C2 已落地）；宿主 `game.core.drops` 为同对象过渡保险。"""
+    global _DROPS
+    if _DROPS is None:
+        try:
+            _DROPS = importlib.import_module(_DROPS_PKG)
+        except ImportError:
+            last = None
+            for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+                m = sys.modules.get("%s.core.drops" % prefix)
+                if m is not None:
+                    _DROPS = m
+                    break
+            if _DROPS is None:
+                for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+                    try:
+                        _DROPS = importlib.import_module("%s.core.drops" % prefix)
+                        break
+                    except Exception as exc:                    # noqa: BLE001
+                        last = exc
+            if _DROPS is None:
+                raise RuntimeError("reward：core.drops 取不到（%s）——拒绝静默空跑" % (last,))
+    return _DROPS
+
+
 
 
 def _log():
-    """日志门面（真源模块级 `from .log_setup import LOG`）。"""
-    return _resolve("log", lambda: _host_attr("log_setup", "LOG"))
-
-
-def _host_content():
-    """内容 API（真源 `_c()` 里的 `import game.content as C`）。"""
-    return _resolve("content", lambda: _host_module("content"))
+    """日志门面（真源模块级 `from .log_setup import LOG`）—— B2-C4：包内唯一取用口 `content/obs.py`。"""
+    return obs.log()
 
 
 def _host_key_to_id():
@@ -143,11 +148,6 @@ def _host_stat_bonus():
 # ↓↓↓ 以下 = 真源正文（只改上表登记的「宿主取件」几行）
 # ============================================================
 
-def _c():
-    """惰性引 content，防模块加载期循环 import"""
-    return _host_content()
-
-
 def _grant_items(group_id, qq_id, items, lines, db):
     """物品/材料/装备入包。items: [{item, n}]。返回 (成功, 失败计数)。"""
     _key_to_id = _host_key_to_id()
@@ -161,19 +161,19 @@ def _grant_items(group_id, qq_id, items, lines, db):
             # eq: 前缀 = 名册装备
             if isinstance(key, str) and key.startswith("eq:"):
                 rid = key[3:]
-                _rids = _c().EQUIP_ROSTER_BY_NAME.get(rid, [rid]) if rid not in _c().EQUIP_ROSTER else [rid]
+                _rids = EQUIP_ROSTER_BY_NAME.get(rid, [rid]) if rid not in EQUIP_ROSTER else [rid]
                 _rid = _rids[0]
-                if _rid not in _c().EQUIP_ROSTER:
+                if _rid not in EQUIP_ROSTER:
                     print(f"[dragonfall][reward] 装备奖励名册缺失: {rid}")
                     fail += 1
                     continue
-                eq = _c().generate_roster_equip(_rid)
+                eq = _drops().generate_roster_equip(_rid)
                 db.add_item(group_id, qq_id, f"eq_{uuid.uuid4().hex[:8]}", eq)
                 lines.append(f"  🎁 获得装备：{eq.get('name', rid)}")
                 continue
             # 普通物品/材料
             kid = _key_to_id(key) if _key_to_id else key
-            _idata = _c().ITEMS.get(kid) or _c().MATERIALS.get(kid)
+            _idata = ITEMS.get(kid) or MATERIALS.get(kid)
             if _idata is None:
                 print(f"[dragonfall][reward] 物品奖励缺失: {key}（未收录），已跳过")
                 fail += 1
@@ -189,7 +189,7 @@ def _grant_items(group_id, qq_id, items, lines, db):
 def _grant_pets(group_id, qq_id, pets, lines, db):
     for pid in pets or []:
         try:
-            egg = _c().make_pet_egg(pid)
+            egg = make_pet_egg(pid)
             if not egg:
                 continue
             db.add_item(group_id, qq_id, f"petegg_{pid}", egg)
@@ -201,7 +201,7 @@ def _grant_pets(group_id, qq_id, pets, lines, db):
 def _grant_mounts(group_id, qq_id, mounts, lines, db):
     for mid in mounts or []:
         try:
-            rein = _c().make_mount_rein(mid)
+            rein = make_mount_rein(mid)
             if not rein:
                 continue
             db.add_item(group_id, qq_id, f"mountrein_{mid}", rein)
@@ -214,10 +214,9 @@ def _grant_title(group_id, qq_id, title, lines):
     """称号授予：titles.py 按 id/中文名匹配，播报解锁（条件系统自动判定拥有）。"""
     if not title:
         return
-    _C = _c()
-    tinfo = next((t for t in _C.TITLES if t.get("id") == title), None)
+    tinfo = next((t for t in TITLES if t.get("id") == title), None)
     if not tinfo:
-        tinfo = next((t for t in _C.TITLES if t.get("name") == title), None)
+        tinfo = next((t for t in TITLES if t.get("name") == title), None)
     if tinfo:
         lines.append(f"  🏅 获得称号：「{tinfo.get('name', title)}」！")
     else:
@@ -269,22 +268,20 @@ def grant_reward(reward: dict, group_id, qq_id, *, player=None, lines=None) -> l
         from content.reward import grant_reward
         lines = grant_reward({"exp": 100, "gold": 50, "items": [...]}, gid, qid)
     """
-    try:                                        # 流水埋点（未启用 = 零行为，见 game/tlog_setup.py）
-        _r = reward or {}
-        _it = _r.get("items")
-        _tlog.emit("drop.grant", actor=qq_id, source="reward",
-                   exp=int(_r.get("exp", 0) or 0),
-                   gold=int(_r.get("gold", 0) or 0),
-                   items=(len(_it) if hasattr(_it, "__len__") else 0))
-    except Exception:
-        pass
+    # 流水埋点：`content/obs.py::emit`（B2-C4）。未启用 → None（零行为，宿主契约）；
+    # **解析放在 try 之外** —— 句柄没接上是装配缺陷，必须抛（否则 fail-closed 被吃掉，见接口表 §2④）。
+    _r = reward or {}
+    _it = _r.get("items")
+    obs.emit("drop.grant", actor=qq_id, source="reward",
+             exp=int(_r.get("exp", 0) or 0),
+             gold=int(_r.get("gold", 0) or 0),
+             items=(len(_it) if hasattr(_it, "__len__") else 0))
     check_player_level_up = _host_levelup()
     stat_bonus = _host_stat_bonus()
     if lines is None:
         lines = []
     if not reward:
         return lines
-    _C = _c()
     reward = dict(reward)  # 防污染原数据
     # ── 经验/金币（含升级结算）──────────────────────────────
     exp = int(reward.get("exp") or 0)
@@ -327,7 +324,7 @@ def grant_reward(reward: dict, group_id, qq_id, *, player=None, lines=None) -> l
     for eq in reward.get("equips") or []:
         rid = eq.get("rid") if isinstance(eq, dict) else eq
         try:
-            equip = _C.generate_roster_equip(rid)
+            equip = _drops().generate_roster_equip(rid)
             db.add_item(group_id, qq_id, f"eq_{uuid.uuid4().hex[:8]}", equip)
             lines.append(f"  🎁 获得装备：{equip.get('name', rid)}")
         except Exception:

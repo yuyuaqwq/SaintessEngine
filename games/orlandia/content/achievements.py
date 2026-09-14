@@ -15,22 +15,22 @@
 
 正文改动面（只有两类，替换表见 `overnight/w1213_b13l4_port.py`，每条断言出现次数）
 --------------------------------------------------------------------------------------
-1. 宿主取件 → 惰性替身：`from .. import content as C` / `from .. import db`（函数内，共 6+6 处）
-   删除 → 模块级 `C = _HostMod("content")` / `db = _HostMod("db")`；
-   `from ..content_rules.gameplay import check_player_level_up` →
-   `_host_attr("content_rules.gameplay", …)`；`from .stat_bonus import stat_bonus` →
-   `_host_attr("core.stat_bonus", …)`（stat_bonus 属 B13-L6 线，未落地 → 走句柄）；
-   `from ..reward import grant_items_batch` → `_host_attr("reward", …)`；
-   `from ..log_setup import LOG` → `_host_attr("log_setup", "LOG")`（**只改这一处**）。
-2. 读点切包内域读口/门面（I1 + B14-2）：`C.ITEMS.get(_ik)` → 包内 `items` 域读口 `ITEMS`
+1. 宿主取件（**B2-C4 收口后**）：
+   `from .. import content as C` → 删（唯一残余读点 `display` 改包内直取 `content/index.py`，同一对象）；
+   `from .. import db` → 包内 `content/_pkgref.DB`（B1 口径）；
+   `from ..content_rules.gameplay import check_player_level_up` → 包内 `content/gameplay_rules.py`（B1）；
+   `from .stat_bonus import stat_bonus` → 包内 `content/stat_bonus.py`（B1）；
+   `from ..reward import grant_items_batch` → 包内 `content/reward.py`；
+   `from ..log_setup import LOG` → `content/obs.py::log()`（B2-C4：包内唯一日志取用口）。
+2. 读点切包内域读口/门面（I1 + B14-2 + B2-C4）：`C.ITEMS.get(_ik)` → 包内 `items` 域读口 `ITEMS`
    （实测 900 键与 `name` 字段全等）；B14-2 再把三名数据名切包内门面 ——
    `catalog_quests.ACHIEVEMENTS`（源列表序）· `catalog_space.MAP_BY_ID` ·
    `catalog_items.MATERIALS`（门禁逐名 OK · 不等 0，含键序）。
 
 ⚠️ 缺口（报告已登记，B14 统一裁）
-  · `C.display("monsters", …)`（`_bestiary_kills`）：宿主 `C.display` 走 `_INDEXES["monsters"]`
-    （354 条，能把怪物 id 翻成中文名），包内 `content/tables.display` 对 monsters **原样返回**
-    → 不同义，保留宿主句柄（实测见报告步骤 A·5）。
+  · `C.display("monsters", …)`（`_bestiary_kills`）→ **已切包内直取** `content/index.py::display`
+    （B2-C4）。同对象判据：`content/index.py` = `game/core/index.py` 的逐字端口，`display` 就是宿主
+    `C.display` 本体（`identity_map.txt`）⇒ 走的正是那只 `monsters` 索引（354 条 id→中文名）。
 
 ★ 真源遗留缺陷**逐字保留**：`claim_achievement_rewards` 的 `except` 分支里 `LOG` 是**未定义的全局名**
   （真源模块级没有 `LOG`，只有 `check_achievements` 里那处函数内 import）→ 该分支实际抛
@@ -92,68 +92,12 @@ from .catalog_space import MAP_BY_ID            # 真源 `C.MAP_BY_ID`
 
 
 # ============================================================
-# 宿主替身口（**惰性**：属性访问时才解析宿主模块；绝不 import 宿主模块树、绝不静默空跑）
-# 真源写法 → 包内替身：`from .. import content as C` → `C = _HostMod("content")`；
-# `from .. import db` → `db = _HostMod("db")`。函数内那几行 import 已按原位置删除，
-# 所有调用点 `C.xxx` / `db.xxx` **一行未改**（与 `content/world_cmds.py` / `talk_actions.py` 同款）。
+# 存储/日志取口（B2-C4 收口）
+#   `db` = 包内 `content/_pkgref.DB`（B1 口径）；LOG = `content/obs.py::log()`（包内唯一日志取用口）
 # ============================================================
-_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
-_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
-_INJECTED = {}
-
-
-def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = `_HostMod` 的模块名（`content` / `db`）。"""
-    for k, v in (objs or {}).items():
-        if v is not None:
-            _INJECTED[k] = v
-
-
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身，真源 `from .. import X` 那一类）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        full = prefix if not name else "%s.%s" % (prefix, name)
-        m = sys.modules.get(full)
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module(prefix if not name else "%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("%s：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (__name__, name, last))
-
-
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「函数内 `from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
-    try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
-
-
-class _HostMod:
-    """宿主模块替身（`C` / `db`）——`C.xxx` / `db.xxx` 正文一字未改，属性访问时解析。"""
-
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
-
-
-C = _HostMod("content")     # 真源 `from .. import content as C`
-from ._pkgref import DB as db
+from . import obs                          # noqa: E402  包内唯一 LOG/tlog 取用口（fail-closed）
+from .index import display as _index_display   # noqa: E402  `C.display` → 包内直取（同一对象）
+from ._pkgref import DB as db              # noqa: E402  `from .. import db` 的包内等价物
 
 
 # v140 波2：3 个新条件类型注册（数据已有零消费点或最小接线）
@@ -213,7 +157,7 @@ def _bestiary_kills(qq_id, keyword) -> int:
         return 0
     total = 0
     for r in rows:
-        name = C.display("monsters", r["monster"])
+        name = _index_display("monsters", r["monster"])
         if keyword in (name or ""):
             total += int(r.get("kills", 0) or 0)
     return total
@@ -341,8 +285,7 @@ def check_achievements(group_id, qq_id, player=None, extra=None) -> list:
                 new_ones.append(a)
         return new_ones
     except Exception:
-        LOG = _host_attr("log_setup", "LOG")
-        LOG.warning("[dragonfall] check_achievements 异常，成就列表降级为空", exc_info=True)
+        obs.log().warning("[dragonfall] check_achievements 异常，成就列表降级为空", exc_info=True)
         return []
 
 

@@ -5,12 +5,12 @@
 
 | 真源写法 | 包内 | 依据 |
 |---|---|---|
-| `from .drops import generate_equip, generate_roster_equip`（模块级） | `_HostAttr("core.drops", …)`（惰性替身） | **缺口**：`game/core/drops.py`（568 行，名册/随机装备生成 + 词条挂载）**不在本线清单**，且它自己 import `..content as C` / `..data` 一大片（B13 别的线在并行搬）→ 走宿主句柄，待其进包后再切包内直取 |
-| `from ..data import CRAFT_RECIPES, CRAFT_RECIPE_ALIASES` | **仍走宿主句柄** `_HostAttr("data.craft", …)` | ⚠️ **本线实测的反例**：包内 `craft` 域（426 条）外层键是**字典序**（导出契约 `sort_table`），宿主 `CRAFT_RECIPES` 是**源插入序**——两者不是字段级可逆投影（I3）。迭代序会外泄到行为：`craft_recipe_search` 的子串兜底取「首次命中」、`craft_recipes_by_material` 的 `sort(key=lv)` 稳定排序并列项，实测 1325 条探针里 **检索 41 条 / 材料联想 87 条输出不同**（`overnight/w1213_l5_craft_order.py`）→ 切域 = 改行为，本线不切，登记缺口 |
-| `from ..core.index import resolve, display as _display`（模块级） | `_HostAttr("core.index", …)`（惰性替身） | `game/core/index.py` 属 **B13-L7** 线（并行未落地）→ 按 SOP 用宿主句柄；另 `display("materials", …)` 依赖 `MATERIALS`（无同名域，§5 对照表列明）→ 落地后也仍要宿主面 |
+| `from .drops import generate_equip, generate_roster_equip`（模块级） | `_drops().generate_equip` / `_drops().generate_roster_equip`（**包内直取** `content/drops.py`） | **缺口已闭合**：`game/core/drops.py`（568 行）属 **B2-C2 线**，其冻结落点 `content/drops.py` **已落地**（框架仓提交 `99258b0`）⇒ 本模块两个孤儿读点（B2-C4 接手的 R2 登记项）实际取到包内实现；宿主同对象回退仅作过渡保险 |
+| `from ..data import CRAFT_RECIPES, CRAFT_RECIPE_ALIASES` | **包内门面直取**（B16-W11d 已切：`catalog_rules` 的插入序 dump） | ⚠️ **反例保留在案**：包内 `craft` 域（426 条）外层键是**字典序**（导出契约 `sort_table`），不可逆 ⇒ **不切域**；切的是 `catalog_rules` 的**源插入序** dump（门禁逐值/逐序不等 0） |
+| `from ..core.index import resolve, display as _display`（模块级） | **包内直取** `from .index import resolve, display`（B2-C4） | B13-L7 已落地 `content/index.py`（与宿主 `game/core/index.py` 薄壳**同一对象**，证据 `out/evidence/hostface_map.txt`） |
 | `from ..data import MATERIALS` | **未直接使用**（真源只在 `craft_recipe_make` 里算 `craft_cost`） | `MATERIALS` 在包内**无同名域**（BRIEF §5 列明）→ 不建第二份表 |
 
-包内唯一直接取域的地方：无（本模块三张表/两个查询口全部走宿主句柄，理由如上）。
+包内唯一直接取域的地方：`catalog_items` / `catalog_rules`（B16-W11d）+ `content/index.py`（B2-C4）。
 
 宿主侧：`game/core/craft.py` 现在只剩「加载包 + 模块别名」薄壳，见那边头注。
 """
@@ -18,111 +18,69 @@ import importlib
 import sys
 
 # ============================================================
-# ① 宿主替身口（注入优先 → sys.modules → importlib；**绝不静默空跑**）
-#    抄 `content/world_cmds.py` 的同款写法（B9 线2 定的包内标准形状）
+# ① 包内取件（B2-C4 收口：`core.index` 已落地 → 包内直取；`core.drops` 待 B2-C2 落地）
 # ============================================================
-_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
-_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
-_INJECTED = {}
-_MOD = "craft"
+#: `core.drops` 面的包内落点（接口表第 5 行冻结：`content/drops.py`，B2-C2 线负责落地）
+_DROPS_PKG = "content.drops"
+_DROPS = None
 
 
-def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = `_HostMod` 的模块名。"""
-    for k, v in (objs or {}).items():
-        if v is not None:
-            _INJECTED[k] = v
+def _drops():
+    """`core.drops` 取件口（B2-C4）—— **包内直取** `content/drops.py`（接口表第 5 行冻结落点，
+    B2-C2 已落地）；宿主 `game.core.drops` 为同对象过渡保险。
 
-
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = sys.modules.get(prefix if not name else "%s.%s" % (prefix, name))
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+    判据 `out/evidence/identity_map.txt`：落地前 `C.generate_equip` / `C.generate_roster_equip`
+    / `C.build_monster_group` / `C.roll_blueprint` 在包内**无同对象**（真源属 B2-C2 线）；
+    C2 落地 `content/drops.py`（提交 `99258b0`）后本口自动切到包内实现。
+    """
+    global _DROPS
+    if _DROPS is None:
         try:
-            return importlib.import_module(prefix if not name else "%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("%s：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (_MOD, name, last))
-
-
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「`from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
-    try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return importlib.import_module(
-                    "%s.%s" % (prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
-
-
-class _HostAttr:
-    """宿主「模块属性」惰性替身 —— 真源模块级 `from ..data import X` / `from .drops import f`
-    的同义替身：模块级名字不变、正文一字未改；取值在**首次被访问**时发生（不强求 import 期宿主就绪）。"""
-
-    __slots__ = ("_mod", "_attr", "_val")
-
-    def __init__(self, mod, attr):
-        object.__setattr__(self, "_mod", mod)
-        object.__setattr__(self, "_attr", attr)
-
-    def _v(self):
-        try:
-            return object.__getattribute__(self, "_val")
-        except AttributeError:
-            v = _host_attr(object.__getattribute__(self, "_mod"),
-                           object.__getattribute__(self, "_attr"))
-            object.__setattr__(self, "_val", v)
-            return v
-
-    def __getattr__(self, name):
-        return getattr(self._v(), name)
-
-    def __getitem__(self, k):
-        return self._v()[k]
-
-    def __setitem__(self, k, v):
-        self._v()[k] = v
-
-    def __contains__(self, k):
-        return k in self._v()
-
-    def __iter__(self):
-        return iter(self._v())
-
-    def __len__(self):
-        return len(self._v())
-
-    def __bool__(self):
-        return bool(self._v())
-
-    def __call__(self, *a, **kw):
-        return self._v()(*a, **kw)
+            _DROPS = importlib.import_module(_DROPS_PKG)
+        except ImportError:
+            last = None
+            for prefix in ("data.plugins.dragonfall.game", "game"):
+                m = sys.modules.get("%s.core.drops" % prefix)
+                if m is not None:
+                    _DROPS = m
+                    break
+            if _DROPS is None:
+                for prefix in ("data.plugins.dragonfall.game", "game"):
+                    try:
+                        _DROPS = importlib.import_module("%s.core.drops" % prefix)
+                        break
+                    except Exception as exc:                    # noqa: BLE001
+                        last = exc
+            if _DROPS is None:
+                raise RuntimeError("craft：core.drops 取不到（%s）——拒绝静默空跑" % (last,))
+    return _DROPS
 
 
 # ============================================================
-# ② 宿主取件（模块级名字与真源逐名相同；正文零改动）
+# ② 取件（模块级名字与真源逐名相同；正文零改动）
 # ============================================================
-generate_equip = _HostAttr("core.drops", "generate_equip")
-generate_roster_equip = _HostAttr("core.drops", "generate_roster_equip")
-# ★ B16-W11d：三张数据表改包内门面直取（原 `_HostAttr("data…")`）——
+# ★ B16-W11d：三张数据表改包内门面直取（原宿主句柄）——
 #   `CRAFT_RECIPES`/`CRAFT_RECIPE_ALIASES` ← catalog_rules 的**插入序** dump（`craft` 域是字典序、不可逆）；
 #   `MATERIALS` ← catalog_items（域 `items`）。
 from . import catalog_items as _citems
 from .catalog_rules import CRAFT_RECIPES, CRAFT_RECIPE_ALIASES
 MATERIALS = _citems.MATERIALS
-resolve = _HostAttr("core.index", "resolve")
-_display = _HostAttr("core.index", "display")
+# ★ B2-C4：`core.index` 已落地（B13-L7）→ 包内直取（同一对象，证据 `hostface_map.txt`）
+from .index import display as _display          # noqa: E402
+from .index import resolve                      # noqa: E402
+
+
+def generate_equip(*args, **kwargs):
+    """真源模块级 `from .drops import generate_equip` —— B2-C4：包内 `content/drops.py` 优先。
+
+    （B2-C2 线尚未落地该模块 → 过渡期回退宿主 `game.core.drops` 同对象；见 `_drops()`。）
+    """
+    return _drops().generate_equip(*args, **kwargs)
+
+
+def generate_roster_equip(*args, **kwargs):
+    """真源模块级 `from .drops import generate_roster_equip` —— 同上。"""
+    return _drops().generate_roster_equip(*args, **kwargs)
 
 
 """奥兰迪亚·余烬纪年数据层 - craft.py(v48：输入中文名 → resolve 转 ID 查表；装备名 display 转中文)"""

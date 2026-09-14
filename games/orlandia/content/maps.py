@@ -118,49 +118,31 @@ def lazy_host_module(full_name: str):
     return _Mod()
 
 
-def _host_module(name: str):
-    """取宿主子模块（注入优先 → `sys.modules` → importlib；**绝不静默空跑**）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = sys.modules.get("%s.%s" % (prefix, name))
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module("%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("maps：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
+def _data_mod():
+    """宿主 `data` 模块句柄（决策项 U1；接口表第 9 行冻结机制 = 注入名 `data`）。
 
-
-class _HostMod:
-    """宿主模块替身（`data`）——`_data().MAPS` 正文不动，属性访问时解析。"""
-
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
-
-
-def _data():
-    """宿主 `game.data` 模块句柄 —— **B15-W9 起只用于兼容镜像**（`_mirror_to_host`）。
-
-    派生表的取值/落点已全在包内（见文件头「派生表落点」），这里只在「宿主那 4 只 dict 还在」时
-    把包内产物镜像进同一只对象；宿主不可导入 → 调用处吞掉（镜像跳过），不影响包内真源。
+    注入优先（宿主薄壳 `game/core/maps.py:29`）→ `sys.modules` 已加载的宿主 `data`
+    （**不 import 宿主模块树**）→ 抛；调用处吞掉（镜像跳过），不影响包内真源。
     """
     if "data" in _INJECTED:
         return _INJECTED["data"]
-    return _host_module("data")
+    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+        m = sys.modules.get("%s.data" % prefix)
+        if m is not None:
+            return m
+    raise RuntimeError("maps：宿主 `data` 句柄未注入（宿主薄壳 bind_host(data=…) 负责）——拒绝静默空跑")
+
+
+def _data():
+    """兼容别名（`_mirror_to_host` 用）：= `_data_mod()`。"""
+    return _data_mod()
 
 
 class _HostDB:
     """惰性宿主存储层代理（真源 `from .. import db`）。"""
 
     def __getattr__(self, name):
-        from ._pkgref import DB as _pdb   # B1：包内直取（原 `_host_module("db")`）
+        from ._pkgref import DB as _pdb   # B1：包内直取（原宿主 db 句柄）
         return getattr(_pdb, name)
 
 

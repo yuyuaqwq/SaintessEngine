@@ -10,6 +10,7 @@
 消费端：宿主壳 `game/services/shop.py`（一行转发 + 再导出）与包内 `content/economy_cmds.py`
 （`_shop_svc.*` 调用点照原样）。
 """
+from . import obs
 from .economy_host import _HostRef, _h  # noqa: F401
 
 # ---- B14-2 L5：数据名读点切包内门面（`C.<数据名>` → 门面直取；函数名/缺口名仍留 `C.<名>`）----
@@ -326,12 +327,10 @@ def buy_index_dispatch(key, group_id, qq_id, player, qty, discount, *,
     at_shop=base._at_shop、smith_stock=core.smith_stock（货架原子购买）、
     buy_weapon=命令层 _buy_weapon 转发（等价 service buy_weapon）；其余数据/引擎原子全 C/db。
     """
-    try:                                       # 流水埋点（未启用 = 零行为）
-        _tlog = _h('tlog_setup')  # ← from .. import tlog_setup as _tlog
-        _tlog.emit("shop.buy", actor=qq_id, key=str(key), qty=qty,
-                   discount=float(discount or 1))
-    except Exception:
-        pass
+    # 流水埋点（B2-C4 孤儿读点收口）：`content/obs.py::emit` —— 未启用 → None（零行为，宿主契约）；
+    # 句柄没接上 → 抛（装配缺陷，不被 except 吞掉）。原 `_h('tlog_setup')` 惰性取件已删。
+    obs.emit("shop.buy", actor=qq_id, key=str(key), qty=qty,
+             discount=float(discount or 1))
     db = _h('db')  # ← from .. import db  # 惰性导入
     _ss = _h('_ss')  # ← from ..core import smith_stock as _ss  # v135 铁匠铺全服共享货架（注入缺省）
     _ec = ec or _cl.ECON_CONFIG
