@@ -265,17 +265,21 @@ class Host:
         return [str(out)]
 
     def declared_hit(self, text: str):
-        """按**可见**声明顺序匹配（不可见声明 = 平台内部 gate，不是玩家指令）。"""
+        """按**可见**声明路由匹配（不可见声明 = 平台内部 gate，不是玩家指令）。
+
+        口径与注册表**同源、只有一份**：直接调 `CommandRegistry.first_hit(text, visible_only=True)`
+        —— `priority` 降序、同值按注册序。此前这里按 `visible()`（= `order` 升序）逐条试，
+        与 `hit()` 的口径不一致（同一份包在编辑器试玩与引擎注册表下可能命中不同声明，B19e 修）。
+        本方法只做「去空白 + 取首条」，**不再自带遍历/排序**（那正是缺口的成因）。
+        容错同旧实现：坏声明不阻断整条命令通道（非法正则已由匹配层容忍）。
+        """
         text = (text or "").strip()
         if not text:
             return None
-        for spec in self.commands.visible():
-            try:
-                if spec.hits(text, mode="search"):
-                    return spec
-            except Exception:                                    # noqa: BLE001
-                continue
-        return None
+        try:
+            return self.commands.first_hit(text, visible_only=True)
+        except Exception:                                        # noqa: BLE001
+            return None
 
     def route(self, ctx: dict, player: dict, text: str) -> list:
         """路由：宿主前缀 → 管理命令；否则包内声明 → **包内处理器**。返回回话（已渲染文本段）。"""

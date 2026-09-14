@@ -250,15 +250,44 @@ class CommandRegistry:
         return tuple(sorted(vis, key=lambda s: s.order))
 
     # ============================================================ 匹配
-    def hits(self, text: str, *, mode: str = "search") -> tuple:
-        """命中该文本的**全部**声明（`priority` 降序，同值保持注册序）—— 互斥矩阵自检用。"""
+    def _ranked(self, text: str, *, mode: str = "search",
+                visible_only: bool = False) -> tuple:
+        """命中集合的**唯一排序实现**（`priority` 降序，同值保持注册序）。
+
+        `visible_only=True` → 候选只取 `visible=True` 的声明（路由口径，见 `first_hit()`）：
+        不可见声明（平台 gate 之类）不参与包内路由。
+        `hits()` / `first_hit()` 都只调这里，谁都不再自己排一遍 —— 排序只有一份实现
+        （「两条路由路径口径不一致」的根因就是各排了一遍，见 B19e）。
+        """
         t = (text or "").strip()
-        got = [s for s in self.specs() if s.hits(t, mode=mode)]
+        got = [s for s in self.specs()
+               if (s.visible or not visible_only) and s.hits(t, mode=mode)]
         return tuple(sorted(got, key=lambda s: -s.priority))
 
+    def hits(self, text: str, *, mode: str = "search") -> tuple:
+        """命中该文本的**全部**声明（`priority` 降序，同值保持注册序）—— 互斥矩阵自检用。"""
+        return self._ranked(text, mode=mode)
+
     def hit(self, text: str, *, mode: str = "search") -> Optional[CommandSpec]:
-        """命中该文本的**第一条**声明（`priority` 最高者，同值取注册序）；无 → None。"""
+        """命中该文本的**第一条**声明（`priority` 最高者，同值取注册序）；无 → None。
+
+        口径 = `first_hit(text)`（缺省 `visible_only=False`：不可见声明**也算**候选）。
+        路由（「玩家能发的指令」）请用 `first_hit(text, visible_only=True)`。
+        """
         got = self.hits(text, mode=mode)
+        return got[0] if got else None
+
+    def first_hit(self, text: str, *, visible_only: bool = False,
+                  mode: str = "search") -> Optional[CommandSpec]:
+        """命中该文本的**第一条**声明；`visible_only=True` 时只在**可见**声明里排。
+
+        排序口径与 `hit()` / `hits()` **完全一致**（`priority` 降序，同值按注册序）——
+        共用 `_ranked()`，本方法自带零排序。唯一差别 = `visible_only`：
+        为 True 时 `visible=False` 的声明（平台 gate 如 `_maint_gate`）**不参与**，
+        因为路由是「玩家能发的指令」，gate 是适配器职责（计划 §11.3）。
+        缺省 `False` ⇒ 与 `hit()` 逐字同结果（`hit()` = 本方法的缺省特例）。
+        """
+        got = self._ranked(text, mode=mode, visible_only=visible_only)
         return got[0] if got else None
 
     # ============================================================ 派生（还原成宿主形状）
