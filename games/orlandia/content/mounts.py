@@ -33,10 +33,10 @@ def bind_host(**objs):
             _INJECTED[k] = v
 
 
-def lazy_host_module(full_name: str):
+def lazy_module(full_name: str):
     """按**完整模块名**包一个惰性宿主模块句柄 —— 宿主薄壳用它注入自己那棵树的模块：:
 
-        _M.bind_host(data=_M.lazy_host_module(__package__.rsplit(".", 1)[0] + ".data"))
+        _M.bind_host(data=_M.lazy_module(__package__.rsplit(".", 1)[0] + ".data"))
 
     为什么必须由薄壳注入全名：同一进程里可能并存 `game.*` 与 `data.plugins.dragonfall.game.*`
     两套模块树（plan §8-R2；`tests/` 两种 import 都有）—— 写目标（`_INDEXES` / `MONSTER_LOCS` /

@@ -179,10 +179,7 @@ from . import timed_events as _timed     # list_timed / get_timed
 from . import time_weather as _tw        # current_period / time_weather_summary
 from . import worlds as _worlds          # get_instance_world
 
-# ⚠️ 兼容别名（**不是读点**）：`content/cmds_world.py:49` 按名 import 这两个旧替身口名
-# （`# noqa: F401`，全仓零调用点）。该文件不属 B2-C4 文件集 → 不就地改；收口 = 删那两个名字后整段删除。
-C = None
-_host_attr = None
+# ★ B2-W2 已收口：`content/cmds_world.py:49` 的两个死 import 名已删，本段（C/_host_attr 占位）随之删除。
 
 # 真源宿主顶层 `from ..services.quests import DAILY_META_KEYS as _DAILY_META_KEYS`
 from .profession_quests import DAILY_META_KEYS as _DAILY_META_KEYS

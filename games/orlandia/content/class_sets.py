@@ -57,11 +57,7 @@ def _host_mod(name: str):
     raise RuntimeError("%s：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (__name__, name, last))
 
 
-# 兼容面（**不是读点**，仅本行撞门禁 grep）：宿主薄壳 `game/core/class_sets.py:72/75` 的
-# `__getattr__` 按名调用它（把 `SERIES_SETS` / `SETS` / `_SERIES_SET_BONUS` 等**遗留数据名**
-# 回退到宿主 `data`）。该宿主文件不属 B2-C4 文件集 ⇒ B2 波1 保名（宿主侧零改）。
-# 收口建议：波2 宿主改口后删掉本别名。
-_host_module = _host_mod
+# ★ B2-W2 已收口：宿主薄壳 `game/core/class_sets.py:72/75` 改口为 `_host_mod`，本兼容别名删除。
 
 
 def _data_mod():

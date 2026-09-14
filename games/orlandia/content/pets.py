@@ -16,7 +16,7 @@
   `overnight/w11c_dump_pet_tables.py` 从宿主真源 dump、非手抄；登记 `NOT_YET_DOMAINED`）
 * `_PET_SKILL_DESC`（8 个展示模板 lambda）属**实现**，随本模块代码走（非数据表）
 
-`bind_host` / `lazy_host_module` **保留**：宿主薄壳 `game/core/pets.py:26` 仍调它们注入句柄
+`bind_host` / `lazy_module` **保留**：宿主薄壳 `game/core/pets.py:26` 仍调它们注入句柄
 （导入期不得抛；句柄在本模块已无消费点，留着即向后兼容）。
 """
 from __future__ import annotations
@@ -36,7 +36,7 @@ def bind_host(pets=None):
         _HOST_PETS = pets
 
 
-def lazy_host_module(full_name: str):
+def lazy_module(full_name: str):
     """按**完整模块名**包一个惰性宿主模块句柄 —— 宿主薄壳用它注入自己那棵树的模块。
 
     宿主侧调用形如（见 `game/core/pets.py`）：宿主包名 + 数据层子模块名 ⇒ 本模块的句柄名。

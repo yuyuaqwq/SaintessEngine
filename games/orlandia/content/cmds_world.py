@@ -46,7 +46,7 @@ from .catalog_space import MAP_BY_ID
 from .commands import register
 from .guards import GUARDS as _GUARDS
 from .wild import ALL_WILD
-from .world_cmds import C, db, _DAILY_META_KEYS, _host_attr   # noqa: F401（`C` 只承载函数读点）
+from .world_cmds import db, _DAILY_META_KEYS   # B2-W2：清死 import（C/_host_attr 全仓零调用点）
 
 
 # ============================================================

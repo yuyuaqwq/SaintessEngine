@@ -15,7 +15,7 @@
 
 兼容面（宿主薄壳 `game/core/index.py` 仍在调，签名/行为保持）
 ----------------------------------------------------------
-* `bind_host(data=…)` / `lazy_host_module(全名)`：保留。**主构建路径不碰它**——唯一消费者是
+* `bind_host(data=…)` / `lazy_module(全名)`：保留。**主构建路径不碰它**——唯一消费者是
   `_host_data()`，只给 3 张**无域缺口表**（`WEAPON_TYPES` / `WT_CN` / `QUALITY_CN`）兜底，
   见 `content/index_build.py` 头注「缺口」与报告 `overnight/_w1_index_to_pkg.md`。
 * `content/index_build.py::GAP_SOURCES` 记录每张缺口表的实际来源（探针/报告取证用）。
@@ -49,10 +49,10 @@ def bind_host(**objs):
             _INJECTED[k] = v
 
 
-def lazy_host_module(full_name: str):
+def lazy_module(full_name: str):
     """按**完整模块名**包一个惰性宿主模块句柄 —— 宿主薄壳用它注入自己那棵树的模块：:
 
-        _M.bind_host(data=_M.lazy_host_module(__package__.rsplit(".", 1)[0] + ".data"))
+        _M.bind_host(data=_M.lazy_module(__package__.rsplit(".", 1)[0] + ".data"))
 
     为什么必须由薄壳注入全名：同一进程里可能并存 `game.*` 与 `data.plugins.dragonfall.game.*`
     两套模块树（plan §8-R2；`tests/` 两种 import 都有）—— 写目标（`_INDEXES` / `MONSTER_LOCS` /

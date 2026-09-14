@@ -37,8 +37,6 @@
 #    `display` = 包内 `content/index.py::display`（原 `C.display`，同一对象）
 #    （`C` / `LOG` 两个**壳面兼容名**见文件末「壳面兼容」段——宿主薄壳按名再导出所需）
 # ============================================================
-import importlib
-import sys
 
 
 # -*- coding: utf-8 -*-
@@ -83,66 +81,11 @@ from . import obs                           # noqa: E402  包内唯一 LOG/tlog 
 from .index import display as _index_display  # noqa: E402  真源 `C.display`（同一对象）
 from ._pkgref import DB as db
 
-# ---- 壳面兼容（**不是读点**，两行撞门禁 grep 的是变量名不是取件口）----------------------
-# 宿主薄壳 `game/core/stat_bonus.py:23-24` 把这两个名字**按名再导出**：
-#     C   = _pkg.C        # 真源模块级 `from .. import content as C`
-#     LOG = _pkg.LOG      # 真源模块级 `from ..log_setup import LOG`
-# 本模块内部已不再读它们（唯一读点 `display` 已切包内直取）——保名只为不炸薄壳那两行。
-# 收口建议：波2 宿主薄壳改薄/删行后，本段与 `_HostFace` 一起删。
-_HOST_PKG = "data.plugins.dragonfall.game"
-_HOST_PKG_FALLBACK = "game"
-_INJECTED = {}
+# ---- 壳面兼容段（★ B2-W2 已删）--------------------------------------------------
+# 原 `_HOST_PKG`/`_INJECTED`/`_HostFace` + `C = _HostFace("content")` /
+# `LOG = _HostFace("log_setup", "LOG")`：宿主薄壳 `game/core/stat_bonus.py:23-24` 的按名再导出
+# 所需（全仓零消费点，B2-C4 实测登记）。波2 宿主那两行已删 ⇒ 本段一并删除（无第二处消费）。
 
-
-class _HostFace:
-    """宿主面惰性句柄（原宿主替身口的等价物）——**壳面兼容专用，本模块内部零使用**。
-
-    `C.xxx` / `LOG.warning` 属性访问时解析：注入优先（键 = 宿主模块名）→ `sys.modules` →
-    importlib → 抛（不静默空跑）。与改造前那两行取件的取值语义一致。
-    """
-
-    __slots__ = ("_mod", "_attr")
-
-    def __init__(self, mod, attr=None):
-        object.__setattr__(self, "_mod", mod)
-        object.__setattr__(self, "_attr", attr)
-
-    def _v(self):
-        mod = object.__getattribute__(self, "_mod")
-        attr = object.__getattribute__(self, "_attr")
-        if mod in _INJECTED:
-            base = _INJECTED[mod]
-        else:
-            base = None
-            for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-                base = sys.modules.get("%s.%s" % (prefix, mod))
-                if base is not None:
-                    break
-            if base is None:
-                last = None
-                for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-                    try:
-                        base = importlib.import_module("%s.%s" % (prefix, mod))
-                        break
-                    except Exception as exc:            # noqa: BLE001
-                        last = exc
-                if base is None:
-                    raise RuntimeError(
-                        "stat_bonus：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (mod, last))
-        return base if attr is None else getattr(base, attr)
-
-    def __getattr__(self, name):
-        return getattr(self._v(), name)
-
-    def __call__(self, *args, **kwargs):
-        return self._v()(*args, **kwargs)
-
-    def __repr__(self):
-        return "<HostFace %s>" % object.__getattribute__(self, "_mod")
-
-
-C = _HostFace("content")            # 壳面兼容：宿主薄壳 `game/core/stat_bonus.py:23` 再导出
-LOG = _HostFace("log_setup", "LOG")  # 壳面兼容：宿主薄壳 `game/core/stat_bonus.py:24` 再导出
 
 # ★ B14-2 L8（2026-09-14）：数据读点 → 包内门面 / 读口（门禁 `b14_catalog_gate.py` 逐值+键序 OK）
 from . import catalog_items as _ci          # noqa: E402  ITEMS / MATERIALS
