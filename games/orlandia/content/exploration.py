@@ -196,8 +196,9 @@ class _HostMod:
         return getattr(_host_module(self._name), attr)
 
 
-from ._pkgref import DB as db
-C = _HostMod("content")
+from ._pkgref import DB as db, PkgModule
+# ★ P4′-W1 A 组：`C.resolve` / `C.display` 实测 `__module__ == "content.index"`（同一只 `_INDEXES`）
+C = PkgModule("content.index")
 
 # ★ B14-2 L8（2026-09-14）：`C.MATERIALS`（材料价）→ 包内物品门面直取
 #   （门禁 `b14_catalog_gate.py` 逐值+键序 OK；`C` 仍有残余 `resolve`/`display`）

@@ -112,8 +112,9 @@ class _HostMod:
         return getattr(_host_module(self._name), attr)
 
 
-C = _HostMod("content")     # 真源 `from .. import content as C`
-from ._pkgref import DB as db
+from ._pkgref import DB as db, PkgModule
+# ★ P4′-W1 A 组：`C.generate_equip` 实测 `__module__ == "content.drops"`
+C = PkgModule("content.drops")
 
 
 # ============================================================

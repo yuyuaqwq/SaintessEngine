@@ -45,7 +45,14 @@ from . import social_pet as _SP
 from . import social_stall as _SS
 from .commands import COMMANDS, register
 # 宿主替身口：与 `content/social_cmds.py` 同一份（`C` / `db` 正文一字未改；见该模块头注）
-from .social_cmds import C, db, _host_attr
+from .social_cmds import db, _host_attr
+from ._pkgref import PkgModule
+# ★ P4′-W1 A 组连带（2026-09-15）：本模块过去从 `social_cmds` **借** C 句柄，读 4 个不同模块的名字。
+#   现按包内真源逐个改直取（表 = 模块级；函数 = 惰性句柄，取件时机不变）。
+from .catalog_life import ECON_CONFIG            # 真源 `C.ECON_CONFIG`（catalog_life 门面）
+from .catalog_core import GUILD_EXP_BASE         # 真源 `C.GUILD_EXP_BASE`
+_C_INDEX = PkgModule("content.index")            # 真源 `C.display`
+_C_ACH = PkgModule("content.achievements")       # 真源 `C.check_achievements`
 
 
 # ============================================================
@@ -130,13 +137,13 @@ def market_sell(env):
     group_id, qq_id = env.group_id, env.uid
     player = env.player
     args = shell._strip_cmd(env.raw, "上架").rsplit(None, 1)
-    if len(args) < 2 or not args[1].isdigit() or int(args[1]) < C.ECON_CONFIG["market_min_price"]:
+    if len(args) < 2 or not args[1].isdigit() or int(args[1]) < ECON_CONFIG["market_min_price"]:
         return ["格式：上架 <物品名> <价格>，如『上架 铁剑 500』；价格至少 1 金币"]
     item_name = args[0]
     price = int(args[1])
     # v104R3 P2：上架价格上限——防止 999999999 恶意占坑/诱导高价（上限远超任何物品价值）
-    if price > C.ECON_CONFIG["market_price_cap"]:
-        return [f"价格太高啦！上架价最多 {C.ECON_CONFIG['market_price_cap']} 金币～"]
+    if price > ECON_CONFIG["market_price_cap"]:
+        return [f"价格太高啦！上架价最多 {ECON_CONFIG['market_price_cap']} 金币～"]
     # B9-L3：按名找背包物品 + 单事务原子上架在包内（真源 market_sell 的解析/落库段）
     ok, nm, err = _SS.market_sell_place(group_id, qq_id, item_name, price)
     if not ok:
@@ -347,7 +354,7 @@ def party(env):
         # 面板（无目标）
         if members:
             lines = party_view_lines(group_id, members, get_player=shell._player,
-                                     final_stats=_final_stats(), display=C.display)
+                                     final_stats=_final_stats(), display=_C_INDEX.display)
             return ["\n".join(lines)]
         return ["你还没有队伍～『组队 <对方名字>』邀请同群玩家组队！\n"
                 "💡 组队打怪经验＋10%（野外各自为战，仅经验加成，副本内才并肩作战）"]
@@ -370,13 +377,13 @@ def party(env):
         if str(members[0]) != str(qq_id):
             return ["你已在队伍中，让队长『组队 <名字>』拉人吧～"]
         ok, lines, _my = party_join(group_id, qq_id, target_qq, tname_str, members,
-                                    check_achievements=C.check_achievements)
+                                    check_achievements=_C_ACH.check_achievements)
         if ok:
             return list(lines)
         return [lines[0]]
     # 无队伍：创建 2 人队（store.party_create 内做战斗/已有队伍闸）
     ok, lines, _my = party_join(group_id, qq_id, target_qq, tname_str, members,
-                                check_achievements=C.check_achievements)
+                                check_achievements=_C_ACH.check_achievements)
     if ok:
         return list(lines)
     return [lines[0]]
@@ -432,7 +439,7 @@ def guild_create_cmd(env):
     if not ok:
         return [err]
     # v105 M18 P2：创建公会立即判定成就（ach_guild1「加入公会」无需等下次事件）
-    C.check_achievements(group_id, qq_id)
+    _C_ACH.check_achievements(group_id, qq_id)
     return [
         f"🏰 【公会创建成功】『{name}』！\n"
         f"你成为了公会会长！\n"
@@ -456,7 +463,7 @@ def guild_join_cmd(env):
     if not ok:
         return [err]
     # v105 M18 P2：加入公会立即判定成就（ach_guild1「加入公会」无需等下次事件）
-    C.check_achievements(group_id, qq_id)
+    _C_ACH.check_achievements(group_id, qq_id)
     return [f"🏰 欢迎加入公会【{g['name']}】！\n{shell._tip('guild')}"]
 
 
@@ -505,7 +512,7 @@ def guild_info(env):
     page_items, pages, page = shell._page_items(members, page, per_page=5)
     # B9-L3：面板主体（头/加成/成员行）在包内；分页用引擎底座、tip 与列表记账是命令层 IO
     lines = _gsd("guild_info_lines")(group_id, g, members, page_items, page, pages,
-                                     shell._player, g["level"] * C.GUILD_EXP_BASE)
+                                     shell._player, g["level"] * GUILD_EXP_BASE)
     lines.append(shell._tip("guild"))
     shell._record_list_state(qq_id, "公会", page, pages)
     return ["\n".join(lines)]

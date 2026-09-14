@@ -135,8 +135,15 @@ TIPS: dict = {
 }
 
 # 宿主面惰性替身（正文 `db.` / `C.` 一字未改）
-from ._pkgref import DB as db
-C = _HostMod("content")
+from ._pkgref import DB as db, PkgModule
+# ★ P4′-W1 A 组（2026-09-15）：最后四个「函数名缺口」按**探针实测的门面落点**改指包内同一只：
+#   `roll_blueprint`→content.drops · `rune_item`→content.runes · `resolve`/`display`→content.index
+#   · `check_achievements`→content.achievements。均为惰性句柄（属性访问时解析）。
+_C_DROPS = PkgModule("content.drops")
+_C_RUNES = PkgModule("content.runes")
+_C_INDEX = PkgModule("content.index")
+_C_ACH = PkgModule("content.achievements")
+C = _HostMod("content")     # 残留：仅 `ItemContext._C()` 的历史返回口，无调用点（P5C 随壳一起清）
 
 TEMPLATES = {}
 META = {}
@@ -759,7 +766,7 @@ def tpl_open_chest(ctx):
         pass
     lines = [f"🎁 你打开了【{ctx.item_name()}】！", f"💰 获得 {gold} 金币！"]
     if random.random() < _cc.CHEST_BP_CHANCE:  # v101.5 常量
-        bp = C.roll_blueprint(max(1, ctx.lv))
+        bp = _C_DROPS.roll_blueprint(max(1, ctx.lv))
         if bp:
             db.add_item(ctx.group_id, ctx.qq_id, f"eq_{uuid.uuid4().hex[:8]}", bp)
             lines.append(f"📜 宝箱里还有：{bp['name']}！")
@@ -789,7 +796,7 @@ def tpl_open_rune_chest(ctx):
     else:
         rk = random.choice(blue) if blue else random.choice(purple)
     r_def = _ci.RUNES[rk]
-    rune_data = C.rune_item(r_def["effect"], random.randint(1, 2))
+    rune_data = _C_RUNES.rune_item(r_def["effect"], random.randint(1, 2))
     if not rune_data:
         return ItemResult(text="符文匣里空空如也……(符文数据缺失)", consume=False)
     db.add_item(ctx.group_id, ctx.qq_id,
@@ -950,8 +957,8 @@ def tpl_skill_tome(ctx):
     if not info:
         return ItemResult(text=f"你翻开【{d.get('name', '技能书')}】，但其中的技艺晦涩难解……(技能数据缺失)", consume=False)
     if req:
-        req_id = C.resolve("classes", req)
-        cls_id = C.resolve("classes", ctx._focus.get("class_name", ""))
+        req_id = _C_INDEX.resolve("classes", req)
+        cls_id = _C_INDEX.resolve("classes", ctx._focus.get("class_name", ""))
         if cls_id != req_id:
             src_name = _cc.CLASSES.get(req_id, {}).get("name", req)
             return ItemResult(
@@ -962,12 +969,12 @@ def tpl_skill_tome(ctx):
             text=f"书中的技艺需要 Lv.{need_lv} 才能参悟，你才 Lv.{ctx._focus.get('level', 0)}。", consume=False)
     learned = list(ctx._focus.get("learned_skills", []))
     sname = info.get("name", learn)
-    if C.resolve("skills", sname) in [C.resolve("skills", s) for s in learned if s]:
+    if _C_INDEX.resolve("skills", sname) in [_C_INDEX.resolve("skills", s) for s in learned if s]:
         return ItemResult(text=f"『{sname}』你早已掌握，这本书对你没有用了。", consume=False)
     self_db = ctx._db()
     self_db.update_player(ctx.group_id, ctx.qq_id, learned_skills=learned + [sname])
     try:
-        C.check_achievements(ctx.group_id, ctx.qq_id, ctx._focus)
+        _C_ACH.check_achievements(ctx.group_id, ctx.qq_id, ctx._focus)
     except Exception:
         pass
     ctx.hook("remove_item")  # 战斗外路径模板自行扣除（与 tpl_heal 同款）

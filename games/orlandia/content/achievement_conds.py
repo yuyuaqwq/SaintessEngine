@@ -123,8 +123,11 @@ class _HostMod:
         return getattr(_host_module(self._name), attr)
 
 
-C = _HostMod("content")     # 真源 `from .. import content as C`
-from ._pkgref import DB as db
+from ._pkgref import DB as db, PkgModule
+# ★ P4′-W1 A 组（2026-09-15）：宿主门面 `game.content.display` 实测 **`__module__ == "content.index"**
+#   （`content/tables.py` 的同名另一只**不是**目标）⇒ 改指包内同一只。
+#   惰性：属性访问时解析，取件时机与旧 `_HostMod("content")` 逐字相同。
+C = PkgModule("content.index")
 
 from .skills import PLAYER_SKILLS, BRANCH_SKILLS   # 包内读口（实测与宿主深等）
 from .catalog_space import MAPS                    # B14-2：真源 `C.MAPS`（门禁 OK，含键序）

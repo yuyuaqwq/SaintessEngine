@@ -94,8 +94,10 @@ class _HostMod:
 
 
 
-C = _HostMod("content")     # 真源 函数内 `from .. import content as C`
-from ._pkgref import DB as db
+from ._pkgref import DB as db, PkgModule
+# ★ P4′-W1 A 组：宿主门面 `game.content.generate_equip` 实测 `__module__ == "content.drops"`
+#   （`content/craft.py` 的同名另一只不是目标）⇒ 改指包内同一只（惰性）。
+C = PkgModule("content.drops")
 
 
 # ============================================================

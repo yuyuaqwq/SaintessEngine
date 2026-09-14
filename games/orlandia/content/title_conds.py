@@ -101,8 +101,9 @@ class _HostMod:
         return getattr(_host_module(self._name), attr)
 
 
-C = _HostMod("content")     # 真源 `from .. import content as C`
-from ._pkgref import DB as db
+from ._pkgref import DB as db, PkgModule
+# ★ P4′-W1 A 组：`C.faction_reputation_tier` 实测 `__module__ == "content.factions"`
+C = PkgModule("content.factions")
 
 # B14-2（L7 线）：数据名读点切包内门面 —— 原 `C.<名>` / `_C.<名>` 直取换成门面同名绑定
 from .catalog_quests import HIDDEN_NPCS, NPCS   # 真源 `C.HIDDEN_NPCS` / `C.NPCS`

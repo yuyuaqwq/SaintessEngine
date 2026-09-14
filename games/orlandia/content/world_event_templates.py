@@ -71,7 +71,9 @@ class _HostMod:
         return getattr(_host_module(self._name), attr)
 
 
-C = _HostMod("content")     # 真源 `from .. import content as C`（延迟导入防循环 → 惰性替身同义）
+from ._pkgref import PkgModule
+# ★ P4′-W1 A 组：`C.generate_equip` 实测 `__module__ == "content.drops"`（惰性，取件时机不变）
+C = PkgModule("content.drops")
 
 
 DISPLAYS = {}

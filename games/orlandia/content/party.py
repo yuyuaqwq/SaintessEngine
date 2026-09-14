@@ -101,8 +101,11 @@ class _HostMod:
         return _host_attr(self._name, attr)
 
 
-C = _HostMod("content")
-from ._pkgref import DB as db
+from ._pkgref import DB as db, PkgModule
+# ★ P4′-W1 A 组：`C.display`→content.index · `C.check_achievements`→content.achievements（探针实测）
+_C_INDEX = PkgModule("content.index")
+_C_ACH = PkgModule("content.achievements")
+C = _HostMod("content")     # 残留：历史句柄，无调用点（P5C 随壳一起清）
 
 
 def _panel_stats():
@@ -194,7 +197,7 @@ def party_view_lines(group_id, members, get_player=None, final_stats=None, displ
     if final_stats is None:
         final_stats = _panel_stats()
     if display is None:
-        display = C.display
+        display = _C_INDEX.display
     lines = [f"🤝 【队伍】({len(members)}人)", "━━━━━━━━━━━━"]
     _order = []
     for _m in members:
@@ -229,7 +232,7 @@ def party_join(group_id, qq_id, target_qq, target_name, members, check_achieveme
     组队次数 bump（v104 M04 P2 双方各记）与成就判定（v105 阶段九）在本函数内完成。
     """
     if check_achievements is None:
-        check_achievements = C.check_achievements
+        check_achievements = _C_ACH.check_achievements
     if members:
         # 已有队伍：仅队长可拉人
         if str(members[0]) != str(qq_id):
