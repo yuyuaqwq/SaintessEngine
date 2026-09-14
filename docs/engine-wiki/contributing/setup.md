@@ -29,8 +29,9 @@ cd framework-engine                          # 框架仓根
 python tests/test_engine_purity.py           # 任选：tests/ 下每个 test_*.py 都能单跑
 ```
 
-框架仓 `tests/` 目前 5 个 `.py`（`run_all.py` + `test_engine_purity.py` /
-`test_engine_neutral_fallback.py` / `test_editor_api.py` / `test_wiki_refs.py`），每个都用
+框架仓 `tests/` 目前 **52** 个 `test_*.py`（+ `run_all.py` 自己 + 夹具 `_domain_fixtures.py`）；
+`python tests/run_all.py --list` 实测列出 **53** 个待跑文件 = 这 52 个 + 示例冒烟
+`examples/minimal-game/tests/test_smoke.py`。每个都用
 `sys.path.insert(0, FW_ROOT)` 自定位，末尾 `sys.exit(1 if 失败 else 0)`，**在哪个目录跑都行**。
 
 > **游戏仓 / 奥兰迪亚侧**对照：那边 200+ 个测试文件同样是"可独立运行的脚本"形态
@@ -101,10 +102,12 @@ python scripts/run_all_tests.py [--file tests/test_xxx.py] [--fail-fast]
 
 **框架仓**（`tests/`，改引擎时你打交道的全部）：
 
-- 5 个 `.py`：`run_all.py` + `test_engine_purity.py`（纯度门禁）+
-  `test_engine_neutral_fallback.py`（中性兜底：未挂配置不崩）+ `test_editor_api.py`（编辑器 API）+
-  `test_wiki_refs.py`（本 wiki 的 `file.py:行号` 引用门禁）
-- 外加示例游戏冒烟：`examples/minimal-game/tests/test_smoke.py`（`run_all.py` 会带上）
+- **53** 个待跑文件（`python tests/run_all.py --list` 实测）= `tests/` 下 52 个 `test_*.py`
+  + 示例游戏冒烟 `examples/minimal-game/tests/test_smoke.py`（`run_all.py` 会带上）
+- 其中代表性的几条：`test_engine_purity.py`（纯度门禁）、`test_engine_neutral_fallback.py`
+  （中性兜底：未挂配置不崩）、`test_editor_api.py`（编辑器 API）、`test_wiki_refs.py`
+  （本 wiki 的 `file.py:行号` 引用门禁）、`test_editor_wiki.py` / `test_editor_wiki_pkg.py`
+  （wiki 渲染与死链，后者连带锁 README 头部的引擎目录数字）
 
 **游戏仓 / 奥兰迪亚侧**（参考实现的回归集，规模大得多）：
 

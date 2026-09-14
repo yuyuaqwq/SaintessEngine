@@ -35,15 +35,17 @@
 | **层 1 · 数据扩展** | `editor/domains.json` + `schemas/<域>.schema.json` + `content/{data,rules}/<域>.json` | 域注册表 / schema 校验 / 表单 / 条目读写 | **不跑** | ✅ 已落地 |
 | **层 2 · 半动态声明** | `editor/relations.json`（字段↔域引用、联动 / 只读）+ `editor/views.json`（域 → **内置**视图名） | 引用下拉与引用校验；把域接到 5 个**内置**视图之一 | **不跑** | ✅ 已落地（视图白名单见 `relations.py:75`） |
 | **层 3 批 1 · 渲染声明（纯声明）** | `editor/render/<域>.json`（版面 / 字段 / 条件 / 插值） | 声明 → **受限渲染树（JSON）** → 前端白名单渲染器画 | **不跑** | ✅ **已落地**（`editor/render.py` + `render_decl.py`） |
-| **层 3 批 2 · 白名单派生值** | 声明里只**点名**框架的白名单纯函数（`DERIVE_FNS`），包不提供函数体 | 值由沙箱子进程算（跑的是**框架**代码） | **不跑包代码** | ⏳ 未落地（仓里无 `render_worker.py`） |
+| **层 3 批 2 · 白名单派生值** | 声明里只**点名**框架的白名单纯函数（`DERIVE_FNS`），包不提供函数体 | 值由沙箱子进程算（跑的是**框架**代码） | **不跑包代码** | ✅ **已落地**（`editor/render_worker.py` 沙箱子进程） |
 | **层 3 批 3 · 代码档** | 包自己的渲染代码（`editor/render/<域>.py` 里的 `derive()`） | 在**沙箱子进程**里跑它，只回受限渲染树 | **跑包代码** | ⛔ **当前决定：不做**（声明面已能识别它并标红） |
 | **前端 JS** | ——（包**不往页面塞任何 JS**） | 编辑器自己的手写前端：第 5 档 + 白名单渲染器 | —— | ✅ 已落地；树的文本一律 `textContent`（`web/app.js` 有明注） |
 
-> **现状怎么核（2026-09-14）**：层 3 **批 1（纯声明）已落地** —— `editor/render.py` / `editor/render_decl.py`
+> **现状怎么核（2026-09-14 复核）**：层 3 **批 1（纯声明）已落地** —— `editor/render.py` / `editor/render_decl.py`
 > + `GET /api/package/<id>/render`（`server.py:428`）+ 前端第 5 档 + 三门禁；它**不执行任何包代码**
-> （`render*.py` 里 `subprocess` / `eval(` / `exec(` 计数 = 0）、也零引擎 import（见 §4 第 4 条）。
-> 批 2 / 批 3 **未落地**；iframe（路径 B）也没有代码。⚠️ `editor/README.md` 的表格**还没跟着更新**
-> （仍写「3 | `editor/view.js`（未做）」）—— 那张表已滞后，别拿它当现状。
+> （批 1 那两个文件里 `subprocess` / `eval(` / `exec(` 计数 = 0）、也零引擎 import（见 §4 第 4 条）。
+> **批 2（白名单派生值）也已落地**：`editor/render_worker.py`（875 行）的沙箱子进程 —— 一次性 /
+> import 白名单 / 超时 / 输出上限，跑的是**框架**白名单纯函数，**不跑包代码**；起进程的调用只在
+> `render_worker.py` 里，父侧 `render.py` 惰性 import 它。批 3（代码档）**仍为不做**；iframe（路径 B）
+> 也没有代码。`editor/README.md` 的第 3 层表格已同步（分「批 1 / 批 2」两行）。
 
 ### 1.1 包侧文件落点（层 1 → 层 3）
 
@@ -117,10 +119,10 @@
 
 ### e) 收益 vs 成本：现有的包没有一个需要它
 
-现装包：`games/orlandia`（`editor/domains.json` 声明 **72** 个域、`editor/glossary/` 70 份）、
+现装包：`games/orlandia`（`editor/domains.json` 声明 **73** 个域、`editor/glossary/` 70 份）、
 `examples/minimal-game`、`games/my_game`（新建包脚手架）。核对结果：**没有一个**声明 `views.json`
 或 render 面，更没有包要求跑自己的渲染代码。层 2 已覆盖「引用 / 联动 / 换内置视图」，
-层 3 批 1/2（纯声明 + 白名单函数）尚未落地；在**没有任何真实需求**时先开「代码档」，
+层 3 批 1/2（纯声明 + 白名单函数）已落地、**批 3 代码档**仍不做；在**没有任何真实需求**时先开「代码档」，
 等于为一个锦上添花的能力长期背安全债。
 
 ### f) 编辑器**已有**两处故意执行包代码的地方 —— 都在子进程，都不是渲染
@@ -240,8 +242,9 @@
    不是"有没有写 `open`"（§2.d 与路径 A 的"诚实残留"）。
 4. **「默认关 + 弹窗确认一下就行了吧？」** —— 开关是**必要**条件不是**充分**条件：真实需求、残留清单、
    门禁三件同样要齐（§4）。
-5. **「层 3 不是已经做了吗？」** —— 只做了**批 1（纯声明）**；批 2（白名单派生值）与批 3（代码档）都没做，
-   iframe 也没有代码（§1 现状）。反向的坑也要防：`editor/README.md` 那张表还写着「未做」，已滞后。
+5. **「层 3 不是已经做了吗？」** —— 做了**批 1（纯声明）与批 2（白名单派生值，沙箱子进程）**；
+   批 3（代码档）**当前决定不做**，iframe 也没有代码（§1 现状）。反向的坑也要防：
+   `editor/README.md` 那张表此前一直滞后，现已按实际状态更新（第 3 层分「批 1 / 批 2」两行）。
 6. **「包 JS 只在 iframe 里跑，就等于隔离了。」** —— `sandbox` 省略 `allow-same-origin` 只是"不能读父页面 /
    不能带 cookie 调同源 API"，**不是绝对隔离**；所以路径 B 只能是「只读展示 + 默认关」。
 
@@ -253,7 +256,8 @@
 * [host-api.md](host-api.md) —— 宿主契约（游戏路那侧的接口面；与编辑器扩展面互为对照）。
 * [../concepts/declaration-tables.md](../concepts/declaration-tables.md) —— 「为什么不写代码而写声明」，与本页层 1/2 同源。
 * [../architecture/design-decisions.md](../architecture/design-decisions.md) —— 本仓 ADR 页；本页是「编辑器扩展面」这一条的决策记录。
-* 框架侧实现现状：`editor/render.py` / `editor/render_decl.py`（层 3 批 1 声明面）、`editor/relations.py`
-  （内置视图白名单与默认分派）；⚠️ `editor/README.md` 的表格**已滞后**（仍写第 3 层未做）。
+* 框架侧实现现状：`editor/render.py` / `editor/render_decl.py`（层 3 批 1 声明面）、
+  `editor/render_worker.py`（层 3 批 2 白名单派生的沙箱子进程）、`editor/relations.py`
+  （内置视图白名单与默认分派）；`editor/README.md` 的表格已同步（第 3 层分「批 1 / 批 2」两行）。
 * 层 3 的字段级设计稿在**工作区**（不在本仓）：`overnight/layer3-render-design.md`（含分批与门禁）、
   `layer3-render-options.md`（方案对比与否决理由）、`layer3-render-contracts.md`（协议字段表）；落地时请把关键结论**回写本页**。

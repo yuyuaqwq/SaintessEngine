@@ -259,8 +259,12 @@ JSON 由导出脚本生成，并由**同步门禁**断言「派生一致」；�
 
 ## 九、奥兰迪亚包：已进包 / 还没进包（2026-09-13 盘点）
 
-**已进包 24 个域 / 5115 条**（★ 2026-09-13 B2b：域的真源**在包里** —— 框架内置集只剩 8 个引擎域，
-其余 16 个由 `games/orlandia/editor/domains.json` 声明）：`items` 900 / `equip_roster` 687 /
+**已进包 73 个域 / 9361 条**（★ 2026-09-14 实测现状：`scripts/verify_package_coverage.py --check`
+汇总行「域 73 个 / 条目合计 9361 / 失败 0」）。域的真源**在包里** —— 框架内置集只剩 8 个引擎域，
+其余 65 个由 `games/orlandia/editor/domains.json` 声明（★ 2026-09-13 B2b 时该数是 16）。
+⚠️ 下面这份**逐域条数**是 **2026-09-13 B2b 那次盘点的快照**（当时合计 24 个域 / 5115 条，
+此后收口 / D3 批与 `text_specs` 等陆续进包）—— 它**不等于**当前 73 域的全量，数字请以实测为准：
+`items` 900 / `equip_roster` 687 /
 `drop_pools` 596 / `pois` 457 / **`monster_roster` 380** / `monsters` 330 / `skills` 305 /
 `texts` 233 / `commands` 194 / `maps` 121 / **`legendary_effects` 93** / `effect_rules` 85 /
 `affixes` 76 / `passive_proc` 42 / `instances` 27 / `tlogs` 18 / **`pets` 16** / `classes` 8 /

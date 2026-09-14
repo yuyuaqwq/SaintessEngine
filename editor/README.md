@@ -37,7 +37,7 @@ effective_domains(pkg) = 包 editor/domains.json ∪（可选）框架内置默�
   （`effect_rules` / `passive_proc` / `commands` / `texts` / `tlogs` / `maps` /
   `drop_pools` / `instances`，逐个的消费端证据写在 `packages.py` 的注释里）；
   **内容域**（`skills` / `items` / `monsters` … 11 个）**不再内置**，只能由内容包声明
-  （`games/orlandia/editor/domains.json` 声明 24 域；反证门禁见下）。
+  （`games/orlandia/editor/domains.json` 声明 73 域；反证门禁见下）。
   同名的域一律**以包为准**（那份不参与取值，但必进一条可读 warning）。
 * **加一个域 = 改包内 3 个文件**：`editor/domains.json`（声明）+ `schemas/<域>.schema.json`（校验）
   + `content/data|rules/<域>.json`（数据）。框架**一行不改**。
@@ -60,7 +60,8 @@ effective_domains(pkg) = 包 editor/domains.json ∪（可选）框架内置默�
 | **1** | `editor/domains.json` + `schemas/` | 域集（新增域 / 同名覆盖）、schema 解析 | 内置 **8 个引擎域** = `BUILTIN_DEFAULT_DOMAINS`（**回退默认集**） |
 | **2** | `editor/relations.json` | 字段↔域引用（下拉候选 + **引用校验**）、表单联动/只读 | `glossary.REF_DOMAINS`（只给候选、**不校验**）+ 无联动（默认空） |
 | **2** | `editor/views.json` | 域 → **内置**视图（`loot_view` / `instance_view` / `space_view` / `table` / `graph`） | `relations.BUILTIN_DEFAULT_VIEWS`（`maps→space_view`、`drop_pools→loot_view`、`instances→instance_view`） |
-| **3** | `editor/render/<域>.json`（每域一份；历史单文件 `editor/render.json` 仍读、已弃用） | 自定义渲染：版面（5 种块 / 分组 / 逐字段覆盖）、受控交互槽（白名单）、**白名单派生只读值** —— 出**受限渲染树**，不执行包代码 | `editor/render.py`（读声明 / 规范化 / 建树 / 限额）+ `render_decl.py`（声明校验 + 白名单表）+ `render_worker.py`（派生沙箱子进程：一次性 / import 白名单 / 超时 / 输出上限） |
+| **3 · 批 1** | `editor/render/<域>.json`（每域一份；历史单文件 `editor/render.json` 仍读、已弃用） | 自定义渲染·**声明面**：版面（5 种块 / 分组 / 逐字段覆盖）、受控交互槽（白名单） → 出**受限渲染树**，不执行包代码 | `editor/render.py`（读声明 / 规范化 / 建树 / 限额）+ `render_decl.py`（声明校验 + 白名单表） |
+| **3 · 批 2** | 同上（声明里只**点名**框架的白名单纯函数 `DERIVE_FNS`，包**不提供函数体**） | **白名单派生只读值**：值由沙箱子进程算（跑的是**框架**代码） → 并回受限渲染树 | `editor/render_worker.py`（派生沙箱子进程：一次性 / import 白名单 / 超时 / 输出上限；父侧 `render.py` 惰性 import） |
 
 合入规则与第 1 层同一套纪律：**包声明 > 框架默认**；包**不声明**时行为**逐项不变**
 （框架那份降级为默认值，不删）；坏声明（坏 JSON / 未知 view 名 / 未知域 / 形状不对）
