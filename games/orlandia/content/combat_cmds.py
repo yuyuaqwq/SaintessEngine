@@ -19,8 +19,7 @@
 
 正文改动面（**三类，全部登记**；差异面自检 `overnight/b10_l5_check.py`）
 ---------------------------------------------------------------------
-1. 模块级/函数体内**宿主 import** → 同位置惰性替身（`_host_module` / `_host_attr` /
-   `_host_attrs`）；`C.xxx` / `db.xxx` 正文一字未改（`_HostMod` 代理）。
+1. 模块级/函数体内**宿主 import** → 同位置惰性替身（B10-L5 期写法；**B2-C1 已整段收口**，见下）。
 2. 命令入口的 4 行取玩家/取参（`self._uid` / `self._player` / `self._strip_cmd`）**上提**到宿主
    薄壳 → 包内删除同名行、改成形参。`self._strip_cmd` 是纯函数（读 `event.get_message_str()`
    + 纯字符串处理，见 `saintess_engine/command/base.py:114`），上提零副作用；`wish` 的 `opt`
@@ -30,27 +29,32 @@
 ★ 全部 4 处 `self._strip_cmd`（wish/attack/skill/honor_shop）都在宿主薄壳里 —— B10_BRIEF §L5
   「取参保留在宿主」逐条落实。
 
-宿主面（句柄注入优先 → sys.modules → importlib；**绝不静默空跑**）
-----------------------------------------------------------------
-| 真源（宿主） | 包内替身 |
+★ **B2-C1（2026-09-14）收口：宿主替身口整段 → 包内直取**
+--------------------------------------------------------
+九个 B2 单元在本模块的全部读点已由「宿主壳惰性解析」改为**包内直取**
+（逐读点对照表 = `dsh-work/b2c1/out/W-B2C1.md`；身份实测 = `out/evidence/identity_probe.txt`）：
+
+| 原读点（宿主壳） | 现取用（包内家） |
 |---|---|
-| `from .. import content as C`（`C.xxx` 700+ 处） | `C = _HostMod("content")`（宿主聚合层**同对象**） |
-| `from .. import db`（`db.xxx` 300+ 处） | `db = _HostMod("db")` |
-| 函数内 `from ..services.X import f` / `from ..core.Y import Z` | `_host_attr("services.X", "f")`（**同位置**、调用时解析） |
-| `from ..services import battle_bridge as BR` | `BR = _host_module("services.battle_bridge")` |
-| `from ..core.constants import ACT_TICK` | `ACT_TICK = _LazyHostAttr(...)`（数值代理：`or`/乘除转发） |
-| `from ..log_setup import LOG` | `LOG = _LazyHostAttr(...)`（属性转发 → `LOG.warning`） |
-| `from ..content_rules.gameplay import check_player_level_up` | 同名惰性包装（**宿主边界**：写库/写背包；`content/gameplay.py` 归属表 :75「不搬（宿主边界）」） |
-| `from ..core.wild_king import explore_king / build_king_monster / open_chest / wild_king_summary` | 同名惰性包装，经**宿主命令模块** `game.commands.combat` 解析 |
-| `from ..services import battle_worldboss_procs as WBP`（真源 `combat.py:2392`，**生产 import**） | `WBP = _host_module("services.battle_worldboss_procs")` |
+| `game.commands.combat` 的野王四函数 | `content/wild_king.py`（宿主 `core.wild_king` **is** 本模块）+ 猴补覆写面 |
+| `game.services.battle_bridge`（构造 + 回写） | `content/bridge.py`（`_EventStateView` 等价件也在本文件） |
+| `game.services.battle_settlement` 7 名 | `content/settlement.py` + 本文件结算句柄（注入名 `db`/`content`） |
+| `game.services.battle_worldboss_procs` | `content/mech/worldboss.py` |
+| `game.core.event_templates` | `content/event_templates.py` |
+| `game.core.poi_effects` | `content/effects/poi_effects.py` |
+| `game.log_setup.LOG` | `content/obs.py`（包内唯一日志口，fail-closed） |
+| `game.content` 的函数读口（11 名） | 各自包内家（12/13 与宿主聚合层**同一对象**）；3 个 drops 名见下 |
 
-★ 野王四函数为什么必须走宿主模块属性：`tests/test_v1307_zone_risk.py:65` 与
-  `tests/test_v1308_lv_jitter.py:70` 会 `monkeypatch` `game.commands.combat.explore_king`
-  （屏蔽野王保确定性）——包内若绑死一份，测试会假红。
+仍留在**宿主边界**的只有 3 处（逐条登记在 W-B2C1 §6）：（a）`content/drops.py` 的 3 个构造器
+—— 接口表第 5 行冻结的落点属 **C2**，本波未落地 ⇒ `_drops()` 过渡口回退宿主聚合层；
+（b）野王四函数的 **monkeypatch 覆写面**（`tests/test_v1307_zone_risk.py:65` /
+`test_v1308_lv_jitter.py:70` 改绑 `game.commands.combat.<名>`，`b2_impact.md:100` 要求保住）；
+（c）`attach_tlog`（接口表第 11 行冻结注入名，平台件，波2 由宿主壳注入）。
 
-时序不变式（为什么只注入 3 个句柄）：`bind_host` 只注入**与原模块级 import 同刻**的句柄
-（`db` / `content` / `commands.combat` 自身）；其余宿主面一律在原**调用点**惰性解析 ——
-提前 import `services.battle_settlement` 等会改变 rule/action **注册顺序**，那是行为改变。
+时序不变式（**原样保留**）：早先「只注入 3 个句柄、其余在调用点惰性解析」的理由是
+提前 import **宿主服务模块**会改变 rule/action 注册顺序；本批改成包内直取后 import 的是
+**包内模块**（`content/bridge.py` / `content/settlement.py` …），而它们本就是宿主壳 `_pkg()`/
+`_lib()` 首次调用时 import 的那一份 ⇒ 注册顺序与改造前逐点相同。
 
 包内直取（**不是**宿主）：`player_final_stats` / `passive_skills_learned` / `skill_learn_cost_for`
 （`content/panel.py`，D3 批逐字端口）· `_sk_table` / `is_skill_learned` / `skill_info` /
@@ -81,11 +85,10 @@
   `game_config.hidden_monsters`）· `ALL_WILD`（真源 `game/core/wild.py:26` 在 import 期求值 →
   `content/wild.py` 惰性快照，宿主薄壳本就 `is` 同一模块）· `PET_SKILL_UNLOCK_LV`
   （`game/data/pets.py:192` 常量段 → `game_config.pets`）。
-* **函数名**（按总则 §2.3「函数名 / 缺口名不硬连」保留宿主句柄）：`C.roll_poi` ·
-  `C.roll_wild_encounter` · `C.roll_explore_egg` · `C.roll_explore_event` · `C.build_monster` ·
-  `C.build_monster_group` · `C.mount_effects` · `C.resolve` · `C.display` ·
-  `C.check_achievements` · `C.exp_to_next`（后者包内已有同名端口
-  `content/catalog_core.py:exp_to_next`，但函数族归后续「函数单元」→ 本线不动）。
+* **函数名**（原「保留宿主句柄」那批）：**B2-C1 已一并收口** —— 11 个函数名改为包内直取
+  （实测与宿主聚合层 `C.<名>` **同一对象**：`out/evidence/identity_probe.txt`）；只剩
+  3 个 `game.core.drops` 构造器（`build_monster` / `build_monster_group` / `roll_blueprint`）
+  走 `_drops()` 过渡口（包内家 = C2 的 `content/drops.py`，接口表第 5 行；本波该文件未落地）。
 """
 from __future__ import annotations
 
@@ -116,144 +119,425 @@ from . import wild as _wild              # ALL_WILD（W5；宿主薄壳 game/cor
 
 
 # ============================================================
-# ① 宿主替身口（注入优先 → sys.modules → importlib；**绝不静默空跑**）
+# ① 包内直取 + 宿主边界（B2-C1 收口）
+# ------------------------------------------------------------
+# 旧「宿主替身口」整段（通用惰性句柄 + 动态属性解析 + 野王惰性包装）已删除：
+# 九个单元的读点全部改成包内直取。仍留在**宿主边界**的只有 3 处（逐条见 W-B2C1 §6）：
+#   1) `content/drops.py` 的 3 个构造器 —— 接口表第 5 行冻结的 C2 落点，本波未落地；
+#   2) 野王四函数的 monkeypatch 覆写面（b2_impact.md:100 要求保住）；
+#   3) `attach_tlog` —— 接口表第 11 行冻结注入名（平台件，波2 由宿主壳注入）。
 # ============================================================
-_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（AstrBot 插件加载路径）
-_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
+
+from . import obs as _obs                     # log_setup 的包内唯一取用口（fail-closed）
+from . import bridge as _BR                   # services.battle_bridge（构造 + 回写两半）
+from . import settlement as _ST               # services.battle_settlement（唯一实现）
+from . import event_templates as _ET          # core.event_templates（唯一实现）
+from .effects import poi_effects as _POI      # core.poi_effects（唯一实现）
+from .mech import worldboss as _WBP           # services.battle_worldboss_procs（唯一实现）
+from . import wild_king as _WK                # core.wild_king（宿主 core.wild_king is 本模块）
+from .index import resolve as _resolve, display as _display
+from .achievements import check_achievements as _check_achievements
+from .mounts import mount_effects as _mount_effects
+from .events import roll_explore_event as _roll_explore_event, roll_explore_egg as _roll_explore_egg
+from .pois import roll_poi as _roll_poi
+from .stats import exp_to_next as _exp_to_next
+from .panel import race_stats                          # 结算句柄用（真源 content_rules.panel）
+from .gameplay_rules import resolve_drop as _resolve_drop
+from .gameplay_rules import check_player_level_up as check_player_level_up   # 真源 `..content_rules.gameplay`
+from .rule_engine import fire as _rule_fire
+from .stat_bonus import stat_bonus as _stat_bonus
+# ⚠️ 这 4 名在测试里被**宿主聚合层属性改写**（`tests/test_v83_explore_egg.py:42-44` /
+#    `test_v97_03_event_templates.py:129` / `test_v1307_zone_risk.py:90-91` /
+#    `test_v1308_lv_jitter.py:109-110`）⇒ 经 `_overlay()` 包一层（见下），不裸绑。
+from .wild import roll_wild_encounter as _pkg_roll_wild_encounter
+from .events import roll_explore_event as _pkg_roll_explore_event, roll_explore_egg as _pkg_roll_explore_egg
+from .pois import roll_poi as _pkg_roll_poi
+from .daily_events import today_event_effects as _pkg_today_event_effects
+from .maps import bump_explore_count as _bump_explore_count              # 真源：宿主聚合层同名（同对象）
+from . import catalog_rules as _cr                     # poi `dom` 替身：RUNE_POOL/NOTE_POOL/SIGHT_POOL
+from .flow import instance_run as _IR                  # poi `dom` 替身：living_members/set_alive
+
+from ._pkgref import DB as db
+from .constants import ACT_TICK
+
+_HOST_PKG = "data.plugins.dragonfall.game"
+_HOST_PKG_FALLBACK = "game"
 _INJECTED = {}
 
 
 def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = 真源相对模块路径（`content` / `db` / `commands.combat`）。"""
+    """宿主薄壳 import 期注入（幂等）——键 = 真源相对模块路径 / 接口表冻结注入名。
+
+    仍在用的键：`db` / `content` / `commands.combat`（宿主壳 `game/commands/combat.py:65`）；
+    接口表冻结、波2 才注入的键：`attach_tlog`（接口表第 11 行）。
+    """
     for k, v in (objs or {}).items():
         if v is not None:
             _INJECTED[k] = v
 
 
-def _host_module(name: str):
-    """取宿主子模块（`services.battle_bridge` 这类相对路径）。"""
-    m = _INJECTED.get(name)
-    if m is not None:
-        return m
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = sys.modules.get("%s.%s" % (prefix, name))
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module("%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("combat_cmds：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
+# ---- 宿主边界 ①：`game.core.drops` 的 3 个构造器（跨簇缺口，W-B2C1 §6 登记）----
 
+def _drops(name):
+    """`game.core.drops` 的构造器（`build_monster` / `build_monster_group` / `roll_blueprint`）。
 
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「函数内 `from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
+    包内家 = ☆`content/drops.py`（接口表第 5 行冻结的 **C2** 落点）。⚠️ 跨簇缺口：该文件属 C2 的
+    落地清单，本波（C1）尚未存在 ⇒ 过渡期回退「宿主内容聚合层属性」（= 旧 `C.<名>` 的同一取法；
+    再回落 `game.core.drops`）。C2 落地后回退分支即死，**本文件无需再改**。
+    """
     try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
+        _mod = importlib.import_module("content.drops")
+    except ImportError:
+        _mod = None
+    if _mod is not None:
+        return getattr(_mod, name)
+    _cands = (_HOST_PKG + ".content", _HOST_PKG_FALLBACK + ".content",
+              _HOST_PKG + ".core.drops", _HOST_PKG_FALLBACK + ".core.drops")
+    for _full in _cands:
+        _m = sys.modules.get(_full)
+        if _m is not None and hasattr(_m, name):
+            return getattr(_m, name)
+    _last = None
+    for _full in _cands:
+        try:
+            return getattr(importlib.import_module(_full), name)
+        except Exception as _exc:                       # noqa: BLE001
+            _last = _exc
+    raise RuntimeError("content.combat_cmds：core.drops.%s 取不到（%s）——拒绝静默空跑"
+                       % (name, _last))
 
 
-def _host_attrs(mod: str, *attrs):
-    """多符号版 `_host_attr` —— 真源「`from ..<mod> import a, b, c`」的同位置一行替身。"""
-    return tuple(_host_attr(mod, a) for a in attrs)
+def build_monster(*args, **kwargs):
+    """真源 `from ..core.drops import build_monster`（包内家 = `content/drops.py`，见 `_drops`）。"""
+    return _drops("build_monster")(*args, **kwargs)
 
 
-class _HostMod:
-    """宿主模块替身（`C` / `db`）——`C.xxx` / `db.xxx` 正文一字未改，属性访问时解析。"""
-
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
+def build_monster_group(*args, **kwargs):
+    """真源 `from ..core.drops import build_monster_group`（包内家 = `content/drops.py`）。"""
+    return _drops("build_monster_group")(*args, **kwargs)
 
 
-class _LazyHostAttr:
-    """宿主模块属性替身（惰性）——数值/真值/算术 dunder 全量转发（`ACT_TICK`），
-    属性访问转发（`LOG.warning`）。首次解析结果缓存（宿主常量运行期不变）。"""
+# ---- 宿主边界 ②：野王四函数的 monkeypatch 覆写面 + 聚合层 5 名的覆写面 ----
 
-    __slots__ = ("_mod", "_attr", "_val")
+def _overlay(name, pkg_obj):
+    """宿主聚合层 `game.content.<name>` 的 **monkeypatch 覆写面**（与 `_wild_king` 同款口径）。
 
-    def __init__(self, mod, attr):
-        self._mod, self._attr, self._val = mod, attr, None
-
-    def _v(self):
-        v = self._val
-        if v is None:
-            v = _host_attr(self._mod, self._attr)
-            self._val = v
-        return v
-
-    def __repr__(self): return repr(self._v())
-    def __bool__(self): return bool(self._v())
-    def __int__(self): return int(self._v())
-    def __float__(self): return float(self._v())
-    def __index__(self): return int(self._v())
-    def __hash__(self): return hash(self._v())
-    def __eq__(self, o): return self._v() == o
-    def __ne__(self, o): return self._v() != o
-    def __lt__(self, o): return self._v() < o
-    def __le__(self, o): return self._v() <= o
-    def __gt__(self, o): return self._v() > o
-    def __ge__(self, o): return self._v() >= o
-    def __mul__(self, o): return self._v() * o
-    def __rmul__(self, o): return o * self._v()
-    def __truediv__(self, o): return self._v() / o
-    def __rtruediv__(self, o): return o / self._v()
-    def __add__(self, o): return self._v() + o
-    def __radd__(self, o): return o + self._v()
-    def __sub__(self, o): return self._v() - o
-    def __rsub__(self, o): return o - self._v()
-    def __getattr__(self, attr): return getattr(self._v(), attr)
+    生产上宿主聚合层同名属性 **is** 包内同名对象（实测 `out/evidence/content_homes.txt`）⇒
+    本函数零动作（包内直取优先）；只有被测试改绑时用宿主那份：
+    `tests/test_v83_explore_egg.py:42-44`（`roll_wild_encounter` / `roll_poi` / `roll_explore_egg`）·
+    `test_v97_03_event_templates.py:129`（`roll_explore_event`）·
+    `test_v1307_zone_risk.py:90-91` / `test_v1308_lv_jitter.py:109-110`（`today_event_effects`）。
+    `b2_impact.md:100` 对 `explore_king` 的要求同样适用于聚合层：宿主模块属性是测试的替换点。
+    只查**已加载**模块，**绝不 import 宿主模块树**。
+    """
+    for _full in (_HOST_PKG + ".content", _HOST_PKG_FALLBACK + ".content"):
+        _m = sys.modules.get(_full)
+        if _m is None:
+            continue
+        _cur = getattr(_m, name, None)
+        if _cur is not None and _cur is not pkg_obj:
+            return _cur
+    return pkg_obj
 
 
-C = _HostMod("content")     # 真源 `from .. import content as C`
-from ._pkgref import DB as db
-
-from .constants import ACT_TICK
-LOG = _LazyHostAttr("log_setup", "LOG")
+def today_event_effects(*args, **kwargs):
+    """真源 `..daily_events.today_event_effects`（+ 聚合层覆写面，见 `_overlay`）。"""
+    return _overlay("today_event_effects", _pkg_today_event_effects)(*args, **kwargs)
 
 
-def _host_level_up(group_id, qq_id, player):
-    """真源 `from ..content_rules.gameplay import check_player_level_up`（宿主边界：写库/写背包）。"""
-    from .gameplay_rules import check_player_level_up as _pkg_level_up
-    return _pkg_level_up(group_id, qq_id, player)
+def roll_poi(*args, **kwargs):
+    """真源 `..pois.roll_poi`（+ 聚合层覆写面，见 `_overlay`）。"""
+    return _overlay("roll_poi", _pkg_roll_poi)(*args, **kwargs)
 
 
-def check_player_level_up(*args, **kwargs):
-    """升级结算（真源模块级同名 import）—— 惰性同名包装，正文调用点一字未改。"""
-    return _host_level_up(*args, **kwargs)
+def roll_explore_egg(*args, **kwargs):
+    """真源 `..events.roll_explore_egg`（+ 聚合层覆写面，见 `_overlay`）。"""
+    return _overlay("roll_explore_egg", _pkg_roll_explore_egg)(*args, **kwargs)
 
 
-def _host_wild_king(name):
-    """真源 `from ..core.wild_king import ...` —— 经**宿主命令模块**属性解析（见头注 ★）。"""
-    return _host_attr("commands.combat", name)
+def roll_explore_event(*args, **kwargs):
+    """真源 `..events.roll_explore_event`（+ 聚合层覆写面，见 `_overlay`）。"""
+    return _overlay("roll_explore_event", _pkg_roll_explore_event)(*args, **kwargs)
+
+
+def roll_wild_encounter(*args, **kwargs):
+    """真源 `..wild.roll_wild_encounter`（+ 聚合层覆写面，见 `_overlay`）。"""
+    return _overlay("roll_wild_encounter", _pkg_roll_wild_encounter)(*args, **kwargs)
+
+
+def _wild_king(name):
+    """野王四函数（真源 `..core.wild_king`）：**包内直取优先** + 宿主命令模块属性覆写。
+
+    `game/core/wild_king.py` 是纯壳（`sys.modules[__name__] = content.wild_king`）⇒ 生产上
+    `game.commands.combat.<名>` **is** `content.wild_king.<名>`；仅当被测试改绑
+    （`tests/test_v1307_zone_risk.py:65` / `tests/test_v1308_lv_jitter.py:70`）时两者不同 →
+    用宿主那份（`b2_impact.md:100` 明确要求保住该 monkeypatch 点）。只查**已加载**模块，
+    **绝不 import 宿主模块树**。
+    """
+    _fn = getattr(_WK, name)
+    for _full in (_HOST_PKG + ".commands.combat", _HOST_PKG_FALLBACK + ".commands.combat"):
+        _m = sys.modules.get(_full)
+        if _m is None:
+            continue
+        _cur = getattr(_m, name, None)
+        if _cur is not None and _cur is not _fn:
+            return _cur
+    return _fn
 
 
 def explore_king(*args, **kwargs):
-    return _host_wild_king("explore_king")(*args, **kwargs)
+    return _wild_king("explore_king")(*args, **kwargs)
 
 
 def build_king_monster(*args, **kwargs):
-    return _host_wild_king("build_king_monster")(*args, **kwargs)
+    return _wild_king("build_king_monster")(*args, **kwargs)
 
 
 def open_chest(*args, **kwargs):
-    return _host_wild_king("open_chest")(*args, **kwargs)
+    return _wild_king("open_chest")(*args, **kwargs)
 
 
 def wild_king_summary(*args, **kwargs):
-    return _host_wild_king("wild_king_summary")(*args, **kwargs)
+    return _wild_king("wild_king_summary")(*args, **kwargs)
+
+
+# ---- 宿主边界 ③：attach_tlog（接口表第 11 行冻结注入名）+ 结算句柄（第 12 行注入名 db/content）----
+
+def _attach_tlog(b, *, btype="monster", player=None, enemies=None, seed=None):
+    """流水挂载（接口表第 11 行：宿主壳 `game/services/battle_bridge.py:203` 注入名 = `attach_tlog`）。
+
+    · 注入优先（波2 宿主壳 `bind_host(attach_tlog=…)`）；
+    · 过渡期（宿主冻结）取**已加载**的宿主 `services.battle_bridge.attach_tlog`（只查 sys.modules，
+      **不 import 宿主模块树**）；
+    · 都没有 → **抛**（fail-closed：开战流水静默不挂 = 平台缺陷被吞）；句柄在但流水未启用 →
+      宿主契约自返回 `b`（零行为，`game/tlog_setup.py:98-124`）。
+    """
+    _fn = _INJECTED.get("attach_tlog")
+    if _fn is None:
+        for _full in (_HOST_PKG + ".services.battle_bridge",
+                      _HOST_PKG_FALLBACK + ".services.battle_bridge"):
+            _m = sys.modules.get(_full)
+            if _m is not None:
+                _fn = getattr(_m, "attach_tlog", None)
+                if _fn is not None:
+                    break
+    if _fn is None:
+        raise RuntimeError(
+            "content.combat_cmds：attach_tlog 取不到（波2 宿主壳未注入且宿主模块未加载）"
+            "——拒绝静默不挂流水")
+    return _fn(b, btype=btype, player=player, enemies=enemies, seed=seed)
+
+
+class _EventStateView(dict):
+    """宿主 db → 包内 `event_state` 协议替身（逐字等价宿主壳 `game/services/battle_bridge.py:122`）。
+
+    接口表第 11 行把 `_EventStateView` 记为宿主独有 ⇒ 等价实现落在本文件。三动词转发宿主 db；
+    `dict` 子类只为满足包内 `isinstance(event_state, dict)` 守卫（键值不落本对象）。
+    """
+
+    __slots__ = ("_db",)
+
+    def __init__(self, db):
+        super().__init__()
+        self._db = db
+
+    def get(self, key, default=None):
+        v = self._db.get_event_state(key)
+        return default if v is None else v
+
+    def __setitem__(self, key, value):
+        self._db.set_event_state(key, value)
+
+    def pop(self, key, default=None):
+        v = self._db.get_event_state(key)
+        if v is None:
+            return default
+        self._db.delete_event_state(key)
+        return v
+
+
+def _es_arg(db):
+    """宿主第三参 `db` → 包内 `event_state` 替身（宿主壳 `_es_arg` 逐字等价）。"""
+    return _EventStateView(db or _settle_db())
+
+
+class _SettleHost:
+    """`content/settlement.py` 的服务句柄（真源 = 宿主壳 `_Host`；接口表第 12 行冻结注入名 db/content）。
+
+    · `db` / `content` = 宿主壳 `game/commands/combat.py:65` 注入的句柄（本文件 `bind_host` 唯一注入口）；
+      `content` 是**宿主内容聚合层** —— 该单元的设计如此（材料/物品/符文/宠物/公会/世界事件表
+      未进包，见 `content/settlement.py` 头注）；
+    · 其余 5 名 = 包内同源物（真源宿主壳 `_Host` 里那 5 个也只是薄壳转发，实测**同一对象**：
+      `out/evidence/identity_probe.txt`）。
+    """
+
+    __slots__ = ()
+
+    @property
+    def db(self):
+        return _INJECTED.get("db") or db
+
+    @property
+    def C(self):                                        # noqa: N802（沿用真源 `_Host.C` 名）
+        _mod = _INJECTED.get("content")
+        if _mod is None:
+            for _full in (_HOST_PKG + ".content", _HOST_PKG_FALLBACK + ".content"):
+                _mod = sys.modules.get(_full)
+                if _mod is not None:
+                    break
+        if _mod is None:
+            raise RuntimeError("content.combat_cmds：结算句柄 content（宿主内容聚合层）取不到"
+                               "——拒绝静默空跑")
+        return _mod
+
+    resolve_drop = staticmethod(_resolve_drop)
+    player_final_stats = staticmethod(player_final_stats)
+    race_stats = staticmethod(race_stats)
+    rule_fire = staticmethod(_rule_fire)
+    stat_bonus = staticmethod(_stat_bonus)
+
+
+def _settle_db():
+    """结算/开战句柄的存储层（宿主注入优先 → 包内存储句柄）。"""
+    return _INJECTED.get("db") or db
+
+
+def _settle_host():
+    """取结算句柄（每次调用现取，与真源 `_host()` 同刻同义）。"""
+    return _SettleHost()
+
+
+class CombatCmds:
+    """`game.commands.combat.CombatCmds` 的**类入口包内等价面**（B2-C1；接口表第 2 行「公开名」）。
+
+    ⚠️ 单一来源：下面这批类级常量表**逐字取自宿主类** `game/commands/combat.py`（B10-L5 起宿主类
+    保留原表、包内实现体经 `self._X` 读**同一份**）。本波宿主冻结 ⇒ 包内这份是**等价面**
+    （供跨模块读者用：`content/player_cmds.py:1558` 的 `CombatCmds._EFFECT_CN`）；B4 删宿主壳时
+    宿主那份消失、包内这份即唯一来源。对拍证据 = `out/evidence/combatcmds_tables.txt`
+    （逐表值 / 类型 / dict 键序全等，不等 0）。
+
+    命令方法本体不在这里 —— 它们是本模块的 **74 个模块级函数**（宿主壳逐个转发调它们）。
+    """
+
+    _RAIN_WINDOW = 1800  # 30 分钟
+    
+    _EXPLORE_RECENT_KEY = "explore_recent_{gid}_{qq_id}"
+    
+    _EXPLORE_RECENT_MAX = 3
+    
+    _MECH_CN = {"rage": "狂暴", "burn": "灼烧", "freeze": "冰冻", "poison": "中毒", "mark": "标记",
+                "shadow": "影袭", "chi": "气力", "wind": "风印", "judge": "审判", "bless": "神恩",
+                "iron": "铁壁", "shield": "圣盾", "arcane": "奥术", "cleanse": "净化", "stun": "眩晕",
+                "spd_down": "减速", "mark_burst": "引爆", "arcane_burst": "奥爆",
+                "bleed": "流血", "bone_rush": "骸骨", "corros": "腐蚀", "curse": "诅咒",
+                "curse_refresh": "诅咒刷新", "element_burst": "元素引爆", "element_burst_3": "三系引爆",
+                "element_burst_all": "全系引爆", "element_multi_mark": "多系印记", "faith_unload": "卸负",
+                "finisher": "终结", "fire_mark": "火印", "guard_core_burst": "磐核爆发",
+                "hunt_mark": "猎印", "ice_mark": "冰印", "lian_duan": "连段", "melody": "旋律",
+                "melody_chant": "吟唱", "poison_burst": "毒爆", "poison_burst_finisher": "毒爆终结",
+                "sacrifice": "献祭", "silence": "沉默", "soul_mark": "魂印", "thunder_mark": "雷印",
+                "zhan_yi": "战意", "zhan_yi_cash": "战意兑换", "zhan_yi_fury": "战意狂暴"}
+    
+    _EFFECT_CN = {"atk_up": "攻击", "def_up": "防御", "matk_up": "魔攻", "spd_up": "速度", "crit_up": "暴击",
+                  "atk_up_strong": "强攻", "matk_up_strong": "强魔攻", "mon_atk_down": "威压", "lifesteal": "吸血",
+                  "counter": "反击", "rage_burst": "爆发", "burn_burst": "引爆", "bless_shield": "护盾",
+                  "all_stat_cc": "全属性", "arcane_field": "奥术力场", "arcane_matrix": "奥术矩阵",
+                  "arcane_shield": "相位盾", "atk_all": "全队攻击", "atk_matk_all": "全队攻魔",
+                  "block_reflect": "格挡反伤", "cc_immune": "免控", "cleanse": "净化", "cleanse_all": "净化全队",
+                  "crit_all": "全队暴击", "crit_hit_buff": "暴击命中", "disengage_dodge": "脱战闪避",
+                  "dodge_buff": "闪避", "dodge_reduce_all": "全队闪避", "element_switch": "换系",
+                  "hunt_team_dmg": "猎杀增伤", "matk_all": "全队魔攻", "protect": "守护",
+                  "reduce": "减伤", "reduce_all": "全队减伤", "reduce_shield_all": "减伤护盾",
+                  "shadow_dance": "影舞", "shield_all": "全队护盾", "shield_all_reduce": "护盾减伤",
+                  "shield_block": "格挡盾", "shield_self": "护盾", "spd_all": "全队速度",
+                  "spd_buff": "加速", "star_lock": "星轨锁定", "stealth": "潜行", "stealth_cc": "影遁",
+                  "taunt": "嘲讽", "vuln": "死亡标记"}
+    
+    _P_BUFF_NAMES = {
+        "atk_up": "⚔️攻击↑", "atk_up_strong": "⚔️攻击↑↑", "matk_up": "🔮魔攻↑",
+        "matk_up_strong": "🔮魔攻↑↑", "def_up": "🛡️防御↑", "spd_up": "💨速度↑",
+        "crit_up": "💥暴击↑", "counter": "🔄反击", "mon_atk_down": "😵敌攻↓",
+        "food_atk_up": "🍖攻↑", "food_def_up": "🍖防↑", "food_spd_up": "🍖速↑",
+        "food_crit_up": "🍖暴击↑", "food_matk_up": "🍖魔攻↑",
+        # v101.28f 药水强度分档 + 特殊效果
+        "atk_up_big": "⚔️攻击↑↑", "atk_up_small": "⚔️攻击↑", "spd_up_small": "💨速度↑",
+        "crit_up_small": "💥暴击↑", "crit_up_big": "💥暴击↑↑",
+        "next_atk_up": "⚔️蓄力", "heal_up": "✨治疗↑", "magic_resist": "🛡️魔抗↑",
+        "thorns_pot": "🌵反伤", "dodge_pot": "💨闪避", "cc_immune": "🗿免疫控制",
+        "execute_pot": "💀处决",
+        "stun": "🌀眩晕", "freeze": "❄️冻结", "silence": "🤐沉默",
+        "mortal_wound": "🤕重伤",
+        # v125.1 P2-4：补漏显键（对照 BUFF_MULT 24 键 + 全量 p_buffs 写入点）
+        "echo_bless": "✨回声祝福", "matk_up_pot": "🔮魔攻↑", "food_spd_up_small": "🍖速↑",
+        "pene_pot": "🗡️物穿", "pene_magi_pot": "🔮法穿", "lifesteal_pot": "🩸吸血",
+        "crit_dmg_pot": "💥暴伤", "block_pot": "🧱格挡",
+        "spd_down": "💨减速", "atk_down": "😵攻↓", "revenge_atk": "⚔️复仇",
+        "spellblade_surge": "🔮魔涌", "stealth": "🌫️潜行", "dodge_up": "💨闪避↑",
+        # 注：atk_down 由 Boss 开场技『低吼削弱』写入（battle_mech.py _b_opening），
+        # 目前无属性消费端（死键）——状态栏照实显示作透明标注，待数值接入
+        # 注：reduce_all 存减伤百分比（float）且刻数由 _reduce_all_left 单独计时，
+        # 无刻数可显示，故意不进本表（避免"剩0.3 刻"误导）
+    }
+    
+    _E_BUFF_NAMES = {
+        "freeze": "❄️冻结", "stun": "🌀眩晕", "silence": "🤐沉默",
+        "mon_atk_down": "😵攻↓", "mon_atk_up": "⚔️攻↑",
+        "mon_atk_up_strong": "⚔️攻↑↑", "mon_def_up": "🛡️防↑", "def_down": "💔破甲",
+        "spd_down": "💨减速", "poison": "☠️中毒", "mark": "🎯标记", "burn": "🔥灼烧",
+        "summon": "👥召唤", "mortal_wound": "🤕重伤",
+        # v125.1 P2-4：补漏显键（对照全量 e_buffs 写入点：Boss 盾/速/睡眠/减速 + 元素印记）
+        "shield": "🛡️护盾", "spd_up": "💨速↑", "sleep": "😴睡眠",
+        "mon_spd_down": "💨减速", "fire_mark": "🔥火印", "ice_mark": "❄️冰印",
+        "thunder_mark": "⚡雷印",
+    }
+    
+    _STACK_NAMES = {
+        "burn": "🔥灼烧", "poison": "☠️毒层", "rage": "🔥狂暴", "shadow": "🌑影袭",
+        "chi": "🌀气力", "judge": "⚖️审判", "mark": "🎯标记", "wind": "💨风印",
+        "iron": "🪨铁壁", "shield": "🛡️圣盾", "bless": "✨神恩",
+    }
+    
+    _ENEMY_MECH_STACKS = ("burn", "poison", "mark", "bleed")
+    
+    _DEBUFF_NAMES = {
+        "poison": "☠️毒", "burn": "🔥灼烧", "mark": "🎯标记", "bleed": "🩸流血",
+    }
+    
+    _DF139_CLASS_FORMS = {
+        "cls_zhan_shi": ("狂暴", "fury"),
+    }
+    
+    _FINISHER139_OPTIONS = ("快刀", "满刃", "残血", "满段")
+    
+    _ARCANE_FIELD_OPTIONS = ("盾", "刃")
+
+
+
+class _PoiDom:
+    """`content/effects/poi_effects.py` 的 `dom` 替身（该文件头 §② 契约：内容域访问）。
+
+    真源 = 宿主薄聚合层 `C`；本文件按调用方契约给**包内等价物**（逐名到包内家，名字集由
+    `out/evidence/poi_contract.txt` 的 AST 扫描定全 —— 漏名即 AttributeError）：
+    `pools`（文案池）· `living_members` / `set_alive`（副本名单视图）·
+    `resolve` / `display` / `roll_blueprint` / `generate_equip`（函数读口）。
+    """
+
+    @staticmethod
+    def pools(name):
+        return getattr(_cr, name)
+
+    living_members = staticmethod(_IR.living_members)
+    set_alive = staticmethod(_IR.set_alive)
+    resolve = staticmethod(_resolve)
+    display = staticmethod(_display)
+
+    @staticmethod
+    def roll_blueprint(*args, **kwargs):
+        return _drops("roll_blueprint")(*args, **kwargs)
+
+    @staticmethod
+    def generate_equip(*args, **kwargs):
+        return _drops("generate_equip")(*args, **kwargs)
 
 
 
@@ -491,7 +775,7 @@ async def explore(self, event: AstrMessageEvent, group_id, qq_id, player):
             return
         db.set_event_state(_town_cd_key, str(time.time()))
         cur_sa_id_poi = player.get("cur_subarea") or ""
-        poi_hit = C.roll_poi(group_id, qq_id, cur, cur_sa_id_poi, chance=0.15)
+        poi_hit = roll_poi(group_id, qq_id, cur, cur_sa_id_poi, chance=0.15)
         if poi_hit:
             poi_id, poi = poi_hit
             # v105 M23 P2-3：POI 每日重置（策划案 02 章 7.6 阶段 D）——本日已触发则本次不再触发
@@ -532,7 +816,7 @@ async def explore(self, event: AstrMessageEvent, group_id, qq_id, player):
             return
         # 野王在场：构造野王战斗（血量弹性按参战人数）→ 保存战斗状态
         monster = build_king_monster(_king, cur_map, player)
-        group = C.build_monster_group(monster, cur_map, player, scale_main=False)
+        group = build_monster_group(monster, cur_map, player, scale_main=False)
         b = self._open_battle(player, group, "monster", group_id=group_id, qq_id=qq_id)
         db.save_battle(group_id, qq_id, b.to_state())
         self._lock_battle(group_id, qq_id)
@@ -547,7 +831,7 @@ async def explore(self, event: AstrMessageEvent, group_id, qq_id, player):
             f"你的行动：{_acts}"
         )
         return
-    wild = C.roll_wild_encounter(group_id, qq_id, player, cur)
+    wild = roll_wild_encounter(group_id, qq_id, player, cur)
     if wild:
         nid, wnpc = wild
         _ta = "她" if wnpc.get("gender") == "女" else "他"  # v95 #141：代词跟随 NPC 性别
@@ -563,23 +847,23 @@ async def explore(self, event: AstrMessageEvent, group_id, qq_id, player):
     # v87 02 章 7.6：POI 探索点独立判定（15%）
     # v87.9 修复：放在随机事件之前——事件命中直接 return 会吞掉 POI 判定，导致挂载了却探索不到
     # v94 体力：野外探索消耗 1 体力（偶遇 NPC 不消耗）；v101.13 坐骑 stamina_reduce 概率免费（流程照常，只免体力）
-    _stam_cost = 0 if random.random() < float(C.mount_effects(player).get("stamina_reduce", 0) or 0) else 1
+    _stam_cost = 0 if random.random() < float(_mount_effects(player).get("stamina_reduce", 0) or 0) else 1
     if _stam_cost > 0:
         _ok, _st = self._spend_stamina(group_id, qq_id, _stam_cost, player, "探索")
         if not _ok:
             yield event.plain_result(_st)
             return
     # v115 今日奇遇：取当前野外图的当日效果（无奇遇返回 {}，A/C 未就绪时 getattr 兜底）
-    _fx = getattr(C, "today_event_effects", lambda m: {})(cur)
+    _fx = today_event_effects(cur)
     # v115 隐藏房间探索计数：每次野外探索成功扣体力后累加（A 提供的 bump_explore_count）
-    _bump_fx = getattr(C, "bump_explore_count", None)
+    _bump_fx = _bump_explore_count
     if _bump_fx is not None:
         try:
             _bump_fx(group_id, qq_id, cur)
         except Exception:
             pass
     cur_sa_id_poi = player.get("cur_subarea") or ""
-    poi_hit = C.roll_poi(group_id, qq_id, cur, cur_sa_id_poi, chance=0.15)
+    poi_hit = roll_poi(group_id, qq_id, cur, cur_sa_id_poi, chance=0.15)
     if poi_hit:
         poi_id, poi = poi_hit
         # v105 M23 P2-3：POI 每日重置——本日已触发则该 POI 本次不触发，继续后续事件/遇怪流程
@@ -592,9 +876,9 @@ async def explore(self, event: AstrMessageEvent, group_id, qq_id, player):
     # v105 M23 P1-1：探索彩蛋独立判定（02 章 7.5『总概率 0.5%』）——原实现嵌在
     # _handle_explore_event 的 35% 事件窗口内（实际 0.35×0.005=0.175%），移出到
     # 遇怪/事件/彩蛋三路并列，命中直接返回，恢复策划案 ~0.5% 总概率
-    egg = C.roll_explore_egg(cur_map.get("id"))
+    egg = roll_explore_egg(cur_map.get("id"))
     if egg:
-        EventContext, execute_event_template = _host_attrs("core.event_templates", "EventContext", "execute_event_template")
+        EventContext, execute_event_template = _ET.EventContext, _ET.execute_event_template
         egg_ctx = EventContext(group_id, qq_id, player, cur_map,
                                params=egg.get("params", {}), name=cur_map.get("name", "此地"),
                                hooks={"title_bonus": lambda q: self._title_bonus(group_id, q)})
@@ -686,7 +970,7 @@ async def explore(self, event: AstrMessageEvent, group_id, qq_id, player):
     if hm:
         monster, tag, flavor = hm
         # v2 多对多：隐藏怪经 build_monster_group 生成敌方阵列（精英带爪牙）后传入 Battle
-        group = C.build_monster_group(monster, cur_map, player)
+        group = build_monster_group(monster, cur_map, player)
         b = self._open_battle(player, group, "monster", group_id=group_id, qq_id=qq_id)
         db.save_battle(group_id, qq_id, b.to_state())
         self._lock_battle(group_id, qq_id)
@@ -720,10 +1004,10 @@ async def explore(self, event: AstrMessageEvent, group_id, qq_id, player):
     eb = self._mount_explore_bonus(player)
     # v115 今日奇遇：精英遭遇率叠加 elite_chance
     if sa_elite and (random.random() < (0.08 + eb + _fx.get("elite_chance", 0)) or not events):
-        monster = C.build_monster(sa_elite, cur_map)
+        monster = build_monster(sa_elite, cur_map)
         tag = "⭐ 精英"
     elif sa_boss and (random.random() < _cc.SA_BOSS_CHANCE or not events):
-        monster = C.build_monster(sa_boss, cur_map)
+        monster = build_monster(sa_boss, cur_map)
         tag = "👑 BOSS"
         # v95.20 #101：Boss 战无法逃跑且每刻耗体力，体力低时预警，避免中途耗尽被困
         if (player.get("stamina") or 0) < 20:
@@ -732,7 +1016,7 @@ async def explore(self, event: AstrMessageEvent, group_id, qq_id, player):
         # v101.25c 怪物等级波动：普通怪 ±1 级（精英/Boss 固定）——同图练级不单调
         # v130.8 意见#32：±1 感知弱 → 增强为 ±2；v132 鱼鱼拍板改回 ±1（"随机等级大概在正负1就行了"，
         # 面板已明示 Lv.X±1 → 波动感知由展示层承担，数值层收敛防等级飘移）
-        monster = C.build_monster(random.choice(events)[1], cur_map, lv_jitter=1)
+        monster = build_monster(random.choice(events)[1], cur_map, lv_jitter=1)
         # v2 多对多：普通怪 60% 单只 / 40% 双只——用确定性哈希决定（v103 铁律：不新增 random
         # 调用点；monster_id+lv 唯一确定同一只怪是否双只，不改变既有 random 调用顺序/结果）
         _double = hash(monster.get("id", "") + "_" + str(monster.get("lv", 0))) % 100 < 40
@@ -761,7 +1045,7 @@ async def explore(self, event: AstrMessageEvent, group_id, qq_id, player):
     # 保存战斗状态（v9 统一引擎）
     # v2 多对多：经 build_monster_group 生成敌方阵列（普通怪 single/double；精英带爪牙；
     # Boss 带 2 爪牙）后传入 Battle 构造（enemies 参数）
-    group = C.build_monster_group(monster, cur_map, player, double=double)
+    group = build_monster_group(monster, cur_map, player, double=double)
     b = self._open_battle(player, group, "monster", group_id=group_id, qq_id=qq_id)
     db.save_battle(group_id, qq_id, b.to_state())
     self._lock_battle(group_id, qq_id)
@@ -892,19 +1176,18 @@ def _open_battle(self, player: dict, enemies: list, btype: str = "monster",
     ③ 装备装配（weapon_effect + affix → actor.triggers，N9/N9.7 已支持）
     ④ 构造 Battle
     """
-    BR = _host_module("services.battle_bridge")
     tb = self._title_bonus(group_id, qq_id) if (group_id is not None and qq_id is not None) else {}
-    BR.prepare_player_for_battle(player, tb, db)
-    sides = BR.build_sides(player=player, enemies=enemies)
+    _BR.prepare_player_for_battle(player, tb, _es_arg(db))
+    sides = _BR.build_sides(player=player, enemies=enemies)
     # 装备词条 + 职业机制 + 外部增幅容器（序列收敛于 BR.apply_battle_loadout，
     # 与数值门禁 tests/numeric_sim.py 同源）
     for _a in sides.get("player", []):
-        BR.apply_battle_loadout(_a, tb)
+        _BR.apply_battle_loadout(_a, tb)
     from saintess_engine import Battle as B2
     b = B2(btype, sides=sides, title_bonus=tb,
            pet=pet if pet is not None else db.pet_get(qq_id))
     # 流水采集（可拔插：未启用 DRAGONFALL_TLOG / 未 enable 时为 no-op，见 game/tlog_setup.py）
-    return BR.attach_tlog(b, btype=btype, player=player, enemies=enemies)
+    return _attach_tlog(b, btype=btype, player=player, enemies=enemies)
 
 def _restore_battle(self, state: dict) -> "object":
     """恢复 saintess_engine 战斗（from_state）。旧格式（无 sides）→ None（命令层清档重开）。"""
@@ -918,8 +1201,7 @@ def _sync_battle_player(self, player: dict, b) -> None:
     try:
         _f = b.focus() if hasattr(b, "focus") else None
         if _f:
-            sync_player_from_actor = _host_attr("services.battle_bridge", "sync_player_from_actor")
-            sync_player_from_actor(player, _f)
+            _BR.sync_player_from_actor(player, _f)
     except Exception:
         pass  # 回写异常不阻断（player 可能为空/半构造）
 
@@ -968,7 +1250,7 @@ def _roll_hidden_monster(self, group_id, qq_id, player, cur_map):
         lv = max(1, base_lv + hdef.get("lv_off", 0))
         monster_def = (hid, hdef["name"], hdef.get("role", "elite"), lv,
                        hdef.get("skills", []), hdef.get("drops", []))
-        monster = C.build_monster(monster_def, cur_map)
+        monster = build_monster(monster_def, cur_map)
         # 隐藏怪金币加成（gold_mult 倍）
         gold_extra = monster.get("gold", 0) * hdef.get("gold_mult", 1)
         monster["gold"] = gold_extra
@@ -999,7 +1281,7 @@ async def wish(self, event: AstrMessageEvent, group_id, qq_id, player, opt):
         return
     db.set_event_state(f"wish_{group_id}_{qq_id}", "")
     if opt == "经验":
-        need = C.exp_to_next(player["level"]) - player["exp"]
+        need = _exp_to_next(player["level"]) - player["exp"]
         gain = max(20, int(need * 0.2))
         db.update_player(group_id, qq_id, exp=player["exp"] + gain)
         player = self._player(group_id, qq_id)
@@ -1014,13 +1296,13 @@ async def wish(self, event: AstrMessageEvent, group_id, qq_id, player, opt):
     else:
         # v101.4：流星愿望材料池数据化 → data/poi_pools.py WISH_POOL
         mat = random.choice(_b143.WISH_POOL)
-        mid = C.resolve("materials", mat)
+        mid = _resolve("materials", mat)
         if mid in _ci.MATERIALS:
             db.add_item(group_id, qq_id, mid,
-                        {"name": C.display("materials", mid), "type": "材料",
+                        {"name": _display("materials", mid), "type": "材料",
                          "stackable": True, "price": _ci.MATERIALS[mid]["price"]})
-        msg = f"🎒 流星回应了你的愿望！获得材料：{C.display('materials', mid)}"
-    C.check_achievements(group_id, qq_id, player, {"wish_met": True})
+        msg = f"🎒 流星回应了你的愿望！获得材料：{_display('materials', mid)}"
+    _check_achievements(group_id, qq_id, player, {"wish_met": True})
     yield event.plain_result(f"🌠 【许愿成真】{msg}")
 
 async def trader_confirm(self, event: AstrMessageEvent, group_id, qq_id):
@@ -1176,10 +1458,10 @@ def _handle_explore_event(self, group_id, qq_id, player, cur_map, _fx=None):
     if find_lines:
         return True, find_lines
     name = cur_map.get("name", "此地")
-    EventContext, execute_event_template = _host_attrs("core.event_templates", "EventContext", "execute_event_template")
+    EventContext, execute_event_template = _ET.EventContext, _ET.execute_event_template
     # v105 M23 P1-1：探索彩蛋已移出本函数（explore() 事件窗口外独立判定，见 combat.py 探索入口），
     # 此处不再 roll 彩蛋——避免彩蛋再次被 35% 事件窗口吞掉导致实际概率只剩 0.175%
-    ev = C.roll_explore_event(exclude=self._recent_explore_events(group_id, qq_id))
+    ev = roll_explore_event(exclude=self._recent_explore_events(group_id, qq_id))
     ctx_kw = {"params": ev.get("params", {}), "name": name,
               "hooks": {"title_bonus": lambda q: self._title_bonus(group_id, q)}}
     _fx = _fx or {}
@@ -1235,15 +1517,16 @@ def _handle_poi(self, group_id, qq_id, player, cur_map, poi_id, poi, st=None):
     未知效果显式告警（不再静默 fallback 吞掉数据拼写错误）。
     st 为副本战斗上下文（副本内联 POI 时传入）。
     """
-    PoiContext, execute_poi = _host_attrs("core.poi_effects", "PoiContext", "execute_poi")
+    PoiContext, execute_poi = _POI.PoiContext, _POI.execute_poi
     eff = f"inst:{poi.get('type')}" if poi.get("type") else poi.get("effect", "")
     ctx = PoiContext(group_id, qq_id, player, cur_map, poi_id, poi, st=st,
-                     hooks={"mark_used": self._mark_poi_used, "player": self._player})
+                     hooks={"mark_used": self._mark_poi_used, "player": self._player},
+                     host=db, dom=_PoiDom)
     text = execute_poi(eff, ctx)
     if text is not None:
         return text
     # 未知 effect：显式告警（防数据拼写错误被静默吞掉）
-    LOG.warning(
+    _obs.log().warning(
         "[dragonfall] 未知 POI effect %r（poi_id=%s），效果未结算——"
         "请检查 data/pois.py 或 instance_stage_maps.py", eff, poi_id)
     if poi.get("type"):
@@ -1372,7 +1655,7 @@ async def skill(self, event: AstrMessageEvent, group_id, qq_id, player, skill_na
     bar = db.get_skill_bar(qq_id)
     _valid_bar = [s for s in (bar or []) if s and skill_info(player["class_name"], s)]
     if not _valid_bar:
-        learned = [C.display("skills", s) for s in (player.get("learned_skills") or []) if s]
+        learned = [_display("skills", s) for s in (player.get("learned_skills") or []) if s]
         if learned:
             new_bar = list(learned[:6])
             while len(new_bar) < 6:
@@ -1381,7 +1664,7 @@ async def skill(self, event: AstrMessageEvent, group_id, qq_id, player, skill_na
             bar = new_bar
     elif len(_valid_bar) != len(bar or []):
         # 部分无效：保留有效项，缺口用已学技能补（不整体重置）
-        learned = [C.display("skills", s) for s in (player.get("learned_skills") or []) if s]
+        learned = [_display("skills", s) for s in (player.get("learned_skills") or []) if s]
         _fill = [s for s in learned if s not in _valid_bar]
         new_bar = list(_valid_bar)
         for _s in _fill:
@@ -1499,7 +1782,7 @@ async def skill(self, event: AstrMessageEvent, group_id, qq_id, player, skill_na
     info = skill_info(player["class_name"], skill_name)
     if not info:
         # v95.25 #145：报错读 learned_skills（v52 后 skills 列不再更新），并引流『技能列表』
-        learned = [C.display("skills", s) for s in (player.get("learned_skills") or [])]
+        learned = [_display("skills", s) for s in (player.get("learned_skills") or [])]
         learned_str = "、".join(learned) if learned else "无（『技能列表』查看可学技能）"
         yield event.plain_result(
             f"没有技能『{skill_name}』！你当前的技能：{learned_str}"
@@ -1657,12 +1940,12 @@ def _skill_panel(self, player: dict) -> str:
     learned = player.get("learned_skills", [])
     # v101.20：已学导师专属技能计入总数（避免"已学>总数"怪相）
     _tutor = (_cc.TUTOR_SKILLS or {}).get(cls, {}) or {}
-    _tutor_learned = sum(1 for _sid in _tutor if _sid in [C.resolve("skills", s) for s in learned if s])
+    _tutor_learned = sum(1 for _sid in _tutor if _sid in [_resolve("skills", s) for s in learned if s])
     total += _tutor_learned
     have = len(learned)
     pts = player.get("skill_points", 0)
     lines = [
-        f"⚔️ 【技能系统】 {cls_info.get('icon','')}{C.display('classes', cls)} Lv.{player['level']}",
+        f"⚔️ 【技能系统】 {cls_info.get('icon','')}{_display('classes', cls)} Lv.{player['level']}",
         "━━━━━━━━━━━━",
         f"💡 技能点：{pts}(每升 1 级+1)",
         f"✅ 已学：{have}/{total} ｜ 🔒 未学：{total - have}",
@@ -1714,7 +1997,7 @@ def _player_skill_table(self, player: dict) -> dict:
     learned = player.get("learned_skills", [])
     _tutor = (_cc.TUTOR_SKILLS or {}).get(player["class_name"], {}) or {}
     for _sid, _info in _tutor.items():
-        if _sid in [C.resolve("skills", s) for s in learned if s]:
+        if _sid in [_resolve("skills", s) for s in learned if s]:
             table[_sid] = _info
     return table
 
@@ -2318,8 +2601,8 @@ def _handle_victory(self, event, group_id, qq_id, player, monster, result, extra
     掉落仍只按主怪 monster 结算一次，任务进度按全部击杀逐个计数。"""
     self._unlock_battle(group_id, qq_id)
     db.clear_battle(group_id, qq_id)
-    victory_settle = _host_attr("services.battle_settlement", "victory_settle")
-    _r = victory_settle(group_id, qq_id, player, monster, result, extra_kills=extra_kills)
+    victory_settle = _ST.victory_settle
+    _r = victory_settle(_settle_host(), group_id, qq_id, player, monster, result, extra_kills=extra_kills)
     lines = _r["lines_pre"]
     player = _r["player"]
     _rule_txt = _r["rule_txt"]
@@ -2361,14 +2644,14 @@ def _handle_victory(self, event, group_id, qq_id, player, monster, result, extra
 
 def _next_step_hint(self, group_id, qq_id, player, monster) -> str:
     """v138.3 结算卡·下一步指引（P4-9 转发壳：实现随迁 services.battle_settlement.next_step_hint）"""
-    next_step_hint = _host_attr("services.battle_settlement", "next_step_hint")
-    return next_step_hint(group_id, qq_id, player, monster)
+    next_step_hint = _ST.next_step_hint
+    return next_step_hint(_settle_host(), group_id, qq_id, player, monster)
 
 def _nearest_town(self, cur_map: str) -> str:
     """BFS 找离当前地图最近的城镇（P4-9 转发壳：实现随迁 services.battle_settlement.nearest_town，
     与回城卷轴 economy._nearest_town 同逻辑，M22 P3）。"""
-    nearest_town = _host_attr("services.battle_settlement", "nearest_town")
-    return nearest_town(cur_map)
+    nearest_town = _ST.nearest_town
+    return nearest_town(_settle_host(), cur_map)
 
 def _handle_defeat(self, event, group_id, qq_id, player, monster, result):
     """战败：扣金币/回城（不扣宠物饱食度——宽容设计，见胜利路径 1475 注释）
@@ -2379,8 +2662,8 @@ def _handle_defeat(self, event, group_id, qq_id, player, monster, result):
     行为零变化（快照测试逐字段全等）。"""
     self._unlock_battle(group_id, qq_id)
     db.clear_battle(group_id, qq_id)
-    defeat_settle = _host_attr("services.battle_settlement", "defeat_settle")
-    _r = defeat_settle(group_id, qq_id, player, monster, result)
+    defeat_settle = _ST.defeat_settle
+    _r = defeat_settle(_settle_host(), group_id, qq_id, player, monster, result)
     yield event.plain_result("\n".join(_r["lines"]))
 
 async def hunt_boss(self, event: AstrMessageEvent, group_id, qq_id, player):
@@ -2477,7 +2760,7 @@ async def hunt_boss(self, event: AstrMessageEvent, group_id, qq_id, player):
     # v1.2（契约 §11）：减益适应（毒/灼烧叠加抗性）全局共享；老存档无键 → setdefault 兜底。
     b.setdefault("adapt", {"poison": 0.0, "burn": 0.0})
     # 世界 Boss：scale_main=False（数值由事件配置，不把主怪 ×0.7；多对多才缩主怪）
-    _boss_grp = C.build_monster_group(b, wmap, player, scale_main=False)
+    _boss_grp = build_monster_group(b, wmap, player, scale_main=False)
     # DOT/减益重构（契约 §6/§11）：确保敌方阵列每个单位带 debuffs/dot_res/immune_dots/adapt。
     # 主目标从全局 b 拷入；爪牙经 _scale_monster=dict(m) 浅拷贝已带上 b 的键，这里再逐个兜底。
     _gdebuff = {k: dict(v) for k, v in (b.get("debuffs") or {}).items()}
@@ -2502,10 +2785,9 @@ async def hunt_boss(self, event: AstrMessageEvent, group_id, qq_id, player):
     b["name"] = _main.get("name", b.get("name", "?"))
     b["hp"], b["max_hp"] = _main.get("hp", 0), _main.get("max_hp", _main.get("hp", 1))
     # N5b4-3：世界Boss 切 saintess_engine（Boss 自动行动 + CTB 时间轴；dmg_mult 构造参数）
-    BR = _host_module("services.battle_bridge")
     _tb = self._title_bonus(group_id, qq_id)
-    BR.prepare_player_for_battle(player, _tb, db)
-    _sides = BR.build_sides(player=player, enemies=[dict(u) for u in _boss_grp])
+    _BR.prepare_player_for_battle(player, _tb, _es_arg(db))
+    _sides = _BR.build_sides(player=player, enemies=[dict(u) for u in _boss_grp])
     # 玩家侧 actor 塞 bonus.panel（v181.M-bonus 统一容器；Boss 敌侧不塞——回落
     # battle.title_bonus 保持 N5b4-3 行为）
     try:
@@ -2523,11 +2805,10 @@ async def hunt_boss(self, event: AstrMessageEvent, group_id, qq_id, player):
     #   → gm_伤害 曾静默失效；现走内容装配层 battle_worldboss_procs 挂 Boss actor。
     #   pet=db.pet_get() 同属「传了但引擎不读」——宠物参战归随从 actor 工厂（随从线），
     #   本处不再静默传参（传了会让人误以为宠物已参战）。
-    WBP = _host_module("services.battle_worldboss_procs")
     _wb_mult = float(db.get_boss_dmg_mult(qq_id) or 1.0)
     if _wb_mult != 1.0:
         for _a in _sides.get("enemy", []):
-            WBP.apply_gm_dmg_mult(_a, _wb_mult)
+            _WBP.apply_gm_dmg_mult(_a, _wb_mult)
     nb = B2("worldboss", sides=_sides, title_bonus=_tb)
     # 敌 actor 技能索引已由 B2 构造建立；给 Boss 配首个技能自动行动（AI 轮换属上层怪 AI 模块）
     try:
@@ -2556,8 +2837,8 @@ async def hunt_boss(self, event: AstrMessageEvent, group_id, qq_id, player):
 def _grant_worldboss_drop(self, group_id, qq_id, key):
     """v104 M06 P2-3：发放世界 Boss 特殊掉落（P4-9 转发壳：实现随迁
     services.battle_settlement.grant_worldboss_drop）。返回物品中文名或 None"""
-    grant_worldboss_drop = _host_attr("services.battle_settlement", "grant_worldboss_drop")
-    return grant_worldboss_drop(group_id, qq_id, key)
+    grant_worldboss_drop = _ST.grant_worldboss_drop
+    return grant_worldboss_drop(_settle_host(), group_id, qq_id, key)
 
 async def _worldboss_act(self, event, group_id, qq_id, player, b, action, skill_name=None, target=None):
     """世界BOSS战斗行动（attack/skill/defend 共用）
@@ -2746,13 +3027,13 @@ def _parse_target_qq(self, target_arg: str):
 
 def _red_until(self, qq_id) -> int:
     """红名截止时间（P4-9 转发壳：实现随迁 services.battle_settlement.red_until）"""
-    red_until = _host_attr("services.battle_settlement", "red_until")
-    return red_until(qq_id)
+    red_until = _ST.red_until
+    return red_until(_settle_host(), qq_id)
 
 def _is_redname(self, qq_id) -> bool:
     """P4-9 转发壳：实现随迁 services.battle_settlement.is_redname"""
-    is_redname = _host_attr("services.battle_settlement", "is_redname")
-    return is_redname(qq_id)
+    is_redname = _ST.is_redname
+    return is_redname(_settle_host(), qq_id)
 
 def _get_honor(self, qq_id) -> int:
     try:
@@ -2956,7 +3237,6 @@ async def _pvp_start(self, event, group_id, qq_id, player, target_arg):
     #   title_bonus 战斗级单份无法区分双人——各自外部增幅（core/stat_bonus.py 聚合）
     #   塞 actor["bonus"]["panel"]，stats 读 actor 优先，双方面板各自精确；
     #   battle 级传 {} 仅兜底。
-    BR = _host_module("services.battle_bridge")
     from saintess_engine import Battle as B2
     # 0. 双方各自外部增幅聚合（core 直调 + 已 load 的 player dict，避免 _title_bonus
     #    内部再读档；失败降级空 dict）
@@ -2970,7 +3250,7 @@ async def _pvp_start(self, event, group_id, qq_id, player, target_arg):
         pass
     # ① 开战仪式（仅攻击方：echo_bless/神龛祝福是发起者消耗自己的祝福；max_hp/max_mp
     #    重算带自己增幅 → 与 actor_stats 面板口径一致）
-    BR.prepare_player_for_battle(player, _tb_me, db)
+    _BR.prepare_player_for_battle(player, _tb_me, _es_arg(db))
     # ② 防守方：拷贝 + 只实时化 max_hp/max_mp（不跑仪式——防消费对方 event_state；
     #    外部增幅用防守方自己的）
     _def_p = dict(target_player)
@@ -2987,13 +3267,13 @@ async def _pvp_start(self, event, group_id, qq_id, player, target_arg):
     except Exception:
         pass
     # ③ 组 sides + 双方装备装配（PVP 双方都是真人 actor，武器/词条一视同仁）
-    _my_actor = BR.player_to_actor(player)
-    _opp_actor = BR.player_to_actor(_def_p)
+    _my_actor = _BR.player_to_actor(player)
+    _opp_actor = _BR.player_to_actor(_def_p)
     _opp_actor["side"] = "enemy"  # 防守方入敌侧（human_controlled=True 保持 → 不自动）
     # 双方装备装配（PVP 双方都是真人 actor，武器/词条一视同仁）+ 各自外部增幅容器
     #（v181.M-bonus 统一数值容器；序列收敛于 BR.apply_battle_loadout，随 actor 落盘/恢复）
-    BR.apply_battle_loadout(_my_actor, _tb_me)
-    BR.apply_battle_loadout(_opp_actor, _tb_opp)
+    _BR.apply_battle_loadout(_my_actor, _tb_me)
+    _BR.apply_battle_loadout(_opp_actor, _tb_opp)
     _b2 = B2("pvp", sides={"player": [_my_actor], "enemy": [_opp_actor]},
              title_bonus={}, pet=db.pet_get(qq_id))
     state = _b2.to_state()
@@ -3060,8 +3340,7 @@ async def _pvp_act(self, event, group_id, qq_id, player, state, action, skill_na
         return
     opp_qq = str(opp_actor.get("qq_id", "") or "")
     # PVP 战斗中血量/蓝量以战斗 state 为准（actor 副本；不写回 db，避免被重置）
-    sync_player_from_actor = _host_attr("services.battle_bridge", "sync_player_from_actor")
-    sync_player_from_actor(player, my_actor)
+    _BR.sync_player_from_actor(player, my_actor)
     if action == "skill":
         info = skill_info(player["class_name"], skill_name)
         if not info:
@@ -3097,7 +3376,7 @@ async def _pvp_act(self, event, group_id, qq_id, player, state, action, skill_na
         my_actor["defending"] = False
         opp_actor["defending"] = False
     # 回写 player dict（展示/后续结算读 player 时拿到最新值；db 不写——PVP 快照制）
-    sync_player_from_actor(player, my_actor)
+    _BR.sync_player_from_actor(player, my_actor)
     my_alive = (my_actor.get("hp") or 0) > 0
     opp_alive = (opp_actor.get("hp") or 0) > 0
     # 结果展示体（双方面板）
@@ -3211,7 +3490,7 @@ async def _pvp_finish(self, event, group_id, winner_qq, loser_qq, attacker_qq, l
 
 async def battle_prefs_form(self, event: AstrMessageEvent, group_id, qq_id, player, arg):
     lines = []
-    cls_id = C.resolve("classes", player.get("class_name", ""))
+    cls_id = _resolve("classes", player.get("class_name", ""))
     forms = self._DF139_CLASS_FORMS.get(cls_id)
     if not forms:
         lines.append("🗡️ 当前职业不支持双形态预设（狂战士/龙裔/暮影/淬势者专属）。")
@@ -3237,7 +3516,7 @@ async def battle_prefs_form(self, event: AstrMessageEvent, group_id, qq_id, play
 
 async def battle_prefs_finisher(self, event: AstrMessageEvent, group_id, qq_id, player, arg):
     lines = []
-    if C.resolve("classes", player.get("class_name", "")) != "cls_ci_ke":
+    if _resolve("classes", player.get("class_name", "")) != "cls_ci_ke":
         lines.append("🗡️ 终结阈值是刺客专属战前设置。")
         yield event.plain_result("\n".join(lines))
         return
@@ -3260,7 +3539,7 @@ async def battle_prefs_finisher(self, event: AstrMessageEvent, group_id, qq_id, 
 
 async def battle_prefs_arcane_field(self, event: AstrMessageEvent, group_id, qq_id, player, arg):
     lines = []
-    if C.resolve("classes", player.get("class_name", "")) != "cls_fa_shi":
+    if _resolve("classes", player.get("class_name", "")) != "cls_fa_shi":
         lines.append("🔮 奥术力场是法师专属战前设置。")
         yield event.plain_result("\n".join(lines))
         return

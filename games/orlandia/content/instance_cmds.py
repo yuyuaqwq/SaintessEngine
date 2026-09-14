@@ -16,8 +16,8 @@
 
 正文改动面（**只有两类**，逐行清单见 `overnight/w1213_b11l1_check.py`）
 ----------------------------------------------------------------------
-1. **宿主取件**：函数体内 `from ..X import y` → 同位置惰性替身
-   （`_HostMod` / `_host_attr` / `_host_module`，调用时解析；与 `content/world_cmds.py` 同款）。
+1. **宿主取件**：函数体内 `from ..X import y` → 同位置惰性替身（B11-L1 期写法；
+   **B2-C1 已整段收口**为包内直取 —— 见下文「宿主替身口 → 包内直取」）。
 2. **数据读口（I1）**：`C.<表>` 中**包内域逐值等同**的 3 张表切包内域读口 ——
    宿主聚合层 `CLASSES`→包内 `classes` 域 · `ITEMS`→`items` 域 · `AFFIXES`→`affixes` 域；
    **B14-2 L3（2026-09-14）**把其余 16 个数据名（67 处读点）切到包内门面
@@ -28,30 +28,43 @@
    重建，`b14_catalog_gate.py` 逐名**含键序**对拍 → **不等 0**）。只改「取值来源」，数值 / 文案 /
    遍历顺序一字未动。
 
-宿主替身口（注入优先 → sys.modules → importlib；**绝不静默空跑**）
-----------------------------------------------------------------
-| 真源写法 | 包内替身 |
+宿主替身口 → **包内直取**（★ B2-C1，2026-09-14 收口）
+------------------------------------------------------
+九个 B2 单元在本模块的读点（接口表 `overnight/B2_W0_INTERFACE.md` §1 第 3/7 行）已全部改成
+**包内直取**；逐读点对照表 = `dsh-work/b2c1/out/W-B2C1.md`，身份实测 =
+`dsh-work/b2c1/out/evidence/identity_probe.txt`。
+
+| 原读点（宿主壳） | 现取用（包内家） |
 |---|---|
-| `from .. import content as C` | `C = _HostMod("content")`（宿主聚合层，同对象） |
-| `from .. import db` | `db = _HostMod("db")` |
-| `from ..core import texts as T` | `T = _HostMod("core.texts")`（文案唯一真源 `game/data/text_specs.json`） |
-| `from ..content_rules.panel import player_final_stats` | `player_final_stats = _HostFn(...)`（宿主壳 bind_host 注入） |
-| `from ..content_rules.gameplay import resolve_drop` | `resolve_drop = _HostFn(...)` |
-| `from ..core.constants import ACT_TICK` | `ACT_TICK = _HostVal(...)`（数值代理，宿主壳注入） |
-| `from ._platform import AstrMessageEvent` | `AstrMessageEvent = _HostRef(...)`（只作类型标注） |
+| `game.commands.instance_battle`（`IB`） | `content/flow/instance_battle.py`（只调纯函数 `next_actor_key`） |
+| `game.core.instance_gate`（链 + 文案 + 2 个 DB 取数名） | `content/flow/instance_gate.py` + 本文件门面 `instance_gate` |
+| `game.commands.combat`（`pet_battle_status_note` / `resource_stack_text`） | `content/combat_cmds.py`（同一对象） |
+| `game.content` 的函数读口（15 名） | 各自包内家（13/15 与宿主聚合层**同一对象**）；2 个 drops 名见下 |
+| `game.core.texts`（`T`） | 早已是 `content/texts.py`（`from . import texts as T`） |
+| `game.content_rules.panel.player_final_stats` | `content/panel.py`（同一对象） |
+| `game.content_rules.gameplay.resolve_drop` | `content/gameplay_rules.py`（同一对象） |
+| `game.core.constants.ACT_TICK` | `content/constants.py` |
+| `game.commands._platform.AstrMessageEvent` | **删**（只作类型标注 → 按包内惯例 `from __future__ import annotations`） |
 | `IR`（副本运行态） | 包内 `content/flow/instance_run.py`（★ B11-L2 同波收口该模块：本线只用其现有 API） |
 
-★ 缺口（报告同步登记）：`C` 上仍是宿主聚合层 —— **函数读口**（`C.set_instance_st` / `C.build_monster` /
-`C.subarea_pois` / `C.resolve_map_for` / `C.display` / `C.resolve` / `C.rune_item` /
-`C.pet_exp_need` / `C.roll_blueprint` / `C.roll_gem_drop` / `C.create_instance_world` /
-`C.destroy_instance_world` / `C.get_instance_world` / `C.map_entry_subarea` / `C.subarea_links` …，
-B14-2 只裁数据名，函数归「待函数单元」）。
+仍留在**宿主边界**的只有 2 处（逐条登记在 W-B2C1 §6）：（a）`content/drops.py` 的 2 个构造器
+（`build_monster` / `roll_blueprint`）—— 接口表第 5 行冻结的落点属 **C2**，本波未落地 ⇒
+`_drops()` 过渡口回退宿主聚合层；（b）`core.instance_gate` 的 **DB 取数 2 名** +
+链入口的**猴补回挂**（`tests/test_v185_gate_teeth.py` 猴补宿主模块属性）—— 等价实现在本文件的
+门面 `instance_gate` 内（接口表第 7 行把这两名记为宿主独有）。
+
+★ 函数读口（原「归待函数单元」那批）：**B2-C1 已一并收口** —— 13 个函数名改为包内直取
+（实测与宿主聚合层 `C.<名>` **同一对象**：`out/evidence/identity_probe.txt`）；只剩 2 个
+`game.core.drops` 构造器（`build_monster` / `roll_blueprint`）走 `_drops()` 过渡口
+（包内家 = C2 的 `content/drops.py`，接口表第 5 行；本波该文件未落地）。
 ★ **W5（2026-09-14）收口**：原「2 张缺口表」已切包内门面 `_cat_b143`（门禁逐名深比较含键序 →
 **不等 0**，未自建第二份表）：`POIS`（原 5 处；真源 `game/data/pois.py:9` 的 83 条定义 →
 `game_config.pois` 域，含原包内 `pois` 域缺的 17 条世界 POI 型）· `INVESTIGATE_COLLECT_SAMPLES`
 （原 1 处；真源 `game/data/instance_investigation.py:47` 手挑 5 个收藏 id →
 `game_config.instance_investigation`）。
 """
+from __future__ import annotations
+
 import importlib
 import json
 import os
@@ -70,142 +83,180 @@ from . import catalog_life as _cat_life
 from . import catalog_quests as _cat_quests
 from . import catalog_space as _cat_space
 from . import catalog_b143 as _cat_b143   # POIS / INVESTIGATE_COLLECT_SAMPLES（W5）
+from .constants import ACT_TICK           # 真源 core.constants.ACT_TICK（同一常量）
 
 
 # ============================================================
-# ① 宿主替身口（写法照抄 content/world_cmds.py）
+# ① 包内直取 + 宿主边界（B2-C1 收口）
+# ------------------------------------------------------------
+# 旧「宿主替身口」整段（通用惰性句柄 + 动态属性解析）已删除：本文件全部读点改成包内直取。
+# 仍留在**宿主边界**的只有 2 处（逐条见 W-B2C1 §6）：
+#   1) `content/drops.py` 的 2 个构造器（`build_monster` / `roll_blueprint`）—— 接口表第 5 行
+#      冻结的 C2 落点，本波未落地 ⇒ `_drops()` 过渡口回退宿主聚合层；
+#   2) `core.instance_gate` 的 DB 取数 2 名 + 链入口猴补回挂 —— 等价实现 = 本文件门面 `instance_gate`。
 # ============================================================
+
+from .flow import instance_battle as IB         # commands.instance_battle 的包内唯一实现
+from .flow import instance_gate as _gate        # core.instance_gate 的包内唯一实现
+from .index import resolve as _resolve, display as _display
+from .worlds import (create_instance_world as _create_instance_world,
+                     destroy_instance_world as _destroy_instance_world,
+                     get_instance_world as _get_instance_world,
+                     resolve_map_for as _resolve_map_for,
+                     set_instance_st as _set_instance_st)
+from .maps import map_entry_subarea as _map_entry_subarea, subarea_links as _subarea_links
+from .pets import pet_exp_need as _pet_exp_need
+from .gems import roll_gem_drop as _roll_gem_drop
+from .runes import rune_item as _rune_item
+from .pois import subarea_pois as _subarea_pois
+from .panel import player_final_stats                  # 真源 content_rules.panel（同一对象）
+from .combat_cmds import (pet_battle_status_note as _pet_battle_status_note,
+                          resource_stack_text as _resource_stack_text)   # 同一对象（build 后不再裸引用）
+from .gameplay_rules import resolve_drop               # 真源 content_rules.gameplay（同一对象）
+from .catalog_rules import (INSTANCE_BOSS_EQUIP_DROP as _INSTANCE_BOSS_EQUIP_DROP,
+                            )                          # 真源：宿主聚合层同名（逐值相等，27 键）
+from ._pkgref import DB as db                          # 包内存储层句柄（B1 起既有）
+from . import texts as T                               # 文案表（B11-L1 起既有）
+
 _HOST_PKG = "data.plugins.dragonfall.game"
 _HOST_PKG_FALLBACK = "game"
 _INJECTED = {}
 
 
 def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = 替身要解析的名字。"""
+    """宿主薄壳 import 期注入（**兼容保留**；本文件读点已全部包内直取）。
+
+    `game/commands/instance.py:74` 仍按旧契约调用（`C` / `db` / `T` / `player_final_stats` /
+    `resolve_drop` / `ACT_TICK` / `AstrMessageEvent`）⇒ 本函数必须存在且接受这些键；值照旧记账
+    （幂等、`None` 忽略），但**本文件已无读点依赖它** —— 九个 B2 单元与本文件的函数/数据读口
+    全部改成包内直取（见头注「宿主替身口 → 包内直取」）。
+    """
     for k, v in (objs or {}).items():
         if v is not None:
             _INJECTED[k] = v
 
-
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        full = prefix if not name else "%s.%s" % (prefix, name)
-        m = sys.modules.get(full)
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module(prefix if not name else "%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("instance_cmds：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
+# ---- 宿主边界 ①：`game.core.drops` 的 2 个构造器（跨簇缺口，W-B2C1 §6 登记）----
 
 
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「函数内 from ..<mod> import <attr>」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
+def _drops(name):
+    """`game.core.drops` 的构造器（`build_monster` / `roll_blueprint`）。
+
+    包内家 = ☆`content/drops.py`（接口表第 5 行冻结的 **C2** 落点）。⚠️ 跨簇缺口：该文件属 C2 的
+    落地清单，本波（C1）尚未存在 ⇒ 过渡期回退「宿主内容聚合层属性」（= 旧 `C.<名>` 的同一取法；
+    再回落 `game.core.drops`）。C2 落地后回退分支即死，**本文件无需再改**。
+    """
     try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
+        _mod = importlib.import_module("content.drops")
+    except ImportError:
+        _mod = None
+    if _mod is not None:
+        return getattr(_mod, name)
+    _cands = (_HOST_PKG + ".content", _HOST_PKG_FALLBACK + ".content",
+              _HOST_PKG + ".core.drops", _HOST_PKG_FALLBACK + ".core.drops")
+    for _full in _cands:
+        _m = sys.modules.get(_full)
+        if _m is not None and hasattr(_m, name):
+            return getattr(_m, name)
+    _last = None
+    for _full in _cands:
+        try:
+            return getattr(importlib.import_module(_full), name)
+        except Exception as _exc:                       # noqa: BLE001
+            _last = _exc
+    raise RuntimeError("content.instance_cmds：core.drops.%s 取不到（%s）——拒绝静默空跑"
+                       % (name, _last))
 
 
-class _HostMod:
-    """宿主模块替身（`C` / `db` / `T` / `instance_gate`…）—— 正文 `X.attr` 一字未改。"""
+def build_monster(*args, **kwargs):
+    """真源 `from ..core.drops import build_monster`（包内家 = `content/drops.py`，见 `_drops`）。"""
+    return _drops("build_monster")(*args, **kwargs)
 
-    def __init__(self, name):
-        self._name = name
+
+def roll_blueprint(*args, **kwargs):
+    """真源 `from ..core.drops import roll_blueprint`（包内家 = `content/drops.py`）。"""
+    return _drops("roll_blueprint")(*args, **kwargs)
+
+
+# ---- 宿主边界 ②：core.instance_gate 门面（DB 取数 2 名 + 猴补回挂；接口表第 7 行）----
+
+#: 会被包内链内部调用的文案函数（**逐字取自宿主壳** `game/core/instance_gate.py` 的 `_TEXT_FUNCS`）
+_GATE_TEXT_FUNCS = ("stamina_short_msg", "text_party_need", "text_leader_only", "text_too_few",
+                    "text_too_many", "text_member_no_char", "text_member_level", "text_member_dead",
+                    "text_member_in_battle", "text_member_prof_wait", "text_key_seal",
+                    "text_walk_deny")
+
+
+class _InstanceGate:
+    """`core.instance_gate` 的包内直取门面（真源 = `content/flow/instance_gate.py`）。
+
+    · 链 / 文案：全部直取包内（名字与宿主壳逐字相同；源码面门禁
+      `tests/test_v185_instance_admission.py::t7_wiring` 按 `instance_gate.<fn>` 扫调用点 ⇒ 名字保持）；
+    · **宿主独有 2 名**（接口表第 7 行）：`find_instance_key_item` / `instance_cleared_qq`
+      —— 宿主侧那两名要读背包/成就（`db.get_inventory` / `db.get_achievements`），判定本体在包内
+      （包内第二名叫 `instance_cleared`）⇒ 本门面按宿主壳 `game/core/instance_gate.py:44-64`
+      **逐字等价**补真名；
+    · **猴补回挂**：宿主壳链入口的 `_bind_text_funcs()`（`tests/test_v185_gate_teeth.py` 猴补宿主
+      模块属性来证明门禁有牙）在这里等价保留 —— 只回挂**被改绑过**的名字
+      （生产上宿主属性 is 包内同一对象 ⇒ 零动作）。
+    """
 
     def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
+        return getattr(_gate, attr)
+
+    # ---- 宿主独有：DB 取数 2 名（判定仍在包内）----
+    def find_instance_key_item(self, group_id, qq_id, key_item):
+        """真源宿主壳同名函数：背包来自 `db.get_inventory`，三路匹配在包内。"""
+        return _gate.find_instance_key_item(db.get_inventory(group_id, qq_id) or [], key_item)
+
+    def instance_cleared_qq(self, group_id, qq_id, inst_key) -> bool:
+        """真源宿主壳同名函数：成就记录来自 `db.get_achievements`，判定在包内（`instance_cleared`）。"""
+        return _gate.instance_cleared(db.get_achievements(group_id, qq_id) or [], inst_key)
+
+    # ---- 猴补回挂（等价宿主壳 `_bind_text_funcs`）----
+    def _bind_text_funcs(self) -> None:
+        _host = None
+        for _full in (_HOST_PKG + ".core.instance_gate", _HOST_PKG_FALLBACK + ".core.instance_gate"):
+            _host = sys.modules.get(_full)
+            if _host is not None:
+                break
+        if _host is None:
+            return
+        for _n in _GATE_TEXT_FUNCS:
+            _cur = getattr(_host, _n, None)
+            if _cur is not None and _cur is not getattr(_gate, _n, None):
+                setattr(_gate, _n, _cur)
+
+    # 宿主壳里调 `_bind_text_funcs()` 的 7 个链入口（join_admission 不调 ⇒ 与宿主壳一致）
+    def resolve_open_members(self, *a, **kw):
+        self._bind_text_funcs()
+        return _gate.resolve_open_members(*a, **kw)
+
+    def member_rule(self, *a, **kw):
+        self._bind_text_funcs()
+        return _gate.member_rule(*a, **kw)
+
+    def resume_admission(self, *a, **kw):
+        self._bind_text_funcs()
+        return _gate.resume_admission(*a, **kw)
+
+    def key_free_note(self, *a, **kw):
+        self._bind_text_funcs()
+        return _gate.key_free_note(*a, **kw)
+
+    def key_rule(self, *a, **kw):
+        self._bind_text_funcs()
+        return _gate.key_rule(*a, **kw)
+
+    def open_admission(self, *a, **kw):
+        self._bind_text_funcs()
+        return _gate.open_admission(*a, **kw)
+
+    def walk_admission(self, *a, **kw):
+        self._bind_text_funcs()
+        return _gate.walk_admission(*a, **kw)
 
 
-class _HostObj:
-    """宿主对象惰性替身（函数/常量/类型）：`bind_host` 注入优先，否则调用时解析。"""
-
-    def __init__(self, mod, attr):
-        self._mod = mod
-        self._attr = attr
-
-    def _v(self):
-        if self._attr in _INJECTED:
-            return _INJECTED[self._attr]
-        return _host_attr(self._mod, self._attr)
-
-    def __repr__(self):
-        return repr(self._v())
-
-
-class _HostFn(_HostObj):
-    """宿主函数替身（调用时解析）。"""
-
-    def __call__(self, *a, **k):
-        return self._v()(*a, **k)
-
-
-class _HostVal(_HostObj):
-    """宿主常量替身（数值/属性 dunder 全转发；调用时解析）。"""
-
-    def __float__(self):
-        return float(self._v())
-
-    def __int__(self):
-        return int(self._v())
-
-    def __bool__(self):
-        return bool(self._v())
-
-    def __mul__(self, o):
-        return self._v() * o
-
-    def __rmul__(self, o):
-        return o * self._v()
-
-    def __truediv__(self, o):
-        return self._v() / o
-
-    def __rtruediv__(self, o):
-        return o / self._v()
-
-    def __add__(self, o):
-        return self._v() + o
-
-    def __radd__(self, o):
-        return o + self._v()
-
-    def __sub__(self, o):
-        return self._v() - o
-
-    def __rsub__(self, o):
-        return o - self._v()
-
-    def __eq__(self, o):
-        return self._v() == o
-
-    def __lt__(self, o):
-        return self._v() < o
-
-    def __gt__(self, o):
-        return self._v() > o
-
-
-C = _HostMod("content")            # 真源 `from .. import content as C`
-from ._pkgref import DB as db
-from . import texts as T
-player_final_stats = _HostFn("content_rules.panel", "player_final_stats")
-resolve_drop = _HostFn("content_rules.gameplay", "resolve_drop")
-ACT_TICK = _HostVal("core.constants", "ACT_TICK")
-AstrMessageEvent = _HostObj("commands._platform", "AstrMessageEvent")   # 只作类型标注
+instance_gate = _InstanceGate()                 # 真源 `from ..core import instance_gate`
 
 
 # ============================================================
@@ -313,7 +364,7 @@ class InstanceImpl:
         db.save_battle(group_id, st.get("leader") or "", st)
         _wid = st.get("world_id") or ""
         if _wid.startswith("inst:"):
-            C.set_instance_st(_wid, st)
+            _set_instance_st(_wid, st)
 
     # ---------------- v137 『加入战斗』：同队伍成员并入正在进行中的副本战斗 ----------------
     # 设计依据：docs/RESEARCH_join_battle.md §四.2/§五/§九（CTB 播种 = 参考点 + 自身 cost；
@@ -343,7 +394,6 @@ class InstanceImpl:
         # 1./2./3. 准入链（v185：队伍 → 队员视角 → 目标战斗 → 战斗状态 → 重复/满员/敌灭/0 血/角色）
         #   规则顺序与全部措辞在 core/instance_gate.join_admission（唯一真相源）；
         #   链内会写 ctx["st"]（队员视角取到的队长战斗 state），下面复用它。
-        instance_gate = _HostMod("core.instance_gate")
         _ctx = {
             "party_members": db.party_members(group_id, qq_id),
             "my_key": new_key,
@@ -470,12 +520,12 @@ class InstanceImpl:
         try:
             _pwid = (player or {}).get("world_id") or ""
             if _pwid.startswith("inst:"):
-                _pinst = C.get_instance_world(_pwid)
+                _pinst = _get_instance_world(_pwid)
                 _pst = (_pinst or {}).get("st") or {}
                 _pb = db.get_battle(group_id, qq_id)
                 _mirror_gone = _pb is None or _pb["state"].get("type") != "instance"
                 if _pinst is None or _pst.get("over") or _mirror_gone:
-                    C.destroy_instance_world(_pwid)
+                    _destroy_instance_world(_pwid)
                     db.update_player(group_id, qq_id, world_id="mainland")
                     player["world_id"] = "mainland"
         except Exception:
@@ -500,7 +550,7 @@ class InstanceImpl:
                     for _m2 in IR.roster_of(_st).members:
                         if str(_m2) in _cur:
                             db.update_player(group_id, _m2, world_id="mainland")
-                    C.destroy_instance_world(_wid2)
+                    _destroy_instance_world(_wid2)
                 # R3 P3-1：文案与行为对齐——开本不占地图位置，超时只解除战斗锁/
                 # 清 battle（v101.27 #390），玩家从未被\"传送\"；沿用『离开副本』口径
                 yield event.plain_result(T.static("instance.面板_通关超时离开"))
@@ -528,7 +578,7 @@ class InstanceImpl:
             ok_members = IR.roster_of(old_st).only(cur)  # v185：成员读取收口——只保留仍在队伍中的成员
             if old_st.get("rooms"):
                 _mid = (old_st.get("inst_id") or "").removeprefix("inst_")
-                _entry_sa = C.map_entry_subarea(_mid)
+                _entry_sa = _map_entry_subarea(_mid)
                 if _entry_sa:
                     for _m in ok_members:
                         db.update_player(group_id, _m, cur_map=_mid, cur_subarea=_entry_sa)
@@ -538,7 +588,6 @@ class InstanceImpl:
                 # 人数/等级/0 血/战斗中 四连同源校验（v185：core/instance_gate.resume_admission）
                 # 旧语义照旧——**不查副业等待**、不查钥匙/位置/体力；不满足则放弃旧进度，
                 # 落到 _instance_start 输出对应拦截提示（判定用 v.ok，理由仅作诊断）。
-                instance_gate = _HostMod("core.instance_gate")
                 _rctx = {
                     "members": ok_members,
                     "inst": inst,
@@ -607,7 +656,7 @@ class InstanceImpl:
             # v141 审计：副本大陆路径统一走 resolve_map_for（唯一入口契约）；
             # 大陆实例已销毁（world_id 残留 inst:）→ resolve_map_for None → 回退全局静态图
             # （副本图在 MAP_BY_ID 始终存在，与原 MAP_BY_ID.get 语义一致）
-            _dun_map = C.resolve_map_for(st.get("world_id") or "", _inst_map_id(st.get("inst_id") or "")) \
+            _dun_map = _resolve_map_for(st.get("world_id") or "", _inst_map_id(st.get("inst_id") or "")) \
                 or _cat_space.MAP_BY_ID.get(_inst_map_id(st.get("inst_id") or ""), {})
             _dun = _dun_map.get("dungeon") or {}
             _br = _dun.get("boss_room")
@@ -615,7 +664,7 @@ class InstanceImpl:
             if _br and _br in _rooms:
                 # 队长移动到 Boss 房（触发 _instance_dungeon_move 的 Boss 战链路）
                 _cur = (self._player(group_id, st.get("leader")) or {}).get("cur_subarea") or ""
-                _links = C.subarea_links(_inst_map_id(st.get("inst_id") or ""), _cur)
+                _links = _subarea_links(_inst_map_id(st.get("inst_id") or ""), _cur)
                 if _cur != _br and _br in _links:
                     async for _r in self._instance_dungeon_move(event, group_id, qq_id, player,
                                                                 inst_row, _br):
@@ -762,7 +811,7 @@ class InstanceImpl:
         cur_sa_id = player.get("cur_subarea") or ""
         # v141 审计：副本大陆路径统一走 resolve_map_for（唯一入口契约）；
         # 大陆实例已销毁（world_id 残留 inst:）→ resolve_map_for None → 回退全局静态图
-        cur_map = C.resolve_map_for(st.get("world_id") or "", _inst_map_id(st.get("inst_id") or "")) \
+        cur_map = _resolve_map_for(st.get("world_id") or "", _inst_map_id(st.get("inst_id") or "")) \
             or _cat_space.MAP_BY_ID.get(_inst_map_id(st.get("inst_id") or ""), {})
         cur_sa = None
         for _sa in (cur_map.get("subareas") or []):
@@ -774,7 +823,7 @@ class InstanceImpl:
         if rooms:
             rstate = rooms.get(cur_sa_id) or {}
             _pois_left = rstate.get("pois_left")
-            for _pid in (C.subarea_pois(cur_map.get("id", ""), cur_sa_id) or []):
+            for _pid in (_subarea_pois(cur_map.get("id", ""), cur_sa_id) or []):
                 if _pois_left is not None and _pid not in _pois_left:
                     continue
                 _p = _cat_b143.POIS.get(_pid)
@@ -909,7 +958,7 @@ class InstanceImpl:
         # 复位 cur_map/cur_subarea 到副本入口 + world_id 回 mainland + 销毁大陆实例
         if st.get("rooms"):
             _mid = (st.get("inst_id") or "").removeprefix("inst_")
-            _entry_sa = C.map_entry_subarea(_mid)
+            _entry_sa = _map_entry_subarea(_mid)
             if _entry_sa:
                 for m in IR.roster_of(st).members:
                     if str(m) in cur:
@@ -919,7 +968,7 @@ class InstanceImpl:
             for m in IR.roster_of(st).members:
                 if str(m) in cur:
                     db.update_player(group_id, m, world_id="mainland")
-            C.destroy_instance_world(_wid)
+            _destroy_instance_world(_wid)
         db.set_event_state(_ck, "")
         yield event.plain_result(
             T.text("instance.面板_撤退_已放弃", name=inst.get('name', '副本'),
@@ -958,7 +1007,7 @@ class InstanceImpl:
         # 原地只能用传送”。
         if st.get("rooms"):
             _mid = (st.get("inst_id") or "").removeprefix("inst_")
-            _entry_sa = C.map_entry_subarea(_mid)
+            _entry_sa = _map_entry_subarea(_mid)
             if _entry_sa:
                 for m in IR.roster_of(st).members:
                     if str(m) in cur:
@@ -967,7 +1016,7 @@ class InstanceImpl:
             for m in IR.roster_of(st).members:
                 if str(m) in cur:
                     db.update_player(group_id, m, world_id="mainland")
-            C.destroy_instance_world(_wid)
+            _destroy_instance_world(_wid)
         yield event.plain_result(
             T.text("instance.面板_离开_完成", name=inst.get('name', '副本'))
         )
@@ -1025,7 +1074,7 @@ class InstanceImpl:
         cur_sa_id = player.get("cur_subarea") or ""
         # v141 审计：副本大陆路径统一走 resolve_map_for（唯一入口契约）；
         # 大陆实例已销毁（world_id 残留 inst:）→ resolve_map_for None → 回退全局静态图
-        cur_map = C.resolve_map_for(st.get("world_id") or "", _inst_map_id(st.get("inst_id") or "")) \
+        cur_map = _resolve_map_for(st.get("world_id") or "", _inst_map_id(st.get("inst_id") or "")) \
             or _cat_space.MAP_BY_ID.get(_inst_map_id(st.get("inst_id") or ""), {})
         cur_sa = None
         for _sa in (cur_map.get("subareas") or []):
@@ -1043,7 +1092,7 @@ class InstanceImpl:
             _left = IR.monsters_left(st, cur_sa_id)  # v185：剩余怪数读取走 core/instance_run
             _pois_left = rstate.get("pois_left")
             # ① POI（概率=discovery_agro，只从 pois_left 抽，消耗资源池）
-            poi_ids = [pid for pid in (C.subarea_pois(cur_map.get("id", ""), cur_sa_id) or [])
+            poi_ids = [pid for pid in (_subarea_pois(cur_map.get("id", ""), cur_sa_id) or [])
                        if _pois_left is None or pid in _pois_left]
             if poi_ids and random.random() < _agro:
                 poi_id = poi_ids[0]  # 确定性：取剩余列表首个（不新增 random 调用点）
@@ -1147,7 +1196,7 @@ class InstanceImpl:
         # Battle 时传当前行动者宠物）。宠物经验/饱食度结算与野外一致：副本内击杀奖励
         # （_instance_kill_reward）与通关奖励（_instance_victory）按存活成员各结各宠。
         # （v104 M17 P2 旧设定『副本不携带宠物』已废弃，见 git log v167.3。）
-        st["boss"] = C.build_monster(mon_def, {"id": st["inst_id"], "name": st["inst_id"], "area": "instance"})
+        st["boss"] = build_monster(mon_def, {"id": st["inst_id"], "name": st["inst_id"], "area": "instance"})
         if mon_def[2] == "boss":
             inst2 = _cat_space.INSTANCES[st["inst_id"]]
             # v178 E1：副本 Boss 带 inst_id 上下文（供 _boss_cfg 按副本条目解析
@@ -1365,7 +1414,7 @@ class InstanceImpl:
                 if mdef_tpl and isinstance(mdef_tpl, (list, tuple)) and len(mdef_tpl) >= 6:
                     # v163 爪牙=同图小怪模板（鱼鱼拍板）：build_monster 构建独立小怪数值
                     # （如哥布林守卫 lv15 ≈ 564HP），不从 Boss 按比例缩放。
-                    _mo = C.build_monster(mdef_tpl, {"id": st.get("inst_id") or "x",
+                    _mo = build_monster(mdef_tpl, {"id": st.get("inst_id") or "x",
                                                     "name": st.get("inst_id") or "x", "area": "instance"})
                     sub = self._mark_minion_copy(_mo,
                                                   "{}-m{}_{}".format(base_uid, mi, j),
@@ -1513,7 +1562,7 @@ class InstanceImpl:
             _p = self._player(group_id, qq_id)
             _wid = (_p or {}).get("world_id") or ""
             if _wid.startswith("inst:"):
-                _inst = C.get_instance_world(_wid)
+                _inst = _get_instance_world(_wid)
                 if _inst is not None:
                     _st = _inst.get("st")
                     # v141：cleared/over（通关后停留搜刮/已结束）不算战斗中，玩家可自由行动
@@ -1565,7 +1614,7 @@ class InstanceImpl:
                         db.update_player(group_id, _m, world_id="mainland")
                     except Exception:
                         pass
-                C.destroy_instance_world(_wid)
+                _destroy_instance_world(_wid)
             db.clear_battle(group_id, leader)
             return T.static("instance.面板_过期_24h")
         return ""
@@ -1602,7 +1651,7 @@ class InstanceImpl:
                                 name=inst['name'], lv=inst['lv'], size=size))
             lines.append(f"   {inst['desc']}")
             mats = "、".join(
-                C.display("materials", m) if m in _cat_items.MATERIALS else m
+                _display("materials", m) if m in _cat_items.MATERIALS else m
                 for m in inst.get("materials", [])
             )
             lines.append(T.text("instance.日志_列表_首领", name=inst['boss'][1], lv=inst['boss'][3], mats=mats))
@@ -1718,7 +1767,7 @@ class InstanceImpl:
             # 与野外面板同款 pet_battle_status_note——副本带宠 v167.3 后玩家同样困惑
             # 『宠物怎么不出手』（饱食度 =0 技能失效是设计，但此前副本面板零提示）。
             try:
-                _pet_note = _host_attr("commands.combat", "pet_battle_status_note")
+                _pet_note = _pet_battle_status_note
                 _ppet = (st.get("pets") or {}).get(k) or {}
                 _pn2 = _pet_note(_ppet)
                 if _pn2:
@@ -1729,7 +1778,7 @@ class InstanceImpl:
             # snap.effects 由 sync_views 每帧回写；st.resources 旧键无生产写入 =
             # 死字段不再读。白名单/cap 逻辑与野外 _resource_line 同源）
             try:
-                _rst = _host_attr("commands.combat", "resource_stack_text")
+                _rst = _resource_stack_text
                 _rl_txt = _rst(snap.get("effects") or {})
             except Exception:
                 _rl_txt = ""
@@ -1897,7 +1946,7 @@ class InstanceImpl:
             inst = _cat_space.INSTANCES.get(st["inst_id"], {})
             # v141 审计：副本大陆路径统一走 resolve_map_for（唯一入口契约）；
             # 大陆实例已销毁（world_id 残留 inst:）→ resolve_map_for None → 回退全局静态图
-            cur_map = C.resolve_map_for(st.get("world_id") or "", _inst_map_id(st.get("inst_id") or "")) \
+            cur_map = _resolve_map_for(st.get("world_id") or "", _inst_map_id(st.get("inst_id") or "")) \
                 or _cat_space.MAP_BY_ID.get(_inst_map_id(st.get("inst_id") or ""), {})
             sas = cur_map.get("subareas") or []
             cur_sa = next((s for s in sas if s["id"] == cur_sa_id), None)
@@ -2135,7 +2184,7 @@ class InstanceImpl:
                 if _sa.get("boss") and isinstance(_sa["boss"], (list, tuple)) and len(_sa["boss"]) >= 2:
                     _ml.append(list(_sa["boss"]))
                 # 房间 POI 挂载（v137 dungeon_pois 已并入 SUBAREA_POIS，id 带前缀唯一）
-                _poi_ids = list(C.subarea_pois(_map_id, _sa_id) or [])
+                _poi_ids = list(_subarea_pois(_map_id, _sa_id) or [])
                 # 资源池汇总：本房间 POI loot（gold/materials/equip）
                 for _pid in _poi_ids:
                     _p = _cat_b143.POIS.get(_pid) or {}
@@ -2245,7 +2294,6 @@ class InstanceImpl:
         min_players = inst.get("min_players", 2)
         max_players = inst.get("max_players", 3)
         # v185：队伍解析（纯单人副本/弹性副本无队/非队长/人数越界）→ core/instance_gate（唯一真相源）
-        instance_gate = _HostMod("core.instance_gate")
         members, _member_deny = instance_gate.resolve_open_members(
             inst, qq_id, db.party_members(group_id, qq_id))
         if _member_deny:
@@ -2331,7 +2379,7 @@ class InstanceImpl:
             return
         key_free_note = instance_gate.key_free_note(ctx)
         # 构建副本 Boss（血量按人数缩放：min_players 人数 = hp_mult，每多 1 人 +0.65；攻击 ×atk_mult）
-        boss = C.build_monster(inst["boss"], {"id": kid, "name": inst["name"], "area": "instance"})
+        boss = build_monster(inst["boss"], {"id": kid, "name": inst["name"], "area": "instance"})
         if inst.get("mech"):
             boss["mech"] = inst["mech"]  # v58 Boss 专属机制
         hp_mult = inst["hp_mult"] + 0.65 * (len(members) - min_players)
@@ -2403,15 +2451,15 @@ class InstanceImpl:
             _p0 = self._player(group_id, qq_id)
             _old_wid = (_p0 or {}).get("world_id") or ""
             if _old_wid.startswith("inst:"):
-                C.destroy_instance_world(_old_wid)
+                _destroy_instance_world(_old_wid)
         except Exception:
             pass
         # v141 大陆隔离：开本创建独立大陆实例，副本进度（st/rooms/resources_pool）
         # 挂在大陆实例上（权威源），battle_state 保留兼容镜像（读取时大陆优先）。
         # 全队 players.world_id = inst:<uuid>，位置同步到副本入口。
         _map_id = kid[5:] if str(kid).startswith("inst_") else kid
-        _entry_sa = C.map_entry_subarea(_map_id)
-        _world_id = C.create_instance_world(
+        _entry_sa = _map_entry_subarea(_map_id)
+        _world_id = _create_instance_world(
             kid, members, boss, now=now, leader=qq_id,
             st=st,
             rooms=st.get("rooms") or {},
@@ -2555,7 +2603,6 @@ class InstanceImpl:
         优先读 IB.next_actor_key（saintess_engine actors 权威 ct 最小者）；无 battle/无存活
         回落队伍第一人。"""
         try:
-            IB = _HostMod("commands.instance_battle")
             _k = IB.next_actor_key(st)
             if _k:
                 return (st.get("players", {}).get(str(_k), {}) or {}).get("name", str(_k))
@@ -2688,9 +2735,9 @@ class InstanceImpl:
                                 # q7-5 审计：向下取整（原 round 会 ±1 抖动）
                                 n = max(1, min(99, int(per_val / mprice)))
                                 db.add_item(group_id, _key, mid,
-                                            {"name": C.display("materials", mid), "type": "材料",
+                                            {"name": _display("materials", mid), "type": "材料",
                                              "stackable": True, "price": mprice}, n)
-                                acc["mats"].append(f"{C.display('materials', mid)} ×{n}")
+                                acc["mats"].append(f"{_display('materials', mid)} ×{n}")
                             else:
                                 # v110 审计修复：副本掉落支持消耗品钥匙（i_key_* 发放链补全）
                                 _it = ITEMS.get(mid, {})
@@ -2732,8 +2779,8 @@ class InstanceImpl:
                     _p_exp = int(pet.get("exp", 0) or 0) + _gain
                     _p_lv = int(pet.get("level", 1) or 1)
                     _lvup = False
-                    while _p_exp >= C.pet_exp_need(_p_lv):
-                        _p_exp -= C.pet_exp_need(_p_lv)
+                    while _p_exp >= _pet_exp_need(_p_lv):
+                        _p_exp -= _pet_exp_need(_p_lv)
                         _p_lv += 1
                         _lvup = True
                     db.pet_update(_key, satiety=max(0, _new_sat), exp=_p_exp, level=_p_lv,
@@ -2855,7 +2902,7 @@ class InstanceImpl:
         概率（数据层 INVESTIGATION_POINTS 逐点可覆盖，缺省用命令层常量）：
         - 收藏 3% → 图纸残页 25% → 蓝符 15%（仅 Lv.60+）→ 否则保底材料 1 件。
         蓝符只在副本 Lv.60+ 生效（低等级副本该档概率并入保底材料）；
-        蓝符 = 蓝色品质 RUNES 符文（C.rune_item 构造，与 _instance_secret_chest 同款），
+        蓝符 = 蓝色品质 RUNES 符文（`_rune_item` 构造，与 _instance_secret_chest 同款），
         按副本等级就近出符：Lv.60-74 → lvl 1-2，Lv.82+ → lvl 2-3。
         """
         from . import runes as _runes_core
@@ -2872,9 +2919,9 @@ class InstanceImpl:
             if not isinstance(collect, (list, tuple)):
                 collect = [collect]
             for cid in collect:
-                mid = C.resolve("materials", cid) if cid else None
+                mid = _resolve("materials", cid) if cid else None
                 if mid and mid in _cat_items.MATERIALS:
-                    mname = C.display("materials", mid)
+                    mname = _display("materials", mid)
                     db.add_item(group_id, qq_id, mid, {
                         "name": mname, "type": "收藏", "stackable": True,
                         "price": _cat_items.MATERIALS[mid].get("price", 1),
@@ -2888,7 +2935,7 @@ class InstanceImpl:
                 rk = random.choice(blue_runes)
                 r_def = _cat_items.RUNES[rk]
                 lvl = random.randint(1, 2) if inst_lv < 82 else random.randint(2, 3)
-                rune_data = C.rune_item(r_def["effect"], lvl)
+                rune_data = _rune_item(r_def["effect"], lvl)
                 if rune_data:
                     db.add_item(group_id, qq_id, f"rune_{r_def['effect']}_{rune_data['lvl']}", rune_data)
                     return [T.text("instance.面板_调查点_蓝符", name=rune_data['name'])]
@@ -2904,9 +2951,9 @@ class InstanceImpl:
         # ① 保底材料（默认/兜底层）
         mats = poi.get("materials") or inst.get("materials", [])
         mat = random.choice(mats) if mats else None
-        mat_id = C.resolve("materials", mat) if mat else None
+        mat_id = _resolve("materials", mat) if mat else None
         if mat_id and mat_id in _cat_items.MATERIALS:
-            mname = C.display("materials", mat_id)
+            mname = _display("materials", mat_id)
             db.add_item(group_id, qq_id, mat_id, {
                 "name": mname, "type": "材料", "stackable": True,
                 "price": _cat_items.MATERIALS[mat_id]["price"],
@@ -2949,7 +2996,7 @@ class InstanceImpl:
             elif r.get("type") == "item":
                 mat_id = r["item_id"]
                 if mat_id and mat_id in _cat_items.MATERIALS:
-                    mname = C.display("materials", mat_id)
+                    mname = _display("materials", mat_id)
                     db.add_item(group_id, qq_id, mat_id, {
                         "name": mname, "type": _cat_items.MATERIALS[mat_id].get("type", "材料"), "stackable": True,
                         "price": _cat_items.MATERIALS[mat_id]["price"],
@@ -3049,20 +3096,20 @@ class InstanceImpl:
                 if mat_id in _cat_items.MATERIALS:
                     n = r.get("count", 2)
                     db.add_item(group_id, qq_id, mat_id, {
-                        "name": C.display("materials", mat_id), "type": "材料",
+                        "name": _display("materials", mat_id), "type": "材料",
                         "stackable": True, "price": _cat_items.MATERIALS[mat_id]["price"],
                     }, count=n)
                     text = T.text("instance.面板_宝箱_材料",
-                                  name=C.display('materials', mat_id), n=n)
+                                  name=_display('materials', mat_id), n=n)
         if not text:  # 引擎空结果兜底（数据异常不吞奖励）
             mat = random.choice(inst.get("materials", ["兽肉"]))
-            mat_id = C.resolve("materials", mat)
+            mat_id = _resolve("materials", mat)
             db.add_item(group_id, qq_id, mat_id, {
-                "name": C.display("materials", mat_id), "type": "材料",
+                "name": _display("materials", mat_id), "type": "材料",
                 "stackable": True, "price": _cat_items.MATERIALS[mat_id]["price"],
             }, count=2)
             text = T.text("instance.面板_宝箱_材料",
-                          name=C.display('materials', mat_id), n=2)
+                          name=_display('materials', mat_id), n=2)
         st["secret_chest"] = None
         self._instance_save(group_id, st)
         return T.static("instance.面板_宝箱_开启") + "\n" + text
@@ -3126,8 +3173,8 @@ class InstanceImpl:
                     _p_exp = int(pet.get("exp", 0) or 0) + _gain
                     _p_lv = int(pet.get("level", 1) or 1)
                     _lvup = False
-                    while _p_exp >= C.pet_exp_need(_p_lv):
-                        _p_exp -= C.pet_exp_need(_p_lv)
+                    while _p_exp >= _pet_exp_need(_p_lv):
+                        _p_exp -= _pet_exp_need(_p_lv)
                         _p_lv += 1
                         _lvup = True
                     db.pet_update(m, satiety=max(0, _new_sat), exp=_p_exp, level=_p_lv,
@@ -3141,7 +3188,7 @@ class InstanceImpl:
             # v135 副本全员图纸小概率：每名存活成员独立判定（首功图纸之外的全员奖励，
             # 概率 constants.INSTANCE_BP_CHANCE=10%）。已学图纸折算图纸残页，未学整张入包。
             if random.random() < _cat_core.INSTANCE_BP_CHANCE:
-                bp2 = C.roll_blueprint(boss.get("lv", 1) or 1)
+                bp2 = roll_blueprint(boss.get("lv", 1) or 1)
                 if bp2:
                     _learned2 = (p.get("learned_blueprints") or [])
                     if bp2.get("blueprint_for") in _learned2:
@@ -3161,7 +3208,7 @@ class InstanceImpl:
                 _bctx = _BossCtx(inst_id=st.get("inst_id"), monster_lv=boss.get("lv", 1) or 1,
                                  player_level=boss.get("lv", 1) or 1)
                 # 当前实例专属 rid（区分展示文案：👑专属 vs ⚔️珍藏）
-                _boss_cfg = (getattr(C, "INSTANCE_BOSS_EQUIP_DROP", None) or {}).get(st.get("inst_id")) or {}
+                _boss_cfg = (_INSTANCE_BOSS_EQUIP_DROP or {}).get(st.get("inst_id")) or {}
                 _excl_rid = _boss_cfg.get("boss_equip") or _boss_cfg.get("equip")
                 _eq_results = [x for x in _boss_roll(f"boss:{st.get('inst_id')}", _bctx)
                                if x.get("type") == "equip" and x.get("data")]
@@ -3179,9 +3226,9 @@ class InstanceImpl:
             mats = inst.get("materials", [])
             for _ in range(inst.get("mat_count", 1)):
                 mat = random.choice(mats) if mats else None
-                mat_id = C.resolve("materials", mat) if mat else None  # v48：中文名 → ID
+                mat_id = _resolve("materials", mat) if mat else None  # v48：中文名 → ID
                 if mat_id and mat_id in _cat_items.MATERIALS:
-                    mname = C.display("materials", mat_id)
+                    mname = _display("materials", mat_id)
                     db.add_item(group_id, m, mat_id, {
                         "name": mname, "type": "材料", "stackable": True,
                         "price": _cat_items.MATERIALS[mat_id]["price"],
@@ -3193,7 +3240,7 @@ class InstanceImpl:
         # 每名存活成员独立判定；掉落只吃 1 次 random.random()，不影响副本其余随机序列。
         gem_drop_line = ""
         try:
-            _gem = C.roll_gem_drop(boss)
+            _gem = _roll_gem_drop(boss)
             if _gem:
                 db.add_item(group_id, m, f"gem_{uuid.uuid4().hex[:8]}", _gem)
                 gem_drop_line = T.text("instance.日志_通关_宝石", name=p['name'], gem_name=_gem['name'])
@@ -3208,7 +3255,7 @@ class InstanceImpl:
             if top_key:
                 top_p = self._player(group_id, top_key)
                 if top_p:
-                    bp = C.roll_blueprint(boss.get("lv", 1) or 1)
+                    bp = roll_blueprint(boss.get("lv", 1) or 1)
                     # v101.25 #349：首功图纸奖励同规则——已学图纸折算为图纸残页
                     _learned = (top_p.get("learned_blueprints") or [])
                     if bp.get("blueprint_for") in _learned:
@@ -3316,5 +3363,5 @@ class InstanceImpl:
         # v141 大陆隔离：副本失败 → 销毁大陆实例（进度作废）
         _wid = st.get("world_id") or ""
         if _wid.startswith("inst:"):
-            C.destroy_instance_world(_wid)
+            _destroy_instance_world(_wid)
         yield event.plain_result("\n".join(lines))
