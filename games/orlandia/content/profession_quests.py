@@ -18,7 +18,7 @@
 |---|---|---|
 | `from .. import db` | 模块级 `db` = 惰性宿主代理 `_HostDB` | `db.xxx(...)` 正文一行未改 |
 | `from .. import content as C` | ★ B14-2 L8：**已切净**（`C.DAILY_QUESTS` → 包内门面 `catalog_quests.DAILY_QUESTS`）⇒ `C` 替身删；`bind_host(content=…)` 注入面按宿主薄壳协议保留 | 读 `DAILY_QUESTS`，源序 = `_DAILY_QUESTS_ORDER`（门禁逐值+列表序 OK） |
-| `from ..core import texts as T` | 模块级 `T` = 惰性宿主代理（宿主薄壳用 `lazy_module(_host_texts)` 注入） | `T.text(...)` / `T.static(...)` 一字未改 |
+| `from ..core import texts as T` | 模块级 `T` = **包内**惰性句柄 `PkgModule("content.texts")`（★ P4′-W1-B） | `T.text(...)` / `T.static(...)` 一字未改；宿主 `game.core.texts` 的 `text`/`static` 是**同一批函数对象**（探针实测 `is` 为真）|
 | `from ..core.stat_bonus import stat_bonus` | 模块级 `stat_bonus` = 惰性调用代理 → ★ REPOINT-PKG 起兜底**包内直取** `content/stat_bonus.py` | 称号加成，签名/语义不变（宿主 `game/core/stat_bonus.py` 是同名单再导出 ⇒ 同一函数对象） |
 | `from ..content_rules.gameplay import check_player_level_up` | 模块级 `check_player_level_up` = 惰性调用代理 → ★ REPOINT-PKG 起兜底**包内直取** `content/gameplay_rules.py` | 升级判定，返回 `(logs, player)` 不变（宿主 `game/content_rules/gameplay.py` 是同名单再导出 ⇒ 同一函数对象） |
 
@@ -40,12 +40,15 @@ from __future__ import annotations
 
 import random
 
+# ★ P4′-W1-B（包侧去 shim）：包内惰性模块句柄（旧 `_HostMod` 的包内等价物；零依赖，
+#   取件时机逐字相同 = 属性访问时解析）。
+from ._pkgref import PkgModule as _PkgModule
+
 # ============================================================
 # 宿主替身口（全部对应真源的**函数体内**惰性 import → 包内改模块级惰性代理）
 # ============================================================
 _HOST_DB = None            # 真源 `from .. import db`
 _HOST_CONTENT = None       # 真源 `from .. import content as C`
-_HOST_TEXTS = None         # 真源 `from ..core import texts as T`
 _HOST_LEVEL_UP = None      # 注入槽（真源 `from ..content_rules.gameplay import …`）—— 未注入 → 包内直取 `content/gameplay_rules.py`
 _HOST_STAT_BONUS = None    # 注入槽（真源 `from ..core.stat_bonus import stat_bonus`）—— 未注入 → 包内直取 `content/stat_bonus.py`
 
@@ -54,14 +57,18 @@ _HOST_PKG_FALLBACK = "game"
 
 
 def bind_host(db=None, content=None, texts=None, level_up=None, stat_bonus=None):
-    """宿主替身注入（幂等；宿主薄壳 `game/services/quests.py` 在 import 期调用）。"""
-    global _HOST_DB, _HOST_CONTENT, _HOST_TEXTS, _HOST_LEVEL_UP, _HOST_STAT_BONUS
+    """宿主替身注入（幂等；宿主薄壳 `game/services/quests.py` 在 import 期调用）。
+
+    ★ P4′-W1-B：`texts` 形参按宿主薄壳的注入协议**保留**
+      （`game/services/quests.py:71` 用 `texts=_pkg.lazy_module(_host_texts)` 传参 —— 少了会
+      TypeError），但包内已不再持有它的槽位：文案表改指包内 `content/texts.py`（`T`）。
+      传进来的值被显式忽略。
+    """
+    global _HOST_DB, _HOST_CONTENT, _HOST_LEVEL_UP, _HOST_STAT_BONUS
     if db is not None:
         _HOST_DB = db
     if content is not None:
         _HOST_CONTENT = content
-    if texts is not None:
-        _HOST_TEXTS = texts
     if level_up is not None:
         _HOST_LEVEL_UP = level_up
     if stat_bonus is not None:
@@ -91,26 +98,18 @@ class _LazyModule(object):
         return getattr(self._getter(), name)
 
 
-class _HostMod(object):
-    def __init__(self, slot, mod):
-        self._slot = slot
-        self._mod = mod
-
-    def _target(self):
-        obj = self._slot()
-        return obj if obj is not None else _resolve_host(self._mod)
-
-    def __getattr__(self, name):
-        return getattr(self._target(), name)
-
-
 class _HostDB(object):
     def __getattr__(self, name):
         return getattr(_HOST_DB if _HOST_DB is not None else _resolve_host("db"), name)
 
 
+# ★ P4′-W1-B：`_HostMod` 样板随唯一使用点（旧 `T = _HostMod(...)`）变死 → 已删
+#   （本文件其余读点均为包内直取 / 注入槽直调，无宿主模块句柄需求）。
 db = _HostDB()
-T = _HostMod(lambda: _HOST_TEXTS, "core.texts")
+# ★ P4′-W1-B：文案表改指**包内实现** `content/texts.py`。宿主 `game.core.texts` 是拷贝壳，
+#   其 `text` / `static` 与包内是**同一批函数对象**（探针实测 `is` 为真）⇒ 逐字同一实现；
+#   包内不再经宿主命名空间取件。`PkgModule` 每次属性访问解析一次（与旧 `_HostMod` 同时机）。
+T = _PkgModule("content.texts")
 # ★ B14-2 L8（2026-09-14）：`C` 替身已删（唯一读点 `C.DAILY_QUESTS` 切包内门面）。`bind_host(content=…)`
 #   形参按宿主薄壳 `game/services/quests.py:71` 的注入协议**保留**（少了它会 TypeError）。
 from . import catalog_quests as _cq          # noqa: E402  DAILY_QUESTS（源序 = _DAILY_QUESTS_ORDER）

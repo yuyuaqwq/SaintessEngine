@@ -13,8 +13,8 @@
 |---|---|---|
 | `from .. import db`（**函数体内**惰性 import） | 模块级 `db` = **惰性宿主代理** `_HostDB` | 正文里 `db.xxx(...)` **一行未改**；宿主由 `bind_host(db)` 注入，或按 `sys.modules` 找**已加载**的宿主模块（绝不 import，防在包侧另起一份宿主模块树） |
 | `from .. import content as C`（模块级） | 模块级 `C` = **惰性宿主代理** `_HostMod` | 表读口（`MATERIALS`/`MAP_BY_ID`/`PROF_WAIT_BASE`/`price_band`/`roll_fish`/`RARE_MATERIAL_PRICE`/`DROP_POOLS` 派生…）仍在宿主内容聚合层；这些**域未进包**（fishing/gather 数据域的死角见报告 §缺口）。宿主在 import 期注入同一模块对象 |
-| `from ..core import timed_events as _te`（模块级） | 模块级 `_te` = **惰性宿主代理** `_HostMod` | `get_timed`/`set_timed`/`remove_timed` 三处调用名未改 |
-| `from ..log_setup import LOG`（模块级） | 模块级 `LOG` = **惰性宿主代理** `_HostMod` | fail-closed 告警原文未改 |
+| `from ..core import timed_events as _te`（模块级） | 模块级 `_te` = **包内**惰性句柄 `PkgModule("content.timed_events")`（★ P4′-W1-B） | `get_timed`/`set_timed`/`remove_timed` 三处调用名未改；宿主 `game.core.timed_events` 是**别名壳**（`sys.modules[__name__] = content.timed_events`）⇒ 逐字同一个模块对象 |
+| `from ..log_setup import LOG`（模块级） | 告警改走**包内唯一日志取用口** `content/obs.py::log()`（★ P4′-W1-B；句柄由宿主 `bootstrap.bind_observability()` 在包加载期注入） | fail-closed **告警原文未改**，取用写法由 `LOG.warning` 改 `obs.log().warning`；包内不再出现第二个日志口 |
 | `from ..drop_engine import expand_pool as _expand`（**函数体内**惰性 import，两处） | 模块级 `_expand` / `_expand_pool` = **惰性调用代理** | 每次调用解析宿主 `game.drop_engine.expand_pool`（与真源同：真源也是调用时才 import） |
 | **模块级副作用** `_te.register_timed("prof_wait", …, on_expire=prof_wait_expire_cb)` | **留在宿主薄壳**（`game/services/profession.py`）注册，回调指向本模块的 `prof_wait_expire_cb` | 包被 `package_apply()` import 时宿主 `content`/`timed_events` 未必就绪；注册时机必须与真源一致（宿主模块 import 期）。回调体在本模块 |
 | **模块级启动校验** `validate_gather_cond()`（import 期 fail-fast） | 函数体在本模块；**调用点留在宿主薄壳 import 期** | 同上：真源在宿主模块 import 时校验，行为逐字保持（异常文本也逐字相同） |
@@ -30,6 +30,7 @@
 
     from content import profession as P
     P.bind_host(db, content=C, timed=_te, log=LOG, expand_pool=expand_pool)   # 宿主薄壳注入
+    #   ★ P4′-W1-B 后 `timed` / `log` 仍可按协议传（形参在、值被忽略）；`_te` 已是包内句柄
     mats = P.gather_roll(20, 5, "oak_plain")
 """
 from __future__ import annotations
@@ -46,6 +47,10 @@ from . import catalog_life as _cl     # 生活/副业/商店/宠物/经济配置
 from . import catalog_space as _sp    # 地图/子区域
 from . import catalog_b143 as _b143   # B14-3 收口名（FISH_EXP/QUALITY —— 原缺口名已建域）
 from .prof_config import price_band  # ★ B15b：宿主函数进包（原 `C.price_band`，宿主已无对象）
+# ★ P4′-W1-B（包侧去 shim）：① 包内惰性模块句柄（旧 `_HostMod` 的包内等价物；零依赖，
+#   取件时机逐字相同 = 属性访问时解析）② 包内唯一日志取用口 `content/obs.py`。
+from ._pkgref import PkgModule as _PkgModule
+from . import obs
 # ---- B14-2 L5 读点切换（2026-09-14）----
 # 数据名读点（MATERIALS/RUNES · MAP_BY_ID · PROF_WAIT_BASE/PROF_WAIT_DECAY/PROF_WAIT_FLOOR/
 # MINING_KEYWORDS/RARE_MATERIAL_PRICE · PET_EGG_ORANGE_CHANCE/PROF5_BONUS_CHANCE/RARE_MAT_CHANCE）
@@ -59,8 +64,6 @@ from .prof_config import price_band  # ★ B15b：宿主函数进包（原 `C.pr
 # ============================================================
 _HOST_DB = None            # 宿主存储层（真源 `from .. import db`）
 _HOST_CONTENT = None       # 宿主内容聚合层（真源 `from .. import content as C`）
-_HOST_TIMED = None         # 宿主倒计时引擎门面（真源 `from ..core import timed_events as _te`）
-_HOST_LOG = None           # 宿主日志门面（真源 `from ..log_setup import LOG`）
 _HOST_EXPAND = None        # 宿主产出池展开函数（真源 `from ..drop_engine import expand_pool`）
 
 # 宿主模块名（运行时 `main.py` 的模块路径 = `data.plugins.dragonfall`；测试同样）
@@ -69,16 +72,18 @@ _HOST_PKG_FALLBACK = "game"
 
 
 def bind_host(db=None, content=None, timed=None, log=None, expand_pool=None):
-    """宿主替身注入（幂等；宿主薄壳 `game/services/profession.py` 在 import 期调用）。"""
-    global _HOST_DB, _HOST_CONTENT, _HOST_TIMED, _HOST_LOG, _HOST_EXPAND
+    """宿主替身注入（幂等；宿主薄壳 `game/services/profession.py` 在 import 期调用）。
+
+    ★ P4′-W1-B：`timed` / `log` 两个形参按宿主薄壳的注入协议**保留**
+      （`game/services/profession.py:57` 逐个关键字传参 —— 少了会 TypeError），
+      但包内已不再持有它们的槽位：倒计时引擎改指包内 `content/timed_events.py`（`_te`），
+      日志改走包内唯一取用口 `content/obs.py`。传进来的值被显式忽略。
+    """
+    global _HOST_DB, _HOST_CONTENT, _HOST_EXPAND
     if db is not None:
         _HOST_DB = db
     if content is not None:
         _HOST_CONTENT = content
-    if timed is not None:
-        _HOST_TIMED = timed
-    if log is not None:
-        _HOST_LOG = log
     if expand_pool is not None:
         _HOST_EXPAND = expand_pool
 
@@ -132,8 +137,11 @@ class _HostDB(object):
 
 db = _HostDB()
 C = _HostMod(lambda: _HOST_CONTENT, "content")
-_te = _HostMod(lambda: _HOST_TIMED, "core.timed_events")
-LOG = _HostMod(lambda: _HOST_LOG, "log_setup")
+# ★ P4′-W1-B：倒计时引擎改指**包内实现**。宿主 `game.core.timed_events` 是别名壳
+#   （`sys.modules[__name__] = content.timed_events`）⇒ 与旧 `_te` 解析到的是**同一个模块
+#   对象 / 同一批函数对象**；但包内不再经宿主命名空间取件。`PkgModule` 每次属性访问解析一次，
+#   与旧 `_HostMod` 的取件时机逐字相同。
+_te = _PkgModule("content.timed_events")
 
 
 def _expand(*args, **kwargs):
@@ -287,7 +295,7 @@ def gather_cond_roll(cur_map: str):
             if chk is None:
                 # fail-closed：未知条件词 → 本条不命中 + 告警（防语义反转）
                 ok = False
-                LOG.warning(
+                obs.log().warning(
                     "[dragonfall] 采集条件词 %r 未注册（地图 %s 材料 %s），fail-closed 不命中——"
                     "请检查 GATHER_COND_POOLS 或 _GATHER_COND_CHECKERS", p, cur_map, mid)
                 continue
