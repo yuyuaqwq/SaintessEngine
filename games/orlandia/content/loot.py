@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-"""《奥兰迪亚·余烬纪年》包内**掉落策略/解析器半边**（逐字搬自游戏仓 `game/drop_engine.py`，476 行）。
+"""《奥兰迪亚·余烬纪年》包内**掉落策略/解析器半边**（逐字搬自游戏仓 `game/drop_engine.py`）。
 
 来源与范围
 ----------
-真源 476 行 = 引擎实例装配（池数据源 / 引用解析 / 专属策略 / 四入口 / 全量审计）**全搬**。
+真源 = 宿主 `game/drop_engine.py`（v184 收口版 **495 行**，2026-09-14 B12B13-TAIL 线3 起该文件
+已改成**薄壳**）：引擎实例装配（池数据源 / 引用解析 / 专属策略 / 四入口 / 全量审计）**全搬**；
+正文 `def _randint` → EOF（438 行）除「宿主取件 4 行 + fish 守卫 1 行」外逐行未改
+（白名单门禁见 `overnight/d3_loot_verify.py` A1 节）。
 真源的**形状层**（`LootTable` 池与策略注册表 / 展开 / 审计 / `SimpleCtx` / `TierTable`）不在这里 ——
 v184 起它已在引擎 `saintess_engine.loot`（引擎零知识），真源与本文件都只是**引它**。
 
@@ -15,22 +18,29 @@ v184 起它已在引擎 `saintess_engine.loot`（引擎零知识），真源与�
      → 改成「**调用方传 dict/回调**」（替身接口见下表）
   ③ **未搬**：真源之外的**写库/落包半边**（把产出发给玩家的消费端，属宿主事件）—— 一行不搬。
 
+❷（2026-09-14 · B12B13-TAIL 线3）**宿主 `game/drop_engine.py` 已成薄壳**（模块别名到本文件）
+   —— 宿主那份的「宿主取件」原文（`_get_pools()` 的宿主数据层优先分支 / `_fish_tiers()` 的
+   本树装配分支 / 函数内 `import game.content as C`）搬进薄壳的三个 thunk，经
+   `install_pools_source` / `install_quality_tiers_source` / `install_content_api_source` 挂进来
+   （「活源」= 每次调用问一次，取数时机与打桩可见性逐字保留）。宿主薄壳文件：
+   `<宿主>/game/drop_engine.py`（模块别名 + 三个 thunk + 源码探针）。
+
 方向只有一个：**内容 → 引擎**（本文件只 `import saintess_engine`，引擎零游戏知识）。
 
 ① import 层改动（与真源逐行对拍见 `overnight/d3_loot_verify.py` A1 节）
 | 真源写法 | 包内写法 | 说明 |
 |---|---|---|
-| `from saintess_engine.loot import LootTable, SimpleCtx`（:51） | 同左 + `TierTable` | 引擎；本文件唯一包外依赖 |
-| `import game.content as C`（:66 / :426，**函数内**） | `C = _content_api(ctx)` / `C = _content_api()` | ② 宿主内容 API → 调用方给（替身接口） |
-| `from .data.drop_pools import DROP_POOLS`（:188） | `_package_pools()` 读包内 `content/data/drop_pools.json` | ② 宿主数据层 → 包内同源数据（或 `install_pools` 覆盖） |
-| `from .core.quality_tiers import FISH_TIERS`（:217/220） | `_QUALITY_TIERS`（`install_quality_tiers` 挂） | ② 宿主档位表 → 调用方给 |
+| `from saintess_engine.loot import LootTable, SimpleCtx`（:52） | 同左 + `TierTable` | 引擎；本文件唯一包外依赖 |
+| `import game.content as C`（:67 / :445，**函数内**） | `C = _content_api(ctx)` / `C = _content_api()` | ② 宿主内容 API → 调用方给（替身接口） |
+| `from .data.drop_pools import DROP_POOLS`（:207） | `_package_pools()` 读包内 `content/data/drop_pools.json`（宿主侧走活源） | ② 宿主数据层 → 包内同源数据（或 `install_pools` / `install_pools_source`） |
+| `from .core.quality_tiers import FISH_TIERS`（:236/239） | `_QUALITY_TIERS`（`install_quality_tiers` / `install_quality_tiers_source` 挂） | ② 宿主档位表 → 调用方给 |
 
-② 宿主耦合替身接口（本文件**不 import 宿主** —— 一律由调用方给 dict / 回调；三个挂载口）
+② 宿主耦合替身接口（本文件**不 import 宿主** —— 一律由调用方给 dict / 回调；三对挂载口）
 | 真源宿主耦合 | 包内替身 | 调用方给什么 |
 |---|---|---|
-| `game.data.drop_pools.DROP_POOLS`（596 池数据） | `install_pools(pools)`；未挂 → 包内 `content/data/drop_pools.json` | 池 dict（`{池key: {type, entries/rolls/…}}`），与真源数据逐条同源 |
-| `game.content`：`ITEMS` / `EQUIP_ROSTER` / `RUNES` / `roll_blueprint` / `roll_gem_drop` / `roll_drop_equip` / `generate_roster_equip` / `generate_equip` / `rune_item` / `make_pet_egg` | `install_content_api(api)`（**模块 or 普通对象**，只按属性取）；也认 `ctx.content_api`（逐次覆盖）。未挂 → 包内默认 `_PackageContent` | 见 `content_api_keys()`：`ITEMS`/`EQUIP_ROSTER` 读包内门面 `content/catalog_items.py`（B14-2 起；原就地 JSON），装备/图纸/宝石/符文/宠物蛋**构造器**尚未进包 → 默认一律 `None`（= 该条出不来） |
-| `game.core.quality_tiers.FISH_TIERS`（垂钓档位表） | `install_quality_tiers(order, info=…, weights_by_level=…, aliases=…, clamp=…)`（或直接给 `TierTable`） | 档位表；未挂 → 空表 → `_roll_fish` 守卫返回 `[]`（抽不出，不抛） |
+| `game.data.drop_pools.DROP_POOLS`（596 池数据） | `install_pools(pools)` / `install_pools_source(fn)`（活源优先）；未挂 → 包内 `content/data/drop_pools.json` | 池 dict（`{池key: {type, entries/rolls/…}}`），与真源数据逐条同源 |
+| `game.content`：`ITEMS` / `EQUIP_ROSTER` / `RUNES` / `roll_blueprint` / `roll_gem_drop` / `roll_drop_equip` / `generate_roster_equip` / `generate_equip` / `rune_item` / `make_pet_egg` | `install_content_api(api)`（**模块 or 普通对象**，只按属性取） / `install_content_api_source(fn)`；也认 `ctx.content_api`（逐次覆盖）。未挂 → 包内默认 `_PackageContent` | 见 `content_api_keys()`：`ITEMS`/`EQUIP_ROSTER` 读包内门面 `content/catalog_items.py`（B14-2 起；原就地 JSON），装备/图纸/宝石/符文/宠物蛋**构造器**尚未进包 → 默认一律 `None`（= 该条出不来） |
+| `game.core.quality_tiers.FISH_TIERS`（垂钓档位表） | `install_quality_tiers(order, info=…, weights_by_level=…, aliases=…, clamp=…)`（或直接给 `TierTable`） / `install_quality_tiers_source(fn)` | 档位表；未挂 → 空表 → `_roll_fish` 守卫返回 `[]`（抽不出，不抛） |
 | 事件钩子（真源 `ctx.hooks[hook]`） | **不变**（引擎 `SimpleCtx.hooks` 恒为 dict） | `special:xxx` 的 hook 表，由调用方塞进 ctx |
 
 ⚠️ 不变式：`ctx` 只是**调用方给的普通袋子**（引擎 `SimpleCtx`：缺属性 → None）。本文件不读玩家 DB /
@@ -52,7 +62,7 @@ from typing import Any
 from saintess_engine.loot import LootTable, SimpleCtx, TierTable
 
 # B14-2（L7 线）：包内默认内容 API 的**数据来源**切到包内门面（原就地读 content/data/*.json）
-from .catalog_items import EQUIP_ROSTER, ITEMS   # 真源 `game.content`:ITEMS / :EQUIP_ROSTER
+from .catalog_items import EQUIP_ROSTER, ITEMS, RUNES   # 真源 `game.content`:ITEMS / :EQUIP_ROSTER；B15b 补 RUNES
 
 # ============================================================
 # 搬运头：替身接口落点（包内新增，非真源正文）
@@ -65,6 +75,11 @@ _DATA_DIR = os.path.join(_HERE, "data")
 _POOLS_OVERRIDE = None
 _CONTENT_API = None
 _QUALITY_TIERS = None
+# 调用方挂载口「活源」（None = 未挂 → 走上面的静态挂载值，再退包内默认）
+#   —— 等价真源三处「函数内惰性 import 宿主」（每次调用才解析；宿主薄壳把那段原文搬进 thunk）
+_POOLS_SOURCE = None
+_CONTENT_API_SOURCE = None
+_QUALITY_TIERS_SOURCE = None
 
 # 包内缓存（惰性：import 期不拉数据，与真源取数时机一致）
 _POOLS_CACHE = None
@@ -151,7 +166,8 @@ def _package_pools() -> dict:
 
 
 def _content_api(ctx=None):
-    """内容 API 解析：`ctx.content_api` > 调用方 `install_content_api` 挂的 > 包内默认。
+    """内容 API 解析：`ctx.content_api` > 调用方 `install_content_api` 挂的 >
+    `install_content_api_source` 挂的**活源**（每次调用问一次）> 包内默认。
 
     替身接口（真源 = 函数内 `import game.content as C`）：只按属性取，不要求是模块 ——
     普通对象 / `SimpleNamespace` / 模块都行；缺某个属性时由调用点决定后果（`ITEMS` /
@@ -163,6 +179,8 @@ def _content_api(ctx=None):
             return api
     if _CONTENT_API is not None:
         return _CONTENT_API
+    if _CONTENT_API_SOURCE is not None:                      # 活源：每次解析都问一次（真源同款时机）
+        return _CONTENT_API_SOURCE()
     return _package_content()
 
 
@@ -209,6 +227,36 @@ def content_api_keys() -> tuple:
             "rune_item", "make_pet_egg")
 
 
+def install_pools_source(fn=None):
+    """替身接口：挂「**活**池源」（每次取池时调用一次，返回值 = 池 dict）。
+
+    与 `install_pools(pools)`（静态值）并存：活源优先。真源 `_get_pools()` 本身就是
+    「每次调用去问宿主数据层 / 包内门面」—— 宿主薄壳把那段原文搬进 thunk 后挂在这里，
+    取数时机与打桩可见性（`sys.modules`/模块属性被换掉也看得见）逐字保留。
+    传 `None` → 撤下。
+    """
+    global _POOLS_SOURCE
+    _POOLS_SOURCE = fn
+    return fn
+
+
+def install_content_api_source(fn=None):
+    """替身接口：挂「**活**内容 API 源」（每次解析引用时调用一次；等价真源函数内
+    `import game.content as C`）。与 `install_content_api(api)` 并存：活源后判。传 `None` → 撤下。"""
+    global _CONTENT_API_SOURCE
+    _CONTENT_API_SOURCE = fn
+    return fn
+
+
+def install_quality_tiers_source(fn=None):
+    """替身接口：挂「**活**档位表源」（每次取表时调用一次；等价真源函数内
+    `from .core.quality_tiers import FISH_TIERS`）。与 `install_quality_tiers(...)` 并存：
+    活源优先。传 `None` → 撤下。"""
+    global _QUALITY_TIERS_SOURCE
+    _QUALITY_TIERS_SOURCE = fn
+    return fn
+
+
 # ============================================================
 # 基础工具（↓ 以下逐字真源正文）
 
@@ -233,11 +281,11 @@ def _resolve_item_ref(ref: str, ctx: Any) -> dict | None:
         return {"type": "gem", "data": gem} if gem else None
     if ref == "rune":
         # 稀有符文：蓝/紫品质随机（v168 语义：随机取蓝/紫符文 1 级）
-        pool = [k for k, r in C.RUNES.items() if (r.get("quality") or "") in ("blue", "purple")]
+        pool = [k for k, r in RUNES.items() if (r.get("quality") or "") in ("blue", "purple")]
         if not pool:
             return None
         rk = random.choice(pool)
-        r_def = C.RUNES[rk]
+        r_def = RUNES[rk]
         rune_data = C.rune_item(r_def["effect"], random.randint(1, 2))
         return {"type": "rune", "data": rune_data} if rune_data else None
     if ref.startswith("gold:"):
@@ -253,13 +301,13 @@ def _resolve_item_ref(ref: str, ctx: Any) -> dict | None:
     if ref.startswith("rune:"):
         # rune:blue / rune:purple（指定品质符文）；rune = 蓝紫混合
         q = ref.split(":", 1)[1] if ":" in ref else None
-        pool = [k for k, r in C.RUNES.items()
+        pool = [k for k, r in RUNES.items()
                 if (r.get("quality") or "") == q] if q else \
-               [k for k, r in C.RUNES.items() if (r.get("quality") or "") in ("blue", "purple")]
+               [k for k, r in RUNES.items() if (r.get("quality") or "") in ("blue", "purple")]
         if not pool:
             return None
         rk = random.choice(pool)
-        r_def = C.RUNES[rk]
+        r_def = RUNES[rk]
         rune_data = C.rune_item(r_def["effect"], random.randint(1, 2))
         return {"type": "rune", "data": rune_data} if rune_data else None
     if ref == "equip_drop_mix":
@@ -343,7 +391,11 @@ _EXPAND_INLINE_PREFIXES = ("equip:", "item:", "gold:")
 
 
 def _get_pools() -> dict:
-    """池数据源。替身接口：`install_pools(pools)` 优先，否则包内 `content/data/drop_pools.json`（惰性缓存）。"""
+    """池数据源。替身接口（优先级）：`install_pools_source(fn)`（**活源**，每次取池问一次 ——
+    宿主薄壳把真源 `_get_pools()` 的「宿主数据层优先 → 包内门面回退」两支搬进 thunk）>
+    `install_pools(pools)`（静态值）> 包内 `content/data/drop_pools.json`（惰性缓存）。"""
+    if _POOLS_SOURCE is not None:
+        return _POOLS_SOURCE()
     if _POOLS_OVERRIDE is not None:
         return _POOLS_OVERRIDE
     return _package_pools()
@@ -370,9 +422,13 @@ def _fish_tiers():
     """垂钓档位表（真源唯一真相源 `game/core/quality_tiers.py:29 FISH_TIERS`）。
 
     包内替身（宿主耦合 → 调用方给）：`install_quality_tiers(order=…, info=…, weights_by_level=…,
-    aliases=…, clamp=(1, 9))` 挂**真源那份档位表**（档位取值 —— QUALITY / FISH_QUALITY_WEIGHTS ——
-    不在包内数据域，见报告「未搬」）；未挂 → 空表 → `_roll_fish` 首行守卫返回 []（抽不出，不抛）。
+    aliases=…, clamp=(1, 9))` 挂**真源那份档位表**，或 `install_quality_tiers_source(fn)` 挂**活源**
+    （每次取表问一次；真源 `_fish_tiers()` 的「先确保本树数据层装配 → 取档位表」原文搬进 thunk）。
+    档位取值 —— QUALITY / FISH_QUALITY_WEIGHTS —— 不在包内数据域，见报告「未搬」；
+    未挂 → 空表 → `_roll_fish` 首行守卫返回 []（抽不出，不抛）。
     """
+    if _QUALITY_TIERS_SOURCE is not None:
+        return _QUALITY_TIERS_SOURCE()
     return _QUALITY_TIERS if _QUALITY_TIERS is not None else _EMPTY_TIERS
 
 
@@ -393,7 +449,7 @@ def _roll_fish(pool: dict, ctx: Any, table) -> list[dict]:
     FISH_TIERS = _fish_tiers()
     FISH_QUALITY_ORDER = FISH_TIERS.order
     if not FISH_QUALITY_ORDER:               # 替身守卫：档位表未挂（调用方没给）→ 抽不出（不抛）
-        return []
+        return []                            # noqa: 档位表未挂（不静默等权兜底）
     rng = table.rng
     spot_cfg = pool.get("spot_cfg") or {}
     ban = set(spot_cfg.get("ban_quality", []))
@@ -592,8 +648,8 @@ def _resolvable(ref, pool) -> object:
         return f"table 子池缺失: {ref}"
     if ref.startswith("equip:"):
         rid = ref.split(":", 1)[1]
-        return True if rid in C.EQUIP_ROSTER else f"equip 名册缺失: {rid}"
-    if ref in C.ITEMS or ref in C.EQUIP_ROSTER:
+        return True if rid in EQUIP_ROSTER else f"equip 名册缺失: {rid}"
+    if ref in ITEMS or ref in EQUIP_ROSTER:
         return True
     if uses == "rolls":
         return f"table 子池未知: {ref}"

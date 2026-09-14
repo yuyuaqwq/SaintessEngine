@@ -62,7 +62,7 @@ class _HostRef:
     #    `x = y or _ss`（注入缺省的写法，见 `content/shop.py:326 buy_index_dispatch`）——
     #    若代理实现了 `__len__`，`or` 的真值判定会走 `len(module)` → TypeError
     #    （2026-09-13 实测：`buy 1` 直接抛，快照 before/after 差 2 例）。代理恒为真值即可，
-    #    容器语义（`len(C.X)` / `for it in C.X` / `k in C.X`）走 `__getattr__` 拿真对象，不受影响。
+    #    容器语义（`len(C.<名>)` / `for it in C.<名>` / `k in C.<名>`）走 `__getattr__` 拿真对象，不受影响。
 
     def __repr__(self):
         return "<HostRef %r>" % (object.__getattribute__(self, "_key"),)

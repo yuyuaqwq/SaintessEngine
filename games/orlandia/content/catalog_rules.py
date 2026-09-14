@@ -775,6 +775,14 @@ __all__ = [
     "WILD_KING_PER_DAY_LIMIT",
     "WILD_KING_PER_PERIOD_LIMIT",
     "WILD_KING_PITY_PERIODS",
+    # ---- B15b 追加（2026-09-14）：副业/重锻**宿主函数**进包 ----
+    #   真源 `game/data/prof_config.py:86/:108` · `refine_exclusive.py:160`（宿主 data 层已删）。
+    #   函数本体在 `content/prof_config.py` / `content/refine_exclusive.py`（逐字端口），
+    #   此处只**再导出** → 宿主 `game/content.py` 的 `catalog_*` 聚合循环收回 `C.<名>`（零宿主改动）。
+    #   ⚠️ 函数名不是数据名 → **不进** `NOT_YET_DOMAINED`（那格只登记数据名）。
+    "price_band",
+    "gather_map_min_lv",
+    "merge_into",
 ]
 
 
@@ -6540,3 +6548,22 @@ INSTANCE_BOSS_EQUIP_DROP = {'inst_goblin_camp': {'boss_equip': 'eq_gu_lu_de_huan
                                    'eq_xing_yu_xiang_lian'],
                           'pool_rate': 0.35,
                           'boss_rate': 0.0}}
+
+
+# =============================================================================
+# B15b 追加（2026-09-14）：副业/重锻**宿主函数**进包 —— 只做**再导出**
+#   背景：宿主 `game/data/*.py` 删除后，`game/data/prof_config.py` 的 `price_band()` /
+#   `gather_map_min_lv()` 与 `game/data/refine_exclusive.py` 的 `merge_into()` 在宿主聚合层
+#   `C.<名>` 上**没有对象**了（`C.gather_map_min_lv` 实测 AttributeError，红测试
+#   `tests/test_v87_14_spatial_links.py`）。函数本体**逐字端口**在：
+#       content/prof_config.py:48      price_band        ← 真源 game/data/prof_config.py:86
+#       content/prof_config.py:54      gather_map_min_lv ← 真源 game/data/prof_config.py:108
+#       content/refine_exclusive.py:29 merge_into        ← 真源 game/data/refine_exclusive.py:160
+#   本文件把三个名字放进 `dir()` 面 ⇒ 宿主 `game/content.py` 的 `catalog_*` 聚合循环
+#   （`globals().setdefault(名, getattr(模块, 名))`，callable 即收）自动收回 `C.<名>`
+#   → **宿主侧零改动**（原「缺名」红项清零；等价性见 `overnight/W-B15b.md`）。
+#   依赖常量不重抄：`PRICE_BAND` ← `content/config.py:const("prof_config", …)`（域 game_config）；
+#   `REFINE_EXCLUSIVE_RECIPES` ← `catalog_items`（域 game_config·**新组** refine_exclusive）。
+# =============================================================================
+from .prof_config import gather_map_min_lv, price_band  # noqa: F401
+from .refine_exclusive import merge_into  # noqa: F401

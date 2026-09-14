@@ -54,10 +54,13 @@
 | `.boss_script` 三函数（`boss_script_cfg` / `make_script_event` / `make_script_hook`） | `script_api=模块或对象` | 宿主 `.boss_script` 模块（等价物 = 包内同名模块） | 包内 `content/flow/boss_script.py` |
 | `st` 存档（宿主持久化） | 同左 | 普通 dict（键名/类型/缺失语义一律不变） | —— |
 
-③ 不变式：④ 文案面「宿主渲染」是刻意的 —— 副本战斗日志域的 3 条 key
-（`instance.日志_团队治疗` / `instance.结算_战斗异常` / `instance.面板_战斗_不在`）
-在宿主 `game/data/text_specs.json` 里声明，宿主命令层仍是唯一渲染点
-（`tests/test_texts_table.py` 的「声明 ↔ 调用点」双向对账据此成立）。
+③ 不变式：④ 文案面 —— **B18 L3c（2026-09-14）起调用点已进包**：副本战斗日志域的 3 条 key
+（`instance.日志_团队治疗` / `instance.结算_战斗异常` / `instance.面板_战斗_不在`）仍在宿主
+`game/data/text_specs.json` 里声明（唯一真源不变），但 `T.text/T.static` 的**调用点**从宿主
+`game/commands/instance_battle.py` 迁到本模块（`team_heal_text` / `abort_text`），宿主该文件的
+文案调用点计数归 0；渲染走包内 `content/texts.py`（读宿主薄壳注入的同一份 SPEC_PATH），
+故整句逐字不变。`tests/test_texts_table.py` 的「声明 ↔ 调用点」双向对账已相应把本模块
+加进 `WIRED["副本战斗日志"]`（跨线共享改动点，全文见 `overnight/W-B18-L3c.md`）。
 对拍证据：`overnight/_l4_snapshot.py`（改包前后逐字节等价）+ `_l4_dep_audit.py`（依赖同源）。
 """
 from __future__ import annotations
@@ -68,10 +71,28 @@ from typing import Optional
 
 from . import instance_run as IR
 from .. import bridge as BR
+from .. import texts as T                                      # B18 L3c：渲染点唯一 = 包内 content/texts.py
 from ..mech.kinds import K_HEAL, K_BUFF
 
 _HERE = os.path.dirname(os.path.abspath(__file__))            # <pkg>/content/flow
 _DATA_DIR = os.path.join(os.path.dirname(_HERE), "data")      # <pkg>/content/data
+
+# ── 文案（B18 L3c：3 条 key 的**调用点**从宿主 `game/commands/instance_battle.py` 迁进包内）──
+# key / 槽位 / 整句逐字未改（表仍是宿主 `game/data/text_specs.json`，包内 `content/texts.py`
+# 经宿主薄壳注入的 SPEC_PATH 读同一份）→ 宿主该文件的 `T.text/T.static` 调用点计数归 0。
+TEAM_HEAL_KEY = "instance.日志_团队治疗"
+ABORT_TEXT = {"no_sides": "instance.结算_战斗异常",
+              "no_actor": "instance.面板_战斗_不在"}
+
+
+def team_heal_text(name, amount) -> str:
+    """团队治疗广播行（真源 = 宿主旧 `game/commands/instance_battle.py::_team_heal_text`）。"""
+    return T.text(TEAM_HEAL_KEY, name=name, amount=amount)
+
+
+def abort_text(code) -> str:
+    """行动中止码 → 文案（真源 = 宿主旧 `_ABORT_TEXT` 映射；code ∈ ABORT_TEXT）。"""
+    return T.static(ABORT_TEXT[code])
 
 # 玩家快照/玩法壳视图需要同步回的每玩家键（actor → snap 或 st per-player 键）
 # V 系列：战斗状态权威 = effects（snap 由 sync_player_from_actor 回写），

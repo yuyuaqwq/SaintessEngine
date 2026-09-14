@@ -84,6 +84,7 @@ from .panel import player_final_stats
 from .skills import skill_info
 from .tables import TIER_GROWTH
 from .time_weather import PERIOD_CN
+from .prof_config import gather_map_min_lv  # ★ B15b：宿主函数进包（原 `C.gather_map_min_lv`，宿主已无对象）
 
 
 # ============================================================
@@ -262,7 +263,7 @@ def _map_facilities(self, cur_map: dict, player: dict = None, sa_id_override: st
     # v173：野地采集也按副业等级分档显示（同垂钓/矿脉）——等级不足显示 🔒
     if cur_map.get("type") == "野外" and mid not in _cat_life.CAMP_SPOTS:
         _glv = db.get_prof_level(player.get("group_id", "g"), player["qq_id"], "gather") if player else 1
-        _gneed = int(C.gather_map_min_lv(int(cur_map.get("lv") or 0)))
+        _gneed = int(gather_map_min_lv(int(cur_map.get("lv") or 0)))
         _lock = " 🔒" if _glv < _gneed else ""
         lines.append(f"🌿 野地可采集(采集Lv.{_gneed}){_lock}(『采集』)")
     return lines

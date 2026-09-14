@@ -592,6 +592,18 @@ UPGRADE_MATERIAL_CN = _CFG_UPGRADE.get("UPGRADE_MATERIAL_CN")
 
 REFINE_RECIPES: dict = dict(_CFG_REFINE.get("REFINE_RECIPES") or {})
 
+# ---- B15b 追加（只加新名，既有名与取值不动）----
+# `REFINE_EXCLUSIVE_RECIPES`：真源 `game/data/refine_exclusive.py:18`（v172 路 B 重锻专属 12 条，
+# 键 = 旧装备中文名，值 = {target(名册 rid), mats, gold, inherit, desc}）。域 = `content/rules/game_config.json`
+# 的**新组** `refine_exclusive`（组名 = 真源模块名，与 `refine` 组同款口径；数据由
+# `overnight/b15b_port_domain.py` 从备份真源 import 后 dump，非手抄）。
+# 为什么必须有这个门面名：宿主聚合层 `C.REFINE_EXCLUSIVE_RECIPES` 开关后**没有对象**了，
+# 而 `content/economy_cmds.py` 的 4 处 `getattr(C, "REFINE_EXCLUSIVE_RECIPES", None) or {}`
+# 会静默退成 `{}`（= v172 路 B 的重锻专属配方在『装备重锻』列表/获取提示里**整块消失**）。
+# 本名由 `game/content.py` 的 `catalog_*` 聚合循环自动收回 ⇒ `C.<名>` 恢复（宿主侧零改动）。
+_CFG_REFINE_EXCLUSIVE: dict = dict(_GAME_CONFIG.get("refine_exclusive") or {})
+REFINE_EXCLUSIVE_RECIPES: dict = dict(_CFG_REFINE_EXCLUSIVE.get("REFINE_EXCLUSIVE_RECIPES") or {})
+
 
 __all__ = [
     "MATERIALS", "MATERIALS_BY_NAME", "ITEMS",
@@ -600,5 +612,5 @@ __all__ = [
     "AFFIXES", "SETS", "PROPS", "LEGENDARY_EFFECTS",
     "ENHANCE_TABLE", "MAX_ENHANCE", "ENHANCE_FAIL_DROP", "ENHANCE_SMITH_MAPS",
     "UPGRADE_TABLE", "UPGRADE_STONE", "UPGRADE_STAMINA", "UPGRADE_MATERIAL_CN",
-    "REFINE_RECIPES", "missing_domains",
+    "REFINE_RECIPES", "REFINE_EXCLUSIVE_RECIPES", "missing_domains",
 ]

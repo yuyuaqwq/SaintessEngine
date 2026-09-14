@@ -565,7 +565,7 @@ class InstanceImpl:
                         T.text("instance.面板_恢复进度", icon=inst.get('icon', '🏰'),
                                name=inst.get('name', '')) + "\n"
                         "━━━━━━━━━━━━\n"
-                        + self._instance_map_view(old_st, group_id)
+                        + self._instance_map_view(old_st, group_id, qq_id)
                     )
                     return
         async for _r in self._instance_start(event, group_id, qq_id, player, arg):
@@ -672,7 +672,7 @@ class InstanceImpl:
         self._instance_save(group_id, st)
         if st.get("mode") == "map":
             # 新层地图模式：显示层全景
-            map_view = self._instance_map_view(st, group_id)
+            map_view = self._instance_map_view(st, group_id, qq_id)
             yield event.plain_result(
                 T.static("instance.面板_继续深入") + "\n"
                 "━━━━━━━━━━━━\n"
@@ -707,7 +707,7 @@ class InstanceImpl:
         if st.get("mode") != "map":
             yield event.plain_result(T.static("instance.面板_地图命令_战斗中"))
             return
-        yield event.plain_result(self._instance_map_view(st, group_id))
+        yield event.plain_result(self._instance_map_view(st, group_id, qq_id))
 
     # ---------------- 调查（v87.2） ----------------
     # v104 M24 P2-4：空参数也命中（help 写『调查』），handler 内给格式提示
@@ -1628,7 +1628,7 @@ class InstanceImpl:
         st = battle_row["state"]
         # v87.2 副本地图化：地图模式显示层全景
         if st.get("mode") == "map":
-            return self._instance_map_view(st, group_id)
+            return self._instance_map_view(st, group_id, qq_id)
         inst = _cat_space.INSTANCES.get(st["inst_id"], {})
         self._instance_ensure_player_fields(st)
         stage_line = ""
@@ -1876,13 +1876,16 @@ class InstanceImpl:
             "secret": secret,
         }
 
-    def _instance_map_view(self, st: dict, group_id) -> str:
+    def _instance_map_view(self, st: dict, group_id, qq_id=None) -> str:
         """生成副本内小地图全景。
 
         v137 副本地图化：rooms 存档存在时按房间渲染（当前房间/可前往 LINKS/怪物剩余/
         POI 剩余/资源池），复用 world 的 _map_nav_body + _map_blocks 统一模板；否则
         回退旧层全景（_stage_virtual_map，兼容过渡）。
         """
+        # v140-bugfix（2026-09-14）：原实现直接引用未定义的 `qq_id`（通关后「调查痕迹」行）→ NameError；
+        # 旧 2 参调用点（含测试桩）保持可用：无实参时回退到副本 leader。
+        qq_id = qq_id or st.get("leader")
         rooms = st.get("rooms")
         if rooms:
             cur_sa_id = st.get("cur_subarea") or ""
@@ -2437,7 +2440,7 @@ class InstanceImpl:
         intro_note = f"\n📖 {inst['intro']}" if inst.get("intro") else ""
         # v87.2 副本地图化：地图模式显示层全景，战斗模式保持原样
         if st.get("mode") == "map":
-            map_view = self._instance_map_view(st, group_id)
+            map_view = self._instance_map_view(st, group_id, qq_id)
             yield event.plain_result(
                 T.text("instance.面板_开本_地图_标题", icon=inst['icon'], name=inst['name']) + "\n"
                 + key_free_note

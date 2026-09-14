@@ -39,6 +39,7 @@ from . import catalog_space as _cspace
 from . import catalog_b143 as _b143  # B14-3 收口名（装备品质/宝石/附魔/词条/钓鱼/世界事件表）
 from . import wild as _wild          # B14-3：`ALL_WILD` 派生读口（content/wild，PEP 562）
 from .panel import STAT_NAMES  # 既有读口（原 `_HostRef("STAT_NAMES")`，门禁证明与宿主面同值同序）
+from .prof_config import gather_map_min_lv  # ★ B15b：宿主函数进包（原 `C.gather_map_min_lv`，宿主已无对象）
 
 # ---- 宿主面（宿主壳 bind_host() 注入；顺序铁律见 economy_host 模块头）----
 C = _HostRef("C")
@@ -705,7 +706,7 @@ class EconomyImpl(CommandBase):
         # 顺序：先 _prof_wait_flow（含旧轮惰性结算，v127.5「奖励不丢」铁律）——
         #   旧轮结算保留；若 flow 已开新轮（_ok=True），清掉新轮再拦（防高图留计时白嫖）。
         _gather_lv = db.get_prof_level(group_id, qq_id, "gather")
-        _need_gather = int(C.gather_map_min_lv(int(cur_map.get("lv") or 0)))
+        _need_gather = int(gather_map_min_lv(int(cur_map.get("lv") or 0)))
         if _gather_lv < _need_gather:
             text, _ok = self._prof_wait_flow(
                 event, group_id, qq_id, "gather",

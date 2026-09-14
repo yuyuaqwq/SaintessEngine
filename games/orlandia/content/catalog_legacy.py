@@ -854,6 +854,15 @@ GAPS: tuple = ("AFFIX_AFFINITY_POOLS", "AFFIX_KIND", "BRANCH_KEY_DISPLAY", "CLAS
 GAP_REASON: dict = {
     '宿主函数（包内无实现）': ['price_band', 'gather_map_min_lv', 'merge_into'],
     '宿主 data 子模块句柄（随 data 消失；实测无真读点）': ['affixes', 'alchemy', 'base_growth', 'battle_config', 'battle_rules', 'builds', 'calamity', 'classes', 'collection_book', 'cooking', 'dialogues', 'dungeon_links', 'dungeon_pois', 'econ_config', 'enhance', 'equip_roster', 'equipment', 'formula_skeleton', 'gather', 'gather_pools', 'guild', 'hidden_monsters', 'honor_shop', 'housing', 'instance_investigation', 'instance_stage_maps', 'instances', 'item_tag_display', 'items', 'job_guide', 'mesh_rooms_east_abyss', 'mesh_rooms_south', 'mesh_rooms_west_north', 'monster_mods', 'monsters', 'npcs', 'poi_pools', 'prof_config', 'props', 'quest_add_v140', 'quests', 'races', 'refine', 'refine_exclusive', 'set_bonus_data', 'sets', 'shop', 'shop_limit', 'signin_config', 'skill_up', 'skills', 'stat_templates', 'subareas', 'tips', 'titles', 'trial_tower', 'upgrade', 'weapon_effect_data', 'weekly_quests', 'wild_king_data', 'wild_npcs', 'world'],
+    # ---- B15b 追加（2026-09-14 · 只追加，不改上面两格的既有取值）----
+    # 上面『宿主函数（包内无实现）』那三个名 + `GAPS` 里的 `REFINE_EXCLUSIVE_RECIPES` **已进包**：
+    #   price_band / gather_map_min_lv → `content/prof_config.py`（逐字端口；常量走 content/config.py）
+    #   merge_into                     → `content/refine_exclusive.py`（逐字端口；常量走 catalog_items）
+    #   三门面再导出由 `content/catalog_rules.py` 尾部长尾门面负责 ⇒ 宿主 `C.<名>` 自动收回，宿主零改动。
+    #   `REFINE_EXCLUSIVE_RECIPES` 的域 = `content/rules/game_config.json` 新组 `refine_exclusive`
+    #   （由 `overnight/b15b_port_domain.py` 从备份真源 dump，非手抄）。
+    # 故 `GAPS` / 上面那格是**历史台账**，勿再按「缺口」派活；等价性证据见 `overnight/W-B15b.md`。
+    'B15b 已进包（历史名，勿再按缺口处理）': ['price_band', 'gather_map_min_lv', 'merge_into', 'REFINE_EXCLUSIVE_RECIPES'],
 }
 
 

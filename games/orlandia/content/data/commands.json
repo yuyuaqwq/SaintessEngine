@@ -7,6 +7,7 @@
     "category": "系统",
     "usage": "（内部 gate，无玩家用法）",
     "order": 10,
+    "priority": 100,
     "visible": false,
     "extra": {
       "note": "v96：停服时非 GM 游戏指令一律拦下并停止传播；开服或 GM 直接放行（不产出任何结果，事件继续传给真正的指令 handler）。v127.5：任意游戏指令入口顺带惰性刷新通用倒计时引擎（timed_events）。priority=100 且配 _GameCmdFilter；正则无 $ 锚定、设计上匹配所有消息，**不参与指令互斥矩阵**（test_v87 / test_command_parse 均按名剔除）。"
@@ -1471,6 +1472,7 @@
       "player"
     ],
     "order": 15,
+    "priority": 50,
     "extra": {
       "note": "与 item_detail 正则重叠，靠 priority=50 判定先后（test_v87 矩阵豁免登记）。"
     }
@@ -1674,6 +1676,7 @@
     "category": "世界",
     "usage": "（发数字，如 5）",
     "order": 17,
+    "priority": 100,
     "extra": {
       "note": "v101.16：priority=100 高于快捷指令（shortcut_trigger 同 pattern 双注册，靠 priority 判定先后，test_v87 矩阵豁免登记）。"
     }
@@ -2254,6 +2257,7 @@
       "player"
     ],
     "order": 5,
+    "priority": 5,
     "extra": {
       "note": "v167 拆分：『摆摊』一词语义歧义（有无价格区分卖/换，与数量参数冲突，一介散人『咕噜的皇冠』同名事件暴露按名匹配的坑）。老词保留为引导提示，priority=5 让位给新指令。"
     }

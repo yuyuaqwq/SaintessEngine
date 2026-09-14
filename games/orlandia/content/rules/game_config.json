@@ -5718,6 +5718,142 @@
       }
     }
   },
+  "refine_exclusive": {
+    "REFINE_EXCLUSIVE_RECIPES": {
+      "铁皮长剑": {
+        "target": "eq_bilei_zhanjian",
+        "mats": {
+          "mat_jing_tie_ding": 6,
+          "mat_jin_he": 2,
+          "mat_yan_long_lin": 1
+        },
+        "gold": 320,
+        "inherit": "half",
+        "desc": "铁皮长剑叠上精铁甲片重锻，剑脊如城墙——壁垒战剑（重锻独有，继承一半强化/升级）"
+      },
+      "精铁战剑": {
+        "target": "eq_bilei_juntuan_zhanjian",
+        "mats": {
+          "mat_hei_tie_ding": 8,
+          "mat_zhan_hun_zhi_chen": 1,
+          "mat_jin_he_zhi_xin": 1
+        },
+        "gold": 1200,
+        "inherit": "half",
+        "desc": "精铁战剑熔入烬核余火，烙上军团壁垒徽记——壁垒军团战剑（重锻独有，继承一半强化/升级）"
+      },
+      "见习法杖": {
+        "target": "eq_mingwen_fadian_zhizhang",
+        "mats": {
+          "mat_yin_ling_si": 6,
+          "mat_mo_yan_zhi_he": 2,
+          "mat_sheng_guang_jie_jing": 1
+        },
+        "gold": 320,
+        "inherit": "half",
+        "desc": "学徒法杖的潦草魔文誊成整页铭文，字字生辉——铭文法典之杖（重锻独有，继承一半强化/升级）"
+      },
+      "符文法杖": {
+        "target": "eq_mingke_fadian_zhizhang",
+        "mats": {
+          "mat_fu_wen_duan": 8,
+          "mat_ling_hun_sui_pian": 1,
+          "mat_yun_xing_he": 1
+        },
+        "gold": 1200,
+        "inherit": "half",
+        "desc": "符文法杖的符文逐一錾进银脊，如使徒印章——铭刻法典之杖（重锻独有，继承一半强化/升级）"
+      },
+      "布衣权杖": {
+        "target": "eq_xianzhe_fadian_zhizhang",
+        "mats": {
+          "mat_yin_ling_si": 6,
+          "mat_moonlight_essence": 1,
+          "mat_bai_lu_jiao": 1
+        },
+        "gold": 320,
+        "inherit": "half",
+        "desc": "布衣权杖经贤者之手重铸，杖首圣辉凝成书页纹——贤者法典之杖（重锻独有，继承一半强化/升级）"
+      },
+      "祝福权杖": {
+        "target": "eq_huiguang_shengzhang",
+        "mats": {
+          "mat_sheng_hui_rong": 8,
+          "mat_ye_dao_zhi_xin": 1,
+          "mat_gu_long_lin": 1
+        },
+        "gold": 1200,
+        "inherit": "half",
+        "desc": "祝福权杖在圣辉泉水中浸炼七日，辉光流转——辉光圣杖（重锻独有，继承一半强化/升级）"
+      },
+      "猎手短弓": {
+        "target": "eq_xunlie_changgong",
+        "mats": {
+          "mat_qing_xiang_mu": 6,
+          "mat_feng_zhi_yu": 2,
+          "mat_lie_huo_mu": 1
+        },
+        "gold": 320,
+        "inherit": "half",
+        "desc": "猎手短弓换林线巡守者弓弦，箭路直追奔鹿——巡猎长弓（重锻独有，继承一半强化/升级）"
+      },
+      "风行长弓": {
+        "target": "eq_yuanzheng_zhigong",
+        "mats": {
+          "mat_lie_feng_zhi_mu": 8,
+          "mat_feng_bao_ying_yu": 1,
+          "mat_tian_ying_yu": 1
+        },
+        "gold": 1200,
+        "inherit": "half",
+        "desc": "风行长弓弓胎经远征军匠师重校，弦响如号角——远征之弓（重锻独有，继承一半强化/升级）"
+      },
+      "轻影匕首": {
+        "target": "eq_yexing_duanren",
+        "mats": {
+          "mat_ying_zhi_ge": 6,
+          "mat_an_ying_jing_hua": 2,
+          "mat_jing_tie_ding": 1
+        },
+        "gold": 320,
+        "inherit": "half",
+        "desc": "轻影匕首淬过月光重锻，刃身暗下时影子难寻——夜行短刃（重锻独有，继承一半强化/升级）"
+      },
+      "夜行匕首": {
+        "target": "eq_anyezhi_ren",
+        "mats": {
+          "mat_ying_zhi_ge": 8,
+          "mat_mu_ying_long_hun": 1,
+          "mat_shen_yuan_quan_ya": 1
+        },
+        "gold": 1200,
+        "inherit": "half",
+        "desc": "夜行匕首在无星之夜重锻，出手只留一线暮影——暗夜之刃（重锻独有，继承一半强化/升级）"
+      },
+      "行者拳套": {
+        "target": "eq_zhenyue_quantao",
+        "mats": {
+          "mat_jing_tie_ding": 6,
+          "mat_rong_yan_he_xin": 2,
+          "mat_shi_cai": 1
+        },
+        "gold": 320,
+        "inherit": "half",
+        "desc": "行者拳套缠上精铁链与山石之核，拳风如压山——镇岳拳套（重锻独有，继承一半强化/升级）"
+      },
+      "石拳拳套": {
+        "target": "eq_hanyue_quan",
+        "mats": {
+          "mat_hei_tie_ding": 8,
+          "mat_di_di_long_lin": 1,
+          "mat_gu_long_yi_jia": 1
+        },
+        "gold": 1200,
+        "inherit": "half",
+        "desc": "石拳拳套以地脉精钢重铸，一拳山岳晃动——撼岳拳（重锻独有，继承一半强化/升级）"
+      }
+    }
+  },
   "rules": {
     "RULES": [
       {

@@ -241,7 +241,7 @@ def _collection_completed_bonus(qq_id: str, player: dict) -> dict:
     bonus = {}
     try:
         _C = C
-        # B14-2 L8：`C.COLLECTION_BOOKS` → 包内读口 `collection.books()`（5 册 / id 序一致 / 去注入
+        # B14-2 L8：宿主 `COLLECTION_BOOKS` → 包内读口 `collection.books()`（5 册 / id 序一致 / 去注入
         # `order` 后逐册 deep-equal True，实测 `_b14_2_L8_probe.py`）
         books = list(_col.books())
         if not books:

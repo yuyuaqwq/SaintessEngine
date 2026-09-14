@@ -45,6 +45,7 @@ from . import catalog_items as _ci    # 物品/材料/符文/装备名册
 from . import catalog_life as _cl     # 生活/副业/商店/宠物/经济配置
 from . import catalog_space as _sp    # 地图/子区域
 from . import catalog_b143 as _b143   # B14-3 收口名（FISH_EXP/QUALITY —— 原缺口名已建域）
+from .prof_config import price_band  # ★ B15b：宿主函数进包（原 `C.price_band`，宿主已无对象）
 # ---- B14-2 L5 读点切换（2026-09-14）----
 # 数据名读点（MATERIALS/RUNES · MAP_BY_ID · PROF_WAIT_BASE/PROF_WAIT_DECAY/PROF_WAIT_FLOOR/
 # MINING_KEYWORDS/RARE_MATERIAL_PRICE · PET_EGG_ORANGE_CHANCE/PROF5_BONUS_CHANCE/RARE_MAT_CHANCE）
@@ -238,7 +239,7 @@ def gather_roll(level: int, prof_lv: int = 1, cur_map: str = "") -> list:
         # v104 R3 M14 P1-2：兜底池排除强化石类消耗品（i_stone_* 是炼金/商店独占，禁止采集白嫖）
         # v125.2 B3：价格带公式数据下沉 prof_config.price_band（原 3+lv*4 / 20+lv*12 双处字面量）
         _map_lv = _sp.MAP_BY_ID.get(cur_map or "", {}).get("lv", level)
-        _lo, _hi = C.price_band(_map_lv)
+        _lo, _hi = price_band(_map_lv)
         cand = [name for name, m in _ci.MATERIALS.items()
                 if _lo <= m["price"] <= _hi
                 and name not in ("i_stone_upgrade", "i_stone_refine")]
@@ -993,7 +994,7 @@ def settle_mining(group_id, qq_id, st, *, daily_prof_bump=None):
                     and m not in ("i_stone_upgrade", "i_stone_refine")]
             _map_lv = _sp.MAP_BY_ID.get(cur_map, {}).get("lv", player["level"])
             # v125.2 B3：价格带公式数据下沉 prof_config.price_band（原 3+lv*4 / 20+lv*12 双处字面量）
-            _lo, _hi = C.price_band(_map_lv)
+            _lo, _hi = price_band(_map_lv)
             cand = [m for m in ores if _lo <= _ci.MATERIALS[m]["price"] <= _hi]
             if cand:
                 ores = cand

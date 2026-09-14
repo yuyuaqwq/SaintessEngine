@@ -11,9 +11,11 @@
     框架不认，映射表在内容侧）+ `REPRO_KEYS` + `_uid` / `_num` / `_rounds_of` / `_player_input`。
     **可拔插（红线）**：`tlog=None` 时**全部方法零行为** —— 不链观察者、不包 human_act、不写一个字段。
     **采集不改行为**：观察者与包装都是只读 + 前后串联（既有观察者先跑、异常各自隔离）。
+  · **回放半边**（`find_battle`/`replay`，旧版 `:245-321`）：★ **B12B13 线2 起已在包内**
+    → `content/tlog_replay.py`（B10-L2 的留宿理由「依赖宿主重建链」已随 `battle_bridge` 实现
+    归包 `content/bridge.py` 消失；回放半边按 I2 走 `_host_attr("services.battle_bridge", …)`
+    取宿主薄壳 —— event_state 仍是宿主 DB 视图）。
   · **未搬**（清单见 `overnight/d3-tlog-port.md` §3）：
-    :245-321 回放半边（`find_battle`/`replay`）—— 依赖宿主重建链
-    （`game/services/battle_bridge.py` 的 `prepare_player_for_battle`/`build_sides`/`apply_battle_loadout`）；
     `game/services/tlog_db_sink.py`（155 行）+ `game/tlog_setup.py`（116 行）= **落库半边**
     ——模块归属裁定为**宿主**（`overnight/module-ownership.md:82/102`：采集器 → 包，DB sink → 宿主）。
     ⇒ 包内**不含**任何落库/开关代码：出口（引擎 `JSONLSink`/`MemorySink`，宿主可换 `SQLiteSink`）
