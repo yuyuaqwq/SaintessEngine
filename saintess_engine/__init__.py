@@ -22,6 +22,9 @@
             container/   容量受限格子容器
             session/     宿主会话适配
             run/         运行形状（准入链 / 进度 / 名单）
+            host/        宿主运行时（包加载 / 会话循环 / 命令通道 / 战斗驱动）
+                         ★ 平台三函数（recv/load_player+save_player/say）与可选钩子由**适配器**给；
+                           本模块零平台知识、零游戏知识 —— 换包 = 换 package_dir（一个进程一个包）
 
 本文件是**包门面**：外部只需 `from saintess_engine import X`。
 包内模块一律相对导入，不反向依赖门面（纯度门禁 tests/test_engine_purity.py）。
@@ -53,6 +56,8 @@ from . import (  # noqa: F401
     clock, command, container, events, expr, formation, gauge, log, loot, run, session,
     space, store, text, tlog,
 )
+from . import host  # noqa: F401  （宿主运行时：放在最后 import，避免与上面各模块的加载顺序打架）
+from .host import Host, load_package  # noqa: F401
 # 指令声明 / 文案表（声明驱动：可拔插，未装载 = 零行为）
 from .command import CommandRegistry, CommandSpec  # noqa: F401
 from .text import TextSpec, TextTable, safe_format  # noqa: F401
