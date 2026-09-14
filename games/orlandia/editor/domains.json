@@ -80,6 +80,15 @@
     "owner": "engine",
     "tier": "fixed"
   },
+  "text_specs": {
+    "label": "文案真源",
+    "kind": "data",
+    "schema": null,
+    "primary": null,
+    "icon": "💬",
+    "owner": "engine",
+    "tier": "fixed"
+  },
   "tlogs": {
     "label": "流水声明",
     "kind": "data",

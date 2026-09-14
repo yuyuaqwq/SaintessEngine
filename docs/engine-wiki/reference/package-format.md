@@ -347,11 +347,11 @@ effective_domains(pkg) = 包 editor/domains.json  ∪（可选）框架内置默
 ```
 
 **实证（可复现）**：`python tests/test_editor_step3_pkg_first.py` —— 用 monkeypatch 把框架那份
-常量**整个置空**后，`games/orlandia` 仍能列出完整 24 域、能读能写能校验、HTTP 端到端 200
+常量**整个置空**后，`games/orlandia` 仍能列出完整 73 域、能读能写能校验、HTTP 端到端 200
 （= 真源确实在包，框架那份可以被整体拿掉）；同一门禁钉住 `examples/minimal-game` 这个**最小样板**
 （自带 6 域声明 + 6 份 schema，覆盖它声明的**全部**域，照它抄就是新游戏的加域姿势）。
 另一条**反证**在 `python tests/test_editor_package_domains.py`（§4b）：内置集逐名 == 8 个引擎域 +
-**拿掉**包内 `editor/domains.json` → orlandia 的 24 域立刻掉到 8（内容域真的没有了，不是换个来源）。
+**拿掉**包内 `editor/domains.json` → orlandia 的 73 域立刻掉到 8（内容域真的没有了，不是换个来源）。
 
 ### 10.3 什么时候才该动框架
 

@@ -51,15 +51,16 @@ effective_domains(pkg) = 包 editor/domains.json ∪（可选）框架内置默�
 
 ## 包的扩展面（声明式到哪层）
 
-设计稿：工作区 `overnight/editor-extension-design.md`（三层扩展面）。**声明式**这一档分两层，
-第 1、2 层均已上线；包能声明的东西全部落在包自己的 `editor/` 目录里，框架一行不改。
+设计稿：工作区 `overnight/editor-extension-design.md`（三层扩展面）+ 第 3 层实施稿
+`overnight/layer3-render-design.md`（§9 分批）。第 1、2 层与第 3 层的**声明面**（§9 批 1 声明 +
+批 2 白名单派生/沙箱）均已上线；包能声明的东西全部落在包自己的 `editor/` 目录里，框架一行不改。
 
 | 层 | 包侧文件 | 能改什么 | 框架侧 |
 |---|---|---|---|
 | **1** | `editor/domains.json` + `schemas/` | 域集（新增域 / 同名覆盖）、schema 解析 | 内置 **8 个引擎域** = `BUILTIN_DEFAULT_DOMAINS`（**回退默认集**） |
 | **2** | `editor/relations.json` | 字段↔域引用（下拉候选 + **引用校验**）、表单联动/只读 | `glossary.REF_DOMAINS`（只给候选、**不校验**）+ 无联动（默认空） |
 | **2** | `editor/views.json` | 域 → **内置**视图（`loot_view` / `instance_view` / `space_view` / `table` / `graph`） | `relations.BUILTIN_DEFAULT_VIEWS`（`maps→space_view`、`drop_pools→loot_view`、`instances→instance_view`） |
-| 3 | `editor/view.js`（未做） | 自定义渲染（iframe 沙箱） | — |
+| **3** | `editor/render/<域>.json`（每域一份；历史单文件 `editor/render.json` 仍读、已弃用） | 自定义渲染：版面（5 种块 / 分组 / 逐字段覆盖）、受控交互槽（白名单）、**白名单派生只读值** —— 出**受限渲染树**，不执行包代码 | `editor/render.py`（读声明 / 规范化 / 建树 / 限额）+ `render_decl.py`（声明校验 + 白名单表）+ `render_worker.py`（派生沙箱子进程：一次性 / import 白名单 / 超时 / 输出上限） |
 
 合入规则与第 1 层同一套纪律：**包声明 > 框架默认**；包**不声明**时行为**逐项不变**
 （框架那份降级为默认值，不删）；坏声明（坏 JSON / 未知 view 名 / 未知域 / 形状不对）
@@ -89,9 +90,12 @@ effective_domains(pkg) = 包 editor/domains.json ∪（可选）框架内置默�
 * 前端：选包后 `/api/glossary?pkg=` 会带上包声明的控件/引用表（`ref_source: package`），
   引用字段照旧渲染成下拉；`by=name` 用 `/api/package/<id>/hints` 的 `ref_names`。
 
-**仍在框架侧（第 3 层，未做）**：字段词典 `glossary.py` 的**释义/中文名/分组**（`GLOSSARY` /
-`GROUPS`）、`x-widget` 声明与校验器注册表（包还不能自带控件或自定义校验器）、自定义渲染
-`editor/view.js`。第 3 层设计（iframe 沙箱 + postMessage 回写）见设计稿 §二。
+**第 3 层还没做的**（`overnight/layer3-render-design.md` §9 分批）：**批 3** 可选代码档
+（`editor/render/<域>.py` 的受限 `derive()`，**当前决定：不做** —— 声明面只做存在性识别 + 标红）、
+**批 4** 导入面风险标注 + 包内 `render/$schema.json`、**批 5** `<域>.html.js` 的 iframe 只读路径（默认关）。
+另：包只能**点名**白名单控件/校验钩子（`glossary.PKG_WIDGETS` / `render_decl.HOOKS` 是固定词表），
+**不能注册自己的实现**（不能自带新控件或自定义校验器）。字段词典的**中文名/释义/分组/控件**真源
+已搬进包（`editor/glossary/<域>.json`；框架 `GLOSSARY` / `GROUPS` / `WIDGETS` 只是回退默认集）。
 
 ## 跑法
 
