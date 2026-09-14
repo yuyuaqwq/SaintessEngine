@@ -34,8 +34,19 @@
 
     from content.flow import weekly_progress as WP
     WP.bind_host(db, grant_reward)          # 宿主薄壳注入（游戏仓 game/services/weekly_progress.py）
+    WP.selfcheck()                          # ★ 启动自检：缺注入 → 抛 HostInjectionMissing（不静默）
     st = WP._week_state(qq_id)
     lines = WP.weekly_bump_kill(group_id, qq_id, monster)
+
+★ fail-closed（2026-09-15 P5′ 1.0b 修复，RPT 发现的静默失效）
+------------------------------------------------------------
+`bind_host` 注入点消失（例：宿主壳被删/换宿主）后，`_host_grant_reward()` 会取不到宿主
+`reward.grant_reward`；旧口径下这个错误被 `weekly_bump_kill` 的 `except Exception: pass`
+吞掉 ⇒ **达标不发奖、进度不落库、无任何日志**。现行口径：
+
+* `_resolve_host()` / `selfcheck()` 抛专用的 `HostInjectionMissing`；
+* `weekly_bump_kill` 的宽容分支**放行**它（只吞数据/DB 波动）；
+* 宿主启动时调 `selfcheck()`（`main.py::_weekly_reward_selfcheck`）—— 缺注入**当场报错**。
 """
 from __future__ import annotations
 
@@ -57,6 +68,17 @@ _HOST_PKG = "data.plugins.dragonfall.game"
 _HOST_PKG_FALLBACK = "game"
 
 
+class HostInjectionMissing(RuntimeError):
+    """宿主注入面缺失 = **wiring 故障**（区别于数据/DB 波动）。
+
+    存在的理由（RPT 实测的静默缺陷）：注入点 `game/services/weekly_progress.py` 一旦消失，
+    `_host_grant_reward()` 取不到宿主 `reward.grant_reward`；若这个错误被
+    `weekly_bump_kill` 的宽容 `except Exception: pass` 吞掉，玩家达标后**不发奖、不落进度、
+    不给提示**，且日志里一个字都没有 —— 本项目最怕的静默失效。
+    因此本类单独成型：宽容分支必须放行它（见 `weekly_bump_kill` 的 except 序）。
+    """
+
+
 def bind_host(db=None, grant_reward=None):
     """宿主替身注入（幂等；宿主薄壳在 import 期调用）。`db` = 存储层模块（四动词），`grant_reward` = 可调用。"""
     global _HOST_DB, _HOST_GRANT
@@ -73,7 +95,32 @@ def _resolve_host(mod: str):
         m = sys.modules.get(name)
         if m is not None:
             return m
-    raise RuntimeError(f"weekly_progress：宿主模块 {mod} 不可用（未 bind_host 且未加载）—— 拒绝静默空跑")
+    raise HostInjectionMissing(
+        f"weekly_progress：宿主模块 {mod} 不可用（未 bind_host 且未加载）—— 拒绝静默空跑")
+
+
+def selfcheck():
+    """**启动自检**（fail-closed）：周常发奖链路（宿主存储层 + 发放函数）必须当场可取。
+
+    返回一行可读结论；缺任一 → 抛 `HostInjectionMissing`（**不静默**、不降级）。
+    宿主应在启动装配时调用（`main.py::_weekly_reward_selfcheck`）：
+    宁可启动就报错，也不要「玩家打了半天达标却什么都没发生」。
+    """
+    try:
+        getattr(db, "get_event_state")            # 取宿主存储层（缺 → HostInjectionMissing）
+    except HostInjectionMissing as exc:
+        raise HostInjectionMissing(
+            "weekly_progress 自检失败：宿主存储层不可取（%s）—— 周常进度/发奖会静默失效" % exc)
+    try:
+        grant = _host_grant_reward()
+    except HostInjectionMissing as exc:
+        raise HostInjectionMissing(
+            "weekly_progress 自检失败：宿主发奖函数不可取（%s）—— 达标会静默不发奖" % exc)
+    if not callable(grant):
+        raise HostInjectionMissing(
+            "weekly_progress 自检失败：宿主 grant_reward 不可调用（%r）" % (grant,))
+    return "weekly_progress 自检通过：存储层 + 发奖函数均可取（grant=%s）" % (
+        getattr(grant, "__module__", "?"),)
 
 
 class _HostDB:
@@ -222,8 +269,12 @@ def weekly_bump_kill(group_id, qq_id, monster) -> list:
                     out.append("🏆 本周悬赏全部完成！下周刷新后再来领新赏金～")
         if changed:
             _save_week_state(qq_id, st)
+    except HostInjectionMissing:
+        # 注入面缺失 = wiring 故障 → **放行**（绝不静默：历史缺陷正是这里被下面的
+        # `except Exception: pass` 吞掉，玩家达标不发奖且无任何痕迹）。
+        raise
     except Exception:
-        # 周常推进失败不影响战斗主流程（与成就/野王 hook 同款宽容）
+        # 周常推进失败不影响战斗主流程（与成就/野王 hook 同款宽容）—— 仅限数据/DB 波动。
         pass
     return out
 
