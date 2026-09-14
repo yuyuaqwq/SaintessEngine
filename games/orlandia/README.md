@@ -10,9 +10,11 @@
 
 ## 一、包里有什么
 
-**50 个域 / 8163 条**，约 3 MB：
+**73 个域 / 9361 条**（★ 2026-09-14 实测现状：`scripts/verify_package_coverage.py --check`
+汇总行「域 73 个 / 条目合计 9361 / 失败 0」），约 3 MB：
 
-> ★ 2026-09-13 B2b：域的表**真源在本包的 `editor/domains.json`**（50 域）—— 框架内置集只剩
+> ★ 2026-09-13 B2b：域的表**真源在本包的 `editor/domains.json`**（50 域 —— B2b 时点数，
+> 现状 73 域见上）—— 框架内置集只剩
 > 8 个**引擎域**（effect_rules / passive_proc / commands / texts / tlogs / maps / drop_pools /
 > instances，每个都能在 `saintess_engine/` 指到消费端）；**内容域不内置**，只能由包声明
 > （反证：拿掉本包那份声明 → 编辑器只认识那 8 个）。下表是 19 域那批的历史盘点；
@@ -41,7 +43,7 @@
 | classes | 8 | `content/data/classes.json` | `game/data/classes.py::CLASSES` | 职业（含 `tutor` 元组 → list） |
 | loot_vocab | 1 | **`content/rules/loot_vocab.json`** | `game/drop_engine.py` 的三张声明常量 | 掉落池**引用词汇声明**（内容侧告诉审计「哪些引用解得开」） |
 
-`game.json` 声明：`id=orlandia` / `engine=">=0.1"` / `domains=[50 个域]` / `created=2026-09-12` /
+`game.json` 声明：`id=orlandia` / `engine=">=0.1"` / `domains=[73 个域]` / `created=2026-09-12` /
 `entry=content/apply.py`（2026-09-13 机制入口移植进包起，`entry` 是**管辖字段**：声明了就必须有那个文件，
 `tests/test_editor_dist.py` 守这条不变量）。
 

@@ -20,6 +20,7 @@ D. **子进程健壮**：超时可掐死（明确报 timeout，不静默）；wo
 """
 from __future__ import annotations
 
+import atexit
 import hashlib
 import json
 import os
@@ -57,7 +58,8 @@ if HOST_ROOT:
 PKG = (os.path.join(HOST_ROOT, "framework", "games", "orlandia") if HOST_ROOT
        else os.path.join(ROOT, "games", "orlandia"))   # 游戏包
 QQ_REF = os.path.join(HOST_ROOT, "tests", "b20_qq_ref.py") if HOST_ROOT else ""
-DB_DIR = os.path.join(tempfile.gettempdir(), "b20_play_db")
+DB_DIR = tempfile.mkdtemp(prefix="b20_play_db_")   # 每次运行独立目录（并发/残留互不污染）
+atexit.register(shutil.rmtree, DB_DIR, ignore_errors=True)   # 退出清理（含异常/早退）
 CLOCK = 1700000000.0                               # 固定墙钟（两侧同刻）
 
 sys.path.insert(0, ROOT)                           # `import editor.play`
