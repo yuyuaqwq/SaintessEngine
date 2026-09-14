@@ -109,6 +109,29 @@ def get_visited_count(group_id, qq_id):
             conn.close()
 
 
+def get_visited_maps(qq_id) -> set:
+    """该玩家已到访的**地图级** id 集合（`visited` 表的 DISTINCT map_id）。
+
+    ★ PFIX P5（2026-09-15）：`content/achievement_conds.py::_c_hidden_area`（隐藏区域成就）
+    原先直插 `db._lock` / `db._connect()` —— 那是**宿主 `game/db.py` 的内部句柄**；
+    B1 把存储层搬进包后 `content/_pkgref.DB`（= `content.persistence`）**不导出**这两个名字
+    ⇒ 取件抛 AttributeError ⇒ 条件走 `except` 兜底恒 `False` ⇒ 隐藏区域成就永不可达
+    （实测 `test_v104_achievements.py` 4 条、`test_v99_05_achievement_conds.py` 相关条红）。
+    按「改走公共口」补这个**公共函数**（与 `get_visited_count` / `get_visited_subareas` 同层同款），
+    实现体 = 原查询逐字。
+    """
+    with _lock:
+        conn = _connect()
+        try:
+            rows = conn.execute(
+                "SELECT DISTINCT map_id FROM visited WHERE qq_id=?",
+                (qq_id,),
+            ).fetchall()
+            return set(r["map_id"] for r in rows)
+        finally:
+            conn.close()
+
+
 # ==================== v115 探索见闻：子区域级到访 visited_subareas ====================
 # 与 visited 表（地图级）同构但按"地图:子区域"粒度记录；group_id 仅作兼容保留（同 add_visited）。
 
@@ -492,6 +515,7 @@ __all__ = [
     "get_bestiary",
     "add_visited",
     "get_visited_count",
+    "get_visited_maps",
     "add_visited_subarea",
     "get_visited_subareas",
     "get_visited_subareas_rows",

@@ -330,16 +330,13 @@ def _c_hidden_area(player, stats, profs, extra, cond):
             hidden.add(m["id"])
     if not hidden:
         return False
+    # ★ PFIX P5：改走**公共口** `db.get_visited_maps`（`content/persistence/world.py`）。
+    #   原实现直插 `db._lock` / `db._connect()` —— 宿主 `game/db.py` 时代这两个内部句柄
+    #   确实存在；B1 把存储层搬进包后 `content/_pkgref.DB`（= `content.persistence`）
+    #   **不导出**它们 ⇒ AttributeError ⇒ `except` 兜底恒 False ⇒ 隐藏区域成就永不可达。
+    #   公共口内部用的是同一把 `_lock` + 同一个 `_connect()`（查询逐字同款）。
     try:
-        with db._lock:
-            conn = db._connect()
-            try:
-                rows = conn.execute(
-                    "SELECT DISTINCT map_id FROM visited WHERE qq_id=?", (player["qq_id"],)
-                ).fetchall()
-            finally:
-                conn.close()
-        cnt = sum(1 for r in rows if r[0] in hidden)
+        cnt = sum(1 for m in db.get_visited_maps(player["qq_id"]) if m in hidden)
         return cnt >= _value(cond)
     except Exception:
         return False

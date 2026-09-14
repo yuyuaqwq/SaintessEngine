@@ -46,7 +46,7 @@ from .social import (  # noqa: F401
 )
 from .world import (  # noqa: F401
     bump_fishing, get_fishing_total, bump_bestiary, get_bestiary,
-    add_visited, get_visited_count, get_world_event, save_world_event,
+    add_visited, get_visited_count, get_visited_maps, get_world_event, save_world_event,
     clear_world_event, get_event_state, set_event_state, delete_event_state,
     get_talk_state, set_talk_state, clear_talk_state, talk_state_key,
     get_talk_flags, set_talk_flag, get_boss_dmg_mult,

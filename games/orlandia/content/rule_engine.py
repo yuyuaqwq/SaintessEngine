@@ -13,10 +13,15 @@
   ② `_db()` 的 `from .. import db` → 包内句柄 `from ._pkgref import DB as db`（B1/B2-C2）
   ③ `fire()` 内 `from ..core.event_templates import EventContext, execute_event_template`
      → **包内直取** `.event_templates`（B2-C2；L3 已落地，函数内 import 保持调用时解析）
-  ④ 时段判定改经 `_time_check()` 取件（**本线新增 8 行桥**）：`tests/test_v97_05_rule_engine.py:35`
-     用 `RE._is_time = lambda span: span == "day"` 覆盖**宿主模块属性**钉死时段；原实现里
-     `_match_cond` 直接调本模块全局 `_is_time`，搬包后若仍读包内全局，该覆盖会失效（测试必红）。
-     取件优先读宿主薄壳同名函数（它就是包内这一份的再导出），被覆盖时拿到覆盖值。
+  ④ 时段判定改经 `_time_check()` 取件（**P1 收口 2026-09-15：调用时取件**）：
+     `tests/test_v97_05_rule_engine.py:35` 用 `RE._is_time = lambda span: span == "day"`
+     覆盖**宿主模块属性**钉死时段；真源语义 = 「`_match_cond` 调本模块全局 `_is_time`」，
+     薄壳化后宿主那份再导出就是它的替身 ⇒ 必须**每次调用去宿主命名空间取件**
+     （`_host_attr("core.rule_engine", "_is_time")`，取不到回落包内），与
+     `content/events.py::_src` 同款。
+     ★ 禁止写成 `from .rule_engine import _is_time`（**自指桥**）：那只读包内自己，
+       宿主壳改写会**永久静默失效**（PATCHAUDIT §3 A 组实测）。见
+       `docs/engine-wiki/architecture/boundaries.md`「禁止自指桥」。
 
 缺口（报告登记）：规则表 `data/rules.py:RULES`（20 条）已于 W12 收口切包内门面
 （`catalog_b143.RULES` ← `rules/game_config.json` 的 `rules` 组；**不是**
@@ -25,10 +30,16 @@
 """
 
 # ============================================================
-# 宿主取件（B2-C2：本模块已全部改包内直取；原 `_host_*` 宿主替身机械已删）
-#   · 存档层 → 包内句柄 `content/_pkgref.py:DB`（见下）
+# 宿主取件
+#   · 存档层 → 包内句柄 `content/_pkgref.py:DB`（B1/B2-C2 后不再走宿主）
 #   · 事件模板 → 包内直取 `.event_templates`（见 `fire()` 内函数级 import）
+#   · 时段判定 `_is_time` → ★ **调用时取件**（P1 收口，见下 `_time_check`）：
+#     真源里 `_match_cond` 查的是**本模块全局**，薄壳化后宿主壳那份再导出是它的替身，
+#     故每次调用都要去宿主命名空间取件（同 `content/events.py::_src` 的口径）。
+#     取不到宿主那份时回落包内 `_is_time`（真源逐字实现），保证包独立可用。
 # ============================================================
+_HOST_PKG = "data.plugins.dragonfall.game"
+_HOST_PKG_FALLBACK = "game"
 
 # -*- coding: utf-8 -*-
 """奥兰迪亚·余烬纪年核心层 - rule_engine.py（v97.5：行为彩蛋规则引擎）
@@ -61,6 +72,7 @@ cond 支持字段：
 触发器（v97.5 已挂）：explore_done / battle_win / gather_done / move_enter / craft_done / quest_deliver
 """
 import random
+import sys
 
 # 延迟导入规则表（避免 data 层循环）
 RULES = None
@@ -112,12 +124,55 @@ def _is_time(span: str) -> bool:
     return True
 
 
-def _time_check(span: str) -> bool:
-    """时段判定取件（本线新增桥，见头注 ④）：宿主薄壳同名函数优先 ——
-    `tests/test_v97_05_rule_engine.py:35` 用 `RE._is_time = lambda span: span == "day"`
-    覆盖宿主模块属性钉死时段；取不到宿主那份时回落包内 `_is_time`（真源逐字实现）。"""
+def _host_module(name: str):
+    """按宿主包名解析宿主模块（`sys.modules` 已加载优先 → importlib 兜底；**绝不静默空跑**）。
+
+    与 `content/events.py::_host_module` 同款（各包内模块按仓内惯例自带一份替身口）。
+    """
+    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+        m = sys.modules.get("%s.%s" % (prefix, name))
+        if m is not None:
+            return m
+    import importlib
+    last = None
+    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+        try:
+            return importlib.import_module("%s.%s" % (prefix, name))
+        except Exception as exc:                    # noqa: BLE001
+            last = exc
+    raise RuntimeError("rule_engine：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
+
+
+def _host_attr(mod: str, attr: str):
+    """宿主命名空间取件（**调用时**求值）——`content/events.py::_host_attr` 同款。"""
+    m = _host_module(mod)
     try:
-        from .rule_engine import _is_time as fn
+        return getattr(m, attr)
+    except AttributeError:
+        import importlib
+        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+            try:
+                return importlib.import_module("%s.%s" % (
+                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
+            except Exception:                       # noqa: BLE001
+                continue
+        raise
+
+
+def _time_check(span: str) -> bool:
+    """时段判定取件（**调用时**解析，与 `content/events.py::_src` 同款）。
+
+    真源语义 = 「`_match_cond` 查本模块全局 `_is_time`」；实现进包后，宿主
+    `game/core/rule_engine.py` 的再导出（`_is_time = _pkg._is_time`，拷贝壳）就是那个
+    「本模块全局」的替身 ⇒ `tests/test_v97_05_rule_engine.py:35` 的
+    `RE._is_time = lambda span: span == "day"` 必须被看见，故**每次调用**读宿主命名空间。
+    取不到宿主那份时回落包内 `_is_time`（真源逐字实现）——包独立可用。
+
+    ★ 禁止写成 `from .rule_engine import _is_time as fn`（自指桥）：那是读包内自己，
+      既不是别名壳也不是惰性桥，宿主壳改写会永久静默失效（PATCHAUDIT §3 A 组实测）。
+    """
+    try:
+        fn = _host_attr("core.rule_engine", "_is_time")
     except Exception:                                # noqa: BLE001
         fn = None
     return (fn or _is_time)(span)

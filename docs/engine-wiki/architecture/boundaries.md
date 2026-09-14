@@ -67,6 +67,59 @@
 `to_state` 在 API 面内」一条断言（`test_engine_purity.py:153-155`）。
 （游戏仓侧的全量回归是另一回事：`python scripts/run_all_tests.py`，住在游戏仓。）
 
+### 游戏仓侧常驻哨兵：`tests/test_patch_surface.py`
+
+壳化会让「测试改写宿主模块属性来控制行为」这种写法**悄悄失效**（见下一节）。
+游戏仓为此常驻一道哨兵（PATCHAUDIT 2026-09-14 落地，PFIX 2026-09-15 加固为
+「**按名字**判定取件」）：AST 扫 `tests/**` 里所有对宿主模块属性的改写，逐条判定
+「这次改写是否真的能控制行为」：
+
+| 判定 | 含义 | 处理 |
+|---|---|---|
+| `effective_alias` | 宿主名 == 包内实现模块对象（别名壳） | 放行 |
+| `effective_bridge` | 包内实现**按这个名字**经宿主命名空间取件（`_host_attr("core.x","NAME")` / `_src("NAME")`），或宿主壳把该名绑成 `source=lambda: NAME` | 放行 |
+| `effective_host_native` | 包内无同名实现（宿主即实现） | 放行 |
+| `dead_noop` | 实现已进包、包内**自持**该名 ⇒ 改写只落在宿主命名空间 | **报红**（除非 `WHITELIST` 显式登记并写明理由） |
+| `unknown` | 动态属性名，静态判不了 | 报红（人工确认） |
+
+跑法：`python tests/test_patch_surface.py`（exit=0 通过）；有牙自证
+`python tests/test_patch_surface.py --self-test`（注入一条**已知失效**改写必须报红 +
+一条别名壳改写必须放行 + 一条已知有效桥必须放行）。本哨兵是**常驻门禁**，
+已进游戏仓全量 `scripts/run_all_tests.py`（文件名 `test_*.py` 自动收）。
+
+## 内容包壳化：别名壳 / 调用时取件，**禁止自指桥**
+
+把实现从宿主搬进内容包（B1/B2/B13/B18 各线）后，宿主原文件退化成「壳」。
+仓内允许**两种**壳；**第三种「自指桥」禁止使用** —— 它是唯一会让测试**静默失效**的桥型：
+
+| 壳形态 | 代码形态 | 「测试改写宿主模块属性」的后果 |
+|---|---|---|
+| **别名壳**（安全） | `_sys.modules[__name__] = _impl` | 宿主名与包内实现**是同一个模块对象** ⇒ 改写 == 改实现 |
+| **调用时取件**（安全，首选） | 包内 `_host_attr("core.x", "NAME")` / `_src("NAME")`；宿主壳 `bind_spec_path(source=lambda: NAME)` | 取件发生在**每次调用**、读宿主命名空间 ⇒ 改写可见 |
+| **自指桥**（★禁止） | 包内 `from .本模块 import NAME as fn`（或任何只读**包内自己**的间接层） | 包内实现读自己的全局；宿主那份是 import 期**拷贝** ⇒ 宿主壳改写**永久静默 no-op**：不报错，测试假绿 / 夜间偶红 |
+
+**为什么必须写死这一条**：自指桥**不会报错**。它把「测试钉死时钟 / 数据」的意图悄悄吃掉，
+症状是「白天全绿、深夜或换机才红」——最贵的一类缺陷。别名壳与调用时取件都把
+「名字解析」放在**运行时**，与真源「函数体查本模块全局」的语义一致；自指桥把解析
+固定在**包内**，与宿主壳（测试的打桩面）脱钩。
+
+**本仓实证（PFIX P1，2026-09-15）**：`content/rule_engine.py::_time_check()` 曾写成
+`from .rule_engine import _is_time as fn`（自指到包内自己）⇒
+`tests/test_v97_05_rule_engine.py:35` 的 `RE._is_time = lambda span: span == "day"`
+（改写宿主 `game/core/rule_engine.py` —— 它是 `_is_time = _pkg._is_time` 的**拷贝壳**）
+完全不被看见 ⇒ 23:00–05:00 跑该测试**必红**（`rule_explore_ghost` 的 `cond time=deep_night`
+真的命中，chance 0.18 在 `seed(1)` 下触发）。已改成调用时取件
+`_host_attr("core.rule_engine", "_is_time")`（取不到回落包内 `_is_time`）⇒
+**同一深夜窗口 78/0 绿**；把它改回自指桥 ⇒ 测试 **77/1 红** + 哨兵 `dead_noop` 报红
+（有牙反证，见 `out/logs/P1_counterproof_*.log`）。
+
+**判据（新增壳 / 改桥时照做）**：
+
+1. 壳化某个名字后，跑 `python tests/test_patch_surface.py` —— 必须放行；
+2. 若该名字被测试改写，做一次「删掉取件、退回自指」的反证：测试必须**由绿转红**
+   （防「改绿了但没牙」）；
+3. 桥只允许两种形态：**别名壳**（模块自替换）或**调用时取件**（每次调用读宿主命名空间）。
+
 ## 历史上的 15 条反向依赖边（为什么要建这道门）
 
 来源：游戏仓内部文档 `docs/ENGINE_CONTENT_SPLIT_PLAN.md` §3.2（逐条 R1–R15）。
@@ -218,3 +271,4 @@ def apply_game_content(actor: dict, ctx: dict | None = None) -> dict:   # game/c
 - 每个 ADR 的代价 → [design-decisions.md](design-decisions.md)
 - 分发清单 → [../contributing/release.md](../contributing/release.md)
 - 未取证项总表 → [../_selfcheck.md](../_selfcheck.md)
+- 壳化打桩面哨兵（游戏仓，常驻门禁）→ `tests/test_patch_surface.py`（`--self-test` 有牙自证）
