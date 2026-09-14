@@ -1,17 +1,25 @@
 # -*- coding: utf-8 -*-
-"""编辑器扩展面**第 3 层 · 批 1**：包侧渲染声明的**读 + 规范化 + 告警 + 受限渲染树 + 限额**。
+"""编辑器扩展面**第 3 层 · 批 1/批 2**：包侧渲染声明的**读 + 规范化 + 告警 + 受限渲染树 +
+派生值（沙箱）+ 限额**。
 
-设计真源：`overnight/layer3-render-design.md` §9「批 1 · 声明面」（§3 字段级、§4 渲染树、§6 降级）
-          + `overnight/layer3-render-contracts.md` §0/§1/§2/§3。
+设计真源：`overnight/layer3-render-design.md` §9「批 1 · 声明面」/「批 2 · 派生值」
+          （§3 字段级、§4 渲染树、§5.1/§5.2 沙箱、§6 降级）
+          + `overnight/layer3-render-contracts.md` §0/§1/§2/§3/§4。
 
-批 1 = **纯声明（D0）**。本模块**绝不**：
+批 1 = **纯声明（D0）**；批 2 加**派生值**（`derives`）—— 值只在**一次性子进程**里由
+**框架白名单函数**算出（`editor/render_worker.py`），本模块只负责：构造 payload、
+把回程值**过一遍白名单/限额**、再把它们落进树。本模块**绝不**：
 
-* 起任何子进程（派生值/代码档是批 2/批 3 的事）；
-* 执行包里的任何东西（`<域>.py` / `.html.js` 只被**数一下存在性**，内容不读）；
-* import `saintess_engine`，也不 import `editor.packages`（后者会级联 `install_engine()`）。
+* 自己起进程（本文件里没有起进程的调用 —— 那条边界**只**在 `render_worker.py` 里；
+  且对它是**惰性 import**，所以 `import editor.render` 不会把 worker 拉进内存）；
+* 执行包里的任何东西（`<域>.py` / `.html.js` 只被**数一下存在性**，内容不读 —— 代码档
+  **已砍**，见 `_load_all` 的「忽略并告警」）；
+* import `saintess_engine`，也不 import `editor.packages`/`editor.relations`（前者会级联
+  `install_engine()`，后者 import 前者）。
 
 树里的每个文本叶都是**纯文本**（协议里没有 `html`/`style`/`class` 字段；未知键一律丢弃）；
-插值（`{字段}` / `{字段|zh}`）在**服务端**算完再进树 —— 前端只做转义渲染，不做模板求值。
+插值（`{字段}` / `{字段|zh}` / `{derive:名}`）在**服务端**算完再进树 —— 前端只做转义渲染，
+不做模板求值。
 
 降级纪律（抄第 1/2 层，**永不 500、永不白屏**）
 --------------------------------------------
@@ -21,6 +29,7 @@
 | L1 | 声明**坏**（坏 JSON / 未知 `$version` / 未知键…） | 整份忽略 → 调用方回退第 2 层 + **可读告警** |
 | L2 | 声明好、某块不合规 | 逐块降级：丢掉那一块 + 告警，其余照渲染 |
 | L3 | 树构建不出（`when` 不满足 / 顶层不合规） | `ok:false` + `stage` → 调用方整域回退 + 黄条 |
+| L3 | **派生期**失败（子进程超时 / 崩 / 输出超限 / 回程值不合规） | `derived()` 回 `ok:false` + `stage` → 调用方整域回退 + 黄条 |
 
 声明签名缓存抄 `editor/relations.py:242-258`（`(mtime_ns, size)` 两文件签名）；
 **渲染结果不缓存**（含数据与耗时），只在声明/schema 两层缓存。
@@ -30,7 +39,12 @@
     declarations(pkg_dir, domains=None) -> {domains, warnings, limits, code_enabled}
     declared(pkg_dir, dom, domains=None) -> (规范化声明 | None, [告警])
     active(pkg_dir, dom, domains=None) -> bool
-    build(pkg_dir, dom, key, data, domains=None, decl=None) -> 树外壳
+    derived(pkg_dir, dom, key, data, domains=None, decl=None, timeout_ms=None,
+            ref_values=None) -> {ok, stage, values, warnings, elapsed_ms, sandbox}
+                                                     # ★批 2：派生值落**一次性子进程**
+    build(pkg_dir, dom, key, data, domains=None, decl=None, derived=None) -> 树外壳
+                                                     # `derived` 给了才用派生；不传 = 批 1 的 D0 语义
+    tree_problems(tree) -> [可读问题]                            # ★批 2：父侧树校验（只报不改）
     render_warnings(pkg_dir, domains=None) -> [可读告警]        # 并入既有告警出口
     limits() -> dict                                            # /render 的 limits 小节
 """
@@ -57,6 +71,10 @@ MAX_WARNINGS = 64                         # 树/响应里的告警条数上限�
 MAX_HINT = 200
 TIMEOUT_ENV = "FW_RENDER_TIMEOUT"
 TIMEOUT_DEFAULT_MS = 1500
+MAX_DERIVE_STR = 200                      # 派生展示串上限（与 MAX_HINT 同源）
+MAX_VALUE_ITEMS = 200                     # 回程值容器上限（契约 §4.4 的 list 项）
+MAX_VALUE_DEPTH = 6                       # 回程值嵌套深度上限
+MAX_VALUE_KEY = 80                        # 回程值字典键长上限
 
 _CACHE: dict = {}                         # 包目录 -> (签名, 解析结果)
 _CACHE_MAX = 500
@@ -337,6 +355,8 @@ def _load_all(pkg_dir, domains: dict | None):
         _one_decl(out, warns, key, dom, {**raw}, rel, doms,
                   hashlib.sha1(txt.encode("utf-8")).hexdigest()[:16])
     # ③ 代码面存在性（**只看文件名，不读内容**）
+    #    ★ 批 2 口径（作业书 §1 裁定）：**批 3（代码档）已砍** —— `render/<域>.py` 一律
+    #    「明确忽略 + 告警，绝不执行」；`$allow_code:true` 同样只记存在性、不发车。
     for dom in sorted(doms):
         d = decl_dir(key)
         for suffix, flag in ((".py", "has_code"), (".html.js", "has_iframe")):
@@ -348,9 +368,18 @@ def _load_all(pkg_dir, domains: dict | None):
                 info = out["info"][dom] = _bad_info(f"{RENDER_DIR_REL}/{dom}{suffix}", [])
             info[flag] = True
             out["code_enabled"] = True
+            if suffix == ".py":
+                msg = (f"渲染声明：`{RENDER_DIR_REL}/{dom}.py`（代码档）存在，但**批 3 已砍**"
+                       " —— 本批只记存在性：**忽略该文件、绝不执行**（值一律走白名单派生）")
+                warns.append(msg)
+                info["warnings"].append(msg)
     for dom, info in out["info"].items():
         if (out["decls"].get(dom) or {}).get("allow_code"):
             out["code_enabled"] = True
+            msg = (f"渲染声明 {dom}：`$allow_code: true`，但**批 3（代码档）已砍** —— "
+                   "本批忽略该开关：**绝不执行包内任何函数**")
+            warns.append(msg)
+            info["warnings"].append(msg)
     out["warnings"] = list(warns)
     if len(_CACHE) > _CACHE_MAX:
         _CACHE.clear()
@@ -478,8 +507,11 @@ def _interp_one(body: str, ctx) -> str:
         return ""
     if body.startswith("derive:"):
         name = body[len("derive:"):].strip()
-        ctx["warn"](f"插值 {{derive:{name}}}：派生值属**批 2**（本批不执行任何包函数）"
-                    " —— 该插值点渲染为空")
+        got = (ctx.get("derived_display") or {}).get(name)
+        if got is not None:
+            return got                                # ★批 2：派生展示串（沙箱算好、父侧已校验）
+        ctx["warn"](f"插值 {{derive:{name}}}：派生值属**批 2** 的沙箱路径"
+                    "（本次调用没请求派生 = D0）—— 该插值点渲染为空")
         return ""
     zh = False
     if body.endswith("|zh"):
@@ -609,6 +641,24 @@ def _rows_from(source_field, data, decl, gloss, warn, kv_mode: bool):
     return []
 
 
+def _derive_items(value):
+    """派生值 → `list/table` 的原始项列表（对象 → 键值项 `{"name": 键, "value": 值}`）。"""
+    if isinstance(value, list):
+        return value
+    if isinstance(value, dict):
+        return [{"name": k, "value": v} for k, v in value.items()]
+    return [value]
+
+
+def _derive_kv_rows(name: str, value) -> list:
+    """派生值 → `kind=kv` 的 `{label, value}` 行（全是展示串）。"""
+    if isinstance(value, dict):
+        return [{"label": _to_text(k), "value": _to_text(v)} for k, v in value.items()]
+    if isinstance(value, list):
+        return [{"label": f"{name} {i + 1}", "value": _to_text(v)} for i, v in enumerate(value)]
+    return [{"label": name, "value": "—" if value is None else _to_text(value)}]
+
+
 def _build_block(blk: dict, ctx) -> dict | None:
     if not RD.cond_ok(blk.get("when"), ctx["data"]):
         return None
@@ -627,19 +677,31 @@ def _build_block(blk: dict, ctx) -> dict | None:
         out["text"] = _interp(blk.get("text") or "", ctx)
         return out
     src = blk.get("source") or {}
-    if "derive" in src:
-        ctx["warn"](f"块 {blk['id']}：数据来源 {{derive:{src['derive']}}} 属**批 2**"
-                    "（本批不执行任何包函数）—— 该块已略过")
+    dname = src.get("derive")
+    d_raw = ctx.get("derived_raw") or {}
+    if dname is not None and dname in d_raw:
+        # ★批 2：数据来源 = 沙箱派生值（父侧已过白名单 + 限额）
+        value = d_raw[dname]
+        if kind == "kv":
+            out["rows"] = _derive_kv_rows(dname, value)
+            if not out["rows"]:
+                out["empty"] = blk.get("empty") or "（空）"
+            return out
+        vals = _derive_items(value)
+    elif dname is not None:
+        ctx["warn"](f"块 {blk['id']}：数据来源 {{derive:{dname}}} 属**批 2** 的沙箱路径"
+                    "（本次调用没请求派生 = D0）—— 该块已略过")
         return None
-    field = src.get("field")
-    if kind == "kv":
-        rows = _rows_from(field, ctx["data"], ctx["decl"], ctx["gloss"], ctx["warn"], True)
-        out["rows"] = rows or []
-        if not out["rows"]:
-            out["empty"] = blk.get("empty") or "（空）"
-        return out
-    vals = _rows_from(field, ctx["data"], ctx["decl"], ctx["gloss"], ctx["warn"], False)
-    vals = vals if isinstance(vals, list) else []
+    else:
+        field = src.get("field")
+        if kind == "kv":
+            rows = _rows_from(field, ctx["data"], ctx["decl"], ctx["gloss"], ctx["warn"], True)
+            out["rows"] = rows or []
+            if not out["rows"]:
+                out["empty"] = blk.get("empty") or "（空）"
+            return out
+        vals = _rows_from(field, ctx["data"], ctx["decl"], ctx["gloss"], ctx["warn"], False)
+        vals = vals if isinstance(vals, list) else []
     limit = int(blk.get("max_rows") or RD.MAX_ROWS_DEFAULT)
     if kind == "list":
         limit = min(limit, RD.MAX_LIST_ITEMS)
@@ -721,9 +783,236 @@ def _shrink(tree: dict, warn) -> None:
         warn(f"渲染树共丢弃 {dropped} 个块")
 
 
-def build(pkg_dir, dom: str, key: str, data, domains=None, decl=None) -> dict:
-    """声明 → 受限渲染树（**D0 纯声明：不执行任何包代码、不写盘**）。
+#: 协议里**不允许**出现在树里的键（契约 §2.3 H1：出现即丢弃；树 ≠ HTML）
+FORBIDDEN_TREE_KEYS = ("html", "innerhtml", "style", "class", "script", "src",
+                       "onerror", "onload", "srcdoc")
 
+
+def tree_problems(tree) -> list:
+    """父侧**树校验**（契约 §2/H1 + §5.1 的回程校验）：纯函数，返回可读问题清单（`[]` = 干净）。
+
+    只**报**不**改**：树的构建者是框架自己（`build()`），这里防的是两件事 ——
+    ① 将来有人不小心把 `html`/`style`/`script` 之类的键塞进树（H1 不可协商）；
+    ② 顶层形状退化（`tabs` 空 / 分页或块数超限 / 块类型不在白名单）。**不静默**：问题清单由
+    调用方并进告警（`server._run_view` 就是那条路）。
+    """
+    probs: list = []
+    if not isinstance(tree, dict):
+        return ["渲染树不是对象"]
+    stack = [(tree, "tree")]
+    guard = 0
+    while stack and guard < 20000:
+        node, path = stack.pop()
+        guard += 1
+        if isinstance(node, dict):
+            for k, v in node.items():
+                if isinstance(k, str) and k.lower() in FORBIDDEN_TREE_KEYS:
+                    probs.append(f"{path}.{k}：协议里不允许这个键（H1：出现即丢弃）")
+                if isinstance(v, (dict, list)):
+                    stack.append((v, f"{path}.{k}"))
+        elif isinstance(node, list):
+            for i, v in enumerate(node):
+                if isinstance(v, (dict, list)):
+                    stack.append((v, f"{path}[{i}]"))
+    tabs = tree.get("tabs")
+    if not isinstance(tabs, list) or not tabs:
+        probs.append("tree.tabs：需为非空数组（契约 §2.1）")
+    else:
+        if len(tabs) > RD.MAX_TABS:
+            probs.append(f"tree.tabs：{len(tabs)} 页超过上限 {RD.MAX_TABS}")
+        for i, tab in enumerate(tabs):
+            if not isinstance(tab, dict) or not isinstance(tab.get("id"), str) or not tab.get("id"):
+                probs.append(f"tree.tabs[{i}]：缺 id（契约 §2.1）")
+                continue
+            blocks = tab.get("blocks")
+            if not isinstance(blocks, list):
+                probs.append(f"tree.tabs[{i}].blocks：需为数组")
+            elif len(blocks) > RD.MAX_BLOCKS_PER_TAB:
+                probs.append(f"tree.tabs[{i}].blocks：{len(blocks)} 块超过上限 "
+                             f"{RD.MAX_BLOCKS_PER_TAB}")
+            for j, blk in enumerate(blocks if isinstance(blocks, list) else []):
+                if not isinstance(blk, dict) or blk.get("kind") not in RD.KINDS:
+                    probs.append(f"tree.tabs[{i}].blocks[{j}]：块类型不在白名单"
+                                 f"（{' / '.join(RD.KINDS)}）")
+    return probs[:16]
+
+
+# ═══════════════════ 四之二、派生值（批 2：一次性子进程 + 父侧回程硬判） ═══════════════════
+def _fmt_date(value) -> str:
+    """`format:"date"`：数字（unix 秒）→ `YYYY-MM-DD`；字符串原样。"""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        try:
+            t = time.gmtime(value)
+            return "%04d-%02d-%02d" % (t.tm_year, t.tm_mon, t.tm_mday)
+        except (OSError, ValueError, OverflowError):
+            pass
+    return _to_text(value)
+
+
+def _fmt_derive(value, fmt: str, name: str, warn) -> str:
+    """沙箱回程值 → 展示串（契约 §2.1：`derives.*.value` 是**展示串**）。"""
+    if value is None:
+        warn(f"派生 {name}：没有值（数据取不到 / 除零 / 计算失败）—— 显示为「—」")
+        return "—"
+    num = isinstance(value, (int, float)) and not isinstance(value, bool)
+    if fmt == "percent" and num:
+        s = f"{value * 100:.1f}%"
+    elif fmt == "number" and num:
+        s = f"{value:,}" if isinstance(value, int) else \
+            (f"{value:,.2f}".rstrip("0").rstrip("."))
+    elif fmt == "date":
+        s = _fmt_date(value)
+    else:
+        s = _to_text(value)
+    if len(s) > MAX_DERIVE_STR:
+        warn(f"派生 {name}：展示串超过 {MAX_DERIVE_STR} 字 —— 已截断")
+        s = s[:MAX_DERIVE_STR]
+    return s
+
+
+def _clean_value(v, depth: int = 0, where: str = "值"):
+    """回程值 → `(干净值, 可用?, [告警])`：**父侧硬判**类型/串长/条目数/深度（契约 §5.1 的①②③④⑦）。"""
+    probs: list = []
+    if v is None or isinstance(v, bool):
+        return v, True, probs
+    if isinstance(v, (int, float)):
+        if isinstance(v, float) and (v != v or v in (float("inf"), float("-inf"))):
+            probs.append(f"{where}：非有限浮点（NaN/Inf）—— 已丢弃该派生")
+            return None, False, probs
+        return v, True, probs
+    if isinstance(v, str):
+        if len(v) > MAX_DERIVE_STR:
+            probs.append(f"{where}：字符串超过 {MAX_DERIVE_STR} 字 —— 已截断")
+            return v[:MAX_DERIVE_STR], True, probs
+        return v, True, probs
+    if depth >= MAX_VALUE_DEPTH:
+        probs.append(f"{where}：嵌套超过 {MAX_VALUE_DEPTH} 层 —— 已丢弃该派生")
+        return None, False, probs
+    if isinstance(v, list):
+        if len(v) > MAX_VALUE_ITEMS:
+            probs.append(f"{where}：数组 {len(v)} 项超过上限 {MAX_VALUE_ITEMS} —— 已截断")
+            v = v[:MAX_VALUE_ITEMS]
+        out, ok = [], True
+        for x in v:
+            cv, cok, p = _clean_value(x, depth + 1, where)
+            probs.extend(p)
+            ok = ok and cok
+            out.append(cv)
+        return (out if ok else None), ok, probs
+    if isinstance(v, dict):
+        if len(v) > MAX_VALUE_ITEMS:
+            probs.append(f"{where}：对象 {len(v)} 键超过上限 {MAX_VALUE_ITEMS} —— 已截断")
+            v = dict(list(v.items())[:MAX_VALUE_ITEMS])
+        out, ok = {}, True
+        for k, x in v.items():
+            key = k if isinstance(k, str) else _to_text(k)
+            if len(key) > MAX_VALUE_KEY:
+                key = key[:MAX_VALUE_KEY]
+            cv, cok, p = _clean_value(x, depth + 1, where)
+            probs.extend(p)
+            ok = ok and cok
+            out[key] = cv
+        return (out if ok else None), ok, probs
+    probs.append(f"{where}：值类型 {type(v).__name__} 不在白名单"
+                 "（只许 null/bool/数/串/数组/对象）—— 已丢弃该派生")
+    return None, False, probs
+
+
+def derived(pkg_dir, dom: str, key: str, data, domains=None, decl=None,
+            timeout_ms=None, ref_values=None) -> dict:
+    """★批 2：该域的派生值 —— 在**一次性子进程**里跑**框架白名单函数**（契约 §4）。
+
+    `ok=False`（超时 / 崩 / 输出超限）→ 调用方按 L3 **整域**降级 + 黄条；没有派生声明 →
+    `ok=True` + 空 `values`（**不起子进程**，零冷启动成本）。**永不抛。**
+
+    payload 里**没有**包目录/仓根等任何本机路径（契约 §4.1），`allow_code` 恒 `False`
+    （批 3 已砍 —— 子进程没有执行包代码的入口）。
+    """
+    out, all_w = _load_all(pkg_dir, domains)
+    if decl is None:
+        decl = out["decls"].get(dom)
+    if decl is None:
+        return {"ok": False, "stage": "decl", "values": {}, "elapsed_ms": None, "sandbox": None,
+                "message": f"域 {dom} 没有可用的渲染声明（或声明已损坏）—— 已回退内置视图",
+                "warnings": list(all_w)}
+    warns = list(all_w)
+    for w in ((out["info"].get(dom) or {}).get("warnings") or []):
+        if w not in warns:
+            warns.append(w)
+    if decl.get("when") and not RD.cond_ok(decl["when"], data):
+        return {"ok": False, "stage": "decl", "values": {}, "elapsed_ms": None, "sandbox": None,
+                "message": f"域 {dom} 的 render 声明 when 条件不满足 —— 本次回退内置视图",
+                "warnings": warns}
+    # `when` 由**父侧**求值（子进程不做条件判断：少一门语义就少一个逃逸面）
+    specs, compute = {}, []
+    for name, spec in (decl.get("derives") or {}).items():
+        if not isinstance(spec, dict):
+            continue
+        if spec.get("when") and not RD.cond_ok(spec["when"], data):
+            continue
+        specs[name] = {"fn": spec.get("fn"), "args": dict(spec.get("args") or {})}
+        compute.append(name)
+    if not specs:
+        return {"ok": True, "stage": "done", "values": {}, "warnings": warns,
+                "elapsed_ms": 0, "sandbox": None, "skipped": True}
+    from . import render_worker as RW          # ★惰性：`import editor.render` 不拉 worker 进内存
+    tmo = int(timeout_ms) if timeout_ms else RW.default_timeout_ms()
+    payload = {
+        "pkg_id": os.path.basename(os.path.normpath(str(pkg_dir or ""))) or "",
+        "dom": dom, "key": str(key),
+        "data": data if isinstance(data, dict) else {},
+        "decl": {"version": decl.get("version") or 1, "extends": decl.get("extends"),
+                 "decl_sha": decl.get("decl_sha") or "", "derives": specs},
+        "compute": compute,
+        "schema_digest": {"primary": "", "fields": list(decl.get("fields_known") or [])},
+        "glossary": {},                        # 词表只在**父侧**用（展示层），子进程不需要
+        "ref_values": dict(ref_values or {}),  # `lookup_label` 的候选值：父进程预读（契约 §1.9）
+        "limits": {"max_output_bytes": RW.MAX_OUTPUT_BYTES, "max_elements": RW.MAX_ELEMENTS,
+                   "max_depth": MAX_VALUE_DEPTH, "timeout_ms": tmo},
+        "caps": list(RW.CAPS),                 # ["decl","derive"] —— **没有** "code"
+        "allow_code": False,                   # ★批 3 已砍：恒 False（声明写 true 也不发车）
+    }
+    res = RW.invoke(payload, timeout_ms=tmo)
+    if not res.get("ok"):
+        return {"ok": False, "stage": res.get("stage") or "derive", "values": {},
+                "elapsed_ms": res.get("elapsed_ms"), "sandbox": res.get("sandbox"),
+                "message": res.get("message") or "派生沙箱子进程失败 —— 已回退内置视图",
+                "warnings": warns + [w for w in (res.get("warnings") or []) if w not in warns]}
+    raw = res.get("values") if isinstance(res.get("values"), dict) else {}
+    clean: dict = {}
+    for name in specs:
+        if name not in raw:
+            continue
+        cv, ok, probs = _clean_value(raw[name], where=f"派生 {name}")
+        for p in probs:
+            if p not in warns:
+                warns.append(p)
+        if ok:
+            clean[name] = cv
+    for name in raw:                           # 回程里**声明外**的名字 → 丢弃 + 告警（绝不透传）
+        if name not in specs:
+            msg = f"派生沙箱回了声明外的名字 {name!r} —— 已丢弃（绝不透传）"
+            if msg not in warns:
+                warns.append(msg)
+    for w in (res.get("warnings") or []):
+        if w not in warns:
+            warns.append(w)
+    return {"ok": True, "stage": "done", "values": clean, "warnings": warns,
+            "elapsed_ms": res.get("elapsed_ms"), "sandbox": res.get("sandbox"),
+            "echo": res.get("echo")}
+
+
+def build(pkg_dir, dom: str, key: str, data, domains=None, decl=None, derived=None) -> dict:
+    """声明 → 受限渲染树。
+
+    * 不给 `derived` = **批 1 的 D0 语义**（派生值一行不算、`{derive:…}` 渲染为空 + 告警）；
+    * 给 `derived`（`{派生名: 回程值}`，来自 `derived()` = 沙箱子进程）→ 落 `tree["derives"]`、
+      `{derive:名}` 插值、`source:{derive:名}` 块。
+
+    `derived` 的每个值都**已经**在 `derived()` 里过完白名单/类型/长度/深度判；本函数只做
+    「有没有这个键」的判定，绝不对沙箱回程值做**求值**（不能求值 = 没有代码入口）。
     返回 `{ok, ...}`：`ok=False` 时带 `stage` 与 `message`（调用方按 L3 降级 + 黄条）；
     任何坏输入都**不抛**。
     """
@@ -759,8 +1048,27 @@ def build(pkg_dir, dom: str, key: str, data, domains=None, decl=None) -> dict:
     for w in sw:
         warn(w)
     gloss = _glossary(pkg_dir, dom)
+    d_raw = derived if isinstance(derived, dict) else {}
+    # ★批 2：派生展示串（父侧格式化；`when` 不满足 / 沙箱没回值 → 不进树、不显示）
+    d_disp = {}
+    for name, spec in (decl.get("derives") or {}).items():
+        if name not in d_raw:
+            continue
+        if spec.get("when") and not RD.cond_ok(spec["when"], data):
+            continue
+        entry = {"label": name, "value": _fmt_derive(d_raw[name], spec.get("format") or "plain",
+                                                     name, warn)}
+        if spec.get("tone") and spec["tone"] != "info":
+            entry["tone"] = spec["tone"]
+        if spec.get("format") and spec["format"] != "plain":
+            entry["format"] = spec["format"]
+        d_disp[name] = entry
     ctx = {"data": data if isinstance(data, dict) else {}, "decl": decl, "gloss": gloss,
-           "required": required, "warn": warn}
+           "required": required, "warn": warn,
+           "derived_raw": d_raw, "derived_display": {k: v["value"] for k, v in d_disp.items()}}
+    for name, spec in (decl.get("derives") or {}).items():        # 标签也能插值（含 {derive:…}）
+        if name in d_disp and spec.get("label"):
+            d_disp[name]["label"] = _interp(spec["label"], ctx)
     blocks: list = []
     for blk in (decl["layout"] or []):
         nb = _build_block(blk, ctx)
@@ -822,6 +1130,8 @@ def build(pkg_dir, dom: str, key: str, data, domains=None, decl=None) -> dict:
             "icon": decl.get("icon") or meta.get("icon") or None,
             "tabs": tabs, "readonly_paths": ro, "field_overrides": over,
             "warnings": warns, "elapsed_ms": 0, "truncated": truncated}
+    if d_disp:                                     # ★批 2：派生结果（value 是**展示串**）
+        tree["derives"] = d_disp
     _shrink(tree, warn)
     tree["warnings"] = warns
     if state["cut"]:

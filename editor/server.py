@@ -856,6 +856,32 @@ def _check_report(dom: str, data: dict, pkg_dir=None) -> dict:
             "friendly": GL.friendly(dom, errs, pkg_dir), "missing": _missing(dom, data, pkg_dir)}
 
 
+def _render_ref_values(pkg_dir, decl) -> dict:
+    """`lookup_label` 的**候选值**（父进程预读 → 放进 payload；子进程不读盘，契约 §1.9/§4.1）。
+
+    只认「`ref` 是常量字符串」的那种写法（运行时才知道的引用值无法预读 —— 子进程就回原值）。
+    读盘**只读**（渲染链路零写盘）；目标域读不到 → 空表（不判红、不报错）。
+    """
+    out: dict = {}
+    for _name, spec in ((decl or {}).get("derives") or {}).items():
+        if not isinstance(spec, dict) or spec.get("fn") != "lookup_label":
+            continue
+        args = spec.get("args") or {}
+        dom2, ref = args.get("domain"), args.get("ref")
+        if not (isinstance(dom2, str) and dom2 and isinstance(ref, str) and ref):
+            continue
+        if ref in out:
+            continue
+        by = args.get("by") if args.get("by") in ("key", "name") else "key"
+        try:
+            vals = REL.ref_candidates(pkg_dir, dom2, by)
+        except Exception:                                    # noqa: BLE001 —— 预读失败不拦渲染
+            vals = []
+        if vals:
+            out[ref] = [str(v) for v in vals][:RENDER.MAX_VALUE_ITEMS]
+    return out
+
+
 def _run_view(pkg_dir, dom: str, name: str, data: dict, key: str,
               domains: dict | None = None) -> dict:
     """把 (域, 视图名) 落到**框架内置**实现上 → 视图 JSON（坏数据 → `ok=False`，不炸）。
@@ -865,10 +891,41 @@ def _run_view(pkg_dir, dom: str, name: str, data: dict, key: str,
     ★ 第 3 层·批 1（声明面）：新增 `name="package-render"` 分支 —— 走**纯声明**渲染树
     （`editor/render.py`，不执行任何包代码）。声明坏 / 树建不出 → 返回 `ok=False` + `stage`，
     由调用方按 L3 回退第 2 层（**永远不是 500**）。
+
+    ★ 第 3 层·批 2（派生值）：先走 `RENDER.derived()`（**一次性子进程** + 白名单函数）拿派生值，
+    再把这些值交给 `RENDER.build(..., derived=…)` 落树（父侧做回程硬判 + 限额截断）。
+    派生期失败（超时/崩/输出超限）→ `ok=False` + `stage` → 仍走 L3 降级（不是 500）。
+    没有派生声明 → **不起子进程**（零冷启动；与批 1 逐字节同行为）。
     """
     if name == "package-render":
-        return RENDER.build(pkg_dir, dom, key, data if isinstance(data, dict) else {},
-                            domains=domains)
+        # ★批 2 修批 1 的遗留缺陷：HTTP 路由把**整份域文件**（`{key: 条目}` 的映射）当条目数据
+        #   喂给树，于是 `{字段}` 插值恒空（直连 `RENDER.build()` 一直是**条目级**，所以批 1
+        #   的两条门禁都没测到这条）。这里按 `key` 取**该条目**——契约 §4.1 的 `data` 明写
+        #   「**该条目**的数据快照」。取不到 → 空对象（树照建 + 告警，不 500）。
+        _e = PK.get_entry(pkg_dir, dom, key)
+        data = _e if isinstance(_e, dict) else {}
+        decl, decl_w = RENDER.declared(pkg_dir, dom, domains)
+        dv = RENDER.derived(pkg_dir, dom, key, data, domains=domains, decl=decl,
+                            ref_values=_render_ref_values(pkg_dir, decl))
+        if not dv.get("ok"):
+            return {"ok": False, "stage": dv.get("stage") or "derive",
+                    "message": dv.get("message") or "派生沙箱失败 —— 已回退内置视图",
+                    "warnings": list(decl_w) + list(dv.get("warnings") or []),
+                    "view": None, "domain": dom, "key": key}
+        tree = RENDER.build(pkg_dir, dom, key, data, domains=domains, decl=decl,
+                            derived=dv.get("values"))
+        if tree.get("ok"):
+            merged = list(tree.get("warnings") or [])
+            for w in RENDER.tree_problems(tree):        # ★父侧树校验（H1 / 顶层形状；只报不改）
+                if w not in merged:
+                    merged.append(f"渲染树校验：{w}")
+            for w in (dv.get("warnings") or []):
+                if w not in merged:
+                    merged.append(w)
+            tree["warnings"] = merged[:RENDER.MAX_WARNINGS]
+            if dv.get("elapsed_ms") is not None:
+                tree["derive_elapsed_ms"] = int(dv["elapsed_ms"])
+        return tree
     impl = REL.resolved_name(name)
     if impl == "loot_view":
         return LV.build_file(data, key, LV.load_vocab(pkg_dir))
