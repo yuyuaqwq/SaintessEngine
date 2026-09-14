@@ -8,10 +8,8 @@
 * 分支：等级门槛 → 战斗中拦截 → 目标层解析（1..30、只能挑战已突破层的下一层）→ 每日上限
   → 同层幂等 → 塔层查询 → 塔卫构造 → **开战装配（宿主能力）** → 开战面板。
 
-宿主面（**过渡期**，I2：包内不 import 宿主，只经下面两个口取件）
-------------------------------------------------------------------
-1. `build_monster`（真源仍在宿主 `game/core/drops.py`，L3 未搬）→ 包内既有「宿主替身口」
-   `content/persistence/handles._host_attr`（与 B11–B13 各 `content/*_cmds.py` 同款约定）。
+1. `build_monster` → **包内直取** `content/drops.py`（B2-C2 真搬：drops 8 个真函数已进包；
+   调用点用函数内 import，与原 `_host_*("core.drops", …)` 的「调用时解析」同刻）。
 2. 开战装配（`Battle` + `battle_bridge` + `db.save_battle` + 单进程锁 + 阵型面板 =
    「必须认识活人世界」）→ 宿主壳对象上的可选能力 `_open_tower_battle`，由桥接层经
    `env.state["shell"]` 透传（与 B18a 的 `ctx.cap("_open_tower_battle")` 同源；P2 后由引擎
@@ -23,7 +21,6 @@ from __future__ import annotations
 
 from .commands import register
 from .flow import tower_progress as _TP
-from .persistence.handles import _host_attr as _host_attr
 
 _SEP = "━━━━━━━━━━━━"
 
@@ -92,7 +89,8 @@ def tower_cmd(env) -> list:
     fd = _TP._floor_def(floor)
     if not fd:
         return ["🏯 塔灵正在重构试炼……稍后再来挑战吧～"]
-    guard = _TP.build_tower_guard(floor, _host_attr("core.drops", "build_monster"))
+    from .drops import build_monster as _build_monster   # B2-C2 包内直取（原宿主句柄；调用时解析）
+    guard = _TP.build_tower_guard(floor, _build_monster)
     guard_name = guard.get("name", "塔卫")
     # 开战装配 = 宿主能力（本线不搬）：返回「插入到第 4 行后的阵型面板串」，无 → None
     open_battle = getattr(shell, "_open_tower_battle", None) if shell is not None else None

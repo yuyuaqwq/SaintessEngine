@@ -10,10 +10,9 @@
      `from .catalog_b143 import RULES as _R`（W12 收口 2026-09-14：`catalog_b143.RULES` =
      `content/rules/game_config.json` 的 `rules` 组，20 条；逐值 + 键序对拍
      `overnight/_w12_precheck_sources.py` A → OK）
-  ② `_db()` 的 `from .. import db` → 模块级 `db = _HostMod("db")`
+  ② `_db()` 的 `from .. import db` → 包内句柄 `from ._pkgref import DB as db`（B1/B2-C2）
   ③ `fire()` 内 `from ..core.event_templates import EventContext, execute_event_template`
-     → `_host_attr("core.event_templates", …)`（**跨线**：event_templates 归 B13-L3，别线正在并行搬
-       → 按 BRIEF §3 B-5 用宿主句柄；L3 落地后切包内直取）
+     → **包内直取** `.event_templates`（B2-C2；L3 已落地，函数内 import 保持调用时解析）
   ④ 时段判定改经 `_time_check()` 取件（**本线新增 8 行桥**）：`tests/test_v97_05_rule_engine.py:35`
      用 `RE._is_time = lambda span: span == "day"` 覆盖**宿主模块属性**钉死时段；原实现里
      `_match_cond` 直接调本模块全局 `_is_time`，搬包后若仍读包内全局，该覆盖会失效（测试必红）。
@@ -26,64 +25,10 @@
 """
 
 # ============================================================
-# ① 宿主替身口（注入优先 → sys.modules → importlib；**绝不静默空跑**）
-#    形状逐字抄 `content/world_cmds.py`（B9 线2 定稿）
+# 宿主取件（B2-C2：本模块已全部改包内直取；原 `_host_*` 宿主替身机械已删）
+#   · 存档层 → 包内句柄 `content/_pkgref.py:DB`（见下）
+#   · 事件模板 → 包内直取 `.event_templates`（见 `fire()` 内函数级 import）
 # ============================================================
-import importlib as _importlib
-import sys as _sys
-
-_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
-_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
-_INJECTED = {}
-
-
-def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = `_HostMod` 的模块名（`content` / `db` / `data`）。"""
-    for k, v in (objs or {}).items():
-        if v is not None:
-            _INJECTED[k] = v
-
-
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = _sys.modules.get(prefix if not name else "%s.%s" % (prefix, name))
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return _importlib.import_module(prefix if not name else "%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("%s：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (__name__, name, last))
-
-
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「函数内 `from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
-    try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return _importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
-
-
-class _HostMod:
-    """宿主模块替身（`C` / `db` / `data`）——`C.xxx` 正文一字未改，属性访问时解析。"""
-
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
 
 # -*- coding: utf-8 -*-
 """奥兰迪亚·余烬纪年核心层 - rule_engine.py（v97.5：行为彩蛋规则引擎）
@@ -291,8 +236,7 @@ def fire(group_id, qq_id, player, cur_map, trigger, evt=None, hooks=None) -> str
         tpl = action.get("template")
         if not tpl:
             continue
-        EventContext = _host_attr("core.event_templates", "EventContext")
-        execute_event_template = _host_attr("core.event_templates", "execute_event_template")
+        from .event_templates import EventContext, execute_event_template   # B2-C2 包内直取
         ctx = EventContext(group_id, qq_id, player, cur_map,
                            params=action.get("params") or {},
                            name=(cur_map or {}).get("name", "此地"),

@@ -20,136 +20,36 @@
 |---|---|---|
 | `QUALITY_WEIGHTS` / `STOCK_COUNT` / `STOCK_WINDOW` / `RESTOCK_HOURS` / `_QTY_BY_QUALITY` / `SMITH_NPC_NAMES` / `_SMITH_TOWN_LEVELS`（源码字面量） | 包内域读口 `smith_stock`（`content/data/smith_stock.json`：`quality_weights` / `shelf_rules{stock_count,stock_window,restock_hours,qty_by_quality}` / `npc_names` / `town_levels`） | 域 = 这四组静态配置的**逐值镜像**（导出器 = 游戏仓 `scripts/export_domains/shop_econ.py:derive_smith_stock`）；对拍逐项相等，`overnight/w1213_l5_probe.py` P1 |
 | `from ..data import SHOP_EQUIP, SHOP_WEAPONS` | 包内域读口 `shop`（`content/data/shop.json`，89 条店铺合表）→ `{k: v["equip"]}` / `{k: v["weapons"]}` | 合表是六张表并集（导出器 `derive_shop`）；对拍与宿主 `SHOP_EQUIP`/`SHOP_WEAPONS` 逐键相等（P8）。两者在正文里只用来**建静态店名册集合**（set），与键序无关 |
-| `from ..data import EQUIP_ROSTER, EQUIP_ROSTER_BY_NAME` | `_HostAttr("data", …)` | **缺口**：`equip_roster` 域**不是字段级可逆投影**（I3）——域里被注入 `fixed_affixes`（622 条）/ `series_set`（397 条），实测 **665/687 条**与宿主真源不等，且外层键是字典序（宿主是源插入序，而 `roll_stock` 按插入序建候选池再 `random.choice`）→ 切了必改行为，本线不切 |
-| `from ..data import QUALITY, ECON_CONFIG, WEAPON_FLAVOR` | `_HostAttr("data", …)` | **缺口**：三张表无同名域（BRIEF §5 对照表列明） |
-| `from ..core.stats import equip_stats, equip_value` | `_HostAttr("core.stats", …)` | `core/stats.py` 属 **B13-L6** 线（并行未落地）→ 宿主句柄，落地后切包内直取 |
-| `from .quality_tiers import QUALITY_TIERS` | `_HostAttr("core.quality_tiers", "QUALITY_TIERS")` | `core/quality_tiers.py` 属 **B13-L1** 线（并行未落地）→ 宿主句柄；正文 `QUALITY_TIERS.pick_weights(QUALITY_WEIGHTS, rng=random)` 一字未改（宿主源码级门禁指向本实现，见宿主壳头注） |
-| `from .. import db`（函数内，惰性） | 模块级 `db = _HostMod("db")` | 正文 `db.get_event_state(...)` 未改；真源也只在 `get_smith_stock`/`buy_stock_item` 里用 db → 属性访问时解析，时机等价 |
-| `from ..core.drops import generate_roster_equip`（`buy_stock_item` 函数内） | 同位置 `_host_attr("core.drops", …)` | **缺口**：`game/core/drops.py` 不在本线清单（别的线/B14 处理） |
-| `from ..data import MAP_BY_ID, SUBAREAS`（`_ensure_maps()` 内，防循环） | 同位置 `_host_attr("data", …)` | 原样保留「延迟取 + 缓存」结构（真源注释：防循环） |
+| `from ..data import EQUIP_ROSTER, EQUIP_ROSTER_BY_NAME` | **包内门面直取** `content/catalog_items.py`（B16-W11d） | 名册表同源；本文件只做 `in` 成员判定 / 建集合 / 按名册取值 |
+| `from ..data import QUALITY, ECON_CONFIG, WEAPON_FLAVOR` | **包内门面直取** `catalog_b143` / `catalog_life`（B16-W11d） | 三张表同源 |
+| `from ..core.stats import equip_stats, equip_value` | **包内直取** `content/stats.py`（B2-C2） | 宿主 `game/core/stats.py` 是薄壳 → 同一批对象 |
+| `from .quality_tiers import QUALITY_TIERS` | **包内直取** `content/quality_tiers.py`（B2-C2） | 宿主薄壳 → 同一个 `QUALITY_TIERS` 对象；正文 `QUALITY_TIERS.pick_weights(QUALITY_WEIGHTS, rng=random)` 一字未改（宿主源码级门禁指向本实现，见宿主壳头注） |
+| `from .. import db`（函数内，惰性） | 包内句柄 `from ._pkgref import DB as db`（B1） | 正文 `db.get_event_state(...)` 未改；`content.persistence` 惰性解析（时机等价） |
+| `from ..core.drops import generate_roster_equip`（`buy_stock_item` 函数内） | **包内直取** `content/drops.py`（B2-C2 真搬） | 同位置函数内 import（调用时解析）；drops 8 个真函数已进包，宿主薄壳化留波 2 |
+| `from ..data import MAP_BY_ID, SUBAREAS`（`_ensure_maps()` 内，防循环） | 包内门面 `catalog_space`（B16-W11d） | 原样保留「延迟取 + 缓存」结构（真源注释：防循环） |
 
 宿主侧：`game/core/smith_stock.py` 现在只剩「加载包 + 模块别名 + 源码探针」薄壳，见那边头注。
 """
-import importlib
 import json
 import os
 import random
-import sys
 import time
 from datetime import date
 
 # ============================================================
-# ① 宿主替身口（注入优先 → sys.modules → importlib；**绝不静默空跑**）
-#    抄 `content/world_cmds.py` 的同款写法（B9 线2 定的包内标准形状）
+# ① 宿主取件（B2-C2：本模块已全部改包内直取；原 `_host_*` 宿主替身机械已删）
 # ============================================================
-_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
-_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
-_INJECTED = {}
-_MOD = "smith_stock"
-
-
-def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = `_HostMod` 的模块名。"""
-    for k, v in (objs or {}).items():
-        if v is not None:
-            _INJECTED[k] = v
-
-
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = sys.modules.get(prefix if not name else "%s.%s" % (prefix, name))
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module(prefix if not name else "%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("%s：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (_MOD, name, last))
-
-
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「函数内 `from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
-    try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return importlib.import_module(
-                    "%s.%s" % (prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
-
-
-class _HostMod:
-    """宿主模块替身（`db`）——正文里 `db.xxx` 照原样写，属性访问时解析。"""
-
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
-
-
-class _HostAttr:
-    """宿主「模块属性」惰性替身 —— 真源模块级 `from ..data import X` / `from ..core.X import f`
-    的同义替身：模块级名字不变、正文一字未改；取值在**首次被访问/调用**时发生。"""
-
-    __slots__ = ("_mod", "_attr", "_val")
-
-    def __init__(self, mod, attr):
-        object.__setattr__(self, "_mod", mod)
-        object.__setattr__(self, "_attr", attr)
-
-    def _v(self):
-        try:
-            return object.__getattribute__(self, "_val")
-        except AttributeError:
-            v = _host_attr(object.__getattribute__(self, "_mod"),
-                           object.__getattribute__(self, "_attr"))
-            object.__setattr__(self, "_val", v)
-            return v
-
-    def __getattr__(self, name):
-        return getattr(self._v(), name)
-
-    def __getitem__(self, k):
-        return self._v()[k]
-
-    def __setitem__(self, k, v):
-        self._v()[k] = v
-
-    def __contains__(self, k):
-        return k in self._v()
-
-    def __iter__(self):
-        return iter(self._v())
-
-    def __len__(self):
-        return len(self._v())
-
-    def __bool__(self):
-        return bool(self._v())
-
-    def __call__(self, *a, **kw):
-        return self._v()(*a, **kw)
 
 
 from ._pkgref import DB as db
-# ★ B16-W11d：五张表改包内门面直取（原 `_HostAttr("data", …)` 盲区形态）
+# ★ B16-W11d：五张表改包内门面直取（原 `_Host*("data", …)` 盲区形态）
 from .catalog_b143 import QUALITY, WEAPON_FLAVOR
 from .catalog_items import EQUIP_ROSTER, EQUIP_ROSTER_BY_NAME
 from . import catalog_life as _clife
 ECON_CONFIG = _clife.ECON_CONFIG
-equip_stats = _HostAttr("core.stats", "equip_stats")
-equip_value = _HostAttr("core.stats", "equip_value")
-QUALITY_TIERS = _HostAttr("core.quality_tiers", "QUALITY_TIERS")
+# ★ B2-C2：`core.stats` / `core.quality_tiers` 也切包内直取（宿主那两个文件是薄壳 → 同一批对象）
+from .stats import equip_stats, equip_value
+from .quality_tiers import QUALITY_TIERS
 
 # ============================================================
 # ② 包内域读口（域 `smith_stock` + `shop`；导出器 = 游戏仓
@@ -202,13 +102,13 @@ _SUBAREAS = {}
 def _ensure_maps():
     global _MAP_BY_ID, _SUBAREAS
     if not _MAP_BY_ID:
-        from . import catalog_space as _cs          # ★ B16-W11d：包内门面（原 `_host_attr("data", …)`）
+        from . import catalog_space as _cs          # ★ B16-W11d：包内门面（原 `_host_*("data", …)`）
         _MAP_BY_ID = _cs.MAP_BY_ID
         _SUBAREAS = _cs.SUBAREAS
 
 
-# db 惰性：模块级 `db = _HostMod("db")`（见上），正文 `db.xxx` 一字未改。
-# v135：仅 get_smith_stock/buy_stock_item 用到 db，代理在属性访问时才解析宿主模块。
+# db 惰性：模块级 `db = _pkgref.DB`（见上），正文 `db.xxx` 一字未改。
+# v135：仅 get_smith_stock/buy_stock_item 用到 db，句柄在属性访问时才解析包内 persistence。
 
 _STATIC_SHOP_RIDS = None
 
@@ -552,7 +452,7 @@ def buy_stock_item(map_id: str, town_lv: int | None, rid: str):
         if it.get("rid") == rid and it.get("qty", 0) > 0:
             it["qty"] -= 1
             db.set_event_state(key, json.dumps(st, ensure_ascii=False))
-            generate_roster_equip = _host_attr("core.drops", "generate_roster_equip")
+            from .drops import generate_roster_equip   # B2-C2 包内直取（同位置，调用时解析）
             item = generate_roster_equip(rid)
             npc = SMITH_NPC_NAMES.get(map_id, "铁匠")
             item["name"] = f"{item['name']}（{npc}的作品）"

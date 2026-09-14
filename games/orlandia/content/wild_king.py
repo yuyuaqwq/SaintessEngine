@@ -2,7 +2,10 @@
 # ==============================================================================
 # 包内实现（唯一真源）· B13-L2（2026-09-14）—— 逐字搬自宿主
 #   `qqbot/data/plugins/dragonfall/game/core/wild_king.py`
-# 搬运改动面**只有「宿主取件」**一类：9 处 `from .. import db` → `db` 替身；`C`/`drop_engine`/`data.maps`/`core.drops` → 宿主句柄；12 个 `WILD_KING*` 常数 → ★ B16-W11b 包内门面 `catalog_rules`（原 `_WK` 宿主句柄已退场）；`WILD_KINGS` → 包内域读口
+# 搬运改动面**只有「宿主取件」**一类：9 处 `from .. import db` → 包内句柄；`C`/`data.maps`/`core.drops`
+#   → 包内直取（B2-C2 起本文件已无宿主句柄：`db`=`content/_pkgref.DB`，`C`=`content/drops`，
+#   `build_monster` 函数内直取）；12 个 `WILD_KING*` 常数 → ★ B16-W11b 包内门面 `catalog_rules`；
+#   `WILD_KINGS` → 包内域读口
 # ★ B14-2 L8（2026-09-14）切包内门面：`C.ITEMS` / `C.MATERIALS` → `catalog_items`；`data.maps.MAP_BY_ID` → `catalog_space`。
 # 宿主同名文件 = 薄壳（指向本模块，见那边的头注）。
 # ==============================================================================
@@ -24,78 +27,23 @@
   全服连续 2 时段野王未击杀 → 下时段刷 2 只（no_kill_streak）
 - 状态存 event_state：全局键 wild_king_global（JSON），个人键 wild_king_meta_{qq_id}（JSON）
 
-⚠️ 宿主存储经 `db = _HostMod("db")` 替身（B13-L2 搬包 2026-09-14）：正文 `db.xxx(...)`
-   一字未改，属性访问时解析宿主 `game.db`；取不到**大声抛**（不静默空跑）。
+⚠️ 宿主存储经包内句柄 `from ._pkgref import DB as db`（B1/B2-C2）：正文 `db.xxx(...)` 一字未改，
+   属性访问时解析包内 `content.persistence`（`_pkgref` 顺带确保宿主 store 工厂已注入库路径）。
 """
 import datetime
 import json
 import random
 
-import importlib
 import os
-import sys
 
 # ============================================================
-# ① 宿主替身口（B13-L2 搬包 2026-09-14；正文 `db.xxx(...)` / `C.xxx` 一行未改）
-#    写法照抄包内 `content/world_cmds.py`（B9 线2）：注入优先 → sys.modules → importlib，
-#    取不到**大声抛**（绝不静默空跑）。
+# ① 宿主取件（B2-C2：本模块已全部改包内直取；原 `_host_*` 宿主替身机械已删）
 # ============================================================
-_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
-_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
-_INJECTED = {}
-
-
-def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = `_HostMod` 的模块名（`db` / `content`）。"""
-    for k, v in (objs or {}).items():
-        if v is not None:
-            _INJECTED[k] = v
-
-
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身，真源 `from .. import X` 那一类）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        full = prefix if not name else "%s.%s" % (prefix, name)
-        m = sys.modules.get(full)
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module(prefix if not name else "%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("B13-L2：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
-
-
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「`from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
-    try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
-
-
-class _HostMod:
-    """宿主模块替身（`db` / `C`）——`db.xxx` / `C.xxx` 正文一字未改，属性访问时解析。"""
-
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
-
 from ._pkgref import DB as db
-C = _HostMod("content")                 # 真源 `from .. import content as C`（残 `roll_blueprint`，见缺口）
+from ._pkgref import PkgModule as _PkgModule
+# 真源 `from .. import content as C`：正文只残一个 `C.roll_blueprint`（`_roll_chest_rewards` 内）
+# —— B2-C2：直接指向包内 `content/drops.py`（`roll_blueprint` 真函数已搬进包），惰性解析时机不变。
+C = _PkgModule("content.drops")
 
 # ★ B14-2 L8（2026-09-14）：`C.ITEMS` / `C.MATERIALS` / `data.maps.MAP_BY_ID` 三处读点
 #   → 包内门面直取（B14 第一段产物；门禁 `b14_catalog_gate.py` 逐值+键序 OK）。
@@ -113,7 +61,7 @@ from .catalog_rules import (WILD_KING_CHEST_TIERS, WILD_KING_GLOBAL_LIMIT, WILD_
 #    `scripts/export_domains/monster_combat.py` → `content/data/wild_king.json`）
 #    真源 `game/data/wild_king_data.py:62 WILD_KINGS`（8 只）—— 逐键 deep-equal 已验
 #    （`overnight/b13l2_probe*.py`）。**不改形状**：JSON 里的值原样用。
-#    其余常数（时段/候选图/宝箱档位/上限）**域内没有** → 走 `_WK` 宿主句柄（缺口登记）。
+#    其余常数（时段/候选图/宝箱档位/上限）**域内没有** → ★ B16-W11b 起改走包内门面 `catalog_rules`（见上）。
 # ============================================================
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -354,7 +302,7 @@ def build_king_monster(king: dict, map_obj: dict, player: dict) -> dict:
     血量 = hp_base × (1 + 0.5×(参战人数-1))：首人参战 hp_base 基准，
     后续参战玩家累计参战人数（存 king['participants']），保持多人弹性。
     """
-    build_monster = _host_attr("core.drops", "build_monster")  # noqa: E402（宿主真源，drops 未进包）
+    from .drops import build_monster   # noqa: E402  B2-C2 包内直取（drops 真函数已进包）
     # 参战人数：首人参战记 1；已有参战记录则 +1
     participants = int(king.get("participants", 0) or 0)
     king["participants"] = participants + 1

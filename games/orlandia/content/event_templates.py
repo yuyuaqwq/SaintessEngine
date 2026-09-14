@@ -24,18 +24,22 @@
 
 正文改动面（**只有三类**，与本波其它线同款）
 --------------------------------------------
-1. 宿主模块引用 → 惰性替身：`from .. import db` / `from .. import content as C` →
-   `db = _HostMod("db")` / `C = _HostMod("content")`（正文 `db.xxx(...)` / `C.xxx` **一行未改**）。
+1. 宿主模块引用 → 包内取件：
+   · `from .. import db` → 包内句柄 `from ._pkgref import DB as db`（B1/B2-C2；正文 `db.xxx(...)` 一字未改）；
+   · `from .. import content as C` → 见 `EventContext._C()`：仍返回**宿主内容聚合层模块**（同名同对象），
+     取件口改走包内既有解析 `content/reward.py:_host_content()`（注入优先 → `sys.modules` → importlib，
+     绝不静默空跑）—— 宿主侧 `tpl_merchant`（故意留宿主，见上 ★）与冻结对拍用例都经 `ctx._C()` 取
+     `generate_equip` / `TRADER_DEAL_CHANCE` / `QUALITY`，对象与改造前逐字相同。
 2. 宿主边界函数 → 同名惰性包装 / 包内直取：
    · `from ..content_rules.gameplay import check_player_level_up`（写库 + 写背包，属「接人性」，
-     真源 `content/gameplay.py` 归属表 :75 明写**不搬**）→ 模块级同名包装（`_host_attr`）；
+     真源 `content/gameplay.py` 归属表 :75 明写**不搬**）→ 模块级同名包装（见下）；
    · `from ..content_rules.panel import race_stats` → **包内直取** `from .panel import race_stats`
      （`content/panel.py:83` 已端口；实测全种族逐值相等：0 不等，见报告 §1）。
 3. 命令方法级「取玩家」那种改造：本模块无需（纯逻辑，ctx 由调用方构造）。
 
-★ 数据读口（I1）：`C`（宿主聚合层）上只剩**函数** —— `C.resolve` / `C.display` /
-`C.roll_blueprint` / `C.generate_equip`（函数名，按 B14 派工口径不切）：`resolve`/`display` 的权威索引
-在装配期宿主侧（`content/quests_flow.py:_Dom.resolve` 同口径委托宿主）→ `C` 替身保留。
+★ 数据读口（I1）：18 个模板正文仍写 `C = ctx._C()` / `C.resolve` / `C.display` / `C.roll_blueprint`
+  （**正文一行未改**）；`C` 由 `_C()` 给的宿主聚合层模块提供 —— `resolve`/`display` 的权威索引在装配期
+  宿主侧（`content/quests_flow.py:_Dom.resolve` 同口径委托宿主），故 `_C()` 不换返回对象。
 ★ W4（2026-09-14）核对：原记「缺口常量」`QUALITY` / `AUCTION_POOL` 已由 B14-3 收口门面
 `content/catalog_b143.py` 提供（门禁逐键逐值+键序 OK）；本文件**只有头注提到、无代码读点** → 未动。
 B14-2（L7 线）已切门面：材料表 → `content/catalog_items.py:MATERIALS`（10 处调用点，门禁逐名
@@ -47,71 +51,15 @@ OK · 不等 0，含键序）；`TRADER_DEAL_CHANCE`（真源 `game/data/battle_
 """
 from __future__ import annotations
 
-import importlib
 import random
-import sys
 
 
 # ============================================================
-# ① 宿主替身口（注入优先 → sys.modules → importlib；**绝不静默空跑**）
-#    与 `content/world_cmds.py` / `content/combat_cmds.py` 同款
+# ① 宿主取件（B2-C2：原 `_host_*` 宿主替身机械已删）
+#   · `db` → 包内句柄 `content/_pkgref.py:DB`（见下）
+#   · `C`  → 见 `EventContext._C()`：仍返回**宿主内容聚合层模块**（同名同对象；取件口改走
+#           `content/reward.py:_host_content()`）
 # ============================================================
-_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
-_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
-_INJECTED = {}
-
-
-def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = `_HostMod` 的模块名（`content` / `db`）。"""
-    for k, v in (objs or {}).items():
-        if v is not None:
-            _INJECTED[k] = v
-
-
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身，真源 `from .. import X` 那一类）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        full = prefix if not name else "%s.%s" % (prefix, name)
-        m = sys.modules.get(full)
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module(prefix if not name else "%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("event_templates：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
-
-
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「函数内 `from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
-    try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
-
-
-class _HostMod:
-    """宿主模块替身（`C` / `db`）——`C.xxx` / `db.xxx` 正文一字未改，属性访问时解析。"""
-
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
-
-
-C = _HostMod("content")         # 真源 `from .. import content as C`
 from ._pkgref import DB as db
 
 # B14-2（L7 线）：数据名读点切包内门面 —— 原 `C.MATERIALS` 直取换成门面同名绑定
@@ -122,7 +70,7 @@ def check_player_level_up(group_id, qq_id, player):
     """升级结算（真源 `from ..content_rules.gameplay import check_player_level_up` 的**同义包装**）
 
     **宿主边界**：写 `db` / 写背包 / 读章节礼包 —— `content/gameplay.py` 归属表 :75 明写「不搬
-    （宿主边界）」，`content/combat_cmds.py:192` 同款处置（`_host_attr` 调用时解析）。
+    （宿主边界）」，`content/combat_cmds.py:192` 同款处置（取件在调用时解析）。
     """
     from .gameplay_rules import check_player_level_up as _pkg_level_up
     return _pkg_level_up(group_id, qq_id, player)
@@ -186,7 +134,15 @@ class EventContext:
         return db            # 真源 `from .. import db; return db`（本模块级 = 宿主替身）
 
     def _C(self):
-        return C             # 真源 `from .. import content as C; return C`
+        """真源 `from .. import content as C; return C` —— 返回**宿主内容聚合层模块**。
+
+        B2-C2：取件口改走包内既有的宿主内容 API 解析 `content/reward.py:_host_content()`
+        （注入优先 → `sys.modules` → importlib，绝不静默空跑）—— 与改造前 `_Host*("content")`
+        返回**同一个对象**（都是已加载的 `game.content` 模块）；宿主 `tpl_merchant` 与
+        `tests/test_v184_loot_tiers.py` 的冻结对拍用例都经此取 `generate_equip` /
+        `TRADER_DEAL_CHANCE` / `QUALITY`。"""
+        from .reward import _host_content
+        return _host_content()
 
     def param(self, key, default=None):
         return self.params.get(key, default)
