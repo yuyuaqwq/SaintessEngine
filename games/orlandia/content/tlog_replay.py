@@ -10,61 +10,48 @@
   · `battle_bridge` 的唯一实现已归包（`content/bridge.py`，回写半边 `sync_player_from_actor`
     亦已在包内）⇒ 本批（B12B13 线2）把回放半边随包收口。
 
-取件（原真源 `from ..services.battle_bridge import (…)` 的同义替身）
-  · `_host_attr("services.battle_bridge", "<名>")` —— **调用时**解析宿主**薄壳**同名函数，
-    与真源逐字同义（宿主薄壳内部把「event_state 视图（DB）」注入给包内 `content/bridge.py`）
-    ⇒ 重演端拿到的 event_state 仍是**宿主 DB 视图**：`echo_bless` / `poi_buff` 的读 + 回写
-    （消耗一次）语义一字不变。**这是本半边唯一的宿主面**，故按 I2 走注入口、不 import 宿主顶层。
+取件（原真源 `from ..services.battle_bridge import (…)`）
+  · ★ **B2-C3（本批）改「包内直取」**：重演用构造半边（`prepare_player_for_battle` /
+    `build_sides` / `apply_battle_loadout`）直接取包内唯一真源 `content/bridge.py` ——
+    原写法是**调用时**解析宿主**薄壳**同名函数（薄壳本身只是一层委托，两处同源）。
+  · 重演端拿到的 event_state 语义一字不变：宿主薄壳把「event_state 视图（DB）」适配后传给
+    `content/bridge.py`；本模块走 `build` 覆盖时直接用调用方给的 player/enemies 普通 dict，
+    默认分支 `event_state` 为 None（`content/bridge.prepare_player_for_battle` 按无事件状态处理，
+    与真源「不传 db = 空 event_state」同款）。
+  · 过渡注入槽：`bind_host(bridge=…)` / 旧键 `services.battle_bridge`（宿主壳旧调用）仍认，
+    给了就优先用（行为同源）。
   · `_uid` / `_rounds_of` 取自同批采集半边 `content/tlog_collect.py`（同源，零第二份）。
-  · 不碰 DB / 时钟 / 单进程锁：本模块零平台知识，DB 只经重建链句柄间接出现。
+  · 不碰 DB / 时钟 / 单进程锁：本模块零平台知识，DB 只经重建链间接出现。
 """
 from __future__ import annotations
 
-import importlib
 import random
-import sys
 from typing import Iterable, Optional
 
 from saintess_engine.tlog import Record
 
 from .tlog_collect import _rounds_of, _uid
 
-# ---------------------------------------------------------------- 宿主取件口
-# 真源 `from ..services.battle_bridge import (…)` 的替身：调用时按模块路径解析宿主**薄壳**。
-# 键 = 宿主真源相对模块路径（`services.battle_bridge`），与包内其它模块的 `_host_attr` 同款。
-_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（AstrBot 插件加载路径）
-_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
+# ---------------------------------------------------------------- 取件口（包内直取）
+# 真源 `from ..services.battle_bridge import (…)` = 包内 `content/bridge.py` 的构造半边。
+# 旧键 `services.battle_bridge`（宿主薄壳注入）保留兼容：薄壳的 3 个同名函数是同一实现的委托。
 _INJECTED = {}
 
 
 def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = 真源相对模块路径（`services.battle_bridge`）。"""
+    """过渡注入槽（幂等）——键 `bridge` 或旧键 `services.battle_bridge`（宿主薄壳 import 期调用）。"""
     for k, v in (objs or {}).items():
         if v is not None:
             _INJECTED[k] = v
 
 
-def _host_module(name: str):
-    """取宿主子模块（`services.battle_bridge` 这类相对路径）。"""
-    m = _INJECTED.get(name)
+def _bridge():
+    """重演用构造半边：注入槽优先 → 包内真源 `content/bridge.py`（B2-C3 包内直取）。"""
+    m = _INJECTED.get("bridge") or _INJECTED.get("services.battle_bridge")
     if m is not None:
         return m
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = sys.modules.get("%s.%s" % (prefix, name))
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module("%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("tlog_replay：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
-
-
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「`from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    return getattr(_host_module(mod), attr)
+    from . import bridge as _BR
+    return _BR
 
 
 # ================================================================ 回放
@@ -97,10 +84,10 @@ def replay(records: Iterable[Record], *, seed: Optional[int] = None,
         raise ValueError("流水缺少 battle.start —— 无法重建（记录不完整）")
 
     from saintess_engine import Battle as B2
-    apply_battle_loadout = _host_attr("services.battle_bridge", "apply_battle_loadout")
-    build_sides = _host_attr("services.battle_bridge", "build_sides")
-    prepare_player_for_battle = _host_attr("services.battle_bridge",
-                                           "prepare_player_for_battle")
+    _BR = _bridge()
+    apply_battle_loadout = _BR.apply_battle_loadout
+    build_sides = _BR.build_sides
+    prepare_player_for_battle = _BR.prepare_player_for_battle
 
     sd = start.fields.get("seed")
     use_seed = seed if seed is not None else sd

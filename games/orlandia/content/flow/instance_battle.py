@@ -35,7 +35,7 @@
 | `from ..content_rules.skills import skill_info`（:308） | `from .. import skills as _SK` | 技能链已进包（D3） |
 | `from ..content_rules.skills import skill_level_of`（:169） | 同左（包内 skills） | 团队广播治疗量口径不变 |
 | `from ..services.battle_bridge import sync_player_from_actor`（:388） | 调用方传 `sync_player_fn` | 回写半边**未进包** = 缺口（真源 :375-420） |
-| `from .. import db as _db`（:408） | 调用方传 `db_update_fn` | 玩家 DB 血量同步 |
+| `from .. import db as _db`（:408） | 调用方传 `db_update_fn`；**★ B2-C3 起缺省自解析**（见 ② R1） | 玩家 DB 血量同步 |
 | `from .battle_item_use import make_override`（:201） | `from ..mech.item_use import make_override` | 道具翻译器已进包（B8.2 线4 端口） |
 | `from .boss_script import …`（:206-224） | 调用方传 `script_api` | 缺省 = 包内 `content/flow/boss_script.py`（D3 端口） |
 | 宿主聚合层 `MONSTER_MODS`（:134，嘲讽/仇恨 target_policy） | `_monster_mods()` | 包内域 `content/data/monster_mods.json`（140 条，与真源逐项相等） |
@@ -43,16 +43,26 @@
 ② 宿主耦合替身接口（调用方传什么 / 缺省行为）
 | 真源宿主耦合 | 包内替身 | 调用方传什么 | 缺省（不传） |
 |---|---|---|---|
-| `T.text("instance.日志_团队治疗", name=…, amount=…)`（:183） | `team_heal_text(name, amount) -> str` | 宿主 `T.text` 渲染器（文案键在宿主） | `None` → 治疗照算、**该行不追加**（缺口，见 `overnight/b82_L4_battle_cmds.md`） |
+| `T.text("instance.日志_团队治疗", name=…, amount=…)`（:183） | `team_heal_text(name, amount) -> str` | 宿主 `T.text` 渲染器（文案键在宿主） | ★ **B2-C3**：缺省 = 包内 `team_heal_text`（宿主壳传的就是它；不再是「该行不追加」） |
 | `T.static("instance.结算_战斗异常")`（:311）/ `T.static("instance.面板_战斗_不在")`（:330） | `act(...)` 返回第 4 位 **abort 码**（`"no_sides"` / `"no_actor"` / `""`） | 调用方按码拼文案（对齐 `instance_gate` 的 `v.reason` 渲染口径） | —— |
 **B11-L2（2026-09-14）收口**：`sync_player_fn` 缺省已闭合 —— 不传 = 包内
 `content.bridge.sync_player_from_actor`（B9-L8 把回写半边搬进包内同一模块；
 宿主薄壳传的 `services.battle_bridge.sync_player_from_actor` 就是它的一层委托，两边同源）。
 
 | `sync_player_from_actor(snap, actor)` | `sync_player_fn(snap, actor)` | 宿主 `services.battle_bridge.sync_player_from_actor` | 缺省 = 包内 `content.bridge.sync_player_from_actor`（**B11-L2 闭合**，不再是缺口） |
-| `db.update_player(group_id, key, hp=…, mp=…, max_hp=…, max_mp=…)` | `db_update_fn(group_id, key, hp, mp, max_hp, max_mp)` | 宿主 `db.update_player` 包装 | `None` → 不写库（**DB 属宿主**：包内不建 DB 句柄；宿主薄壳恒传） |
-| `.boss_script` 三函数（`boss_script_cfg` / `make_script_event` / `make_script_hook`） | `script_api=模块或对象` | 宿主 `.boss_script` 模块（等价物 = 包内同名模块） | 包内 `content/flow/boss_script.py` |
+| `db.update_player(group_id, key, hp=…, mp=…, max_hp=…, max_mp=…)` | `db_update_fn(group_id, key, hp, mp, max_hp, max_mp)` | 宿主 `db.update_player` 包装 | ★ **B2-C3（R1）**：`None` → **自解析**（注入槽 `bind_host(db_update=…)` → 包内 `content.persistence`，见下「R1 收口」）——**不再**是「不写库」 |
+| `.boss_script` 三函数（`boss_script_cfg` / `make_script_event` / `make_script_hook`） | `script_api=模块或对象` | 宿主 `.boss_script` 模块（等价物 = 包内同名模块） | ★ **B2-C3**：缺省 = 包内端口 `_ScriptApiPort`（`game/commands/_boss_script_port.py` 的包内等价物：耦合三样换包内源） |
 | `st` 存档（宿主持久化） | 同左 | 普通 dict（键名/类型/缺失语义一律不变） | —— |
+
+★ **R1 收口（B2-C3，2026-09-14）**：`db_update_fn` 缺省原为 `None` = **不写库**（B2_W0_INTERFACE.md §4 R1）。
+把读点 `content/cmds_instance_router.py` 的 `IB` 直接改指本模块、而不同时接上句柄 ⇒
+「战斗中 DB 血量每刻同步」这条现行为会**静默丢失**。本批按接口表冻结的约定**先接句柄、再改读点**：
+
+| 取用 | 注入槽（`bind_host`） | 缺省解析（包内直取） |
+|---|---|---|
+| `db_update` | `bind_host(db_update=<callable>)` 或 `bind_host(db=<宿主 db 模块>)`（wave 2 宿主壳注入） | 包内 `content/persistence`（`content/_pkgref.py` 的 `DB`，B1 落地的包内存储层）→ `update_player(group_id, key, hp=…, mp=…, max_hp=…, max_mp=…)` |
+
+解析**不进 try**（句柄取不到 = 装配缺陷 → 抛）；**写库调用**在 try 内（真源口径：DB 写失败不阻断战斗）。
 
 ③ 不变式：④ 文案面 —— **B18 L3c（2026-09-14）起调用点已进包**：副本战斗日志域的 3 条 key
 （`instance.日志_团队治疗` / `instance.结算_战斗异常` / `instance.面板_战斗_不在`）仍在宿主
@@ -65,8 +75,10 @@
 """
 from __future__ import annotations
 
+import importlib
 import json
 import os
+import sys
 from typing import Optional
 
 from . import instance_run as IR
@@ -76,6 +88,142 @@ from ..mech.kinds import K_HEAL, K_BUFF
 
 _HERE = os.path.dirname(os.path.abspath(__file__))            # <pkg>/content/flow
 _DATA_DIR = os.path.join(os.path.dirname(_HERE), "data")      # <pkg>/content/data
+
+# ============================================================
+# ★ B2-C3（R1）：`db_update_fn` 自解析口 —— 与宿主壳 `game/commands/instance_battle.py:55-58`
+# 的 `_db_update` 逐字同源（`db.update_player(group_id, key, hp=…, mp=…, max_hp=…, max_mp=…)`）。
+# 冻结理由与顺序见文件头 ② R1；写法照 `content/reward.py` / `content/travel.py` 的替身口
+# （注入优先 → 包内直取；取不到抛，拒绝静默空跑）。
+# ============================================================
+_INJECTED = {}
+
+
+def bind_host(**objs):
+    """宿主替身注入（幂等）——键 `db_update`（callable）或 `db`（宿主 db 模块）；`None` 忽略。"""
+    for k, v in (objs or {}).items():
+        if v is not None:
+            _INJECTED[k] = v
+
+
+def _default_db_update():
+    """缺省写库口 = 包内 `content.persistence`（B1 落地的包内存储层；与宿主 `game.db` 同库同实现）。"""
+    from .._pkgref import DB as _db
+
+    def _update(group_id, key, hp, mp, max_hp, max_mp):
+        _db.update_player(group_id, key, hp=hp, mp=mp, max_hp=max_hp, max_mp=max_mp)
+
+    return _update
+
+
+def _resolve_db_update():
+    """取写库口：注入槽 `db_update` → 注入槽 `db`（模块）→ 包内直取。"""
+    fn = _INJECTED.get("db_update")
+    if fn is not None:
+        return fn
+    mod = _INJECTED.get("db")
+    if mod is not None:
+        return mod.update_player
+    return _default_db_update()
+
+
+# ============================================================
+# ★ B2-C3：`script_api` 缺省自解析口
+# ------------------------------------------------------------
+# 真源宿主壳 `game/commands/instance_battle.py::_script_api()` =
+# `game/commands/_boss_script_port.py:script_api()`：把三处宿主耦合绑进包内 `content/flow/boss_script.py`
+#   ① `data`            = 宿主 `game.content` 的 `MONSTER_MODS` / `INSTANCES`
+#                         ⇒ 包内等价物 = `content/catalog_quests.MONSTER_MODS` / `content/catalog_space.INSTANCES`
+#                         （宿主 `game.content` 就是这两个包内门面的聚合，**同一对象**）
+#   ② `phase_templates` = 包内 `content/tables.merge_phase_config`（宿主端口用的也是它）
+#   ③ `build_monster`   = **未进包缺口**（`game/core/drops.py`；C2 落点 `content/drops.py`）
+#                         ⇒ 注入槽 → 包内 `content.drops` → 宿主聚合层；都取不到 = None
+#                         （与宿主端口 `getattr(C, "build_monster", None)` 逐字同宽容度）
+# 缺省从「裸 `boss_script` 模块」升级为本端口 = 与宿主壳注入的 `script_api` **同形同源**，
+# 否则读点改包内直取后 Boss 剧本会退化（阶段模板不合并 / 援军变木桩）。
+# ============================================================
+_HOST_PKG = "data.plugins.dragonfall.game"
+_HOST_PKG_FALLBACK = "game"
+
+
+def _host_content():
+    """宿主内容聚合层 `game.content`：`sys.modules` → importlib → 抛。"""
+    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+        m = sys.modules.get("%s.content" % prefix)
+        if m is not None:
+            return m
+    last = None
+    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+        try:
+            return importlib.import_module("%s.content" % prefix)
+        except Exception as exc:                                  # noqa: BLE001
+            last = exc
+    raise RuntimeError("instance_battle：宿主聚合层 content 取不到（%s）——拒绝静默空跑" % (last,))
+
+
+def _resolve_build_monster():
+    """Boss 援军构造器（缺口名）：注入槽 → 包内 `content.drops`（C2 落点）→ 宿主聚合层 → None。"""
+    fn = _INJECTED.get("build_monster")
+    if fn is not None:
+        return fn
+    try:
+        from .. import drops as _drops
+    except Exception:                                             # noqa: BLE001  未落地
+        _drops = None
+    if _drops is not None:
+        fn = getattr(_drops, "build_monster", None)
+        if fn is not None:
+            return fn
+    try:
+        return getattr(_host_content(), "build_monster", None)
+    except Exception:                                             # noqa: BLE001
+        return None
+
+
+class _ScriptApiPort:
+    """宿主壳 `_boss_script_port._ScriptApi` 的**包内端口**（逐字同形：只把三处耦合换包内源）。
+
+    见 `game/commands/_boss_script_port.py:49-72`（真源适配器）：非绑定符号原样透传包内模块。
+    """
+
+    _BOUND_FACTORIES = ("make_script_hook", "make_script_event")
+
+    def __init__(self, bs):
+        object.__setattr__(self, "_bs", bs)
+
+    @staticmethod
+    def _deps() -> dict:
+        from ..catalog_quests import MONSTER_MODS
+        from ..catalog_space import INSTANCES
+        from ..tables import merge_phase_config
+        return {"data": {"MONSTER_MODS": MONSTER_MODS, "INSTANCES": INSTANCES},
+                "phase_templates": merge_phase_config,
+                "build_monster": _resolve_build_monster()}
+
+    def __getattr__(self, name):
+        bs = object.__getattribute__(self, "_bs")
+        fn = getattr(bs, name)
+        if not callable(fn):
+            return fn
+        if name in self._BOUND_FACTORIES:
+            def _factory(st, **kw):
+                d = self._deps()
+                d.update(kw)                  # 调用方显式传参优先
+                return fn(st, **d)
+            return _factory
+        if name == "boss_script_cfg":
+            def _cfg(st, actor, data=None):
+                return fn(st, actor, data if data is not None else self._deps()["data"])
+            return _cfg
+        return fn
+
+
+def _default_script_api():
+    """缺省 Boss 剧本导演：注入槽 `script_api` → 包内端口 `_ScriptApiPort`。"""
+    injected = _INJECTED.get("script_api")
+    if injected is not None:
+        return injected
+    from . import boss_script as _BS
+    return _ScriptApiPort(_BS)
 
 # ── 文案（B18 L3c：3 条 key 的**调用点**从宿主 `game/commands/instance_battle.py` 迁进包内）──
 # key / 槽位 / 整句逐字未改（表仍是宿主 `game/data/text_specs.json`，包内 `content/texts.py`
@@ -93,6 +241,11 @@ def team_heal_text(name, amount) -> str:
 def abort_text(code) -> str:
     """行动中止码 → 文案（真源 = 宿主旧 `_ABORT_TEXT` 映射；code ∈ ABORT_TEXT）。"""
     return T.static(ABORT_TEXT[code])
+
+
+# ★ B2-C3：模块级渲染器别名（`_attach_instance_hooks` 的 `team_heal_text` 形参同名遮蔽，
+# 缺省解析要用模块级那一只；它与宿主壳传入的 `_IB.team_heal_text` 是**同一函数对象**）。
+_TEAM_HEAL_RENDERER = team_heal_text
 
 # 玩家快照/玩法壳视图需要同步回的每玩家键（actor → snap 或 st per-player 键）
 # V 系列：战斗状态权威 = effects（snap 由 sync_player_from_actor 回写），
@@ -282,8 +435,10 @@ def _attach_instance_hooks(b, st: dict, *, script_api=None, team_heal_text=None)
     不按仇恨选目标、道具行动回调丢失。
 
     :param script_api: Boss 剧本导演实现（模块/对象，需有 `boss_script_cfg` /
-        `make_script_event` / `make_script_hook`）；缺省 = 包内 `content/flow/boss_script.py`。
-    :param team_heal_text: 团队治疗行渲染器（见 `_instance_team_event`）。
+        `make_script_event` / `make_script_hook`）；缺省 = 包内端口 `_default_script_api()`
+        （★ B2-C3：与宿主壳 `_script_api()` 同形同源；不再是裸 `boss_script` 模块）。
+    :param team_heal_text: 团队治疗行渲染器（见 `_instance_team_event`）；缺省 = 包内
+        `team_heal_text`（★ B2-C3：宿主壳传的就是它，不再默认不追加该行）。
     """
     try:
         b.target_picker = _instance_target_picker(st)
@@ -295,7 +450,9 @@ def _attach_instance_hooks(b, st: dict, *, script_api=None, team_heal_text=None)
     except Exception:
         b.action_override = None
     if script_api is None:
-        from . import boss_script as script_api                # 包内剧本导演（D3 端口）
+        script_api = _default_script_api()                     # 包内端口（B2-C3）
+    if team_heal_text is None:
+        team_heal_text = _TEAM_HEAL_RENDERER                   # 包内渲染器（B2-C3）
     try:
         _se = script_api.make_script_event(st)
         _te = _instance_team_event(st, team_heal_text)
@@ -484,12 +641,15 @@ def sync_views(st: dict, group_id, sync_player_fn=None, db_update_fn=None) -> No
 
     ★ 端口差异：真源 `sync_player_from_actor`（:388）→ 缺省 = 包内 `_pkg_sync_player`
     （B11-L2 收口：B9-L8 已把回写半边搬进 `content/bridge.py`，缺省不再是「不回写」）；
-    `db.update_player`（:408）**属宿主持久化** → 仍由调用方注入 `db_update_fn`，
-    不传 = 不写库（快照/敌视图/now 仍照算）。
+    ★ B2-C3（R1）：`db_update_fn=None` 不再是「不写库」——缺省走 `_resolve_db_update()`
+    （注入槽 `bind_host(db_update=…)` / `bind_host(db=…)` → 包内 `content.persistence`），
+    与宿主壳 `game/commands/instance_battle.py::_db_update` 写库行为逐字一致。
     """
     players = st.setdefault("players", {})
     if sync_player_fn is None:
         sync_player_fn = _pkg_sync_player
+    if db_update_fn is None:
+        db_update_fn = _resolve_db_update()   # 解析不进 try：取不到 = 装配缺陷（拒绝静默不写库）
     for _a in _players_of(st):
         _k = str(_a.get("qq_id") or "")
         snap = players.get(_k)

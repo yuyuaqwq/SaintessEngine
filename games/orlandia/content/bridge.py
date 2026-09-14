@@ -31,12 +31,13 @@
 | `db.set_event_state(k, "")`（:314） / `set_event_state(k, json)`（:339） | `event_state[k] = v` | 同上（原地写回调用方的 dict）|
 | `db.delete_event_state(k)`（:337） | `event_state.pop(k, None)` | 同上 |
 | `_default_db()`（:369，`from .. import db`）| **不搬**（宿主存储层访问器）| 不传 `event_state` = 无 event_state（内部按空 dict 处理，零副作用）|
-| `apply_player_battle_start(player, actor, db)`（:188） | 第三参改 **`event_state`** | 同上（薄壳，保持旧签名语义）|
-| `attach_tlog(b, ...)`（:207，读宿主 `tlog_setup` 流水开关 + sink）| **不搬**（宿主流水装配）| —— |
+| `apply_player_battle_start(player, actor, db)`（:188） | 第三参改 **`event_state`** | 同上（薄壳，保持旧签名语义）；传宿主 db 对象时由 `_as_event_state` 自动适配（★ B2-C3）|
+| `attach_tlog(b, ...)`（:207，读宿主 `tlog_setup` 流水开关 + sink）| ★ **B2-C3 起包内承接**：`attach_tlog()` = 注入槽 `bind_host(attach_tlog=…)` → 宿主薄壳同名函数（`sys.modules` → importlib）| 包内**不实现**流水 sink（平台件），只提供「取宿主实现并调用」的一层口 |
 
-⚠️ 未搬（宿主侧契约，**不属于本包**）：`attach_tlog`（读宿主 `game/tlog_setup.py` 流水开关 +
-   采集 sink）、`_default_db`（宿主存储层访问器 `from .. import db`）。清单见
-   `overnight/d3-bridge-port.md` §4。
+⚠️ 未搬（宿主侧契约）：`_default_db`（宿主存储层访问器 `from .. import db`）；`attach_tlog` 的
+   **实现体**（读 `game/tlog_setup.py` 开关 + `game/services/battle_tlog.py` 采集 sink）仍在宿主
+   —— 平台件。★ B2-C3 在包内补的只是**注入口 + 解析 + 调用**（模块级 `bind_host` / `attach_tlog`）。
+   清单见 `overnight/d3-bridge-port.md` §4。
 
 ★ 回写半边 `sync_player_from_actor` 原在上述「未搬」清单里 —— **B9-L8 批（2026-09-13）已搬入
    本文件**（真源 `:375-420` 逐字，**零宿主耦合**：只读 actor、原地写调用方给的 player dict），
@@ -55,9 +56,97 @@
 """
 from __future__ import annotations
 
+import importlib
+import sys
 from typing import Optional
 
 from saintess_engine import make_actor  # 只读 saintess_engine 工厂，不改 saintess_engine
+
+
+# ============================================================
+# ★ B2-C3 宿主替身口（注入优先 → 已加载宿主模块 → importlib；绝不静默空跑）
+# ------------------------------------------------------------
+# 本文件仍**不 import 宿主顶层**（I2：方向只有 内容 → 引擎）。唯一的宿主面 = `attach_tlog`
+# 的实现体（读 `game/tlog_setup` 开关 + `game/services/battle_tlog.py` 采集 sink，属平台件），
+# 按宿主壳同款约定取：`bind_host(attach_tlog=…)` 注入 → `sys.modules` 已加载 → import。
+# ============================================================
+_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（AstrBot 插件加载路径）
+_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
+_INJECTED = {}
+
+
+def bind_host(**objs):
+    """宿主替身注入（幂等；宿主薄壳 import 期调用）。键 = `attach_tlog`；`None` 忽略。"""
+    for k, v in (objs or {}).items():
+        if v is not None:
+            _INJECTED[k] = v
+
+
+def _host_mod(name: str):
+    """取宿主子模块：注入优先 → `sys.modules` → importlib；取不到抛（拒绝静默空跑）。"""
+    m = _INJECTED.get(name)
+    if m is not None:
+        return m
+    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+        mod = sys.modules.get("%s.%s" % (prefix, name))
+        if mod is not None:
+            return mod
+    last = None
+    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+        try:
+            return importlib.import_module("%s.%s" % (prefix, name))
+        except Exception as exc:                                  # noqa: BLE001
+            last = exc
+    raise RuntimeError("bridge：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
+
+
+# ============================================================
+# 宿主 db → event_state 协议替身（★ B2-C3：包内直取调用方也可能直接递宿主 db）
+# ------------------------------------------------------------
+# 真源 `game/services/battle_bridge.py::_EventStateView` 的**逐字搬入**：包内
+# `prepare_player_for_battle` / `apply_player_battle_start` 的第三参是普通 dict（只用到
+# `get / 赋值 / pop` 三动词）。宿主 db 对象（有 `get_event_state` 等）经本适配器接上同样的三动词。
+# ⚠️ 契约：本对象是 dict 子类**只为**满足包内 `isinstance(event_state, dict)` 守卫，键值**不落本对象**
+#    （`__setitem__` 已改道 db），故不持有第二份状态；若包内改用 `setdefault` / `in` / 迭代，
+#    会落到 dict 自己的空存储上（静默偏差）。
+# ============================================================
+
+class _EventStateView(dict):
+    """宿主 db → 包内 `event_state` 协议替身（get / 赋值 / pop 三动词转发宿主 db）。"""
+
+    __slots__ = ("_db",)
+
+    def __init__(self, db):
+        super().__init__()
+        self._db = db
+
+    def get(self, key, default=None):
+        v = self._db.get_event_state(key)
+        return default if v is None else v
+
+    def __setitem__(self, key, value):
+        self._db.set_event_state(key, value)
+
+    def pop(self, key, default=None):
+        v = self._db.get_event_state(key)
+        if v is None:
+            return default
+        self._db.delete_event_state(key)
+        return v
+
+
+def _as_event_state(obj):
+    """第三参归一：`None` / 普通 dict → 原样；宿主 db 对象（有 `get_event_state`）→ 适配为 dict 协议。
+
+    与宿主壳 `_es_arg(db)`（`_EventStateView(db or _default_db())`）等价：唯一差别是
+    **不替调用方回落 `_default_db()`** —— 包内没有「默认宿主 db」，`None` 就是「无 event_state」
+    （零副作用，见文件头 ②）。
+    """
+    if obj is None or isinstance(obj, dict):
+        return obj
+    if hasattr(obj, "get_event_state") and hasattr(obj, "set_event_state"):
+        return _EventStateView(obj)
+    return obj
 
 # ============================================================
 # 玩家 → player actor
@@ -239,7 +328,7 @@ def apply_player_battle_start(player: dict, actor: dict, event_state: Optional[d
 
     返回 actor（原地补全后同一引用）。
     """
-    prepare_player_for_battle(player, None, event_state)
+    prepare_player_for_battle(player, None, _as_event_state(event_state))
     return actor
 
 
@@ -303,7 +392,9 @@ def prepare_player_for_battle(player: dict, title_bonus: Optional[dict] = None,
     player = player if isinstance(player, dict) else {}
     if not player:
         return player
-    # 0. 宿主耦合替身落点（调用方 dict；None → 空 dict = 无 event_state，读永远 miss、写丢弃）
+    # 0. 宿主耦合替身落点（调用方 dict 原样；宿主 db 对象 → `_EventStateView` 适配；
+    #    None → 空 dict = 无 event_state，读永远 miss、写丢弃）
+    event_state = _as_event_state(event_state)
     _es = event_state if isinstance(event_state, dict) else {}
     # 1. 战斗字段播种（与旧 Battle.__init__ _seed 同款；actor 由 build_sides 透传）
     _seed_battle_keys(player)
@@ -450,8 +541,34 @@ def sync_player_from_actor(player: dict, actor: dict) -> dict:
     return player
 
 
+# ============================================================
+# 流水挂载（★ B2-C3：包内承接「取宿主实现并调用」的一层口；实现体仍是宿主的平台件）
+# ------------------------------------------------------------
+# 真源 = 宿主 `game/services/battle_bridge.py::attach_tlog`（:207）：读 `game/tlog_setup` 流水开关
+#        + `game/services/battle_tlog.py` 采集 sink，未启用流水时**零行为**直接返回 `b`。
+# 本函数**不重写**那段平台装配：注入槽 → 宿主薄壳同名函数（`sys.modules` → importlib），
+# 与改动前「读点解析宿主薄壳」逐字同源（旧读点是 `_host_mod("services.battle_bridge")` 那类替换）。
+# 解析失败**抛**（装配缺陷：调用方以为挂了流水而其实没挂）；调用体异常照真源口径吞掉（流水不影响开战）。
+# ============================================================
+
+def attach_tlog(b, *, btype: str = "monster", player=None, enemies=None, seed=None):
+    """给一场战斗挂**流水采集**（未启用流水时零行为，直接返回 `b`）。
+
+    实现体 = 注入的 `attach_tlog`（wave 2 宿主壳注入）或宿主薄壳同名函数；包内不搬 sink。
+    签名 / 返回 / 异常语义与真源（`game/services/battle_bridge.py:203`）逐字一致。
+    """
+    fn = _INJECTED.get("attach_tlog")
+    if fn is None:
+        fn = getattr(_host_mod("services.battle_bridge"), "attach_tlog")
+    try:
+        fn(b, btype=btype, player=player, enemies=enemies, seed=seed)
+    except Exception:                                             # noqa: BLE001
+        pass
+    return b
+
+
 __all__ = [
     "player_to_actor", "monster_to_actor", "enemies_to_actors", "build_sides",
     "apply_player_battle_start", "apply_battle_loadout", "prepare_player_for_battle",
-    "sync_player_from_actor",
+    "sync_player_from_actor", "attach_tlog", "bind_host",
 ]

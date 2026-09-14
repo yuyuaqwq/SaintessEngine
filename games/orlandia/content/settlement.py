@@ -30,7 +30,10 @@ random 调用顺序/落库顺序**一字未改**）：
   - 段19 grant_player_exp 落库后 `db.get_player` **重读**（读档惰性升级在此结算）→
     段21 的 need/exp_pct 用重读后的 player（这是「计划半边」做不到逐字节等价的原因）
 """
+import functools
+import importlib
 import random
+import sys
 import time
 
 # ---- B14-2 L5：数据名读点切包内门面（`C.<数据名>` → 门面直取；函数名/缺口名仍留 `C.<名>`）----
@@ -44,6 +47,167 @@ from . import catalog_b143 as _b143   # B14-3 收口名（宠物/公会/势力/�
 # 上一段留下的 8 个「域缺口名」（GUILD_CONFIG/PET_MAX_LEVEL/PET_SKILL_UNLOCK_LV/WORLD_EVENT_POOL/
 # AREA_FACTION/FACTIONS/MAP_CONNECTIONS/RUNE_DROP）已由 `catalog_b143` 提供 → 本段 15 处切 `_b143`；
 # 仍留 `C.<名>` 的只剩宿主**函数**（pet_exp_bonus/roll_drop/display/…）。见 overnight/_w3_cut_economy_side.md。
+
+
+# ============================================================
+# ★ B2-C3 宿主面替身口（注入优先 → 包内直取 → 已加载宿主模块；绝不静默空跑）
+# ------------------------------------------------------------
+# 真源宿主壳 `game/services/battle_settlement.py` 的 `_Host` / `_host()` 句柄类随
+# 「读点改包内直取」消失：本模块自己解析宿主面，唯一注入口 = `bind_host(**objs)`。
+#
+# 解析顺序（逐符号，与 `content/reward.py:49-121` 同款）：
+#   ① 注入槽（键 = 符号名：`db` / `content` / `player_final_stats` / `race_stats` /
+#      `resolve_drop` / `rule_fire` / `stat_bonus`）—— wave 2 宿主壳注入；`None` 不覆盖
+#   ② 包内直取：
+#        db                 → `content/persistence`（`content/_pkgref.py::DB`，B1/B17 落地的包内存储层）
+#        player_final_stats → `content/panel.py`（D3 逐字搬入物）
+#        race_stats         → `content/panel.py`
+#        resolve_drop       → `content/gameplay_rules.py`（B1）
+#        rule_fire          → `content/rule_engine.py`（B13-L6）
+#        stat_bonus         → `content/stat_bonus.py`（B13-L6）
+#      ★ 这 5 个函数经宿主壳**同名再导出**（`game/content_rules/panel.py` /
+#        `game/content_rules/gameplay.py` / `game/core/rule_engine.py` /
+#        `game/core/stat_bonus.py` 全是 `from content.… import <名>`）⇒ 取到的是**同一个函数对象**
+#      ⇒ 与宿主壳旧路径（`_Host.<名>`）逐字节同源。
+#      ★ `db` 同理：`game.db` = `game/store/__init__` = `from content.persistence… import *`
+#        ⇒ `update_player` 等是同一个函数对象。
+#   ③ 宿主聚合层 `game.content`（只喂 `C.<函数名>` 这批**未进包**的函数读口：
+#      `pet_exp_bonus` / `pct_str` / `pet_exp_mult` / `pet_exp_need` / `display` /
+#      `roll_drop` / `roll_drop_equip` / `generate_roster_equip` / `make_pet_egg` /
+#      `rune_item` / `rune_value` / `roll_mount_drop` / `make_mount_rein` / `roll_gem_drop` /
+#      `exp_to_next` / `mount_effects` …）—— 缺口登记见 `out/W-B2C3.md`（`drops` 归 C2 落点
+#      `content/drops.py`；其余函数读口属「待函数单元」）
+#      取不到 → 抛（拒绝静默空跑）
+#
+# ★ 调用约定兼容（过渡期，宿主侧冻结；B2-C3 与宿主壳必须同时可用）：
+#   宿主壳恒以 `_host()` 作**首参**调用；包内直取调用方（B2 各簇读点）按**真源签名**调
+#   （没有 host 参数）。`@_host_tolerant` 让两种约定都成立且行为一致：首参不是宿主面句柄时，
+#   自动左对齐补上包内自解析句柄。**函数签名/正文/返回值一字未改**（装饰器只做取件归一）。
+# ============================================================
+_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（AstrBot 插件加载路径）
+_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
+_INJECTED = {}
+
+
+def bind_host(**objs):
+    """宿主面注入（幂等）——键 = 符号名；值 = 模块/函数（定值）；`None` 忽略。"""
+    for k, v in (objs or {}).items():
+        if v is not None:
+            _INJECTED[k] = v
+
+
+def _slot(key, fallback):
+    """取一个宿主面符号：注入槽优先 → `fallback()`（包内直取 / 宿主聚合层）。"""
+    v = _INJECTED.get(key)
+    if v is not None:
+        return v
+    return fallback()
+
+
+def _load_host_mod(name):
+    """取宿主子模块（`game.content`）：`sys.modules` → importlib；取不到抛。"""
+    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+        m = sys.modules.get("%s.%s" % (prefix, name))
+        if m is not None:
+            return m
+    last = None
+    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
+        try:
+            return importlib.import_module("%s.%s" % (prefix, name))
+        except Exception as exc:                                  # noqa: BLE001
+            last = exc
+    raise RuntimeError("settlement：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
+
+
+def _host_content():
+    """宿主内容聚合层 `game.content`（真源 `from .. import content as C`）—— 只喂未进包函数读口。"""
+    return _load_host_mod("content")
+
+
+def _pkg_db():
+    from ._pkgref import DB as _db     # B1/B17：包内存储层（与宿主 game.db 同库、同一批函数对象）
+    return _db
+
+
+def _pkg_panel_stats():
+    from .panel import player_final_stats, race_stats
+    return player_final_stats, race_stats
+
+
+def _pkg_resolve_drop():
+    from .gameplay_rules import resolve_drop
+    return resolve_drop
+
+
+def _pkg_rule_fire():
+    from .rule_engine import fire
+    return fire
+
+
+def _pkg_stat_bonus():
+    from .stat_bonus import stat_bonus
+    return stat_bonus
+
+
+class _HostFace:
+    """宿主服务句柄（真源 `_Host` 的**包内自解析版**）——每属性访问时现取（与真源同刻）。"""
+
+    @property
+    def db(self):
+        return _slot("db", _pkg_db)
+
+    @property
+    def C(self):
+        return _slot("content", _host_content)
+
+    @property
+    def player_final_stats(self):
+        return _slot("player_final_stats", lambda: _pkg_panel_stats()[0])
+
+    @property
+    def race_stats(self):
+        return _slot("race_stats", lambda: _pkg_panel_stats()[1])
+
+    @property
+    def resolve_drop(self):
+        return _slot("resolve_drop", _pkg_resolve_drop)
+
+    @property
+    def rule_fire(self):
+        return _slot("rule_fire", _pkg_rule_fire)
+
+    @property
+    def stat_bonus(self):
+        return _slot("stat_bonus", _pkg_stat_bonus)
+
+
+_DEFAULT_HOST = _HostFace()
+
+
+def _is_host_face(obj) -> bool:
+    """是不是「宿主服务句柄」（真源 `_Host` 实例 或 本模块 `_HostFace`）。
+
+    ⚠️ 只看**类**上的 `db` / `C`（不看实例）：`_HostFace` 的两个属性是 property，
+    实例 `hasattr` 会触发解析（句柄不可用时抛）——类上判断零副作用。
+    """
+    if isinstance(obj, _HostFace):
+        return True
+    t = type(obj)
+    return hasattr(t, "db") and hasattr(t, "C")
+
+
+def _host_tolerant(fn):
+    """两种调用约定兼容（签名不变）：`f(host, …)`（宿主壳）与 `f(…)`（包内直取）。"""
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        if args and _is_host_face(args[0]):
+            return fn(*args, **kwargs)
+        if "host" in kwargs:
+            if not _is_host_face(kwargs["host"]):
+                kwargs = dict(kwargs, host=_DEFAULT_HOST)
+            return fn(*args, **kwargs)
+        return fn(_DEFAULT_HOST, *args, **kwargs)
+    return wrapper
 
 
 # ============ 胜利结算主段小函数（combat._handle_victory 原段顺序 1803–2201） ============
@@ -71,6 +235,7 @@ def exp_curve(exp, monster_lv, player_level):
     return exp, _exp_note
 
 
+@_host_tolerant
 def party_exp_bonus(host, group_id, qq_id, exp):
     """组队经验 +10%（队长队员同样生效，design 29 章 2.1 表）
     v95.29 #270：队伍行按 (group_id, leader) 记，队员反查必须同一 group_id——
@@ -84,6 +249,7 @@ def party_exp_bonus(host, group_id, qq_id, exp):
     return exp, party_bonus_line
 
 
+@_host_tolerant
 def guild_exp_bonus(host, qq_id, exp):
     """公会经验加成（等级越高加成越多，上限 20%）"""
     db, C = host.db, host.C
@@ -97,6 +263,7 @@ def guild_exp_bonus(host, qq_id, exp):
     return exp, guild_bonus
 
 
+@_host_tolerant
 def pet_exp_gain(host, qq_id, exp, monster):
     """宠物经验加成（24 章五 v133.2 品质分级：等级×品质每级加成，cap 5~30%；饱食度 >0 全额，=0 减半）"""
     db, C = host.db, host.C
@@ -137,6 +304,7 @@ def pet_exp_gain(host, qq_id, exp, monster):
     return exp, pet_bonus
 
 
+@_host_tolerant
 def mount_exp_bonus(host, player, exp):
     """v101.13 坐骑 exp_mult：骑乘加成类坐骑战斗经验加成（幽灵马/狮鹫/炎蹄战马）"""
     C = host.C
@@ -149,6 +317,7 @@ def mount_exp_bonus(host, player, exp):
     return exp, mount_bonus
 
 
+@_host_tolerant
 def world_event_bonus(host, group_id, qq_id, exp, gold):
     """世界事件加成（effects 数据驱动：按 etype 查 WORLD_EVENT_POOL 定义拿 effects，
     db 的 world_event 仅存 etype/ends_at/data；查不到 = 无加成）"""
@@ -178,6 +347,7 @@ def world_event_bonus(host, group_id, qq_id, exp, gold):
     return exp, gold, evt_bonus, evt_effects
 
 
+@_host_tolerant
 def fortune_bonus(host, group_id, qq_id, exp, gold):
     """v87 02 章 7.6：每日运势加成（大吉 经验+10% / 小凶 金币-10%）"""
     db = host.db
@@ -200,6 +370,7 @@ def fortune_bonus(host, group_id, qq_id, exp, gold):
     return exp, gold, fortune_line
 
 
+@_host_tolerant
 def bump_kill_stats(host, group_id, qq_id, monster, evt_effects):
     """任务统计（evt_effects 由段6 world_event_bonus 产出，供声望 rep_mult 消费）"""
     db, C = host.db, host.C
@@ -224,6 +395,7 @@ def bump_kill_stats(host, group_id, qq_id, monster, evt_effects):
     return rep_lines
 
 
+@_host_tolerant
 def roll_blueprint_drop(host, group_id, qq_id, player, monster, gold):
     """掉落（v93 经济改革：怪物永不掉装备——装备走铁匠铺购买 + 图纸锻造）
     v106 幸运：Boss 图纸惊喜掉率 ×(1+luck)（luck 上限 50%，roll_drop 内部 cap）"""
@@ -260,6 +432,7 @@ def roll_blueprint_drop(host, group_id, qq_id, player, monster, gold):
     return drop_equip, drop_lines, gold
 
 
+@_host_tolerant
 def roll_equip_drop(host, group_id, qq_id, monster, drop_equip, drop_lines):
     """v140 装备掉落（鱼鱼拍板：打破 v93 铁律，精英/Boss 掉装备；普通怪仍不掉）
     精英=蓝/紫、Boss=紫/橙；与图纸 10% 独立判定共存
@@ -293,6 +466,7 @@ def roll_equip_drop(host, group_id, qq_id, monster, drop_equip, drop_lines):
     return drop_lines
 
 
+@_host_tolerant
 def roll_pet_egg(host, group_id, qq_id, monster):
     """v101.11 蛋掉落表数据化（data/pets.py PET_EGG_ROLL，加宠物/改概率不动代码）"""
     db, C = host.db, host.C
@@ -318,6 +492,7 @@ def roll_pet_egg(host, group_id, qq_id, monster):
     return pet_egg_line
 
 
+@_host_tolerant
 def roll_mount_drop(host, group_id, qq_id, monster):
     """v39 坐骑缰绳掉落（精英/Boss 概率，背包『使用』解锁坐骑）"""
     db, C = host.db, host.C
@@ -330,6 +505,7 @@ def roll_mount_drop(host, group_id, qq_id, monster):
     return mount_line
 
 
+@_host_tolerant
 def roll_rune_drop(host, group_id, qq_id, monster):
     """v34 符文掉落（精英/Boss 概率 x3，品质越高越稀有，等级随品质浮动）
     v101.25i5 分层：普通怪只掉稀有；史诗/传说仅精英/Boss（鱼鱼：低级怪爆传说 III 不合理）"""
@@ -365,6 +541,7 @@ def roll_rune_drop(host, group_id, qq_id, monster):
     return rune_line
 
 
+@_host_tolerant
 def roll_gem_drop(host, group_id, qq_id, monster):
     """v136 原石随机掉落（Phase 2 定稿：普通 2% / 精英 5% / 野外 Boss 15% / 副本 Boss 20%）。
     命中 1 颗随机原石（layer 范围按怪档查 GEM_DROP_TIER；Boss 专属固定属性倾向查
@@ -384,6 +561,7 @@ def roll_gem_drop(host, group_id, qq_id, monster):
     return gem_line
 
 
+@_host_tolerant
 def rune_income(host, group_id, qq_id, player, exp, gold):
     """v34 符文收益：拾荒(金币+%) / 睿智(经验+%)——直接从已装备读符文"""
     C = host.C
@@ -410,6 +588,7 @@ def lucky_charm(gold, player, now):
     return gold, lucky_line
 
 
+@_host_tolerant
 def material_fold(host, group_id, qq_id, player, monster, gold, lucky_line):
     """v93 经济改革：金币不再入账，按 原金币×1.5 折算成 1-2 种可卖材料（怪物掉落池优先，通用池兜底）
     v106 幸运属性：掉落收益 ×(1+luck)（上限 50%），与幸运护符（+50%）独立叠加
@@ -469,6 +648,7 @@ def material_fold(host, group_id, qq_id, player, monster, gold, lucky_line):
     return lucky_line, drop_lines
 
 
+@_host_tolerant
 def know_exp_bonus(host, group_id, qq_id, player, exp):
     """经验/金币（v93：只入经验，金币已折算成材料）
     v106.1 求知属性：战斗经验 ×(1+exp_bonus)（上限 50%），叠加在全部既有加成之后"""
@@ -487,6 +667,7 @@ def know_exp_bonus(host, group_id, qq_id, player, exp):
     return exp, exp_bonus_line
 
 
+@_host_tolerant
 def grant_player_exp(host, group_id, qq_id, player, exp):
     """v95.19: 顺带同步 DB max_hp/max_mp 实时值（player 已由 Battle 刷新，防 get_player clamp 误伤）
     #262: 先更新 player dict 再落库——此前直接写库导致进度条显示旧值、
@@ -510,6 +691,7 @@ def grant_player_exp(host, group_id, qq_id, player, exp):
 
 # ============ 纯渲染/判定单点（原样搬） ============
 
+@_host_tolerant
 def next_step_hint(host, group_id, qq_id, player, monster) -> str:
     """v138.3 结算卡·下一步指引（峰终定律）：战斗胜利后给一条养成方向的短指引。
 
@@ -537,6 +719,7 @@ def next_step_hint(host, group_id, qq_id, player, monster) -> str:
         return ""
 
 
+@_host_tolerant
 def nearest_town(host, cur_map: str) -> str:
     """BFS 找离当前地图最近的城镇（战败回城用；与回城卷轴 economy._nearest_town 同逻辑，M22 P3）。"""
     from collections import deque
@@ -560,6 +743,7 @@ def nearest_town(host, cur_map: str) -> str:
     return _cc.START_MAP
 
 
+@_host_tolerant
 def red_until(host, qq_id) -> int:
     try:
         db = host.db
@@ -568,10 +752,12 @@ def red_until(host, qq_id) -> int:
         return 0
 
 
+@_host_tolerant
 def is_redname(host, qq_id) -> bool:
     return time.time() < red_until(host, qq_id)
 
 
+@_host_tolerant
 def grant_worldboss_drop(host, group_id, qq_id, key):
     """v104 M06 P2-3：发放世界 Boss 特殊掉落（材料直接入库/缰绳生成坐骑道具）。返回物品中文名或 None"""
     db, C = host.db, host.C
@@ -606,6 +792,7 @@ def _mon_lv(monster) -> int:
     return int(monster.get("lv") or monster.get("level") or 1)
 
 
+@_host_tolerant
 def victory_settle(host, group_id, qq_id, player, monster, result, extra_kills=None):
     """方案 A 主段编排：原 _handle_victory 1803–2201 段（加成+掉落+exp 结算+面板行骨架）
     按原顺序逐段原样串起；2202–2297 段（公会任务/升级/quest/野王/塔卫/成就/rule/
@@ -717,6 +904,7 @@ def victory_settle(host, group_id, qq_id, player, monster, result, extra_kills=N
     }
 
 
+@_host_tolerant
 def defeat_settle(host, group_id, qq_id, player, monster, result):
     """战败：扣金币/回城（不扣宠物饱食度——宽容设计，见胜利路径 1475 注释）
     全同步编排（原 _handle_defeat 2347–2411）：

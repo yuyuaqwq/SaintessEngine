@@ -10,27 +10,29 @@
 `tests/test_texts_table.py` 的「声明 ↔ 调用点」双向对账）。宿主里**零 `T.text/T.static`
 调用点**（B18 §3 验收线：渲染进包）。
 
-搬的边界（正文改动面只有「宿主取件」一类，其余逐字）
-----------------------------------------------------
-| 真源写法 | 包内替身 |
+搬的边界（★ B2-C3，2026-09-14：读点由「宿主替身」收口为**包内直取**）
+------------------------------------------------------------------
+| 真源写法 | 包内取用（本批） |
 |---|---|
-| `from .. import content as C` | `C = _HostMod("content")` |
-| `from .. import db` | `db = _HostMod("db")` |
-| `from ..core import texts as T` | `T = _HostMod("core.texts")`（文案唯一真源 `game/data/text_specs.json`） |
-| `from ..content_rules.skills import skill_info` | `skill_info = _HostFn("content_rules.skills", "skill_info")` |
-| `from . import instance_battle as IB` | `IB = _HostMod("commands.instance_battle")`（宿主薄壳：编排在包、宿主耦合回调在宿主 → 必须走宿主面） |
-| `from .. import tlog_setup as _tlog`（函数内） | `_tlog = _HostMod("tlog_setup")`（模块级，调用时解析） |
+| `from .. import content as C` | `C` = 包内聚合面 `_ContentFace`：`MAP_BY_ID` / `get_instance_st` **包内直取**（B14-2 门面 / `content/worlds.py`）；仅 `build_monster` 是**未进包缺口**（C2 落点 `content/drops.py`）→ 注入槽 → 宿主聚合层 |
+| `from .. import db` | 包内直取 `content.persistence`（B1；`from ._pkgref import DB as db`） |
+| `from ..core import texts as T` | 包内直取 `content/texts.py`（文案唯一真源仍是宿主 `game/data/text_specs.json`） |
+| `from ..content_rules.skills import skill_info` | 包内直取 `from .skills import skill_info`（技能链 D3 已进包） |
+| `from . import instance_battle as IB` | ★ **包内直取** `content.flow.instance_battle`（宿主 `commands.instance_battle` 只是一层委托薄壳），经 `IB = _OrchestratorRef()` 逐名解析：**外部替换过的宿主壳属性优先**（波1 monkeypatch 面兼容，实证 `tests/test_texts_table.py:554/1022`）→ 否则包内真源。**三处按宿主壳口径补齐**（否则行为变化）：① `db_update` 句柄已在包内接上（R1，见 `content/flow/instance_battle.py` ② R1）；② `IB.act` 包内返回 **4 位**（含 abort 码），本模块经 `_act3` 按宿主壳口径折成 `(logs, ended, nxt)`（三元返回原样透传）；③ `script_api` / `team_heal_text` 的包内缺省已与宿主壳注入值同形同源（`_ScriptApiPort` / `_TEAM_HEAL_RENDERER`） |
+| `from .. import tlog_setup as _tlog`（函数内） | 包内唯一取用口 `content/obs.py`：`obs.emit("instance.clear", …)`（**不自己解析句柄**；未接上句柄 → 抛，接上但未启用 → `None` 零行为） |
 | `from content.mech.kinds import K_HEAL, K_BUFF`（函数内） | 原样保留（改相对 `.mech.kinds`，同一模块） |
 
-替身写法与 `content/instance_cmds.py` / `content/world_cmds.py` **同款**（注入优先 → `sys.modules`
-→ `importlib`；**绝不静默空跑**）。
+取件时机与本批之前**逐字相同**：`C` 的包内成员经 `content/_pkgref.py::PkgModule` 惰性解析
+（属性访问时 import 目标包内模块 = 旧宿主替身的时机）；`IB` / `skill_info` / `T` / `db` 为
+模块级 import（与 `content/instance_cmds.py` 同款，包加载口已先跑）。**绝不静默空跑**。
 
 包内直连（不再经宿主）
 ----------------------
 `IR`（副本运行态适配层）→ 包内 `content/flow/instance_run.py` —— 与 `content/instance_cmds.py`
 同源同款（B11-L2 已归包；宿主 `game/core/instance_run.py` 是**同名再导出壳**，逐名同一函数对象）。
 
-I2 合规：包内不 import 宿主（替身在调用时解析）；`self` 侧玩法壳方法
+I2 合规：包内不 import 宿主顶层；唯一的未进包符号（`build_monster`）经注入槽 / 已加载宿主模块
+在调用时解析；`self` 侧玩法壳方法
 （`_instance_defeat` / `_instance_victory` / `_instance_kill_reward` / `_instance_save` /
 `_instance_battle_footer` / `_instance_current_members` / `_instance_map_view` /
 `_instance_elite_scale` / `_find_skill_cfg` / `_unlock_battle` / `_player` …）由宿主
@@ -42,95 +44,181 @@ import importlib
 import sys
 import time
 
-from .flow import instance_run as IR   # 包内直连（宿主 core.instance_run 是同名再导出壳）
+from . import obs                          # 平台件唯一取用口（B2-W0 冻结）
+from ._pkgref import DB as db              # 包内直取（B1：包内存储层）
+from ._pkgref import PkgModule as _PkgModule
+from . import texts as T                   # 包内直取（B18 §3：渲染进包）
+from .flow import instance_battle as _PKG_IB   # ★ B2-C3：包内唯一真源（原宿主薄壳）
+from .flow import instance_run as IR       # 包内直连（宿主 core.instance_run 是同名再导出壳）
+from .skills import skill_info             # 包内直取（技能链 D3 已进包）
 
 
 # ============================================================
-# 宿主替身口（写法照抄 content/instance_cmds.py）
+# `C` 聚合面替身（★ B2-C3：包内直取优先，未进包符号走宿主聚合层）
+# ------------------------------------------------------------
+# 真源 `from .. import content as C`：本模块只用到 3 个符号 ——
+#   · `MAP_BY_ID`      → 包内门面 `content/catalog_space.py`（B14-2，逐值/键序对拍相等）
+#   · `get_instance_st`→ 包内 `content/worlds.py`（副本运行态真源）
+#   · `build_monster`  → **未进包**（`game/core/drops.py` 真源；包内落点 = C2 的
+#                        `content/drops.py`，尚未落地）⇒ 登记的**缺口**：注入槽优先 →
+#                        包内 `content.drops`（若已落地）→ 已加载宿主聚合层 `game.content`。
+# `content/_pkgref.py::PkgModule` 保持「属性访问时解析」的取件时机（与旧替身逐字同时机）。
 # ============================================================
 _HOST_PKG = "data.plugins.dragonfall.game"
 _HOST_PKG_FALLBACK = "game"
 _INJECTED = {}
+_HOST_C = None
+
+_cs = _PkgModule("content.catalog_space")     # MAP_BY_ID
+_worlds = _PkgModule("content.worlds")        # get_instance_st
 
 
 def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = 替身要解析的名字。"""
+    """宿主替身注入（幂等；wave 2 宿主壳调用）——键 `c`（宿主聚合层）/ `build_monster`。`None` 忽略。"""
+    global _HOST_C
     for k, v in (objs or {}).items():
-        if v is not None:
-            _INJECTED[k] = v
+        if v is None:
+            continue
+        if k == "c":
+            _HOST_C = v
+        _INJECTED[k] = v
 
 
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
+def _load_host_mod(name: str):
+    """取宿主子模块：`sys.modules` 已加载 → importlib；取不到**抛**（拒绝静默空跑）。"""
     for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = sys.modules.get(prefix if not name else "%s.%s" % (prefix, name))
+        m = sys.modules.get("%s.%s" % (prefix, name))
         if m is not None:
             return m
     last = None
     for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
         try:
-            return importlib.import_module(prefix if not name else "%s.%s" % (prefix, name))
+            return importlib.import_module("%s.%s" % (prefix, name))
         except Exception as exc:                # noqa: BLE001
             last = exc
     raise RuntimeError("cmds_instance_router：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
 
 
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「函数内 from ..<mod> import <attr>」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
+def _host_c():
+    """宿主内容聚合层（只喂**未进包**符号；注入优先 → 已加载模块 → import）。"""
+    if _HOST_C is not None:
+        return _HOST_C
+    return _load_host_mod("content")
+
+
+def _build_monster():
+    """`C.build_monster`（缺口名）：注入槽 → 包内 `content.drops`（C2 落点）→ 宿主聚合层。"""
+    fn = _INJECTED.get("build_monster")
+    if fn is not None:
+        return fn
     try:
-        return getattr(m, attr)
+        from . import drops as _drops
+    except Exception:                           # noqa: BLE001  未落地（C2 尚未交付）
+        return _host_c().build_monster
+    fn = getattr(_drops, "build_monster", None)
+    return fn if fn is not None else _host_c().build_monster
+
+
+_PKG_ATTRS = {
+    "MAP_BY_ID": lambda: _cs.MAP_BY_ID,
+    "get_instance_st": lambda: _worlds.get_instance_st,
+    "build_monster": _build_monster,
+}
+_HOST_FALLBACK = ("build_monster",)
+
+
+class _ContentFace:
+    """`C` 替身（正文 `C.<名>` 一字未改）：包内直取优先 → 未进包符号走宿主聚合层。"""
+
+    def __getattr__(self, name):
+        getter = _PKG_ATTRS.get(name)
+        if getter is not None:
+            return getter()
+        if name in _HOST_FALLBACK:
+            return getattr(_host_c(), name)
+        raise AttributeError(
+            "cmds_instance_router：C.%s 未登记（本模块只用 MAP_BY_ID / get_instance_st / build_monster）"
+            % name)
+
+
+C = _ContentFace()
+
+# ============================================================
+# `IB` 读点（★ B2-C3：包内直取 + 波1 monkeypatch 面兼容）
+# ------------------------------------------------------------
+# 包内唯一真源 = `content.flow.instance_battle`（宿主 `commands.instance_battle` 只是一层委托薄壳）。
+# ⚠️ 必须保留的过渡面：宿主壳在波1 仍是**冻结的公共 monkeypatch 面** —— 既有门禁直接
+#    `setattr(宿主壳, "build_battle"/"act", 桩)`（实证 `tests/test_texts_table.py:554/1022`：
+#    「战斗异常」与「同归于尽」两条冻结分支）。只认包内模块会让这些桩**静默失效** = 行为变化
+#    （实测：文案门禁 61/63）。故逐名解析：**外部替换过的宿主壳属性优先**，否则包内直取。
+# ------------------------------------------------------------
+_HOST_IB_MODS = ("data.plugins.dragonfall.game.commands.instance_battle",
+                 "game.commands.instance_battle")
+
+
+def _host_shell_mod():
+    """已加载的宿主薄壳（**只查 `sys.modules`**：没加载 = 没人能 patch 它，不必 import）。"""
+    for _n in _HOST_IB_MODS:
+        _m = sys.modules.get(_n)
+        if _m is not None:
+            return _m
+    return None
+
+
+def _external_override(name):
+    """宿主壳同名属性**被外部替换**时返回它；原装委托桩 / 未加载 / 同一对象 → `None`。
+
+    判据：原装委托桩的 `__module__` 就是宿主壳模块名（桩定义在壳里）；外部（测试/工具）
+    注入的桩定义在别的模块 ⇒ `__module__` 不同 ⇒ 认定为「被替换」。
+    """
+    _mod = _host_shell_mod()
+    if _mod is None:
+        return None
+    try:
+        _v = getattr(_mod, name)
     except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
+        return None
+    if _v is getattr(_PKG_IB, name, None):
+        return None                                       # 同一对象（如 `_VIEW_ST_KEYS`）
+    if callable(_v) and getattr(_v, "__module__", "") in _HOST_IB_MODS:
+        return None                                       # 原装委托桩 → 用包内真源
+    return _v                                             # 外部替换件 → 以它为准（波1 兼容）
 
 
-class _HostMod:
-    """宿主模块替身（`C` / `db` / `T` / `IB`…）—— 正文 `X.attr` 一字未改。"""
+class _OrchestratorRef:
+    """`IB` 替身（正文 `IB.<名>` 一字未改）：注入槽 → 宿主壳外部替换件 → 包内真源。"""
 
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
-
-
-class _HostObj:
-    """宿主对象惰性替身（函数/常量/类型）：`bind_host` 注入优先，否则调用时解析。"""
-
-    def __init__(self, mod, attr):
-        self._mod = mod
-        self._attr = attr
-
-    def _v(self):
-        if self._attr in _INJECTED:
-            return _INJECTED[self._attr]
-        return _host_attr(self._mod, self._attr)
-
-    def __repr__(self):
-        return repr(self._v())
+    def __getattr__(self, name):
+        _inj = _INJECTED.get("instance_battle")
+        if _inj is not None:
+            return getattr(_inj, name)
+        _ov = _external_override(name)
+        if _ov is not None:
+            return _ov
+        return getattr(_PKG_IB, name)
 
 
-class _HostFn(_HostObj):
-    """宿主函数替身（调用时解析）。"""
-
-    def __call__(self, *a, **k):
-        return self._v()(*a, **k)
+IB = _OrchestratorRef()
 
 
-C = _HostMod("content")                                     # 真源 `from .. import content as C`
-from ._pkgref import DB as db
-from . import texts as T
-skill_info = _HostFn("content_rules.skills", "skill_info")  # 真源 `from ..content_rules.skills import skill_info`
-IB = _HostMod("commands.instance_battle")                   # 真源 `from . import instance_battle as IB`
-_tlog = _HostMod("tlog_setup")                              # 真源 `from .. import tlog_setup as _tlog`
+def _act3(*a, **k):
+    """`IB.act` → **宿主壳口径三元组**（★ B2-C3：包内实现返回 4 位，abort 码未渲染）。
+
+    真源宿主壳 `game/commands/instance_battle.py::act` 的逐字同义替换：
+        logs, ended, nxt, abort = _IB.act(…)
+        if abort: return [_IB.abort_text(abort)], True, None
+        return logs, ended, nxt
+    读点 `IB` 从「宿主薄壳」改指「包内模块」后，必须按宿主壳口径补齐 —— 否则
+    ① 三元解包直接 ValueError；② `"no_sides"/"no_actor"` 的两句文案（B18 L3c 起渲染点在包内）
+    会丢失。三元返回（宿主壳口径 / 外部替换桩，如 `tests/test_texts_table.py:1024`）原样透传。
+    """
+    _r = IB.act(*a, **k)
+    if len(_r) == 3:
+        return _r
+    logs, ended, nxt, abort = _r
+    if abort:
+        return [IB.abort_text(abort)], True, None
+    return logs, ended, nxt
 
 __all__ = ["InstanceRouterImpl", "INSTANCE_TIMEOUT"]
 INSTANCE_TIMEOUT = 60  # 副本行动超时（秒）——与 instance.py 模块常量同源（v101.30d 60s）
@@ -309,7 +397,7 @@ class InstanceRouterImpl:
             if now - int(st.get("turn_time", now) or now) > INSTANCE_TIMEOUT:
                 _def_name = (self._player(group_id, cur_key) or {}).get("name", cur_key)
                 logs.append(T.text("instance.日志_超时自动防御", name=_def_name))
-                _dlogs, _dended, _dnxt = IB.act(st, group_id, cur_key, "defend")
+                _dlogs, _dended, _dnxt = _act3(st, group_id, cur_key, "defend")
                 IB.sync_views(st, group_id)
                 logs += _dlogs
                 if _dended or not IB.next_actor_key(st):
@@ -356,7 +444,7 @@ class InstanceRouterImpl:
             _mem_before = 0
 
         # ---- 3. 行动（instance_battle.act：from_state → human_act → 落回）----
-        act_logs, ended, _who = IB.act(st, group_id, qq_id, action, skill_name, target=_tgt)
+        act_logs, ended, _who = _act3(st, group_id, qq_id, action, skill_name, target=_tgt)
         IB.sync_views(st, group_id)
         logs += act_logs
 
@@ -558,8 +646,11 @@ class InstanceRouterImpl:
                     return
             # 末层 / 无 stages → 通关
             st["over"] = True
-            _tlog.emit("instance.clear", actor=qq_id, iid=str(st.get("inst_id") or ""),
-                       first_clear=bool(st.get("first_clear")))
+            # ★ B2-C3：流水走包内唯一取用口 `content/obs.py`（不自己解析句柄）。
+            # 解析在 `obs.emit` 内部、**不在 try 里** —— 句柄没接上 = 抛（fail-closed），
+            # 接上但未启用 = 返回 None（宿主契约零行为），写流水异常才吞。
+            obs.emit("instance.clear", actor=qq_id, iid=str(st.get("inst_id") or ""),
+                     first_clear=bool(st.get("first_clear")))
             _fc_cur = self._instance_current_members(group_id, st) or [str(st.get("leader") or "")]
             st["first_clear"] = not any(
                 a.get("ach_key") == f"inst_clear_{st['inst_id']}" and a.get("progress", 0) >= 1
