@@ -149,7 +149,14 @@ def builtin_default_domains() -> dict:
 DOMAINS_REL = "editor/domains.json"
 DOMAIN_KINDS = ("data", "rules")
 _DOMAIN_ID_RE = re.compile(r"^[a-z][a-z0-9_\-]{0,40}$")
+#: 域的**必填五字段**（内置默认集与包声明同形比较用）
 _OVER_FIELDS = ("label", "kind", "schema", "primary", "icon")
+#: 域的**可选归属标注**（2026-09-14 起）：`owner` = 形状/模块归属，`tier` = 可迁移等级。
+#: 由内容包在 `editor/domains.json` 里声明（orlandia 72 域全标注）；框架**只透传 + 校验取值**，
+#: 不赋默认 —— 没写的域输出里就没有这两个键（保证「包声明 == 生效域表」逐字段可比）。
+DOMAIN_OWNERS = ("package", "engine")
+DOMAIN_TIERS = ("portable", "fixed")
+_OPTIONAL_FIELDS = ("owner", "tier")
 
 _DOMAINS_CACHE: dict = {}          # 包目录 -> (声明文件签名, {域: meta}, [warning])
 _CACHE_MAX = 500
@@ -260,11 +267,25 @@ def _read_package_domains(pkg_dir: str) -> tuple:
         if primary is not None and not isinstance(primary, str):
             warns.append(f"包域声明 {did}：primary 不是字符串 —— 沿用内置值")
             primary = None
-        out[did] = {"label": label if label is not None else base["label"],
-                    "kind": kind,
-                    "schema": schema if schema is not None else base["schema"],
-                    "primary": primary if primary is not None else base["primary"],
-                    "icon": icon if icon is not None else base["icon"]}
+        owner, tier = meta.get("owner"), meta.get("tier")
+        if owner is not None and owner not in DOMAIN_OWNERS:
+            warns.append(f"包域声明 {did}：owner={owner!r} 非法（只能是 {'/'.join(DOMAIN_OWNERS)}）"
+                         f"—— 该字段已忽略")
+            owner = None
+        if tier is not None and tier not in DOMAIN_TIERS:
+            warns.append(f"包域声明 {did}：tier={tier!r} 非法（只能是 {'/'.join(DOMAIN_TIERS)}）"
+                         f"—— 该字段已忽略")
+            tier = None
+        entry = {"label": label if label is not None else base["label"],
+                 "kind": kind,
+                 "schema": schema if schema is not None else base["schema"],
+                 "primary": primary if primary is not None else base["primary"],
+                 "icon": icon if icon is not None else base["icon"]}
+        if owner is not None:            # 可选字段：**只在有值时输出**（没声明 = 没这个键）
+            entry["owner"] = owner
+        if tier is not None:
+            entry["tier"] = tier
+        out[did] = entry
     if raw and not out:
         warns.append("包域声明里没有一条可用（形状全部不合）—— 已回退为内置域表"
                      if use_builtin else

@@ -362,6 +362,8 @@ function renderRail() {
   }).join('');
   $('rail').innerHTML = items
     + '<div class="rail-sep"></div>'
+    + `<button class="rail-item ${playOpen() ? 'on' : ''}" data-nav="play" title="试玩（脱离平台插件；子进程跑引擎 host + 本游戏包）">
+         <span class="ri-icon">🎮</span><span class="ri-label">试玩</span></button>`
     + `<button class="rail-item ${isWiki() ? 'on' : ''}" data-nav="wiki" title="引擎文档（wiki）">
          <span class="ri-icon">📖</span><span class="ri-label">文档</span></button>`
     + `<button class="rail-item ${isSettings() ? 'on' : ''}" data-nav="settings" title="包设置">
@@ -370,6 +372,7 @@ function renderRail() {
     b.onclick = () => {
       if (b.dataset.nav === 'settings') return openSettings();
       if (b.dataset.nav === 'wiki') return openWiki();
+      if (b.dataset.nav === 'play') return openPlay();
       switchDomain(b.dataset.dom);
     };
   });
@@ -524,6 +527,8 @@ async function switchDomain(dom) {
   S.dom = dom;
   $('settings').classList.add('hidden');
   $('wiki').classList.add('hidden');
+  $('play').classList.add('hidden');
+  $('listPane').classList.remove('hidden');   // 试玩页隐藏了左栏 → 切回域时恢复
   // ⚠️ 必须走 closeEntry()（它会清 S.entryKey）—— 曾经的 bug：切域只隐藏面板、
   //    不清 entryKey，切回来后点原来那条会被 openEntry 的「同一条」短路掉，毫无反馈。
   closeEntry();
@@ -1540,6 +1545,8 @@ function openSettings() {
   $('editor').classList.add('hidden');
   $('editorEmpty').classList.add('hidden');
   $('wiki').classList.add('hidden');
+  $('play').classList.add('hidden');
+  $('listPane').classList.remove('hidden');
   $('settings').classList.remove('hidden');
   renderSettingsForm();
   renderRail();
@@ -1643,6 +1650,102 @@ function renderSimError(j) {
     </div>`;
 }
 
+/* ═══════════════════════════ 试玩（脱离平台插件） ═══════════════════════════
+   与试跑抽屉同款纪律：**编辑器主进程不 import 引擎** —— 服务端路由（
+   `out/server_routes_B20.py` 片段 / 合并后的 `editor/server.py`）把请求交给
+   `editor/play.py`，后者只起子进程（`editor/play_worker.py`）。
+
+   本页三件事：① 列出本包全部指令声明（194 条，读 `content/data/commands.json`）；
+   ② 喂「命令序列 + seed」；③ 逐条渲染输出与状态指纹。
+   ═══════════════════════════════════════════════════════════════════════ */
+const playOpen = () => !$('play').classList.contains('hidden');
+
+function openPlay() {
+  $('editor').classList.add('hidden');
+  $('editorEmpty').classList.add('hidden');
+  $('settings').classList.add('hidden');
+  $('wiki').classList.add('hidden');
+  $('play').classList.remove('hidden');
+  $('listPane').classList.add('hidden');
+  $('playSub').textContent = S.pkgId ? `${S.pkgId} · 子进程` : '';
+  if ((location.hash || '') !== '#/play') history.replaceState(null, '', '#/play');
+  renderRail();
+  if (!S.playCatalog) loadPlayCatalog();
+}
+
+async function loadPlayCatalog() {
+  if (!S.pkgId) return;
+  $('playStatus').textContent = '读指令表…';
+  const r = await api('GET', `/api/package/${encodeURIComponent(S.pkgId)}/d/commands?limit=0`);
+  const rows = (r.json && r.json.entries) || [];
+  S.playCatalog = rows;
+  $('playCount').textContent = `${rows.length} 条指令`;
+  $('playStatus').textContent = '';
+  $('playCatalog').innerHTML = rows.length
+    ? `<div class="play-cat-head">本包指令（${rows.length}）——点右侧「用」填入命令</div>` + rows.map((e) => `
+      <div class="play-cat-row" title="${esc(e.summary || '')}">
+        <span class="mono dim">${esc(e.key)}</span>
+        <span class="play-cat-name">${esc(e.name || '')}</span>
+        <button class="btn ghost sm" data-fill="${esc(e.name || e.key)}">用</button>
+      </div>`).join('')
+    : '<div class="dim">（读不到指令表——该包没有 content/data/commands.json）</div>';
+  els('#playCatalog button[data-fill]').forEach((b) => (b.onclick = () => {
+    const ta = $('playCommands');
+    ta.value = (ta.value ? ta.value.replace(/\s*$/, '\n') : '') + b.dataset.fill;
+    ta.focus();
+  }));
+}
+
+function renderPlayRow(row) {
+  const ok = row.ok !== false;
+  const segs = row.segments || [];
+  const actions = (row.actions || []).length
+    ? `<div class="play-actions-line dim">平台动作：${esc(JSON.stringify(row.actions))}</div>` : '';
+  const err = ok ? '' : `<div class="sim-err-msg">✕ ${esc(row.error || '失败')}</div>`
+    + (row.traceback ? `<details class="extra"><summary>堆栈</summary><div class="sim-tb">${esc(row.traceback)}</div></details>` : '');
+  return `<div class="play-row ${ok ? 'ok' : 'bad'}">
+    <div class="play-row-head">
+      <span class="play-idx mono">${row.i}</span>
+      <span class="play-cmd">${esc(row.text)}</span>
+      <span class="chip kind">${esc(row.key || '—')}</span>
+      <span class="mono dim play-sha" title="状态指纹（整库 + blob）">${esc((row.state_sha || '').slice(0, 12))}</span>
+    </div>
+    ${err}${actions}
+    <div class="play-segs">${segs.length
+      ? segs.map((s) => `<div class="play-seg">${esc(s)}</div>`).join('')
+      : (ok ? '<div class="dim">（无回话）</div>' : '')}</div>
+  </div>`;
+}
+
+async function runPlay() {
+  const raw = $('playCommands').value || '';
+  const commands = raw.split('\n').map((s) => s.trim()).filter((s) => s && !s.startsWith('#'));
+  if (!commands.length) { toast('先写至少一条命令', 'warn'); return; }
+  $('btnPlayRun').disabled = true;
+  $('playStatus').textContent = `跑 ${commands.length} 条…（子进程）`;
+  $('playOut').innerHTML = '<div class="sim-idle">跑动中…<br><span class="dim">子进程加载引擎 + 本游戏包</span></div>';
+  const r = await api('POST', `/api/package/${encodeURIComponent(S.pkgId)}/play`, {
+    commands, seed: +($('playSeed').value || 1),
+    uid: $('playUid').value || 'u1', group_id: $('playGroup').value || 'g1',
+  });
+  $('btnPlayRun').disabled = false;
+  const j = r.json || {};
+  if (j.stage === 'timeout' || j.stage === 'crash' || (!j.rows || !j.rows.length)) {
+    $('playOut').innerHTML = `<div class="sim-err">
+      <div class="sim-err-msg">✕ 试玩失败<span class="sim-err-stage">${esc(j.stage || r.status)}</span></div>
+      <div class="mono" style="font-size:11.5px">${esc(j.message || '')}</div>
+      <details class="extra" open><summary>输出</summary><div class="sim-tb">${esc(j.stderr || j.stdout || j.traceback || '')}</div></details>
+    </div>`;
+    $('playStatus').textContent = '';
+    return;
+  }
+  $('playOut').innerHTML = j.rows.map(renderPlayRow).join('');
+  const okN = j.rows.filter((x) => x.ok !== false).length;
+  $('playStatus').textContent = `完成 ${okN}/${j.rows.length} 条 · 声明 ${j.count} 条`
+    + (j.digests_sha ? ` · 摘要 ${j.digests_sha.slice(0, 12)}` : '');
+}
+
+
 /* ═══════════════════════════ 字段词典增强（翻译 + 注脚 + 文档直链） ═══════════════════════════
    schema 表单只给「类型 + 一句 description」。这里给每个字段补三样：
      ① 中文名（挂在 label 后）
@@ -1694,7 +1797,8 @@ const WIKI = { tree: [], groups: [], cur: null, triedMermaid: false };
 const DEFAULT_PAGE = 'README.md';
 
 async function loadWikiTree() {
-  const r = await api('GET', '/api/wiki/tree');
+  // B18-L11 补：带上活动包 → 包自带 wiki（<pkg>/docs/wiki）优先，框架篇兜底
+  const r = await api('GET', '/api/wiki/tree' + (S.pkgId ? '?pkg=' + encodeURIComponent(S.pkgId) : ''));
   WIKI.tree = (r.json && r.json.pages) || [];
   WIKI.groups = (r.json && r.json.groups) || [];
 }
@@ -1714,7 +1818,8 @@ function renderWikiNav() {
 }
 
 async function renderWikiSearch(q) {
-  const r = await api('GET', '/api/wiki/search?q=' + encodeURIComponent(q));
+  const r = await api('GET', '/api/wiki/search?q=' + encodeURIComponent(q)
+    + (S.pkgId ? '&pkg=' + encodeURIComponent(S.pkgId) : ''));
   const hits = (r.json && r.json.hits) || [];
   $('wikiNav').innerHTML = `<div class="wk-group">搜索「${esc(q)}」· ${hits.length} 处命中</div>`
     + (hits.length ? hits.map((h) => `<button class="wk-hit" data-path="${esc(h.path)}" data-line="${h.line}">
@@ -1743,13 +1848,16 @@ function renderWikiToc(toc) {
 
 async function openWiki(path, findTerm) {
   const rel = path || WIKI.cur || DEFAULT_PAGE;
-  const r = await api('GET', '/api/wiki/page?path=' + encodeURIComponent(rel));
+  const r = await api('GET', '/api/wiki/page?path=' + encodeURIComponent(rel)
+    + (S.pkgId ? '&pkg=' + encodeURIComponent(S.pkgId) : ''));
   if (!r.ok) { toast((r.json && r.json.message) || '文档打开失败', 'bad'); return; }
   const j = r.json;
   WIKI.cur = j.path;
   $('editor').classList.add('hidden');
   $('editorEmpty').classList.add('hidden');
   $('settings').classList.add('hidden');
+  $('play').classList.add('hidden');
+  $('listPane').classList.remove('hidden');
   $('wiki').classList.remove('hidden');
   $('wikiTitle').textContent = j.title;
   $('wikiPath').textContent = j.path;
@@ -1828,7 +1936,8 @@ function openCodeRef(ref) {
   $('codeNote').textContent = '读取中…';
   $('codeBody').innerHTML = '';
   ov.classList.remove('hidden');
-  api('GET', '/api/wiki/code?ref=' + encodeURIComponent(ref)).then((r) => {
+  api('GET', '/api/wiki/code?ref=' + encodeURIComponent(ref)
+    + (S.pkgId ? '&pkg=' + encodeURIComponent(S.pkgId) : '')).then((r) => {
     const j = r.json || {};
     if (!j.ok) {
       $('codeNote').textContent = '';
@@ -1857,6 +1966,7 @@ function openWikiRef(href) {
 /* #/wiki/<page>?find=<词> 深链（可分享、可刷新保留） */
 function routeFromHash() {
   const h = decodeURIComponent(location.hash || '');
+  if (h === '#/play') { openPlay(); return true; }
   if (!h.startsWith('#/wiki/')) return false;
   const [page, qs] = h.replace('#/wiki/', '').split('?');
   const m = /find=([^&]+)/.exec(qs || '');
@@ -1867,6 +1977,8 @@ function routeFromHash() {
 /* 离开文档 → 回到当前域的条目视图（Esc / 点域栏） */
 function closeWiki() {
   $('wiki').classList.add('hidden');
+  $('play').classList.add('hidden');
+  $('listPane').classList.remove('hidden');
   $('editorEmpty').classList.remove('hidden');
   if ((location.hash || '').startsWith('#/wiki/')) history.replaceState(null, '', location.pathname);
   renderRail();
@@ -2310,6 +2422,10 @@ window.addEventListener('DOMContentLoaded', () => {
   $('btnSim').onclick = openSim;
   $('btnRunSim').onclick = runSim;
   $('btnSimClose').onclick = () => $('simDrawer').classList.add('hidden');
+  // 试玩（脱离平台插件；子进程跑引擎 host + 本游戏包）
+  $('btnPlayRun').onclick = runPlay;
+  $('btnPlayList').onclick = loadPlayCatalog;
+  $('btnPlayClear').onclick = () => { $('playOut').innerHTML = ''; };
   $('btnSavePkg').onclick = savePkg;
   $('btnExport').onclick = exportPkg;
   $('btnImport').onclick = () => $('pkgZipFile').click();

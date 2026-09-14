@@ -1,0 +1,148 @@
+{
+  "fields": {
+    "key": {
+      "zh": "品种 id",
+      "note": "表键，也是条目自带的 `key`（schema 对三处用同一串 pattern：条目字段、规则行字段、整表键名）。实测内容侧全按它做跨表引用与持久化：掉落池写 `petegg:<key>`（`game/drop_engine.py:141-146`）、孵化的蛋物品存它、孵化时进玩家宠物行与图鉴主键（`game/store/social.py:798`）。⚠ 改 key = 断引用 + 丢玩家已有的该品种记录；实测 16 个键全匹配 `^pet_[a-z0-9_]+$`，0 重复。",
+      "group": "base"
+    },
+    "name": {
+      "zh": "名称",
+      "note": "品种显示名（内容侧词汇）。孵化时被**抄进**玩家宠物行（`game/core/item_templates.py:717`）→ 改名只影响**新**孵化的，已有记录仍是旧名。实测 16 个名字 0 重名（按名找品种会变歧义）。",
+      "group": "base"
+    },
+    "icon": {
+      "zh": "图标",
+      "note": "展示用字形（内容侧词汇，可以是任意字符）。实测面板 / 孵化文案 / 蛋详情三处把它直接拼进玩家可见文案（`game/commands/social.py:919`、`game/core/item_templates.py:722`、`game/commands/economy.py:449`）。schema **不强制存在**（缺该字段时界面回退通用图标）；实测 16/16 都有。",
+      "group": "base"
+    },
+    "quality": {
+      "zh": "品质档",
+      "note": "品质档名（内容侧词汇，框架不枚举 —— 不同内容侧档数与命名不同）。内容侧按它查三处按品质索引的表：蛋价 `game/data/pets.py:133`、成长加成档 `game/data/pets.py:194`、品质标签 `game/data/pets.py:152-159`。实测 5 档（紫 5 / 绿 3 / 蓝 3 / 橙 3 / 白 2）。⚠ 实测**未知品质有兜底**（查不到按默认档走，`game/data/pets.py:136/212`）→ 拼错不会报错，只会静默降档。 实测取值：blue / green / orange / purple / white",
+      "group": "base"
+    },
+    "focus": {
+      "zh": "定位词",
+      "note": "内容侧的定位 / 分类词（描述这个品种偏向什么）。⚠ 实测逐键搜索**没有**内容侧读取它的代码（同名 `focus` 的读取点都是引擎 / 面板侧的方法，与本字段无关）→ 展示与分类字段，不驱动数值。实测 5 个取值。",
+      "group": "base"
+    },
+    "skill_name": {
+      "zh": "技能名",
+      "note": "该品种技能的显示名（内容侧词汇）。实测只被内容侧文案函数 `pet_skill_label`（`game/data/pets.py:175-181`）拼成一行展示（面板 `game/commands/social.py:931`、蛋详情 `game/commands/economy.py:453`）。",
+      "group": "skill"
+    },
+    "skill_interval": {
+      "zh": "触发间隔",
+      "note": "每隔这么多个「时间单位」触发一次技能（整数 ≥ 1）——「时间单位」是内容侧叫法与语义，框架不解释、不换算。⚠ 实测当前**没有按它出手的执行端**：它只被技能描述拼接读（`game/data/pets.py:181`），宠物参战依赖随从装配（新引擎仓全仓 0 处宠物相关标识）。实测只有 2 个档位（3 刻 9 条 / 4 刻 7 条）。",
+      "group": "skill"
+    },
+    "skill_type": {
+      "zh": "技能类型",
+      "note": "内容侧技能类型词 —— 决定这条技能**怎么算**（伤害 / 治疗 / 概率挡一次…）。框架不预设任何类型名，也**不校验**它是否真被内容侧实现过：拼错不报错，只会静默不生效。实测内容侧只在**文案模板**表里按它取描述（`game/data/pets.py:163-172`，8 个 key），数据层之外的代码 0 处读它 → 当前无执行消费者。实测 8 个取值。 实测取值：atk_pct / block / buff_atk / crit_up / heal_pct / lifesteal / matk_pct / pierce",
+      "group": "skill"
+    },
+    "skill_value": {
+      "zh": "技能数值",
+      "note": "配合 `skill_type` 的系数（内容侧按百分比显示：`int(value*100)`，`game/data/pets.py:164-171`）。schema **不设上限**：倍率型技能的系数可能 > 1，加上限等于替内容侧做决定。实测 0.08~0.70。",
+      "group": "skill"
+    },
+    "spd": {
+      "zh": "速度",
+      "note": "该品种的速度值（整数 ≥ 1）。⚠ 实测逐键搜索**没有**内容侧读取它的点（代码里读 `spd` 的都是玩家 / 怪的战斗面板属性，与品种本字段无关）→ 数据层保留字段，改它不改变行为。实测 13 个不同取值，30~75。",
+      "group": "base"
+    },
+    "source": {
+      "zh": "获取渠道",
+      "note": "获取渠道的**说明文本**（自由串，不是引用）。实测面板与蛋详情直接显示（`game/commands/social.py:945`、`game/commands/economy.py:449`）；真实渠道在别处（怪掉落掷蛋 / 垂钓 / 任务奖励）。⚠ 改这段文字**不改变**发放结果。实测 16/16 都有。",
+      "group": "base"
+    },
+    "desc": {
+      "zh": "描述",
+      "note": "展示文案（蛋详情逐字显示，`game/commands/economy.py:450`）。本域**不强制非空、也不强制存在**（schema 不给 minLength）—— 与物品、特效两域的「必填且非空」口径**不同**。实测 16/16 都有。",
+      "group": "base"
+    },
+    "lines": {
+      "zh": "随机台词池",
+      "note": "该品种的随机台词池（至少 1 条 —— 空数组是坏数据，要表达「没有台词」请**删字段**）。⚠ 实测取用它的内容侧函数 `pet_line`（`game/data/pets.py:220-227`）全仓**只有定义与 re-export、没有任何调用点** → 数据层保留，接上才生效。实测 16/16 都是 3 条。",
+      "group": "flavor"
+    },
+    "egg_roll": {
+      "zh": "蛋掉落规则（派生）",
+      "note": "导出期把内容侧「蛋掉落规则」源表**按品种 id 连接**进条目的派生字段 —— **不是**品种源行自带的字段（同 `equip_roster` 的 series_set / fixed_affixes 做法）。整行原样照搬（含它自己的 `key`；导出期断言 `egg_roll.key` == 表键）。**没有规则的品种不写此字段**：实测 16 条里 10 条有、其余 6 个品种的渠道在内容侧别的系统里 → 缺省 = 不走「打怪掷蛋」这条渠道，与「有一行空规则」是两回事。",
+      "group": "egg"
+    },
+    "rate": {
+      "zh": "掷中概率",
+      "note": "该规则的其它条件**全部**满足后掷中的概率（0~1 的比值）。实测消费端逐行判定并即时掷一次（`game/services/battle_settlement.py:296-317`）。实测 10 行取值 0.015~0.12。",
+      "group": "egg"
+    },
+    "role": {
+      "zh": "限定怪物定位",
+      "note": "只对「怪物定位 == 这个值」的怪生效（内容侧词汇，框架不枚举）。消费端拿怪物的定位逐字比对，不等即跳过本行。**缺字段 = 不限定位**（实测 10 行里只有 1 行写它）。 实测取值：dps",
+      "group": "egg"
+    },
+    "name_kw": {
+      "zh": "限定怪物名关键词",
+      "note": "怪物**名含其中任一**关键词才生效（内容侧词汇；与同一行的其它条件之间是「与」，数组内部是「或」）。⚠ 这是**按名**的弱引用，指向别处的怪物名册（不是本域的键，框架不解析）。**缺字段 = 不限名字**（实测 3 行写它）。",
+      "group": "egg"
+    },
+    "is_elite": {
+      "zh": "仅精英怪",
+      "note": "true = 只对精英怪生效。消费端逐行判 `is_elite`。**缺字段 = 不判精英**（实测 4 行为 true）。",
+      "group": "egg"
+    },
+    "is_boss": {
+      "zh": "仅首领",
+      "note": "true = 只对首领怪生效。消费端逐行判 `is_boss`。**缺字段 = 不判首领**（实测 3 行为 true）。",
+      "group": "egg"
+    }
+  },
+  "groups": [
+    {
+      "id": "base",
+      "label": "基础",
+      "icon": "📌",
+      "fields": [
+        "key",
+        "name",
+        "icon",
+        "quality",
+        "focus",
+        "desc",
+        "spd",
+        "source"
+      ]
+    },
+    {
+      "id": "skill",
+      "label": "技能",
+      "icon": "⚔️",
+      "fields": [
+        "skill_name",
+        "skill_interval",
+        "skill_type",
+        "skill_value"
+      ]
+    },
+    {
+      "id": "egg",
+      "label": "蛋掉落规则（派生字段）",
+      "icon": "🥚",
+      "fields": [
+        "egg_roll",
+        "rate",
+        "role",
+        "name_kw",
+        "is_elite",
+        "is_boss"
+      ]
+    },
+    {
+      "id": "flavor",
+      "label": "台词",
+      "icon": "💬",
+      "fields": [
+        "lines"
+      ]
+    }
+  ]
+}

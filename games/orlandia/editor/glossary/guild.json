@@ -152,6 +152,22 @@
       "note": "= `skills.level_guild_lv`（[0] 占位，面板显示 [1:]）。",
       "widget": "lines",
       "group": "skills"
+    },
+    "config": {
+      "zh": "公会常量表",
+      "note": "真源 `game/data/guild.py` 的 `GUILD_CONFIG`（导出后平铺 14 键）。`create_cost` / `create_level` 是建会门槛（见下两条）；其余是事务口径常量 —— 实测：sign_exp=20 / sign_contribute=10 / sign_gold=50 / task_exp=40 / task_contribute=20 / task_gold=100 / kill_task=5 / donate_items=3 / exp_bonus_per_level=0.01 / max_bonus=0.2 / vice_leader_level=3 / elite_level=1。消费端 `content/social_guild.py`。",
+      "widget": "kv",
+      "group": "config"
+    },
+    "create_cost": {
+      "zh": "建会金币",
+      "note": "创建一个公会的金币消耗。 实测 1000。",
+      "group": "config"
+    },
+    "create_level": {
+      "zh": "建会等级门槛",
+      "note": "创建公会所需的玩家等级。 实测 30。",
+      "group": "config"
     }
   },
   "groups": [
@@ -191,6 +207,16 @@
         "skills.max_level",
         "skills.level_costs",
         "skills.level_guild_lv"
+      ]
+    },
+    {
+      "id": "config",
+      "label": "公会常量",
+      "icon": "⚙️",
+      "fields": [
+        "config",
+        "create_cost",
+        "create_level"
       ]
     }
   ]

@@ -15,12 +15,28 @@
 实现约束（与编辑器一致）：**零第三方依赖**，只用 stdlib 渲染 markdown。
 mermaid 图默认显示源码；若浏览器能联网取到 mermaid 渲染器，前端会把它画出来（渐进增强）。
 
+包自带 wiki（**包优先、框架兜底**）
+----------------------------------
+游戏包可以在自己目录里放 `<pkg>/docs/wiki/**.md`（相对路径沿用框架那套命名：`README.md` /
+`getting-started/quickstart.md` / `reference/effect-rules.md` …）。四个接口都多一个
+`pkg_dir=None`：
+
+* 给了包 → **包内页 ∪ 框架页**；**同名页（相对路径相同）以包内那份为准**；包内没有的页
+  回退框架页；两边都没有 = 照旧 `None`（**不抛、不 500**）。
+* 不给包（`pkg_dir=None`）→ **与没有这个功能时逐字一致**（零回归是硬约束）。
+* 包目录里没有 `docs/wiki/`（或缺了某一页）= 没声明 —— 走框架那份，逐项不变。
+
+同一套纪律也用在 `code_ref`：包内源码（`<pkg>/**/*.py`）优先，框架源码兜底；都没有 →
+照旧说「读不到」，**不猜**。
+
 对外接口
 --------
-    tree()                  -> [{path, title, group}]
-    page(rel)               -> {path, title, html, toc, prev, next} | None
-    search(q)               -> [{path, title, line, text}]
-    code_ref(ref)           -> {ok, file, line, lines, note}
+    tree(pkg_dir=None)                   -> [{path, title, group}]
+    page(rel, pkg_dir=None)              -> {path, title, html, toc, prev, next} | None
+    search(q, limit=60, pkg_dir=None)    -> [{path, title, line, text}]
+    code_ref(ref, span=14, pkg_dir=None) -> {ok, file, line, lines, note}
+    pkg_wiki_dir(pkg_dir)                -> `<pkg>/docs/wiki`（不给包 = ""）
+    page_path(rel, pkg_dir=None)         -> 解析后的真实文件路径（两边都没有 = ""）
 """
 from __future__ import annotations
 
@@ -31,6 +47,8 @@ import re
 HERE = os.path.dirname(os.path.abspath(__file__))
 FW_ROOT = os.path.dirname(HERE)
 WIKI_DIR = os.path.join(FW_ROOT, "docs", "engine-wiki")
+# 包内 wiki 的相对路径（**目录**，与 `glossary.PKG_GLOSSARY_REL` 同一套纪律：真源在包）
+PKG_WIKI_REL = ("docs", "wiki")
 
 GROUPS = [
     ("", "首页"),
@@ -44,29 +62,65 @@ GROUPS = [
 
 # 源码解析用的索引（basename → 相对路径），首次用时建
 _src_index = None
+_pkg_src_index: dict = {}                 # 包目录 → 源码索引（包内优先时用）
 
 
 # ───────────────────────────────────────────────────────────────── 页面发现
-def _md_files() -> list:
+def pkg_wiki_dir(pkg_dir) -> str:
+    """`<pkg>/docs/wiki`（**不做存在性检查**；不给包 = "" —— 那就是没声明）。"""
+    return os.path.join(str(pkg_dir), *PKG_WIKI_REL) if pkg_dir else ""
+
+
+def _roots(pkg_dir=None) -> list:
+    """页面根目录，**包优先 → 框架兜底**（不存在的根不进表）。不给包 = 只有框架那份。"""
     out = []
-    for root, _dirs, files in os.walk(WIKI_DIR):
-        for f in sorted(files):
-            if f.endswith(".md"):
-                rel = os.path.relpath(os.path.join(root, f), WIKI_DIR).replace("\\", "/")
-                out.append(rel)
-    return sorted(out)
+    if pkg_dir:
+        d = pkg_wiki_dir(pkg_dir)
+        if os.path.isdir(d):
+            out.append(d)
+    out.append(WIKI_DIR)
+    return out
 
 
-def _title_of(rel: str) -> str:
-    for line in _read(rel).splitlines():
+def _safe_page(root: str, rel) -> str:
+    """root 下的页面绝对路径；越界（`../`）或文件不存在 → ""（路径逃逸防护）。"""
+    p = os.path.normpath(os.path.join(root, *str(rel).split("/")))
+    if not p.startswith(os.path.normpath(root)) or not os.path.isfile(p):
+        return ""
+    return p
+
+
+def page_path(rel, pkg_dir=None) -> str:
+    """解析一个相对页名 → 真实文件绝对路径（**包内优先 → 框架兜底**）；两边都没有 = ""。"""
+    for root in _roots(pkg_dir):
+        p = _safe_page(root, rel)
+        if p:
+            return p
+    return ""
+
+
+def _md_files(pkg_dir=None) -> list:
+    """页清单 = 框架页 ∪ 包内页（**同名以包内那份为准**，不重复列出）。不给包 = 旧的框架清单。"""
+    seen: dict = {}
+    for root in _roots(pkg_dir):
+        for r, _dirs, files in os.walk(root):
+            for f in sorted(files):
+                if f.endswith(".md"):
+                    rel = os.path.relpath(os.path.join(r, f), root).replace("\\", "/")
+                    seen.setdefault(rel, root)          # 先到先得 = 包优先（_roots 包在前）
+    return sorted(seen)
+
+
+def _title_of(rel: str, pkg_dir=None) -> str:
+    for line in _read(rel, pkg_dir).splitlines():
         if line.startswith("# "):
             return line[2:].strip()
     return rel
 
 
-def _read(rel: str) -> str:
-    p = os.path.normpath(os.path.join(WIKI_DIR, *str(rel).split("/")))
-    if not p.startswith(os.path.normpath(WIKI_DIR)) or not os.path.isfile(p):
+def _read(rel: str, pkg_dir=None) -> str:
+    p = page_path(rel, pkg_dir)
+    if not p:
         return ""
     with open(p, encoding="utf-8") as f:
         return f.read()
@@ -76,18 +130,22 @@ def _group_of(rel: str) -> str:
     return rel.split("/")[0] if "/" in rel else ""
 
 
-def tree() -> list:
-    """[{path, title, group, group_label}]（保持 GROUPS 顺序，组内按文件名）。"""
+def tree(pkg_dir=None) -> list:
+    """[{path, title, group, group_label}]（保持 GROUPS 顺序，组内按文件名）。
+
+    给了包 = **包内页 ∪ 框架页**（同名包内胜）；不给包 = 旧行为逐字不变。
+    """
     order = {g: i for i, (g, _l) in enumerate(GROUPS)}
-    rows = [{"path": r, "title": _title_of(r), "group": _group_of(r)} for r in _md_files()]
+    rows = [{"path": r, "title": _title_of(r, pkg_dir), "group": _group_of(r)}
+            for r in _md_files(pkg_dir)]
     for r in rows:
         r["group_label"] = dict(GROUPS).get(r["group"], r["group"] or "其他")
     rows.sort(key=lambda r: (order.get(r["group"], 99), r["path"]))
     return rows
 
 
-def _neighbours(rel: str):
-    rows = [r["path"] for r in tree()]
+def _neighbours(rel: str, pkg_dir=None):
+    rows = [r["path"] for r in tree(pkg_dir)]
     if rel not in rows:
         return None, None
     i = rows.index(rel)
@@ -291,27 +349,29 @@ def _render_list(items: list, base: int, cur_page: str) -> str:
 
 
 # ───────────────────────────────────────────────────────────────────── 对外
-def page(rel: str):
-    text = _read(rel)
+def page(rel: str, pkg_dir=None):
+    """渲染一页。给了包 → **包内同名页优先**，没有则回退框架页；两边都没有 = None。"""
+    text = _read(rel, pkg_dir)
     if not text:
         return None
     body, toc = render_md(text, rel)
-    prev, nxt = _neighbours(rel)
-    return {"path": rel, "title": _title_of(rel), "html": body, "toc": toc,
+    prev, nxt = _neighbours(rel, pkg_dir)
+    return {"path": rel, "title": _title_of(rel, pkg_dir), "html": body, "toc": toc,
             "group_label": dict(GROUPS).get(_group_of(rel), ""),
-            "prev": prev, "prev_title": _title_of(prev) if prev else "",
-            "next": nxt, "next_title": _title_of(nxt) if nxt else ""}
+            "prev": prev, "prev_title": _title_of(prev, pkg_dir) if prev else "",
+            "next": nxt, "next_title": _title_of(nxt, pkg_dir) if nxt else ""}
 
 
-def search(q: str, limit: int = 60) -> list:
+def search(q: str, limit: int = 60, pkg_dir=None) -> list:
+    """跨页搜词。给了包 → 搜**包内页 ∪ 框架页**（同名页只搜包内那份）。"""
     q = (q or "").strip()
     if len(q) < 2:
         return []
     ql = q.lower()
     hits = []
-    for rel in _md_files():
-        title = _title_of(rel)
-        for i, line in enumerate(_read(rel).splitlines(), 1):
+    for rel in _md_files(pkg_dir):
+        title = _title_of(rel, pkg_dir)
+        for i, line in enumerate(_read(rel, pkg_dir).splitlines(), 1):
             if ql in line.lower():
                 hits.append({"path": rel, "title": title, "line": i,
                              "text": line.strip()[:220]})
@@ -320,26 +380,43 @@ def search(q: str, limit: int = 60) -> list:
     return hits
 
 
+def _index_sources(root: str) -> dict:
+    """一个根目录下源码 basename → 相对路径列表。"""
+    idx: dict = {}
+    skip = {".git", "__pycache__", ".venv", "node_modules"}
+    for r, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in skip]
+        for f in files:
+            if f.endswith((".py", ".js", ".json")):
+                rel = os.path.relpath(os.path.join(r, f), root).replace("\\", "/")
+                idx.setdefault(f, []).append(rel)
+    return idx
+
+
 def _src_files() -> dict:
     """仓库内源码 basename → 相对路径（框架仓 + 示例/游戏包）。"""
     global _src_index
     if _src_index is not None:
         return _src_index
-    idx: dict = {}
-    skip = {".git", "__pycache__", ".venv", "node_modules"}
-    for root, dirs, files in os.walk(FW_ROOT):
-        dirs[:] = [d for d in dirs if d not in skip]
-        for f in files:
-            if f.endswith((".py", ".js", ".json")):
-                rel = os.path.relpath(os.path.join(root, f), FW_ROOT).replace("\\", "/")
-                idx.setdefault(f, []).append(rel)
-    _src_index = idx
-    return idx
+    _src_index = _index_sources(FW_ROOT)
+    return _src_index
 
 
-def code_ref(ref: str, span: int = 14):
+def _pkg_src_files(pkg_dir) -> dict:
+    """包内源码索引（按包目录缓存）。包目录不能读 → 空表（= 走框架兜底，不抛）。"""
+    key = os.path.normpath(os.path.abspath(str(pkg_dir)))
+    if key not in _pkg_src_index:
+        try:
+            _pkg_src_index[key] = _index_sources(key)
+        except OSError:
+            _pkg_src_index[key] = {}
+    return _pkg_src_index[key]
+
+
+def code_ref(ref: str, span: int = 14, pkg_dir=None):
     """`effects.py:270` → 该文件的真实源码片段（带行号，标出目标行）。
 
+    给了包 → **包内源码优先**（`<pkg>/**/effects.py`），框架源码兜底；
     找不到（例如指向**游戏仓**的文件）→ ok=False + 说明，**不猜**。
     """
     m = CODE_REF.fullmatch((ref or "").strip())
@@ -347,7 +424,11 @@ def code_ref(ref: str, span: int = 14):
         return {"ok": False, "reason": f"不是可解析的引用：{ref}"}
     fname, rng = m.group(1), m.group(2)
     first = int(re.split(r"[-–]", rng)[0])
-    cands = _src_files().get(os.path.basename(fname), [])
+    root, cands = FW_ROOT, _src_files().get(os.path.basename(fname), [])
+    if pkg_dir:
+        pc = _pkg_src_files(pkg_dir).get(os.path.basename(fname), [])
+        if pc:                                     # 包内命中 → 用包里的那份（框架不再参与）
+            root, cands = os.path.normpath(os.path.abspath(str(pkg_dir))), pc
     if not cands:
         return {"ok": False, "reason": f"本仓没有 {fname}——多是**游戏仓（使用本框架的那个游戏）**侧的文件；"
                                        "本 wiki 允许引用它，但编辑器只读得到本仓源码",
@@ -362,7 +443,7 @@ def code_ref(ref: str, span: int = 14):
                 break
     if pick is None:
         pick = sorted(cands, key=lambda p: (0 if p.startswith("saintess_engine/") else 1, len(p)))[0]
-    path = os.path.join(FW_ROOT, *pick.split("/"))
+    path = os.path.join(root, *pick.split("/"))
     try:
         with open(path, encoding="utf-8") as f:
             lines = f.read().splitlines()
@@ -370,6 +451,9 @@ def code_ref(ref: str, span: int = 14):
         return {"ok": False, "reason": f"读取失败：{e}"}
     lo = max(1, first - span)
     hi = min(len(lines), first + span)
-    return {"ok": True, "file": pick, "line": first, "lo": lo, "hi": hi,
-            "total": len(lines), "candidates": cands,
-            "lines": [{"n": i, "t": lines[i - 1], "hit": i == first} for i in range(lo, hi + 1)]}
+    out = {"ok": True, "file": pick, "line": first, "lo": lo, "hi": hi,
+           "total": len(lines), "candidates": cands,
+           "lines": [{"n": i, "t": lines[i - 1], "hit": i == first} for i in range(lo, hi + 1)]}
+    if root != FW_ROOT:                        # 明确标注「这段来自游戏包」；不给包时不出现该键
+        out["root"] = "package"
+    return out

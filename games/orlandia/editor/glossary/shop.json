@@ -29,6 +29,12 @@
       "note": "子区域设施类别（实测 7 值：smith 铁匠/锻造/军械、herb 草药/炼金、tavern 酒馆/旅店、cook 灶坊/烹饪、general 集市/商行/码头、misc 其他、enhance 强化坊）。不在表里的子区域由代码按 NPC funcs 兜底 —— 不枚举，词汇会扩。",
       "widget": "select",
       "group": "facility"
+    },
+    "ranks": {
+      "zh": "荣誉商店编号表",
+      "note": "B14-3（2026-09-14）新增：只有保留键 `honor_shop` 这一行有它，装 `game/data/honor_shop.py:11 HONOR_SHOP` 的编号表。⚠**键是数字字符串**（源侧 int 1..6 → JSON 字符串键）：消费点 `combat_cmds._honor_buy(..., int(num))` 用 `HONOR_SHOP.get(num)` 取，包内读口必须**还原 int**，否则兑换恒报「没有第 N 件商品」（与 `shop_items` 的 int 键同款坑）。 实测本域共 90 行货单，其中只有保留键 `honor_shop` 这一行带它，装 6 件商品（编号 1..6）。",
+      "widget": "kv",
+      "group": "goods"
     }
   },
   "groups": [
@@ -36,13 +42,21 @@
       "id": "goods",
       "label": "货单",
       "icon": "🏪",
-      "fields": ["items", "weapons", "materials", "equip"]
+      "fields": [
+        "items",
+        "weapons",
+        "materials",
+        "equip",
+        "ranks"
+      ]
     },
     {
       "id": "facility",
       "label": "设施",
       "icon": "🏛",
-      "fields": ["kind"]
+      "fields": [
+        "kind"
+      ]
     }
   ]
 }

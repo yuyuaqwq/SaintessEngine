@@ -38,6 +38,8 @@ API
     GET    /api/wiki/page?path=<rel>      → 渲染后的文档页（md → html + 目录）
     GET    /api/wiki/search?q=<词>        → 跨页搜词（配字段时找语义）
     GET    /api/wiki/code?ref=x.py:NN     → 文档里的 `file.py:NNN` → 真实源码片段
+    ↑ 四条都接 `?pkg=<id>` → 该包自带的 `<pkg>/docs/wiki/**.md`（**包优先、框架兜底**）；
+      不给包 = 历史行为逐字不变（包没有 docs/wiki 时输出与改造前逐项一致）
     GET    /api/package/<id>/export       → 导出游戏包 zip（分发；附 DIST_README/DIST_smoke）
     GET    /api/dist/inspect?path=<zip>   → 看 zip 里有什么（不导入、不写盘）
     POST   /api/package/<id>/simulate     → 沙箱试跑（子进程跑引擎，见 simulate.py）
@@ -470,19 +472,28 @@ class H(BaseHTTPRequestHandler):
                                     "panel_keys": GL.PANEL_KEYS})
         if len(parts) >= 2 and parts[0] == "wiki":
             q = parse_qs(getattr(self, "_query", ""))
+            # `?pkg=<id>` → 该包自带的 wiki（`<pkg>/docs/wiki/**.md`）；解析口径是
+            # **包优先、框架兜底**：包内同名页胜、包内没有的页回退框架页、两边都没有 = 404/None。
+            # 不给包 / 包没有 docs/wiki = 历史行为逐字不变（零回归硬约束）。
+            pkg_id = (q.get("pkg") or [""])[0]
+            pkg_dir = PK.resolve_package(pkg_id, GAMES_DIR) if pkg_id else None
+            if pkg_id and not pkg_dir:
+                return self._err(404, f"包不存在：{pkg_id}")
             if parts[1] == "tree":
-                return self._send(200, {"ok": True, "pages": WK.tree(),
+                return self._send(200, {"ok": True, "pages": WK.tree(pkg_dir),
                                         "groups": [{"id": g, "label": l} for g, l in WK.GROUPS]})
             if parts[1] == "page":
                 rel = (q.get("path") or [""])[0]
-                pg = WK.page(rel)
+                pg = WK.page(rel, pkg_dir)
                 if not pg:
                     return self._err(404, f"文档不存在：{rel}")
                 return self._send(200, {"ok": True, **pg})
             if parts[1] == "search":
-                return self._send(200, {"ok": True, "hits": WK.search((q.get("q") or [""])[0])})
+                return self._send(200, {"ok": True,
+                                        "hits": WK.search((q.get("q") or [""])[0], pkg_dir=pkg_dir)})
             if parts[1] == "code":
-                return self._send(200, {"ok": True, **WK.code_ref((q.get("ref") or [""])[0])})
+                return self._send(200, {"ok": True,
+                                        **WK.code_ref((q.get("ref") or [""])[0], pkg_dir=pkg_dir)})
             return self._err(404, "未知 wiki 接口")
         # maps 域的拓扑视图：节点/连边/深度/审计由**引擎同一份派生代码**算（editor/space_view.py）
         if (len(parts) == 6 and parts[0] == "package" and parts[2] == "d"
@@ -805,6 +816,9 @@ def main(argv=None):
     finally:
         srv.server_close()
     return 0
+
+# B20「试玩」路由（类方法补丁）：必须在 `class H` 定义**之后**导入
+from editor import routes_play as _routes_play  # noqa: F401,E402
 
 
 if __name__ == "__main__":

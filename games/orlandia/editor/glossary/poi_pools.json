@@ -1,0 +1,31 @@
+{
+  "fields": {
+    "WISH_POOL": {
+      "zh": "材料名池",
+      "note": "材料**中文名**列表（实测 许愿 6 / 篝火料理 4 / 草药丛 5）。消费端 `random.choice(池)` → 按名查 `items` 域。未展开（名字指向 items 域，闭合由内容侧查）。 实测 6 条。",
+      "group": "pools"
+    },
+    "CAMPFIRE_FOOD_POOL": {
+      "zh": "材料名池",
+      "note": "材料**中文名**列表（实测 许愿 6 / 篝火料理 4 / 草药丛 5）。消费端 `random.choice(池)` → 按名查 `items` 域。未展开（名字指向 items 域，闭合由内容侧查）。 实测 4 条。",
+      "group": "pools"
+    },
+    "HERB_POOL": {
+      "zh": "材料名池",
+      "note": "材料**中文名**列表（实测 许愿 6 / 篝火料理 4 / 草药丛 5）。消费端 `random.choice(池)` → 按名查 `items` 域。未展开（名字指向 items 域，闭合由内容侧查）。 实测 5 条。",
+      "group": "pools"
+    }
+  },
+  "groups": [
+    {
+      "id": "pools",
+      "label": "材料名池",
+      "icon": "📍",
+      "fields": [
+        "WISH_POOL",
+        "CAMPFIRE_FOOD_POOL",
+        "HERB_POOL"
+      ]
+    }
+  ]
+}

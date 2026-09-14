@@ -168,6 +168,43 @@
           <aside class="wiki-toc" id="wikiToc"></aside>
         </div>
       </div>
+      <!-- 试玩（脱离平台插件；子进程跑引擎 host + 本游戏包，见 editor/play.py） -->
+      <div class="play hidden" id="play">
+        <header class="editor-head">
+          <div class="editor-title">
+            <h1>试玩</h1>
+            <div class="editor-meta">
+              <span class="mono dim" id="playSub"></span>
+              <span class="chip kind" id="playCount"></span>
+            </div>
+          </div>
+          <div class="segmented" id="playSeedWrap">
+            <label class="mini">种子<input id="playSeed" type="number" value="1"></label>
+            <label class="mini">uid<input id="playUid" value="u1"></label>
+            <label class="mini">群<input id="playGroup" value="g1"></label>
+          </div>
+        </header>
+        <div class="editor-body play-body">
+          <div class="play-left">
+            <div class="play-hint dim">一行一条命令（支持 @ 前缀 / 参数），按序在同一份存档上跑。
+              命令表 = 本包 <span class="mono">content/data/commands.json</span>（194 条），
+              运行在**子进程**里，编辑器主进程不 import 引擎。</div>
+            <textarea class="play-input mono" id="playCommands" spellcheck="false"
+              placeholder="注册 试玩 男&#10;角色&#10;背包&#10;探索"></textarea>
+            <div class="play-actions">
+              <button class="btn primary" id="btnPlayRun"><span class="btn-ico">▶</span>开跑</button>
+              <button class="btn ghost" id="btnPlayList">载入全部指令</button>
+              <button class="btn ghost" id="btnPlayClear">清空输出</button>
+              <span class="hint" id="playStatus"></span>
+            </div>
+            <div class="play-catalog" id="playCatalog"></div>
+          </div>
+          <div class="play-right" id="playOut">
+            <div class="sim-idle">填好命令后点「开跑」<br>
+              <span class="dim">子进程真加载引擎 + 本游戏包，存档落在独立库，不碰真仓</span></div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- 试跑抽屉 -->

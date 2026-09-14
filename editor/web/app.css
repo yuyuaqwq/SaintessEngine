@@ -1071,3 +1071,27 @@ fieldset.cat>.cat-legend{
   background:var(--bg-2);padding-top:var(--sp3);
   box-shadow:0 1px 0 var(--line);
 }
+
+/* ═══ 试玩（B20）：脱离平台插件，子进程跑引擎 host + 本游戏包 ═══ */
+.play{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+.play-body{display:flex;gap:var(--sp5);align-items:stretch;overflow:hidden}
+.play-left{flex:0 0 42%;min-width:280px;display:flex;flex-direction:column;gap:var(--sp4);min-height:0}
+.play-right{flex:1 1 auto;min-width:0;overflow-y:auto;display:flex;flex-direction:column;gap:var(--sp3);
+  border-left:1px solid var(--line);padding-left:var(--sp5)}
+.play-hint{font-size:12px;line-height:1.6}
+.play-input{flex:1 1 auto;min-height:180px;resize:vertical;font-size:12.5px;line-height:1.55;
+  background:var(--bg-2);color:var(--fg-0);border:1px solid var(--line);border-radius:var(--r2);padding:var(--sp3)}
+.play-actions{display:flex;gap:var(--sp3);align-items:center;flex-wrap:wrap}
+.play-catalog{flex:0 0 auto;max-height:30vh;overflow-y:auto;border-top:1px solid var(--line);padding-top:var(--sp3)}
+.play-cat-head{font-size:11.5px;color:var(--fg-2);margin-bottom:var(--sp2)}
+.play-cat-row{display:flex;align-items:center;gap:var(--sp2);padding:2px 0;font-size:12px}
+.play-cat-name{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.play-row{border:1px solid var(--line);border-radius:var(--r2);padding:var(--sp3);background:var(--bg-2)}
+.play-row.bad{border-color:var(--bad,#c66)}
+.play-row-head{display:flex;align-items:center;gap:var(--sp2);margin-bottom:var(--sp2)}
+.play-idx{flex:0 0 auto;opacity:.6}
+.play-cmd{font-weight:600;flex:0 1 auto}
+.play-sha{margin-left:auto;font-size:11px}
+.play-segs{display:flex;flex-direction:column;gap:2px}
+.play-seg{white-space:pre-wrap;word-break:break-word;font-size:12.5px;line-height:1.55}
+.play-actions-line{margin-top:var(--sp2);font-size:11.5px}

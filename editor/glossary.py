@@ -54,7 +54,8 @@ schema 是给机器看的：`{"type": "string"}` 说得出类型，说不出「�
     widget_for(dom, path, pkg_dir=None) / all_widgets(pkg_dir=None)
     friendly(dom, errors, pkg_dir=None) -> list      # schema 报错 → 中文（带字段中文名）
     missing_required(dom, data, schema_def, pkg_dir=None) -> list
-    ref_url(entry) -> str | None                     # 词典条目 → 编辑器内 wiki 深链
+    ref_url(entry, pkg_dir=None) -> str | None       # 词典条目 → 编辑器内 wiki 深链
+    wiki_path(page, pkg_dir=None) -> str             # 页名 → 文件路径（包内优先 → 框架兜底）
     package_glossary(pkg_dir) -> dict                # 规范化后的包词汇表
     glossary_warnings(pkg_dir) -> [可读告警]
     declared_vocab(pkg_dir, dom, path) -> dict | None  # **只认包声明**
@@ -66,10 +67,13 @@ import os
 import re
 
 from editor import packages as PK      # 域注册表（DOMAIN_SCHEMA 从它派生；packages 不 import glossary，无环）
+from editor import wiki as WK          # 页面解析（wiki 不 import glossary，无环；真源在 wiki.py）
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FW_ROOT = os.path.dirname(HERE)
 WIKI_DIR = os.path.join(FW_ROOT, "docs", "engine-wiki")
+# 包内 wiki 目录（**单一真源在 `editor/wiki.py`**，这里只是别名，免得两处各写一份路径）
+PKG_WIKI_REL = WK.PKG_WIKI_REL
 
 # ─────────────────────────────────────────────────────────────── 通用（跨域叶名共用）
 _COMMON = {
@@ -1340,7 +1344,8 @@ def lookup(dom: str, path: str, pkg_dir=None):
         for k in (key0, leaf):
             e = tbl.get(k)
             if e:
-                return dict(e, dom=dom, path=path, matched=k, source="package", wiki=ref_url(e))
+                return dict(e, dom=dom, path=path, matched=k, source="package",
+                            wiki=ref_url(e, pkg_dir))
     for key in (key0, leaf):
         e = (GLOSSARY.get(dom) or {}).get(key)
         if e:
@@ -1364,7 +1369,7 @@ def all_entries(pkg_dir=None) -> dict:
             out[dom][k] = {
                 "zh": v.get("zh", ""),
                 "note": v.get("note", ""),
-                "wiki": ref_url(v),
+                "wiki": ref_url(v, pkg_dir),
             }
     if pkg_dir:
         try:
@@ -1374,16 +1379,21 @@ def all_entries(pkg_dir=None) -> dict:
         for dom, t in decl.items():
             tbl = out.setdefault(dom, {})
             for k, v in (t.get("fields") or {}).items():
-                tbl[k] = {"zh": v.get("zh", ""), "note": v.get("note", ""), "wiki": ref_url(v)}
+                tbl[k] = {"zh": v.get("zh", ""), "note": v.get("note", ""),
+                          "wiki": ref_url(v, pkg_dir)}
     return out
 
 
-def ref_url(entry: dict | None):
+def ref_url(entry: dict | None, pkg_dir=None):
     """词典条目 → 编辑器内 wiki 深链（`wiki:<page>#find=<词>`）。无来源 = None。
 
     两处出处都认：条目的 `wiki`（**包词汇表**的显式文档出处 `["页.md", "页内词"]`）优先，
     否则 `ref`（框架词典沿用的 `(页, 词)` 元组）。⚠ 包词汇表条目里的 `ref` 是**跨域引用**
     （`{"domain": …, "by": …}`）—— 它不是文档出处，这里**返回 None**，不编一个像样的链接。
+
+    给了 `pkg_dir` → 出链前先按「**包内页优先 → 框架页兜底**」核一次这页在不在；
+    两边都没有 = 那个词条没有可打开的文档 → 返回 None（**不编链接**）。
+    不给包 = 旧行为逐字不变（只做形状校验，不查文件是否存在）。
     """
     src = (entry or {}).get("wiki")
     ref = src if isinstance(src, (list, tuple)) else (entry or {}).get("ref")
@@ -1391,10 +1401,22 @@ def ref_url(entry: dict | None):
             and all(isinstance(x, str) and x for x in ref)):
         return None
     page, term = ref
+    if pkg_dir and not WK.page_path(page, pkg_dir):
+        return None
     return f"wiki:{page}#find={term}"
 
 
-def wiki_path(page: str) -> str:
+def wiki_path(page: str, pkg_dir=None) -> str:
+    """页名 → 文件路径：**包内 `docs/wiki` 优先 → 框架 `docs/engine-wiki` 兜底**。
+
+    不给包 = 旧行为逐字不变（框架那份，**不做存在性检查** —— 调用方自己 `os.path.isfile`）。
+    给了包：包内那份存在就用它；包内没有回退框架那份；两边都没有 → 仍返回框架路径
+    （与旧口径一致：由调用方判定，**不抛**）。
+    """
+    if pkg_dir:
+        p = WK.page_path(page, pkg_dir)
+        if p:
+            return p
     return os.path.join(WIKI_DIR, *page.split("/"))
 
 
