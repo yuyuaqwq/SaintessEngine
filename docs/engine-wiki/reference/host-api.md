@@ -6,7 +6,7 @@
 
 实现：`saintess_engine/host/`（`Host` / `Package` / `Env` / `Scenario` / `BattleOutcome`）。
 示例：`examples/host-skeleton/`（**最小适配器示例**，19 行假适配器即可接入）。
-门禁：`tests/test_host_contract.py`（26 项）· `tests/test_host_skeleton.py`（4 项）。
+门禁：`tests/test_host_contract.py`（26 项）· `tests/test_host_skeleton.py`（5 项）。
 
 ---
 

@@ -52,6 +52,34 @@ python examples/host-skeleton/adapter_cli.py \
 可选钩子（不给也能跑）：`clock()` · `rng()` · `on_tlog(record)` · `load_blob`/`save_blob` ·
 `on_event(name, payload)` · `should_stop()`。
 
+### 2.1 宿主注入面（`inject`，三函数之外唯一要接的面）
+
+包若在 `game.json` 里声明了 `bind`（形状见
+[`package-format.md`](../../docs/engine-wiki/reference/package-format.md) §2.2），宿主就必须用
+**一个 dict** 把包运行期要用的宿主对象交进来：
+
+```python
+host = Host(adapter, package_dir, inject={"store": my_store})   # 或 load_package(root, inject=...)
+```
+
+* **加载期**：引擎在 import 包命令模块（`content/commands.py`）**之前**调 `bind_host(**inject)`
+  （本骨架的 `Host` 已把 `inject` 透传给引擎 `Host`）；
+* **运行期**：`inject` 并入每条消息的 `Env.state`（引擎自有键在后让位，**同名以注入为准**）；
+* 引擎**不解释** `inject` 的键值（零游戏知识，只原样转交）；
+* ★ **宿主若不提供注入、而包又声明了 `bind` → 引擎明确报 `PackageError`**（不是静默空表）。
+  这是有意的 fail-closed：与其让包在 import 期炸在包内某模块里，不如在加载处把根因说清楚。
+
+两条可跑的演示（`python examples/host-skeleton/main.py --demo-inject`）：
+
+```
+① 零注入   examples/minimal-game 不声明 bind → 不给 inject 也能加载
+② 反证     同一份合成包「声明 bind 但不给 inject」→ PackageError
+③ 全链路   合成包「声明 bind + 提供 inject」→ 命令表解析成功 → 处理器跑出回话
+```
+
+合成包是**临时目录里现写的**（`main.py::write_bind_demo_package`），不新增示例包目录。
+反证由 `tests/test_host_skeleton.py` E 段逐条钉住。
+
 ---
 
 ## 三、目录里有什么
@@ -97,7 +125,9 @@ python examples/host-skeleton/adapter_cli.py \
 * **import 白名单**：骨架只许 import 引擎 + 标准库 + 自己的兄弟模块（不许出现宿主/平台词）；
 * **零游戏词汇**：骨架全文不得出现包内职业名 / 技能名 / 已知机制词（**游戏逻辑不许漏进宿主**）；
 * **接入成本反证**：现场 19 行假适配器 → 真跑一场 → 伤害 > 0；
-* **两宿主一致性**：同一配置同一种子下，骨架的伤害数字与包内桥直连口径逐条相同。
+* **两宿主一致性**：同一配置同一种子下，骨架的伤害数字与包内桥直连口径逐条相同；
+* **注入面反证**：合成包声明 `bind` 不给 `inject` → `PackageError`；给了 → 命令表解析成功 +
+  处理器跑出回话；`main.py --demo-inject`（子进程）另钉住「零注入包可加载」。
 
 `tests/test_host_contract.py`（2026-09-14 新增）：命令通道逐环 —— 声明命中 / 内置守卫 / 包侧守卫 /
 `Env` 字段面 / 处理器返回值规整 / 改完必存 / 坏引用明确回话 / 纯数据包降级。

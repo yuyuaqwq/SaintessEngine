@@ -7,7 +7,7 @@
 
 为什么需要它
 ------------
-宿主骨架的四条纪律**不是靠人看代码守的**，得有线上的门禁钉住：
+宿主骨架的五条纪律**不是靠人看代码守的**，得有线上的门禁钉住：
 
   A. **import 白名单** —— 骨架只许 import 引擎（`saintess_engine`）+ 标准库（+ 骨架自己的兄弟模块）；
      **不得**出现 `game` / `astrbot` 这类宿主/平台词（那意味着骨架又长回一层宿主）。
@@ -18,6 +18,9 @@
      → 伤害 > 0。这是"别人 30 分钟能接上"的硬证据（不是形容词）。
   D. **两宿主一致性（骨架侧半）** —— 同一 actor 配置 + 同一随机种子下，骨架跑出的**伤害数字**与
      `content/bridge.py` **直连口径**逐条相同。骨架上多出来的那层装配/记账不许改数值。
+  E. **注入面反证** —— 合成包声明了 `bind`：骨架**不给** `inject` → `PackageError`（不是静默空表）；
+     **给了** → 加载期 bind 被调、命令表解析成功、处理器跑出回话。`main.py --demo-inject`
+     另在子进程里钉住「零注入包（不声明 bind）可加载」这一半。
 
 数据从哪来：`games/orlandia` 包（只读）。职业 / 技能 / 怪名 / 掉落池全部**现读包内 JSON**，
 本文件里的字面量只有平台词表与断言阈值 —— 不把包内容抄成第二份。
@@ -30,7 +33,9 @@ import json
 import os
 import random
 import re
+import subprocess
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -321,6 +326,50 @@ def test_two_host_parity() -> None:
     check(skeleton["result"] == direct["result"] == "victory", "胜负一致", direct["result"])
 
 
+# ============================================================
+# E. 注入面反证（合成包声明 bind：不给注入 → PackageError；给了 → 全链路）
+# ============================================================
+
+def test_inject_contract() -> None:
+    print("\n=== E. 注入面反证（合成包声明 bind）===")
+    skel = importlib.import_module("main")
+    # 隔离不用在这里做：`main.demo_bind_package` 自带 `content*` 清理
+    # （引擎契约是「一个进程一个包」，演示函数每次装载前清一次，见 main.py）。
+    root = os.path.join(tempfile.mkdtemp(prefix="host_skeleton_inject_"), "bind-demo")
+
+    # ① 不给 inject → PackageError（引擎拒绝静默空跑；骨架不替宿主兜底）
+    try:
+        skel.demo_bind_package(root)
+        check(False, "合成包声明 bind 却不给 inject → PackageError", "居然没报错")
+    except skel.PackageError as exc:
+        check("bind" in str(exc), "合成包声明 bind 却不给 inject → PackageError（含 bind 字样）",
+              str(exc)[:100])
+    except Exception as exc:                                    # noqa: BLE001
+        check(False, "合成包声明 bind 却不给 inject → PackageError",
+              "抛的是 %s: %s" % (type(exc).__name__, exc))
+
+    # ② 给了 inject → 加载期 bind 被调 → 命令表解析成功 → 处理器跑出回话
+    out = skel.demo_bind_package(root, inject={"who": "宿主注入对象"})
+    check(out["handlers"] == [skel.DEMO_COMMAND], "给了 inject → 命令表解析成功",
+          "handlers=%s" % out["handlers"])
+    check(bool(out["said"]) and "宿主注入对象" in out["said"][0],
+          "处理器跑出回话（加载期注入 + Env.state 都在）", repr(out["said"]))
+    check("demo-1" in out["saved"], "新玩家建档落库（引擎落一次）", str(out["saved"]))
+
+    # ③ 零注入那半：不声明 bind 的包（examples/minimal-game）在**子进程**里跑，
+    #    既钉住演示入口，又避免它的 import 期注册与上面的合成包串味。
+    pr = subprocess.run([sys.executable, os.path.join(SKEL, "main.py"), "--demo-inject"],
+                        capture_output=True, text=True, encoding="utf-8", errors="replace",
+                        cwd=SKEL, env={**os.environ, "PYTHONIOENCODING": "utf-8",
+                                       "PYTHONUTF8": "1"})
+    blob = (pr.stdout or "") + (pr.stderr or "")
+    last = next((ln for ln in reversed(blob.strip().splitlines()) if ln.strip()), "")
+    check(pr.returncode == 0 and "零注入" in blob and "PackageError" in blob and "全链路" in blob,
+          "main.py --demo-inject 自带演示全通（零注入 / 反证 / 全链路）",
+          "exit=%s；%s" % (pr.returncode, last[:100]))
+    note("注入演示：合成包 bind_decl=%s handlers=%s" % (out["bind"], out["handlers"]))
+
+
 def main() -> int:
     print("=== 宿主骨架端到端冒烟（examples/host-skeleton）===")
     print("包：%s" % PKG)
@@ -328,11 +377,13 @@ def main() -> int:
     test_zero_game_vocabulary()
     test_minimal_adapter()
     test_two_host_parity()
+    test_inject_contract()
     print("\n" + "=" * 56)
     if FAILS:
         print("❌ 未过 %d 项：%s" % (len(FAILS), FAILS))
         return 1
-    print("✅ 宿主骨架冒烟全绿（4 项）：import 白名单 / 零游戏词汇 / 假适配器接入 / 两宿主一致性")
+    print("✅ 宿主骨架冒烟全绿（5 项）：import 白名单 / 零游戏词汇 / 假适配器接入 / "
+          "两宿主一致性 / 注入面反证")
     print("   假适配器 %d 行 · 场景种子 %s" % (FAKE_ADAPTER_LINES, SEED))
     return 0
 

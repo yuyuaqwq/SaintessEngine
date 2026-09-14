@@ -25,7 +25,7 @@
 
 ```
 <包目录>/
-  game.json                     # 清单：id / name / desc / engine 要求 / domains / entry
+  game.json                     # 清单：id / name / desc / engine 要求 / domains / entry / bind
   editor/
     domains.json                # 域声明（**域的真源在包** —— 见 §十；缺它 = 回退框架默认集）
   schemas/                      # 本包自带的 JSON Schema（按域名声明引用；缺 = 回退框架 schemas/）
@@ -45,6 +45,107 @@
 `game.json` 的 `entry` 字段指向装配入口（惯例 `content/apply.py`）。**可选**：纯数据导出包
 （内容侧机制尚未移植、只把 `content/data/*.json` 交给编辑器）不声明它；一旦声明，该文件**必须存在**
 （`tests/test_editor_dist.py` 守这条 —— 声明了却缺文件 = 坏包，2026-09-12 的导出包正踩过）。
+
+### 2.1 `game.json` 字段表
+
+| 字段 | 必填 | 形状 | 语义 / 校验（实现：`saintess_engine/host/package.py`） |
+|---|---|---|---|
+| `id` | 否 | 字符串 | 包身份；缺省 → 回退目录名（`Package.id`），`bind` 的报错文案里也用它 |
+| `name` / `desc` | 否 | 字符串 | 展示元数据（编辑器 / 宿主命令行）；引擎不解释 |
+| `engine` | 否 | 门槛字符串（如 `">=0.1"`） | 版本门槛：不满足 → `PackageError`（**显式报错，不静默降级**） |
+| `entry` | 否 | 包内相对路径（惯例 `content/apply.py`） | 装配入口。**声明了就必须存在**（缺文件 → `PackageError`）；纯数据包不声明 |
+| `domains` | 否 | 字符串数组 | 本包声明的域清单（编辑器 / 状态展示用） |
+| `bind` | 否 | `{"module": "<包内相对路径 .py>", "func": "<函数名>"}` | ★ **宿主注入声明**（见 2.2）。不声明 = 本包零宿主耦合 |
+| `created` | 否 | 字符串 | 建档时间（元数据） |
+
+### 2.2 `bind`：宿主注入声明（可选）
+
+包的代码如果需要**宿主对象**（存档句柄 / 平台客户端 / 通信出口……），不要在包内自己找宿主 ——
+在 `game.json` 里声明一个中间人，引擎按契约把宿主的**注入对象**交给它：
+
+```json
+{
+  "id": "my-game",
+  "engine": ">=0.1",
+  "entry": "content/apply.py",
+  "bind": {"module": "content/index.py", "func": "bind_host"}
+}
+```
+
+**形状**（两键都必填、都必须是字符串）：
+
+| 键 | 形状 | 含义 |
+|---|---|---|
+| `module` | 包内相对路径（`.py` 可省） | 中间人模块；按**包根**解析成 import 名（`content/index.py` → `content.index`） |
+| `func` | 函数名 | 中间人入口；签名 `func(**inject)`，返回值忽略 |
+
+**语义**（引擎已实现；加载期与运行期用**同一个** `inject` dict）：
+
+* **加载期**：包若声明了 `bind`，引擎在 **import 包命令模块（`content/commands.py`）之前**调
+  `func(**inject)` —— 包命令模块因此可以在 import 期就 `from . import index` 并取宿主对象。
+* **运行期**：`inject` 并入每条消息的 `Env.state`（引擎自有键 `spec` / `prefix` / `package`
+  在前、注入键在后，**同名以注入为准**）。
+* 入口是同一个面：`Host(adapter, package_dir, inject={...})` 与 `load_package(root, inject={...})`。
+* 引擎**不解释** `inject` 的键值（零游戏知识，只原样转交）—— 键名与含义由宿主与包约定。
+
+**校验规则**（引擎已实现 → `PackageError`，绝不放行；宁可不跑，也不静默）：
+
+| 情形 | 结果 |
+|---|---|
+| 声明了 `bind`，但宿主没给注入（`inject` 缺省 / 空 dict） | `PackageError`（**拒绝静默空跑**）—— 否则包会炸在包内某模块里，错误指不到根因 |
+| `module` 或 `func` 缺失 / 空串 | `PackageError`（`bind` 声明不完整） |
+| `module` 指向的模块 import 失败（文件不存在） | `PackageError` |
+| `func` 不在该模块里，或不是可调用对象 | `PackageError`（`bind.func 不可调用`） |
+| `bind` 函数自己抛错 | **原样抛出**（引擎不吞：包自己的错就是包自己的错） |
+| 没声明 `bind` | 什么也不调（纯数据包 / 无宿主耦合的包照常加载） |
+
+**最小示例**（「声明 `bind` + 提供 `inject`」的完整链路，可照抄成一个新包）：
+
+```
+<包目录>/
+  game.json                 # bind: {"module": "content/index.py", "func": "bind_host"}
+  content/
+    index.py                # 中间人：宿主对象只从这里进来；取不到就抛（fail-closed）
+    commands.py             # 命令模块：import 期就问 index 要宿主对象
+    data/commands.json      # 指令声明（真源）
+    apply.py                # 装配入口（install_engine / apply_game_content）
+```
+
+```python
+# content/index.py —— 中间人
+_HOST = {}
+
+def bind_host(**objs):                 # 引擎在 import content/commands.py 之前调它
+    for key, value in objs.items():
+        if value is not None:
+            _HOST[key] = value
+
+def get(key):
+    if key not in _HOST:
+        raise RuntimeError("index：宿主对象 %s 取不到 —— 拒绝静默空跑" % key)
+    return _HOST[key]
+```
+
+```python
+# content/commands.py —— 命令模块：import 期就要求已注入（这就是 bind 的时序意义）
+from . import index
+
+_store = index.get("store")            # 宿主没注入 → 这里抛错（根因指到本行）
+
+def hello(env):
+    return ["store=%s；Env.state 里同名以注入为准：%s" % (_store, env.state.get("store"))]
+```
+
+宿主侧只多一个参数：
+
+```python
+host = Host(adapter, package_dir, inject={"store": my_store})
+# 或：pkg = load_package(package_dir, inject={"store": my_store})
+```
+
+可运行的端到端演示见 `examples/host-skeleton/main.py`（`python main.py --demo-inject`：
+零注入跑 `examples/minimal-game` + 内联合成包演示上面这条全链路）。
+字段级契约见 [host-api.md](host-api.md) §四「宿主注入面」。
 
 ---
 
