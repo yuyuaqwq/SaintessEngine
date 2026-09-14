@@ -130,6 +130,10 @@ def main() -> int:
     # 7. README 声明的模块/文件/行数 == 磁盘（防文档数字静默过期）
     test_readme_counts()
 
+    # 8. ★ PKG_WIKI_BEGIN（B18-L11）：包自带 wiki —— 纯增量，见文件末同名段标记
+    test_pkg_wiki()
+    # ★ PKG_WIKI_END
+
     print(f"\n{'-' * 46}\n通过 {PASS} / 失败 {FAIL}")
     for f in FAILURES:
         print("  ❌", f)
@@ -177,6 +181,73 @@ def test_readme_counts():
     check(f"顶层模块数 {top} == 磁盘 {len(mods)}", top == len(mods), f"{sorted(mods)}")
     check(f".py 总数 {files} == 磁盘 {len(all_py)}", files == len(all_py))
     check(f"总行数 {lines} == 磁盘 {total}", lines == total, f"差 {total - lines}")
+
+
+# ★═════════════════════════ PKG_WIKI_BEGIN（B18-L11）═════════════════════════
+# 包自带 wiki（`<pkg>/docs/wiki/**.md`）的**纯增量**断言：渲染 / 死链 / 深链。
+# 删掉这一整段（连同 main() 里那三行调用）= 回到改造前，其余断言不受影响。
+# 完整门禁（包优先 / 框架兜底 / 零回归逐字节）在 `tests/test_editor_wiki_pkg.py`。
+def test_pkg_wiki():
+    """包内页能渲染、页内相对链接无死链、包词汇表的深链能定位到**解析到的**那页。"""
+    print("【包自带 wiki：包优先 → 框架兜底（纯增量）】")
+    import json
+    import shutil
+    import tempfile
+
+    root = tempfile.mkdtemp(prefix="fw_wiki_inc_")
+    try:
+        pkg = os.path.join(root, "inc_pkg")
+        page_rel = "guides/包内指南.md"
+        term = "包内指南专属词"
+        os.makedirs(os.path.join(pkg, "docs", "wiki", "guides"), exist_ok=True)
+        os.makedirs(os.path.join(pkg, "editor", "glossary"), exist_ok=True)
+        with open(os.path.join(pkg, "game.json"), "w", encoding="utf-8", newline="\n") as f:
+            json.dump({"id": "inc_pkg", "name": "增量门禁用包"}, f, ensure_ascii=False)
+        with open(os.path.join(pkg, "docs", "wiki", *page_rel.split("/")), "w",
+                  encoding="utf-8", newline="\n") as f:
+            f.write(f"# 包内指南\n\n{term}：这一页只存在于游戏包里。\n\n"
+                    "回[框架首页](../README.md)，或看[与框架同名的参考页](../reference/effect-rules.md)。\n")
+        # 包词汇表：`effect_rules` 是**引擎域**（内置），不必再声明域就能带 wiki 深链
+        with open(os.path.join(pkg, "editor", "glossary", "effect_rules.json"), "w",
+                  encoding="utf-8", newline="\n") as f:
+            json.dump({"fields": {"cap": {"zh": "包·叠层上限", "note": "包内文档出处",
+                                          "wiki": [page_rel, term]}}}, f, ensure_ascii=False)
+
+        pg = W.page(page_rel, pkg)
+        check("包内页能渲染（h1 + 非空）", bool(pg) and "<h1" in pg["html"] and pg["title"] == "包内指南",
+              f"{pg and pg.get('title')}")
+        check("包内页进了页清单", page_rel in [p["path"] for p in W.tree(pkg)])
+        check("不给包时这一页不存在", W.page(page_rel) is None)
+
+        dead = []
+        # 扫「包 ∪ 框架」的全部页。链接判活的规则与上面框架那条**同口径**（按当前页自己的根
+        # 归一化，允许 `../` 落到 wiki 目录外，如框架 `_selfcheck.md` → `../engine-vocabulary-contract.md`），
+        # 另外接受「包内没有 → 框架兜底」：两条里任一命中即不算死链。
+        pk_root, fw_root = os.path.normpath(W.pkg_wiki_dir(pkg)), os.path.normpath(W.WIKI_DIR)
+        for rel in [p["path"] for p in W.tree(pkg)]:
+            own = pk_root if os.path.isfile(os.path.join(pk_root, *rel.split("/"))) else fw_root
+            for m in re.finditer(r"\]\(([^)\s]+)\)", W._read(rel, pkg)):
+                url = m.group(1)
+                if not url.endswith(".md") and ".md#" not in url:
+                    continue
+                base = os.path.dirname(rel)
+                tgt = os.path.normpath(os.path.join(base, url.split("#")[0])).replace("\\", "/")
+                cand = os.path.normpath(os.path.join(own, *tgt.split("/")))
+                if not os.path.isfile(cand) and not W.page_path(tgt, pkg):
+                    dead.append(f"{rel} → {url}")
+        check("包内页的相对 md 链接零死链（含回退到框架页的那条）", not dead, f"{dead[:4]}")
+
+        from editor import glossary as G2
+        hit = G2.lookup("effect_rules", "cap", pkg)
+        check("包词汇表的深链出链（指到包内页）",
+              hit and hit["wiki"] == f"wiki:{page_rel}#find={term}", f"{hit and hit.get('wiki')}")
+        check("深链的「页内词」真在**解析到的**那页正文里",
+              term in open(G2.wiki_path(page_rel, pkg), encoding="utf-8").read())
+        check("包内没有的页 → wiki_path 回退框架那份",
+              G2.wiki_path("reference/effect-rules.md", pkg) == G2.wiki_path("reference/effect-rules.md"))
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+# ★═════════════════════════ PKG_WIKI_END ═════════════════════════════
 
 
 if __name__ == "__main__":

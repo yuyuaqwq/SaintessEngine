@@ -268,10 +268,21 @@ def main():
           len(e_o) == len(PK.DOMAINS) + len(PKG_ONLY_DOMAINS)
           and set(e_o) == set(PK.DOMAINS) | PKG_ONLY_DOMAINS,
           len(e_o))
-    check(f"orlandia 里属于内置那份的 {len(PK.DOMAINS)} 域逐字段等于内置（内容不变的搬迁）",
-          {k: v for k, v in e_o.items() if k in PK.DOMAINS} == PK.DOMAINS,
+    # ★ 2026-09-14 B15a：包可以**额外**声明可选归属标注 `owner`/`tier`（框架只透传 + 校验取值，
+    #   不赋默认）→ 本判据只比**必填五字段**（「内容不变的搬迁」= 这五个不变），
+    #   并**追加**一条「可选标注取值合法」的检查（判据只加强，不削弱）。
+    _OVER = ("label", "kind", "schema", "primary", "icon")
+    _pkg_over = {k: {f: v.get(f) for f in _OVER} for k, v in e_o.items() if k in PK.DOMAINS}
+    _built_over = {k: {f: v.get(f) for f in _OVER} for k, v in PK.DOMAINS.items()}
+    check(f"orlandia 里属于内置那份的 {len(PK.DOMAINS)} 域**必填五字段**逐字段等于内置（内容不变的搬迁）",
+          _pkg_over == _built_over,
           {k: (PK.DOMAINS.get(k), e_o.get(k)) for k in set(PK.DOMAINS) | set(e_o)
-           if k in PK.DOMAINS and PK.DOMAINS.get(k) != e_o.get(k)})
+           if k in PK.DOMAINS and _pkg_over.get(k) != _built_over.get(k)})
+    _bad_opt = {k: {f: v.get(f) for f in ("owner", "tier") if f in v}
+                for k, v in e_o.items() if k in PK.DOMAINS
+                and (v.get("owner") not in (None, "package", "engine")
+                     or v.get("tier") not in (None, "portable", "fixed"))}
+    check("包内那 8 域的可选标注 owner/tier 取值合法（声明了才查）", not _bad_opt, _bad_opt)
     check(f"{len(PKG_ONLY_DOMAINS)} 个包声明域**只**在包侧声明（内置默认集里没有 —— 真源归包）",
           PKG_ONLY_DOMAINS <= set(e_o) and not (PKG_ONLY_DOMAINS & set(PK.DOMAINS)),
           sorted(PKG_ONLY_DOMAINS & set(PK.DOMAINS)))
