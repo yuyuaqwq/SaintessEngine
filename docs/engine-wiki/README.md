@@ -121,6 +121,7 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
 | | [reference/judges.md](reference/judges.md) | judge 谓词清单（按动作分域） |
 | | [reference/channels.md](reference/channels.md) | 渠道时机表 + 两形态 + `when` / `per_dt` |
 | | [reference/package-format.md](reference/package-format.md) | 游戏包格式：数据 JSON + 声明 JSON + 扩展代码 py（包 → 引擎单向） |
+| | [reference/editor-extension-security.md](reference/editor-extension-security.md) | 编辑器扩展面：**为什么**不执行包代码（含包的 JS）/ 将来怎么设计 / 开启红线 |
 | **架构** | [architecture/README.md](architecture/README.md) | 模块依赖图 + 一次战斗的模块协作 |
 | | [architecture/data-flow.md](architecture/data-flow.md) | 从 `human_act` 到落地的完整调用链 |
 | | [architecture/design-decisions.md](architecture/design-decisions.md) | ADR：为什么 actor 同构 / 单容器 / 声明表 / 零默认值 |
