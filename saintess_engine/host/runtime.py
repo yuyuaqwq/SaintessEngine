@@ -20,7 +20,10 @@
 """
 from __future__ import annotations
 
+import asyncio
+import inspect
 import random
+import threading
 import time
 
 from ..battle.battle import Battle
@@ -66,7 +69,7 @@ class Host:
     def __init__(self, adapter, package_dir, *, scenario=None, prefix="/", seed=None,
                  idle_sleep=0.05, echo_battle=True, tlog_limit=500, id_key="uid",
                  register_hint=DEFAULT_REGISTER_HINT, battle_hint=DEFAULT_BATTLE_HINT,
-                 battle_check=None, texts_domain="texts", inject=None):
+                 battle_check=None, texts_domain="texts", inject=None, async_runner=None):
         self.adapter = adapter
         self.package_dir = package_dir
         self.scenario = scenario or Scenario()
@@ -79,6 +82,10 @@ class Host:
         self.register_hint = str(register_hint or "")
         self.battle_hint = str(battle_hint or "")
         self.battle_check = battle_check
+        #: **异步处理器执行策略**（`callable(coro) -> 结果`）。不给 → 引擎自己跑：
+        #: 当前线程无事件循环则 `asyncio.run`；已在循环里则另起线程跑（见 `_run_async`）。
+        #: 宿主（如 AstrBot 插件）想自己掌控事件循环/超时/取消时传它。
+        self.async_runner = async_runner
         self.texts_domain = str(texts_domain or "texts")
         #: **宿主注入面**：一个 dict，两处用 —— ① 加载期交给包声明的 `bind` 钩子（在 import
         #: 包命令模块之前）② 每轮消息并入 `Env.state`。引擎**不解释**其键值（零游戏知识）。
@@ -249,7 +256,60 @@ class Host:
                              hooks=(self.pkg.guard_hooks() if self.pkg else {}))
         if blocked:
             return [blocked]
-        return self._as_replies(fn(env))
+        return self._as_replies(self._resolve_async(fn(env)))
+
+    # ------------------------------------------------------------ 异步处理器
+    def _resolve_async(self, out):
+        """处理器返回值若是 **awaitable / async generator** → 先跑完再规整。
+
+        为什么必须在引擎侧做（实测，2026-09-15）：包内 **229 个 handler 是 `async def`**
+        （战斗 / 经济 / 社交 / 世界那些大族），旧宿主桥 `game/commands/_host_bridge.py:145`
+        有 `if hasattr(out, "__await__"): out = await out`；引擎通道此前没有这个分支
+        ⇒ 异步 handler 会被 `str()` 成 `<coroutine object …>` 投给玩家。
+        """
+        if inspect.isawaitable(out) or hasattr(out, "__aiter__"):
+            return self._run_async(out)
+        return out
+
+    def _run_async(self, out):
+        """把 awaitable / async generator 跑到完成（**同步 API 不变**，调用方无需 await）。
+
+        执行策略（三级）：
+          ① 宿主给了 `async_runner=<callable>` → 交给它（适配器自己的事件循环策略）
+          ② 当前线程**没有**运行中的事件循环（宿主主循环通常在独立线程 / CLI / 编辑器子进程）
+             → `asyncio.run`
+          ③ 已在事件循环里（如 AstrBot 的 async handler 直接回调进来的场景）→ **另起线程**跑，
+             避免 `RuntimeError: This event loop is already running` / 死锁
+        """
+        async def _collect():
+            if hasattr(out, "__aiter__"):
+                items = []
+                async for piece in out:
+                    items.append(piece)
+                return items
+            return await out
+
+        coro = _collect()
+        if self.async_runner is not None:
+            return self.async_runner(coro)
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(coro)
+        box: dict = {}
+
+        def _worker():
+            try:
+                box["r"] = asyncio.run(coro)
+            except BaseException as exc:                     # noqa: BLE001  原样回抛给调用方
+                box["e"] = exc
+
+        th = threading.Thread(target=_worker, name="host-await", daemon=True)
+        th.start()
+        th.join()
+        if "e" in box:
+            raise box["e"]
+        return box.get("r")
 
     @staticmethod
     def _as_replies(out) -> list:
