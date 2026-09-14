@@ -9,92 +9,77 @@
 ----------------------------------------------
 | 真源写法 | 包内替身 | 说明 |
 |---|---|---|
-| `from ..data import EVENT_WEIGHT_SUM, EXPLORE_EVENTS, EXPLORE_EGG_CHANCE, EXPLORE_EGG_EVENTS, EXPLORE_EGG_SUM` | 经宿主薄壳同名再导出解析：`_src("EXPLORE_EVENTS")` … | **不是**包内域读口，理由见下（顺序不可逆） |
-| `from .time_weather import current_season`（B13 线2 落点） | `_src("current_season")()` | 同样经宿主命名空间：`tests/test_v116_explore_season.py:31` 直接给**宿主模块属性**打桩（`EV.current_season = lambda …`），真源语义就是「调用时查本模块全局名」——替身照抄这个语义 |
+| `from ..data import EVENT_WEIGHT_SUM, EXPLORE_EVENTS, EXPLORE_EGG_CHANCE, EXPLORE_EGG_EVENTS, EXPLORE_EGG_SUM` | 本模块顶层再导出同 6 名 + `_src(name)` 读**本模块全局** | ★ W2b 起**不再回宿主**：名从包内真源再导出（见下），`_src` = `globals()[name]`，与真源「函数体查本模块全局」逐字同义 |
+| `from .time_weather import current_season`（B13 线2 落点） | 同上（`current_season` 在顶层再导出） | 真源语义就是「调用时查本模块全局名」⇒ `content.events.current_season = …` 打桩**照旧生效**（`tests/test_v116_explore_season.py` / `overnight/w1213_b13l3_snap.py` 已同步把打桩目标改到 `content.events`） |
 
-★ 为什么**不用**包内 `events` 域读口（缺口登记，不是偷懒）
---------------------------------------------------------
+★ W2b 去宿主（2026-09-15）
+--------------------------
+六个名字（`EXPLORE_EVENTS` / `EXPLORE_EGG_EVENTS` / `EXPLORE_EGG_CHANCE` / `EXPLORE_EGG_SUM` /
+`EVENT_WEIGHT_SUM` / `current_season`）从**包内真源**再导出：
+`content/catalog_quests`（两个池）· `content/catalog_rules`（三个派生/常量）·
+`content/time_weather`（当前季节）。`_src(name)` = `globals()[name]`（取不到 → 大声抛，
+不静默兜底）。宿主薄壳 `game/core/events.py` 的 `from content.catalog_quests import …` 仍取同样的对象，
+故 `game.core.events` 的同名面**数值/对象一字不变**。
+
+★ 为什么**不用**包内 `events` 域读口（**历史缺口登记**；W2b 起读的是 catalog 门面，不是该域）
+--------------------------------------------------------------------------------------------
 包内 `content/data/events.json`（146 条）是宿主两个池的**合表派生**：
 `scripts/export_domains/npc_story.py:307` 走 `sort_table()` = **外层键按字典序重排** +
 注入 `source` 字段。而 `roll_explore_event` / `roll_explore_egg` 的**抽签顺序**就是行为：
 `total = sum(weight)` 后 `acc += w; if r <= acc` 逐条累加 ⇒ 同样的随机数在不同顺序下命中不同事件。
 实测：`EXPLORE_EVENTS`（100 条）与域内 `source=="explore"` 的键序**100/100 位置全不同**，
 `EXPLORE_EGG_EVENTS`（46 条）同样不同（见报告 §1 核实表）。
-⇒ 顺序不可逆（I3 不满足）→ 本线按 BRIEF §5 口径**用宿主句柄 + 缺口登记**：
-待 `events` 域补 `order` 字段（或改保序导出）后，再切包内读口。
+⇒ 顺序不可逆（I3 不满足）→ **该 JSON 域读口不可用**。W2b 改读的是**保序的包内门面**
+`content/catalog_quests.EXPLORE_EVENTS/EXPLORE_EGG_EVENTS`（与宿主旧面**同一对象**，实测 `is` 为真）。
 
-★ 另一处缺口：`EVENT_WEIGHT_SUM` / `EXPLORE_EGG_SUM` 是**派生标量**（`sum(...)`），
-导出器明写「不是表 → 不进本域」（`npc_story.py:247`），包内无读口 → 同走宿主再导出。
+★ 另一处历史缺口（W2b 已解）：`EVENT_WEIGHT_SUM` / `EXPLORE_EGG_SUM` 是**派生标量**（`sum(...)`），
+导出器明写「不是表 → 不进本域」（`npc_story.py:247`）——但它们**在 `content/catalog_rules.py:256-257`
+是真的**（与宿主旧面同一对象），本模块顶层再导出即得。
 
 等价证据：`overnight/w1213_b13l3_snap.py`（124 用例含「季节打桩 / 蛋概率打桩 / 兜底不空池」）
 · `overnight/W-B13-L3-events-dialogue.md`。
 """
 from __future__ import annotations
 
-import importlib
 import random
-import sys
-
 
 # ============================================================
-# ① 宿主取件口（注入优先 → sys.modules → importlib；**绝不静默空跑**）
+# ① 包内真源再导出（★ W2b：不再回宿主取件）
+# ------------------------------------------------------------
+# 真源那 6 个名字**住在包内**：两个探索池在 catalog_quests、三个派生/常量在 catalog_rules、
+# 当前季节在 time_weather。本模块顶层再导出，使 `_src(name)` 有全局可读；
+# 且 `content.events.<名> = …` 打桩与真源「函数体查本模块全局」语义逐字一致。
 # ============================================================
-_HOST_PKG = "data.plugins.dragonfall.game"
-_HOST_PKG_FALLBACK = "game"
-_INJECTED = {}
+from .catalog_quests import EXPLORE_EVENTS, EXPLORE_EGG_EVENTS   # noqa: F401
+from .catalog_rules import (EVENT_WEIGHT_SUM, EXPLORE_EGG_CHANCE,  # noqa: F401
+                            EXPLORE_EGG_SUM)
+from .time_weather import current_season                          # noqa: F401
 
 
 def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——本模块只用 `core.events` 命名空间，注入位备用。"""
-    for k, v in (objs or {}).items():
-        if v is not None:
-            _INJECTED[k] = v
-
-
-def _host_module(name: str):
-    if name in _INJECTED:
-        return _INJECTED[name]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = sys.modules.get("%s.%s" % (prefix, name))
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module("%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("events：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
-
-
-def _host_attr(mod: str, attr: str):
-    m = _host_module(mod)
-    try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
+    """宿主注入位（历史接口）：本模块已**零宿主取件**，形参保留只为旧宿主壳照旧传参。"""
+    return None
 
 
 def _src(name: str):
-    """真源本模块的**全局名** → 宿主薄壳同名再导出（`core.events.<name>`）。
+    """真源本模块的**全局名** —— 直接读本模块全局（★ W2b：不再经宿主薄壳转一手）。
 
-    ⚠️ 必须是**调用时**解析（每次读宿主模块命名空间），这样 `EV.<name> = …` 这类
-    打桩（真源语义：函数体查本模块全局）在薄壳化之后仍然生效。
+    ⚠️ 必须是**调用时**解析（每次读本模块 `__dict__`），这样 `content.events.<name> = …`
+    这类打桩（真源语义：函数体查本模块全局）照旧生效。
+    取不到 → **大声抛**（绝不静默兜底）。
     """
-    return _host_attr("core.events", name)
+    try:
+        return globals()[name]
+    except KeyError:
+        raise RuntimeError("events：本模块全局没有 %r —— 拒绝静默空跑" % (name,))
 
 
 # v116 季节渗透：探索事件随季节变化（借鉴垂钓，见 core/fishing.py）
 # - 事件 season 硬限定：非当季不触发；season_boost 偏好：当季权重 ×1.5
 # - 季节码与 time_weather.current_season 对齐（spring/summer/autumn/winter）
-# （真源此处 `from .time_weather import current_season` —— B13 线2 落点；本模块经
-#   `_src("current_season")` 取自宿主薄壳再导出，保住 `EV.current_season = …` 打桩语义）
+# （真源此处 `from .time_weather import current_season` —— B13 线2 落点；W2b 起本模块顶层
+#   直接再导出 `current_season`，`_src("current_season")` 读本模块全局 ⇒
+#   `content.events.current_season = …` 打桩照旧生效）
 
 # v116 季节感前缀：命中限定/偏好事件时附加给返回事件（浅拷贝，不污染数据池）
 _SEASON_PREFIX = {"spring": "🌸", "summer": "☀️", "autumn": "🍂", "winter": "❄️"}

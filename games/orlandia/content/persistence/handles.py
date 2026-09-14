@@ -12,13 +12,24 @@
 | `lock` | 引擎 `Database.lock`（RLock，可重入） | `_lock`（代理，`with _lock:` 逐语义等价） | 注入值 → 否则 Database 的 RLock |
 
 注入方式 = 模块级 `bind(**handles)`（与包内既有 `bind_host` 约定同形，不另发明第三套）。
-`C` / `_host_attr` / `_host_attrs` 沿用包内既有「宿主替身口」写法（`content/auction.py` 起）。
+`_host_attr` / `_host_attrs` / `_HostMod` 沿用包内既有「宿主替身口」写法（`content/auction.py` 起）。
+
+★ W2a 改指（2026-09-15）：`C` 与 `_host_content()` 不再指向**宿主** `game.content`，
+改指**包内聚合门面** `content/facade.py::C`（`from ..facade import C`）。
+等价性 = 探针逐名对象同一性（71 名 / 298 处，`out/probe/c_facade_identity.log` BAD=0）
++ 取件时机不变（两侧都是属性访问时解析）。`_host_module` / `_host_attr` / `_host_attrs` /
+`_HostMod` **保留**（`cmds_gm` / `persistence/players` / `persistence/battle_state` 仍在用）。
 """
 from __future__ import annotations
 
 import importlib
 import sys
 import time as _time
+
+# ★ W2a 改指：包内内容聚合门面（原 `C = _HostMod("content")` → 宿主 `game.content`）。
+#   `content.facade` 零 import 依赖（只 import importlib）⇒ 放在 import 期不会把 EAGER 窗口
+#   拖进半初始化；`C.<名>` 的取件时机仍是**属性访问时**（facade.C 是惰性句柄），逐字同旧。
+from ..facade import C  # noqa: F401
 
 _DEFAULT_TIMEOUT = 10.0
 _H = {"db_path": None, "clock": None, "flush_log": None, "lock": None, "db": None}
@@ -144,38 +155,35 @@ def _host_module(name: str):
 
 
 def _host_content():
-    """宿主内容聚合层 `game.content` —— **全仓唯一规范落点**（B2-INTFIX，2026-09-14）。
+    """内容聚合面句柄 —— **包内聚合门面** `content/facade.py::C`（★ W2a 改指，2026-09-15）。
 
-    真源写法 = 包内各文件里的「函数内 `from .. import content as C`」。本函数是它的唯一包内
-    等价物：解析顺序与本模块 `_host_module("content")` 逐字相同 ——
+    改前：返回**宿主** `game.content` 模块本体（注入槽 → `sys.modules` → importlib → 抛）。
+    改后：返回**包内**聚合门面句柄（同一个 `C`，属性访问时解析；facade 模块零 import 依赖）。
 
-        ① 注入槽：`bind_host(content=<模块|零参可调用>)`（wave 2 宿主壳 import 期注入；`None` 不覆盖）
-        ② `sys.modules`：`data.plugins.dragonfall.game.content` → `game.content`
-        ③ `importlib`：同样两个包名，逐个试
-        ④ 都取不到 → **抛 `RuntimeError`**（「拒绝静默空跑」；**绝不**返回 `None`、**绝不**静默降级）
+    为什么能改（等价性证据，不是推测）
+    ----------------------------------
+    门面的聚合口径 = 宿主 `game/content.py`（`from .core import *` + `catalog_*` 逐名
+    `setdefault`）。探针实测：包内全部 `C.<名>` 读点（71 个名 / 298 处）取到的对象与宿主
+    `game.content.<名>` **逐名同一只**（`out/probe/c_facade_identity.log`，BAD=0）。
+    取件时机也一致：旧 `_HostMod("content")` 与门面 `C` 都是**属性访问时**才解析，
+    故 EAGER 窗口（`content/persistence/__init__.py` → `schema.py:25` 读 `C.MAP_BY_ID`）行为不变。
 
-    为什么住这里（B2-INTFIX 落点裁定，完整理由见 `out/W-INTFIX.md` §1）：
-      · 它返回的是**宿主**模块句柄，不是包内模块 —— `content/_pkgref.py` 的 `PkgModule` 是
-        「**包内**惰性模块句柄」（实例全是 `content.persistence.*`，且没有注入面），语义不符；
-      · 本模块就是包内既有的**宿主面解析区**：`_host_module` / `_host_attr` / `_host_attrs` /
-        `_HostMod` / `C = _HostMod("content")` 全在这，「宿主 content 聚合层」句柄本来就在这；
-      · 要求的三步解析顺序本模块**已经实现**（`_host_module`），本函数只是给它一个规范名
-        —— 零新机制、零新状态，不产生第二个注入面。
-
-    背景（B2 四线并行造成的接口错位）：该名一度住在 `content/reward.py`，C4 落地「删宿主替身
-    机械」时把它一并删了，而 `content/settlement.py` · `content/flow/instance_battle.py` ·
-    `content/cmds_instance_router.py` 各自留了一份语义相同的**私有**实现
-    ⇒ `content/event_templates.py` 的 `from .reward import _host_content` 被切断（ImportError，
-    7 个测试文件红）。四份实现全部收敛到本函数后，该句柄只有一个家。
+    为什么住这里（B2-INTFIX 落点裁定，完整理由见 `out/W-INTFIX.md` §1）
+    ------------------------------------------------------------------
+      · 本模块就是包内既有的**宿主面解析区**（`_host_module` / `_host_attr` / `_host_attrs` /
+        `_HostMod` 全在这），4 个消费者的调用写法已按「函数体内惰性 import」定死；
+      · 本批只换**返回对象**，函数名 / 签名 / 调用点一字不改（W2b 才改消费者读点）。
 
     ⚠️ 调用点必须**惰性 import**（函数体内 `from .persistence.handles import _host_content`）：
-    本模块经 `content/persistence/__init__.py`（EAGER 窗口里要读宿主 `C.MAP_BY_ID`）暴露，
-    在 `game/core/__init__` 装配链上不能 import 期取。
+    本模块经 `content/persistence/__init__.py`（EAGER 窗口）暴露，在 `game/core/__init__`
+    装配链上不能 import 期取。
 
-    返回对象 = **已加载的宿主 `game.content` 模块本体**；与改造前三条私有实现的首分支
-    （`sys.modules`）返回的是**同一个对象**（逐调用点 `is` 证据见 `out/W-INTFIX.md` §3）。
+    缺口登记（两侧一致，不是本批引入）：门面**不含** `STAT_NAMES` —— 宿主 `game.content` 同样
+    没有它（它住 `game/content_rules/panel.py`，不在 core 聚合面），故 `getattr(C, "STAT_NAMES",
+    None)` 两侧同为 `None`。
     """
-    return _host_module("content")
+    from ..facade import C as _facade_C
+    return _facade_C
 
 
 def _host_attr(mod: str, attr: str):
@@ -199,7 +207,12 @@ def _host_attrs(mod: str, *attrs):
 
 
 class _HostMod:
-    """宿主模块替身（`C`）——`C.xxx` 正文一字未改，属性访问时解析。"""
+    """宿主模块替身 ——`X.xxx` 正文一字未改，属性访问时解析。
+
+    ★ W2a 起 `C` **不再**用本类（改指包内门面 `content/facade.py::C`）；本类保留是因为
+    `content/cmds_gm.py` 仍 `from .persistence.handles import _HostMod`，且它是包内其他
+    宿主面替身（如各模块自带的 `_HostMod("db")`）的同形样板。
+    """
 
     def __init__(self, name):
         self._name = name
@@ -208,4 +221,5 @@ class _HostMod:
         return getattr(_host_module(self._name), attr)
 
 
-C = _HostMod("content")     # 真源 模块级 `from .. import content as C`
+#: 包内内容聚合门面句柄（真源 模块级 `from .. import content as C`）——见文件头「W2a 改指」。
+#: `C` 已在本文件 import 期从 `..facade` 绑定（见顶部 import 注释）。

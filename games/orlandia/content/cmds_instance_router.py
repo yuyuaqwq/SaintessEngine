@@ -53,18 +53,15 @@ from .skills import skill_info             # 包内直取（技能链 D3 已进�
 
 
 # ============================================================
-# `C` 聚合面替身（★ B2-C3：包内直取优先，未进包符号走宿主聚合层）
+# `C` 聚合面替身（★ B2-C3：包内直取优先；★ W2b：兜底改包内门面）
 # ------------------------------------------------------------
 # 真源 `from .. import content as C`：本模块只用到 3 个符号 ——
 #   · `MAP_BY_ID`      → 包内门面 `content/catalog_space.py`（B14-2，逐值/键序对拍相等）
 #   · `get_instance_st`→ 包内 `content/worlds.py`（副本运行态真源）
-#   · `build_monster`  → **未进包**（`game/core/drops.py` 真源；包内落点 = C2 的
-#                        `content/drops.py`，尚未落地）⇒ 登记的**缺口**：注入槽优先 →
-#                        包内 `content.drops`（若已落地）→ 已加载宿主聚合层 `game.content`。
+#   · `build_monster`  → 包内 `content/drops.py`（C2 已落地；旧注释的「未进包缺口」已消）
 # `content/_pkgref.py::PkgModule` 保持「属性访问时解析」的取件时机（与旧替身逐字同时机）。
-# ★ B2-INTFIX（2026-09-14）：宿主聚合层句柄**只有一个家** = 包内唯一规范落点
-#   `content/persistence/handles.py::_host_content()`（注入 → `sys.modules` → importlib → 抛）。
-#   本文件原来的私有 `_load_host_mod()` / `_host_c()` 兜底链（第四份同义实现）已删。
+# ★ W2b（2026-09-15）：兜底句柄从 `persistence.handles._host_content()`（宿主聚合层 `game.content`）
+#   换成**包内聚合门面** `content/facade.py::C` —— 本文件不再回宿主取件。
 # ============================================================
 _INJECTED = {}
 _HOST_C = None
@@ -74,7 +71,7 @@ _worlds = _PkgModule("content.worlds")        # get_instance_st
 
 
 def bind_host(**objs):
-    """宿主替身注入（幂等；wave 2 宿主壳调用）——键 `c`（宿主聚合层）/ `build_monster`。`None` 忽略。"""
+    """宿主替身注入（幂等；wave 2 宿主壳调用）——键 `c`（内容聚合层）/ `build_monster`。`None` 忽略。"""
     global _HOST_C
     for k, v in (objs or {}).items():
         if v is None:
@@ -85,16 +82,17 @@ def bind_host(**objs):
 
 
 def _host_c():
-    """宿主内容聚合层（只喂**未进包**符号）：注入槽 `c` → **唯一规范落点**。
+    """内容聚合层句柄（只喂**未进包**符号）：注入槽 `c` → **包内聚合门面**。
 
-    B2-INTFIX：兜底不再是本地 `_load_host_mod("content")`，而是
-    `content/persistence/handles.py::_host_content()`（注入 → `sys.modules` → importlib → 抛）。
-    惰性 import：`content.persistence` 在 EAGER 窗口不可取（见该函数 docstring）。
+    ★ W2b（2026-09-15）：兜底从 `content/persistence/handles.py::_host_content()`（宿主聚合层）
+    换成包内门面 `content/facade.py::C`（W2a 落点）；`C.<名>` 逐名解析到包内真源
+    （`MAP_BY_ID` → `content.catalog_space`；`build_monster` → `content.drops`）。
+    注入槽 `c` 仍在（宿主壳 wave 2 的注入协议），但包内不再回宿主取件。
     """
     if _HOST_C is not None:
         return _HOST_C
-    from .persistence.handles import _host_content
-    return _host_content()
+    from .facade import C
+    return C
 
 
 def _build_monster():
@@ -119,7 +117,10 @@ _HOST_FALLBACK = ("build_monster",)
 
 
 class _ContentFace:
-    """`C` 替身（正文 `C.<名>` 一字未改）：包内直取优先 → 未进包符号走宿主聚合层。"""
+    """`C` 替身（正文 `C.<名>` 一字未改）：包内直取优先 → 未登记符号走**包内门面**。
+
+    ★ W2b：门面 = `content/facade.py::C`（包内聚合），不再有「宿主聚合层」这一级。
+    """
 
     def __getattr__(self, name):
         getter = _PKG_ATTRS.get(name)

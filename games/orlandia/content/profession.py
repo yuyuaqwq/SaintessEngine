@@ -12,7 +12,7 @@
 | 真源写法 | 包内写法 | 说明 |
 |---|---|---|
 | `from .. import db`（**函数体内**惰性 import） | 模块级 `db` = **惰性宿主代理** `_HostDB` | 正文里 `db.xxx(...)` **一行未改**；宿主由 `bind_host(db)` 注入，或按 `sys.modules` 找**已加载**的宿主模块（绝不 import，防在包侧另起一份宿主模块树） |
-| `from .. import content as C`（模块级） | 模块级 `C` = **惰性宿主代理** `_HostMod` | 表读口（`MATERIALS`/`MAP_BY_ID`/`PROF_WAIT_BASE`/`price_band`/`roll_fish`/`RARE_MATERIAL_PRICE`/`DROP_POOLS` 派生…）仍在宿主内容聚合层；这些**域未进包**（fishing/gather 数据域的死角见报告 §缺口）。宿主在 import 期注入同一模块对象 |
+| `from .. import content as C`（模块级） | 模块级 `C` = **包内逐名惰性读口** `_PkgFace`（★ W2b：旧 `_HostMod("content")` 已删） | 表读口（`current_period`/`roll_fish`/`check_achievements`/`make_pet_egg`/…）逐名解析到**包内真源**（探针实测，见 §`_PkgFace` 类头注）；宿主聚合层**在册时优先**（= 旧 `_HostMod` 取件语义，保 tests 猴补可见）；`bind_host(content=…)` 形参按宿主注入协议保留但**不再落槽** |
 | `from ..core import timed_events as _te`（模块级） | 模块级 `_te` = **包内**惰性句柄 `PkgModule("content.timed_events")`（★ P4′-W1-B） | `get_timed`/`set_timed`/`remove_timed` 三处调用名未改；宿主 `game.core.timed_events` 是**别名壳**（`sys.modules[__name__] = content.timed_events`）⇒ 逐字同一个模块对象 |
 | `from ..log_setup import LOG`（模块级） | 告警改走**包内唯一日志取用口** `content/obs.py::log()`（★ P4′-W1-B；句柄由宿主 `bootstrap.bind_observability()` 在包加载期注入） | fail-closed **告警原文未改**，取用写法由 `LOG.warning` 改 `obs.log().warning`；包内不再出现第二个日志口 |
 | `from ..drop_engine import expand_pool as _expand`（**函数体内**惰性 import，两处） | 模块级 `_expand` / `_expand_pool` = **惰性调用代理** | 每次调用解析宿主 `game.drop_engine.expand_pool`（与真源同：真源也是调用时才 import） |
@@ -31,6 +31,7 @@
     from content import profession as P
     P.bind_host(db, content=C, timed=_te, log=LOG, expand_pool=expand_pool)   # 宿主薄壳注入
     #   ★ P4′-W1-B 后 `timed` / `log` 仍可按协议传（形参在、值被忽略）；`_te` 已是包内句柄
+    #   ★ W2b 后 `content` 同理按协议传（形参在、值被忽略）；包内 `C` 已是**包内门面**
     mats = P.gather_roll(20, 5, "oak_plain")
 """
 from __future__ import annotations
@@ -38,6 +39,7 @@ from __future__ import annotations
 import asyncio
 import json
 import random
+import sys
 import time
 
 # ---- B14-2 L5：数据名读点切包内门面（`C.<数据名>` → 门面直取；函数名/缺口名仍留 `C.<名>`）----
@@ -51,19 +53,85 @@ from .prof_config import price_band  # ★ B15b：宿主函数进包（原 `C.pr
 #   取件时机逐字相同 = 属性访问时解析）② 包内唯一日志取用口 `content/obs.py`。
 from ._pkgref import PkgModule as _PkgModule
 from . import obs
+# ★ W2b（2026-09-15）：读表口 `C` 改指**包内真源**（逐名惰性解析）。
+#   为什么不是 `from .facade import C`（实测，不是偏好 —— 全量 newly-red 证据）：
+#     `facade.C` 的 `_namespace()` **首次访问即冻结**（`ns.setdefault` 快照），而旧写法
+#     `_HostMod("content")` 是**每次属性访问 `getattr(宿主门面, 名)`**。宿主门面上
+#     `roll_fish` / `roll_collect_fish` 是**运行期可被猴补**的名字（`tests/test_commands_fishing.py:48`
+#     `C.roll_fish = lambda …`；同款见 test_r3_m15_fishing / test_v104_fishing / test_v83_collect_fish /
+#     test_v1023_life_prof）⇒ 用冻结门面会让这 5 个文件**全红**（实测 137 条断言失败）。
+#   `_PkgFace` = **每次属性访问** import 目标包内模块再取值（= 旧 `_HostMod` 的取件时机逐字相同，
+#   只是目标从宿主模块换成包内真源）。名字 → 包内真源见下表（探针实测，`__module__` 同一）。
+
+
+class _PkgFace(object):
+    """包内聚合读口（只登记本文件用到的名字；逐次属性访问解析，猴补可见）。
+
+    未登记名 → 回退 `content.facade.C`（包内聚合面；同样只在该名字真的被读到时才取）。
+    """
+
+    __slots__ = ()
+
+    _MAP = {
+        # —— 数据/索引面 ——
+        "check_achievements": "content.achievements",
+        "display": "content.index",
+        "resolve": "content.index",
+        "current_period": "content.time_weather",
+        "current_season": "content.time_weather",
+        "today_weather": "content.time_weather",
+        # —— 产出/掉落面 ——
+        "generate_equip": "content.drops",
+        "roll_blueprint": "content.drops",
+        "roll_drop_equip": "content.drops",
+        "roll_fish": "content.fishing",
+        "roll_collect_fish": "content.fishing",
+        "roll_fish_size_weight": "content.fishing",
+        "roll_gem": "content.gems",
+        "roll_gem_drop": "content.gems",
+        "make_pet_egg": "content.pets",
+        "make_mount_rein": "content.mounts",
+        "mount_effects": "content.mounts",
+        "rune_item": "content.runes",
+    }
+
+    def __getattr__(self, name):
+        import importlib
+        # ① 已加载的宿主聚合层优先 —— ★ 旧写法 `_HostMod("content")` 的语义就是这样：
+        #    属性访问时 `getattr(game.content, 名)`。保留它 = 保留 tests/* 里
+        #    `C.roll_fish = lambda …`（conftest.C = game.content）这类运行期猴补的可见性。
+        for _n in (_HOST_PKG + ".content", _HOST_PKG_FALLBACK + ".content"):
+            _m = sys.modules.get(_n)
+            if _m is not None:
+                return getattr(_m, name)
+        # ② 纯包场景（无宿主 game/**）：按登记表取包内真源
+        mod = self._MAP.get(name)
+        if mod is not None:
+            return getattr(importlib.import_module(mod), name)
+        # ③ 表外名：包内聚合门面
+        from .facade import C as _FACADE
+        return getattr(_FACADE, name)
+
+    def __repr__(self):
+        return ("<content.profession.C 包内逐名读口（%d 名登记 + facade 回退）>"
+                % len(self._MAP))
+
+
+C = _PkgFace()
 # ---- B14-2 L5 读点切换（2026-09-14）----
 # 数据名读点（MATERIALS/RUNES · MAP_BY_ID · PROF_WAIT_BASE/PROF_WAIT_DECAY/PROF_WAIT_FLOOR/
 # MINING_KEYWORDS/RARE_MATERIAL_PRICE · PET_EGG_ORANGE_CHANCE/PROF5_BONUS_CHANCE/RARE_MAT_CHANCE）
 # 已切包内门面（见文件头 `_cc/_ci/_cl/_sp` import 块）。
-# 仍留 `C.<名>` 的只有：① 宿主函数（price_band/roll_fish/check_achievements/make_pet_egg/…）
-# ② 域缺口 `GATHER_COND_POOLS`（`getattr(C,…)` 形式，扫描器不计）——见 overnight/W-B14-2-L5.md §残余。
+# ★ W2b（2026-09-15）：**残余的 `C.<名>` 也全部切到包内门面** —— `C` 现在是
+#   `content/facade.py::C`（聚合名 = 包内真源，逐名探针实测），不再有「宿主函数」这一类。
+#   `GATHER_COND_POOLS` 仍是 `getattr(C,…)` 形式（域缺口的既有写法，扫描器不计）。
 # ★ B14-3（2026-09-14）：FISH_EXP/QUALITY 两名已由门面 `catalog_b143` 补上 → 2 处切 `_b143`。
 
 # ============================================================
-# 宿主替身口（① 存储层 / ② 读表口；② 由宿主薄壳在 import 期注入同一模块对象）
+# 宿主替身口（① 存储层；② 产出池展开）
+# ★ W2b：读表口 `C` 已切**包内门面**（`from .facade import C`），本段不再持有 `content` 槽。
 # ============================================================
 _HOST_DB = None            # 宿主存储层（真源 `from .. import db`）
-_HOST_CONTENT = None       # 宿主内容聚合层（真源 `from .. import content as C`）
 _HOST_EXPAND = None        # 宿主产出池展开函数（真源 `from ..drop_engine import expand_pool`）
 
 # 宿主模块名（运行时 `main.py` 的模块路径 = `data.plugins.dragonfall`；测试同样）
@@ -78,12 +146,12 @@ def bind_host(db=None, content=None, timed=None, log=None, expand_pool=None):
       （`game/services/profession.py:57` 逐个关键字传参 —— 少了会 TypeError），
       但包内已不再持有它们的槽位：倒计时引擎改指包内 `content/timed_events.py`（`_te`），
       日志改走包内唯一取用口 `content/obs.py`。传进来的值被显式忽略。
+    ★ W2b：`content`（宿主聚合层，真源 `from .. import content as C`）形参同样按注入协议保留，
+      但包内 `C` 已改指包内门面 ⇒ **不再落槽、不再被读**（宿主可继续照旧传参）。
     """
-    global _HOST_DB, _HOST_CONTENT, _HOST_EXPAND
+    global _HOST_DB, _HOST_EXPAND
     if db is not None:
         _HOST_DB = db
-    if content is not None:
-        _HOST_CONTENT = content
     if expand_pool is not None:
         _HOST_EXPAND = expand_pool
 
@@ -113,21 +181,6 @@ class _LazyModule(object):
         return getattr(self._getter(), name)
 
 
-class _HostMod(object):
-    """惰性宿主模块代理 —— `C.xxx` / `_te.xxx` / `LOG.xxx` 正文一行不动，属性访问时解析。"""
-
-    def __init__(self, slot, mod):
-        self._slot = slot
-        self._mod = mod
-
-    def _target(self):
-        obj = self._slot()
-        return obj if obj is not None else _resolve_host(self._mod)
-
-    def __getattr__(self, name):
-        return getattr(self._target(), name)
-
-
 class _HostDB(object):
     """惰性宿主存储层代理（真源 `from .. import db`）。"""
 
@@ -136,7 +189,9 @@ class _HostDB(object):
 
 
 db = _HostDB()
-C = _HostMod(lambda: _HOST_CONTENT, "content")
+# ★ W2b：`C` = **包内**聚合门面（顶部 `from .facade import C`），正文 `C.<名>` 一字未改。
+#   旧写法 `C = _HostMod(lambda: _HOST_CONTENT, "content")` 与 `_HOST_CONTENT` 槽、`_HostMod`
+#   类随本次改口一并删除（二者在本文件已无其它使用点）。取件时机不变（属性访问时解析）。
 # ★ P4′-W1-B：倒计时引擎改指**包内实现**。宿主 `game.core.timed_events` 是别名壳
 #   （`sys.modules[__name__] = content.timed_events`）⇒ 与旧 `_te` 解析到的是**同一个模块
 #   对象 / 同一批函数对象**；但包内不再经宿主命名空间取件。`PkgModule` 每次属性访问解析一次，

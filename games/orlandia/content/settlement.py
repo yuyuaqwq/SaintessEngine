@@ -69,18 +69,17 @@ from . import catalog_b143 as _b143   # B14-3 收口名（宠物/公会/势力/�
 #      ⇒ 与宿主壳旧路径（`_Host.<名>`）逐字节同源。
 #      ★ `db` 同理：`game.db` = `game/store/__init__` = `from content.persistence… import *`
 #        ⇒ `update_player` 等是同一个函数对象。
-#   ③ 宿主聚合层 `game.content`（只喂 `C.<函数名>` 这批**未进包**的函数读口：
-#      `pet_exp_bonus` / `pct_str` / `pet_exp_mult` / `pet_exp_need` / `display` /
-#      `roll_drop` / `roll_drop_equip` / `generate_roster_equip` / `make_pet_egg` /
-#      `rune_item` / `rune_value` / `roll_mount_drop` / `make_mount_rein` / `roll_gem_drop` /
-#      `exp_to_next` / `mount_effects` …）—— 缺口登记见 `out/W-B2C3.md`（`drops` 归 C2 落点
-#      `content/drops.py`；其余函数读口属「待函数单元」）
+#   ③ 内容聚合层（只喂 `C.<函数名>` 读口：`pet_exp_bonus` / `pct_str` / `pet_exp_mult` /
+#      `pet_exp_need` / `display` / `roll_drop` / `roll_drop_equip` / `generate_roster_equip` /
+#      `make_pet_egg` / `rune_item` / `rune_value` / `roll_mount_drop` / `make_mount_rein` /
+#      `roll_gem_drop` / `exp_to_next` / `mount_effects` …）
+#      ★ W2b（2026-09-15）：该层 = **包内聚合门面** `content/facade.py::C`（W2a 落点），
+#        逐名解析到包内真源（`content.pets` / `content.drops` / `content.index` /
+#        `content.mounts` / `content.gems` / `content.runes` / `content.stats`，探针实测同一只对象）。
+#        旧注释里的「`game.content` 宿主聚合层 / `drops` 缺口」已消。
 #      取不到 → 抛（拒绝静默空跑）
-#      ★ B2-INTFIX（2026-09-14）：本层句柄**只有一个家** = 包内唯一规范落点
-#        `content/persistence/handles.py::_host_content()`（注入 → `sys.modules` → importlib → 抛）。
-#        本文件原来的私有 `_load_host_mod("content")` / `_host_content()` 已删（同一句柄的
-#        第三份实现，是 C2↔C4 接口错位的成因之一）；`_HostFace.C` 只保留**自己的**注入槽
-#        `content`（宿主壳 wave 2 预留，行为不变）+ 规范落点兜底。
+#      ★ `_HostFace.C` 只保留**自己的**注入槽 `content`（宿主壳 wave 2 预留，行为不变）
+#        + 包内门面兜底。
 #
 # ★ 调用约定兼容（过渡期，宿主侧冻结；B2-C3 与宿主壳必须同时可用）：
 #   宿主壳恒以 `_host()` 作**首参**调用；包内直取调用方（B2 各簇读点）按**真源签名**调
@@ -139,10 +138,12 @@ class _HostFace:
 
     @property
     def C(self):
-        # B2-INTFIX：兜底 = **唯一规范落点** `content/persistence/handles.py::_host_content()`
-        # （惰性 import：content.persistence 在 EAGER 窗口不可取，见该函数 docstring）。
-        from .persistence.handles import _host_content
-        return _slot("content", _host_content)
+        # ★ W2b（2026-09-15）：兜底从 `persistence.handles._host_content()`（宿主聚合层
+        # `game.content`）换成**包内聚合门面** `content/facade.py::C`（W2a 落点）——
+        # 本文件不再回宿主取件。注入槽 `content` 仍优先（宿主壳 wave 2 的注入协议）。
+        # 惰性 import（函数体内）：`content.persistence` 在 EAGER 窗口不可取（见 `_pkgref` docstring）。
+        from .facade import C
+        return _slot("content", lambda: C)
 
     @property
     def player_final_stats(self):

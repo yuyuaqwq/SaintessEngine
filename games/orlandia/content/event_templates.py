@@ -26,11 +26,10 @@
 --------------------------------------------
 1. 宿主模块引用 → 包内取件：
    · `from .. import db` → 包内句柄 `from ._pkgref import DB as db`（B1/B2-C2；正文 `db.xxx(...)` 一字未改）；
-   · `from .. import content as C` → 见 `EventContext._C()`：仍返回**宿主内容聚合层模块**（同名同对象），
-     取件口 = **唯一规范落点** `content/persistence/handles.py:_host_content()`（B2-INTFIX：
-     注入优先 → `sys.modules` → importlib → 抛，绝不静默空跑）—— 宿主侧 `tpl_merchant`
-     （故意留宿主，见上 ★）与冻结对拍用例都经 `ctx._C()` 取
-     `generate_equip` / `TRADER_DEAL_CHANCE` / `QUALITY`，对象与改造前逐字相同。
+   · `from .. import content as C` → 见 `EventContext._C()`：**★ W2b（2026-09-15）起返回包内聚合门面**
+     `content/facade.py::C`（W2a 落点）—— 旧口径是 `content/persistence/handles.py:_host_content()`
+     （宿主聚合层 `game.content`），本文件**不再回宿主取件**。`C.display` / `C.resolve` /
+     `C.roll_blueprint` 逐名解析到包内真源（`content.index` / `content.drops`，探针实测同一只对象）。
 2. 宿主边界函数 → 同名惰性包装 / 包内直取：
    · `from ..content_rules.gameplay import check_player_level_up`（写库 + 写背包，属「接人性」，
      真源 `content/gameplay.py` 归属表 :75 明写**不搬**）→ 模块级同名包装（见下）；
@@ -39,8 +38,8 @@
 3. 命令方法级「取玩家」那种改造：本模块无需（纯逻辑，ctx 由调用方构造）。
 
 ★ 数据读口（I1）：18 个模板正文仍写 `C = ctx._C()` / `C.resolve` / `C.display` / `C.roll_blueprint`
-  （**正文一行未改**）；`C` 由 `_C()` 给的宿主聚合层模块提供 —— `resolve`/`display` 的权威索引在装配期
-  宿主侧（`content/quests_flow.py:_Dom.resolve` 同口径委托宿主），故 `_C()` 不换返回对象。
+  （**正文一行未改**）；`C` 由 `_C()` 给的**包内聚合门面**提供（★ W2b 改口）—— `resolve`/`display`
+  的权威索引现在也住在包内（`content/index.py`），与宿主旧面**同一只对象**。
 ★ W4（2026-09-14）核对：原记「缺口常量」`QUALITY` / `AUCTION_POOL` 已由 B14-3 收口门面
 `content/catalog_b143.py` 提供（门禁逐键逐值+键序 OK）；本文件**只有头注提到、无代码读点** → 未动。
 B14-2（L7 线）已切门面：材料表 → `content/catalog_items.py:MATERIALS`（10 处调用点，门禁逐名
@@ -58,8 +57,8 @@ import random
 # ============================================================
 # ① 宿主取件（B2-C2：原 `_host_*` 宿主替身机械已删）
 #   · `db` → 包内句柄 `content/_pkgref.py:DB`（见下）
-#   · `C`  → 见 `EventContext._C()`：仍返回**宿主内容聚合层模块**（同名同对象；取件口 =
-#           **唯一规范落点** `content/persistence/handles.py:_host_content()`，B2-INTFIX）
+#   · `C`  → 见 `EventContext._C()`：**包内聚合门面** `content/facade.py::C`（★ W2b 改口；
+#           旧口径 = `persistence.handles._host_content()`，本文件已无该消费者）
 # ============================================================
 from ._pkgref import DB as db
 
@@ -145,9 +144,12 @@ class EventContext:
         `TRADER_DEAL_CHANCE` / `QUALITY`。
 
         惰性 import（函数体内）：`content/persistence/__init__` 在 EAGER 窗口要读宿主
-        `C.MAP_BY_ID`，本模块又在 `game/core/__init__` 装配链上 ⇒ 只能运行期取（同 `_pkgref` 口径）。"""
-        from .persistence.handles import _host_content
-        return _host_content()
+        `C.MAP_BY_ID`，本模块又在 `game/core/__init__` 装配链上 ⇒ 只能运行期取（同 `_pkgref` 口径）。
+        ★ W2b（2026-09-15）：返回对象换成**包内聚合门面** `content/facade.py::C`
+        （W2a 落点）——`C.display` / `C.resolve` / `C.roll_blueprint` 逐名解析到包内真源
+        （`content.index` / `content.drops`，探针实测同一只对象），不再回宿主取件。"""
+        from .facade import C
+        return C
 
     def param(self, key, default=None):
         return self.params.get(key, default)

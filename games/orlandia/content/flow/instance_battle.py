@@ -133,19 +133,26 @@ def _resolve_db_update():
 #                         ⇒ 包内等价物 = `content/catalog_quests.MONSTER_MODS` / `content/catalog_space.INSTANCES`
 #                         （宿主 `game.content` 就是这两个包内门面的聚合，**同一对象**）
 #   ② `phase_templates` = 包内 `content/tables.merge_phase_config`（宿主端口用的也是它）
-#   ③ `build_monster`   = **未进包缺口**（`game/core/drops.py`；C2 落点 `content/drops.py`）
-#                         ⇒ 注入槽 → 包内 `content.drops` → 宿主聚合层；都取不到 = None
+#   ③ `build_monster`   = `content/drops.py`（已进包）⇒ 注入槽 → 包内 `content.drops`
+#                         → 包内门面 `content/facade.py::C`；都取不到 = None
 #                         （与宿主端口 `getattr(C, "build_monster", None)` 逐字同宽容度）
 # 缺省从「裸 `boss_script` 模块」升级为本端口 = 与宿主壳注入的 `script_api` **同形同源**，
 # 否则读点改包内直取后 Boss 剧本会退化（阶段模板不合并 / 援军变木桩）。
 # ★ B2-INTFIX（2026-09-14）：宿主聚合层句柄**只有一个家** = 包内唯一规范落点
 #   `content/persistence/handles.py::_host_content()`（注入 → `sys.modules` → importlib → 抛）。
 #   本文件原来的私有 `_host_content()`（第三份同义实现）已删 —— 它是 C2↔C4 接口错位的成因之一。
+# ★ W2b（2026-09-15）：**该兜底改指包内门面** `content/facade.py::C` ——
+#   本文件不再有 `_host_content()` 消费者（`handles._host_content` 的 4 个消费者全部改口）。
 # ============================================================
 
 
 def _resolve_build_monster():
-    """Boss 援军构造器（缺口名）：注入槽 → 包内 `content.drops`（C2 落点）→ 宿主聚合层 → None。"""
+    """Boss 援军构造器：注入槽 → 包内 `content.drops` → **包内聚合门面** `facade.C` → None。
+
+    ★ W2b（2026-09-15）：最后一级兜底从 `persistence.handles._host_content()`（宿主聚合层）
+    换成包内门面 `content/facade.py::C`（`C.build_monster` = `content.drops.build_monster`，
+    探针实测同一只对象），包侧不再回宿主取件。
+    """
     fn = _INJECTED.get("build_monster")
     if fn is not None:
         return fn
@@ -157,11 +164,8 @@ def _resolve_build_monster():
         fn = getattr(_drops, "build_monster", None)
         if fn is not None:
             return fn
-    try:
-        from ..persistence.handles import _host_content   # B2-INTFIX：唯一规范落点（惰性 import）
-        return getattr(_host_content(), "build_monster", None)
-    except Exception:                                             # noqa: BLE001
-        return None
+    from ..facade import C                                        # W2b：包内门面（惰性句柄）
+    return getattr(C, "build_monster", None)
 
 
 class _ScriptApiPort:

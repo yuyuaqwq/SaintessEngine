@@ -7,7 +7,7 @@
 | 真源写法 | 包内替身 | 为什么 |
 |---|---|---|
 | `from .connection import _connect, _lock[, atomic]` | `from .handles import ...` | 连接/锁/事务三个句柄由**注入面**给（宿主工厂注入 db_path） |
-| `from .. import content as C` | `from .handles import C`（`_HostMod("content")`） | 包内禁 import 宿主（I2）；宿主内容面走既有句柄约定 |
+| `from .. import content as C` | `from ..facade import C`（**包内聚合门面**；★ W2a 改指） | 包内禁 import 宿主（I2）；内容面 = 包内门面 |
 | 函数内 `from ..<宿主模块> import <名>` | `_host_attr("…", "…")` / `_host_attrs(...)` | 同位置、调用时解析（与真源「函数内惰性 import」同刻） |
 | `time.time()` | `clock()` | 时钟是四个注入点之一（默认 = stdlib `time.time`，行为零变化） |
 
@@ -18,7 +18,8 @@ import json
 import sqlite3
 import time
 from .handles import _connect, _lock, atomic, clock
-from .handles import C
+# ★ W2a：内容聚合面取自**包内门面**（原 `from .handles import C` → 宿主 `game.content`）
+from ..facade import C
 from .inventory import FISH_TAGS_MAX, _slim, _trim_individuals, _snapshot_one
 from .inventory import record_possessed_conn  # v168 冒险手册：市场/摆摊接手记曾拥有
 

@@ -11,7 +11,9 @@ from __future__ import annotations
 
 from saintess_engine.store import ensure_columns
 
-from .handles import C, flush_log
+from .handles import flush_log
+# ★ W2a：内容聚合面取自**包内门面**（原 `from .handles import C` → 宿主 `game.content`）。
+from ..facade import C  # noqa: F401  （`content.facade` 零 import 依赖，EAGER 窗口安全）
 
 # v135 装配期循环解除：connection 不再顶层依赖 content（data._assembly → core →
 # smith_stock → db → store.connection → content 未完成初始化）。C_MAP_IDS 改为
