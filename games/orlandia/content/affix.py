@@ -3,14 +3,16 @@
 
 真源：游戏仓 `game/core/affix.py`（159 行）**逐字端口**。宿主同名文件已改薄壳。
 
-搬的边界 / 正文改动面（三类取件）
+取件（★ B16-W11 收口 · 2026-09-14：四张表全数归包）
 1. `from ..data import AFFIXES / LEGENDARY_EFFECTS` → **包内域读口**
    `content/data/affixes.json`（76 条）/ `legendary_effects.json`（93 条）—— 与宿主
    `game/data/affixes.py` 两张表**逐条 deep-equal**（B10-L1 已证；本线复核见报告 §3）。
-2. `AFFIX_FALLBACK` / `AFFIX_COUNT` / `AFFIX_POOL_BY_QUALITY` / `SERIES_FIXED_AFFIX`
-   （4 张表无同名域）→ 宿主数据层惰性替身 `_D = _HostMod("data")`，引用改 `_D.<名>`。
-3. `from .stats import equip_stats` → 宿主句柄 `_host_attr("core.stats", "equip_stats")`
-   （`core/stats.py` 归 **B13-L6** 线在搬；落地后切包内直取）。
+2. `AFFIX_POOL_BY_QUALITY` → 包内门面 `content/catalog_b143.py`（`game_config.affixes` 域）。
+   `AFFIX_FALLBACK` / `AFFIX_COUNT`（真源 `game/data/equipment.py:293/280`）·
+   `SERIES_FIXED_AFFIX`（真源 `game/data/affixes.py:1028`）→ 包内门面 `content/catalog_rules.py`
+   （包内**无域** ⇒ 值随代码 dump、非手抄；已登记 `NOT_YET_DOMAINED`）。
+3. `from .stats import equip_stats` → 宿主**函数**句柄 `_host_attr("core.stats", "equip_stats")`
+   （`core/stats.py` 归 **B13-L6** 线在搬；句柄属「函数名」类，按收口纪律不切）。
 
 引擎侧不变：`from saintess_engine.loot import count_for, draw_slots`（抽样形状已收口引擎）。
 
@@ -104,8 +106,10 @@ from .apply import _read_json
 AFFIXES: dict = _read_json("affixes.json", {})
 LEGENDARY_EFFECTS: dict = _read_json("legendary_effects.json", {})
 
-# ---- 宿主数据层惰性替身（4 张表无同名域 → 报告缺口）----
-_D = _HostMod("data")
+# ---- 包内门面（B16-W11：4 张表全数归包）----
+from .catalog_b143 import AFFIX_POOL_BY_QUALITY              # `game_config.affixes` 域
+from .catalog_rules import (AFFIX_FALLBACK, AFFIX_COUNT,     # 包内无域 → dump 字面量
+                            SERIES_FIXED_AFFIX)              # （登记 NOT_YET_DOMAINED）
 
 # 词条触发时机分组（battle 挂点用）
 TRIGGER_TYPES = {"stat", "on_hit", "on_taken", "turn_start", "battle_start", "passive"}
@@ -117,7 +121,7 @@ def _affix_base_value(slot: str, lv: int, stat: str) -> int:
     base = equip_stats(slot, lv, "white")
     if base.get(stat, 0) > 0:
         return base[stat]
-    fb = _D.AFFIX_FALLBACK.get(stat, (2, 1.0))
+    fb = AFFIX_FALLBACK.get(stat, (2, 1.0))
     return int(fb[0] + fb[1] * lv)
 
 # 随机装备属性需求估算：按部位/武器类型 → 主属性
@@ -181,10 +185,10 @@ def roll_affixes(slot: str, lv: int, quality: str) -> list:
     同随机流同结果）。`rng` 传标准库 random 模块本体，随机流对齐旧实现。
     """
     # v184：条数（旧：AFFIX_COUNT 取值 + 列表档位 20% 命中上界）
-    n = count_for(_D.AFFIX_COUNT, quality, extra_chance=0.20, rng=random)
+    n = count_for(AFFIX_COUNT, quality, extra_chance=0.20, rng=random)
     if not n:
         return []
-    pool = _D.AFFIX_POOL_BY_QUALITY.get(quality, _D.AFFIX_POOL_BY_QUALITY["orange"])
+    pool = AFFIX_POOL_BY_QUALITY.get(quality, AFFIX_POOL_BY_QUALITY["orange"])
     # 按部位过滤：武器只出攻击词条，防具只出防御词条（kind 归属）
     want_kind = "attack" if slot == "weapon" else "defense"
     pool = [a for a in pool if AFFIXES[a]["kind"] == want_kind]
@@ -202,7 +206,7 @@ def fixed_affixes(name: str) -> list:
     随机；现蓝 1 随机/紫 2 随机/橙 2-3 随机），总词条数不变，数值强度不受影响。
     数据层 SERIES_FIXED_AFFIX 保持完整（供回退/参考），此处只截断消费端。
     """
-    affs = list(_D.SERIES_FIXED_AFFIX.get(name, []))
+    affs = list(SERIES_FIXED_AFFIX.get(name, []))
     return affs[:1]
 
 

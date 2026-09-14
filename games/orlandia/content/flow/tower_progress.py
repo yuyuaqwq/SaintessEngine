@@ -13,7 +13,7 @@
 | 真源写法 | 包内写法 | 说明 |
 |---|---|---|
 | `from .. import db` + `db.get_event_state` / `db.set_event_state` / `db.get_player` / `db.update_player` | 模块级 `db` = **惰性宿主代理** `_HostDB`（属性访问时才解析宿主模块） | 正文里 `db.xxx(...)` **一行未改**；宿主由 `bind_host(db)` 注入，或按 `sys.modules` 找**已加载**的宿主模块（绝不 import） |
-| `from .. import content as C` + `C.TRIAL_FLOORS` / `C.TRIAL_DAILY_LIMIT` / `C.TRIAL_MAX_FLOOR` | `from . import tower_data as _TD` + `getattr(_TD, …)` | 塔表**逐字**落在包内 `content/flow/tower_data.py`（真源 `game/data/trial_tower.py` 整文件）；三处 `getattr` 的默认值原样保留 |
+| `from .. import content as C` + 宿主聚合层 `TRIAL_FLOORS` / `TRIAL_DAILY_LIMIT` / `TRIAL_MAX_FLOOR` | `from . import tower_data as _TD` + `getattr(_TD, …)` | 塔表**逐字**落在包内 `content/flow/tower_data.py`（真源 `game/data/trial_tower.py` 整文件）；三处 `getattr` 的默认值原样保留 |
 | `C.build_monster(...)`（`game/core/drops.py:389`，**未进包**） | 调用方传参 `build_monster=` | 与 `content/flow/__init__.py` 的 boss_script 同款替身；**必传**（不给默认 → 不许静默落到兜底分支） |
 
 不变式

@@ -15,9 +15,12 @@
 | 函数体内 `from .. import content as C` | **删行**（模块级 `C` = 宿主聚合层代理） | `C.display` / `C.CLASS_NOVICE` / `C.check_achievements` 一字未改 |
 | 函数体内 `from ..content_rules.panel import player_final_stats` | `final_stats = _panel_stats()` | 同一函数对象（注入优先），正文其余不动 |
 
+※ B14-2 L8（2026-09-14）：`C.CLASS_NOVICE` 已切包内读口（`content/tables.py:45`，逐值相等实测 True），
+  正文该行取值口改写为本地名 `CLASS_NOVICE`；`C` 仍有残余（`C.display` / `C.check_achievements`）→ 替身保留。
+
 ⚠️ 缺口（报告同步登记，**不建第二份读口**）：
-  · `C.class_name` 展示走 `C.display` 与 `C.CLASS_NOVICE`——`CLASS_NOVICE` 包内 `content/tables.py`
-    已有同名常量（本机实测两值相等；仍走注入以免双源），`C.display` 包内无等价读口。
+  · `C.display`（展示名索引，宿主 `game/core/index.py`）**无同名域/读口** ⇒ 保留 `C.display`
+    （`CLASS_NOVICE` 原也走注入，B14-2 L8 已切包内读口，不再走注入以免双源）。
   · `C.check_achievements`（成就判定）= 宿主 `game/core/achievements.py`，本线不搬。
   · `db.party_*` / `db.bump_stats` / `db.get_group_players` / `db.update_player` / `db.clear_battle` /
     `db.get_battle` 全部是**存档层原语**（`game/store/social.py`）——接人层铁律 ⇒ 留宿主。
@@ -114,6 +117,9 @@ def _panel_stats():
 # ============================================================
 import re
 
+# B14-2 L8（2026-09-14）：`C.CLASS_NOVICE`（宿主聚合层）→ 包内读口（`content/tables.py:45`，逐值相等）
+from .tables import CLASS_NOVICE      # noqa: E402
+
 # ---- 组队（『组队/队伍』）----
 
 
@@ -204,7 +210,7 @@ def party_view_lines(group_id, members, get_player=None, final_stats=None, displ
     for i, m in enumerate(members, 1):
         p = get_player(group_id, m)
         cls_str = (
-            f" Lv.{p.get('level', '?')} {display('classes', p.get('class_name') or C.CLASS_NOVICE)}"
+            f" Lv.{p.get('level', '?')} {display('classes', p.get('class_name') or CLASS_NOVICE)}"
             if p else ""
         )
         pos_str = f" · 💨速{_spdmap.get(str(m), '?')}" if len(members) > 1 else ""

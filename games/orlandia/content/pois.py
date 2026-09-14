@@ -6,8 +6,8 @@
 | 真源写法 | 包内 | 依据 |
 |---|---|---|
 | `from ..data.pois import SUBAREA_POIS` | 包内域读口 `pois`（`content/data/pois.json`） | 域 = 「房间地址 → 挂载 POI 引用」457 行；对拍逐键相等（含行内引用序），`overnight/w1213_l5_probe.py` P5 |
-| `from ..data.pois import POIS`（函数内） | `_host_attr("data.pois", "POIS")` | **缺口**：POI 类型定义表（83 条）未进包（游戏仓导出器 `derive_pois` 头注已登记「想彻底闭合要另开 `poi_types` 域」）→ 本线不建第二份表 |
-| `from ..data.props import SUBAREA_PROPS`（函数内） | `_host_attr("data.props", "SUBAREA_PROPS")` | **缺口**：`props` 域是**反投影**（每条 prop 列自己的 `mounts`），同一地点多个 prop 的**行内顺序不复原**（实测 `oak_town:oak_town_4` 等键序不同）→ 不满足 I3 字段级可逆，按 SOP 用宿主句柄 |
+| `from ..data.pois import POIS`（函数内） | ★ **已切包内门面**（W12 收口 2026-09-14）`from .catalog_b143 import POIS` —— POI 类型定义表（83 条）= `rules/game_config.json` 的 `pois` 组（真源 `game/data/pois.py:9`）；`b14_catalog_gate.py --names POIS` → OK |
+| `from ..data.props import SUBAREA_PROPS`（函数内） | ★ **已切包内门面**（B16-W11b 收口 2026-09-14）`from .catalog_rules import SUBAREA_PROPS` —— `props` 域是**反投影**（每条 prop 列自己的 `mounts`），同一地点多 prop 的**行内序不复原**（实测 `oak_town:oak_town_4` 键序不同）⇒ 门面按真源原序 dump（315 条，逐键/逐序对拍相等；登记 `NOT_YET_DOMAINED`） |
 
 域行形状与归一
 --------------
@@ -117,7 +117,7 @@ def subarea_props(map_id: str, subarea_id: str) -> list:
     元素为 prop id 字符串，或 (prop_id, 专属名) 元组——元组表示该处
     使用专属名显示/交互（同一 prop 在不同子区域可有不同名字）。
     """
-    SUBAREA_PROPS = _host_attr("data.props", "SUBAREA_PROPS")
+    from .catalog_rules import SUBAREA_PROPS   # ★ B16-W11b：包内门面（props 域是反投影、行内序不可逆）
     key = f"{map_id}:{subarea_id}"
     return SUBAREA_PROPS.get(key, [])
 
@@ -143,5 +143,5 @@ def roll_poi(group_id: str, qq_id: str, map_id: str, subarea_id: str, chance: fl
     if random.random() >= chance:
         return None
     poi_id = random.choice(ids)
-    POIS = _host_attr("data.pois", "POIS")
+    from .catalog_b143 import POIS   # ★ W12 收口：真源 `from ..data.pois import POIS`（函数内）
     return poi_id, POIS.get(poi_id, {})

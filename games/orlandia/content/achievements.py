@@ -10,8 +10,8 @@
   · `from .achievement_conds import COND_CHECKS as _COND_CHECKS` + 3 个 `@_register_cond`
     （blueprints_learned / quests_done / chests_opened）在**本模块 import 期**执行 —— 与真源
     「import achievements 即注册」逐字等价（宿主薄壳 import 包内本模块，注册随之发生）；
-  · `C.ACHIEVEMENTS` 的**源列表序**决定 `check_achievements` 的解锁顺序与
-    `achievement_titles` 的称号序 → 见下缺口，未切包内域。
+  · `ACHIEVEMENTS`（包内门面 `content/catalog_quests.py`）的**源列表序**决定
+    `check_achievements` 的解锁顺序与 `achievement_titles` 的称号序。
 
 正文改动面（只有两类，替换表见 `overnight/w1213_b13l4_port.py`，每条断言出现次数）
 --------------------------------------------------------------------------------------
@@ -22,16 +22,12 @@
    `_host_attr("core.stat_bonus", …)`（stat_bonus 属 B13-L6 线，未落地 → 走句柄）；
    `from ..reward import grant_items_batch` → `_host_attr("reward", …)`；
    `from ..log_setup import LOG` → `_host_attr("log_setup", "LOG")`（**只改这一处**）。
-2. 读点切包内域读口（I1）：`C.ITEMS.get(_ik)` → 包内 `items` 域读口 `ITEMS`（实测 900 键
-   与 `name` 字段全等）。
+2. 读点切包内域读口/门面（I1 + B14-2）：`C.ITEMS.get(_ik)` → 包内 `items` 域读口 `ITEMS`
+   （实测 900 键与 `name` 字段全等）；B14-2 再把三名数据名切包内门面 ——
+   `catalog_quests.ACHIEVEMENTS`（源列表序）· `catalog_space.MAP_BY_ID` ·
+   `catalog_items.MATERIALS`（门禁逐名 OK · 不等 0，含键序）。
 
 ⚠️ 缺口（报告已登记，B14 统一裁）
-  · `C.ACHIEVEMENTS`（3 处）：包内 `achievements` 域是 **dict（外层键字典序）**，宿主
-    `C.ACHIEVEMENTS` 是 **list（源列表序）** —— 实测 119 条**逐条深等、集合相等，但顺序不同**
-    （域无 `seq`/顺序字段）⇒ 切过去会改「解锁顺序 / 称号顺序」→ 保留宿主句柄（`content/misc_cmds.py`
-    的成就面板已登记同款缺口）；
-  · `C.MAP_BY_ID`（`_monster_total`）：无同名域（maps 域的派生索引），且 maps 域是投影 → 保留；
-  · `C.MATERIALS`（`check_achievements` 奖励文案）：无同名域 → 保留；
   · `C.display("monsters", …)`（`_bestiary_kills`）：宿主 `C.display` 走 `_INDEXES["monsters"]`
     （354 条，能把怪物 id 翻成中文名），包内 `content/tables.display` 对 monsters **原样返回**
     → 不同义，保留宿主句柄（实测见报告步骤 A·5）。
@@ -73,7 +69,7 @@ import os as _os
 # ============================================================
 # 包内域读口（I1）：`items` 域（真源 `C.ITEMS`）
 # 实测（探针 `overnight/w1213_b13l4_probe.py`）：900 键 / 键集合与 `name` 字段**全等** →
-# 正文里 `C.ITEMS.get(_ik)` 一处改读本读口；`C.MATERIALS`（无同名域）仍走宿主句柄（缺口登记）。
+# 正文里 `C.ITEMS.get(_ik)` 一处读本读口；B14-2 起材料 / 成就 / 地图索引三名数据名也切门面。
 # ============================================================
 _HERE = _os.path.dirname(_os.path.abspath(__file__))
 
@@ -88,6 +84,11 @@ def _read_domain(name: str) -> dict:
 
 
 ITEMS = _read_domain("items")                   # ← 真源 `C.ITEMS`
+
+# B14-2（L7 线）：数据名读点切包内门面 —— 原 `C.<名>` 直取换成包内门面同名绑定
+from .catalog_items import MATERIALS            # 真源 `C.MATERIALS`
+from .catalog_quests import ACHIEVEMENTS        # 真源 `C.ACHIEVEMENTS`（源列表序）
+from .catalog_space import MAP_BY_ID            # 真源 `C.MAP_BY_ID`
 
 
 # ============================================================
@@ -222,7 +223,7 @@ def _monster_total() -> int:
     """地图怪物去重总数(图鉴全解锁判定)"""
     try:
         ids = set()
-        for mid, m in C.MAP_BY_ID.items():
+        for mid, m in MAP_BY_ID.items():
             for mon in (m.get("monsters") or []):
                 if isinstance(mon, dict):
                     ids.add(mon.get("id") or mon.get("name"))
@@ -259,7 +260,7 @@ def achievement_titles(qq_id) -> list:
         unlocked = {r["ach_key"] for r in rows}
     except Exception:
         return []
-    return [a["title"] for a in C.ACHIEVEMENTS if a["id"] in unlocked and a.get("title")]
+    return [a["title"] for a in ACHIEVEMENTS if a["id"] in unlocked and a.get("title")]
 
 
 def achievement_points(qq_id) -> int:
@@ -273,7 +274,7 @@ def achievement_points(qq_id) -> int:
         unlocked = {r["ach_key"] for r in rows}
     except Exception:
         return 0
-    return sum(2 if a.get("cat") == "隐藏" else 1 for a in C.ACHIEVEMENTS if a["id"] in unlocked)
+    return sum(2 if a.get("cat") == "隐藏" else 1 for a in ACHIEVEMENTS if a["id"] in unlocked)
 
 
 def check_achievements(group_id, qq_id, player=None, extra=None) -> list:
@@ -307,7 +308,7 @@ def check_achievements(group_id, qq_id, player=None, extra=None) -> list:
             inst_ids.add(extra["inst_id"])
         extra["inst_ids"] = inst_ids
         new_ones = []
-        for a in C.ACHIEVEMENTS:
+        for a in ACHIEVEMENTS:
             if a["id"] in unlocked:
                 continue
             if cond_met(player, stats, profs, extra, a["cond"], group_id):
@@ -328,7 +329,7 @@ def check_achievements(group_id, qq_id, player=None, extra=None) -> list:
                         for _ik, _ic in rw["items"].items():
                             _nm = _ik
                             try:
-                                _nm = (ITEMS.get(_ik) or C.MATERIALS.get(_ik) or {}).get("name", _ik)
+                                _nm = (ITEMS.get(_ik) or MATERIALS.get(_ik) or {}).get("name", _ik)
                             except Exception:
                                 pass
                             parts.append(f"{_nm}×{_ic}")
@@ -364,9 +365,9 @@ def claim_achievement_rewards(group_id, qq_id) -> tuple:
         # 过滤出真正带奖励的待领成就
         claimable = []
         for r in pending:
-            a = next((x for x in C.ACHIEVEMENTS if x["id"] == r["ach_key"]), None)
+            a = next((x for x in ACHIEVEMENTS if x["id"] == r["ach_key"]), None)
             # v105.xx P0 修复：原 `if a and X or Y` 优先级错误——a=None（如 inst_clear_* 记录
-            # 不在 C.ACHIEVEMENTS 中）时 `or` 右侧仍求值 a.get() → AttributeError 崩溃。
+            # 不在 ACHIEVEMENTS 中）时 `or` 右侧仍求值 a.get() → AttributeError 崩溃。
             # 显式括号：a 为 None 时短路，不进入。
             if a and (((a.get("reward") or {}).get("exp", 0)) or ((a.get("reward") or {}).get("gold", 0))
                       or ((a.get("reward") or {}).get("items"))):

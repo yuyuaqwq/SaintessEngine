@@ -11,38 +11,37 @@
 | 真源写法 | 包内写法 | 说明 |
 |---|---|---|
 | 函数体内 `from .. import db` + `db.xxx(...)` | 模块级 `db` = **惰性宿主代理** `_HostDB` | 正文里 `db.xxx(...)` **一行未改**；宿主由 `bind_host(db)` 注入，或按 `sys.modules` 找**已加载**的宿主模块（绝不 import，防在包侧另起一份宿主模块树） |
-| 函数体内 `from .. import content as C` + `C.XXX` | 模块级 `C = _Dom()`（读**包内域 JSON**；未进包的符号 `__getattr__` 转注入的宿主聚合层） | 逐符号归属见下表 |
+| 函数体内 `from .. import content as C` + `C.<名>` | 模块级 `C = _Dom()`（W6 后**只剩函数名句柄 `resolve`**：`ALL_WILD` → 包内派生式读口 `content/wild.py`；`FACTIONS` / `AREA_FACTION` → 门面 `catalog_b143.py`；其余数据名走 `catalog_*.py`） | 逐符号归属见下表 |
 | 函数体内 `from ..content_rules.gameplay import check_player_level_up` | 模块级同名包装 `check_player_level_up(...)` | 升级结算写库 = 宿主；正文调用点不动 |
 | 函数体内 `from ..core.stat_bonus import stat_bonus` | 模块级同名包装 `stat_bonus(...)` | 外部增幅聚合 = 宿主（读称号/成就/收藏册） |
 | 函数体内 `from ..reward import grant_reward` | 模块级同名包装 `grant_reward(*a, **k)` | 发放实现 = 宿主 `game/reward.py` |
 | 函数体内 `from .quests import bump_daily_progress as _bump_daily_progress` | 模块级同名包装 `_bump_daily_progress(...)` | 每日委托计数 = 宿主 `game/services/quests.py`（**同级服务，本批未搬**） |
 | 函数体内 `from ..services.quests import DAILY_META_KEYS, settle_daily_quest` | `DAILY_META_KEYS` = `_HostAttr("services.quests", …)`（支持 `in`）；`settle_daily_quest` = 同名包装 | 同上；`DAILY_META_KEYS` 只被 `if dkey in DAILY_META_KEYS` 用 ⇒ 用带 `__contains__` 的惰性对象，正文那一行不动 |
 
-★ 逐符号归属（`C.XXX` → 包内域 / 宿主）
---------------------------------------
-| 符号 | 包内来源 | 实测口径 |
+★ 逐符号归属（B14-2：数据名已切到**包内门面**；残余 = 缺口名，逐条见 `overnight/W-B14-2-L4.md` §缺口）
+----------------------------------------------------------------------------------
+| 符号 | 取值来源（B14-2 切门面后） | 实测口径 |
 |---|---|---|
-| `C.MAIN_QUESTS`（70） | `content/data/quests.json` 的 `source=="main"` | 全 70 条逐字段 == 真源置 `source`；**消费端全是按 id 取**（`next(... id == X)`）⇒ 无顺序语义，dict 值序即可 |
-| `C.SIDE_QUESTS`（144，**有序**） | 同域 `source=="side"` + 本模块 `SIDE_QUEST_ORDER` 还原**源列表插入序** | `available_quest_list` / `side_available_list` / `offer_side_quests` 的输出行序 = 遍历序 ⇒ 序不能丢（见下） |
-| `C.NPCS`（362） | `npcs.json` 的 `source=="town"` | 键集/逐字段与真源相等（去注入的 `source` 后），与 `content/talk_actions.py:_Dom` 同口径 |
-| `C.ALL_WILD`（63） | `npcs.json` 的 `source=="wild"` ∪ (`source=="hidden"` 且无 `inst_stage`) | 真源 `core/wild.py:26 ALL_WILD = {**WILD_NPCS, **HIDDEN_NPCS}` 在 `core.wild` import 期求值（**不含**装配期后并入的 6 条层内 NPC）—— 实测 63 条 |
-| `C.DIALOGUES`（39） | `dialogues.json` | 逐键逐值 == 真源 |
-| `C.RACES`（6） | `races.json` | 同上 |
-| `C.CLASSES`（8） | `classes.json` | **只用到 `name` / `tier_levels` 两个字段**（实测两者与真源逐条相等；`tutor` / `evolve_branches` 另有出处、本模块不读 ⇒ 包内那份的差异不构成本模块的行为差异） |
-| `C.MAP_BY_ID` | `worlds.json` | **只用到 `.get(...).get("name")` / `.get("area")`**（对象在 `obj_text` / `quest_reputation` / `_rule_fire` 的 `cur_map` 参数位）——消费者只读 `id`/`name`/`area`/`type`，`worlds` 域全有 |
-| `C.TITLES` | **宿主**（`game/data/titles.py`）—— 缺口 | 称号名册未进包（`titles` 域是别的线声明的**条件子集**，不是名册全量）⇒ 经注入的宿主聚合层读 |
-| `C.FACTIONS` / `C.AREA_FACTION` | **宿主**（`game/data/factions.py`）—— 缺口 | 按 B9「常量模块归 L7」铁律本线不建域 |
-| `C.resolve("materials", …)` | **宿主** | 材料名→id 的**权威索引在宿主**（`materials`(598) ⊊ `items`(900)，且 `build_index` 是装配期产物）——包内 `content/tables.py:resolve` 对 `materials` 是**原样返回**，直接改用它会静默错（`db.count_item` 拿到中文名）⇒ 必须走宿主 |
+| `_cq.MAIN_QUESTS`（70） | 门面 `content/catalog_quests.py`（`quests` 域 `source=="main"`） | 与宿主聚合层同名表 **深比较相等**（含键序，`overnight/b14_catalog_gate.py`）；**消费端全是按 id 取**（`next(... id == X)`）⇒ 无顺序语义 |
+| `_cq.SIDE_QUESTS`（144，**有序**） | 门面 `catalog_quests`（+ 门面 `_ORDER_*` 序表还原**源列表插入序**） | 同上门禁逐条相等；`available_quest_list` / `side_available_list` / `offer_side_quests` 的输出行序 = 遍历序 ⇒ 序不能丢（见下） |
+| `_cq.NPCS`（362） | 门面 `catalog_quests`（域 `source=="town"`，去注入 `source`） | 门禁逐条相等；本模块只读 `name` / `map` |
+| `ALL_WILD`（63） | 包内**派生式读口** `content/wild.py`（PEP 562 `__getattr__("ALL_WILD")` = `{**WILD_NPCS, **HIDDEN_NPCS[无 inst_stage]}`，首次取值后缓存） | W6 实测与宿主 `C.ALL_WILD` **键集/键序/逐条值深等**（63 条，`overnight/w6_allwild_check.py`）；本模块只 `.get(id)` 后读 `name` / `map` ⇒ 顺序无消费语义（该读口内部两张表仍走宿主句柄，那边已登记缺口：npcs 域待补真源顺序字段） |
+| `_cq.DIALOGUES`（39） | 门面 `catalog_quests`（`dialogues` 域全量） | 门禁逐键逐值相等 |
+| `_cc.RACES`（6） | 门面 `content/catalog_core.py`（`races.json`） | 门禁逐条相等 |
+| `_cc.CLASSES`（8） | 门面 `catalog_core`（`classes.json`） | 门禁相等；**只用到 `name` / `tier_levels` 两个字段** |
+| `_cs.MAP_BY_ID`（121） | 门面 `content/catalog_space.py`（`worlds` 域） | 门禁相等；**只用到 `.get(...).get("name")` / `.get("area")` / `.get("type")`**（`obj_text` / `quest_reputation` / `_rule_fire` 的 `cur_map` 参数位） |
+| `_cq.TITLES`（68） | 门面 `catalog_quests`（`titles` 域全量） | B14-2 前走宿主 `game/data/titles.py`；门禁实测门面 == 宿主（含键序），消费是「按 id / name 扫表」⇒ 顺序无语义 |
+| `FACTIONS` / `AREA_FACTION` | 门面 `content/catalog_b143.py`（B14-3 新建域 `factions`；外层键序由 `_ORDER_FACTIONS` / `_ORDER_AREA_FACTION` 还原） | 门禁逐条相等（含键序）：`b14_catalog_gate.py --names FACTIONS,AREA_FACTION` → 不等 0 |
+| `C.resolve("materials", …)` | **函数名句柄**（宿主 `game/core/index.py:47`，W6 后 `C` 上只剩这一项） | 材料名→id 的**权威索引在宿主**（`materials`(598) ⊊ `items`(900)，且 `build_index` 是装配期产物）——包内 `content/tables.py:resolve` 对 `materials` 是**原样返回**，直接改用它会静默错（`db.count_item` 拿到中文名）⇒ 必须走宿主 |
 
 ★ 顺序声明 `SIDE_QUEST_ORDER` —— 为什么必须有
 --------------------------------------------
 域文件外层键是**字典序**（导出契约 `sort_table`：幂等优先），而真源 `SIDE_QUESTS` 是有序 list：
 `available_quest_list`（『接取』无参列表）/ `side_available_list`（对话菜单序号）/ `offer_side_quests`
 （逐条接取/拒绝提示）**都按遍历序产出玩家可见行**。少一份顺序声明 → 行序变（逐字节不等）。
-导出域**没有** `seq`/`order` 字段可还原（`derive_quests` 只注入 `source`）⇒ 本模块显式声明真源插入序
-（与 `content/event_menu.py:MAP_ORDER` / `content/tables.py:JOB_ORDER` 同一手法），并**带集合守卫**：
-域内多一条/少一条就 `raise`（防「加了支线忘了改这里」= 静默改序）。顺序字面量由
-`overnight/b9_l5_quests_travel_snap.py --dump-side-order` 从真源生成（本文件不手抄）。
+B14-2：序表**单点移入门面** `content/catalog_quests.py`（那里带集合守卫：域多/少一条即 `raise`）。
+本模块的 `SIDE_QUEST_ORDER` 因此改为由门面 `SIDE_QUESTS` 派生的**只读视图**——宿主薄壳
+`game/services/quests_flow.py:66` 仍在 re-export 这个名字，故名字必须保留；**别再往这里加 id**。
 
 用法::
 
@@ -52,74 +51,36 @@
 """
 from __future__ import annotations
 
-import json
-import os
 import sys
 
-_HERE = os.path.dirname(os.path.abspath(__file__))          # <pkg>/content
-
-
-def _read_domain(domain: str, sub: str = "data", default=None):
-    """读包内 `content/<sub>/<domain>.json`（缺文件 / 坏 JSON → default，不抛；与包内口径同）。"""
-    try:
-        with open(os.path.join(_HERE, sub, "%s.json" % domain), encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:                                        # noqa: BLE001
-        return {} if default is None else default
+# ★ B14-2（2026-09-14）：数据名改从**包内门面**直取 —— 宿主 `game/data` 删掉后本模块仍能活；
+#   门面同包、只读包内域、不 import 宿主（`game.*`）。
+# ★ W6（2026-09-14）：残余数据读点再切门面 —— `ALL_WILD` → 包内派生式读口 `content/wild.py`
+#   （实测与宿主 `C.ALL_WILD` 63 条**键集/键序/逐条值深等**）；`FACTIONS` / `AREA_FACTION` →
+#   门面 `content/catalog_b143.py`（B14-3 新建域 `factions`，门禁逐条相等）。切完 `C` 上
+#   只剩**函数名句柄** `resolve`（宿主装配期索引，函数名不切）→ 见 docstring 逐符号归属表。
+from . import catalog_b143 as _b143        # FACTIONS / AREA_FACTION
+from . import catalog_core as _cc          # CLASSES / RACES
+from . import catalog_quests as _cq        # MAIN_QUESTS / SIDE_QUESTS / NPCS / DIALOGUES / TITLES
+from . import catalog_space as _cs         # MAP_BY_ID
+from . import wild as _w                   # ALL_WILD（派生式读口）
 
 
 # ============================================================
 # 顺序声明（真源 `game/data/quests.py:939 SIDE_QUESTS` 的列表插入序）
+# ------------------------------------------------------------
+# B14-2：真源序表**单点移入门面** `content/catalog_quests.py`（门面里带集合守卫：
+# 域多/少一条即 `raise`，且已与宿主聚合层同名表逐条对拍相等）。
+# 本名保留只为宿主薄壳 `game/services/quests_flow.py:66` 的 re-export（名单与顺序同门面）。
 # ============================================================
-SIDE_QUEST_ORDER = """s1 s2 s3 s4 s5 s6
-s7 s8 s9 s10 s11 s12
-s13 s14 s15 s16 s17 s18
-s19 s20 s21 s22 s23 s24
-s25 s26 s27 s28 s29 s30
-s31 s32 s33 s34 s36 s37
-s38 s39 s40 s41 s42 s43
-s44 s45 s35 s46 s47 s48
-s49 s50 s51 s52 s53 s54
-s55 s56 s57 s58 s59 s60
-s61 s62 s63 s64 s65 s66
-s67 s68 s69 s70 s71 s72
-s73 s74 s75 s76 s77 s78
-s79 s80 s81 s82 s83 s84
-s85 s86 s87 s88 s89 s107
-s108 s109 s110 s111 s112 s113
-s114 s115 s116 s117 s118 s119
-s120 s121 s90 s91 s92 s93
-s94 s95 s96 s97 s98 s99
-s100 s101 s102 s103 s104 s105
-s106 hq5_1 hq5_2 hq5_3 hq6_1 hq6_2
-hq6_3 hq7_1 hq7_2 hq7_3 hq8_1 hq8_2
-hq8_3 hq8_4 s_hidden_ember s_hidden_library s_caravan_escort s_bandit_clear
-s_lighthouse s_tunnel_repair s_dragon_bone s_dragon_blood s_board_cat s_tide_shells""".split()
-
-
-def _side_quests(raw: dict) -> list:
-    """按声明的真源序还原支线表；集合不一致 → **raise**（绝不静默改序）。"""
-    rows = {k: v for k, v in (raw or {}).items()
-            if isinstance(v, dict) and v.get("source") == "side"}
-    have = set(SIDE_QUEST_ORDER)
-    if have != set(rows):
-        raise ValueError(
-            "quests_flow：SIDE_QUEST_ORDER 与 quests 域的 side 条目不一致"
-            "（域 %d 条 / 声明 %d 条；域多出 %s；声明多出 %s）"
-            "—— 请用 overnight/b9_l5_quests_travel_snap.py --dump-side-order 重生成"
-            % (len(rows), len(SIDE_QUEST_ORDER), sorted(set(rows) - have)[:5],
-               sorted(have - set(rows))[:5]))
-    if len(SIDE_QUEST_ORDER) != len(have):
-        raise ValueError("quests_flow：SIDE_QUEST_ORDER 里有重复 id（%d 条 vs 集合 %d）"
-                         % (len(SIDE_QUEST_ORDER), len(have)))
-    return [rows[k] for k in SIDE_QUEST_ORDER]
+SIDE_QUEST_ORDER = [q["id"] for q in _cq.SIDE_QUESTS]
 
 
 # ============================================================
 # 宿主替身口（存储层 / 内容聚合层 / 同级服务 / 发放与结算）
 # ============================================================
 _HOST_DB = None            # 宿主存储层（真源 `from .. import db`）
-_HOST_C = None             # 宿主内容聚合层（真源 `from .. import content as C`）—— 只喂**未进包**的符号
+_HOST_C = None             # 宿主内容聚合层（真源 `from .. import content as C`）—— W6 后只喂 `resolve`（函数名句柄；ALL_WILD / FACTIONS / AREA_FACTION 均已有包内读口）
 _HOST_LEVEL_UP = None      # `game.content_rules.gameplay.check_player_level_up`
 _HOST_STAT_BONUS = None    # `game.core.stat_bonus.stat_bonus`
 _HOST_GRANT = None         # `game.reward.grant_reward`
@@ -130,8 +91,7 @@ _HOST_QUESTS_SVC = None    # `game.services.quests`（每日委托：bump_daily_
 _HOST_PKG = "data.plugins.dragonfall.game"
 _HOST_PKG_FALLBACK = "game"
 
-# `C` 上**未进包**的符号 → 转宿主聚合层（其余符号本模块自己从包内域文件给）
-_HOST_FALLBACK = ("TITLES", "FACTIONS", "AREA_FACTION")
+# `C` 上**未进包**的符号 → 转宿主聚合层：W6 后只剩函数名 `resolve`（见下面 `_Dom`）
 
 
 def bind_host(db=None, c=None, level_up=None, stat_bonus_fn=None,
@@ -240,36 +200,17 @@ def settle_daily_quest(*args, **kwargs):
 
 
 # ============================================================
-# 域门面（替身：宿主薄聚合层 `C`）—— 包内域直读，未进包的符号下沉宿主
+# 宿主句柄门面（替身 `C`）—— W6 后只剩**函数名** `resolve`；数据名已切 `catalog_*.py` /
+# `content/wild.py`（函数名句柄不切，逐符号归属见模块 docstring）
 # ============================================================
 class _Dom:
-    """`C.MAIN_QUESTS` / `C.SIDE_QUESTS` / `C.NPCS` / `C.ALL_WILD` / `C.DIALOGUES` /
-    `C.CLASSES` / `C.RACES` / `C.MAP_BY_ID` 从**包内域**给；`TITLES` / `FACTIONS` /
-    `AREA_FACTION` / `resolve` 转宿主聚合层（见模块 docstring 的逐符号归属表）。"""
+    """`C` 上的宿主替身 —— W6 收窄到**只剩 `resolve`**（函数名）。
 
-    def __init__(self):
-        raw_q = _read_domain("quests")
-        raw_n = _read_domain("npcs")
-        self.MAP_BY_ID = _read_domain("worlds")
-        self.DIALOGUES = _read_domain("dialogues")
-        self.CLASSES = _read_domain("classes")
-        self.RACES = _read_domain("races")
-        # C.NPCS = 城镇/据点 NPC（真源 npcs 域 source=="town"，362 条）
-        self.NPCS = {k: v for k, v in raw_n.items() if v.get("source") == "town"}
-        # C.ALL_WILD = 野外 ∪ 隐藏（**不含**装配期并入的 6 条层内 NPC —— 见 docstring）
-        self.ALL_WILD = {k: v for k, v in raw_n.items()
-                         if v.get("source") == "wild"
-                         or (v.get("source") == "hidden" and not v.get("inst_stage"))}
-        # C.MAIN_QUESTS：消费端全部按 id 取 ⇒ 无顺序语义
-        self.MAIN_QUESTS = [v for v in raw_q.values() if v.get("source") == "main"]
-        # C.SIDE_QUESTS：**有序**（顺序声明 + 集合守卫）
-        self.SIDE_QUESTS = _side_quests(raw_q)
-
-    def __getattr__(self, name):
-        """未进包的符号 → 宿主聚合层（`__getattr__` 只在常规找不到时才走）。"""
-        if name in _HOST_FALLBACK:
-            return getattr(_host_c(), name)
-        raise AttributeError(name)
+    `ALL_WILD` → 派生式读口 `content/wild.py`；`FACTIONS` / `AREA_FACTION` → 门面
+    `content/catalog_b143.py`；其余数据名走门面 `catalog_quests` / `catalog_core` /
+    `catalog_space`。`resolve` 的权威索引（`materials` 598 条）是宿主**装配期**产物，
+    包内 `content/tables.py:resolve` 对它原样返回（会静默错）⇒ 必须委托宿主。
+    """
 
     @staticmethod
     def resolve(table_name: str, name_or_id: str):
@@ -287,15 +228,15 @@ def obj_text(obj):
         # v125.1 P2：s64 等 collect_count 无 count 的复合目标不再 KeyError
         return f"收集 {obj['collect']} ×{obj.get('collect_count') or obj.get('count', 1)}"
     if obj.get("explore"):
-        return f"前往 {C.MAP_BY_ID.get(obj['explore'], {}).get('name', '？')}"
+        return f"前往 {_cs.MAP_BY_ID.get(obj['explore'], {}).get('name', '？')}"
     if obj.get("find"):
         # v97.1 告示委托：在指定地图探索概率找到目标
-        return f"在 {C.MAP_BY_ID.get(obj.get('map', ''), {}).get('name', '？')} 寻找 {obj['find']}(探索有概率遇到)"
+        return f"在 {_cs.MAP_BY_ID.get(obj.get('map', ''), {}).get('name', '？')} 寻找 {obj['find']}(探索有概率遇到)"
     if obj.get("use"):
         # v124 use 目标：使用指定物品达成
         return f"使用 {obj['use']}"
     if obj.get("talk"):
-        npc = C.NPCS.get(obj["talk"], {})
+        npc = _cq.NPCS.get(obj["talk"], {})
         return f"与 {npc.get('name', '？')} 交谈"
     return "？"
 
@@ -343,17 +284,17 @@ def available_quest_list(player, quests, mq) -> list:
     """当前地图可接取任务列表（v123d 抽出，供『接取』无参渲染与『接取 <序号>』映射共用）。
 
     返回 [{"name": 任务名, "line": 渲染行（不含 📜 前缀）}, ...]——主线 pending 在前，
-    支线按 C.SIDE_QUESTS 顺序；告示委托（board）不在此列（须去告示板指名接取）。
+    支线按 _cq.SIDE_QUESTS 顺序；告示委托（board）不在此列（须去告示板指名接取）。
     """
     available = []
     if mq and quests.get("main_status") == "pending":
-        giver = C.NPCS.get(mq["giver"]) or C.ALL_WILD.get(mq["giver"]) or {}
+        giver = _cq.NPCS.get(mq["giver"]) or _w.ALL_WILD.get(mq["giver"]) or {}
         if giver.get("map") == player["cur_map"]:
             available.append({
                 "name": mq["name"],
                 "line": f"主线『{mq['name']}』（{giver.get('name', '？')}发布）",
             })
-    for sq in C.SIDE_QUESTS:
+    for sq in _cq.SIDE_QUESTS:
         if sq["id"] in (quests.get("side") or {}):
             continue
         # v124 链式支线：unlock 前置未满足不出现在可接列表
@@ -366,7 +307,7 @@ def available_quest_list(player, quests, mq) -> list:
         # 列入普通列表会误导玩家（点名接取被 world.py 告示板拦截逻辑挡下）
         if sq.get("board"):
             continue
-        npc = C.NPCS.get(sq["giver"]) or C.ALL_WILD.get(sq["giver"]) or {}
+        npc = _cq.NPCS.get(sq["giver"]) or _w.ALL_WILD.get(sq["giver"]) or {}
         if npc.get("map") == player["cur_map"]:
             # v104 M19：接取列表显示支线等级门槛
             _lv = f"Lv.{sq['min_level']}+ " if sq.get("min_level") else ""
@@ -387,7 +328,7 @@ def update_explore_quests(group_id, qq_id, map_id):
     # 主线 explore（v105：仅已接取(active)时触发——pending 未接取到达目标图不得自动完成+发奖）
     main_id = quests.get("main_quest")
     if main_id and quests.get("main_status") == "active":
-        mq = next((q for q in C.MAIN_QUESTS if q["id"] == main_id), None)
+        mq = next((q for q in _cq.MAIN_QUESTS if q["id"] == main_id), None)
         if mq and mq["objective"].get("explore") == map_id:
             # v124.3：奖励统一走 _grant_quest_rewards（exp/gold/升级 + reward_item 全格式
             # + reward_pet/reward_mount/unlock_class）——此前 explore 自动完成只有
@@ -409,7 +350,7 @@ def update_explore_quests(group_id, qq_id, map_id):
             if _rep:
                 lines.append(f"  {_rep}")
             if mq["next"]:
-                nq = next((q for q in C.MAIN_QUESTS if q["id"] == mq["next"]), None)
+                nq = next((q for q in _cq.MAIN_QUESTS if q["id"] == mq["next"]), None)
                 if nq:
                     lines.append(f"📜 新主线：『{nq['name']}』{nq['desc']}")
             else:
@@ -418,11 +359,11 @@ def update_explore_quests(group_id, qq_id, map_id):
     side = dict(quests.get("side", {}))
     for sid, sq in list(side.items()):
         if sq.get("status") == "active":
-            sqd = next((q for q in C.SIDE_QUESTS if q["id"] == sid), None)
+            sqd = next((q for q in _cq.SIDE_QUESTS if q["id"] == sid), None)
             if sqd and sqd["objective"].get("explore") == map_id:
                 sq["status"] = "ready"
                 changed = True
-                _g = C.NPCS.get(sqd["giver"]) or C.ALL_WILD.get(sqd["giver"]) or {}
+                _g = _cq.NPCS.get(sqd["giver"]) or _w.ALL_WILD.get(sqd["giver"]) or {}
                 lines.append(f"📜 支线『{sqd['name']}』目标达成！回去找 {_g.get('name', '？')} {deliver_hint(sqd['giver'])}吧～")
     if changed:
         quests["side"] = side
@@ -438,17 +379,17 @@ def take_main_quest(group_id, qq_id, npc_id, npc):
     if not main_id:
         lines.append("🎊 主线任务已全部完成，你已是奥兰迪亚的传说！")
         return lines
-    mq = next((q for q in C.MAIN_QUESTS if q["id"] == main_id), None)
+    mq = next((q for q in _cq.MAIN_QUESTS if q["id"] == main_id), None)
     # 存档容错：main_quest 指向已不存在的任务（旧存档/主线数据变更）→ 重置回主线起点
     if not mq and main_id:
         quests["main_quest"] = "q1_1"
         quests["main_status"] = "pending"
         quests["main_progress"] = {}
         main_id = "q1_1"
-        mq = next((q for q in C.MAIN_QUESTS if q["id"] == main_id), None)
+        mq = next((q for q in _cq.MAIN_QUESTS if q["id"] == main_id), None)
     if not mq or mq["giver"] != npc_id:
         # 不是这个 NPC 的任务
-        need_npc = C.NPCS.get(mq["giver"], {}).get("name", "？") if mq else "？"
+        need_npc = _cq.NPCS.get(mq["giver"], {}).get("name", "？") if mq else "？"
         lines.append(f"【{npc['name']}】我现在没有任务交给你。镇长/各地首领或许有安排……")
         if mq:
             lines.append(f"📜 当前主线『{mq['name']}』由 {need_npc} 发布。")
@@ -535,10 +476,10 @@ def take_main_quest(group_id, qq_id, npc_id, npc):
         if rep_line:
             lines.append(f"  {rep_line}")
         if mq["next"]:
-            nq = next((q for q in C.MAIN_QUESTS if q["id"] == mq["next"]), None)
+            nq = next((q for q in _cq.MAIN_QUESTS if q["id"] == mq["next"]), None)
             if nq:
                 lines.append(f"📜 新主线：『{nq['name']}』{nq['desc']}")
-                lines.append(f"  🎯 去找 {C.NPCS[nq['giver']]['name']} 接取新任务")
+                lines.append(f"  🎯 去找 {_cq.NPCS[nq['giver']]['name']} 接取新任务")
         else:
             lines.append("🎊 恭喜！你完成了全部主线任务，成为奥兰迪亚的传说！")
     else:
@@ -547,20 +488,20 @@ def take_main_quest(group_id, qq_id, npc_id, npc):
 
 def quest_reputation(group_id, qq_id, npc_id):
     """完成任务时给对应势力加声望，返回提示行(如有)"""
-    npc = C.NPCS.get(npc_id)
+    npc = _cq.NPCS.get(npc_id)
     if not npc:
         return ""
-    m = C.MAP_BY_ID.get(npc["map"], {})
+    m = _cs.MAP_BY_ID.get(npc["map"], {})
     area_key = m.get("area", npc["map"])
-    faction = C.AREA_FACTION.get(area_key)
+    faction = _b143.AREA_FACTION.get(area_key)
     if not faction:
         return ""
     db.add_reputation(group_id, qq_id, faction, 10)
-    return f"🏛️ {C.FACTIONS[faction]['icon']} 声望＋10"
+    return f"🏛️ {_b143.FACTIONS[faction]['icon']} 声望＋10"
 
 def deliver_hint(npc_id):
     """交付方式提示（v95.16 #75）：有对话树 NPC 走对话交付，无对话树 NPC 用『交付任务』"""
-    if C.DIALOGUES.get(npc_id):
+    if _cq.DIALOGUES.get(npc_id):
         return "对话交付"
     return "『交付任务』交付"
 
@@ -577,7 +518,7 @@ def side_available_list(group_id, qq_id, npc_id, npc) -> list:
     quests = db.get_quests(group_id, qq_id)
     side = quests.get("side", {}) or {}
     out = []
-    for sq in C.SIDE_QUESTS:
+    for sq in _cq.SIDE_QUESTS:
         if sq["giver"] != npc_id:
             continue
         if sq.get("board"):  # v95r65 #295：告示板委托只能在告示板接取，NPC 不自动发
@@ -618,7 +559,7 @@ def offer_side_quest(group_id, qq_id, npc_id, sid) -> list:
                  if a["sid"] == sid), None)
     if not item:
         return []
-    sq = next((q for q in C.SIDE_QUESTS if q["id"] == sid), None)
+    sq = next((q for q in _cq.SIDE_QUESTS if q["id"] == sid), None)
     if not sq:
         return []
     quests = db.get_quests(group_id, qq_id)
@@ -647,7 +588,7 @@ def offer_side_quests(group_id, qq_id, npc_id, npc):
     available = side_available_list(group_id, qq_id, npc_id, npc)
     av_ids = {a["sid"] for a in available}
     changed = False
-    for sq in C.SIDE_QUESTS:
+    for sq in _cq.SIDE_QUESTS:
         if sq["giver"] != npc_id or sq.get("board"):
             continue
         if sq["id"] in side:
@@ -675,10 +616,10 @@ def offer_side_quests(group_id, qq_id, npc_id, npc):
             _rr = sq["require_race"]
             _cur = player.get("race") or "human"
             if _cur != _rr:
-                _rcn = (C.RACES.get(_rr) or {}).get("name", "对应血脉")
+                _rcn = (_cc.RACES.get(_rr) or {}).get("name", "对应血脉")
                 lines.append(
                     f"⛔ {npc.get('name', '对方')}凝视着你，缓缓摇头：『这份传承只属于{_rcn}的血脉。"
-                    f"你体内流淌的{(C.RACES.get(_cur) or {}).get('name', '血脉')}之血，与它无缘。』"
+                    f"你体内流淌的{(_cc.RACES.get(_cur) or {}).get('name', '血脉')}之血，与它无缘。』"
                 )
                 continue
     if changed:
@@ -689,9 +630,9 @@ def offer_side_quests(group_id, qq_id, npc_id, npc):
     # v95.16 #75：按是否有对话树区分交付引导（无对话树 NPC 的『对话』没有交付选项）
     _ta = "她" if npc.get("gender") == "女" else "他"
     for sid, sq in list(quests.get("side", {}).items()):
-        sqd = next((q for q in C.SIDE_QUESTS if q["id"] == sid), None)
+        sqd = next((q for q in _cq.SIDE_QUESTS if q["id"] == sid), None)
         if sqd and sqd["giver"] == npc_id and sq.get("status") == "ready":
-            if C.DIALOGUES.get(npc_id):
+            if _cq.DIALOGUES.get(npc_id):
                 lines.append(f"✅ 『{sqd['name']}』已完成！与{_ta}对话即可交付～")
             else:
                 lines.append(f"✅ 『{sqd['name']}』已完成！输入『交付任务』即可交付～")
@@ -754,19 +695,19 @@ def grant_quest_rewards(group_id, qq_id, qdef, lines):
         if uc not in unlocks:
             unlocks.append(uc)
             db.update_player(group_id, qq_id, hidden_class_unlock=unlocks)
-            lines.append(f"  ⚔️ 传承达成！隐藏职业「{C.CLASSES.get(uc, {}).get('name', uc)}」已解锁！")
+            lines.append(f"  ⚔️ 传承达成！隐藏职业「{_cc.CLASSES.get(uc, {}).get('name', uc)}」已解锁！")
             # v112：档位门槛统一读 CLASSES["tier_levels"]（缺省 T1=40），删除 60/30 特例
-            _need = (C.CLASSES.get(uc, {}).get("tier_levels") or {1: 40, 2: 60, 3: 90})[1]
-            _cname = C.CLASSES.get(uc, {}).get("name", uc)
+            _need = (_cc.CLASSES.get(uc, {}).get("tier_levels") or {1: 40, 2: 60, 3: 90})[1]
+            _cname = _cc.CLASSES.get(uc, {}).get("name", uc)
             lines.append(f"  💡 达到 {_need} 级后输入『转职 {_cname}』接受传承！")
     # v140 波3.6：任务奖励称号（title 字段 = titles.py id 或中文名；称号系统条件判定自动拥有，
     # 这里仅播报解锁——条件满足即生效，不满足也不阻塞任务完成）
     _tid = qdef.get("title")
     if _tid:
-        _tinfo = next((t for t in C.TITLES if t.get("id") == _tid), None)
+        _tinfo = next((t for t in _cq.TITLES if t.get("id") == _tid), None)
         if not _tinfo:
             # 兼容支线旧字段用中文名（如 "北境的恩人" → north_benefactor）
-            _tinfo = next((t for t in C.TITLES if t.get("name") == _tid), None)
+            _tinfo = next((t for t in _cq.TITLES if t.get("name") == _tid), None)
         if _tinfo:
             lines.append(f"  🏅 获得称号：「{_tinfo.get('name', _tid)}」！")
         else:
@@ -785,7 +726,7 @@ def complete_side_quest(group_id, qq_id, sid, branch_choice=None, hooks=None):
     _rule_fire = (hooks or {}).get("rule_fire")
     lines = []
     quests = db.get_quests(group_id, qq_id)
-    sqd = next((q for q in C.SIDE_QUESTS if q["id"] == sid), None)
+    sqd = next((q for q in _cq.SIDE_QUESTS if q["id"] == sid), None)
     if not sqd:
         return ["未知支线任务。"]
     sq = quests.get("side", {}).get(sid)
@@ -866,7 +807,7 @@ def complete_side_quest(group_id, qq_id, sid, branch_choice=None, hooks=None):
         lines.append(f"  {rep_line}")
     # v97.5 行为彩蛋规则：任务交付后
     _rule_txt = _rule_fire("quest_deliver", group_id, qq_id, player,
-                           C.MAP_BY_ID.get(player.get("cur_map"), {}))
+                           _cs.MAP_BY_ID.get(player.get("cur_map"), {}))
     if _rule_txt:
         lines.append(f"  {_rule_txt}")
     return lines
@@ -882,7 +823,7 @@ def talk_quest_progress(group_id, qq_id, npc_id) -> list:
     mid = quests.get("main_quest")
     if not mid:
         return []
-    mq = next((q for q in C.MAIN_QUESTS if q["id"] == mid), None)
+    mq = next((q for q in _cq.MAIN_QUESTS if q["id"] == mid), None)
     if not mq:
         return []
     obj = mq.get("objective", {})
@@ -922,7 +863,7 @@ def update_use_quests(group_id, qq_id, item_name):
     for sid, sq in list(side.items()):
         if sq.get("status") != "active":
             continue
-        sqd = next((q for q in C.SIDE_QUESTS if q["id"] == sid), None)
+        sqd = next((q for q in _cq.SIDE_QUESTS if q["id"] == sid), None)
         if not sqd:
             continue
         obj = sqd.get("objective") or {}
@@ -934,7 +875,7 @@ def update_use_quests(group_id, qq_id, item_name):
                     continue
             side[sid] = {"status": "ready", "progress": {"use": item_name}}
             changed = True
-            giver = C.NPCS.get(sqd["giver"]) or C.ALL_WILD.get(sqd["giver"]) or {}
+            giver = _cq.NPCS.get(sqd["giver"]) or _w.ALL_WILD.get(sqd["giver"]) or {}
             lines.append(f"✨ 『{sqd['name']}』目标达成！回去找 {giver.get('name', '发布人')} 交付吧～")
     if changed:
         quests["side"] = side
@@ -963,7 +904,7 @@ def quest_kill_progress(group_id, qq_id, monster):
     # 主线（仅处理已接且进行中的任务；击杀达到目标则变为可交状态）
     main_id = quests.get("main_quest")
     if main_id:
-        mq = next((q for q in C.MAIN_QUESTS if q["id"] == main_id), None)
+        mq = next((q for q in _cq.MAIN_QUESTS if q["id"] == main_id), None)
         if mq and quests.get("main_status") == "active":
             prog = dict(quests.get("main_progress", {}))
             obj = mq["objective"]
@@ -979,7 +920,7 @@ def quest_kill_progress(group_id, qq_id, monster):
                 changed = True
                 if prog.get(obj["kill"], 0) >= obj["count"]:
                     quests["main_status"] = "ready"
-                    _g = C.NPCS.get(mq["giver"]) or C.ALL_WILD.get(mq["giver"]) or {}
+                    _g = _cq.NPCS.get(mq["giver"]) or _w.ALL_WILD.get(mq["giver"]) or {}
                     lines.append(f"📜 主线『{mq['name']}』目标达成！回去找 {_g.get('name', '？')} {deliver_hint(mq['giver'])}吧～")
                 else:
                     lines.append(f"📜 主线『{mq['name']}』：{prog[obj['kill']]}/{obj['count']}")
@@ -1015,7 +956,7 @@ def quest_kill_progress(group_id, qq_id, monster):
     for sid, sq in list(side.items()):
         if sq.get("status") != "active":
             continue
-        sqd = next((q for q in C.SIDE_QUESTS if q["id"] == sid), None)
+        sqd = next((q for q in _cq.SIDE_QUESTS if q["id"] == sid), None)
         if not sqd:
             continue
         obj = sqd["objective"]
@@ -1027,7 +968,7 @@ def quest_kill_progress(group_id, qq_id, monster):
             changed = True
             if prog["any"] >= obj["kill_any"]:
                 sq["status"] = "ready"
-                _g = C.NPCS.get(sqd["giver"]) or C.ALL_WILD.get(sqd["giver"]) or {}
+                _g = _cq.NPCS.get(sqd["giver"]) or _w.ALL_WILD.get(sqd["giver"]) or {}
                 lines.append(f"📜 支线『{sqd['name']}』目标达成！回去找 {_g.get('name', '？')} {deliver_hint(sqd['giver'])}吧～")
             else:
                 lines.append(f"📜 支线『{sqd['name']}』：{prog['any']}/{obj['kill_any']}")
@@ -1043,7 +984,7 @@ def quest_kill_progress(group_id, qq_id, monster):
             changed = True
             if prog.get(obj["kill"], 0) >= obj["count"]:
                 sq["status"] = "ready"
-                _g = C.NPCS.get(sqd["giver"]) or C.ALL_WILD.get(sqd["giver"]) or {}
+                _g = _cq.NPCS.get(sqd["giver"]) or _w.ALL_WILD.get(sqd["giver"]) or {}
                 lines.append(f"📜 支线『{sqd['name']}』目标达成！回去找 {_g.get('name', '？')} {deliver_hint(sqd['giver'])}吧～")
             else:
                 lines.append(f"📜 支线『{sqd['name']}』：{prog[obj['kill']]}/{obj['count']}")

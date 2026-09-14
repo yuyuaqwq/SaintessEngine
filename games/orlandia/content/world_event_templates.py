@@ -11,11 +11,12 @@
 ------------------------------------------------------------
 | 真源写法 | 包内替身 |
 |---|---|
-| `from .. import content as C`（`_i_auction` / `_i_boss` 内，`C.AUCTION_POOL` / `C.generate_equip` / `C.WORLD_BOSS_POOL`） | 模块级 `C = _HostMod("content")`（正文 `C.xxx` **一行未改**） |
+| `from .. import content as C`（`_i_auction` / `_i_boss` 内，`C.AUCTION_POOL` / `C.generate_equip` / `C.WORLD_BOSS_POOL`） | `AUCTION_POOL` / `WORLD_BOSS_POOL` → **包内门面** `content/catalog_b143.py`（★ W4，2026-09-14）；`generate_equip` 是**函数名**（不切）→ 仍走模块级 `C = _HostMod("content")` | 只换「取值来源」：两张池子逐条逐序与宿主 `C` 相等 ⇒ 行为一字未变 |
 
-★ 数据读口（I1）：`AUCTION_POOL` / `WORLD_BOSS_POOL` 在包内**无同名域**（BRIEF §5「无同名域」
-清单口径），`generate_equip` 是函数（掉落族，`content/loot.py` 已有端口但消费点仍是宿主聚合层）
-→ 本线不建第二份读口，登记**缺口**：待对应域进包后把 `C` 替身换成包内域门面。
+★ 数据读口（I1）：`AUCTION_POOL` / `WORLD_BOSS_POOL` —— 原「包内无同名域」缺口已由 **B14-3**
+（`game_config.world` 组）补齐 ⇒ ★ W4 切包内门面 `content/catalog_b143.py`。
+`generate_equip` 是函数（掉落族，`content/loot.py` 已有端口但消费点仍是宿主聚合层）
+→ 按 B14 派工口径**函数名不切**，继续走宿主 `C` 替身。
 
 等价证据：`overnight/w1213_b13l3_snap.py`（B1–B8 共 11 例：6 展示 × 边界 + 2 初始化 + 未知降级）
 · `overnight/W-B13-L3-events-dialogue.md`。
@@ -24,6 +25,9 @@ from __future__ import annotations
 
 import importlib
 import sys
+
+# ★ W4（2026-09-14）：`C.AUCTION_POOL` / `C.WORLD_BOSS_POOL` → 包内门面（真源 `game/data/world.py:110/123`）
+from . import catalog_b143 as _cat_b143
 
 
 # ============================================================
@@ -151,7 +155,7 @@ def _i_auction(rnd):
     """拍卖：随机抽 3 件高品质装备作拍卖品"""
     # 真源此处 `from .. import content as C`（延迟导入防循环）→ 本模块级 `C` 替身，同义
     items = []
-    pool = rnd.sample(C.AUCTION_POOL, min(3, len(C.AUCTION_POOL)))
+    pool = rnd.sample(_cat_b143.AUCTION_POOL, min(3, len(_cat_b143.AUCTION_POOL)))
     for i, ap in enumerate(pool, 1):
         equip = C.generate_equip(ap["slot"], ap["lv"], ap["quality"])
         items.append({
@@ -169,7 +173,7 @@ def _i_auction(rnd):
 def _i_boss(rnd):
     """世界 Boss：随机抽取一只并初始化讨伐状态"""
     # 真源此处 `from .. import content as C`（延迟导入防循环）→ 本模块级 `C` 替身，同义
-    b = rnd.choice(C.WORLD_BOSS_POOL)
+    b = rnd.choice(_cat_b143.WORLD_BOSS_POOL)
     return {"boss": {"name": b["name"], "icon": b["icon"], "lv": b["lv"],
                      "hp": b["hp"], "max_hp": b["hp"],
                      "reward": b["reward"], "contrib": {},

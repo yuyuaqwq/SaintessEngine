@@ -3,20 +3,21 @@
 
 真源：游戏仓 `game/core/class_sets.py`（61 行）**逐字端口**。宿主同名文件已改薄壳。
 
-搬的边界 / 正文改动面（三类取件）
+取件（★ B16-W11 收口 · 2026-09-14：`SERIES_SETS` / `SERIES_SET_BONUS` 归包）
 1. `from .index import pinyin_id` → **包内直取**（`content/index.py` = B13-L7 线已落地的
    逐字端口，`pinyin_id` 纯计算）。
-2. `SERIES_SETS` / `SETS` → 宿主数据层惰性替身 `_D = _HostMod("data")`。
-   ⚠️ `SETS` **必须是宿主同一只字典**：`_build_class_sets` 是**写入型装配器**
-   （`SETS[set_id] = entry`），宿主 `game/data/_assembly.py:91` 调它、宿主面板
-   （`game/content_rules/panel.py`）读 `C.SETS` —— 若改成包内 `content/data/sets.json`
-   的副本，套装的 2/4/5 件加成就对宿主侧**静默消失**。
-3. `from ..data.set_bonus_data import SERIES_SET_BONUS`（v181-P2A 下沉的数值表）→ 惰性句柄
-   `_series_set_bonus()`（**不能模块级取件**：`game.data → _assembly → core.class_sets`
-   EAGER 环里 import 期取 `game.data.set_bonus_data` 会撞半初始化模块）。
+2. `SERIES_SETS` → 包内门面 `content/catalog_rules.py`（真源 `game/data/equip_roster.py:510`，
+   deep-equal）。`SERIES_SET_BONUS`（v181-P2A 下沉的数值表，真源 `game/data/set_bonus_data.py:35`）
+   → 同门面（包内**无域** ⇒ 值随代码 dump，已登记 `NOT_YET_DOMAINED`），仍走
+   `_series_set_bonus()` **惰性取件**（EAGER 环纪律见下）。
+3. ★ **`SETS` 必须仍是宿主同一只字典**（唯一保留的宿主数据句柄 `_D.SETS`）：
+   `_build_class_sets` 是**写入型装配器**（`SETS[set_id] = entry`），宿主 `game/data/_assembly.py:91`
+   调它、宿主面板（`game/content_rules/panel.py`）读 `C.SETS` —— 若改成包内
+   `content/data/sets.json` 的副本，套装的 2/4/5 件加成就对宿主侧**静默消失**。
+   （登记给收口方：B15「包内装配器写包内 SETS + 宿主读包」的系统活，非本线。）
 
 缺口：`sets` 域是**导出后的镜像**（92 条含名册套装），与「装配器写宿主 SETS」是两条路 ——
-本线保宿主真源（写入语义所系）；「装配器改写成包内域 + 宿主读包」属 B14/B15 的系统活。
+本线保宿主真源（写入语义所系）。
 """
 
 import importlib
@@ -100,7 +101,9 @@ SETS 的装配行为是逻辑，留在 core），经别名 _SERIES_SET_BONUS 消
 
 from .index import pinyin_id                 # B13-L7 线已落地的包内逐字端口
 
-_D = _HostMod("data")   # 宿主数据层：SETS 必须**同一只字典**（写入型装配器，见头注）
+from .catalog_rules import SERIES_SETS      # 包内门面（B16-W11：真源 equip_roster.py:510）
+
+_D = _HostMod("data")   # ★ 只服务 `SETS` 写入：必须**宿主同一只字典**（写入型装配器，见头注）
 
 
 def _series_set_bonus():
@@ -109,12 +112,13 @@ def _series_set_bonus():
     **惰性**取件：`game.data → _assembly → core.class_sets` EAGER 环里 import 期取会撞
     半初始化的 `game.data`。
     """
-    return _host_attr("data.set_bonus_data", "SERIES_SET_BONUS")
+    from .catalog_rules import SERIES_SET_BONUS     # 包内门面（B16-W11：dump 字面量）
+    return SERIES_SET_BONUS
 
 
 def _build_class_sets():
     """注册 10 章名册套装到 SETS(幂等：key 唯一，重复运行覆盖同名)。"""
-    for series, set_name in _D.SERIES_SETS.items():
+    for series, set_name in SERIES_SETS.items():
         b = _series_set_bonus()[series]
         set_id = f"set_{pinyin_id(set_name)}"
         entry = {

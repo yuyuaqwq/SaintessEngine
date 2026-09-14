@@ -1,20 +1,25 @@
 # -*- coding: utf-8 -*-
 """包内坐骑逻辑（`content/mounts.py`）—— 游戏仓 `game/core/mounts.py`（47 行）**逐字端口**（B13-L7）。
 
-正文一字未改，只换一处「宿主取件」：
+正文一字未改，只换一处「宿主取件」（★ W12 收口 2026-09-14 已切包内门面直取）：
     `from ..data import MOUNT_BY_KEY, MOUNT_DROP_BOSS, MOUNT_DROP_ELITE`
-      →  宿主 `data` 句柄（函数内解析，取到的是**宿主那三张表对象**，只读）
-
-为什么没切包内域：`editor/domains.json` **无 mounts 域**、包内无 `content/data/mounts.json`
-（实测 66 域清单里没有它）→ 按 BRIEF §5 口径「不确定 / 无同名域 → 宿主句柄 + 缺口登记」。
-缺口：MOUNT_POOL / MOUNT_BY_KEY / MOUNT_DROP_ELITE / MOUNT_DROP_BOSS 四张表仍未进包，
-待 B14 建域（导出器 `derive_*`）后切包内读口。
+      →  `MOUNT_BY_KEY` ← `catalog_life`（派生索引 `{m["key"]: m for m in MOUNT_POOL}`，
+         真源 `game/data/mounts.py:67`；域 = `rules/game_config.json` 的 `mounts` 组）
+      →  `MOUNT_DROP_BOSS` / `MOUNT_DROP_ELITE` ← `catalog_b143`（同域 `mounts` 组，
+         真源 `game/data/mounts.py:71/70`；**序有行为** = `roll_mount_drop` 按 `.items()`
+         累计区间抽签 ⇒ 门面读口带序声明 + 守卫）
+    对拍：`b14_catalog_gate.py --names MOUNT_BY_KEY` → OK；
+         两张掉落表（宿主聚合层未导出）→ `overnight/_w12_precheck_sources.py` C/D → OK。
 """
 from __future__ import annotations
 
 import importlib
 import random
 import sys
+
+# ---- 包内门面读口（W12 收口：真源顶层 `from ..data import MOUNT_*`）----
+from . import catalog_life as _cl                                  # noqa: E402  MOUNT_BY_KEY（派生索引）
+from .catalog_b143 import MOUNT_DROP_BOSS, MOUNT_DROP_ELITE        # noqa: E402  两张掉落表
 
 _HOST_PKG = "data.plugins.dragonfall.game"
 _HOST_PKG_FALLBACK = "game"
@@ -63,9 +68,8 @@ def _host_module(name: str):
 
 
 def _tables():
-    """宿主 `game.data` 的坐骑表（真源 `from ..data import MOUNT_*`）。"""
-    d = _host_module("data")
-    return d.MOUNT_BY_KEY, d.MOUNT_DROP_BOSS, d.MOUNT_DROP_ELITE
+    """坐骑表（W12 收口：包内门面直取；真源 `from ..data import MOUNT_*`，只读）。"""
+    return _cl.MOUNT_BY_KEY, MOUNT_DROP_BOSS, MOUNT_DROP_ELITE
 
 
 def make_mount_rein(mount_key):

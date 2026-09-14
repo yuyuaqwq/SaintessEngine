@@ -17,7 +17,7 @@
 | 真源写法（函数体内） | 包内写法 | 说明 |
 |---|---|---|
 | `from .. import db` | 模块级 `db` = 惰性宿主代理 `_HostDB` | `db.xxx(...)` 正文一行未改 |
-| `from .. import content as C` | 模块级 `C` = 惰性宿主代理 `_HostMod` | 读 `DAILY_QUESTS`（域已进包 `content/data/quests.json`，但真源表仍在宿主聚合层，见 §缺口） |
+| `from .. import content as C` | ★ B14-2 L8：**已切净**（`C.DAILY_QUESTS` → 包内门面 `catalog_quests.DAILY_QUESTS`）⇒ `C` 替身删；`bind_host(content=…)` 注入面按宿主薄壳协议保留 | 读 `DAILY_QUESTS`，源序 = `_DAILY_QUESTS_ORDER`（门禁逐值+列表序 OK） |
 | `from ..core import texts as T` | 模块级 `T` = 惰性宿主代理（宿主薄壳用 `lazy_module(_host_texts)` 注入） | `T.text(...)` / `T.static(...)` 一字未改 |
 | `from ..core.stat_bonus import stat_bonus` | 模块级 `stat_bonus` = 惰性调用代理 | 称号加成，签名/语义不变 |
 | `from ..content_rules.gameplay import check_player_level_up` | 模块级 `check_player_level_up` = 惰性调用代理 | 升级判定，返回 `(logs, player)` 不变 |
@@ -27,7 +27,8 @@
 * 函数体逐行照搬（含注释/文案槽位名/`lines` 追加顺序）。
 * `random.sample` / 衰减乘算 / `daily[f"d{i}"]` 键序与真源完全一致。
 * `DAILY_QUESTS` 的**源顺序**参与 `daily_pool` 过滤 + `random.sample` 抽样 → 顺序敏感；
-  包内 `content/data/quests.json` 是字典序（导出契约 `sort_table`），故本模块仍读宿主 C（见报告 §缺口）。
+  ★ B14-2 L8（2026-09-14）：切包内门面 `catalog_quests.DAILY_QUESTS`（按 `_DAILY_QUESTS_ORDER` 声明序
+  重建 → **列表序 == 源序**，门禁 `b14_catalog_gate.py` 逐条+序 OK），旧注「包内 JSON 是字典序故仍读宿主 C」**已作废**。
 
 用法::
 
@@ -109,8 +110,10 @@ class _HostDB(object):
 
 
 db = _HostDB()
-C = _HostMod(lambda: _HOST_CONTENT, "content")
 T = _HostMod(lambda: _HOST_TEXTS, "core.texts")
+# ★ B14-2 L8（2026-09-14）：`C` 替身已删（唯一读点 `C.DAILY_QUESTS` 切包内门面）。`bind_host(content=…)`
+#   形参按宿主薄壳 `game/services/quests.py:71` 的注入协议**保留**（少了它会 TypeError）。
+from . import catalog_quests as _cq          # noqa: E402  DAILY_QUESTS（源序 = _DAILY_QUESTS_ORDER）
 
 
 def check_player_level_up(*args, **kwargs):
@@ -164,7 +167,7 @@ def daily_need(dq):
     for _v in dobj.values():
         if isinstance(_v, int) and _v > 0:
             return _v
-    _def = next((q for q in C.DAILY_QUESTS if q.get("name") == (dq or {}).get("name")), None)
+    _def = next((q for q in _cq.DAILY_QUESTS if q.get("name") == (dq or {}).get("name")), None)
     if _def:
         for _v in (_def.get("objective") or {}).values():
             if isinstance(_v, int) and _v > 0:
@@ -302,7 +305,7 @@ def draw_daily(group_id, qq_id, player):
     base_completed = completed
     repeat = dict(daily.get("_repeat", {}) or {})
     # v94 随机抽 2 个每日任务（按等级过滤：低等级不抽打不到的任务）
-    pool = [dq for dq in C.DAILY_QUESTS if daily_pool(player, dq)]
+    pool = [dq for dq in _cq.DAILY_QUESTS if daily_pool(player, dq)]
     chosen = random.sample(pool, min(2, len(pool)))
     daily = {"_date": _dt.date.today().isoformat(),
              "_completed": base_completed, "_repeat": repeat}

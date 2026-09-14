@@ -10,7 +10,7 @@
 | `from . import texts as T` → `game/core/texts.py`（宿主聚合 + ERROR 日志） | 本文件自带 `_Texts`（`T`） | `set_text_table(TextTable(...))` 换表（可带 `on_miss` 打宿主日志） | 包内 `content/data/texts.json` + 引擎 `saintess_engine.text.TextTable` |
 | `from .. import db` + `db.get_inventory(group_id, qq_id)`（:56/:61） | `find_instance_key_item(inventory, key_item, items=None)` | 背包条目 list（含 `key`/`data`/`count`） | `items=None` → 包内 `content/data/items.json` |
 | `from .. import db` + `db.get_achievements(group_id, qq_id)`（:76/:79） | `instance_cleared(achievements, inst_key)` | 成就记录 list（含 `ach_key`/`progress`） | —— |
-| `C.ITEMS`（宿主内容层） | `items=` 参数 | `dict`：物品 key → `{name: …}` | 包内 `content/data/items.json` |
+| 宿主内容层 `ITEMS` | `items=` 参数 | `dict`：物品 key → `{name: …}` | 包内 `content/data/items.json` |
 其余（`saintess_engine.run.Admission` / `Rule`）不变。
 
 ★ 缺口：包内尚无统一文案装载模块（`content/texts.py`）——本文件是自带的最小装载口；
@@ -72,7 +72,7 @@ def set_text_table(table) -> None:
 
 
 def _default_items() -> dict:
-    """包内物品域（真源经宿主内容层 `C.ITEMS` 取 —— 同源导出物）。"""
+    """包内物品域（真源经宿主内容层 `ITEMS` 取 —— 同源导出物）。"""
     return _read_json("items.json", {}) or {}
 
 

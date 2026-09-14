@@ -460,5 +460,47 @@
     "schema": "mining_deep_pools.schema.json",
     "primary": "mining_deep_pool",
     "icon": "⛏️"
+  },
+  "equipment": {
+    "label": "装备常量",
+    "kind": "data",
+    "schema": "equipment.schema.json",
+    "primary": "equipment_group",
+    "icon": "🛡"
+  },
+  "factions": {
+    "label": "阵营",
+    "kind": "data",
+    "schema": "factions.schema.json",
+    "primary": "factions_group",
+    "icon": "🏛"
+  },
+  "enchant": {
+    "label": "附魔",
+    "kind": "data",
+    "schema": "enchant.schema.json",
+    "primary": "enchant_group",
+    "icon": "✨"
+  },
+  "poi_pools": {
+    "label": "交互点池",
+    "kind": "data",
+    "schema": "poi_pools.schema.json",
+    "primary": "poi_pools_group",
+    "icon": "📍"
+  },
+  "chapters": {
+    "label": "章节补给",
+    "kind": "data",
+    "schema": "chapters.schema.json",
+    "primary": "chapters_group",
+    "icon": "📦"
+  },
+  "gems": {
+    "label": "幸运宝石",
+    "kind": "data",
+    "schema": "gems.schema.json",
+    "primary": "gems_group",
+    "icon": "💎"
   }
 }

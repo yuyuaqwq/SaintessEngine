@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/chapters.schema.json",
+  "title": "章节补给（chapters）—— 一条 = 一张源表（章节升级礼包）",
+  "description": "本域 = 宿主 `game/data/quest_add_v140.py:106 CHAPTER_PACK`（B14-3 缺口名 `CHAPTER_PACK` 1 处，消费点 `content/gameplay.py` 的升级结算发礼包）。经 `scripts/export_domains/b14_3_gaps.py:derive_chapters` 单向导出（**值原样，零注入**）。\\n\\n**为什么单开域而不并进 `quests`**（B14-3_BRIEF §1(b) 给了这个二选一）：`quests` 域的 primary def 是「一条 = 一个任务」（`required=[source,name,desc,objective,reward_exp,reward_gold]`），而本表是「一条 = 一个等级的补给包」（`lv/name/items`），**形状不同** ⇒ 并进去只能硬造任务字段或放水 required（BRIEF §2.4 禁）。\\n\\n**未进本域**（同源模块的 `QUEST_ADD` / `QUEST_MAT` / `SUPPLY_BOX`）：`QUEST_ADD` 已被 `npc_story.py:189` 判定「奖励补丁行、不在 quests 域」；三者都**没有** `C.<名>` 读点（非本轮缺口名）→ 本轮不进域，登记在报告「未做」。",
+  "x-primary": "chapters_group",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "外层键 = 真源模块名（本轮只有 `quest_add_v140`；与 `game_config` 的键口径一致：导出期自证「组名 == 真源文件名」）。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/chapters_group"
+  },
+  "$defs": {
+    "chapter_pack_table": {
+      "type": "array",
+      "title": "章节补给礼包（`game/data/quest_add_v140.py:106 CHAPTER_PACK`）",
+      "description": "实测 10 条，一条 = 一个等级的礼包。消费点：升级结算时若跨过该等级则发 `items` 里的物品。",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "title": "一个等级的补给礼包",
+        "required": [
+          "lv",
+          "name",
+          "items"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "lv": {
+            "type": "integer",
+            "minimum": 1,
+            "x-widget": "int",
+            "title": "触发等级",
+            "description": "玩家升到该等级时发放（实测首条 = 10）。"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "礼包名",
+            "description": "发放文案里的礼包名（如「新手补给礼包」）。"
+          },
+          "items": {
+            "type": "array",
+            "title": "物品名清单",
+            "description": "物品**名**（不是 id）清单，按名进背包（如 `[\\\"黑面包\\\", \\\"铁箱\\\"]`）。未展开。",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "chapters_group": {
+      "type": "object",
+      "title": "一个源模块的常量组（`game/data/quest_add_v140.py`）—— 本域的**条目本体**",
+      "description": "逐键 = 一张源表；行齐备由导出器 `derive_chapters` 断言（少一行即 raise）。**不写 required**：同 `guild.schema.json` 登记。 逐键 = 一张源表（值**原样**：不补默认值、不改类型、不包装）。  ⚠ 这是 `validate_entry` 实际校验的那一层：域表的一条 = 本对象（与 `game_config.schema.json:$defs.config_group` 同型）；表级的 `additionalProperties` 指向本 def，逐字段类型由下面的 `properties` 管住（实测：把某个成员的类型改坏 → `domain_status` 报红）。",
+      "additionalProperties": true,
+      "minProperties": 1,
+      "properties": {
+        "CHAPTER_PACK": {
+          "$ref": "#/$defs/chapter_pack_table"
+        }
+      }
+    }
+  }
+}

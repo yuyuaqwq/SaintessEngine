@@ -3,16 +3,17 @@
 
 真源：游戏仓 `game/core/enchant.py`（46 行）**逐字端口**。宿主同名文件已改薄壳。
 
-搬的边界 / 正文改动面（三类取件）
+取件（★ B16-W11 收口 · 2026-09-14：`ENCHANT_*` 归包）
 1. `from .affix import _affix_base_value` → **本线包内直取**（`content/affix.py`）。
 2. `from .constants import PCT_STATS` → **包内读口** `from .tables import PCT_STATS`
-   （`content/rules/panel_rules.json` → `content/tables.py`；与宿主 `core/constants.PCT_STATS`
-   逐值逐序对拍相等）。
-3. `from .stats import equip_stats` → 宿主句柄 `_host_attr("core.stats", "equip_stats")`；
-   `from ..data import ENCHANT_MAX_VALUE / ENCHANT_RECIPES` → 宿主数据层替身
-   `_D = _HostMod("data")` 取 `_D.ENCHANT_*`。
+   （`content/rules/panel_rules.json` → `content/tables.py`；与宿主 `core/constants.PCT_STATS` 逐值逐序相等）。
+3. `ENCHANT_RECIPES` → 包内门面 `content/catalog_b143.py`（`enchant` 域，序 = 真源插入序）；
+   `ENCHANT_MAX_VALUE` → 包内门面 `content/catalog_rules.py`（包内**无域** ⇒ 值随代码 dump，
+   已登记 `NOT_YET_DOMAINED`，建域后改读 `content/data/enchant.json`）。
+4. `from .stats import equip_stats` → 宿主**函数**句柄 `_host_attr("core.stats", "equip_stats")`
+   （`core/stats.py` 归 B13-L6；句柄属「函数名」类，按收口纪律不切）。
 
-缺口：`enchant` 域不存在（66 域里没有）→ 配方/上限表走宿主句柄；`core/stats.py` 归 B13-L6。
+正文一字未改：只换「取值来源」（原 `_D.<名>` → 同名门面名）。
 """
 
 import importlib
@@ -80,14 +81,16 @@ class _HostMod:
 from .affix import _affix_base_value          # B13-L1：本线包内直取
 from .tables import PCT_STATS                  # 包内读口（与宿主 constants.PCT_STATS 逐值相等）
 
-_D = _HostMod("data")                          # 宿主数据层（enchant 域不存在 → 报告缺口）
+# ---- 包内门面（B16-W11：`ENCHANT_*` 归包）----
+from .catalog_b143 import ENCHANT_RECIPES                    # `enchant` 域（序 = 真源插入序）
+from .catalog_rules import ENCHANT_MAX_VALUE                 # 包内无域 → dump 字面量（NOT_YET_DOMAINED）
 
 
 """奥兰迪亚·余烬纪年数据层 - enchant.py"""
 def enchant_value(slot: str, lv: int, stat: str, big: bool = False) -> int | float:
     """附魔数值：白板基础 * ratio；大成功 1.5x；crit/dodge 固定小值"""
     equip_stats = _host_attr("core.stats", "equip_stats")   # B13-L6 线在搬；落地后切包内直取
-    rec = _D.ENCHANT_RECIPES.get(stat)
+    rec = ENCHANT_RECIPES.get(stat)
     if not rec:
         return 0
     if stat in PCT_STATS:
@@ -101,13 +104,13 @@ def enchant_value(slot: str, lv: int, stat: str, big: bool = False) -> int | flo
         v = v * 1.5
         if stat in PCT_STATS:
             v = round(v, 3)
-    if stat in _D.ENCHANT_MAX_VALUE:
-        v = min(v, _D.ENCHANT_MAX_VALUE[stat])
+    if stat in ENCHANT_MAX_VALUE:
+        v = min(v, ENCHANT_MAX_VALUE[stat])
     return v
 
 def enchant_match_material(stat: str, items: list) -> str | None:
     """从背包物品里找第一个匹配该附魔系的材料名(无则 None)"""
-    rec = _D.ENCHANT_RECIPES.get(stat)
+    rec = ENCHANT_RECIPES.get(stat)
     if not rec:
         return None
     for it in items:

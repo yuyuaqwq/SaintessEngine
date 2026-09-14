@@ -21,11 +21,13 @@
 「包内 `META` == 域 JSON」对拍（防注册路径改了而域漂移）。
 
 缺口（报告 §5；**本线不新建第二份表**）
-* `C`（`_HostMod("content")`）仍是**宿主聚合层**：常量 `ITEM_TYPE_PET_EGG` / `ITEM_TYPE_MOUNT` /
-  `MATERIAL_KIND_TYPES` / `CHEST_BP_CHANCE` / `START_MAP` / `MAP_TYPE_TOWN`（B13-L6/L7 线在搬）；
-  表 `MAP_BY_ID`（maps 域派生索引，I3 投影不等价 → B14 统一裁）；`FISHING_SPOTS` / `RUNES` /
-  `rune_item` / `PET_POOL` / `MOUNT_BY_KEY` / `roll_blueprint` / `resolve` / `CLASSES` /
-  `check_achievements`（域/读口未进包或形状不等）。
+* ★ **B14-2 L6（2026-09-14）：下面 13 个数据名已切「包内门面直取」**（宿主 `game/data` 删掉后本文件仍能活；
+  `b14_catalog_gate.py` 逐值 + 键序对拍相等）：`ITEM_TYPE_PET_EGG` / `ITEM_TYPE_MOUNT` /
+  `MATERIAL_KIND_TYPES` / `CHEST_BP_CHANCE` / `START_MAP` / `MAP_TYPE_TOWN` / `CLASSES` ← `catalog_core`；
+  `MAP_BY_ID` / `PORTALS` ← `catalog_space`；`RUNES` ← `catalog_items`；
+  `FISHING_SPOTS` / `PET_POOL` / `MOUNT_BY_KEY` ← `catalog_life`。
+* `C`（`_HostMod("content")`）仍是**宿主聚合层**，余下读点全是**函数名缺口**（无同名域/读口，按 B14 派工
+  保留 `C.<名>`，报告登记）：`roll_blueprint` / `rune_item` / `resolve` / `check_achievements`。
 * `tips` 域条目多一层 `{"lines": …}` 包装：本文件读口就地还原（唯一一处形状适配），
   若要「域即真相源」得先在导出器侧定形状（登记，未做）。
 """
@@ -82,7 +84,7 @@ def _host_attr(mod: str, attr: str):
 
 
 class _HostMod:
-    """宿主模块替身（`C` / `db` / `_D`）——`C.xxx` / `db.xxx` / `_D.xxx` 属性访问时解析。"""
+    """宿主模块替身（`C` / `db` / `_D` 数据层句柄）——属性访问时解析。"""
 
     def __init__(self, name):
         self._name = name
@@ -115,6 +117,13 @@ import random
 import time
 
 from .apply import _read_json
+
+# ★ B14-2 L6：数据表切包内门面（宿主 `game/data` 删掉后本文件仍能活）
+from . import catalog_core as _cc         # ITEM_TYPE_* / MATERIAL_KIND_TYPES / CHEST_BP_CHANCE
+                                          #   MAP_TYPE_* / START_MAP / CLASSES
+from . import catalog_items as _ci        # RUNES
+from . import catalog_life as _cl         # FISHING_SPOTS / PET_POOL / MOUNT_BY_KEY
+from . import catalog_space as _cs        # MAP_BY_ID / PORTALS
 
 # ---- 包内域读口：`content/data/tips.json`（域 `tips`）----
 # 域条目形状 = `{分类: {"lines": [提示语…]}}`（导出器为满足宿主 `export()`「条目必须是 dict」的
@@ -230,9 +239,9 @@ def infer_template(data):
     if eff:
         return eff if eff in TEMPLATES else "none"
     # v102.2：type 中文文案收敛为常量（改物品类型文案只动数据+constants）
-    if data.get("type") == C.ITEM_TYPE_PET_EGG:
+    if data.get("type") == _cc.ITEM_TYPE_PET_EGG:
         return "pet_egg"
-    if data.get("type") == C.ITEM_TYPE_MOUNT:
+    if data.get("type") == _cc.ITEM_TYPE_MOUNT:
         return "mount"
     return "none"
 
@@ -609,16 +618,15 @@ def tpl_battle_start_resource(ctx):
 def tpl_return_vila(ctx):
     """回城卷轴：回最近城镇（v95.13：原写死 oak_town，新世界地图按距离）。"""
     db = ctx._db()
-    C = ctx._C()
     cur = ctx._focus.get("cur_map", "")
-    dest = ctx.hook("nearest_town", cur) or ctx._C().START_MAP
+    dest = ctx.hook("nearest_town", cur) or _cc.START_MAP
     # v104 P2(M22): 城内直达（回城卷轴）落 subareas[0]（广场），与方碑传送/战败回城/出门一致
     # （core/maps.py:115 注释明确"传送/回家等城内直达走广场不走城门"；原实现落 map_entry_subarea=城门）
-    sas = C.MAP_BY_ID.get(dest, {}).get("subareas") or []
+    sas = _cs.MAP_BY_ID.get(dest, {}).get("subareas") or []
     first_sa = sas[0] if sas else None
     db.update_player(ctx.group_id, ctx.qq_id,
                      cur_map=dest, cur_subarea=first_sa["id"] if first_sa else "")
-    town_name = C.MAP_BY_ID.get(dest, {}).get("name", "城镇")
+    town_name = _cs.MAP_BY_ID.get(dest, {}).get("name", "城镇")
     ctx.hook("remove_item")
     return ItemResult(text=f"🧭 卷轴展开，光芒闪过——你回到了{town_name}！")
 
@@ -634,9 +642,8 @@ def tpl_teleport_portal(ctx):
     if ctx.battle:
         return ItemResult(text="战斗中无法使用传送卷轴！先解决眼前的敌人吧～", consume=False)
     db = ctx._db()
-    C = ctx._C()
     cur = ctx._focus.get("cur_map", "")
-    portals = [m for m in (db.get_portals(ctx.qq_id) or []) if C.MAP_BY_ID.get(m)]
+    portals = [m for m in (db.get_portals(ctx.qq_id) or []) if _cs.MAP_BY_ID.get(m)]
     if not portals:
         return ItemResult(
             text="🌀 传送卷轴泛起微光又暗淡下去——还没有可用的方碑锚点！\n"
@@ -647,7 +654,7 @@ def tpl_teleport_portal(ctx):
         return ItemResult(
             text="你已经在这座方碑所在的城镇了！(传送卷轴没有消耗)",
             consume=False)
-    tgt = C.MAP_BY_ID[dest]
+    tgt = _cs.MAP_BY_ID[dest]
     sas = tgt.get("subareas") or []
     first_sa = sas[0] if sas else None
     db.update_player(ctx.group_id, ctx.qq_id,
@@ -655,10 +662,10 @@ def tpl_teleport_portal(ctx):
     db.add_visited(ctx.group_id, ctx.qq_id, dest)
     db.clear_talk_state(ctx.group_id, ctx.qq_id)  # v95 #142：传送落地清对话，防"还在交谈中"残留
     ctx.hook("remove_item")
-    p = C.PORTALS.get(dest, {})
+    p = _cs.PORTALS.get(dest, {})
     pname = p.get("name", "方碑") if p else "方碑"
     picon = p.get("icon", "🌌") if p else "🌌"
-    anchors = "、".join(C.MAP_BY_ID[m].get("name", m) for m in portals)
+    anchors = "、".join(_cs.MAP_BY_ID[m].get("name", m) for m in portals)
     return ItemResult(text=(
         f"🌀 传送卷轴展开，星辉流转——你抵达了【{tgt.get('name', '城镇')}】({picon}{pname})！\n"
         f"📍 当前方碑锚点：{anchors}\n"
@@ -693,9 +700,9 @@ def _make_bait_tpl(key):
         # v104 R3 M15 P3-4：非战斗也校验水域——desc 承诺"只能在水边使用"，
         # 原实现仅拦战斗（ctx.battle），任意地点可用；与垂钓命令同源判定：
         # 当前地图无 FISHING_SPOTS 钓点（城镇/野外）拒绝挂饵
-        _C = ctx._C()
+        # B14-2 L6：原 `_C = ctx._C()` 局部宿主替身已无用 → 走包内门面 `catalog_life`
         _cur = (ctx._focus or {}).get("cur_map", "")
-        if _cur and not _C.FISHING_SPOTS.get(_cur):
+        if _cur and not _cl.FISHING_SPOTS.get(_cur):
             return ItemResult(text="鱼饵只能在水边使用——这里没有水域，到有钓点的地方再挂饵吧～", consume=False)
         name, tip = _BAIT_INFO[key]
         ctx.hook("remove_item")
@@ -751,7 +758,7 @@ def tpl_open_chest(ctx):
     except Exception:
         pass
     lines = [f"🎁 你打开了【{ctx.item_name()}】！", f"💰 获得 {gold} 金币！"]
-    if random.random() < C.CHEST_BP_CHANCE:  # v101.5 常量
+    if random.random() < _cc.CHEST_BP_CHANCE:  # v101.5 常量
         bp = C.roll_blueprint(max(1, ctx.lv))
         if bp:
             db.add_item(ctx.group_id, ctx.qq_id, f"eq_{uuid.uuid4().hex[:8]}", bp)
@@ -771,17 +778,17 @@ def tpl_open_rune_chest(ctx):
     物品消耗走 ctx.hook("remove_item")（战斗外模板自行扣除，与 tpl_heal 同款）。"""
     db = ctx._db()
     C = ctx._C()
-    pool = [k for k, r in C.RUNES.items() if (r.get("quality") or "") in ("blue", "purple")]
+    pool = [k for k, r in _ci.RUNES.items() if (r.get("quality") or "") in ("blue", "purple")]
     if not pool:
         return ItemResult(text="符文匣里空空如也……(符文数据缺失)", consume=False)
     # 紫色加权：40% 紫 / 60% 蓝（"稀有/紫色符文"描述下的防通胀平衡）
-    purple = [k for k in pool if (C.RUNES[k].get("quality") or "") == "purple"]
-    blue = [k for k in pool if (C.RUNES[k].get("quality") or "") == "blue"]
+    purple = [k for k in pool if (_ci.RUNES[k].get("quality") or "") == "purple"]
+    blue = [k for k in pool if (_ci.RUNES[k].get("quality") or "") == "blue"]
     if random.random() < 0.4 and purple:
         rk = random.choice(purple)
     else:
         rk = random.choice(blue) if blue else random.choice(purple)
-    r_def = C.RUNES[rk]
+    r_def = _ci.RUNES[rk]
     rune_data = C.rune_item(r_def["effect"], random.randint(1, 2))
     if not rune_data:
         return ItemResult(text="符文匣里空空如也……(符文数据缺失)", consume=False)
@@ -799,7 +806,6 @@ def tpl_open_rune_chest(ctx):
 def tpl_pet_egg(ctx):
     """宠物蛋：孵化宠物（已有宠物/同品种拦截）。"""
     db = ctx._db()
-    C = ctx._C()
     pet_key = ctx.data.get("pet_key")
     if not pet_key:
         return ItemResult(text="这枚宠物蛋有点奇怪……", consume=False)
@@ -813,7 +819,7 @@ def tpl_pet_egg(ctx):
                 text="你已经有一只【该品种】宠物啦！可以『出售』这颗蛋，或『放生』后重新孵化(图鉴记录保留)。",
                 consume=False)
         return ItemResult(text="你已经有一只宠物啦！先『放生』再孵化新品种吧～", consume=False)
-    pdef = next((p for p in C.PET_POOL if p["key"] == pet_key), None)
+    pdef = next((p for p in _cl.PET_POOL if p["key"] == pet_key), None)
     if not pdef:
         return ItemResult(text="宠物蛋里的生命气息微弱……", consume=False)
     ctx.hook("remove_item")
@@ -822,7 +828,7 @@ def tpl_pet_egg(ctx):
     dex_count = len(db.pet_dex_get(ctx.qq_id))
     return ItemResult(
         text=f"🥚 宠物蛋微微颤动……裂开了！\n"
-             f"🎉 {pdef['icon']} 【{pdef['name']}】破壳而出，成为了你的伙伴！(图鉴 {dex_count}/{len(C.PET_POOL)})\n"
+             f"🎉 {pdef['icon']} 【{pdef['name']}】破壳而出，成为了你的伙伴！(图鉴 {dex_count}/{len(_cl.PET_POOL)})\n"
              + _rand_tip("pet"))
 
 
@@ -830,9 +836,8 @@ def tpl_pet_egg(ctx):
 def tpl_mount(ctx):
     """坐骑缰绳：解锁坐骑。"""
     db = ctx._db()
-    C = ctx._C()
     mk = ctx.data.get("mount_key")
-    mdef = C.MOUNT_BY_KEY.get(mk) if mk else None
+    mdef = _cl.MOUNT_BY_KEY.get(mk) if mk else None
     if not mdef:
         return ItemResult(text="这缰绳上的气息有点古怪……", consume=False)
     mounts = ctx._focus.get("mounts") or {}
@@ -948,7 +953,7 @@ def tpl_skill_tome(ctx):
         req_id = C.resolve("classes", req)
         cls_id = C.resolve("classes", ctx._focus.get("class_name", ""))
         if cls_id != req_id:
-            src_name = C.CLASSES.get(req_id, {}).get("name", req)
+            src_name = _cc.CLASSES.get(req_id, {}).get("name", req)
             return ItemResult(
                 text=f"书页上流转着【{src_name}】一脉的印记，与你的力量不合……", consume=False)
     need_lv = int(info.get("lv", 1))
@@ -1014,9 +1019,9 @@ def tpl_none(ctx):
         return ItemResult(text=f"你使用了『{ctx.item_name()}』。", consume=False)
     # v113.5 O117：材料类（食材/矿材）不可直接使用，提示可走副业加工（烹饪/锻造/炼金）
     # v126.3：配置 type 细分为 18 种（兽材/矿石/草药/…），水合后 data.type 是真实细分值——
-    # 按 C.MATERIAL_KIND_TYPES 大类归并判定，否则兽材/矿石等材料漏判退回通用文案
-    # B13-L1：真源 `from .. import content as C` → 模块级 `C = _HostMod("content")`
-    if (ctx.data or {}).get("type") in C.MATERIAL_KIND_TYPES:
+    # 按 MATERIAL_KIND_TYPES（B14-2 L6 起走包内门面 catalog_core）大类归并判定，
+    # 否则兽材/矿石等材料漏判退回通用文案
+    if (ctx.data or {}).get("type") in _cc.MATERIAL_KIND_TYPES:
         return ItemResult(
             text=f"『{ctx.item_name()}』不能直接使用——这是材料，可『烹饪』『锻造』『炼金』等副业加工成成品～",
             consume=False)
@@ -1081,8 +1086,8 @@ def tpl_grapple(ctx):
         return ItemResult(text="钩索要在野外攀爬时使用，战斗中用不上～", consume=False)
     # B13-L1：真源 `from .. import content as C` → 模块级 `C = _HostMod("content")`
     cur = (ctx._focus or {}).get("cur_map", "")
-    cm = C.MAP_BY_ID.get(cur) or {}
-    if cm.get("type") == C.MAP_TYPE_TOWN:
+    cm = _cs.MAP_BY_ID.get(cur) or {}
+    if cm.get("type") == _cc.MAP_TYPE_TOWN:
         return ItemResult(text="钩索只在野外有用——城里到处是路，用不上它～", consume=False)
     d = ctx.data
     ed = d.get("effect_data") or {}
@@ -1114,7 +1119,7 @@ def tpl_scout(ctx):
         return ItemResult(text="望远镜要在野外眺望时使用，战斗中用不上～", consume=False)
     # B13-L1：真源 `from .. import content as C` → 模块级 `C = _HostMod("content")`
     cur = (ctx._focus or {}).get("cur_map", "")
-    cm = C.MAP_BY_ID.get(cur) or {}
+    cm = _cs.MAP_BY_ID.get(cur) or {}
     lines = [f"🔭 你举起【{ctx.item_name()}】眺望{cm.get('name', '此地')}……"]
     if cm:
         lines.append(f"📍 区域：{cm.get('region', '?')} · 章节 {cm.get('chapter', '?')}")
@@ -1150,7 +1155,7 @@ def tpl_fish_net(ctx):
     if ctx.battle:
         return ItemResult(text="鱼网要在水边使用时，战斗结束后再下网吧～", consume=False)
     _cur = (ctx._focus or {}).get("cur_map", "")
-    if _cur and not C.FISHING_SPOTS.get(_cur):
+    if _cur and not _cl.FISHING_SPOTS.get(_cur):
         return ItemResult(text="鱼网只能在水边使用——这里没有水域，到有钓点的地方再下网吧～", consume=False)
     db = ctx._db()
     _braw = db.get_event_state(f"bait_{ctx.qq_id}")
@@ -1227,8 +1232,8 @@ def tpl_anchor(ctx):
         return ItemResult(text="星砂要在野外安置，战斗中用不上～", consume=False)
     # B13-L1：真源 `from .. import content as C` → 模块级 `C = _HostMod("content")`
     cur = (ctx._focus or {}).get("cur_map", "")
-    cm = C.MAP_BY_ID.get(cur) or {}
-    if cm.get("type") == C.MAP_TYPE_TOWN:
+    cm = _cs.MAP_BY_ID.get(cur) or {}
+    if cm.get("type") == _cc.MAP_TYPE_TOWN:
         return ItemResult(text="星砂锚点只能放在野外——城镇随时能回，用不上它～", consume=False)
     d = ctx.data
     ed = d.get("effect_data") or {}

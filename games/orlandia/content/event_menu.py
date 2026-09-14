@@ -7,14 +7,35 @@
 
 真源 → 包内域（单向导出：游戏仓 `scripts/export_game_package.py` + `scripts/export_domains/`）
 ------------------------------------------------------------------------------------------
-| 命令层原来读 | 包内域 | 本模块提供 | 备注 |
+| 命令层原来读（宿主聚合层 `C`） | 包内域 | 本模块提供（B14-2 起的取值口） | 备注 |
 |---|---|---|---|
-| `C.MAPS`（121，**list**，源序） | `worlds` | `MAPS`（按 `MAP_ORDER` 还原源序）/ `MAP_BY_ID` | 地图扁平表（`game/data/maps.py` 的 `MAPS`/`MAP_BY_ID`） |
-| `C.MAP_BY_ID` | 同左 | `MAP_BY_ID` | 渲染只用 `.get("name")` |
-| `C.EXPLORE_EVENTS`（100，源序） | `events`（`source=="explore"`） | `EXPLORE_EVENTS` | 档位 top6 并列时**靠源序**决胜 |
-| `C.EXPLORE_EGG_EVENTS`（46，源序） | `events`（`source=="egg"`） | `EXPLORE_EGG_EVENTS` | 传闻取 `[:3]`/`[:2]` → 硬依赖源序 |
-| `C.ITEMS` / `C.resolve("items",…)` | `items` | `ITEMS` / `resolve_item()` | 补给箱发放 |
+| `MAPS`（121，**list**，源序） | `worlds` | `MAPS` ← **门面** `content/catalog_space.py`（源序）；本地序名 `MAP_ORDER` = 门面同名列 | 地图扁平表（`game/data/maps.py` 的 `MAPS`/`MAP_BY_ID`） |
+| `MAP_BY_ID` | 同左 | `MAP_BY_ID` ← 门面 `catalog_space` | 渲染只用 `.get("name")` / `["id"]` |
+| `EXPLORE_EVENTS`（100，源序） | `events`（`source=="explore"`） | `EXPLORE_EVENTS` ← **门面** `content/catalog_quests.py` | 档位 top6 并列时**靠源序**决胜 |
+| `EXPLORE_EGG_EVENTS`（46，源序） | `events`（`source=="egg"`） | `EXPLORE_EGG_EVENTS` ← 门面 `catalog_quests` | 传闻取 `[:3]`/`[:2]` → 硬依赖源序 |
+| `ITEMS` / `resolve("items",…)` | `items` | `ITEMS` ← **门面** `content/catalog_items.py` / `resolve_item()`（本模块索引） | 补给箱发放 |
 | `game/core/texts.py`（文案表门面） | `texts` | **不搬**（调用点必须留命令层，见 §④） | `supply.*` 7 条由宿主文案表门禁对账 |
+
+★ B14-2（2026-09-14，L4 线）读点现状
+------------------------------------
+宿主 `game/data` 要删 ⇒ 本模块原先「就地读域 + 自带序声明 + 自带重建」的五张表**全部改从
+包内门面直取**（门面 = 同批 B14-A/B/C 建的门面，本批门禁 `overnight/b14_catalog_gate.py`
+逐名 **OK · 不等 0（含键序）**，见 `overnight/W-B14-2-L4.md`）：
+* 门面已按域序声明 `_ORDER_*` 且自带集合守卫（域多/少一条即 `raise`）⇒ 本模块原先的
+  `MAP_ORDER` / `EXPLORE_EVENT_ORDER` / `EGG_EVENT_ORDER` 字面量与 `_ordered()` /
+  `_maps_ordered()` / `_read_domain()` 重建函数**全部删除**（防同表两份定义）。
+  `MAP_ORDER` 这个名字**保留**（`content/catalog_items.py:43` / `catalog_life.py:41` 引它作
+  「顺序只能显式声明」的先例，`content/travel.py` 也曾 import 它）⇒ 改写成门面 `_cs.MAP_ORDER`
+  的只读视图，名字与内容（121 条 id，序相同）不变。
+* 两处**取值形状**与本地旧值不同的地方（都取「门面 = 真源形状」那一侧，实测已逐条核对）：
+  ① `MAPS` / `MAP_BY_ID` 的门面条目**多一个注入键 `subareas`**（真源 `game/data/maps.py` 有；
+     本地旧值 = `worlds` 域裸条目，缺这个键）—— 消费点只读 `name` / `id`（宿主命令层
+     `game/commands/event_menu.py:105/136`）⇒ 无行为差异；
+  ② `EXPLORE_EVENTS` / `EXPLORE_EGG_EVENTS` 的门面条目**已剥注入键 `source`**（本地旧值带）
+     —— 逐条去掉 `source` 后与门面 **deep-equal**（100/100、46/46），且 id 序与
+     `sorted(key=-weight)[:6]` 的 top6 顺序完全一致（并列决胜靠它）⇒ 无行为差异。
+* 未切：`MATERIALS` 仍是**有意空表**（理由见 §③ 末段；门面有 598 条同名表，但本模块消费点
+  只在「ITEMS 未命中」的兜底分支里 → 保留原样，登记给主 agent 裁）。
 
 ★ 顺序声明（`MAP_ORDER` / `EXPLORE_EVENT_ORDER` / `EGG_EVENT_ORDER`）——为什么必须有
 ----------------------------------------------------------------------------------
@@ -22,11 +43,10 @@
 **有序 list**：① 地图 `next(... name in …)` 子串匹配要按源序取首个命中（『事件 橡木』
 命中橡木镇还是橡木平原，由源序决定）；② 探索档位 `sorted(..., key=-weight)[:6]` 是稳定排序，
 并列时按源序；③ 彩蛋传闻取前 3/前 2 条。少一份顺序声明 → 玩家看到的行会变（逐字变）。
-导出域**没有** `ord`/`seq` 字段可还原（`derive_events` 只注入 `source`）→ 本模块显式声明
-真源插入序（与 `content/tables.py` 的 `JOB_ORDER` 同一手法），并**带集合守卫**：
-域里多一条/少一条就 `raise`（防「加了地图/事件忘了改这里」= 静默改序）。
-（`weekly_quests` 域是导出期注入 `seq` 的另一条路；`events`/`worlds` 是既有域，
-本批不动别人的导出器 —— 缺口见报告 §缺口。）
+B14-2：真源序**已在门面里单点声明**（`catalog_space._explore_seq()` · `catalog_quests` 的
+同名 `_ORDER`，都带集合守卫：「域里多一条/少一条就 `raise`」）⇒ 本模块不再各存一份字面量。
+更彻底的做法是域侧补 `seq`/`ord` 字段（`weekly_quests`/`titles` 域已是这形状），
+那样连门面的序表也能删 —— 属导出器批的活，本线禁改，登记给主 agent。
 
 未进包（保留宿主直读，报告 §缺口）
 ----------------------------------
@@ -38,116 +58,31 @@
 from __future__ import annotations
 
 import datetime
-import json
-import os
 
-_HERE = os.path.dirname(os.path.abspath(__file__))          # <pkg>/content
-_DATA_DIR = os.path.join(_HERE, "data")
-
-
-def _read_domain(domain: str, sub: str = "data", default=None):
-    """读包内 `content/<sub>/<domain>.json`（缺文件 / 坏 JSON → default，不抛；同包内口径）。"""
-    try:
-        with open(os.path.join(_HERE, sub, "%s.json" % domain), encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:                                       # noqa: BLE001
-        return {} if default is None else default
+# ★ B14-2（L4）：五张表改从**包内门面**直取（宿主 `game/data` 删掉后本模块仍能活）；
+#   门面自带域序声明 + 集合守卫 ⇒ 本模块原先的序字面量与重建函数已删（见文件头「读点现状」）。
+from . import catalog_items as _ci         # ITEMS
+from . import catalog_quests as _cq        # EXPLORE_EVENTS / EXPLORE_EGG_EVENTS
+from . import catalog_space as _cs         # MAPS / MAP_BY_ID / MAP_ORDER
 
 
 # ============================================================
 # ① 地图（worlds 域 = 扁平地图表）
 # ============================================================
-WORLDS: dict = _read_domain("worlds")
-MAP_BY_ID: dict = WORLDS
-
-# ★ 真源 `game/data/maps.py:3 MAPS` 的**列表插入序**（121 条；见文件头「顺序声明」）。
-#   块由 `overnight/_b82_L3_gen_orders.py` 从真源生成（本文件不手抄）。
-MAP_ORDER = """oak_town oak_plain white_deer_forest white_deer emerald_forest misty_swamp goblin_camp rust_dock
-candle_crypt thunder_mine whirl_arena blacktide_opera hill_mine ironharbor harbor_docks sea_cave
-silver_brook silver_valley windmill_plain deer_fort maple_village rockfall_gorge boar_ridge dawn_city
-dawn_cathedral gold_plain white_abbey old_king_tomb border_castle silver_river secret_crypt knight_yard
-king_road holy_trial ironshield_town ironshield_hills old_battlefield moon_gate silverwood starlake
-moon_court elven_ruins ancient_tree star_song moon_glade emerald_valley moon_temple windvale
-moonshadow_wood frost_horn frost_field anvil_fort forge_valley black_forest cinder_mountain ash_temple
-abyss_gate frost_fang cold_ridge winter_lake frost_throne aurora_town permafrost_field
-frostwhisper_canyon dragon_pass dragon_ridge dragon_roost ancient_battlefield dragon_tomb dragon_kin
-bone_wild storm_cliff storm_throne redridge_plateau dragonsfall_valley jade_port shell_town coral_reef
-sunset_isle storm_strait mermaid_bay sunken_ship siren_nest nameless_harbor pearl_city mist_trench
-whale_domain shipwreck_graveyard storm_sea sea_god_temple deep_dragon_palace deep_tunnel under_market
-fungus_forest deep_lake molten_abyss gray_dwarf under_dragon ember_camp lava_bed abyss_altar
-abyss_throne wind_city cloud_sea storm_plateau eye_of_storm rainbow_cloud starlight_terrace
-cloud_sanctum lost_library ember_corridor silver_wind_road west_ridge_wilds dusk_ridge_road
-mist_tide_passage black_tide_strait dwarf_long_gallery cold_spine_snow_trail dragon_ridge_old_road
-dragonborn_valley_trail sky_ladder_path""".split()
+MAP_ORDER: list = list(_cs.MAP_ORDER)       # 真源 `game/data/maps.py:3 MAPS` 的列表插入序（121）
+MAPS: list = _cs.MAPS                       # 121（门面条目带注入键 `subareas`，与真源逐条相等）
+MAP_BY_ID: dict = _cs.MAP_BY_ID             # {地图 id: 地图条目}
 
 # ============================================================
-# ② 事件池（events 域 = 探索池 + 彩蛋池，条目带 source）
+# ② 事件池（events 域 = 探索池 + 彩蛋池；门面已剥注入字段 `source` 并按源序还原）
 # ============================================================
-_EVENTS_RAW: dict = _read_domain("events")
-EXPLORE_EVENT_ORDER = """treasure merchant spring trap omen herb windfall wandering lost_camp meteor animal rain firefly old_well
-windmill hunter_hut beehive floating_bridge old_tree_hollow stone_tablet cart_wreck night_owl spider_web
-frost_flower old_boot mushroom_ring echo_cave campfire_ashes drifting_bottle abandoned_minecart
-south_scarecrow south_gold_panning south_beehive mid_king_tomb mid_holy_butterfly mid_knight_target
-west_silver_leaf west_tree_hollow west_wind_chime north_aurora_shard north_frozen_cave north_wolf_howl
-east_dragon_scale east_dragon_bone_echo sea_tide_beacon gen_tree_rings gen_whiskey_keg
-gen_cliff_eagle_nest gen_stone_bridge gen_abandoned_trench south_swamp_old_tree south_swamp_night_glow
-south_mine_cave_echo south_mine_pickaxe south_docks_sea_fog south_docks_net_salvage
-south_gorge_wind_runes south_ridge_hunter_trap south_ridge_mud_pond south_wind_road_shrine
-mid_border_flag mid_border_patrol mid_border_mess mid_river_fisher mid_river_lantern mid_river_heron
-mid_old_tomb mid_old_wisp mid_west_station mid_west_hunter north_forge_slag north_forge_anvil_echo
-north_cinder_pilgrim north_cinder_geyser north_gallery_relief north_gallery_rune_wind
-east_storm_lighthouse east_storm_thunder_rock east_dragonborn_fossil east_dragonborn_altar
-deep_spore_cloud deep_lake_echo deep_molten_ember deep_altar_whisper sea_whale_song sea_black_wreck
-isle_lighthouse_dusk sea_mist_reef sky_cloud_drift sky_storm_charge sky_rainbow_dew sky_starlight_ladder
-gen_rainbow gen_fog_bell gen_boot_note gen_old_message gen_creek_song gen_lost_pup gen_roadside_keg
-gen_dried_herbs""".split()
-EGG_EVENT_ORDER = """shooting_star mystery_chest night_visitor old_map gold_slime egg_oak_whisper egg_white_deer
-egg_iron_ghost egg_moon_doll egg_cathedral_choir egg_harbor_siren egg_ash_phoenix egg_royal_fox
-egg_swamp_wisp egg_frost_spirit egg_elf_spring egg_dragon_scale egg_under_king egg_cloud_whale
-egg_pearl_goddess egg_blacksmith_ghost egg_time_traveler egg_mimic_chest egg_twin_moon egg_star_fall
-egg_rainbow_koi egg_lucky_clover egg_moon_rabbit egg_old_chest egg_whispering_wind egg_jumping_scarecrow
-egg_dove_messenger egg_sleigh_ghost egg_dragon_shadow egg_lost_mimic_cub egg_sunrise_gold egg_tree_echo
-egg_stained_light egg_moon_glade egg_mirage_fleet egg_glow_school egg_aurora_veil egg_rainbow_end
-egg_meteor_shower egg_fairy_dance egg_goblin_caravan""".split()
-
-
-def _ordered(raw: dict, order, source: str, what: str) -> list:
-    """按声明的真源序还原一个有序条目表；集合不一致 → **raise**（绝不静默改序）。"""
-    keys = {k for k, v in raw.items() if isinstance(v, dict) and v.get("source") == source}
-    have = set(order)
-    if have != keys:
-        raise ValueError(
-            "%s：顺序声明与域内条目不一致（域 %d 条 / 声明 %d 条；"
-            "域多出 %s；声明多出 %s）—— 请用 scripts/export_domains 的重量纲重生成顺序声明"
-            % (what, len(keys), len(order), sorted(keys - have)[:5], sorted(have - keys)[:5]))
-    if len(order) != len(have):
-        raise ValueError("%s：顺序声明里有重复 id（%d 条 vs 集合 %d）" % (what, len(order), len(have)))
-    return [raw[k] for k in order]
-
-
-EXPLORE_EVENTS: list = _ordered(_EVENTS_RAW, EXPLORE_EVENT_ORDER, "explore", "explore 事件池")
-EXPLORE_EGG_EVENTS: list = _ordered(_EVENTS_RAW, EGG_EVENT_ORDER, "egg", "彩蛋事件池")
-
-
-def _maps_ordered() -> list:
-    """地图列表（源序）；集合守卫同 `_ordered`。"""
-    have, keys = set(MAP_ORDER), set(WORLDS)
-    if have != keys:
-        raise ValueError(
-            "地图顺序声明与 worlds 域 key 不一致（域 %d / 声明 %d；域多出 %s；声明多出 %s）"
-            "—— 用 overnight/_b82_L3_gen_orders.py 重生成" %
-            (len(keys), len(MAP_ORDER), sorted(keys - have)[:5], sorted(have - keys)[:5]))
-    if len(MAP_ORDER) != len(have):
-        raise ValueError("地图顺序声明里有重复 id（%d 条 vs 集合 %d）" % (len(MAP_ORDER), len(have)))
-    return [WORLDS[k] for k in MAP_ORDER]
-
-
-MAPS: list = _maps_ordered()
+EXPLORE_EVENTS: list = _cq.EXPLORE_EVENTS           # 100（探索池，源序）
+EXPLORE_EGG_EVENTS: list = _cq.EXPLORE_EGG_EVENTS   # 46（彩蛋池，源序）
 
 # ============================================================
 # ③ 物品（items 域 = MATERIALS ∪ CONSUMABLES ∪ 追加条目的合表 900）
 # ============================================================
-ITEMS: dict = _read_domain("items")
+ITEMS: dict = _ci.ITEMS                     # 900（与宿主聚合层同名表逐条相等，门禁 EQ）
 
 # 名字 → id（`game/core/index.py:19 build_index` 同口径；**实测 900 条名字零重名**
 # —— 所以「首/末次命中赢」这个差别不存在；仍按源顺序赋值，行为与真源一致）。
@@ -162,6 +97,10 @@ for _k, _v in ITEMS.items():
 #   而 `ITEMS = dict(MATERIALS); ITEMS.update(...)`（`items.py:3057-3058`）⇒ 任何材料名都在
 #   items 索引里，且解析出的 id 必然 ∈ ITEMS ⇒ 永远走第一分支。实测：SUPPLY_BOX 三档
 #   9/9 物品名全部命中 ITEMS 分支。故此处给空表 + 保留分支形状（不静默造假表）。
+#   ★ B14-2：**不切门面**——`catalog_items.MATERIALS` 是 598 条**材料段**表，而本模块的读点
+#   只在「`resolve_item` 未命中 ITEMS」的兜底分支里（`_imid in MATERIALS`，`_imid` 是中文名
+#   而 MATERIALS 键是 id）⇒ 换表既不改判定结果、又会让文档里的「结构性不可达」证明失真。
+#   保留空表，登记为本线「未切项」（见报告「未做与缺口」）。
 MATERIALS: dict = {}
 
 

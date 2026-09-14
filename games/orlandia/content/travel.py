@@ -9,22 +9,20 @@
 ------------------------------------------------------------------------------------------
 | 真源写法 | 包内写法 | 说明 |
 |---|---|---|
-| 模块级 `from .. import content as C` | 模块级 `C = _Dom()`（读**包内域 JSON**；未进包的符号 `__getattr__` 转注入的宿主聚合层） | 逐符号归属见下表 |
+| 模块级 `from .. import content as C` | 数据表用**包内门面**（`_cs` / `_cc`）；未进包的符号 `C = _Dom()` 的 `__getattr__` 转注入的宿主聚合层 | ★ B14-2 L6：读表口从「就地重建 + 宿主句柄」切到共享门面，逐符号归属见下表 |
 | 函数体内 `from .. import db  # 惰性导入` + `db.xxx(...)` | 模块级 `db` = **惰性宿主代理** `_HostDB` | 正文里 `db.xxx(...)` **一行未改**；宿主由 `bind_host(db)` 注入，或按 `sys.modules` 找**已加载**的宿主模块（绝不 import，防在包侧另起一份宿主模块树） |
 
-★ 逐符号归属（`C.XXX` → 包内域 / 宿主）
---------------------------------------
+★ 逐符号归属（真源写法一律 `C.<名>`；下表「符号」列只写名）
+----------------------------------------------------------
 | 符号 | 包内来源 | 实测口径 |
 |---|---|---|
-| `C.MAPS`（121，**有序，且条目带 `subareas`**） | `worlds.json` + `subareas.json` + `maps.json`（形状）**重建** | 宿主 `_assembly.py:135` 在装配期把 `SUBAREAS[图id]` 注入 `MAPS[i]["subareas"]`；包内两半拆在 `worlds`/`subareas` 两域，本模块按 `maps` 域的 `nodes` 顺序（= 源 `SUBAREAS[图]` 列表序，实测 121/121 相等）重新拼回。**独有证据**：`overnight/_b9l5_maps_probe.py` 逐条 deep-equal 121/121 通过（键集一致 + 值一致） |
-| `C.MAP_BY_ID` | 同上一份（`{id: 条目}`） | 消费端把它当普通 map dict 用（`["id"]` / `.get("name")` / `.get("type")` / `.get("subareas")`）⇒ 必须是**带 subareas 的那份**（否则 `landing_subarea` 静默返回 None = 落点变空） |
-| `C.PORTALS`（11） | **`portals.json`（本线新域）** | `portal_arrive_note` 只做 `in` / `[tid]` 取 `name`+`icon` |
-| `C.map_entry_subarea` / `C.map_center` / `C.map_route` / `C.subarea_links` | **宿主**（`game/core/maps.py`，引擎 `Space` 适配层）—— 缺口 | ⚠ **不能**在包里重建：`map_space` 读的是**运行时态** `SUBAREAS`（副本大陆克隆会就地增补房间），包内是按域文件静态重建 ⇒ 重建会在副本场景分叉。故按「谁认识活数据谁给」走宿主 |
-| `C.MAP_TYPE_FIELD/TOWN/INSTANCE` | **宿主**（`game/core/constants.py`）—— 缺口 | 按 B9「常量模块归 L7」铁律本线不建域 |
-| `C.LEGACY_MAP_ALIAS` / `C.HIDDEN_MAP_UNLOCK` | **宿主**（`game/data/maps.py:4352/4343` 两个常量）—— 缺口 | 同上（是常量不是条目表） |
-| `C.is_hidden_room` / `C.reveal_met` / `C.reveal_progress` | **宿主**（`game/core/maps.py`）—— 缺口 | 读运行时 `SUBAREAS` 的 `hidden`/`reveal` 字段 + `db` 计数 ⇒ 同 `map_space` 的理由 |
-| `C.build_monster`（`game/core/drops.py:389`） | **宿主** —— 缺口 | 怪物构造器**未进包**（`content/flow/boss_script.py` / `content/flow/tower_progress.py` 已登记同一缺口，走调用方传参）；本模块签名不许改（14 个调用点）⇒ 经 `bind_host` 注入 |
-| `C.mount_effects`（`game/core/mounts.py:39`） | **宿主** —— 缺口 | 坐骑域未进包（`content/settlement.py:55` 已登记同一缺口，那边走调用方传 dict；本模块无参数位 ⇒ 注入） |
+| `MAPS`（121，**有序，且条目带 `subareas`**）/ `MAP_BY_ID` / `PORTALS`（11） | **包内门面** `content/catalog_space.py`（本文件别名 `_cs`） | ★ B14-2 L6：原先是「`worlds`+`subareas`+`maps` 就地重建」（重建函数已删，防同表两份定义）；门面对拍逐条 deep-equal 实测相等（121/121，含 `subareas` 注入）。`MAP_BY_ID` 必须是**带 subareas 的那份**（否则 `landing_subarea` 静默返回 None = 落点变空）；`PORTALS` 键序 = 真源声明序（比域 JSON 字典序更保真） |
+| `MAP_TYPE_FIELD` / `MAP_TYPE_TOWN` / `MAP_TYPE_INSTANCE` | **包内门面** `content/catalog_core.py`（别名 `_cc`） | ★ B14-2 L6：原走宿主 `game/core/constants.py`（缺口）；B13-L6 常量入包后切门面（门禁逐值相等） |
+| `LEGACY_MAP_ALIAS` / `HIDDEN_MAP_UNLOCK` | **包内门面** `content/catalog_b143.py`（别名 `_cb143`；真源 `game/data/maps.py:4352/4343`） | ★ W4（2026-09-14）：原「无域、无读口」缺口已由 B14-3 建 `game_config.maps` 组补齐；门禁逐键逐值（含键序）相等 ⇒ 切门面，`C` 的 `_HOST_FALLBACK` 里两名同时删除 |
+| `map_entry_subarea` / `map_center` / `map_route` / `subarea_links` / `map_exit_subarea` | **宿主**（`game/core/maps.py`，引擎 `Space` 适配层）—— **缺口** | ⚠ **不能**在包里重建：`map_space` 读的是**运行时态** `SUBAREAS`（副本大陆克隆会就地增补房间），包内是按域文件静态重建 ⇒ 重建会在副本场景分叉。故按「谁认识活数据谁给」走宿主 |
+| `is_hidden_room` / `reveal_met` / `reveal_progress` | **宿主**（`game/core/maps.py`）—— **缺口** | 读运行时 `SUBAREAS` 的 `hidden`/`reveal` 字段 + `db` 计数 ⇒ 同 `map_space` 的理由 |
+| `build_monster`（`game/core/drops.py:389`） | **宿主** —— **缺口** | 怪物构造器**未进包**（`content/flow/boss_script.py` / `content/flow/tower_progress.py` 已登记同一缺口，走调用方传参）；本模块签名不许改（14 个调用点）⇒ 经 `bind_host` 注入 |
+| `mount_effects`（`game/core/mounts.py:39`） | **宿主** —— **缺口** | 坐骑域未进包（`content/settlement.py:55` 已登记同一缺口，那边走调用方传 dict；本模块无参数位 ⇒ 注入） |
 
 ★ `getattr(C, "is_hidden_room", None)` 这条**兜底分支**照原样保留：本门面 `__getattr__` 在宿主
 聚合层拿不到该属性时抛 `AttributeError`（与宿主 `C` 缺属性的表现一致）⇒ `getattr(..., None)`
@@ -38,59 +36,14 @@
 """
 from __future__ import annotations
 
-import json
-import os
 import sys
 
 import random  # noqa: F401  （真源模块级 `import random`；`move_stamina_cost` / `travel_ambush` 用）
 
-_HERE = os.path.dirname(os.path.abspath(__file__))          # <pkg>/content
-
-# ★ 地图真源插入序的唯一落点 = `content/event_menu.py`（B8.2 线3 已建，含集合守卫）
-#   —— 本模块 **import 复用**，不另抄一份（同表两份定义 = 双源，见 skill §4「同表多份定义」）。
-from .event_menu import MAP_ORDER                            # noqa: E402
-
-
-def _read_domain(domain: str, sub: str = "data", default=None):
-    """读包内 `content/<sub>/<domain>.json`（缺文件 / 坏 JSON → default，不抛；与包内口径同）。"""
-    try:
-        with open(os.path.join(_HERE, sub, "%s.json" % domain), encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:                                        # noqa: BLE001
-        return {} if default is None else default
-
-
-def _rebuild_maps(worlds: dict, subareas: dict, shapes: dict) -> list:
-    """`worlds` + `subareas` + `maps`(形状) → 宿主 `MAPS` 形状（条目带 `subareas`，按真源图序）。
-
-    与宿主 `game/data/_assembly.py:135` 的「把 `SUBAREAS[图id]` 注入 `MAPS[i]["subareas"]`」同义；
-    子区域顺序取 `maps` 域 `nodes` 的声明序（= 源 `SUBAREAS[图]` 列表序，实测 121/121 相等）。
-    重建结果的**逐条 deep-equal** 由 `overnight/_b9l5_maps_probe.py` 取证（121/121）。
-    集合守卫：真源图序声明 / worlds / maps 三者的图 id 集合必须一致；子区域必须在 `subareas` 域里
-    —— 任何一处对不上就 `raise`（静默少一个子区域 = 落点/撞怪池悄悄变，最难查）。
-    """
-    have = set(MAP_ORDER)
-    if have != set(worlds) or have != set(shapes):
-        raise ValueError(
-            "travel：地图真源序（content/event_menu.py:MAP_ORDER）与包内域不一致"
-            "（worlds %d / maps %d / 声明 %d；worlds 多出 %s；maps 多出 %s）"
-            % (len(worlds), len(shapes), len(MAP_ORDER),
-               sorted(set(worlds) - have)[:5], sorted(set(shapes) - have)[:5]))
-    out = []
-    for mid in MAP_ORDER:
-        ent = dict(worlds.get(mid) or {})
-        sas = []
-        for nid in [n.get("id") for n in ((shapes.get(mid) or {}).get("nodes") or [])]:
-            sa = subareas.get(nid)
-            if not isinstance(sa, dict):
-                raise ValueError("travel：子区域 %r（属于图 %r）不在包内 subareas 域里 —— 拒绝静默少子区域"
-                                 % (nid, mid))
-            sa = dict(sa)
-            sa.pop("map", None)          # 域里注入的归属字段：宿主 SUBAREAS 条目里没有它，剔掉还原形状
-            sas.append(sa)
-        ent["subareas"] = sas
-        out.append(ent)
-    return out
+# ★ B14-2 L6：数据表切包内门面（宿主 `game/data` 删掉后本模块仍能活）
+from . import catalog_core as _cc        # MAP_TYPE_FIELD / MAP_TYPE_TOWN / MAP_TYPE_INSTANCE
+from . import catalog_space as _cs       # MAPS / MAP_BY_ID / PORTALS
+from . import catalog_b143 as _cb143     # ★ W4：LEGACY_MAP_ALIAS / HIDDEN_MAP_UNLOCK（原缺口）
 
 
 # ============================================================
@@ -107,8 +60,6 @@ _HOST_PKG_FALLBACK = "game"
 # `C` 上**未进包**的符号 → 转宿主聚合层（理由见模块 docstring 的逐符号归属表）
 _HOST_FALLBACK = (
     "map_entry_subarea", "map_exit_subarea", "map_center", "map_route", "subarea_links",
-    "MAP_TYPE_FIELD", "MAP_TYPE_TOWN", "MAP_TYPE_INSTANCE",
-    "LEGACY_MAP_ALIAS", "HIDDEN_MAP_UNLOCK",
     "is_hidden_room", "reveal_met", "reveal_progress",
     "build_monster", "mount_effects",
 )
@@ -149,14 +100,7 @@ def _host_c():
 
 
 class _Dom:
-    """`C.MAPS` / `C.MAP_BY_ID` / `C.PORTALS` 从**包内域**给；其余符号转宿主聚合层。"""
-
-    def __init__(self):
-        self.MAPS = _rebuild_maps(_read_domain("worlds"),
-                                  _read_domain("subareas"),
-                                  _read_domain("maps"))
-        self.MAP_BY_ID = {m["id"]: m for m in self.MAPS}
-        self.PORTALS = _read_domain("portals")
+    """`C` 的宿主兜底面（B14-2 L6：数据表已切包内门面 `_cs` / `_cc`，本类只剩未进包的符号）。"""
 
     def __getattr__(self, name):
         """未进包的符号 → 宿主聚合层（`__getattr__` 只在常规找不到时才走）。"""
@@ -209,8 +153,8 @@ def conn_target(conn) -> tuple:
     """解析可前往连接项 → (目标地图 dict, 指定子区域 id 或 None)
     v87.5 支持两字段配置：'map_id' 或 ('map_id', 'subarea_id')"""
     if isinstance(conn, tuple):
-        return C.MAP_BY_ID[conn[0]], conn[1]
-    return C.MAP_BY_ID[conn], None
+        return _cs.MAP_BY_ID[conn[0]], conn[1]
+    return _cs.MAP_BY_ID[conn], None
 
 
 def conn_subarea_name(nm: dict, want_sa) -> str:
@@ -266,13 +210,13 @@ def resolve_map_target(dest: str):
 
     v86/v104 P1 口径（与『前往』原 else 分支逐行等价）：返回 dict 或 None。
     """
-    for m in C.MAPS:
+    for m in _cs.MAPS:
         if dest in (m["name"], m["id"]):
             return m
-    if dest in C.LEGACY_MAP_ALIAS:
-        return C.MAP_BY_ID.get(C.LEGACY_MAP_ALIAS[dest])
+    if dest in _cb143.LEGACY_MAP_ALIAS:
+        return _cs.MAP_BY_ID.get(_cb143.LEGACY_MAP_ALIAS[dest])
     # 区域名 → 区域入口
-    for m in C.MAPS:
+    for m in _cs.MAPS:
         if dest in m.get("area_name", ""):
             return m
     return None
@@ -374,15 +318,15 @@ def travel_ambush(player: dict, target_map: dict, group_id=None, qq_id=None,
     main_kill_hook：命令层注入 _main_kill_target_on_map（combat 域只读判定）。
     缺省 None 或 group_id/qq_id 空 = 无群上下文 → 维持原语义跳过副本撞怪分支。
     """
-    mtype = target_map.get("type", C.MAP_TYPE_FIELD)
-    if mtype == C.MAP_TYPE_TOWN:
+    mtype = target_map.get("type", _cc.MAP_TYPE_FIELD)
+    if mtype == _cc.MAP_TYPE_TOWN:
         return None
     # v95.23 #247：副本区域不参与移动撞怪——副本 Boss 在入口子区域 monsters 池里，
     # 撞怪会绕过『副本 <名字>』开本流程的等级/人数校验，低等级玩家进副本入口被 Boss 秒杀。
     # 副本入口应显示地图信息，引导玩家走开本流程（'副本' 命令有完整校验）。
     # v105 M19 P0：主线击杀目标只挂副本时放行——撞怪池仅保留主线目标怪
     # （走下方统一概率判定，Boss 按等级差概率撞，不绕过任何校验之外的新增风险面）。
-    if mtype == C.MAP_TYPE_INSTANCE:
+    if mtype == _cc.MAP_TYPE_INSTANCE:
         # v105 M19 P0：主线击杀目标只挂副本时放行——撞怪池仅保留主线目标怪
         # （走下方统一概率判定；group_id/qq_id 为空=既有测试直调场景，维持原跳过）
         _main_ent = None
@@ -448,7 +392,7 @@ def hidden_map_block(group_id, qq_id, player: dict, target: dict):
     """
     if not target.get("hidden"):
         return None
-    unlock = C.HIDDEN_MAP_UNLOCK.get(target["id"], {})
+    unlock = _cb143.HIDDEN_MAP_UNLOCK.get(target["id"], {})
     if player["level"] < unlock.get("level", 99):
         return "前方被无形的屏障阻挡……这里需要更强大的实力！(等级不足)"
     # v87：物品型准入（H6 泛黄书页×3 / H7 烬火信标）
@@ -495,7 +439,7 @@ def landing_subarea(target: dict, want_sa):
 def portal_arrive_note(group_id, qq_id, target: dict) -> str:
     """到达图含未激活方碑 → 提示行（'' 表示无提示；v13 旅者方碑引导）。"""
     tid = target.get("id", "")
-    if tid in C.PORTALS and tid not in db.get_portals(qq_id):
-        p = C.PORTALS[tid]
+    if tid in _cs.PORTALS and tid not in db.get_portals(qq_id):
+        p = _cs.PORTALS[tid]
         return f"\n\n🌌 一座{p['icon']}{p['name']}矗立在此！『激活』可解锁传送点～"
     return ""

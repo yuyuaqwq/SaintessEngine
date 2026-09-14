@@ -1,42 +1,42 @@
 {
   "combo": {
     "func": "tpl_combo",
-    "line": 472,
+    "line": 477,
     "doc": "组合模板：steps 顺序执行，拼接文本。params: steps: [{template, params, header?...}]"
   },
   "damage": {
     "func": "tpl_damage",
-    "line": 344,
+    "line": 349,
     "doc": "扣血（陷阱类）。params: pct/min/header"
   },
   "dialog": {
     "func": "tpl_dialog",
-    "line": 384,
+    "line": 389,
     "doc": "纯文案（变体池随机）。params: texts(必填)"
   },
   "exp_gain": {
     "func": "tpl_exp_gain",
-    "line": 302,
+    "line": 307,
     "doc": "经验 + 升级检查（沿用原 omen 逻辑）。params: min/max/scale_lv/header"
   },
   "heal_full": {
     "func": "tpl_heal_full",
-    "line": 335,
+    "line": 340,
     "doc": "回满血蓝。params: header"
   },
   "loot_gold": {
     "func": "tpl_loot_gold",
-    "line": 201,
+    "line": 206,
     "doc": "金币：gold = randint(min,max) + lv*scale_lv。params: min/max/scale_lv/header\nv109.3 P0 修复：基数从 DB 读最新 gold（原用 ctx._focus 陈旧对象——调用方在\n_rule_fire 前可能已通过其他路径加过金币（如 _complete_side_quest 的行会委托\n在 _bump_daily_progress 落库），旧 dict 覆盖会吞掉金币——combat.py:1779 同型\n问题 v105 M18 已修，quest 路径漏网导致 test_v104_quests 30% 偶发失败）"
   },
   "loot_gold_mats": {
     "func": "tpl_loot_gold_mats",
-    "line": 259,
+    "line": 264,
     "doc": "金币+材料（可带图纸概率）。params: min/max/scale_lv/mats/blueprint_chance/header"
   },
   "loot_materials": {
     "func": "tpl_loot_materials",
-    "line": 217,
+    "line": 222,
     "doc": "材料：从 mats 池随机 n 份入包，可带蓝图概率。params: mats/n/blueprint_chance/header\nv101.30d #O29：支持 cap_name/cap_count/fallback_mats——指定材料已有 cap_count 份时\n改掉 fallback 池（防任务/准入材料重复拾取，如泛黄书页满 3 张不再出）"
   },
   "merchant": {
@@ -46,52 +46,52 @@
   },
   "mystery_chest": {
     "func": "tpl_mystery_chest",
-    "line": 393,
+    "line": 398,
     "doc": "神秘宝匣：金币 + 当前地图怪物掉落池随机材料 + 必掉图纸。沿用原逻辑。"
   },
   "random_choice": {
     "func": "tpl_random_choice",
-    "line": 489,
+    "line": 494,
     "doc": "v97.4 概率分支：chance 命中执行 hit 子模板，否则 miss。params: chance/hit/miss\nhit/miss 为 {template, params}（与 combo 的 step 同构），支持嵌套。"
   },
   "rare_find": {
     "func": "tpl_rare_find",
-    "line": 580,
+    "line": 585,
     "doc": "v115 稀有发现：从 params.mats 稀有材料池随机抽 n 份入包（复用 loot_materials 思路）。\nparams: mats/n/header（header 可含 {mats}/{extra} 占位）"
   },
   "region_lore": {
     "func": "tpl_region_lore",
-    "line": 526,
+    "line": 531,
     "doc": "v115 区域见闻：纯氛围文案 + 记入见闻录 flag。\nparams: flag/texts/seen_texts/header（可选）\n首次触发写 event_state lore_{flag}_{qq_id}=\"1\" 并取 texts 一条；\n重复触发（flag 已存在）从 seen_texts（缺省回退 texts）里换一条。"
   },
   "set_flag": {
     "func": "tpl_set_flag",
-    "line": 375,
+    "line": 380,
     "doc": "写入隐藏线 talk_flag。params: flag/key/header"
   },
   "set_state": {
     "func": "tpl_set_state",
-    "line": 358,
+    "line": 363,
     "doc": "写入 event_state。params: key(可含 {gid}/{qid})/value/header\nvalue 支持特殊值 'ts'（存 {\"ts\": 当前时间戳}），或 dict / callable(ctx)。"
   },
   "shrine_bless": {
     "func": "tpl_shrine_bless",
-    "line": 566,
+    "line": 571,
     "doc": "v115 神龛祝福：写 event_state bless_{qq_id}，下次战斗攻击 +pct%。\nbattle.py 现有 echo_bless 机制读键 bless_{qid}（本场攻击 ×1.05，一次性消费）；\n此处复用同款键命名习惯——params: pct/header"
   },
   "stamina_cost": {
     "func": "tpl_stamina_cost",
-    "line": 507,
+    "line": 512,
     "doc": "v97.4 扣体力（浮桥落水等）。params: cost/header\n体力下限 0，上限 100 + lv*2（与 base.py _stamina_max 一致）。"
   },
   "stamina_gift": {
     "func": "tpl_stamina_gift",
-    "line": 544,
+    "line": 549,
     "doc": "v115 体力馈赠：随机回复体力 5-10（可自定义 min/max）。\nparams: min/max/header\n体力封顶 100 + lv*2（与 base.py _stamina_max 一致）。"
   },
   "wandering": {
     "func": "tpl_wandering",
-    "line": 444,
+    "line": 449,
     "doc": "迷路的旅人：限一次谢礼。沿用原 wandering 逻辑。"
   }
 }

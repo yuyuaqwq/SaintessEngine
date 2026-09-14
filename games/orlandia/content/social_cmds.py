@@ -29,8 +29,9 @@
 
 ⚠️ 缺口（报告同步登记）
 ----------------------
-* `C.WORLD_EVENT_POOL`（`game/data/world.py:8`，14 条）与 `C.generate_equip`（宿主 content 函数面）
-  —— **无包内域/读口** → 走宿主 `C` 句柄，不在包侧另起第二份表。
+* `C.WORLD_EVENT_POOL`（`game/data/world.py:8`，14 条）—— ★ W4（2026-09-14）已切包内门面
+  `content/catalog_b143.py`（B14-3 建 `game_config.world` 组，门禁逐条逐序相等）。
+  `C.generate_equip`（宿主 content 函数面，函数名不切）仍走宿主 `C` 句柄，不在包侧另起第二份表。
 * `DISPLAYS` / `INITIALIZERS`（`game/core/world_event_templates.py`）归 **B13-L3**；
   `services.auction`（`settle_auction` / `settle_expired_auction`）归 **B12-L5** —— 两条线都未落地，
   本模块按跨线规则走**宿主句柄惰性替身**；待它们进包后，把 `_host_attr(...)` 换成包内直取即可。
@@ -48,6 +49,9 @@ from __future__ import annotations
 import importlib
 import sys
 import time
+
+# ★ W4（2026-09-14）：`C.WORLD_EVENT_POOL` → 包内门面（真源 `game/data/world.py:8`）
+from . import catalog_b143 as _cat_b143
 
 
 # ============================================================
@@ -149,7 +153,7 @@ async def maybe_roll_event(group_id: str, broadcast) -> str:
     if _rnd.random() > 0.6:
         db.set_event_state("last_event_end", str(now))
         return ""
-    evt = _rnd.choice(C.WORLD_EVENT_POOL)
+    evt = _rnd.choice(_cat_b143.WORLD_EVENT_POOL)
     ends = now + evt["duration"]
     # v100.2：事件 data 初始化数据化 → core/world_event_templates.py INITIALIZERS
     init_fn = _host_attr("core.world_event_templates", "INITIALIZERS").get(evt["type"])
@@ -179,7 +183,7 @@ async def world_event_run(group_id: str, notice: str, broadcast, host_self):
     now = int(time.time())
     if not cur:
         return ["🌍 大陆风平浪静……\n" + notice]
-    evt = next((e for e in C.WORLD_EVENT_POOL if e["type"] == cur["etype"]), None)
+    evt = next((e for e in _cat_b143.WORLD_EVENT_POOL if e["type"] == cur["etype"]), None)
     left = max(0, cur["ends_at"] - now)
     mm, ss = divmod(left, 60)
     lines = [f"🌍 【世界事件】{evt['icon']} {evt['name']}(剩余 {mm}分{ss}秒)" if evt else "🌍 世界事件",

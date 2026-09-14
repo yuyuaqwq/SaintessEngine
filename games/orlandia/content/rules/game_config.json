@@ -1,4 +1,199 @@
 {
+  "affixes": {
+    "AFFIX_AFFINITY_CN": {
+      "攻击": "攻击",
+      "输出": "攻击",
+      "防御": "防御",
+      "防": "防御",
+      "生存": "防御",
+      "元素": "元素",
+      "元素伤害": "元素",
+      "机动": "机动",
+      "速度": "机动",
+      "灵活": "机动",
+      "穿透": "攻击",
+      "破甲": "攻击"
+    },
+    "AFFIX_POOL_BY_QUALITY": {
+      "blue": [
+        "bleed",
+        "armor_break",
+        "combo",
+        "crit_up",
+        "precise",
+        "charge",
+        "counter",
+        "meditate",
+        "block",
+        "dodge",
+        "dmg_reduce",
+        "swift",
+        "hp_up",
+        "regen",
+        "cdr",
+        "exp_bonus",
+        "gold_bonus",
+        "heal_power",
+        "shield_power",
+        "war_spirit",
+        "ember_brand",
+        "arcana_flux",
+        "arcane_focus",
+        "energy_blade",
+        "holy_echo",
+        "sigil_blessing",
+        "pious_charm",
+        "crit_return",
+        "finisher",
+        "combo_recover",
+        "rock_rest",
+        "opening_stance",
+        "sigil_engrave",
+        "momentum_mastery"
+      ],
+      "purple": [
+        "bleed",
+        "armor_break",
+        "combo",
+        "execute",
+        "lifesteal",
+        "crit_up",
+        "crit_dmg",
+        "element_fire",
+        "element_ice",
+        "element_thunder",
+        "precise",
+        "pierce",
+        "hunt",
+        "charge",
+        "counter",
+        "break_magic",
+        "purify",
+        "pene_phys",
+        "pene_magi",
+        "pene_flat",
+        "pene_mflat",
+        "block",
+        "thorns",
+        "dmg_reduce",
+        "shield",
+        "dodge",
+        "tenacity",
+        "regen",
+        "meditate",
+        "swift",
+        "luck",
+        "cdr",
+        "exp_bonus",
+        "gold_bonus",
+        "heal_power",
+        "shield_power",
+        "phys_ward",
+        "magic_ward",
+        "thirst_phys",
+        "thirst_magi",
+        "war_spirit",
+        "rage_forge",
+        "warcry_echo",
+        "blood_bath",
+        "energy_blade",
+        "energy_tide",
+        "full_pack",
+        "crit_charge",
+        "holy_echo",
+        "divine_radiance",
+        "sigil_blessing",
+        "crit_return",
+        "finisher",
+        "rhythm_badge",
+        "chi_limit",
+        "burst_break",
+        "sigil_engrave",
+        "reaction_catalyst",
+        "combo_ward",
+        "combo_edge",
+        "momentum_mastery"
+      ],
+      "orange": [
+        "abyss_resist",
+        "arcana_flux",
+        "arcane_focus",
+        "armor_break",
+        "bleed",
+        "block",
+        "blood_bath",
+        "boiling_blood",
+        "break_magic",
+        "burst_break",
+        "cdr",
+        "charge",
+        "chi_limit",
+        "combo",
+        "combo_edge",
+        "combo_recover",
+        "combo_ward",
+        "counter",
+        "crit_charge",
+        "crit_dmg",
+        "crit_return",
+        "crit_up",
+        "divine_radiance",
+        "dmg_reduce",
+        "dodge",
+        "dragon_aw",
+        "elem_resist",
+        "element_fire",
+        "element_ice",
+        "element_thunder",
+        "ember_brand",
+        "energy_blade",
+        "energy_tide",
+        "execute",
+        "exp_bonus",
+        "finisher",
+        "full_pack",
+        "gold_bonus",
+        "heal_power",
+        "holy_echo",
+        "holy_heart",
+        "hp_up",
+        "hunt",
+        "lifesteal",
+        "luck",
+        "magic_ward",
+        "meditate",
+        "momentum_mastery",
+        "opening_stance",
+        "pene_flat",
+        "pene_magi",
+        "pene_mflat",
+        "pene_phys",
+        "phys_ward",
+        "pierce",
+        "pious_charm",
+        "precise",
+        "purify",
+        "rage_forge",
+        "reaction_catalyst",
+        "regen",
+        "rhythm_badge",
+        "rock_rest",
+        "shield",
+        "shield_power",
+        "sigil_blessing",
+        "sigil_engrave",
+        "swift",
+        "swift_tailwind",
+        "tenacity",
+        "tenacity_cc",
+        "thirst_magi",
+        "thirst_phys",
+        "thorns",
+        "war_spirit",
+        "warcry_echo"
+      ]
+    }
+  },
   "battle_config": {
     "ASSASSIN_ON_CRIT_GAIN": 1,
     "ASSASSIN_ON_TAKE_HIT_PENALTY": -1,
@@ -1223,6 +1418,43 @@
       "anvil_fort",
       "dawn_city"
     ]
+  },
+  "fishing": {
+    "FISH_COLLECT": [
+      {
+        "id": "mat_rainbow_kite",
+        "name": "虹彩龙鲤",
+        "chance": 0.0005,
+        "spots": null,
+        "desc": "传说中只在彩虹映照深潭时现身的龙鲤，鳞片流光溢彩。"
+      },
+      {
+        "id": "mat_moon_jelly",
+        "name": "月华水母",
+        "chance": 0.0003,
+        "spots": null,
+        "time": "night",
+        "desc": "月光下才会浮起的透明水母，触须如月华般柔软。"
+      },
+      {
+        "id": "mat_star_remnant",
+        "name": "星骸遗鳞",
+        "chance": 0.0002,
+        "spots": [
+          "mist_trench",
+          "whale_domain",
+          "storm_sea"
+        ],
+        "desc": "据说来自坠入海底的星辰，鳞片还带着星空的微光。"
+      }
+    ],
+    "FISH_EXP": {
+      "white": 1,
+      "green": 1,
+      "blue": 2,
+      "purple": 3,
+      "orange": 5
+    }
   },
   "formula_skeleton": {
     "FORMULA_SKELETON": {
@@ -3162,6 +3394,541 @@
       ]
     }
   },
+  "hidden_monsters": {
+    "HIDDEN_MONSTERS": {
+      "e_gold_slime": {
+        "id": "e_gold_slime",
+        "name": "黄金史莱姆",
+        "role": "elite",
+        "lv_off": 2,
+        "skills": [
+          "ms_du_ya"
+        ],
+        "drops": [
+          "琥珀精华"
+        ],
+        "gold_mult": 80,
+        "cond": "any",
+        "chance": 0.004,
+        "tag": "✨ 隐藏",
+        "flavor": "一只通体金黄的史莱姆，在阳光下闪闪发光！"
+      },
+      "e_white_stag": {
+        "id": "e_white_stag",
+        "name": "白鹿王",
+        "role": "elite",
+        "lv_off": 3,
+        "skills": [
+          "ms_chong_zhuang"
+        ],
+        "drops": [
+          "白鹿角"
+        ],
+        "gold_mult": 40,
+        "cond": "forest_night",
+        "chance": 0.005,
+        "tag": "✨ 隐藏",
+        "flavor": "月光下，一匹通体雪白的巨鹿正低头饮水，鹿角泛着圣洁的光。"
+      },
+      "e_glimmer_fish": {
+        "id": "e_glimmer_fish",
+        "name": "荧光鱼群",
+        "role": "elite",
+        "lv_off": 1,
+        "skills": [
+          "ms_shui_dan"
+        ],
+        "drops": [
+          "荧光鳞"
+        ],
+        "gold_mult": 20,
+        "cond": "water",
+        "chance": 0.005,
+        "tag": "✨ 隐藏",
+        "flavor": "水面下闪过一片荧光，一群发光的鱼正逆流而上！"
+      },
+      "e_rune_golem": {
+        "id": "e_rune_golem",
+        "name": "符文魔像",
+        "role": "elite",
+        "lv_off": 5,
+        "skills": [
+          "ms_fu_wen_chong_ji"
+        ],
+        "drops": [
+          "符文碎片"
+        ],
+        "gold_mult": 30,
+        "cond": "ruin",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "flavor": "一尊刻满符文的石像缓缓转动头颅，符文亮起猩红的光。"
+      },
+      "e_shadow_stalker": {
+        "id": "e_shadow_stalker",
+        "name": "暗影猎手",
+        "role": "elite",
+        "lv_off": 6,
+        "skills": [
+          "ms_an_ying_dan"
+        ],
+        "drops": [
+          "暗影精华"
+        ],
+        "gold_mult": 50,
+        "cond": "night_any",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "flavor": "黑暗中一双眼睛盯着你——下一秒，利刃已到面前！"
+      },
+      "e_fortune_fox": {
+        "id": "e_fortune_fox",
+        "name": "幸运灵狐",
+        "role": "elite",
+        "lv_off": 1,
+        "skills": [
+          "ms_du_ya"
+        ],
+        "drops": [
+          "幸运符"
+        ],
+        "gold_mult": 60,
+        "cond": "any",
+        "chance": 0.002,
+        "tag": "✨ 隐藏",
+        "flavor": "一只通体赤红的小狐狸好奇地绕着你转圈，尾巴尖上闪着金光。"
+      },
+      "e_forest_wolf_king": {
+        "id": "e_forest_wolf_king",
+        "name": "森林狼王",
+        "role": "elite",
+        "lv_off": 3,
+        "skills": [
+          "ms_chong_zhuang"
+        ],
+        "drops": [
+          "狼皮",
+          "兽肉"
+        ],
+        "gold_mult": 25,
+        "cond": "forest",
+        "chance": 0.004,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "oak_plain",
+          "white_deer_forest",
+          "emerald_forest"
+        ],
+        "flavor": "灌木丛后传来低沉的呜咽——一头银灰色的巨狼缓缓走出，狼王的目光冰冷而威严。"
+      },
+      "e_swamp_croc": {
+        "id": "e_swamp_croc",
+        "name": "沼泽巨鳄",
+        "role": "elite",
+        "lv_off": 2,
+        "skills": [
+          "ms_shui_dan"
+        ],
+        "drops": [
+          "沼泽花",
+          "甲壳残片"
+        ],
+        "gold_mult": 20,
+        "cond": "water",
+        "chance": 0.004,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "misty_swamp",
+          "silver_brook"
+        ],
+        "flavor": "水面毫无征兆地裂开——一张布满利齿的大嘴直扑而来！"
+      },
+      "e_mine_troll": {
+        "id": "e_mine_troll",
+        "name": "矿洞巨魔",
+        "role": "elite",
+        "lv_off": 4,
+        "skills": [
+          "ms_fu_wen_chong_ji"
+        ],
+        "drops": [
+          "铁矿石",
+          "精铁"
+        ],
+        "gold_mult": 30,
+        "cond": "ruin",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "hill_mine",
+          "deep_tunnel"
+        ],
+        "flavor": "矿道深处传来沉重的脚步声——一个三米高的巨魔抡着矿锤，正把挡路的矿石砸得粉碎！"
+      },
+      "e_abbey_guardian": {
+        "id": "e_abbey_guardian",
+        "name": "圣堂武僧",
+        "role": "elite",
+        "lv_off": 5,
+        "skills": [
+          "ms_an_ying_dan"
+        ],
+        "drops": [
+          "圣水"
+        ],
+        "gold_mult": 35,
+        "cond": "any",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "dawn_cathedral",
+          "white_abbey"
+        ],
+        "flavor": "一个光头武僧双手合十拦住你：“施主，陪贫僧过两招。”——说完一拳已经招呼过来了！"
+      },
+      "e_royal_guard": {
+        "id": "e_royal_guard",
+        "name": "王都禁卫",
+        "role": "elite",
+        "lv_off": 6,
+        "skills": [
+          "ms_chong_zhuang"
+        ],
+        "drops": [
+          "副官勋章"
+        ],
+        "gold_mult": 40,
+        "cond": "any",
+        "chance": 0.002,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "king_road",
+          "holy_trial"
+        ],
+        "flavor": "一队巡逻的禁卫停下脚步，队长打量你片刻：“可疑人物，例行检查！”"
+      },
+      "e_moon_wolf": {
+        "id": "e_moon_wolf",
+        "name": "月狼",
+        "role": "elite",
+        "lv_off": 3,
+        "skills": [
+          "ms_du_ya"
+        ],
+        "drops": [
+          "月光精华"
+        ],
+        "gold_mult": 45,
+        "cond": "night_any",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "silverwood",
+          "moon_glade",
+          "starlake",
+          "moonshadow_wood"
+        ],
+        "flavor": "月光下，一头银白的狼站在高处，毛尖泛着月华——它仰头长啸，啸声直穿夜空。"
+      },
+      "e_elf_sentinel": {
+        "id": "e_elf_sentinel",
+        "name": "精灵哨兵",
+        "role": "elite",
+        "lv_off": 4,
+        "skills": [
+          "ms_shui_dan"
+        ],
+        "drops": [
+          "林语之叶"
+        ],
+        "gold_mult": 30,
+        "cond": "forest",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "silverwood",
+          "ancient_tree",
+          "moon_temple",
+          "emerald_valley"
+        ],
+        "flavor": "树影里无声无息地落下一道身影，精灵哨兵拉满长弓：“越过此线者，箭下不留情。”"
+      },
+      "e_frost_bear": {
+        "id": "e_frost_bear",
+        "name": "霜原巨熊",
+        "role": "elite",
+        "lv_off": 4,
+        "skills": [
+          "ms_chong_zhuang"
+        ],
+        "drops": [
+          "冰熊皮",
+          "雪狼皮"
+        ],
+        "gold_mult": 35,
+        "cond": "any",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "frost_horn",
+          "frost_field",
+          "winter_lake",
+          "cold_ridge"
+        ],
+        "flavor": "雪幕里站起一座山——霜原巨熊抖落身上的积雪，发出一声震得树挂簌簌落下的咆哮！"
+      },
+      "e_ash_salamander": {
+        "id": "e_ash_salamander",
+        "name": "烬火蝾螈",
+        "role": "elite",
+        "lv_off": 5,
+        "skills": [
+          "ms_fu_wen_chong_ji"
+        ],
+        "drops": [
+          "烬火余烬"
+        ],
+        "gold_mult": 40,
+        "cond": "ruin",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "cinder_mountain",
+          "ash_temple",
+          "forge_valley",
+          "molten_abyss"
+        ],
+        "flavor": "熔岩般的鳞片在暗处明灭，烬火蝾螈从灰烬中爬出，所过之处留下灼热的爪印。"
+      },
+      "e_dragon_hatchling": {
+        "id": "e_dragon_hatchling",
+        "name": "幼龙",
+        "role": "elite",
+        "lv_off": 6,
+        "skills": [
+          "ms_an_ying_dan"
+        ],
+        "drops": [
+          "幼龙鳞"
+        ],
+        "gold_mult": 60,
+        "cond": "any",
+        "chance": 0.002,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "dragon_pass",
+          "dragon_ridge",
+          "dragon_roost",
+          "dragon_tomb"
+        ],
+        "flavor": "崖壁的阴影里，一双琥珀色的竖瞳正打量着你——一只还没长开翅膀的幼龙！"
+      },
+      "e_storm_eagle": {
+        "id": "e_storm_eagle",
+        "name": "雷暴鹰",
+        "role": "elite",
+        "lv_off": 5,
+        "skills": [
+          "ms_du_ya"
+        ],
+        "drops": [
+          "天鹰羽"
+        ],
+        "gold_mult": 35,
+        "cond": "any",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "storm_cliff",
+          "storm_throne",
+          "redridge_plateau"
+        ],
+        "flavor": "雷云中劈下一道闪电——雷暴鹰穿过电光俯冲而来，爪尖噼啪作响！"
+      },
+      "e_sea_serpent": {
+        "id": "e_sea_serpent",
+        "name": "海蛇",
+        "role": "elite",
+        "lv_off": 5,
+        "skills": [
+          "ms_shui_dan"
+        ],
+        "drops": [
+          "珍珠贝",
+          "湖珍珠"
+        ],
+        "gold_mult": 40,
+        "cond": "water",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "nameless_harbor",
+          "mist_trench",
+          "storm_sea",
+          "black_tide_strait"
+        ],
+        "flavor": "海面隆起一道水脊，巨大的海蛇破浪而起，鳞片在阳光下泛着冷光！"
+      },
+      "e_siren": {
+        "id": "e_siren",
+        "name": "塞壬",
+        "role": "elite",
+        "lv_off": 6,
+        "skills": [
+          "ms_shui_dan"
+        ],
+        "drops": [
+          "深渊珍珠"
+        ],
+        "gold_mult": 50,
+        "cond": "water",
+        "chance": 0.002,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "siren_nest",
+          "mermaid_bay",
+          "coral_reef"
+        ],
+        "flavor": "歌声从礁石后传来，婉转悠扬——塞壬探出半个身子，笑得美丽又危险。"
+      },
+      "e_deep_angler": {
+        "id": "e_deep_angler",
+        "name": "深海鮟鱇",
+        "role": "elite",
+        "lv_off": 6,
+        "skills": [
+          "ms_an_ying_dan"
+        ],
+        "drops": [
+          "荧光鳞"
+        ],
+        "gold_mult": 45,
+        "cond": "water",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "deep_dragon_palace",
+          "mist_trench",
+          "shipwreck_graveyard"
+        ],
+        "flavor": "幽暗的水底亮起一盏小灯——深海鮟鱇甩着发光的诱饵，缓缓向你游来。"
+      },
+      "e_fungus_king": {
+        "id": "e_fungus_king",
+        "name": "真菌之王",
+        "role": "elite",
+        "lv_off": 4,
+        "skills": [
+          "ms_du_ya"
+        ],
+        "drops": [
+          "真菌肉",
+          "腐冠菌"
+        ],
+        "gold_mult": 25,
+        "cond": "ruin",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "fungus_forest",
+          "under_market",
+          "deep_tunnel"
+        ],
+        "flavor": "菌林中央，一株顶着伞盖的巨型真菌缓缓拔地而起，孢子如雪花般飘散！"
+      },
+      "e_lava_golem": {
+        "id": "e_lava_golem",
+        "name": "熔岩魔像",
+        "role": "elite",
+        "lv_off": 6,
+        "skills": [
+          "ms_fu_wen_chong_ji"
+        ],
+        "drops": [
+          "熔岩甲壳"
+        ],
+        "gold_mult": 45,
+        "cond": "ruin",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "molten_abyss",
+          "lava_bed",
+          "ember_camp"
+        ],
+        "flavor": "岩浆翻涌，一尊由熔岩凝成的巨像从火海中站起，裂缝里流淌着赤红的光！"
+      },
+      "e_ghost_knight": {
+        "id": "e_ghost_knight",
+        "name": "幽灵骑士",
+        "role": "elite",
+        "lv_off": 6,
+        "skills": [
+          "ms_an_ying_dan"
+        ],
+        "drops": [
+          "幽灵之尘"
+        ],
+        "gold_mult": 45,
+        "cond": "night_any",
+        "chance": 0.002,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "old_king_tomb",
+          "secret_crypt",
+          "ancient_battlefield"
+        ],
+        "flavor": "马蹄声由远及近——一位身着残甲的幽灵骑士策马而来，眼窝里燃着幽蓝的火焰。"
+      },
+      "e_cloud_serpent": {
+        "id": "e_cloud_serpent",
+        "name": "云龙",
+        "role": "elite",
+        "lv_off": 6,
+        "skills": [
+          "ms_shui_dan"
+        ],
+        "drops": [
+          "云絮"
+        ],
+        "gold_mult": 40,
+        "cond": "any",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "cloud_sea",
+          "cloud_sanctum",
+          "sky_ladder_path",
+          "starlight_terrace"
+        ],
+        "flavor": "云海翻腾，一条通体洁白的龙形生物在云雾间游动，卷起漫天的云絮！"
+      },
+      "e_iron_bull": {
+        "id": "e_iron_bull",
+        "name": "铁角蛮牛",
+        "role": "elite",
+        "lv_off": 2,
+        "skills": [
+          "ms_chong_zhuang"
+        ],
+        "drops": [
+          "山羊角",
+          "兽肉"
+        ],
+        "gold_mult": 20,
+        "cond": "any",
+        "chance": 0.003,
+        "tag": "✨ 隐藏",
+        "maps": [
+          "gold_plain",
+          "border_castle",
+          "knight_yard",
+          "ironshield_town"
+        ],
+        "flavor": "平原上传来隆隆的蹄声——一头铁角蛮牛红着眼朝你冲来，大地都在颤抖！"
+      }
+    }
+  },
   "housing": {
     "PROPERTIES": {
       "prop_oak_01": {
@@ -3258,6 +4025,15 @@
       "4": 0.2
     }
   },
+  "instance_investigation": {
+    "INVESTIGATE_COLLECT_SAMPLES": [
+      "mat_qi_shi_tuan_hui_zhang",
+      "mat_li_shi_xue_jia_bi_ji",
+      "mat_chao_xi_ri_zhi_can_ye",
+      "mat_ming_dan_can_ye",
+      "mat_jiu_zhan_chang_yi_wu_xiu_jian_sui"
+    ]
+  },
   "item_tag_display": {
     "ITEM_TAG_DISPLAY": {
       "鱼": {
@@ -3274,6 +4050,501 @@
         "line": "{size:.1f}cm / {weight}kg",
         "max_lines": 20,
         "omit": "……还有 {left} 条"
+      }
+    }
+  },
+  "maps": {
+    "MAP_CONNECTIONS": {
+      "abyss_altar": [
+        "lava_bed",
+        "abyss_throne"
+      ],
+      "abyss_gate": [
+        "ash_temple"
+      ],
+      "abyss_throne": [
+        "abyss_altar"
+      ],
+      "ancient_battlefield": [
+        "dragon_ridge"
+      ],
+      "ancient_tree": [
+        "moon_court",
+        "frost_field"
+      ],
+      "anvil_fort": [
+        "frost_horn",
+        "forge_valley",
+        "dwarf_long_gallery",
+        "cold_spine_snow_trail"
+      ],
+      "ash_temple": [
+        "cinder_mountain",
+        "abyss_gate"
+      ],
+      "aurora_town": [
+        "permafrost_field",
+        "frostwhisper_canyon"
+      ],
+      "black_forest": [
+        "frost_horn",
+        "cinder_mountain"
+      ],
+      "black_tide_strait": [
+        "nameless_harbor",
+        "pearl_city"
+      ],
+      "boar_ridge": [
+        "maple_village"
+      ],
+      "bone_wild": [
+        "dragon_pass",
+        "redridge_plateau"
+      ],
+      "border_castle": [
+        "ironshield_town"
+      ],
+      "cinder_mountain": [
+        "black_forest",
+        "ash_temple",
+        "ember_corridor"
+      ],
+      "cloud_sanctum": [
+        "rainbow_cloud"
+      ],
+      "cloud_sea": [
+        "wind_city",
+        "storm_plateau"
+      ],
+      "cold_ridge": [
+        "cold_spine_snow_trail"
+      ],
+      "cold_spine_snow_trail": [
+        "anvil_fort",
+        "cold_ridge"
+      ],
+      "coral_reef": [
+        "jade_port",
+        "sunset_isle",
+        "shell_town"
+      ],
+      "dawn_cathedral": [
+        "dawn_city",
+        "knight_yard",
+        "secret_crypt"
+      ],
+      "dawn_city": [
+        "silver_river",
+        "gold_plain",
+        "king_road",
+        "dawn_cathedral"
+      ],
+      "deep_dragon_palace": [
+        "storm_sea"
+      ],
+      "deep_lake": [
+        "under_market",
+        "gray_dwarf"
+      ],
+      "deep_tunnel": [
+        "dwarf_long_gallery",
+        "fungus_forest"
+      ],
+      "deer_fort": [
+        "hill_mine"
+      ],
+      "dragon_kin": [
+        "dragonborn_valley_trail"
+      ],
+      "dragon_pass": [
+        "dragon_ridge_old_road",
+        "dragon_ridge",
+        "bone_wild",
+        "sky_ladder_path"
+      ],
+      "dragon_ridge": [
+        "dragon_pass",
+        "dragon_roost",
+        "ancient_battlefield",
+        "dragonborn_valley_trail"
+      ],
+      "dragon_ridge_old_road": [
+        "moon_court",
+        "dragon_pass"
+      ],
+      "dragon_roost": [
+        "dragon_ridge",
+        "dragon_tomb",
+        "storm_cliff"
+      ],
+      "dragon_tomb": [
+        "dragon_roost"
+      ],
+      "dragonborn_valley_trail": [
+        "dragon_ridge",
+        "dragon_kin"
+      ],
+      "dragonsfall_valley": [
+        "redridge_plateau"
+      ],
+      "dusk_ridge_road": [
+        "west_ridge_wilds",
+        "moon_gate"
+      ],
+      "dwarf_long_gallery": [
+        "anvil_fort",
+        "deep_tunnel"
+      ],
+      "elven_ruins": [
+        "moonshadow_wood"
+      ],
+      "ember_camp": [
+        "molten_abyss",
+        "lava_bed"
+      ],
+      "ember_corridor": [
+        "cinder_mountain"
+      ],
+      "emerald_forest": [
+        "white_deer",
+        "misty_swamp"
+      ],
+      "emerald_valley": [
+        "silverwood",
+        "star_song"
+      ],
+      "eye_of_storm": [
+        "storm_plateau"
+      ],
+      "forge_valley": [
+        "anvil_fort",
+        "winter_lake"
+      ],
+      "frost_fang": [
+        "frost_horn"
+      ],
+      "frost_field": [
+        "ancient_tree",
+        "frost_horn",
+        "permafrost_field"
+      ],
+      "frost_horn": [
+        "frost_field",
+        "anvil_fort",
+        "black_forest",
+        "frost_fang"
+      ],
+      "frost_throne": [
+        "winter_lake"
+      ],
+      "frostwhisper_canyon": [
+        "aurora_town"
+      ],
+      "fungus_forest": [
+        "deep_tunnel",
+        "under_market"
+      ],
+      "goblin_camp": [
+        "misty_swamp"
+      ],
+      "gold_plain": [
+        "dawn_city",
+        "white_abbey",
+        "ironshield_hills",
+        "west_ridge_wilds"
+      ],
+      "gray_dwarf": [
+        "deep_lake"
+      ],
+      "harbor_docks": [
+        "ironharbor",
+        "sea_cave"
+      ],
+      "hill_mine": [
+        "silver_valley",
+        "deer_fort"
+      ],
+      "holy_trial": [
+        "king_road"
+      ],
+      "ironharbor": [
+        "silver_wind_road",
+        "harbor_docks",
+        "jade_port"
+      ],
+      "ironshield_hills": [
+        "gold_plain",
+        "ironshield_town"
+      ],
+      "ironshield_town": [
+        "ironshield_hills",
+        "old_battlefield",
+        "border_castle"
+      ],
+      "jade_port": [
+        "coral_reef",
+        "mist_tide_passage",
+        "ironharbor"
+      ],
+      "king_road": [
+        "dawn_city",
+        "old_king_tomb",
+        "holy_trial"
+      ],
+      "knight_yard": [
+        "dawn_cathedral"
+      ],
+      "lava_bed": [
+        "ember_camp",
+        "abyss_altar"
+      ],
+      "lost_library": [
+        "secret_crypt"
+      ],
+      "maple_village": [
+        "oak_town",
+        "rockfall_gorge",
+        "boar_ridge"
+      ],
+      "mermaid_bay": [
+        "shell_town",
+        "siren_nest"
+      ],
+      "mist_tide_passage": [
+        "jade_port",
+        "nameless_harbor"
+      ],
+      "mist_trench": [
+        "nameless_harbor"
+      ],
+      "misty_swamp": [
+        "emerald_forest",
+        "goblin_camp"
+      ],
+      "molten_abyss": [
+        "under_market",
+        "ember_camp",
+        "under_dragon"
+      ],
+      "moon_court": [
+        "starlake",
+        "moonshadow_wood",
+        "ancient_tree",
+        "dragon_ridge_old_road"
+      ],
+      "moon_gate": [
+        "dusk_ridge_road",
+        "silverwood"
+      ],
+      "moon_glade": [
+        "starlake",
+        "moon_temple"
+      ],
+      "moon_temple": [
+        "moon_glade"
+      ],
+      "moonshadow_wood": [
+        "moon_court",
+        "elven_ruins"
+      ],
+      "nameless_harbor": [
+        "mist_tide_passage",
+        "mist_trench",
+        "whale_domain",
+        "black_tide_strait"
+      ],
+      "white_deer_forest": [
+        "oak_plain",
+        "white_deer"
+      ],
+      "oak_plain": [
+        "oak_town",
+        "white_deer_forest"
+      ],
+      "oak_town": [
+        "oak_plain",
+        "maple_village"
+      ],
+      "old_battlefield": [
+        "ironshield_town"
+      ],
+      "old_king_tomb": [
+        "king_road"
+      ],
+      "pearl_city": [
+        "black_tide_strait",
+        "storm_sea"
+      ],
+      "permafrost_field": [
+        "frost_field",
+        "aurora_town"
+      ],
+      "rainbow_cloud": [
+        "wind_city",
+        "cloud_sanctum"
+      ],
+      "redridge_plateau": [
+        "bone_wild",
+        "dragonsfall_valley"
+      ],
+      "rockfall_gorge": [
+        "maple_village"
+      ],
+      "sea_cave": [
+        "harbor_docks"
+      ],
+      "sea_god_temple": [
+        "storm_sea"
+      ],
+      "secret_crypt": [
+        "dawn_cathedral",
+        "lost_library"
+      ],
+      "shell_town": [
+        "coral_reef",
+        "mermaid_bay"
+      ],
+      "shipwreck_graveyard": [
+        "whale_domain"
+      ],
+      "silver_brook": [
+        "silver_valley",
+        "windmill_plain"
+      ],
+      "silver_river": [
+        "white_deer",
+        "silver_valley",
+        "dawn_city"
+      ],
+      "silver_valley": [
+        "silver_river",
+        "silver_brook",
+        "hill_mine"
+      ],
+      "silver_wind_road": [
+        "white_deer",
+        "ironharbor"
+      ],
+      "silverwood": [
+        "moon_gate",
+        "starlake",
+        "emerald_valley",
+        "windvale"
+      ],
+      "siren_nest": [
+        "mermaid_bay"
+      ],
+      "sky_ladder_path": [
+        "dragon_pass",
+        "wind_city"
+      ],
+      "star_song": [
+        "emerald_valley"
+      ],
+      "starlake": [
+        "silverwood",
+        "moon_court",
+        "moon_glade"
+      ],
+      "starlight_terrace": [
+        "wind_city"
+      ],
+      "storm_cliff": [
+        "dragon_roost",
+        "storm_throne"
+      ],
+      "storm_plateau": [
+        "cloud_sea",
+        "eye_of_storm"
+      ],
+      "storm_sea": [
+        "pearl_city",
+        "sea_god_temple",
+        "deep_dragon_palace"
+      ],
+      "storm_strait": [
+        "sunset_isle",
+        "sunken_ship"
+      ],
+      "storm_throne": [
+        "storm_cliff"
+      ],
+      "sunken_ship": [
+        "storm_strait"
+      ],
+      "sunset_isle": [
+        "coral_reef",
+        "storm_strait"
+      ],
+      "under_dragon": [
+        "molten_abyss"
+      ],
+      "under_market": [
+        "fungus_forest",
+        "deep_lake",
+        "molten_abyss"
+      ],
+      "west_ridge_wilds": [
+        "gold_plain",
+        "dusk_ridge_road"
+      ],
+      "whale_domain": [
+        "nameless_harbor",
+        "shipwreck_graveyard"
+      ],
+      "white_abbey": [
+        "gold_plain"
+      ],
+      "white_deer": [
+        "white_deer_forest",
+        "silver_wind_road",
+        "emerald_forest",
+        "silver_river"
+      ],
+      "wind_city": [
+        "sky_ladder_path",
+        "cloud_sea",
+        "rainbow_cloud",
+        "starlight_terrace"
+      ],
+      "windmill_plain": [
+        "silver_brook"
+      ],
+      "windvale": [
+        "silverwood"
+      ],
+      "winter_lake": [
+        "forge_valley",
+        "frost_throne"
+      ]
+    },
+    "LEGACY_MAP_ALIAS": {
+      "vila": "oak_town",
+      "维拉镇": "oak_town",
+      "白鹿城": "white_deer",
+      "翡翠森林": "emerald_forest",
+      "铁港城": "ironharbor",
+      "晨曦城": "dawn_city",
+      "月冠王庭": "moon_court",
+      "霜角堡": "frost_horn",
+      "铁砧要塞": "anvil_fort",
+      "龙脊山口": "dragon_pass",
+      "橡木镇": "oak_town",
+      "橡木草地": "oak_plain",
+      "橡木林": "white_deer_forest"
+    },
+    "HIDDEN_MAP_UNLOCK": {
+      "lost_library": {
+        "level": 45,
+        "item": {
+          "泛黄书页": 3
+        }
+      },
+      "ember_corridor": {
+        "level": 80,
+        "item": {
+          "烬火信标": 1
+        }
       }
     }
   },
@@ -3464,6 +4735,759 @@
       "mount_ghost": 0.04,
       "mount_warhorse": 0.02,
       "mount_griffin": 0.01
+    }
+  },
+  "pets": {
+    "PET_MAX_LEVEL": 30,
+    "PET_SKILL_UNLOCK_LV": 10
+  },
+  "pois": {
+    "POIS": {
+      "campfire": {
+        "name": "篝火",
+        "icon": "🔥",
+        "desc": "一堆噼啪作响的篝火，火光照亮周围的空地。",
+        "effect": "recover"
+      },
+      "shrine": {
+        "name": "古老神龛",
+        "icon": "🛕",
+        "desc": "一座半埋进土里的古老神龛，石像面容模糊。",
+        "effect": "buff"
+      },
+      "herb_patch": {
+        "name": "草药丛",
+        "icon": "🌿",
+        "desc": "一片长势喜人的野生草药，散发着淡淡的药香。",
+        "effect": "herb"
+      },
+      "loot_pile": {
+        "name": "可疑包裹",
+        "icon": "🎁",
+        "desc": "路边扔着一个绑着麻绳的包裹，不知道装着什么。",
+        "effect": "loot"
+      },
+      "rune_stone": {
+        "name": "符文石",
+        "icon": "🪨",
+        "desc": "一块刻满符文的古老石碑，符文中似乎蕴含着知识。",
+        "effect": "rune"
+      },
+      "fishing_spot": {
+        "name": "鱼群聚集",
+        "icon": "🐟",
+        "desc": "水面泛起细密的涟漪，一大群鱼正聚在水面下。",
+        "effect": "fish"
+      },
+      "note": {
+        "name": "神秘字条",
+        "icon": "📜",
+        "desc": "一张钉在树干上的字条，墨迹已经有些褪色。",
+        "effect": "note"
+      },
+      "scenic_view": {
+        "name": "观景台",
+        "icon": "🏞️",
+        "desc": "一块探出山崖的天然平台，视野豁然开朗。",
+        "effect": "sight"
+      },
+      "ancient_tree_sight": {
+        "name": "古木参天",
+        "icon": "🌳",
+        "desc": "一株盘根错节的老树，树冠几乎遮蔽了半边天空。",
+        "effect": "sight"
+      },
+      "star_gazing": {
+        "name": "星野",
+        "icon": "🌌",
+        "desc": "夜空澄澈如洗，繁星低垂，仿佛伸手就能摘下。",
+        "effect": "sight"
+      },
+      "merchant_camp": {
+        "name": "行商营地",
+        "icon": "🧺",
+        "desc": "一处支着布棚的行商营地，货物还热乎着。",
+        "effect": "merchant"
+      },
+      "ancient_altar": {
+        "name": "古老祭坛",
+        "icon": "🗿",
+        "desc": "一座爬满藤蔓的古老祭坛，石台上残留着香火痕迹。",
+        "effect": "buff"
+      },
+      "bird_nest": {
+        "name": "高悬鸟巢",
+        "icon": "🪺",
+        "desc": "树杈间挂着一只精巧的鸟巢，几片绒羽随风飘落。",
+        "effect": "herb"
+      },
+      "ice_sculpture": {
+        "name": "天然冰雕",
+        "icon": "🧊",
+        "desc": "寒风把冰雪雕琢成奇形怪状的雕塑，在暮色里泛着幽蓝的光。",
+        "effect": "sight"
+      },
+      "dragon_bone": {
+        "name": "远古龙骸",
+        "icon": "🦴",
+        "desc": "半埋在山岩里的巨大龙骨，肋骨间卡着什么东西在发光。",
+        "effect": "loot"
+      },
+      "shipwreck": {
+        "name": "沉船残骸",
+        "icon": "⛵",
+        "desc": "一艘搁浅的旧船斜插在礁石间，舱门半开。",
+        "effect": "loot"
+      },
+      "traveler_grave": {
+        "name": "旅者之墓",
+        "icon": "🪦",
+        "desc": "一座无名墓碑，碑前放着半枯的花环。",
+        "effect": "note"
+      },
+      "goblin_camp_0_chest_1": {
+        "id": "goblin_camp_0_chest_1",
+        "type": "chest",
+        "name": "生锈的铁箱",
+        "hint": "铁箱的锁已经锈穿，看起来能撬开",
+        "loot": {
+          "gold": 50,
+          "materials": [
+            "哥布林铁片"
+          ]
+        }
+      },
+      "goblin_camp_0_fire_1": {
+        "id": "goblin_camp_0_fire_1",
+        "type": "campfire",
+        "name": "将熄的篝火",
+        "hint": "火堆还温着，可以烤烤火恢复体力"
+      },
+      "goblin_camp_1_chest_2": {
+        "id": "goblin_camp_1_chest_2",
+        "type": "chest",
+        "name": "贡品箱",
+        "hint": "箱子上捆着麻绳，里面可能是献给酋长的贡品",
+        "loot": {
+          "gold": 80,
+          "materials": [
+            "哥布林铁片"
+          ]
+        }
+      },
+      "goblin_camp_1_fire_2": {
+        "id": "goblin_camp_1_fire_2",
+        "type": "campfire",
+        "name": "暖火盆",
+        "hint": "火盆里的炭火正旺，能驱散夜战的疲惫"
+      },
+      "goblin_camp_2_corpse_1": {
+        "id": "goblin_camp_2_corpse_1",
+        "type": "corpse",
+        "name": "被抢的商队货箱",
+        "hint": "货箱被砸开过，里面还有没被拿走的零碎",
+        "loot": {
+          "gold": 60,
+          "materials": [
+            "哥布林铁片"
+          ]
+        }
+      },
+      "sea_cave_0_corpse_1": {
+        "id": "sea_cave_0_corpse_1",
+        "type": "corpse",
+        "name": "搁浅的水手",
+        "hint": "水手的衣服被海水泡烂，怀里似乎抱着什么",
+        "loot": {
+          "materials": [
+            "海盗的藏宝图"
+          ]
+        }
+      },
+      "sea_cave_0_trap_1": {
+        "id": "sea_cave_0_trap_1",
+        "type": "trap",
+        "name": "湿滑礁石",
+        "hint": "礁石上长满青苔，踩上去很容易滑倒"
+      },
+      "sea_cave_1_chest_1": {
+        "id": "sea_cave_1_chest_1",
+        "type": "chest",
+        "name": "海盗宝箱",
+        "hint": "木箱上烙着骷髅标记，锁头是新换的",
+        "loot": {
+          "gold": 120,
+          "materials": [
+            "海盗的藏宝图"
+          ]
+        }
+      },
+      "old_king_tomb_0_rune_1": {
+        "id": "old_king_tomb_0_rune_1",
+        "type": "rune_stone",
+        "name": "墓志铭石碑",
+        "hint": "碑上刻着古王奥德里克的生卒与功绩",
+        "lore": "『吾王奥德里克，戍边四十年，以血换民安。魂归于此，勿扰其眠。』"
+      },
+      "old_king_tomb_0_trap_1": {
+        "id": "old_king_tomb_0_trap_1",
+        "type": "trap",
+        "name": "翻板机关",
+        "hint": "石板有松动的痕迹，可能踩空"
+      },
+      "old_king_tomb_1_rune_2": {
+        "id": "old_king_tomb_1_rune_2",
+        "type": "rune_stone",
+        "name": "古王铭文",
+        "hint": "棺盖边缘刻着一行小字",
+        "lore": "『王座之下，机关常鸣。知吾者，可免一劫。』",
+        "effect": {
+          "unlock": "old_king_tomb_0_rune_1"
+        }
+      },
+      "old_king_tomb_2_mech_1": {
+        "id": "old_king_tomb_2_mech_1",
+        "type": "mechanism",
+        "name": "王座机关",
+        "hint": "王座扶手处有个隐蔽的机关，似乎需要某种铭文启示",
+        "need": {
+          "poi_read": "old_king_tomb_0_rune_1"
+        },
+        "effect": {
+          "skip_elite": true
+        },
+        "desc": "你依照铭文转动机关，地面裂开一条捷径——可以绕过守卫！"
+      },
+      "old_king_tomb_2_chest_1": {
+        "id": "old_king_tomb_2_chest_1",
+        "type": "chest",
+        "name": "陪葬宝箱",
+        "hint": "石箱上雕着古王的家徽，落满灰尘",
+        "loot": {
+          "gold": 200,
+          "materials": [
+            "古王碎片"
+          ]
+        }
+      },
+      "secret_crypt_0_trap_1": {
+        "id": "secret_crypt_0_trap_1",
+        "type": "trap",
+        "name": "圣光陷阱",
+        "hint": "地板上刻着圣徽，踩上去会触发圣光灼烧"
+      },
+      "secret_crypt_0_rune_1": {
+        "id": "secret_crypt_0_rune_1",
+        "type": "rune_stone",
+        "name": "审判纪要石碑",
+        "hint": "碑上刻着教会审判异端的记录",
+        "lore": "『凡被圣光标记者，不可通行。沿墙而行，可避其锋。』",
+        "effect": {
+          "avoid_trap": "secret_crypt_0_trap_1"
+        }
+      },
+      "secret_crypt_1_supply_1": {
+        "id": "secret_crypt_1_supply_1",
+        "type": "supply",
+        "name": "教会物资箱",
+        "hint": "铁箱里码着整齐的补给",
+        "loot": {
+          "materials": [
+            "圣水"
+          ],
+          "equip": null
+        }
+      },
+      "secret_crypt_2_chest_1": {
+        "id": "secret_crypt_2_chest_1",
+        "type": "chest",
+        "name": "圣物箱",
+        "hint": "银质箱体上刻着封印符文，微微发光",
+        "loot": {
+          "gold": 150,
+          "materials": [
+            "圣堂密卷"
+          ]
+        }
+      },
+      "elven_ruins_0_fire_1": {
+        "id": "elven_ruins_0_fire_1",
+        "type": "campfire",
+        "name": "残垣火堆",
+        "hint": "不知谁点的火堆还亮着，能暖暖身子"
+      },
+      "elven_ruins_1_mech_1": {
+        "id": "elven_ruins_1_mech_1",
+        "type": "mechanism",
+        "name": "精灵石像",
+        "hint": "其中一尊石像的底座有个可以转动的机关",
+        "effect": {
+          "open_secret": true
+        },
+        "desc": "你转动石像底座，走廊侧面无声地滑开一道暗门！"
+      },
+      "elven_ruins_1_corpse_1": {
+        "id": "elven_ruins_1_corpse_1",
+        "type": "corpse",
+        "name": "精灵战士遗骸",
+        "hint": "精灵弓手的遗骸，箭袋已经朽烂",
+        "loot": {
+          "materials": [
+            "月光石"
+          ]
+        }
+      },
+      "ash_temple_0_fire_1": {
+        "id": "ash_temple_0_fire_1",
+        "type": "campfire",
+        "name": "熔岩裂隙",
+        "hint": "裂隙里透出红光，靠过去能感到热浪——但比被恶魔追着打好多了"
+      },
+      "ash_temple_1_supply_1": {
+        "id": "ash_temple_1_supply_1",
+        "type": "supply",
+        "name": "祭品匣",
+        "hint": "石匣里供奉着祭品，恶魔似乎没来得及取走",
+        "loot": {
+          "materials": [
+            "大生命药水"
+          ]
+        }
+      },
+      "ash_temple_1_trap_1": {
+        "id": "ash_temple_1_trap_1",
+        "type": "trap",
+        "name": "灼热地板",
+        "hint": "某些石板烧得通红，踩上去会烫伤"
+      },
+      "ash_temple_2_rune_1": {
+        "id": "ash_temple_2_rune_1",
+        "type": "rune_stone",
+        "name": "封印符文碑",
+        "hint": "碑上刻着上古封印的符文",
+        "lore": "『火非烬，烬非灭。余烬之中，新生萌发。』"
+      },
+      "abyss_gate_0_corpse_1": {
+        "id": "abyss_gate_0_corpse_1",
+        "type": "corpse",
+        "name": "深渊骑士残骸",
+        "hint": "骑士的铠甲被黑暗腐蚀，胸口还挂着护符",
+        "loot": {
+          "materials": [
+            "深渊骑士护符"
+          ]
+        }
+      },
+      "abyss_gate_1_rune_1": {
+        "id": "abyss_gate_1_rune_1",
+        "type": "rune_stone",
+        "name": "深渊铭文碑",
+        "hint": "碑文在黑暗中泛着幽光",
+        "lore": "『它曾是我们之中的一个，直到它学会以黑暗为食。』"
+      },
+      "dragon_tomb_0_rune_1": {
+        "id": "dragon_tomb_0_rune_1",
+        "type": "rune_stone",
+        "name": "龙语碑文",
+        "hint": "碑上刻着弯弯曲曲的龙语",
+        "lore": "『眠者之殿，龙鳞为钥。』",
+        "effect": {
+          "unlock": "mechanism_dragon_gate"
+        }
+      },
+      "dragon_tomb_1_corpse_1": {
+        "id": "dragon_tomb_1_corpse_1",
+        "type": "corpse",
+        "name": "龙裔遗骸",
+        "hint": "半龙人的遗骸蜷在骨堆边，怀里抱着什么",
+        "loot": {
+          "materials": [
+            "龙鳞"
+          ]
+        }
+      },
+      "dragon_tomb_2_mech_1": {
+        "id": "dragon_tomb_2_mech_1",
+        "type": "mechanism",
+        "name": "暗门机关",
+        "hint": "大殿侧壁有道龙纹暗门，需要龙语启示",
+        "need": {
+          "poi_read": "dragon_tomb_0_rune_1"
+        },
+        "effect": {
+          "open_secret": true
+        },
+        "desc": "你按碑文低吟龙语，暗门轰然开启！"
+      },
+      "deer_fort_0_mech_1": {
+        "id": "deer_fort_0_mech_1",
+        "type": "mechanism",
+        "name": "城门绞盘",
+        "hint": "绞盘还能转动，也许能放下吊桥少走些弯路",
+        "effect": {
+          "skip_wave": true
+        },
+        "desc": "你转动绞盘，吊桥轰然落下——庭院里的守卫被引开了一波！"
+      },
+      "deer_fort_0_corpse_1": {
+        "id": "deer_fort_0_corpse_1",
+        "type": "corpse",
+        "name": "守军残骸",
+        "hint": "鹿角要塞守军的尸体，铠甲上还插着箭",
+        "loot": {
+          "materials": [
+            "军旗碎片"
+          ]
+        }
+      },
+      "deer_fort_1_supply_1": {
+        "id": "deer_fort_1_supply_1",
+        "type": "supply",
+        "name": "军械箱",
+        "hint": "半埋在土里的军械箱",
+        "loot": {
+          "materials": [
+            "精铁锭"
+          ]
+        }
+      },
+      "deer_fort_2_chest_1": {
+        "id": "deer_fort_2_chest_1",
+        "type": "chest",
+        "name": "要塞宝箱",
+        "hint": "主厅角落的箱子，锁上刻着鹿角徽记",
+        "loot": {
+          "gold": 150,
+          "materials": [
+            "军旗碎片"
+          ]
+        }
+      },
+      "holy_trial_0_rune_1": {
+        "id": "holy_trial_0_rune_1",
+        "type": "rune_stone",
+        "name": "试炼誓言碑",
+        "hint": "碑上刻着骑士的誓言",
+        "lore": "『无畏之心，百炼成钢。试炼不是考验，是馈赠。』"
+      },
+      "holy_trial_1_chest_1": {
+        "id": "holy_trial_1_chest_1",
+        "type": "chest",
+        "name": "老兵补给箱",
+        "hint": "老兵脚边的箱子，装着伤药与干粮",
+        "loot": {
+          "materials": [
+            "圣水"
+          ]
+        }
+      },
+      "moon_temple_0_supply_1": {
+        "id": "moon_temple_0_supply_1",
+        "type": "supply",
+        "name": "月光供品",
+        "hint": "祭台上的供品，信徒还未取走",
+        "loot": {
+          "materials": [
+            "月辉石"
+          ]
+        }
+      },
+      "moon_temple_0_rune_1": {
+        "id": "moon_temple_0_rune_1",
+        "type": "rune_stone",
+        "name": "月神祷文碑",
+        "hint": "碑上刻着月神的祷文",
+        "lore": "『月亏月盈，皆为月恩。』"
+      },
+      "moon_temple_1_chest_1": {
+        "id": "moon_temple_1_chest_1",
+        "type": "chest",
+        "name": "月光宝箱",
+        "hint": "银白色的箱子，在月光下几乎隐形",
+        "loot": {
+          "gold": 200,
+          "materials": [
+            "月辉石"
+          ]
+        }
+      },
+      "frost_throne_0_fire_1": {
+        "id": "frost_throne_0_fire_1",
+        "type": "campfire",
+        "name": "冰封火堆",
+        "hint": "火堆被冰封了一半，拨开冰壳还能点燃"
+      },
+      "frost_throne_1_mech_1": {
+        "id": "frost_throne_1_mech_1",
+        "type": "mechanism",
+        "name": "冰晶机关",
+        "hint": "墙上的冰晶簇中嵌着一块不寻常的蓝宝石",
+        "effect": {
+          "unlock": "campfire_throne"
+        },
+        "desc": "你打碎冰晶取下蓝宝石——远处传来冰层碎裂的声音，似乎打通了什么！"
+      },
+      "frost_throne_2_fire_2": {
+        "id": "frost_throne_2_fire_2",
+        "type": "campfire",
+        "name": "取暖火堆",
+        "hint": "王座旁有个火盆——蓝宝石的光芒似乎让它亮了起来",
+        "need": {
+          "unlock": "campfire_throne"
+        },
+        "effect": {
+          "heal_pct": 0.2
+        }
+      },
+      "storm_throne_0_rune_1": {
+        "id": "storm_throne_0_rune_1",
+        "type": "rune_stone",
+        "name": "风暴预言碑",
+        "hint": "碑文被雷劈过，字迹模糊但可辨",
+        "lore": "『雷落九重，云怒难平。取风为翼，可登云巅。』"
+      },
+      "storm_throne_1_trap_1": {
+        "id": "storm_throne_1_trap_1",
+        "type": "trap",
+        "name": "雷池",
+        "hint": "地面有块金属板格外闪亮，恐怕是通电的"
+      },
+      "sunken_ship_0_corpse_1": {
+        "id": "sunken_ship_0_corpse_1",
+        "type": "corpse",
+        "name": "水手遗骸",
+        "hint": "水手抱着一只酒瓶，瓶塞还完好",
+        "loot": {
+          "materials": [
+            "朗姆酒"
+          ]
+        }
+      },
+      "sunken_ship_1_chest_1": {
+        "id": "sunken_ship_1_chest_1",
+        "type": "chest",
+        "name": "船长酒柜",
+        "hint": "酒柜的锁被砸开了，里面还有存货",
+        "loot": {
+          "gold": 100,
+          "materials": [
+            "朗姆酒"
+          ]
+        }
+      },
+      "sunken_ship_2_chest_2": {
+        "id": "sunken_ship_2_chest_2",
+        "type": "chest",
+        "name": "船长宝箱",
+        "hint": "最大的铁箱，锁着三重锁",
+        "loot": {
+          "gold": 300,
+          "materials": [
+            "幽灵船票"
+          ]
+        }
+      },
+      "siren_nest_0_mech_1": {
+        "id": "siren_nest_0_mech_1",
+        "type": "mechanism",
+        "name": "海藻帷幕",
+        "hint": "厚厚一层海藻帘子，后面似乎藏着什么",
+        "effect": {
+          "unlock": "supply_hidden"
+        },
+        "desc": "你拨开海藻帷幕，露出后面一条隐秘的礁石岔道！"
+      },
+      "siren_nest_1_supply_1": {
+        "id": "siren_nest_1_supply_1",
+        "type": "supply",
+        "name": "珊瑚藏物",
+        "hint": "珊瑚丛中有个贝壳匣子",
+        "need": {
+          "unlock": "supply_hidden"
+        },
+        "loot": {
+          "materials": [
+            "荧光鳞"
+          ]
+        }
+      },
+      "siren_nest_2_chest_1": {
+        "id": "siren_nest_2_chest_1",
+        "type": "chest",
+        "name": "珍珠宝箱",
+        "hint": "珍珠母贝做成的箱子，散发着柔光",
+        "loot": {
+          "gold": 220,
+          "materials": [
+            "海妖鳞片"
+          ]
+        }
+      },
+      "sea_god_temple_0_rune_1": {
+        "id": "sea_god_temple_0_rune_1",
+        "type": "rune_stone",
+        "name": "海神祷文碑",
+        "hint": "碑上刻着海神的祷文",
+        "lore": "『潮起潮落，皆为吾意。敬畏者，得海之庇护。』"
+      },
+      "sea_god_temple_1_shell_1": {
+        "id": "sea_god_temple_1_shell_1",
+        "type": "supply",
+        "name": "嵌贝壁龛",
+        "hint": "墙壁上嵌成花纹的贝壳，泛着海神的微光",
+        "loot": {
+          "materials": [
+            "潮汐贝壳"
+          ]
+        }
+      },
+      "sea_god_temple_1_shell_2": {
+        "id": "sea_god_temple_1_shell_2",
+        "type": "supply",
+        "name": "散落的贝壳",
+        "hint": "礁石旁散落的贝壳，潮水刚退",
+        "loot": {
+          "materials": [
+            "潮汐贝壳"
+          ]
+        }
+      },
+      "sea_god_temple_2_chest_1": {
+        "id": "sea_god_temple_2_chest_1",
+        "type": "chest",
+        "name": "贡品宝箱",
+        "hint": "祭坛旁的箱子，装着信徒的贡品",
+        "loot": {
+          "gold": 260,
+          "materials": [
+            "海神祷文"
+          ]
+        }
+      },
+      "deep_dragon_palace_0_corpse_1": {
+        "id": "deep_dragon_palace_0_corpse_1",
+        "type": "corpse",
+        "name": "虾兵残甲",
+        "hint": "一副被遗弃的虾兵铠甲，腰牌还挂着",
+        "loot": {
+          "materials": [
+            "龙宫珠"
+          ]
+        }
+      },
+      "deep_dragon_palace_1_chest_1": {
+        "id": "deep_dragon_palace_1_chest_1",
+        "type": "chest",
+        "name": "珊瑚宝箱",
+        "hint": "珊瑚长成的箱子，卡在礁石间",
+        "loot": {
+          "gold": 240,
+          "materials": [
+            "龙宫珠"
+          ]
+        }
+      },
+      "gray_dwarf_0_corpse_1": {
+        "id": "gray_dwarf_0_corpse_1",
+        "type": "corpse",
+        "name": "守卫残骸",
+        "hint": "灰矮人守卫的尸体，腰带上挂着钥匙串",
+        "loot": {
+          "materials": [
+            "精铁锭"
+          ]
+        }
+      },
+      "gray_dwarf_1_chest_1": {
+        "id": "gray_dwarf_1_chest_1",
+        "type": "chest",
+        "name": "军械箱",
+        "hint": "铁箱里码着整齐的军械",
+        "loot": {
+          "gold": 180,
+          "materials": [
+            "精铁锭"
+          ]
+        }
+      },
+      "gray_dwarf_2_fire_1": {
+        "id": "gray_dwarf_2_fire_1",
+        "type": "campfire",
+        "name": "领主壁炉",
+        "hint": "壁炉里的火烧得正旺，决战前烤烤火吧"
+      },
+      "under_dragon_0_mech_1": {
+        "id": "under_dragon_0_mech_1",
+        "type": "mechanism",
+        "name": "龙骸骨门",
+        "hint": "一扇由龙骸拼成的巨门，卡在轨道上",
+        "effect": {
+          "skip_elite": true
+        },
+        "desc": "你扳动骨门的机括，巨门轰然落下——甬道里的幼龙被隔开了一批！"
+      },
+      "under_dragon_1_corpse_1": {
+        "id": "under_dragon_1_corpse_1",
+        "type": "corpse",
+        "name": "幼龙残骸",
+        "hint": "一只还没成年的地底幼龙尸体",
+        "loot": {
+          "materials": [
+            "地底龙鳞"
+          ]
+        }
+      },
+      "eye_of_storm_0_rune_1": {
+        "id": "eye_of_storm_0_rune_1",
+        "type": "rune_stone",
+        "name": "风神铭文碑",
+        "hint": "碑上的铭文被风磨得发亮",
+        "lore": "『风是天空的血脉。追风者，得风之速。』",
+        "effect": {
+          "boss_buff": "spd_up"
+        }
+      },
+      "eye_of_storm_1_chest_1": {
+        "id": "eye_of_storm_1_chest_1",
+        "type": "chest",
+        "name": "云中铁箱",
+        "hint": "铁箱被风绳捆在云桥上",
+        "loot": {
+          "gold": 320,
+          "materials": [
+            "雷核"
+          ]
+        }
+      },
+      "abyss_throne_0_rune_1": {
+        "id": "abyss_throne_0_rune_1",
+        "type": "rune_stone",
+        "name": "深渊预言碑",
+        "hint": "碑上的文字不断在黑暗中明灭",
+        "lore": "『魔像走廊的机关，动一处则万处皆动。智者绕行，愚者触之。』"
+      },
+      "abyss_throne_1_trap_1": {
+        "id": "abyss_throne_1_trap_1",
+        "type": "trap",
+        "name": "魔像陷阱",
+        "hint": "地板上有细微的震动纹路，恐怕会唤醒魔像"
+      },
+      "cloud_sanctum_0_fire_1": {
+        "id": "cloud_sanctum_0_fire_1",
+        "type": "campfire",
+        "name": "云端火堆",
+        "hint": "云上竟有火堆，火苗是淡金色的"
+      },
+      "cloud_sanctum_1_mech_1": {
+        "id": "cloud_sanctum_1_mech_1",
+        "type": "mechanism",
+        "name": "星门机关",
+        "hint": "回廊尽头有道星门，门框上嵌着七颗星石",
+        "effect": {
+          "open_secret": true
+        },
+        "desc": "你按下七颗星石，星门无声开启——圣殿的藏宝室出现了！"
+      }
     }
   },
   "prof_config": {
@@ -4081,6 +6105,23 @@
       }
     ]
   },
+  "runes": {
+    "RUNE_CRAFT_SHARDS": {
+      "blue": 3,
+      "purple": 4,
+      "orange": 6
+    },
+    "RUNE_DROP": {
+      "blue": 0.018,
+      "purple": 0.008,
+      "orange": 0.0025
+    },
+    "RUNE_LEVEL_ROMAN": {
+      "1": "I",
+      "2": "II",
+      "3": "III"
+    }
+  },
   "signin_config": {
     "SIGNIN_CONFIG": {
       "base_gold": 20,
@@ -4567,5 +6608,298 @@
   "weekly_quests": {
     "WEEKLY_PICK": 3,
     "WEEKLY_MIN_LV": 50
+  },
+  "world": {
+    "WORLD_EVENT_POOL": [
+      {
+        "type": "auction",
+        "name": "神秘拍卖行",
+        "icon": "🏪",
+        "duration": 7200,
+        "desc": "一位神秘商人出现在铁港城，带来了三件稀世珍宝！输入『拍卖』查看，『竞拍 <编号> <金币>』出价！"
+      },
+      {
+        "type": "boss",
+        "name": "世界Boss入侵",
+        "icon": "👹",
+        "duration": 10800,
+        "desc": "强大的魔物突破封印降临大陆！全服勇士共同讨伐，输入『讨伐』加入战斗！"
+      },
+      {
+        "type": "merchant",
+        "name": "商队集市",
+        "icon": "🎁",
+        "duration": 3600,
+        "desc": "远方商队进城了！所有商店限时 8 折，快去扫货！(输入『商店』查看)",
+        "effects": {
+          "shop_discount": 0.8
+        }
+      },
+      {
+        "type": "omen",
+        "name": "深渊涌动",
+        "icon": "🌋",
+        "duration": 7200,
+        "desc": "深渊裂隙异常活跃，魔物蠢蠢欲动！探索战斗经验与金币收益＋50%！",
+        "effects": {
+          "exp_mult": 1.5,
+          "gold_mult": 1.5
+        }
+      },
+      {
+        "type": "swarm",
+        "name": "兽潮来袭",
+        "icon": "⚔️",
+        "duration": 7200,
+        "desc": "兽潮涌向大陆，怪物经验＋30%，击杀声望双倍！守护这片土地！",
+        "effects": {
+          "exp_mult": 1.3,
+          "rep_mult": 2.0
+        }
+      },
+      {
+        "type": "festival",
+        "name": "圣光节",
+        "icon": "🎉",
+        "duration": 14400,
+        "desc": "教会举行圣光节庆典！『签到』奖励翻倍，战斗金币收益＋50%！",
+        "effects": {
+          "gold_mult": 1.5
+        }
+      },
+      {
+        "type": "festival",
+        "name": "丰收祭",
+        "icon": "🌾",
+        "duration": 14400,
+        "desc": "金穗平原麦浪翻涌，丰收祭启幕！全境战斗金币收益×1.5，共庆丰年！",
+        "effects": {
+          "gold_mult": 1.5
+        }
+      },
+      {
+        "type": "festival",
+        "name": "仲夏夜祭典",
+        "icon": "🏮",
+        "duration": 14400,
+        "desc": "萤火纷飞、篝火映夜，仲夏夜祭典歌舞不休！战斗经验收益×1.3！",
+        "effects": {
+          "exp_mult": 1.3
+        }
+      },
+      {
+        "type": "omen",
+        "name": "流星雨之夜",
+        "icon": "🌠",
+        "duration": 7200,
+        "desc": "流星雨划破夜空，星辉洒落大地！向流星许愿，战斗经验收益×1.5！",
+        "effects": {
+          "exp_mult": 1.5
+        }
+      },
+      {
+        "type": "omen",
+        "name": "极光之夜",
+        "icon": "🌌",
+        "duration": 7200,
+        "desc": "北境极光漫天舞动，元素魔力为之共鸣！战斗经验与金币收益×1.3！",
+        "effects": {
+          "exp_mult": 1.3,
+          "gold_mult": 1.3
+        }
+      },
+      {
+        "type": "merchant",
+        "name": "矮人商队",
+        "icon": "⚒️",
+        "duration": 3600,
+        "desc": "矮人锻造商队进城，锤声叮当！所有商店限时 8.5 折，神兵利器任你挑选！",
+        "effects": {
+          "shop_discount": 0.85
+        }
+      },
+      {
+        "type": "merchant",
+        "name": "精灵商队",
+        "icon": "🧝",
+        "duration": 3600,
+        "desc": "精灵商队踏月色而至，药香弥漫街巷！所有商店限时 8.5 折，珍稀药剂材料不容错过！",
+        "effects": {
+          "shop_discount": 0.85
+        }
+      },
+      {
+        "type": "swarm",
+        "name": "鼠潮",
+        "icon": "🐀",
+        "duration": 7200,
+        "desc": "地下鼠群骚动不安，成群涌出地表！讨伐鼠潮，战斗经验收益×1.2！",
+        "effects": {
+          "exp_mult": 1.2
+        }
+      },
+      {
+        "type": "swarm",
+        "name": "狼群围猎季",
+        "icon": "🐺",
+        "duration": 7200,
+        "desc": "北境狼群进入围猎季，嚎声四起！猎杀群狼，战斗经验收益×1.3！",
+        "effects": {
+          "exp_mult": 1.3
+        }
+      }
+    ],
+    "AUCTION_POOL": [
+      {
+        "slot": "weapon",
+        "lv": 15,
+        "quality": "purple",
+        "base": 800,
+        "buyout": 3000
+      },
+      {
+        "slot": "weapon",
+        "lv": 25,
+        "quality": "purple",
+        "base": 2000,
+        "buyout": 8000
+      },
+      {
+        "slot": "armor",
+        "lv": 20,
+        "quality": "purple",
+        "base": 1500,
+        "buyout": 6000
+      },
+      {
+        "slot": "weapon",
+        "lv": 35,
+        "quality": "orange",
+        "base": 5000,
+        "buyout": 20000
+      },
+      {
+        "slot": "ring",
+        "lv": 30,
+        "quality": "orange",
+        "base": 4000,
+        "buyout": 15000
+      },
+      {
+        "slot": "weapon",
+        "lv": 50,
+        "quality": "orange",
+        "base": 12000,
+        "buyout": 50000
+      },
+      {
+        "slot": "necklace",
+        "lv": 45,
+        "quality": "orange",
+        "base": 10000,
+        "buyout": 40000
+      },
+      {
+        "slot": "weapon",
+        "lv": 70,
+        "quality": "orange",
+        "base": 30000,
+        "buyout": 120000
+      },
+      {
+        "slot": "legs",
+        "lv": 80,
+        "quality": "orange",
+        "base": 40000,
+        "buyout": 150000
+      },
+      {
+        "slot": "weapon",
+        "lv": 95,
+        "quality": "orange",
+        "base": 80000,
+        "buyout": 300000
+      }
+    ],
+    "WORLD_BOSS_POOL": [
+      {
+        "name": "巨史莱姆王·咕噜咕噜",
+        "icon": "🟢",
+        "lv": 20,
+        "hp": 80000,
+        "reward": {
+          "gold": 800,
+          "exp": 1200
+        },
+        "map": "misty_swamp",
+        "map_name": "迷雾沼泽",
+        "mech": "summon"
+      },
+      {
+        "name": "百族战魂·奥德里克残影",
+        "icon": "👻",
+        "lv": 40,
+        "hp": 300000,
+        "reward": {
+          "gold": 3000,
+          "exp": 5000
+        },
+        "map": "old_king_tomb",
+        "map_name": "旧王陵外",
+        "mech": "summon"
+      },
+      {
+        "name": "古龙·奥姆之影",
+        "icon": "🐉",
+        "lv": 100,
+        "hp": 5000000,
+        "reward": {
+          "gold": 30000,
+          "exp": 50000
+        },
+        "map": "dragon_tomb",
+        "map_name": "龙之墓外",
+        "mech": "enrage"
+      },
+      {
+        "name": "海蛇王·深渊之鳞",
+        "icon": "🐍",
+        "lv": 55,
+        "hp": 800000,
+        "reward": {
+          "gold": 5000,
+          "exp": 8000
+        },
+        "map": "storm_strait",
+        "map_name": "风暴海峡",
+        "mech": "summon"
+      },
+      {
+        "name": "地底恶魔·黑炎",
+        "icon": "😈",
+        "lv": 85,
+        "hp": 2500000,
+        "reward": {
+          "gold": 15000,
+          "exp": 25000
+        },
+        "map": "molten_abyss",
+        "map_name": "熔火深渊",
+        "mech": "summon"
+      },
+      {
+        "name": "风暴龙王·裂空",
+        "icon": "🌩️",
+        "lv": 98,
+        "hp": 8000000,
+        "reward": {
+          "gold": 45000,
+          "exp": 80000
+        },
+        "map": "storm_plateau",
+        "map_name": "雷暴高原",
+        "mech": "enrage"
+      }
+    ]
   }
 }

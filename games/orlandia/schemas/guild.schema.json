@@ -6,8 +6,8 @@
   "x-primary": "guild_table",
   "type": "object",
   "propertyNames": {
-    "pattern": "^(roles|shop_items|skills)$",
-    "description": "表名（内容侧词汇）：`roles`（职位映射 + 可任命职位）/ `shop_items`（公会商店 6 件商品）/ `skills`（公会技能 3 条）"
+    "pattern": "^(roles|shop_items|skills|config)$",
+    "description": "表名（内容侧词汇）：`roles`（职位映射 + 可任命职位）/ `shop_items`（公会商店 6 件商品）/ `skills`（公会技能 3 条）/ `config`（B14-3 新增：`GUILD_CONFIG` 公会数值配置 —— 11 个键）"
   },
   "additionalProperties": {
     "$ref": "#/$defs/guild_table"
@@ -149,6 +149,30 @@
               }
             }
           }
+        },
+        "config": {
+          "$ref": "#/$defs/guild_config_table"
+        }
+      }
+    },
+    "guild_config_table": {
+      "type": "object",
+      "title": "公会数值配置（`game/data/guild.py:3 GUILD_CONFIG`）",
+      "description": "B14-3（2026-09-14）新增的一行。键 = 源侧常量键**原样**（11 个键，如 `create_cost`/`create_level`/`sign_exp`/`exp_bonus_per_level`/`max_bonus`…），值 = 数值/字符串**原样**（不补默认值、不改类型）。**为什么在本域**：`GUILD_CONFIG` 属于 `game/data/guild.py`，而本域是该模块**唯一**的公会域；本域 `$defs.guild_table` 不写 required ⇒ 加一行配置不会触发「每条都要有实体字段」的校验（同 `shop` 域保留键 `wild_trade`/`honor_shop` 的先例）。读口：包内 `content/social_guild.py` 的 `guild_config()`（原先由宿主 `bind_host(config=C.GUILD_CONFIG)` 注入）。",
+      "additionalProperties": true,
+      "minProperties": 1,
+      "properties": {
+        "create_cost": {
+          "type": "integer",
+          "minimum": 0,
+          "title": "建会金币",
+          "description": "创建一个公会的金币消耗。"
+        },
+        "create_level": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "建会等级门槛",
+          "description": "创建公会所需的玩家等级。"
         }
       }
     }

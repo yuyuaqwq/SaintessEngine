@@ -30,7 +30,8 @@
 宿主服务句柄 `host`（= 调用方传入，宿主薄壳 `_host()` 构造）
 ------------------------------------------------------------
     host.db                 宿主 `game.db`（存储层）
-    host.C                  宿主 `game.content` 薄聚合层（ITEMS/MAPS/MAP_BY_ID/display）
+    host.C                  宿主 `game.content` 薄聚合层（B14-2 起只剩 `display` 函数；
+                            ITEMS / MAPS / MAP_BY_ID 已切包内门面 catalog_{items,space}）
     host.player_final_stats 宿主 `game/content_rules/panel.player_final_stats`（`gm_设等级` 重算）
     host.title_bonus        `(group_id, qq_id) -> dict`（宿主 `CommandBase._title_bonus`）
 
@@ -42,6 +43,11 @@ import json
 import time
 
 from saintess_engine.command import page_items
+
+# B14-2（L7 线）：数据名读点切包内门面 —— 原 `host.C.<名>` 直取换成门面同名绑定；
+# `host.C` 仍保留给 `display`（函数，无门面，见头注）。
+from .catalog_items import ITEMS            # 真源 `host.C.ITEMS`
+from .catalog_space import MAPS, MAP_BY_ID  # 真源 `host.C.MAPS` / `host.C.MAP_BY_ID`
 
 
 # ============ 权限 / 目标解析 / 查找（真源 GmCmds 内部方法） ============
@@ -81,12 +87,11 @@ def resolve_target(host, raw: str):
 
 def find_item(host, name: str):
     """按名称查找物品定义(材料/消耗品)，返回 (item_key, item_data) 或 None。"""
-    C = host.C
-    for k, v in C.ITEMS.items():
+    for k, v in ITEMS.items():
         if v.get("name") == name:
             return k, dict(v)
     # 模糊包含匹配（唯一时才用）
-    hits = [(k, v) for k, v in C.ITEMS.items() if name in (v.get("name") or "")]
+    hits = [(k, v) for k, v in ITEMS.items() if name in (v.get("name") or "")]
     if len(hits) == 1:
         return hits[0][0], dict(hits[0][1])
     return None, None
@@ -94,11 +99,10 @@ def find_item(host, name: str):
 
 def find_map(host, name: str):
     """按名称/别名查找地图，返回 map_id 或 None。"""
-    C = host.C
-    for m in C.MAPS:
+    for m in MAPS:
         if m.get("name") == name or name in (m.get("alias") or []):
             return m["id"]
-    hits = [m for m in C.MAPS if name in (m.get("name") or "")]
+    hits = [m for m in MAPS if name in (m.get("name") or "")]
     if len(hits) == 1:
         return hits[0]["id"]
     return None
@@ -106,8 +110,7 @@ def find_map(host, name: str):
 
 def default_subarea(host, mid: str) -> str:
     """gm_传送落点：优先广场，其次第一个非出口子区域；无子区域 → 空。"""
-    C = host.C
-    m = C.MAP_BY_ID.get(mid, {})
+    m = MAP_BY_ID.get(mid, {})
     subs = m.get("subareas") or []
     for sa in subs:
         if sa.get("type") != "城镇出口" and "广场" in sa.get("name", ""):
@@ -210,9 +213,9 @@ def query_text(host, raw: str) -> str:
         return "❌ 目标玩家不存在～"
     cls = C.display("classes", p.get("class_name") or "") if p.get("class_name") else ""
     sub = p.get("cur_subarea") or ""
-    loc = (C.MAP_BY_ID.get(p.get("cur_map") or "", {}) or {}).get("name") or p.get("cur_map") or "?"
+    loc = (MAP_BY_ID.get(p.get("cur_map") or "", {}) or {}).get("name") or p.get("cur_map") or "?"
     if sub:
-        cm = C.MAP_BY_ID.get(p.get("cur_map") or "", {})
+        cm = MAP_BY_ID.get(p.get("cur_map") or "", {})
         for sa in (cm.get("subareas") or []):
             if sa.get("id") == sub:
                 loc += f"·{sa.get('name')}"
@@ -343,7 +346,7 @@ def teleport(host, raw: str) -> str:
     # v101.28p：传送落点设默认子区域（优先广场），否则 cur_subarea 空=卡城镇总览无法进子区域
     db.update_player("", tgt, cur_map=mid, cur_subarea=default_subarea(host, mid))
     p = db.get_player("", tgt)
-    return f"🌀 已把 {p.get('name')} 传送到【{host.C.MAP_BY_ID[mid]['name']}】！"
+    return f"🌀 已把 {p.get('name')} 传送到【{MAP_BY_ID[mid]['name']}】！"
 
 
 def stamina(host, raw: str) -> str:

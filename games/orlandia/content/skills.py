@@ -9,23 +9,23 @@
 --------------------------------------------------------------
 | 真源 | 包内等价物 | 说明 |
 |---|---|---|
-| `from .. import content as C` | 下面 `class _ContentShim` + `C = _ContentShim()` | 游戏仓聚合层 `game/content.py` 只有 4 个符号被本模块读（`PLAYER_SKILLS` / `BRANCH_SKILLS` / `TUTOR_SKILLS` / `SKILL_UP`）+ `resolve`，包内 shim 就这 5 个 |
+| `from .. import content as C` | 下面 `class _ContentShim` + `C = _ContentShim()`（**W6 后只剩 `resolve`**） | 真源读聚合层 5 个符号（`PLAYER_SKILLS` / `BRANCH_SKILLS` / `TUTOR_SKILLS` / `SKILL_UP` + `resolve`）；W6 起 4 张表调用点直接读**本模块**同名模块级对象（shim 当年就是回指它们 = 同一个对象，值零变化），`C` 上只剩函数名句柄 `resolve` |
 | （隐式）三张源表 | `_shape_three_tables(_T.SKILLS, _T.CLASSES)` | 包内 `content/data/skills.json` 是三表**扁平化**产物（305 条，条目带 `owner_class` / `source` / `tier` / `branch`，见游戏仓 `scripts/export_game_package.py:161 derive_skills`）→ 这里按导出器追加的 4 个字段**逆折回**真源形状（`{cls:{name,skills}}` / `{cls:{name,branches:{tier:{线:{名:info}}}}}` / `{cls:{sk:info}}`），并从条目里剥掉那 4 个追加字段 —— 于是 `skill_info` 返回的 info **与真源逐字段相等**（导出器只追加、不改值，`_put` 源码可查） |
 | `from saintess_engine.battle.formulas import skill_max_level` | 同左（引擎侧纯公式，路径不变） | `skill_upgrade_cost` 用 |
 | ✅ 包内新增：`SKILL_UP` 表 | 本文件内**逐字内嵌**（AST 切片自 `game/data/skill_up.py`，305 条） | 该域**尚未进包**（`content/data/skill_up.json` 不存在，导出器暂无 `derive_skill_up`），而 `_skill_up` 必须读它；包内数据「随代码走」口径同 `content/mech/params.py` / `content/mech/class_data.py`（后者也是程序 dump 内嵌）。建域后整块搬走即可 |
 
-真源读的游戏仓表（4 张）↔ 包内域：
+真源读的游戏仓表（4 张）↔ 包内读口（W6 后调用点直读模块级同名对象）：
 
-    C.PLAYER_SKILLS  ← content/data/skills.json（source == "player"）
-    C.BRANCH_SKILLS  ← content/data/skills.json（source == "branch"；tier/branch 还原嵌套）
-    C.TUTOR_SKILLS   ← content/data/skills.json（source == "tutor"）
-    C.SKILL_UP       ← 本文件内嵌 `SKILL_UP`（真源 `game/data/skill_up.py`）
-    C.resolve(...)   ← content/tables.py:resolve（= 游戏仓 `game/core/index.py:47`）
+    PLAYER_SKILLS  ← content/data/skills.json（source == "player"，`_shape_three_tables` 逆折）
+    BRANCH_SKILLS  ← content/data/skills.json（source == "branch"；tier/branch 还原嵌套）
+    TUTOR_SKILLS   ← content/data/skills.json（source == "tutor"）
+    SKILL_UP       ← 本文件内嵌 `SKILL_UP`（真源 `game/data/skill_up.py`）
+    C.resolve(...) ← content/tables.py:resolve（= 游戏仓 `game/core/index.py:47`）—— 函数名句柄，保留
 
 已知差异（逐条 + 证据见 `overnight/d3-skills-port.md`）
 ----------------------------------------------------
 1. `TUTOR_SKILLS` 里**空表职业键**（真源 `cls_zhan_shi` / `cls_you_xia` = `{}`）在包内域里没有对应条目
-   → 逆折出的 tutor 表少这两个键。**行为等价**：`skill_info` 的导师环是 `(C.TUTOR_SKILLS or {}).get(cls, {}).get(...)`，
+   → 逆折出的 tutor 表少这两个键。**行为等价**：`skill_info` 的导师环是 `(TUTOR_SKILLS or {}).get(cls, {}).get(...)`，
    键缺失 = 空表，结果同为 `None`；`_build_skill_key_index` 遍历空表不产出条目。
 2. `resolve("skills", …)`：真源索引只有 **67** 个名字（`PLAYER_SKILLS` 扁平 + `TUTOR`，`game/data/_assembly.py:166-180`），
    包内 `tables.resolve` 覆盖 **305** 个（含分支）。**语义等价**：分支技能 key 与 `name` 逐条相同（238/238），
@@ -414,12 +414,11 @@ SKILL_UP: dict = {
 
 
 class _ContentShim:
-    """`game/content.py` 聚合层的包内等价物 —— 只含本模块读的 5 个符号。"""
+    """`game/content.py` 聚合层的包内等价物 —— W6 后**只剩 `resolve`**（函数名句柄）。
 
-    PLAYER_SKILLS = PLAYER_SKILLS
-    BRANCH_SKILLS = BRANCH_SKILLS
-    TUTOR_SKILLS = TUTOR_SKILLS
-    SKILL_UP = SKILL_UP
+    4 张数据表（`PLAYER_SKILLS` / `BRANCH_SKILLS` / `TUTOR_SKILLS` / `SKILL_UP`）W6 起由调用点
+    直接读本模块同名模块级对象（shim 原先就是回指它们 ⇒ **同一个对象**，值零变化）。
+    """
 
     @staticmethod
     def resolve(table_name: str, name_or_id: str):
@@ -438,7 +437,7 @@ C = _ContentShim()
 # 兼容 v48 前旧结构 {职业: {技能: def}} 的读取辅助。
 def _sk_table(class_name: str) -> dict:
     class_name = C.resolve("classes", class_name)  # v48：统一转 ID
-    t = C.PLAYER_SKILLS.get(class_name, {})
+    t = PLAYER_SKILLS.get(class_name, {})
     if isinstance(t, dict) and "skills" in t:
         return t["skills"]
     return t
@@ -446,7 +445,7 @@ def _sk_table(class_name: str) -> dict:
 
 def _br_table(class_name: str) -> dict:
     class_name = C.resolve("classes", class_name)
-    t = C.BRANCH_SKILLS.get(class_name, {})
+    t = BRANCH_SKILLS.get(class_name, {})
     if isinstance(t, dict) and "branches" in t:
         return t["branches"]
     return t
@@ -460,13 +459,13 @@ def _build_skill_key_index() -> dict:
     """全量玩家技能索引：{sk_id: (所属职业, info)}——覆盖基础职业 + 分支 + 导师。
     供怪物技能引用玩家技能（存储分离、解析一套）与全局技能 key 反查。"""
     idx = {}
-    for cls_id, cls in (C.PLAYER_SKILLS or {}).items():
+    for cls_id, cls in (PLAYER_SKILLS or {}).items():
         if not isinstance(cls, dict):
             continue
         for sk, info in (cls.get("skills") or {}).items():
             if sk not in idx:
                 idx[sk] = (cls_id, info)
-    for cls_id, brs in (C.BRANCH_SKILLS or {}).items():
+    for cls_id, brs in (BRANCH_SKILLS or {}).items():
         if not isinstance(brs, dict):
             continue
         for tier, branches in (brs.get("branches") or {}).items():
@@ -474,7 +473,7 @@ def _build_skill_key_index() -> dict:
                 for sk, info in (skills or {}).items():
                     if sk not in idx:
                         idx[sk] = (cls_id, info)
-    for cls_id, t_skills in (C.TUTOR_SKILLS or {}).items():
+    for cls_id, t_skills in (TUTOR_SKILLS or {}).items():
         for sk, info in (t_skills or {}).items():
             if sk not in idx:
                 idx[sk] = (cls_id, info)
@@ -527,7 +526,7 @@ def skill_info(class_name: str, skill_name: str):
             if skill_name in skills:
                 return skills[skill_name]
     # v95.23 职业导师进阶技能（TUTOR_SKILLS 并入查询链，battle/面板共用）
-    t_info = (C.TUTOR_SKILLS or {}).get(class_name, {}).get(skill_name)
+    t_info = (TUTOR_SKILLS or {}).get(class_name, {}).get(skill_name)
     if t_info:
         return t_info
     return None
@@ -561,7 +560,7 @@ def branch_path_index(class_name: str, tier: int, branch_key: str):
 
 
 # ============================================================
-# 技能升级配置（C.SKILL_UP 表读）
+# 技能升级配置（SKILL_UP 表读）
 # ============================================================
 
 # v181 P0B-C：SKILL_UP key 已改稳定 id（见 game/data/skill_up.py 头注）。中文名→id 反查索引，
@@ -573,7 +572,7 @@ def _skill_up_name_index() -> dict:
     global _SKILL_UP_NAME_INDEX
     if _SKILL_UP_NAME_INDEX is None:
         _idx = {}
-        for _sid, _cfg in (C.SKILL_UP or {}).items():
+        for _sid, _cfg in (SKILL_UP or {}).items():
             _nm = _cfg.get("name") if isinstance(_cfg, dict) else None
             if _nm and _nm not in _idx:  # 首个赢（自检已保证 name 唯一，防御性 setdefault）
                 _idx[_nm] = _sid
@@ -601,10 +600,10 @@ def _skill_up(info: dict | None) -> dict:
     _name = info.get("name", "")
     _sid = _skill_up_name_index().get(_name)
     if _sid:
-        _hit = C.SKILL_UP.get(_sid)
+        _hit = SKILL_UP.get(_sid)
         if _hit is not None:
             return _hit
-    return C.SKILL_UP.get(_name) or {}
+    return SKILL_UP.get(_name) or {}
 
 
 def skill_upgrade_cost(cur_lv: int, info: dict | None = None) -> int:

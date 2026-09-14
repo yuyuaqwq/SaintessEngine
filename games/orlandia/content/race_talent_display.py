@@ -7,13 +7,11 @@
 现在是薄壳（全名单再导出），消费者 2 处（`game/commands/player.py:417/697`，函数内
 `from ..core.race_talent_display import format_talent`）零改动。
 
-正文改动面（**只有 3 处宿主取件**，其余逐字）：
-  ① `format_talent` 内 `from ..log_setup import LOG` → `LOG = _host_attr("log_setup", "LOG")`
+正文改动面（3 处宿主取件，其余逐字）：
+  ① `format_talent` 内 `from ..log_setup import LOG` → `LOG = _host_attr("log_setup", "LOG")`（平台/运维面，留宿主）
   ②/③ `_d_berserk_hp` / `_d_timid_hp` 内 `from ..data.races import RACE_ATTACK_MULT`
-     → `RACE_ATTACK_MULT = _host_attr("data.races", "RACE_ATTACK_MULT")`
-
-缺口（报告登记）：`RACE_ATTACK_MULT` 包内无同形域（`content/data/races.json` 只有
-`name/icon/desc/talents/talent_names`，无攻击系数表）→ 宿主句柄；`LOG` 属平台/运维面（留宿主）。
+     → ★ **B16-W11b（2026-09-14）**：`from .catalog_rules import RACE_ATTACK_MULT`（包内门面）
+     —— `races` 域只有 `name/icon/desc/talents/talent_names`（无攻击系数表）⇒ 门面字面量、登记 `NOT_YET_DOMAINED`。
 """
 
 # ============================================================
@@ -169,7 +167,7 @@ def _d_heal_received(v, name):
 def _d_berserk_hp(v, name):
     # v181.D（P1-D）：倍率读 data/races.py RACE_ATTACK_MULT（原从 battle 反向 import，
     # 随 battle 常量下沉改读数据单源；调值只改 races.py，本展示与 battle 结算自动同步）
-    RACE_ATTACK_MULT = _host_attr("data.races", "RACE_ATTACK_MULT")
+    from .catalog_rules import RACE_ATTACK_MULT   # ★ B16-W11b：包内门面（真源 game/data/races.py:115）
     pct = round((RACE_ATTACK_MULT["berserk"] - 1) * 100)
     return f"{name} 残血攻＋{pct}%"
 
@@ -178,7 +176,7 @@ def _d_berserk_hp(v, name):
 def _d_timid_hp(v, name):
     # v181.D（P1-D）：倍率读 data/races.py RACE_ATTACK_MULT（原从 battle 反向 import，
     # 随 battle 常量下沉改读数据单源；调值只改 races.py，本展示与 battle 结算自动同步）
-    RACE_ATTACK_MULT = _host_attr("data.races", "RACE_ATTACK_MULT")
+    from .catalog_rules import RACE_ATTACK_MULT   # ★ B16-W11b：包内门面（真源 game/data/races.py:115）
     pct = round((1 - RACE_ATTACK_MULT["timid"]) * 100)
     return f"🔻{name} 残血攻－{pct}%"
 

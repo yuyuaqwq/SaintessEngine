@@ -22,7 +22,7 @@
 | 真源宿主耦合 | 包内替身 | 调用方给什么 |
 |---|---|---|
 | `ctx._db()` → `from .. import db`（:78） | **`ctx.host`**（`PoiContext(..., host=…)`） | 写库五动词对象：`update_player(gid, qid, **fields)` · `add_item(gid, qid, iid, item, count=1)` · `set_event_state(k, v)` · `get_event_state(k)` · `set_talk_flag(gid, qid, flag, action)`（真源 = 宿主 `game.db`；live 消费端 = 宿主命令层 `game/commands/combat.py:982 _handle_poi`） |
-| `ctx._C()` → `from .. import content as C`（:82） | **`ctx.dom`**（`PoiContext(..., dom=…)`） | 内容域访问：`MATERIALS` · `CAMPFIRE_FOOD_POOL` · `HERB_POOL` · `pools(name)` · `resolve(table, name_or_id)` · `display(table, entity_id)` · `roll_blueprint(lv)` · `generate_equip(slot, lv, quality)` · `living_members(st)` · `set_alive(st, key, value)`（真源 = 宿主 `game.content` + `game.data.pois` + `game.core.instance_run`；材料表本体已在 `content/data/items.json`，文案池/图纸与装备生成器/副本运行态**未进包**） |
+| `ctx._C()` → `from .. import content as C`（:82） | **`ctx.dom`**（`PoiContext(..., dom=…)`） | 内容域访问：`CAMPFIRE_FOOD_POOL` · `HERB_POOL` · `pools(name)` · `resolve(table, name_or_id)` · `display(table, entity_id)` · `roll_blueprint(lv)` · `generate_equip(slot, lv, quality)` · `living_members(st)` · `set_alive(st, key, value)`（真源 = 宿主 `game.content` + `game.data.pois` + `game.core.instance_run`；文案池/图纸与装备生成器/副本运行态**未进包**）—— ★ B14-2 起 `MATERIALS` 不再走此接口，改包内门面 `catalog_items`（见文末「读点现状」） |
 | `ctx.hooks["mark_used"] / ["player"]`（:90 / :96，真源本来就由命令层注入） | **逐字保留**（本来就是调用方接口） | 副本 POI 已使用标记 / 读 DB 最新玩家（命令层 `_mark_poi_used` / `_player`） |
 
 ⚠️ 不传 `host` / `dom` = `None`：handler 一旦用到即 **AttributeError（fail-loud）**——
@@ -38,12 +38,32 @@
   `_poi_daily_used` / 未知 effect 告警文案）—— 本层只出「效果执行」半边，调用方接口已在 ② 列全
 * 三张文案池本体 + `game/data/poi_pools.py` 的 `CAMPFIRE_FOOD_POOL` / `HERB_POOL` ——
   数据域导出批的活；本批走调用方接口 `dom.pools(...)` / `dom.CAMPFIRE_FOOD_POOL`
+
+B14-2 读点现状（L4 线；宿主 `game/data` 删掉后本层仍能取值）
+-----------------------------------------------------------
+* **已切包内门面**（真源 = 宿主聚合层同名表）：`from .. import catalog_items as _ci`（正文写
+  `_ci.MATERIALS`，6 处调用点：篝火/草药 各 2、副本宝箱 2）。门禁
+  `overnight/b14_catalog_gate.py --names MATERIALS,…` 逐名 **OK · 不等 0（含键序）** —— 598 条与
+  宿主同名表深比较相等，故 `mid in …` / `["price"]` 的判据与取值一字未变。
+* **W5（2026-09-14）收口**：`CAMPFIRE_FOOD_POOL`(4 处) / `HERB_POOL`(5 处) 已切包内门面
+  `from .. import catalog_b143 as _b143`（真源 `game/data/poi_pools.py:15/18` → `poi_pools` 域；
+  门禁逐名深比较含键序 → **不等 0**；`WISH_POOL` 本层无读点）。
+* **仍走调用方接口 `ctx.dom`（函数名缺口，本线不建第二份读口）**：`resolve("materials",…)` ·
+  `display("materials",…)` · `roll_blueprint(lv)` · `generate_equip(slot,lv,quality)` ·
+  `pools(name)` —— 权威索引在装配期宿主侧，图纸与装备生成器**未进包**
+  （真源 `game/data/poi_pools.py` 等）。`:422` 注释里的 `QUALITY`（宿主聚合层同名表）
+  也只是注释（该表 B14-B/E 已登记无域）。
 """
 
 import json
 import random
 import time
 import uuid
+
+# ★ B14-2（L4）：材料表改从**包内门面**直取（宿主 `game/data` 删掉后本层仍能取值；
+#   门禁逐名 OK · 不等 0，含键序）。其余 `ctx.dom` 接口 = 缺口（函数名/无域），见文末读点现状。
+from .. import catalog_items as _ci
+from .. import catalog_b143 as _b143     # CAMPFIRE_FOOD_POOL / HERB_POOL（W5）
 # ⚠️ 真源 `from ..log_setup import LOG` + `_logger = LOG` **不搬**：宿主日志层，
 #    且 `_logger` 在真源里零读点（全文件仅此一处赋值）。
 
@@ -111,9 +131,10 @@ class PoiContext:
     def _C(self):
         """内容域访问替身（真源 `from .. import content as C` —— 宿主薄聚合层 C）。
 
-        = 调用方传入的 `dom`（MATERIALS / *_POOL / resolve / display /
-        roll_blueprint / generate_equip）。包内尚未导出这些域（材料表 / 文案池 /
-        图纸与装备生成器），一律走调用方接口（见文件头 ②）。
+        = 调用方传入的 `dom`（*_POOL / pools / resolve / display /
+        roll_blueprint / generate_equip）。包内尚未导出这些域（文案池 / 图纸与装备
+        生成器），一律走调用方接口（见文件头 ②）。★ B14-2 起 `MATERIALS` 不走这里，
+        改包内门面 `content/catalog_items.py`（见文末读点现状）。
         """
         return self.dom
 
@@ -150,13 +171,13 @@ def poi_recover(ctx):
                      hp=min(player["max_hp"], player["hp"] + hp_gain),
                      mp=min(player["max_mp"], player["mp"] + mp_gain))
     # v101.4：篝火食材池数据化 → data/poi_pools.py CAMPFIRE_FOOD_POOL
-    fd = random.choice(C.CAMPFIRE_FOOD_POOL)
+    fd = random.choice(_b143.CAMPFIRE_FOOD_POOL)
     mid = C.resolve("materials", fd)
     got = ""
-    if mid in C.MATERIALS:
+    if mid in _ci.MATERIALS:
         db.add_item(ctx.group_id, ctx.qq_id, mid,
                     {"name": C.display("materials", mid), "type": "材料",
-                     "stackable": True, "price": C.MATERIALS[mid]["price"]})
+                     "stackable": True, "price": _ci.MATERIALS[mid]["price"]})
         got = C.display("materials", mid)
     return (f"{ctx.icon} 【{ctx.pname}】你在{ctx.loc}的篝火旁坐下烤火。\n"
             f"❤️ 恢复 {hp_gain} 生命！💙 恢复 {mp_gain} 魔力！\n"
@@ -212,12 +233,12 @@ def poi_herb(ctx):
     C = ctx._C()
     got = []
     for _ in range(random.randint(1, 2)):
-        h = random.choice(C.HERB_POOL)  # v101.4：草药丛材料池数据化 → data/poi_pools.py HERB_POOL
+        h = random.choice(_b143.HERB_POOL)  # v101.4：草药丛材料池数据化 → data/poi_pools.py HERB_POOL
         mid = C.resolve("materials", h)
-        if mid in C.MATERIALS:
+        if mid in _ci.MATERIALS:
             db.add_item(ctx.group_id, ctx.qq_id, mid,
                         {"name": C.display("materials", mid), "type": "材料",
-                         "stackable": True, "price": C.MATERIALS[mid]["price"]})
+                         "stackable": True, "price": _ci.MATERIALS[mid]["price"]})
             got.append(C.display("materials", mid))
     return (f"{ctx.icon} 【{ctx.pname}】你在{ctx.loc}的草丛里仔细翻找，采到了一些好材料。\n"
             f"🎒 获得：{'、'.join(got)}！")
@@ -377,11 +398,11 @@ def inst_loot(ctx):
         logs.append(f"💰 你从{ctx.pname}里摸出了 {gold} 金币！")
     for mn in mats:
         mid = C.resolve("materials", mn)
-        if mid in C.MATERIALS:
+        if mid in _ci.MATERIALS:
             mname = C.display("materials", mid)
             db.add_item(ctx.group_id, ctx.qq_id, mid, {
                 "name": mname, "type": "材料", "stackable": True,
-                "price": C.MATERIALS[mid]["price"],
+                "price": _ci.MATERIALS[mid]["price"],
             })
             logs.append(f"🎒 拾取：{mname}")
     # v168 副本宝箱低品质装备档（鱼鱼拍板：非 Boss 房宝箱也开得出装备，不再只有图纸）：
@@ -401,7 +422,7 @@ def inst_loot(ctx):
         _lv = max(1, (ctx._focus or {}).get("level", 1) + random.randint(-3, 3))
         eq = C.generate_equip(_slot, _lv, _eq_q)
         db.add_item(ctx.group_id, ctx.qq_id, f"eq_{uuid.uuid4().hex[:8]}", eq)
-        # 白 🎒 / 绿 🟢 / 蓝 🔵：品质色块 + 装备名（与 C.QUALITY 档位色一致）
+        # 白 🎒 / 绿 🟢 / 蓝 🔵：品质色块 + 装备名（与 QUALITY 档位色一致 —— 宿主聚合层同名表）
         _emoji = {"white": "🎒", "green": "🟢", "blue": "🔵"}.get(eq.get("quality", "white"), "🎒")
         logs.append(f"{_emoji} 你从{ctx.pname}里翻出一件装备：【{eq['name']}】！")
     ctx.mark_used()

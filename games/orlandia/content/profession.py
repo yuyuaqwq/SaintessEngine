@@ -39,6 +39,20 @@ import json
 import random
 import time
 
+# ---- B14-2 L5：数据名读点切包内门面（`C.<数据名>` → 门面直取；函数名/缺口名仍留 `C.<名>`）----
+from . import catalog_core as _cc     # 常量/职业/种族/面板公式
+from . import catalog_items as _ci    # 物品/材料/符文/装备名册
+from . import catalog_life as _cl     # 生活/副业/商店/宠物/经济配置
+from . import catalog_space as _sp    # 地图/子区域
+from . import catalog_b143 as _b143   # B14-3 收口名（FISH_EXP/QUALITY —— 原缺口名已建域）
+# ---- B14-2 L5 读点切换（2026-09-14）----
+# 数据名读点（MATERIALS/RUNES · MAP_BY_ID · PROF_WAIT_BASE/PROF_WAIT_DECAY/PROF_WAIT_FLOOR/
+# MINING_KEYWORDS/RARE_MATERIAL_PRICE · PET_EGG_ORANGE_CHANCE/PROF5_BONUS_CHANCE/RARE_MAT_CHANCE）
+# 已切包内门面（见文件头 `_cc/_ci/_cl/_sp` import 块）。
+# 仍留 `C.<名>` 的只有：① 宿主函数（price_band/roll_fish/check_achievements/make_pet_egg/…）
+# ② 域缺口 `GATHER_COND_POOLS`（`getattr(C,…)` 形式，扫描器不计）——见 overnight/W-B14-2-L5.md §残余。
+# ★ B14-3（2026-09-14）：FISH_EXP/QUALITY 两名已由门面 `catalog_b143` 补上 → 2 处切 `_b143`。
+
 # ============================================================
 # 宿主替身口（① 存储层 / ② 读表口；② 由宿主薄壳在 import 期注入同一模块对象）
 # ============================================================
@@ -223,18 +237,18 @@ def gather_roll(level: int, prof_lv: int = 1, cur_map: str = "") -> list:
         # v97.2 兜底：按地图等级映射价格区间（修复原逻辑 Lv50+ 采不到 500+ 材料的问题）
         # v104 R3 M14 P1-2：兜底池排除强化石类消耗品（i_stone_* 是炼金/商店独占，禁止采集白嫖）
         # v125.2 B3：价格带公式数据下沉 prof_config.price_band（原 3+lv*4 / 20+lv*12 双处字面量）
-        _map_lv = C.MAP_BY_ID.get(cur_map or "", {}).get("lv", level)
+        _map_lv = _sp.MAP_BY_ID.get(cur_map or "", {}).get("lv", level)
         _lo, _hi = C.price_band(_map_lv)
-        cand = [name for name, m in C.MATERIALS.items()
+        cand = [name for name, m in _ci.MATERIALS.items()
                 if _lo <= m["price"] <= _hi
                 and name not in ("i_stone_upgrade", "i_stone_refine")]
         if not cand:
             # 空区间放宽为"全价段"，保证高等级副本/隐藏区域也有产出
-            cand = [name for name, m in C.MATERIALS.items()
+            cand = [name for name, m in _ci.MATERIALS.items()
                     if m["price"] <= _hi
                     and name not in ("i_stone_upgrade", "i_stone_refine")]
         if not cand:
-            cand = [n for n in C.MATERIALS
+            cand = [n for n in _ci.MATERIALS
                     if n not in ("i_stone_upgrade", "i_stone_refine")]
     # v102.3 限定采集物（时机钩子）：当前时段/季节/天气命中 → 低权重追加
     special = gather_cond_roll(cur_map or "")
@@ -363,10 +377,10 @@ def prof_wait_clear(group_id, qq_id):
 def prof_wait_duration(prof_type, prof_lv):
     """等待时长：基准随机范围 ±25%，副业等级每级－5%(上限－50%)，保底 10 秒
     v125：衰减/保底数据下沉 prof_config.PROF_WAIT_DECAY / PROF_WAIT_FLOOR"""
-    low, high, _ = C.PROF_WAIT_BASE[prof_type]
+    low, high, _ = _cl.PROF_WAIT_BASE[prof_type]
     wait = random.randint(low, high)
-    wait = int(wait * (1 - C.PROF_WAIT_DECAY * min(prof_lv, 10)))
-    return max(wait, C.PROF_WAIT_FLOOR)
+    wait = int(wait * (1 - _cl.PROF_WAIT_DECAY * min(prof_lv, 10)))
+    return max(wait, _cl.PROF_WAIT_FLOOR)
 
 
 def prof_wait_begin(group_id, qq_id, prof_type, extra=None, *,
@@ -454,7 +468,7 @@ def prof_settle(group_id, qq_id, st, *,
     if text:
         # v97.5 行为彩蛋规则：副业结算后（采集/挖掘/垂钓统一挂点）
         _p = db.get_player(group_id, qq_id)
-        _cm = C.MAP_BY_ID.get(_p.get("cur_map"), {}) if _p else {}
+        _cm = _sp.MAP_BY_ID.get(_p.get("cur_map"), {}) if _p else {}
         if rule_fire is not None:
             _rule_txt = rule_fire("gather_done", group_id, qq_id, _p, _cm, {"event": prof_type})
             if _rule_txt:
@@ -481,7 +495,7 @@ def prof_wait_flow(group_id, qq_id, prof_type, extra=None, begin_text="", *,
     now = int(time.time())
     if st and st["finish"] > now:
         left = st["finish"] - now
-        tname = C.PROF_WAIT_BASE.get(st["type"], (0, 0, "副业"))[2]
+        tname = _cl.PROF_WAIT_BASE.get(st["type"], (0, 0, "副业"))[2]
         return f"⏳ 你还在{tname}呢，再有 {left} 秒就完成啦～(完成会自动入包)", False
     settle_text = None
     if st:
@@ -537,10 +551,10 @@ def settle_fishing(group_id, qq_id, st, *, hooks=None,
     fname = fish["name"]
     fq = fish.get("quality", "white")
     # 品质标记：白档不显示，绿/蓝/紫/橙 ✦品质（16 章 1.1 定稿）
-    q_mark = "" if fq == "white" else f"✦{C.QUALITY.get(fq, {}).get('name', fq)}"
+    q_mark = "" if fq == "white" else f"✦{_b143.QUALITY.get(fq, {}).get('name', fq)}"
     q_name = f"{q_mark}·{fname}" if q_mark else fname
     # 垂钓经验：白 1 / 绿 1 / 蓝 2 / 紫 3 / 橙 5（16 章 2.6）
-    f_exp = C.FISH_EXP.get(fq, 1)
+    f_exp = _b143.FISH_EXP.get(fq, 1)
     # 出货文案按档位（16 章 2.6）
     _catch_line = {
         "blue": "水面泛起奇异的光晕…",
@@ -650,7 +664,7 @@ def settle_fishing(group_id, qq_id, st, *, hooks=None,
             _legend(group_id, qq_id, player, fname, spot)
     # 24 章二：月光兔蛋特殊渠道——垂钓传说档（orange）15% 概率（真稀有原则）
     _pet_egg_line = ""
-    if fq == "orange" and random.random() < C.PET_EGG_ORANGE_CHANCE:
+    if fq == "orange" and random.random() < _cc.PET_EGG_ORANGE_CHANCE:
         egg = C.make_pet_egg("pet_rabbit")
         db.add_item(group_id, qq_id, f"petegg_pet_rabbit", egg)
         _pet_egg_line = f"\n🥚 咦？鱼肚子里藏着一枚【{egg['name']}】！『使用 宠物蛋』孵化！"
@@ -767,11 +781,11 @@ def fishing_surprise_fn(group_id, qq_id, player, fish, force_legend=False):
             return f"\n🎏 紫光流转——【{_qmark}{eq['name']}】夹在鱼鳃里闪闪发亮！(已收入背包)"
         return f"\n🎏 惊喜！鱼肚子里卷着一件装备——【{_qmark}{eq['name']}】！(已收入背包)"
     if roll < FISHING_SURPRISE_RUNE:    # 稀有符文档 20%（蓝/紫品质符文）
-        rare_runes = [k for k, r in C.RUNES.items()
+        rare_runes = [k for k, r in _ci.RUNES.items()
                       if (r.get("quality") or "") in ("blue", "purple")]
         if rare_runes:
             rk = random.choice(rare_runes)
-            r_def = C.RUNES[rk]
+            r_def = _ci.RUNES[rk]
             rune_data = C.rune_item(r_def["effect"], random.randint(1, 2))
             if rune_data:
                 # key 与战斗掉落一致（rune_<effect>_<lvl>，同键可叠加）
@@ -792,7 +806,7 @@ def fishing_surprise_fn(group_id, qq_id, player, fish, force_legend=False):
             db.add_item(group_id, qq_id, f"gem_{uuid.uuid4().hex[:8]}", _gem)
             return f"\n💎 惊喜！鱼肚子里嵌着一颗【{_gem['name']}】——原石入包，可『原石』镶嵌到装备孔位！"
     # 罕见材料档 10%（type in 传说/宝石/精华 且 价≥150 的 MATERIALS 池）
-    rare_pool = {k: v for k, v in C.MATERIALS.items()
+    rare_pool = {k: v for k, v in _ci.MATERIALS.items()
                  if v.get("type") in ("传说", "宝石", "精华")
                  and (v.get("price") or 0) >= 150}
     if rare_pool:
@@ -839,7 +853,7 @@ def settle_gather(group_id, qq_id, st, *, daily_prof_bump=None,
     for mat in mats:
         mname = C.display("materials", mat)
         # v104 M08 P0-1：type 从 MATERIALS 定义取（防任务道具类材料被写死为"材料"）
-        db.add_item(group_id, qq_id, mat, {"name": mname, "type": C.MATERIALS[mat].get("type", "材料"), "stackable": True, "price": C.MATERIALS[mat]["price"]})
+        db.add_item(group_id, qq_id, mat, {"name": mname, "type": _ci.MATERIALS[mat].get("type", "材料"), "stackable": True, "price": _ci.MATERIALS[mat]["price"]})
         # v105R3 M14 P3-1：重复材料合并计数（原逐条"草药x1、草药x1"）
         got[mname] = got.get(mname, 0) + 1
     new_lv, leveled = db.add_prof_exp(group_id, qq_id, "gather", 1)
@@ -857,19 +871,19 @@ def settle_gather(group_id, qq_id, st, *, daily_prof_bump=None,
         mat = random.choice(mats) if mats else None
         if mat:
             mname = C.display("materials", mat)
-            db.add_item(group_id, qq_id, mat, {"name": mname, "type": C.MATERIALS[mat].get("type", "材料"), "stackable": True, "price": C.MATERIALS[mat]["price"]})
+            db.add_item(group_id, qq_id, mat, {"name": mname, "type": _ci.MATERIALS[mat].get("type", "材料"), "stackable": True, "price": _ci.MATERIALS[mat]["price"]})
             got[mname] = got.get(mname, 0) + 1
             _mount_bonus_line = f"\n🐾 坐骑帮你多叼回一份【{mname}】！"
     # 阶段九：采集次数 + 成就判定
     db.bump_stats(group_id, qq_id, gather_count=1)
     C.check_achievements(group_id, qq_id, player)
-    cur_map = C.MAP_BY_ID.get(_map_id, {})
+    cur_map = _sp.MAP_BY_ID.get(_map_id, {})
     # 24 章二：月光兔蛋特殊渠道——采集稀有产出 10% 概率（稀有材料判定参考 gather_roll 的高价段）
     _pet_egg_line = ""
     # v125.2 B3：稀有阈值数据下沉 prof_config.RARE_MATERIAL_PRICE（原字面量 150）
-    rare_hit = any(C.MATERIALS[m].get("price", 0) >= C.RARE_MATERIAL_PRICE for m in mats)
+    rare_hit = any(_ci.MATERIALS[m].get("price", 0) >= _cl.RARE_MATERIAL_PRICE for m in mats)
     # v101.30b Lv.10 万物采集大师：稀有惊喜概率翻倍（兔蛋 10%→20%）
-    _rare_ch = 0.20 if prof >= 10 else C.RARE_MAT_CHANCE
+    _rare_ch = 0.20 if prof >= 10 else _cc.RARE_MAT_CHANCE
     if rare_hit and random.random() < _rare_ch:
         egg = C.make_pet_egg("pet_rabbit")
         db.add_item(group_id, qq_id, "petegg_pet_rabbit", egg)
@@ -893,7 +907,7 @@ def settle_gather(group_id, qq_id, st, *, daily_prof_bump=None,
     _daily_txt = "".join(f"\n{l}" for l in _daily_lines) if _daily_lines else ""
     # q7-9：满级采集彩蛋（兔蛋/驯鹿缰绳）只绑稀有产出（价格≥150），低等级图无稀有材料
     # 恒 0%——本次未采到稀有材料时提示去高级图（纯文案，不动数值）
-    _rare_hint = (f"\n💡 稀有产出需前往产出价≥{C.RARE_MATERIAL_PRICE} 材料的区域（高级图）" if not rare_hit else "")
+    _rare_hint = (f"\n💡 稀有产出需前往产出价≥{_cl.RARE_MATERIAL_PRICE} 材料的区域（高级图）" if not rare_hit else "")
     # v105R3 M14 P3-2：材料每项单独一行（对齐物品详情排版规范 v101.21）
     _got_txt = "".join(f"\n{m}x{c}" for m, c in got.items())
     # v169.x 意见#101：采集完成消息顶部加玩家名（同文件 791 行『玩家 {pname}』口径：
@@ -967,27 +981,27 @@ def settle_mining(group_id, qq_id, st, *, daily_prof_bump=None):
         # v101.28k 地图矿石池优先：复用该地图采集池里的矿石类材料（矿场图=矿池，
         # 植物图无矿则按地图等级价格区间兜底）→ 不同地图挖到不同档次的矿
         gather_ores = [m for m in _expand_pool(f"gather:{cur_map}")
-                       if any(k in C.MATERIALS.get(m, {}).get("name", "") for k in C.MINING_KEYWORDS)]
+                       if any(k in _ci.MATERIALS.get(m, {}).get("name", "") for k in _cl.MINING_KEYWORDS)]
         if gather_ores:
             ores = gather_ores
         else:
             ores = []
         if not ores:
             # v104 R3 M14 P1-2：兜底排除强化石类消耗品（i_stone_* 是炼金/商店独占，禁止挖掘白嫖）
-            ores = [m for m, mm in C.MATERIALS.items()
-                    if any(k in mm.get("name", "") for k in C.MINING_KEYWORDS)
+            ores = [m for m, mm in _ci.MATERIALS.items()
+                    if any(k in mm.get("name", "") for k in _cl.MINING_KEYWORDS)
                     and m not in ("i_stone_upgrade", "i_stone_refine")]
-            _map_lv = C.MAP_BY_ID.get(cur_map, {}).get("lv", player["level"])
+            _map_lv = _sp.MAP_BY_ID.get(cur_map, {}).get("lv", player["level"])
             # v125.2 B3：价格带公式数据下沉 prof_config.price_band（原 3+lv*4 / 20+lv*12 双处字面量）
             _lo, _hi = C.price_band(_map_lv)
-            cand = [m for m in ores if _lo <= C.MATERIALS[m]["price"] <= _hi]
+            cand = [m for m in ores if _lo <= _ci.MATERIALS[m]["price"] <= _hi]
             if cand:
                 ores = cand
     # 稀有矿脉：副业 Lv.4+ 概率（15% / Lv.7+ 30%），只在当前地图池内选稀有
     # v101.30b Lv.10 群山之王：稀有矿脉 50%
     # v105 疲劳值（19 章 §2.2）：疲劳期间稀有矿脉概率减半
     # v125.2 B3：稀有阈值数据下沉 prof_config.RARE_MATERIAL_PRICE（原字面量 150）
-    rare = [m for m in ores if C.MATERIALS[m]["price"] >= C.RARE_MATERIAL_PRICE]
+    rare = [m for m in ores if _ci.MATERIALS[m]["price"] >= _cl.RARE_MATERIAL_PRICE]
     is_rare = False
     fatigued = mining_fatigued(group_id, qq_id)
     _rare_ch = 0.15 if prof < 7 else (0.50 if prof >= 10 else 0.30)
@@ -999,10 +1013,10 @@ def settle_mining(group_id, qq_id, st, *, daily_prof_bump=None):
     else:
         ore = random.choice(ores)
     n = random.randint(1, 2)
-    if prof >= 5 and random.random() < C.PROF5_BONUS_CHANCE:
+    if prof >= 5 and random.random() < _cc.PROF5_BONUS_CHANCE:
         n += 1
     oname = C.display("materials", ore)
-    db.add_item(group_id, qq_id, ore, {"name": oname, "type": C.MATERIALS[ore].get("type", "材料"), "stackable": True, "price": C.MATERIALS[ore]["price"]}, count=n)
+    db.add_item(group_id, qq_id, ore, {"name": oname, "type": _ci.MATERIALS[ore].get("type", "材料"), "stackable": True, "price": _ci.MATERIALS[ore]["price"]}, count=n)
     new_lv, leveled = db.add_prof_exp(group_id, qq_id, "mining", 1)
     lv_msg = f"\n🌟 挖掘等级提升到 Lv.{new_lv}！" if leveled else ""
     if daily_prof_bump is not None:
@@ -1023,5 +1037,5 @@ def settle_mining(group_id, qq_id, st, *, daily_prof_bump=None):
                  if fatigued else "")
     # q7-9：满级挖掘稀有矿脉只绑价格≥150 的矿，低等级图矿池无稀有矿则彩蛋恒 0%——
     # 本次无稀有矿可挖时提示去高级图（纯文案，不动数值）
-    _rare_hint = (f"\n💡 稀有产出需前往产出价≥{C.RARE_MATERIAL_PRICE} 材料的区域（高级图）" if not rare else "")
+    _rare_hint = (f"\n💡 稀有产出需前往产出价≥{_cl.RARE_MATERIAL_PRICE} 材料的区域（高级图）" if not rare else "")
     return f"{head}\n你获得了 {oname} x{n}！(『背包』查看){lv_msg}{_fat_line}{_rare_hint}"

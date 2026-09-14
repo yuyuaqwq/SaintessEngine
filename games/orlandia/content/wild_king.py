@@ -2,7 +2,8 @@
 # ==============================================================================
 # 包内实现（唯一真源）· B13-L2（2026-09-14）—— 逐字搬自宿主
 #   `qqbot/data/plugins/dragonfall/game/core/wild_king.py`
-# 搬运改动面**只有「宿主取件」**一类：9 处 `from .. import db` → `db` 替身；`C`/`drop_engine`/`data.maps`/`core.drops` → 宿主句柄；10 个 `WILD_KING*` 常数 → `_WK`；`WILD_KINGS` → 包内域读口
+# 搬运改动面**只有「宿主取件」**一类：9 处 `from .. import db` → `db` 替身；`C`/`drop_engine`/`data.maps`/`core.drops` → 宿主句柄；12 个 `WILD_KING*` 常数 → ★ B16-W11b 包内门面 `catalog_rules`（原 `_WK` 宿主句柄已退场）；`WILD_KINGS` → 包内域读口
+# ★ B14-2 L8（2026-09-14）切包内门面：`C.ITEMS` / `C.MATERIALS` → `catalog_items`；`data.maps.MAP_BY_ID` → `catalog_space`。
 # 宿主同名文件 = 薄壳（指向本模块，见那边的头注）。
 # ==============================================================================
 """奥兰迪亚·余烬纪年 核心层 - wild_king.py（v140 波2：野外 Boss 看守宝箱 · 野王体系）
@@ -14,7 +15,7 @@
   → 『摸宝箱』/『摸战利箱』指令 → wild_king_open_chest() 原子认领开箱
 
 设计（docs/方案 3.2 节，鱼鱼原创）：
-- 全服同一时刻每图至多 1 只、全服 ≤3 只（WILD_KING_GLOBAL_LIMIT，见下 `_WK` 取件）
+- 全服同一时刻每图至多 1 只、全服 ≤3 只（WILD_KING_GLOBAL_LIMIT，见下门面取件）
 - 每日 4 时段（02/08/14/20 点）刷新：日期+时段哈希全服一致从 8 图选 1 只野王
   （哈希命中图之前已被 3 只占满时顺延到下一图，保证"全服 ≤3 只"始终成立）
 - 存活超时 90 分钟自动消失（懒计时：读时校验 expired 即清理）
@@ -94,8 +95,17 @@ class _HostMod:
         return getattr(_host_module(self._name), attr)
 
 db = _HostMod("db")                     # 真源 9 处函数内 `from .. import db`
-C = _HostMod("content")                 # 真源 `from .. import content as C`（ITEMS / MATERIALS / roll_blueprint）
-_WK = _HostMod("data.wild_king_data")   # 真源模块级 import 的 11 个 WILD_KING* 名（域只导了 WILD_KINGS，见下）
+C = _HostMod("content")                 # 真源 `from .. import content as C`（残 `roll_blueprint`，见缺口）
+
+# ★ B14-2 L8（2026-09-14）：`C.ITEMS` / `C.MATERIALS` / `data.maps.MAP_BY_ID` 三处读点
+#   → 包内门面直取（B14 第一段产物；门禁 `b14_catalog_gate.py` 逐值+键序 OK）。
+from . import catalog_items as _ci      # noqa: E402  ITEMS / MATERIALS
+from . import catalog_space as _cs      # noqa: E402  MAP_BY_ID
+# ★ B16-W11b（2026-09-14）：`WILD_KING*` 常数 → 包内门面直取（原 `_WK` 宿主句柄已退场）
+from .catalog_rules import (WILD_KING_CHEST_TIERS, WILD_KING_GLOBAL_LIMIT, WILD_KING_LIFETIME_SEC,
+                            WILD_KING_LOOT_PRIORITY_SEC, WILD_KING_MAPS, WILD_KING_NO_KILL_EXTRA,
+                            WILD_KING_PERIODS, WILD_KING_PER_DAY_LIMIT, WILD_KING_PER_PERIOD_LIMIT,
+                            WILD_KING_PITY_PERIODS)
 
 
 # ============================================================
@@ -121,9 +131,10 @@ WILD_KINGS = _read_domain("wild_king")
 
 
 def __getattr__(name):
-    """PEP 562：真源顶层名兼容（11 个 `WILD_KING*` 常数里的 10 个常数 = `_WK.<名>`）。"""
+    """PEP 562：真源顶层名兼容（`WILD_KING*` 常数 → 包内门面 `catalog_rules`，含另 2 个未直取名）。"""
     if name.startswith("WILD_KING"):
-        return getattr(_WK, name)
+        from . import catalog_rules as _cr
+        return getattr(_cr, name)
     raise AttributeError(name)
 
 # event_state 键
@@ -154,7 +165,7 @@ def period_label(now: datetime.datetime | None = None) -> str:
     """当前时段中文名。"""
     now = now or datetime.datetime.now()
     ph = period_hour(now)
-    for p in _WK.WILD_KING_PERIODS:
+    for p in WILD_KING_PERIODS:
         if p["hour"] == ph:
             return p["label"]
     return "夜晚"
@@ -230,7 +241,7 @@ def _build_king(kid: str, map_id: str, period: str, extra: bool = False) -> dict
         "desc": kdef.get("desc", ""),
         "period": period,
         "spawn_ts": now_ts,
-        "expire": now_ts + _WK.WILD_KING_LIFETIME_SEC,
+        "expire": now_ts + WILD_KING_LIFETIME_SEC,
         "extra": bool(extra),
         "hp": None,          # 当前血量（多人共享：首次参战 build_monster 后回写）
         "max_hp": None,
@@ -251,9 +262,9 @@ def _spawn_pick(period: str, count: int, occupied: set) -> list:
     seed = today.toordinal() * 100 + period_hour()
     picks = []
     idx = 0
-    while len(picks) < count and idx < len(_WK.WILD_KING_MAPS) * 3:
+    while len(picks) < count and idx < len(WILD_KING_MAPS) * 3:
         h = _day_hash(seed, f"{period}#{idx}")
-        cand = _WK.WILD_KING_MAPS[h % len(_WK.WILD_KING_MAPS)]
+        cand = WILD_KING_MAPS[h % len(WILD_KING_MAPS)]
         idx += 1
         if cand in occupied or cand in picks:
             continue
@@ -283,7 +294,7 @@ def wild_king_tick() -> dict:
             st["no_kill_streak"] = int(old.get("no_kill_streak", 0) or 0) + 1
         else:
             st["no_kill_streak"] = 0
-        if st["no_kill_streak"] >= _WK.WILD_KING_NO_KILL_EXTRA:
+        if st["no_kill_streak"] >= WILD_KING_NO_KILL_EXTRA:
             st["extra_count"] = 1  # 下时段多刷 1 只（共 2 只）
             st["no_kill_streak"] = 0
         _save_global(st)
@@ -302,7 +313,7 @@ def wild_king_tick() -> dict:
     # 本时段首次：刷新
     occupied = set(st.get("kings", {}).keys())
     active = len([k for k in st.get("kings", {}).values() if k.get("killed") is not True])
-    budget = _WK.WILD_KING_GLOBAL_LIMIT - active
+    budget = WILD_KING_GLOBAL_LIMIT - active
     count = 1 + int(st.get("extra_count", 0) or 0)
     count = max(1, min(count, budget))
     if count <= 0:
@@ -372,7 +383,7 @@ def build_king_monster(king: dict, map_obj: dict, player: dict) -> dict:
 
 
 def _resolve_map_name(map_id: str) -> str:
-    MAP_BY_ID = _host_attr("data.maps", "MAP_BY_ID")  # noqa: E402（宿主真源）
+    MAP_BY_ID = _cs.MAP_BY_ID            # B14-2 L8：包内门面（真源 `data.maps.MAP_BY_ID`，逐值+键序 OK）
     m = MAP_BY_ID.get(map_id, {})
     return m.get("name", map_id)
 
@@ -404,8 +415,8 @@ def wild_king_on_kill(group_id: str, qq_id: str, monster: dict, damage: int = 0,
     king["chest"] = {
         "unlocked": True,
         "killers": [str(qq_id)],          # 击杀者（含队伍）
-        "priority_until": now_ts + _WK.WILD_KING_LOOT_PRIORITY_SEC,
-        "public_until": now_ts + _WK.WILD_KING_LIFETIME_SEC,  # 宝箱与野王同寿命（约 90 分钟）
+        "priority_until": now_ts + WILD_KING_LOOT_PRIORITY_SEC,
+        "public_until": now_ts + WILD_KING_LIFETIME_SEC,  # 宝箱与野王同寿命（约 90 分钟）
         "opened": {},                     # qq -> 开箱时间戳
         "public": False,
     }
@@ -464,7 +475,7 @@ def _touch_pity(qq_id: str) -> dict:
             meta["pity"] = int(meta.get("pity", 0) or 0) + 1
         meta["pity_period"] = pk
         meta.setdefault("opened_period", "")
-        if meta["pity"] >= _WK.WILD_KING_PITY_PERIODS:
+        if meta["pity"] >= WILD_KING_PITY_PERIODS:
             meta["pity"] = 0
             meta["voucher"] = int(meta.get("voucher", 0) or 0) + 1  # 保底券 +1
     _save_personal(qq_id, meta)
@@ -486,11 +497,11 @@ def _chest_access(king: dict, qq_id: str, meta: dict) -> tuple:
     # 时段限制
     pk = period_key()
     opened = meta.get("opened", {}) or {}
-    if opened.get(pk, 0) >= _WK.WILD_KING_PER_PERIOD_LIMIT:
+    if opened.get(pk, 0) >= WILD_KING_PER_PERIOD_LIMIT:
         return False, "⏳ 本时段你已经摸过宝箱了（每时段限 1 次）！"
     # 每日限制
     today = datetime.date.today().isoformat()
-    if meta.get("day") == today and int(meta.get("day_count", 0) or 0) >= _WK.WILD_KING_PER_DAY_LIMIT:
+    if meta.get("day") == today and int(meta.get("day_count", 0) or 0) >= WILD_KING_PER_DAY_LIMIT:
         return False, "⏳ 今天已经摸过 2 次宝箱了（每日限 2 次）！"
     # 战利箱（击杀者专属期）
     if not chest.get("public") and now_ts < chest.get("priority_until", 0):
@@ -562,8 +573,8 @@ def open_chest(group_id: str, qq_id: str, map_id: str) -> tuple:
     _save_personal(qq_id, meta)
     # 开箱奖励
     kdef = WILD_KINGS.get(king.get("kid"), {})
-    tier = _WK.WILD_KING_CHEST_TIERS.get(king.get("chest_tier") or kdef.get("chest_tier", "low"),
-                                     _WK.WILD_KING_CHEST_TIERS["low"])
+    tier = WILD_KING_CHEST_TIERS.get(king.get("chest_tier") or kdef.get("chest_tier", "low"),
+                                     WILD_KING_CHEST_TIERS["low"])
     is_loot = kind == "loot"
     lines, need_bc = _roll_chest_rewards(group_id, qq_id, king, tier, is_loot)
     # 记录开箱者
@@ -594,7 +605,7 @@ def _roll_chest_rewards(group_id: str, qq_id: str, king: dict, tier: dict,
     lines = []
     need_bc = False
 
-    # 引擎核心档：chest:{tier}（tier key 由 king.chest_tier 指定，数据源 _WK.WILD_KING_CHEST_TIERS）
+    # 引擎核心档：chest:{tier}（tier key 由 king.chest_tier 指定，数据源 WILD_KING_CHEST_TIERS）
     _tier_key = king.get("chest_tier") or "low"
     if _tier_key not in ("low", "mid", "high"):
         _tier_key = "low"
@@ -654,7 +665,7 @@ def _roll_chest_rewards(group_id: str, qq_id: str, king: dict, tier: dict,
         elif t == "item" and r.get("item_id"):
             # 材料档 / 收藏品档（collect：铁牌徽章等曾配置但旧代码不消费的死数据）
             mid = r["item_id"]
-            _idata = C.ITEMS.get(mid) or C.MATERIALS.get(mid)
+            _idata = _ci.ITEMS.get(mid) or _ci.MATERIALS.get(mid)
             if _idata:
                 db.add_item(group_id, qq_id, mid, dict(_idata))
                 lines.append(f"🎒 {_idata.get('name', mid)} ×1")

@@ -16,7 +16,7 @@
 |---|---|---|
 | `from .. import db` + `db.xxx(...)` | 模块级 `db` = **惰性宿主代理** `_HostDB`（属性访问时才解析宿主模块） | 正文里 `db.xxx(...)` **一行未改**；宿主由 `bind_host(db)` 注入，或按 `sys.modules` 找**已加载**的宿主模块（绝不 import，防包侧另起一份宿主模块树） |
 | `from ..store.social import guild_get_member / guild_set_role / guild_spend_contribute`（不在 `db` 门面上） | `_store_social()`（注入优先 → 已加载模块） | 同上；这三个原语在 `game/store/social.py`，`game/db.py` 聚合面没导出 |
-| `from .. import content as C` + `C.GUILD_CONFIG` | `_cfg()`（`bind_host(config=…)` 注入） | 数值配置归 L7 的 `*_config` 面，**本域不搬**（缺口见报告） |
+| `from .. import content as C` + `C.GUILD_CONFIG` | `_cfg()`（`bind_host(config=…)` 注入优先 → ★ W4 兜底改**包内门面** `content/catalog_b143.py:GUILD_CONFIG`） | 数值配置仍由宿主薄壳注入（L7 配置面）；原兜底读宿主 `game.data.guild.GUILD_CONFIG` 已切门面（门禁逐键逐值相等）⇒ `game/data` 删后本模块仍可活 |
 | `from ..data import guild as _G` + `_G.GUILD_ROLES / GUILD_SHOP_ITEMS / GUILD_SKILLS` | 读包内 `content/data/guild.json`（`guild_roles()` / `guild_shop_items()` / `guild_skills()`） | 域真源 = `game/data/guild.py`，单向导出器 `scripts/export_domains/b9_social.py:derive_guild` |
 
 ⚠️ 读表坑：`guild.json` 的 `shop_items` 键是**字符串化整数**（JSON 只有字符串键，真源是 int 1..6）→
@@ -47,12 +47,15 @@ import datetime
 import json
 import os
 
+# ★ W4（2026-09-14）：`C.GUILD_CONFIG` 兜底 → 包内门面（真源 `game/data/guild.py:3`）
+from . import catalog_b143 as _cat_b143
+
 # ============================================================
 # ① 宿主替身口（存储层 / 公会原语 / 数值配置）
 # ============================================================
 _HOST_DB = None            # 宿主存储层（真源 `from .. import db`）
 _HOST_STORE_SOCIAL = None  # 宿主 `game.store.social`（guild_get_member / guild_set_role / guild_spend_contribute）
-_CONFIG = None             # 宿主 GUILD_CONFIG（真源 `from .. import content as C` 的 C.GUILD_CONFIG）
+_CONFIG = None             # GUILD_CONFIG——宿主薄壳注入优先；未注入 → 包内门面 `catalog_b143`（★ W4）
 
 _HOST_PKG = "data.plugins.dragonfall.game"
 _HOST_PKG_FALLBACK = "game"
@@ -100,10 +103,10 @@ def _store_social():
 
 
 def _cfg():
-    """`GUILD_CONFIG`（注入优先 → 已加载的宿主 `game.data.guild`）。"""
+    """`GUILD_CONFIG`（注入优先 → 包内门面 `content/catalog_b143.py`；真源 `game/data/guild.py:3`）。"""
     if _CONFIG is not None:
         return _CONFIG
-    return getattr(_resolve_host("data.guild"), "GUILD_CONFIG")
+    return _cat_b143.GUILD_CONFIG
 
 
 # ============================================================
@@ -419,8 +422,8 @@ def guild_info_lines(group_id, g, members, page_items, page, pages, player_looku
     `self._record_list_state` 记账 —— 分页/提示/记账留在命令层（通用底座 + IO），
     本函数收「已分页好的 page_items」与 `player_lookup` 回调，只拼主体行。
 
-    `exp_need` = 升级所需经验（真源命令层 `g["level"] * C.GUILD_EXP_BASE`，该常量属宿主数值
-    常量面 = L7 域，**本域不搬** → 由命令层算好传入；见报告 §缺口）。
+    `exp_need` = 升级所需经验（真源命令层 `g["level"] * GUILD_EXP_BASE`；该常量包内**已有门面**
+    `content/catalog_core.py:GUILD_EXP_BASE`，但按 B14-2 L6 派工本域不搬数据 → 由命令层算好传入）。
 
     返回 `list[str]`（未含 tip 行）。
     """

@@ -11,19 +11,28 @@
    `from .. import db` 删除，改模块级 `C = _HostMod("content")` / `db = _HostMod("db")`；
    `from ..data.equip_roster import EQUIP_ROSTER` / `from ..data.hidden_monsters import
    HIDDEN_MONSTERS` / `from ..data import MAIN_QUESTS` → `_host_attr(...)`。
+   ★ W6（2026-09-14）：上面这**三张数据表**改门面直取（宿主 `game/data` 删后本模块仍能活）——
+   `EQUIP_ROSTER` → `catalog_items`（687 条，已剥导出期注入字段）、`HIDDEN_MONSTERS` →
+   `catalog_b143`（`game_config.hidden_monsters`）、`MAIN_QUESTS` → `catalog_quests`（70 条，
+   含键序）；门禁 `--names EQUIP_ROSTER,HIDDEN_MONSTERS,MAIN_QUESTS` 逐名 OK · 不等 0。
+   切后 `_host_attr` 只剩函数 / 单例句柄（本线无）。
 2. 包内直取（**本线模块**）：`from .achievements import _bestiary_kills / _monster_total`
    原样保留（真源也是函数内延迟 import，包内同样延迟 → 不成环）。
 3. 读点切包内域读口（I1）：`C.PLAYER_SKILLS` / `C.BRANCH_SKILLS` → `from .skills import …`
    （实测与宿主 `C.PLAYER_SKILLS` / `C.BRANCH_SKILLS` **深等**，见报告步骤 A·5）。
 
-⚠️ 仍是宿主句柄的读点（缺口登记，B14 统一裁）
-  · `C.MAPS` / `C.HIDDEN_MAP_UNLOCK`（`_c_hidden_area`）：包内 `maps` 域是 nodes/roles **投影**
-    （字段集实测只有 links/name/nodes/roles/topology），无 `hidden` / `type` / `monsters`
-    → 计划 §7 风险 #5 的已知反例，切过去会**静默少算隐藏区域**；
+⚠️ 读点现状（B14-2 · W6，2026-09-14）
+  · 已切包内门面：`C.MAPS` → `content/catalog_space.py:MAPS`（门禁逐名 OK · 不等 0，含键序；
+    `hidden` / `type` 字段实测保留 → 隐藏区域集合与切前逐元素相同：`lost_library` /
+    `ember_corridor`）—— B13-L4 时期「maps 域是 nodes/roles 投影」的判断已随 B14-A 重造
+    MAPS 失效；
+  · W6：`C.HIDDEN_MAP_UNLOCK` → 门面 `content/catalog_b143.py:HIDDEN_MAP_UNLOCK`（B14-3 新建
+    `game_config.maps` 域，外层键序由 `_ORDER_HIDDEN_MAP_UNLOCK` 还原；门禁
+    `b14_catalog_gate.py --names HIDDEN_MAP_UNLOCK` → 不等 0），取值仍保留 `or {}` 兜底；
   · `C.display("skills", …)`（`_c_skill_has`）：宿主 `C.display` 走 `_INDEXES`（17 张表、
     `skills` 67 条、`monsters` 354 条），包内 `content/tables.display` 只认 classes/skills
     两个表名 → 两者**不同义**，本线两个模块统一保留宿主句柄（同函数在 achievements 里以
-    `C.display("monsters", …)` 形态出现，单点切换会出现同名函数两种取数口）。
+    `C.display("monsters", …)` 形态出现，单点切换会出现同名函数两种取数口；**函数名句柄不切**）。
 
 真源原文头注（逐字保留）
 ------------------------
@@ -118,6 +127,11 @@ C = _HostMod("content")     # 真源 `from .. import content as C`
 db = _HostMod("db")         # 真源 `from .. import db`
 
 from .skills import PLAYER_SKILLS, BRANCH_SKILLS   # 包内读口（实测与宿主深等）
+from .catalog_space import MAPS                    # B14-2：真源 `C.MAPS`（门禁 OK，含键序）
+from .catalog_b143 import HIDDEN_MAP_UNLOCK        # W6：真源 `C.HIDDEN_MAP_UNLOCK`（门禁 OK，含键序）
+from .catalog_b143 import HIDDEN_MONSTERS          # W6：真源 `_host_attr("data.hidden_monsters", …)`（门禁 OK）
+from .catalog_items import EQUIP_ROSTER            # W6：真源 `_host_attr("data.equip_roster", …)`（门禁 OK）
+from .catalog_quests import MAIN_QUESTS            # W6：真源 `_host_attr("data", …)`（门禁 OK，含键序）
 
 COND_CHECKS = {}
 
@@ -310,8 +324,8 @@ def _c_hidden_area(player, stats, profs, extra, cond):
     也计数）→ 秘境猎手 3 个普通区域即解锁、ach_mythril 到访 1 个任意
     区域即送，隐藏成就贬值。修复后仅到访隐藏区域才计数。
     """
-    hidden = set(getattr(C, "HIDDEN_MAP_UNLOCK", None) or {})
-    for m in (C.MAPS or []):
+    hidden = set(HIDDEN_MAP_UNLOCK or {})            # W6：门面 catalog_b143（原 `getattr(C, …)`）
+    for m in (MAPS or []):
         if m.get("hidden") or m.get("type") == "隐藏区域":
             hidden.add(m["id"])
     if not hidden:
@@ -377,7 +391,6 @@ def _c_item_has(player, stats, profs, extra, cond):
     gid = extra.get("_group_id")
     if not gid:
         return False  # 无群上下文时保持旧行为（恒 False）
-    EQUIP_ROSTER = _host_attr("data.equip_roster", "EQUIP_ROSTER")
     key = cond.get("key")
     name = EQUIP_ROSTER.get(key, {}).get("name", key)
     if db.count_item(gid, player["qq_id"], name) > 0:
@@ -392,7 +405,6 @@ def _c_item_has(player, stats, profs, extra, cond):
 def _c_hidden_monsters_all(player, stats, profs, extra, cond):
     """击败全部隐藏怪物"""
     hm = extra.get("defeated_hidden_monsters") or set()
-    HIDDEN_MONSTERS = _host_attr("data.hidden_monsters", "HIDDEN_MONSTERS")
     return len(hm & set(HIDDEN_MONSTERS.keys())) >= len(HIDDEN_MONSTERS)
 
 
@@ -528,7 +540,6 @@ def _c_main_done(player, stats, profs, extra, cond):
     except Exception:
         return False
     try:
-        MAIN_QUESTS = _host_attr("data", "MAIN_QUESTS")
         tail_id = next((qd["id"] for qd in MAIN_QUESTS if not qd.get("next")), None)
     except Exception:
         return False

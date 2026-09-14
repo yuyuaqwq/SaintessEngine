@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/gems.schema.json",
+  "title": "幸运宝石（gems）—— 一条 = 一张源表（阶位 / 阶名 / 孔位 / 打孔 / 传说特效 / 符文拆卸价）",
+  "description": "本域 = 宿主 `game/data/gems.py` 里**包内无域**的 6 个常量（B14-3 缺口名：`GEM_TIERS` 5 处 / `GEM_TIER_NAMES` 8 / `GEM_SOCKETS` 2 / `GEM_DRILL` 1 / `GEM_LEGENDARY_EFFECTS` 1 / `RUNE_REMOVE_COST` 2 —— 见 `content/catalog_items.py` 的「无域可依」登记）。经 `scripts/export_domains/b14_3_gaps.py:derive_gems` 单向导出（**值原样，零注入**）。\\n\\n**形状**：一条 = 一个源模块的常量组（表键 = 源模块名；条目 = `{源常量名: 值原样}`）—— 同 `equipment`/`factions`/`enchant`。\\n\\n⚠⚠ **int 键陷阱（本域最重要的坑，必须由包内读口还原）**：`GEM_TIERS` / `GEM_TIER_NAMES` 的键源侧是 **int 1..10**，JSON 只有字符串键。不还原的后果（消费点 `content/economy_cmds.py`）：① `GEM_TIERS.get(tier)`（tier 是 int）恒 miss → 宝石详情数值静默归零；② `sorted(GEM_TIERS)` 变 `\\\"1\\\",\\\"10\\\",\\\"2\\\"…` → 百科阶位乱序；③ `GEM_TIER_NAMES.get(tier + 1)` → 合成链永远显示「已是最高阶」。还原责任在包内读口（同 `content/config.py:int_keys()` 的先例），导出侧只按源形状搬运。\\n\\n⚠ `RUNE_REMOVE_COST`（1000/级）与 `GEM_REMOVE_COST`（500/层）同在源文件 `gems.py`，BRIEF §1(a) 把前者指定给 `runes` 域；但 `runes` 域的 primary def 要求每条有 `name`（实体），常量行塞不进 ⇒ 按**源文件同族**归本域，登记在报告 §处置表。\\n\\n**未进本域**：`GEM_BASE_NAME`/`GEM_ITEM_TYPE`/`GEM_STATS`/`GEM_REMOVE_COST`/`GEM_DROP_RATE`/`GEM_DROP_TIER`/`GEM_BOSS_FIXED`（非本轮缺口名，无 `C.<名>` 读点）。",
+  "x-primary": "gems_group",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "外层键 = 真源模块名（本轮只有 `gems`；与 `game_config` 的键口径一致：导出期自证「组名 == 真源文件名」）。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/gems_group"
+  },
+  "$defs": {
+    "gem_drill_table": {
+      "type": "object",
+      "title": "打孔表（`game/data/gems.py:33 GEM_DRILL`）",
+      "description": "键 = 品质档（实测 3：blue/purple/orange）；值 = `{cost, craft_lv}`（打孔金币价 + 所需锻造副业等级）。",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "title": "一个品质档的打孔参数",
+        "required": [
+          "cost",
+          "craft_lv"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "cost": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "打孔金币价",
+            "description": "实测 blue 500 / purple 1500 / orange 4000。"
+          },
+          "craft_lv": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "锻造等级门槛",
+            "description": "打孔所需的锻造副业等级。"
+          }
+        }
+      }
+    },
+    "gem_legendary_effects_table": {
+      "type": "array",
+      "title": "传说级特效名（`game/data/gems.py:42 GEM_LEGENDARY_EFFECTS`）",
+      "description": "实测 4 条（如「暴击连击」），仅传说阶（阶位 ≥8）触发，消费点拼成一行展示。",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "gem_sockets_table": {
+      "type": "object",
+      "title": "装备孔位表（`game/data/gems.py:25 GEM_SOCKETS`）",
+      "description": "键 = 装备品质档（实测 5：white..orange）；值 = `{count, tier, min_tier, max_tier}`。`count = 0` 表示该品质不可镶嵌。",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "title": "一个品质档的孔位",
+        "required": [
+          "count",
+          "tier",
+          "min_tier",
+          "max_tier"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "孔位数",
+            "description": "0 = 不可镶嵌（实测 white/green 0、blue 1、purple 2、orange 3）。"
+          },
+          "tier": {
+            "type": "string",
+            "title": "孔位档标识",
+            "description": "该品质孔位的档标识（实测 `\\\"\\\"` / `\\\"S1\\\"` / `\\\"S2\\\"` …），内容侧词汇；与 `min_tier`/`max_tier` 同口径。"
+          },
+          "min_tier": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "可镶嵌最低阶",
+            "description": "该孔位允许的最低宝石阶（0 = 无孔）。"
+          },
+          "max_tier": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "可镶嵌最高阶",
+            "description": "该孔位允许的最高宝石阶（0 = 无孔）。"
+          }
+        }
+      }
+    },
+    "gem_tier_names_table": {
+      "type": "object",
+      "title": "宝石阶全名表（`game/data/gems.py:19 GEM_TIER_NAMES`）",
+      "description": "键 = 阶位 **1..10**（同上，须还原 int）；值 = 全名（如「碎裂的幸运宝石」）。与 `GEM_BASE_NAME`（「幸运宝石」）拼合。",
+      "propertyNames": {
+        "pattern": "^[0-9]+$",
+        "description": "阶位（1..10）。"
+      },
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "gem_tiers_table": {
+      "type": "object",
+      "title": "宝石阶位表（`game/data/gems.py:7 GEM_TIERS`）",
+      "description": "键 = 阶位 **1..10**（源侧 int → JSON 字符串键，包内读口须还原 int：见文件头 ⚠⚠）；值 = `{name, mult}`。",
+      "propertyNames": {
+        "pattern": "^[0-9]+$",
+        "description": "阶位（1..10）。"
+      },
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "title": "一个阶位",
+        "required": [
+          "name",
+          "mult"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "阶名（短）",
+            "description": "短阶名（碎裂/黯淡/普通/明亮/无瑕/闪耀/完美/璀璨/传说/神话）。"
+          },
+          "mult": {
+            "type": "number",
+            "minimum": 0,
+            "title": "随机属性乘区",
+            "description": "镶嵌后随机属性乘以本比率（实测 1 阶 0.01 → 10 阶 0.30 量级）。"
+          }
+        }
+      }
+    },
+    "gems_group": {
+      "type": "object",
+      "title": "一个源模块的常量组（`game/data/gems.py`）—— 本域的**条目本体**",
+      "description": "逐键 = 一张源表；行齐备由导出器 `derive_gems` 断言（少一行即 raise）。**不写 required**：同 `guild.schema.json` 登记。 逐键 = 一张源表（值**原样**：不补默认值、不改类型、不包装）。  ⚠ 这是 `validate_entry` 实际校验的那一层：域表的一条 = 本对象（与 `game_config.schema.json:$defs.config_group` 同型）；表级的 `additionalProperties` 指向本 def，逐字段类型由下面的 `properties` 管住（实测：把某个成员的类型改坏 → `domain_status` 报红）。",
+      "additionalProperties": true,
+      "minProperties": 1,
+      "properties": {
+        "GEM_TIERS": {
+          "$ref": "#/$defs/gem_tiers_table"
+        },
+        "GEM_TIER_NAMES": {
+          "$ref": "#/$defs/gem_tier_names_table"
+        },
+        "GEM_SOCKETS": {
+          "$ref": "#/$defs/gem_sockets_table"
+        },
+        "GEM_DRILL": {
+          "$ref": "#/$defs/gem_drill_table"
+        },
+        "GEM_LEGENDARY_EFFECTS": {
+          "$ref": "#/$defs/gem_legendary_effects_table"
+        },
+        "RUNE_REMOVE_COST": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "符文拆卸单价（`game/data/gems.py:40`）",
+          "description": "拆卸手续费 = 本值 × 符文等级（实测 1000，消费点 `content/economy_cmds.py`）。"
+        }
+      }
+    }
+  }
+}

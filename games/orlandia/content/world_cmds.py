@@ -28,17 +28,29 @@
 ----------------------------------------------------------------------------------------------
 | 真源写法 | 包内替身 |
 |---|---|
-| `from .. import content as C`（`C.xxx` 330 处） | `C = _HostMod("content")`（宿主聚合层**同对象**） |
+| `from .. import content as C` —— **数据名读点** | **包内门面**（见表下 B14-2 L2 段） |
+| `C.<函数名>`（小写）与未进域常量 | `C = _HostMod("content")`（宿主聚合层**同对象**，见缺口） |
 | `from .. import db`（`db.xxx` 133 处） | `db = _HostMod("db")` |
 | 函数内 `from ..services.X import f` / `from ..core import Y` | `_host_attr(...)`（同位置、调用时解析） |
 | `from .talk_actions import ACTIONS, check_action_keys` | `_host_attr("commands.talk_actions", ...)` |
-| `C.PORTALS`（13 处） | 包内域读口 `PORTALS`（`content/data/portals.json`，域归属 L5；本线 = 消费方） |
+| `C.PORTALS`（13 处，B9 线2 已切） | 包内域读口 `PORTALS`（`content/data/portals.json`，域归属 L5；本线 = 消费方） |
 
-⚠️ 缺口（报告同步登记）：`C` 仍是**宿主聚合层**。包内已有 `maps/subareas/pois/worlds/instances/items/...`
-域，但 `C` 上还有 60+ 个**函数**（`C.subarea_pois` / `C.prop_entry` / `C.portal_cost` /
-`C.town_npc_visible` / `C.wild_npc_findable` / `C.map_route` …）与常量表（`SUBAREA_KIND` /
-`ENHANCE_SMITH_MAPS` / `PROPERTIES` / `HOUSE_LEVELS` / `FACTION_*` —— 常量模块按 B9 归属铁律归
-L7 线）→ 本线**不建第二份读口**（防双源漂移）。下一步 = L7 常量域进包后，把 `C` 替身换成包内域门面。
+**B14 第二段 L2（2026-09-14）**：`C.<数据名>` 读点切包内门面直取 —— 模块顶 `from . import
+catalog_core/items/life/quests/space as _cat_*`（31 个名字，逐名来源表见 `overnight/W-B14-{A..E}.md`；
+门禁 `overnight/_b14_2_L2.json` = 31 名 OK 31 · 门面缺 0 · 不等 0，含键序）。门面值与宿主 `C`
+逐键相等（含键插入序）⇒ 取值来源变了、**行为一字未变**。
+
+⚠️ 残余 `C.<名>` —— ★ W4（2026-09-14，本线收口）已**清零**：原「未进域常量/派生表 9 名」
+（`ALL_WILD`(22 处) · `MAP_CONNECTIONS`(7) · `FACTION_ORDER`(5) · `FACTIONS`(4) ·
+`PERIOD_CN`(3) · `LEGACY_MAP_ALIAS`(2) · `REPUTATION_TIERS`(1) · `POIS`(1) · `CHRONICLES`(1)）
+逐名切包内读口 / 门面（来源见下表；门禁逐名含键序不等 0）：
+* `ALL_WILD` → 包内读口 `content/wild.py`（`_wild.ALL_WILD`；真源 `core/wild.py:26` 派生式，
+  键集/键序/逐条值与宿主 `_wild.ALL_WILD` 全等 —— 本文件 3 处 `.items()` 遍历依赖序）。
+* `PERIOD_CN` → 包内读口 `content/time_weather.py:PERIOD_CN`（真源就是它本身；名同值同）。
+* 其余 7 名 → 包内门面 `content/catalog_b143.py`（B14-3 建 `game_config.*` 组 / `pois` 域）。
+* `C.` 上**只剩函数**（小写名，非本段范围）：`C.subarea_pois` / `C.prop_entry` / `C.portal_cost` /
+  `C.town_npc_visible` / `C.wild_npc_findable` / `C.map_route` / `C.get_timed` /
+  `C.current_period` / `C.generate_roster_equip`（经 `_C` 别名）…
 
 包内直取（**不是**宿主）：`IR`（`content/flow/instance_run.py`，逐字端口）、`TIER_GROWTH`
 （`content/tables.py`）、`player_final_stats`（`content/panel.py`）、`skill_info`（`content/skills.py`）、
@@ -56,10 +68,22 @@ import time
 
 from saintess_engine.formation import alive_units, formation_view
 
+from . import catalog_core as _cat_core
+from . import catalog_items as _cat_items
+from . import catalog_life as _cat_life
+from . import catalog_quests as _cat_quests
+from . import catalog_space as _cat_space
+# ★ W4（2026-09-14）：残余 9 名数据读点切包内 —— 7 名走 catalog_b143，PERIOD_CN / ALL_WILD 走读口
+from . import catalog_b143 as _cat_b143
+# ★ B16-W11b（2026-09-14）：势力阵营常量组（真源 `game/data/factions.py`；宿主聚合层未导出）→ 包内门面
+from .catalog_rules import (FACTION_SHOP, FACTION_CAMPS, FACTION_CAMP_OPEN_LV, FACTION_CAMP_SWITCH_COOLDOWN,
+                            FACTION_CAMP_DAILY_TASKS, FACTION_CAMP_DAILY_LIMIT, FACTION_CAMP_SHOP)
+from . import wild as _wild
 from .flow import instance_run as IR
 from .panel import player_final_stats
 from .skills import skill_info
 from .tables import TIER_GROWTH
+from .time_weather import PERIOD_CN
 
 
 # ============================================================
@@ -136,8 +160,9 @@ WISH_WELL_EGG_CHANCE = 0.05
 # ------------------------------------------------------------
 # 真源 `game/data/portals.py:4 PORTALS`（11 条 {地图id: {name, icon}}）—— 与宿主聚合层
 # `C.PORTALS` **同形**（逐键 deep-equal 探针见 `overnight/b9_l2_verify.py`【D】）；
-# 正文里原 `C.PORTALS`（13 处）改读本读口：**唯一一处「包内取数」的切换**，
-# 其余 `C.xxx` 仍是宿主聚合层替身（函数/常量模块，见头注缺口）。
+# 正文里原 `C.PORTALS`（13 处）改读本读口（B9 线2）；B14 第二段 L2 另把 31 个数据名读点
+# 切到包内门面 `catalog_{core,items,life,quests,space}`（见头注），正文残余 `C.<名>` 只剩
+# 下节缺口那 9 名常量表 + `C.` 上的函数。
 # ============================================================
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -183,12 +208,12 @@ def _map_facilities(self, cur_map: dict, player: dict = None, sa_id_override: st
         lines.append("🏪 商店(『购买』)")
     if (sa_healer is not None and sa_healer) or (sa_healer is None and cur_map.get("healer")):
         lines.append("🏨 旅店(『住宿』恢复全状态)")
-    if mid in C.ENHANCE_SMITH_MAPS:
+    if mid in _cat_items.ENHANCE_SMITH_MAPS:
         _sa_name = sa_obj.get("name", "") if sa_obj else ""
         _sa_funcs = (sa_obj.get("funcs") or []) if sa_obj else []
         # O94 修复：与 base._at_smith 同源——鹿角淬火坊(white_deer_8)补入强化可用区域，
         # 地图设施清单同步显示铁匠铺入口（否则设施显示与『强化』可用性矛盾）
-        _smith = "craft" in _sa_funcs or C.SUBAREA_KIND.get(sa_id) in ("smith", "enhance")
+        _smith = "craft" in _sa_funcs or _cat_life.SUBAREA_KIND.get(sa_id) in ("smith", "enhance")
         if _smith:
             lines.append("🔨 铁匠铺(『强化』『附魔』)")
     # 旅者方碑（只在中心广场/首个子区域提示）
@@ -201,14 +226,14 @@ def _map_facilities(self, cur_map: dict, player: dict = None, sa_id_override: st
                 lines.append(f"🌌 {p['icon']}{p['name']}(『激活』解锁传送点)")
     # F2 副本入口设施化：funcs 含 instance 的子区域 = 副本入口设施（消费 F1 标记）
     if sa_obj and "instance" in (sa_obj.get("funcs") or []):
-        for _ik, _iv in C.INSTANCES.items():
+        for _ik, _iv in _cat_space.INSTANCES.items():
             _ie = _iv.get("entry") or {}
             if _ie.get("map") == mid and _ie.get("subarea") == sa_id:
                 lines.append(f"🏰 此处是【{_iv.get('name', '副本')}】入口（『副本 {_iv.get('name', '')}』进入）")
                 break
     # 自然互动（9.3：垂钓点显示特色描述；v87.17 子区域绑定：不在对应子区域不显示）
-    if mid in C.FISHING_SPOTS:
-        _fi = C.FISHING_SPOTS[mid]
+    if mid in _cat_life.FISHING_SPOTS:
+        _fi = _cat_life.FISHING_SPOTS[mid]
         _want_sa = _fi.get("subarea", "") if isinstance(_fi, dict) else ""
         if not (_want_sa and (sa_obj is None or sa_obj.get("id") != _want_sa)):
             _fname = _fi["name"] if isinstance(_fi, dict) else _fi
@@ -217,16 +242,16 @@ def _map_facilities(self, cur_map: dict, player: dict = None, sa_id_override: st
             _lock = " 🔒" if _flv < _fneed else ""
             _fdesc = _fi.get("desc", "") if isinstance(_fi, dict) else ""
             lines.append(f"🎣 垂钓点·{_fname}(垂钓Lv.{_fneed}){_lock}(『垂钓』){(' · ' + _fdesc) if _fdesc else ''}")
-    if mid in C.CAMP_SPOTS:
-        _cp = C.CAMP_SPOTS[mid]
+    if mid in _cat_life.CAMP_SPOTS:
+        _cp = _cat_life.CAMP_SPOTS[mid]
         _cp_sa = _cp.get("subarea", "") if isinstance(_cp, dict) else ""
         if not (_cp_sa and (sa_obj is None or sa_obj.get("id") != _cp_sa)):
             _cp_name = _cp.get("name", "营地") if isinstance(_cp, dict) else str(_cp)
             lines.append(f"🔥 篝火营地·{_cp_name}(『休息』恢复一半生命)")
     # v105R3 M14 P3-3：城镇地图不显示矿脉（『挖掘』已被城镇拦截，防"⛏️ 矿脉"与"城镇安全区"观感冲突）
     # v173：MINE_SPOTS dict 化（name/min_lv），显示同垂钓点——副业等级不足显示 🔒
-    if mid in C.MINE_SPOTS and cur_map.get("type") != "城镇区域":
-        _mi = C.MINE_SPOTS[mid]
+    if mid in _cat_life.MINE_SPOTS and cur_map.get("type") != "城镇区域":
+        _mi = _cat_life.MINE_SPOTS[mid]
         _mi_sa = _mi.get("subarea", "") if isinstance(_mi, dict) else ""
         if not (_mi_sa and (sa_obj is None or sa_obj.get("id") != _mi_sa)):
             _mi_name = _mi.get("name", "矿脉") if isinstance(_mi, dict) else str(_mi)
@@ -235,7 +260,7 @@ def _map_facilities(self, cur_map: dict, player: dict = None, sa_id_override: st
             _lock = " 🔒" if _mlv < _mneed else ""
             lines.append(f"⛏️ 矿脉·{_mi_name}(挖掘Lv.{_mneed}){_lock}(『挖掘』)")
     # v173：野地采集也按副业等级分档显示（同垂钓/矿脉）——等级不足显示 🔒
-    if cur_map.get("type") == "野外" and mid not in C.CAMP_SPOTS:
+    if cur_map.get("type") == "野外" and mid not in _cat_life.CAMP_SPOTS:
         _glv = db.get_prof_level(player.get("group_id", "g"), player["qq_id"], "gather") if player else 1
         _gneed = int(C.gather_map_min_lv(int(cur_map.get("lv") or 0)))
         _lock = " 🔒" if _glv < _gneed else ""
@@ -275,7 +300,7 @@ def _map_scene(self, cur_map: dict, player: dict = None, sa_id_override: str = N
             if _rstate.get("pois_left") is not None:
                 poi_ids = [pid for pid in poi_ids if IR.poi_left(_st, _rkey, pid)]
         for _pid in poi_ids:
-            _p = C.POIS.get(_pid)
+            _p = _cat_b143.POIS.get(_pid)
             if _p:
                 # v137 副本 POI（dungeon_pois）无 icon 字段——用 type 映射或 ❓ 兜底
                 _icon = _p.get("icon")
@@ -290,7 +315,7 @@ def _map_scene(self, cur_map: dict, player: dict = None, sa_id_override: str = N
         prop_ids = C.subarea_props(mid, sa_id)
         for _entry in prop_ids:
             _ppid, _label = C.prop_entry(_entry)
-            _pp = C.PROPS.get(_ppid)
+            _pp = _cat_items.PROPS.get(_ppid)
             if _pp:
                 _name = _label or _pp['name']
                 prop_lines.append(f"{_pp['icon']} {_name}(『交互 {_name}』)")
@@ -333,23 +358,23 @@ async def deed_view(self, event: AstrMessageEvent, group_id, qq_id, player):
         return
     deed = player.get("deed", "") or ""
     lines = ["🏠 【地契大厅】", "━━━━━━━━━━━━"]
-    if deed and deed in C.PROPERTIES:
-        prop = C.PROPERTIES[deed]
+    if deed and deed in _cat_life.PROPERTIES:
+        prop = _cat_life.PROPERTIES[deed]
         dlv = int(player.get("deed_lv", 1) or 1)
-        hl = C.HOUSE_LEVELS.get(dlv, C.HOUSE_LEVELS[1])
-        lines.append(f"✅ 我的地契：{prop['name']}({C.MAP_BY_ID.get(prop['map'], {}).get('name', '？')})")
+        hl = _cat_life.HOUSE_LEVELS.get(dlv, _cat_life.HOUSE_LEVELS[1])
+        lines.append(f"✅ 我的地契：{prop['name']}({_cat_space.MAP_BY_ID.get(prop['map'], {}).get('name', '？')})")
         lines.append(f"   🏗️ {hl['name']} Lv.{dlv} ｜ 仓库 {hl['storage']} 格 ｜ 回家恢复 {int(hl['heal_pct'] * 100)}%")
-        if dlv < C.HOUSE_MAX_LEVEL:
-            nxt = C.HOUSE_LEVELS[dlv + 1]
+        if dlv < _cat_life.HOUSE_MAX_LEVEL:
+            nxt = _cat_life.HOUSE_LEVELS[dlv + 1]
             cost = f"{nxt['upgrade_cost']['gold']} 金币 + " + " + ".join(f"{C.display('materials', m)}×{c}" for m, c in nxt['upgrade_cost']['mats'].items())
             lines.append(f"   ⬆️ 升级 Lv.{dlv + 1}【{nxt['name']}】：{cost}(『地契 升级』)")
         else:
             lines.append("   ⭐ 已满级宅邸！")
-        lines.append(f"   『回家』进入，『卖房』退契(返还 {int(C.HOUSE_REFUND.get(dlv, 0.5) * 100)}%)")
+        lines.append(f"   『回家』进入，『卖房』退契(返还 {int(_cat_life.HOUSE_REFUND.get(dlv, 0.5) * 100)}%)")
     else:
         lines.append("你还没有房产。以下地皮在出售：")
-        for i, (pid, prop) in enumerate(C.PROPERTIES.items(), 1):
-            mname = C.MAP_BY_ID.get(prop["map"], {}).get("name", "？")
+        for i, (pid, prop) in enumerate(_cat_life.PROPERTIES.items(), 1):
+            mname = _cat_space.MAP_BY_ID.get(prop["map"], {}).get("name", "？")
             lines.append(f"{i:>2}. {prop['name']} ｜ {prop['price']} 金币 ｜ {mname}")
             lines.append(f"     {prop['desc']}")
         lines.append(self._tip("house"))
@@ -365,7 +390,7 @@ async def deed_buy(self, event: AstrMessageEvent, group_id, qq_id, player):
         yield event.plain_result("格式：买房 <编号>！『地契』查看在售地皮～")
         return
     idx = int(raw)
-    props = list(C.PROPERTIES.items())
+    props = list(_cat_life.PROPERTIES.items())
     if idx < 1 or idx > len(props):
         yield event.plain_result(f"没有第 {idx} 块地皮(共 {len(props)} 块)！『地契』查看～")
         return
@@ -389,29 +414,29 @@ async def deed_buy(self, event: AstrMessageEvent, group_id, qq_id, player):
 
 async def deed_sell(self, event: AstrMessageEvent, group_id, qq_id, player):
     deed = player.get("deed", "") or ""
-    if not deed or deed not in C.PROPERTIES:
+    if not deed or deed not in _cat_life.PROPERTIES:
         yield event.plain_result("你没有房产，卖不了～『地契』看看在售地皮！")
         return
-    prop = C.PROPERTIES[deed]
+    prop = _cat_life.PROPERTIES[deed]
     dlv = int(player.get("deed_lv", 1) or 1)
-    refund_pct = C.HOUSE_REFUND.get(dlv, 0.5)
+    refund_pct = _cat_life.HOUSE_REFUND.get(dlv, 0.5)
     refund = int(prop["price"] * refund_pct)
     db.update_player(group_id, qq_id, gold=player["gold"] + refund, deed="", deed_lv=1)
     db.set_event_state(f"deed_owner_{deed}", "")  # v104 M09 P1：卖房释放产权（先到先得）
-    yield event.plain_result(f"🏠 你卖掉了【{prop['name']}】({C.HOUSE_LEVELS.get(dlv, C.HOUSE_LEVELS[1])['name']} Lv.{dlv})，退还 {refund} 金币({int(refund_pct * 100)}%)。")
+    yield event.plain_result(f"🏠 你卖掉了【{prop['name']}】({_cat_life.HOUSE_LEVELS.get(dlv, _cat_life.HOUSE_LEVELS[1])['name']} Lv.{dlv})，退还 {refund} 金币({int(refund_pct * 100)}%)。")
 
 
 async def _deed_upgrade(self, event, group_id, qq_id, player):
     """v84 房屋升级(25 章三)：『地契 升级』消耗金币+材料升房屋等级"""
     deed = player.get("deed", "") or ""
-    if not deed or deed not in C.PROPERTIES:
+    if not deed or deed not in _cat_life.PROPERTIES:
         yield event.plain_result("你没有房产，升级不了～『地契』看看在售地皮！")
         return
     dlv = int(player.get("deed_lv", 1) or 1)
-    if dlv >= C.HOUSE_MAX_LEVEL:
+    if dlv >= _cat_life.HOUSE_MAX_LEVEL:
         yield event.plain_result("你的房屋已经是满级宅邸啦！")
         return
-    nxt = C.HOUSE_LEVELS[dlv + 1]
+    nxt = _cat_life.HOUSE_LEVELS[dlv + 1]
     cost = nxt["upgrade_cost"]
     # 金币检查
     if player["gold"] < cost["gold"]:
@@ -439,12 +464,12 @@ async def _deed_upgrade(self, event, group_id, qq_id, player):
                 db.remove_item(group_id, qq_id, found["key"], 1)
                 inv = db.get_inventory(group_id, qq_id)
     db.update_player(group_id, qq_id, gold=player["gold"] - cost["gold"], deed_lv=dlv + 1)
-    hl = C.HOUSE_LEVELS[dlv + 1]
+    hl = _cat_life.HOUSE_LEVELS[dlv + 1]
     yield event.plain_result(
         f"🔨 叮叮当当一阵敲打——房屋升级为【{hl['name']}】Lv.{dlv + 1}！\n"
         f"📦 仓库扩容至 {hl['storage']} 格 ｜ 回家恢复 {int(hl['heal_pct'] * 100)}%"
         + (f" ｜ 铺面挂机位 +{hl['stall_slots']}" if hl["stall_slots"] else "")
-        + (f"\n💡 满级宅邸解锁专属传送点(『回家』可直达)" if dlv + 1 >= C.HOUSE_MAX_LEVEL else ""))
+        + (f"\n💡 满级宅邸解锁专属传送点(『回家』可直达)" if dlv + 1 >= _cat_life.HOUSE_MAX_LEVEL else ""))
 
 
 async def go_home(self, event: AstrMessageEvent, group_id, qq_id, player):
@@ -456,7 +481,7 @@ async def go_home(self, event: AstrMessageEvent, group_id, qq_id, player):
         return
     # v84 回家恢复（按房屋等级 heal_pct）
     dlv = int(player.get("deed_lv", 1) or 1)
-    hl = C.HOUSE_LEVELS.get(dlv, C.HOUSE_LEVELS[1])
+    hl = _cat_life.HOUSE_LEVELS.get(dlv, _cat_life.HOUSE_LEVELS[1])
     heal_pct = hl.get("heal_pct", 0.5)
     new_hp = max(player.get("hp", 0), int(player.get("max_hp", 1) * heal_pct))
     new_mp = max(player.get("mp", 0), int(player.get("max_mp", 1) * heal_pct))
@@ -472,13 +497,13 @@ async def go_out(self, event: AstrMessageEvent, group_id, qq_id, player):
         yield event.plain_result("你不在家里，不需要出门～")
         return
     deed = player.get("deed", "") or ""
-    prop = C.PROPERTIES.get(deed)
-    target = prop["map"] if prop else C.START_MAP
-    tgt_sas = C.MAP_BY_ID.get(target, {}).get("subareas") or []
+    prop = _cat_life.PROPERTIES.get(deed)
+    target = prop["map"] if prop else _cat_core.START_MAP
+    tgt_sas = _cat_space.MAP_BY_ID.get(target, {}).get("subareas") or []
     first_sa = tgt_sas[0] if tgt_sas else None
     db.update_player(group_id, qq_id, cur_map=target,
                      cur_subarea=first_sa["id"] if first_sa else "")
-    yield event.plain_result(f"🚪 你走出家门，回到了{C.MAP_BY_ID.get(target, {}).get('name', '城镇')}。")
+    yield event.plain_result(f"🚪 你走出家门，回到了{_cat_space.MAP_BY_ID.get(target, {}).get('name', '城镇')}。")
 
 
 async def visit_home(self, event: AstrMessageEvent, group_id, qq_id, player):
@@ -530,7 +555,7 @@ async def home_storage(self, event: AstrMessageEvent, group_id, qq_id, player):
     if raw:
         # v84 仓库容量按房屋等级
         dlv = int(player.get("deed_lv", 1) or 1)
-        hl = C.HOUSE_LEVELS.get(dlv, C.HOUSE_LEVELS[1])
+        hl = _cat_life.HOUSE_LEVELS.get(dlv, _cat_life.HOUSE_LEVELS[1])
         lst = self._home_storage_load(group_id, qq_id)
         if len(lst) >= hl["storage"]:
             yield event.plain_result(
@@ -609,7 +634,7 @@ async def map_view(self, event: AstrMessageEvent, group_id, qq_id, player):
     if cur.startswith("home_"):
         yield event.plain_result(self._home_view(group_id, qq_id, cur))
         return
-    cur_map = C.MAP_BY_ID[cur]
+    cur_map = _cat_space.MAP_BY_ID[cur]
     cur_sa = player.get("cur_subarea") or ""
     sa_now = ""
     if cur_sa:
@@ -672,7 +697,7 @@ async def region_view(self, event: AstrMessageEvent, group_id, qq_id, player):
     if cur.startswith("home_"):
         yield event.plain_result(self._home_view(group_id, qq_id, cur))
         return
-    cur_map = C.MAP_BY_ID.get(cur)
+    cur_map = _cat_space.MAP_BY_ID.get(cur)
     if cur_map is None:
         yield event.plain_result("🧭 找不到当前区域信息……")
         return
@@ -690,25 +715,25 @@ async def region_view(self, event: AstrMessageEvent, group_id, qq_id, player):
         title += f"(Lv.{_lv})"
     lines = [title]
     sas = cur_map.get("subareas") or []
-    town = (cur_map.get("type") == C.MAP_TYPE_TOWN) or bool(cur_map.get("shop")) or bool(cur_map.get("healer"))
+    town = (cur_map.get("type") == _cat_core.MAP_TYPE_TOWN) or bool(cur_map.get("shop")) or bool(cur_map.get("healer"))
     # 本区域全部可达地点（数据=地图级城镇标记 + 子区域类型），顺序 = 数据顺序
     # v167.1：行加两格缩进（对齐地图面板『  ●1.』风格）；标题 Lv 格式 Lv.N
     for sa in sas:
         nm = sa.get("name") or sa.get("id") or "？"
         if sa.get("id") == cur_sa:
             lines.append(f"  ●{nm}")
-        elif sa.get("type") == C.SUB_TYPE_TOWN or town:
+        elif sa.get("type") == _cat_core.SUB_TYPE_TOWN or town:
             lines.append(f"  □{nm}")
         else:
             lines.append(f"  ○{nm}")
     # ⊕ 跨区域连接点（MAP_CONNECTIONS 当前图邻居；概览面板常显——副本 no_exit 除外）
     _dun = cur_map.get("dungeon") or {}
-    neighbors = C.MAP_CONNECTIONS.get(cur, [])
+    neighbors = _cat_b143.MAP_CONNECTIONS.get(cur, [])
     if _dun.get("no_exit"):
         neighbors = []
     for conn in neighbors:
         _mid = conn[0] if isinstance(conn, tuple) else conn
-        nm = C.MAP_BY_ID.get(_mid)
+        nm = _cat_space.MAP_BY_ID.get(_mid)
         if nm:
             _lock = " (🔒隐藏)" if nm.get("hidden") else ""
             _nlv = nm.get("lv")
@@ -800,14 +825,14 @@ def _map_blocks(self, player: dict, cur_map: dict, cur_sa: str,
         npc_ids = cur_map["inline_npcs"]
     npcs = []
     for nid in npc_ids:
-        if nid in C.HIDDEN_NPCS:
-            npcs.append((nid, C.HIDDEN_NPCS[nid]))
-        elif nid in C.NPCS:
-            npcs.append((nid, C.NPCS[nid]))
+        if nid in _cat_quests.HIDDEN_NPCS:
+            npcs.append((nid, _cat_quests.HIDDEN_NPCS[nid]))
+        elif nid in _cat_quests.NPCS:
+            npcs.append((nid, _cat_quests.NPCS[nid]))
     # v95.30 城镇 NPC 随机性：酱油 NPC 按 游走(roam)/概率(appear)/时段(period) 过滤显示
     # （功能 NPC 恒显示；隐藏 NPC 走副本层逻辑不参与；无子区域(地图级)不做过滤）
     npcs = [(nid, n) for nid, n in npcs
-            if nid in C.HIDDEN_NPCS or not cur_sa or C.town_npc_visible(nid, n, cur_sa)]
+            if nid in _cat_quests.HIDDEN_NPCS or not cur_sa or C.town_npc_visible(nid, n, cur_sa)]
     if npcs:
         if lines and lines[-1]:
             lines.append("")
@@ -911,7 +936,7 @@ def _map_nav_body(self, player: dict, cur_map: dict, cur_sa: str,
     # v87.13 描述优先显示当前子区域（子区域无 desc 时回退地图 desc）
     lines = ([f"🗺️ 【{title}】", f"{sa_desc or cur_map['desc']}", "━━━━━━━━━━━━"]
              if with_header else [])
-    neighbors = C.MAP_CONNECTIONS.get(cur_map.get("id", ""), [])
+    neighbors = _cat_b143.MAP_CONNECTIONS.get(cur_map.get("id", ""), [])
     links = C.subarea_links(cur_map.get("id", ""), cur_sa)
     _v_ids = {vs["id"] for vs in self._visible_sas(player, cur_map, group_id, qq_id)}
     _v_links = [lid for lid in links if lid in _v_ids]
@@ -1025,7 +1050,7 @@ async def location_view(self, event: AstrMessageEvent, group_id, qq_id, player):
     if cur.startswith("home_"):
         yield event.plain_result(self._home_view(group_id, qq_id, cur))
         return
-    cur_map = C.MAP_BY_ID[cur]
+    cur_map = _cat_space.MAP_BY_ID[cur]
     cur_sa = player.get("cur_subarea") or ""
     lines = self._map_nav_body(player, cur_map, cur_sa, group_id, qq_id, show_here=False)
     # v128.2 赶路模式提示：唯一入口=『赶路』指令（旧『位置 0』捷径已移除）
@@ -1063,12 +1088,12 @@ def _hurry_section(self, player: dict, cur_map: dict, cur_sa: str,
             npc_ids = cur_map["inline_npcs"]
         npcs = []
         for nid in npc_ids:
-            if nid in C.HIDDEN_NPCS:
-                npcs.append((nid, C.HIDDEN_NPCS[nid]))
-            elif nid in C.NPCS:
-                npcs.append((nid, C.NPCS[nid]))
+            if nid in _cat_quests.HIDDEN_NPCS:
+                npcs.append((nid, _cat_quests.HIDDEN_NPCS[nid]))
+            elif nid in _cat_quests.NPCS:
+                npcs.append((nid, _cat_quests.NPCS[nid]))
         npcs = [(nid, n) for nid, n in npcs
-                if nid in C.HIDDEN_NPCS or not cur_sa or C.town_npc_visible(nid, n, cur_sa)]
+                if nid in _cat_quests.HIDDEN_NPCS or not cur_sa or C.town_npc_visible(nid, n, cur_sa)]
         if npcs:
             lines.append("👥 这里的 NPC：")
             for i, (_, n) in enumerate(npcs, 1):
@@ -1172,7 +1197,7 @@ async def hurry_view(self, event: AstrMessageEvent, group_id, qq_id, player):
     if cur.startswith("home_"):
         yield event.plain_result(self._home_view(group_id, qq_id, cur))
         return
-    cur_map = C.MAP_BY_ID[cur]
+    cur_map = _cat_space.MAP_BY_ID[cur]
     cur_sa = player.get("cur_subarea") or ""
     yield event.plain_result(self._hurry_panel(player, cur_map, cur_sa, group_id, qq_id, ftype))
 
@@ -1201,7 +1226,7 @@ async def ask_way(self, event: AstrMessageEvent, group_id, qq_id, player):
         yield event.plain_result("格式：问路 <地名>！比如『问路 海蚀洞窟』～")
         return
     cur = player.get("cur_map", "")
-    cur_map = C.MAP_BY_ID.get(cur, {})
+    cur_map = _cat_space.MAP_BY_ID.get(cur, {})
     # 1) 同图子区域名：直接给『前往』指引
     for sa in (cur_map.get("subareas") or []):
         if raw in (sa.get("name", ""), sa.get("id", "")):
@@ -1214,14 +1239,14 @@ async def ask_way(self, event: AstrMessageEvent, group_id, qq_id, player):
             return
     # 2) 跨图目标：地图名/id/区域名/旧别名（与『前往』同口径）
     target = None
-    for m in C.MAPS:
+    for m in _cat_space.MAPS:
         if raw in (m["name"], m["id"]):
             target = m
             break
-    if not target and raw in C.LEGACY_MAP_ALIAS:
-        target = C.MAP_BY_ID.get(C.LEGACY_MAP_ALIAS[raw])
+    if not target and raw in _cat_b143.LEGACY_MAP_ALIAS:
+        target = _cat_space.MAP_BY_ID.get(_cat_b143.LEGACY_MAP_ALIAS[raw])
     if not target:
-        for m in C.MAPS:
+        for m in _cat_space.MAPS:
             if raw in m.get("area_name", ""):
                 target = m
                 break
@@ -1233,7 +1258,7 @@ async def ask_way(self, event: AstrMessageEvent, group_id, qq_id, player):
         return
     # 3) BFS 最短路径（MAP_CONNECTIONS 无向图）
     from collections import deque
-    _conns = C.MAP_CONNECTIONS
+    _conns = _cat_b143.MAP_CONNECTIONS
     q = deque([(cur, [cur])])
     seen = {cur}
     route = None
@@ -1253,7 +1278,7 @@ async def ask_way(self, event: AstrMessageEvent, group_id, qq_id, player):
     # v167.1 展示优化：起止标记 + 每段区域名(Lv.N)（首段=当前，末段=目标）
     _path_n = []
     for _i, _mid in enumerate(route):
-        _mp = C.MAP_BY_ID.get(_mid, {})
+        _mp = _cat_space.MAP_BY_ID.get(_mid, {})
         _nm = _mp.get("name") or _mid
         _nlv = _mp.get("lv")
         _lvs = f"(Lv.{_nlv})" if _nlv else ""
@@ -1304,7 +1329,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
         return
     # v94 体力：同图子区域移动免费（城内溜达不算赶路）；跨图移动扣 1、体力不足拒绝
     cur = player["cur_map"]
-    cur_map = C.MAP_BY_ID.get(cur, {})
+    cur_map = _cat_space.MAP_BY_ID.get(cur, {})
     cur_sas = cur_map.get("subareas") or []
     # v86 子区域：『移动 <序号>』→ 同图可前往列表序号优先（v87.14 空间连接），再邻居地图序号
     # v104 P3(M24) 确认：全角数字兼容——Python str.isdigit()/int() 原生接受全角 ０-９(U+FF10-FF19)，
@@ -1352,7 +1377,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
     target = None
     want_sa = None
     if dest.isdigit():
-        neighbors = C.MAP_CONNECTIONS.get(cur, [])
+        neighbors = _cat_b143.MAP_CONNECTIONS.get(cur, [])
         idx = int(dest)
         offset = len(links)
         # #263: 与地图显示口径一致——跨图连接只在出口子区域有效（v95.21 出城走城门铁律），
@@ -1367,7 +1392,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
             # #263 回归修复：不在出口子区域时序号命中邻居地图 → 引导去出口
             # （此前清空 neighbors 后直接"序号无效"，丢了 v87.14 出城走城门的路线引导；
             #   无效序号仍按实际可前往数量报错，保持 #263 口径一致）
-            if not at_exit and offset + 1 <= idx <= offset + len(C.MAP_CONNECTIONS.get(cur, [])):
+            if not at_exit and offset + 1 <= idx <= offset + len(_cat_b143.MAP_CONNECTIONS.get(cur, [])):
                 _exit_name = next((s["name"] for s in (cur_map.get("subareas") or []) if s["id"] == exit_sa_id), "出口")
                 _cur_sa_name = next((s["name"] for s in (cur_map.get("subareas") or []) if s["id"] == player.get("cur_subarea")), player.get("cur_subarea", ""))
                 yield event.plain_result(
@@ -1382,7 +1407,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
         resolve_map_target = _host_attr("services.travel", "resolve_map_target")
         target = resolve_map_target(dest)
     if not target:
-        names = "、".join([m["name"] for m in C.MAPS])
+        names = "、".join([m["name"] for m in _cat_space.MAPS])
         yield event.plain_result(f"找不到『{dest}』！输入『地图』查看可前往区域，或『传送 <名称>』用方碑快速旅行～")
         return
     # 隐藏图检查
@@ -1393,7 +1418,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
         return
     # 是否相邻
     cur = player["cur_map"]
-    neighbors = C.MAP_CONNECTIONS.get(cur, [])
+    neighbors = _cat_b143.MAP_CONNECTIONS.get(cur, [])
     nids = [c[0] if isinstance(c, tuple) else c for c in neighbors]
     # v104 P1(M22)：目标==当前图（输入本图地图名/区域名）→ 提示已在，不再原地白走扣体力
     # （同图子区域名分支 :676-678 已有同款提示，跨图路径此前漏了）
@@ -1404,7 +1429,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
         yield event.plain_result(f"无法直接前往{target['name']}！需要先到相邻地图。看看『地图』～")
         return
     # v84 红名限制（26 章三 第一档）：红名不能进入城镇安全区（'城镇外郊' 数据不存在，v102.1 清理）
-    if self._is_redname(qq_id) and target.get("type") == C.MAP_TYPE_TOWN:
+    if self._is_redname(qq_id) and target.get("type") == _cat_core.MAP_TYPE_TOWN:
         yield event.plain_result(
             "🛡️ 城门口的守卫拦住了你：\"你身上沾着血腥味！红名期间禁止进入城镇！\"\n"
             "(红名期间不能进入安全区，去野外避避风头吧)")
@@ -1470,7 +1495,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
     t_shown = [(i + 1, next((s for s in target_sas if s["id"] == lid), None))
                for i, lid in enumerate(t_links)]
     t_shown = [(i, s) for i, s in t_shown if s]
-    neighbors = C.MAP_CONNECTIONS.get(target["id"], [])
+    neighbors = _cat_b143.MAP_CONNECTIONS.get(target["id"], [])
     nav = ""
     # v101.25c 模板统一后：完整"可前往"列表已由 _subarea_body 输出，
     # 此处不再拼紧凑版（否则跨图移动出现两行重复列表，playtest #405）
@@ -1499,10 +1524,10 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
         db.save_battle(group_id, qq_id, _nb.to_state())
         self._lock_battle(group_id, qq_id)
         arrive_txt = f"🚶 你来到了【{target['name']}】"
-        if target.get("type") == C.MAP_TYPE_TOWN and first_sa:
+        if target.get("type") == _cat_core.MAP_TYPE_TOWN and first_sa:
             arrive_txt = f"🚶 你从野外方向来到了【{target['name']}】{first_sa['name']}"
         # 我方站位单机 = 玩家单位
-        _cls = C.CLASSES.get(player.get("class_name", ""), {}) or {}
+        _cls = _cat_core.CLASSES.get(player.get("class_name", ""), {}) or {}
         _self_unit = {
             "uid": "p_self", "rank": int(_cls.get("default_rank", 2) or 2),
             "reach": int(_cls.get("reach", 2) or 2), "name": player.get("name", "你"),
@@ -1522,7 +1547,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
         return
     # v87.3 必经之路：进入城镇时提示方向（从路图/野外进城）
     arrive_txt = f"🚶 你来到了【{target['name']}】"
-    if target.get("type") == C.MAP_TYPE_TOWN and first_sa:
+    if target.get("type") == _cat_core.MAP_TYPE_TOWN and first_sa:
         arrive_txt = f"🚶 你从野外方向来到了【{target['name']}】{first_sa['name']}"
     # v97.5 行为彩蛋规则：进入新地图
     _rule_txt = self._rule_fire("move_enter", group_id, qq_id, player, target)
@@ -1638,7 +1663,7 @@ async def _instance_dungeon_move(self, event, group_id, qq_id, player, inst_row,
     # v141 大陆隔离：优先从大陆实例读（克隆图），回退全局静态图
     _wid = st.get("world_id") or ""
     _inst = C.get_instance_world(_wid) if _wid.startswith("inst:") else None
-    cur_map = (_inst or {}).get("maps", {}).get((st.get("inst_id") or "").removeprefix("inst_"), {}) or C.MAP_BY_ID.get((st.get("inst_id") or "").removeprefix("inst_"), {})
+    cur_map = (_inst or {}).get("maps", {}).get((st.get("inst_id") or "").removeprefix("inst_"), {}) or _cat_space.MAP_BY_ID.get((st.get("inst_id") or "").removeprefix("inst_"), {})
     sas = cur_map.get("subareas") or []
     links = C.subarea_links(cur_map.get("id", ""), cur_sa) if cur_sa else []
     # 副本内不隐藏房间（v137 房间全可见），直接取连通表
@@ -1759,16 +1784,16 @@ async def portal_view(self, event: AstrMessageEvent, group_id, qq_id, player):
         mounts = player.get("mounts") or {}
         active_mk = mounts.get("active")
         disc = 0.0
-        if active_mk and active_mk in C.MOUNT_BY_KEY:
-            disc = float(C.MOUNT_BY_KEY[active_mk].get("discount", 0) or 0)
+        if active_mk and active_mk in _cat_life.MOUNT_BY_KEY:
+            disc = float(_cat_life.MOUNT_BY_KEY[active_mk].get("discount", 0) or 0)
         for i, mid in enumerate(portals, 1):
-            m = C.MAP_BY_ID.get(mid, {})
+            m = _cat_space.MAP_BY_ID.get(mid, {})
             p = PORTALS.get(mid, {})
             cost = C.portal_cost(m)
             shown = cost
             tag = ""
             if disc > 0:
-                shown = max(C.ECON_CONFIG["portal_min_cost"], int(cost * (1 - disc)))
+                shown = max(_cat_life.ECON_CONFIG["portal_min_cost"], int(cost * (1 - disc)))
                 tag = f"（骑乘坐骑 {int(disc*100)}% 折扣）"
             name = p.get("name", mid) if p else mid
             icon = p.get("icon", "🌌") if p else "🌌"
@@ -1784,7 +1809,7 @@ async def portal_activate(self, event: AstrMessageEvent, group_id, qq_id, player
         yield event.plain_result("这里没有方碑……寻找大陆上古道上刻着符文的古老路标吧！")
         return
     # v87.17 子区域绑定：方碑矗立在首个子区域（广场），必须走到跟前才能激活
-    _pm = C.MAP_BY_ID.get(cur, {})
+    _pm = _cat_space.MAP_BY_ID.get(cur, {})
     _first_sa = (_pm.get("subareas") or [None])[0]
     if _first_sa and player.get("cur_subarea") != _first_sa.get("id"):
         yield event.plain_result(
@@ -1797,7 +1822,7 @@ async def portal_activate(self, event: AstrMessageEvent, group_id, qq_id, player
         yield event.plain_result(f"🌌 {p['icon']}{p['name']} 已经激活过了！『方碑』查看传送列表～")
         return
     db.add_portal(qq_id, cur)
-    m = C.MAP_BY_ID.get(cur, {})
+    m = _cat_space.MAP_BY_ID.get(cur, {})
     exp = max(20, int(m.get("lv", 1)) * 20)
     db.update_player(group_id, qq_id, exp=player["exp"] + exp)
     yield event.plain_result(
@@ -1824,13 +1849,13 @@ async def portal_travel(self, event: AstrMessageEvent, group_id, qq_id):
     if dest.isdigit():
         idx = int(dest)
         if 1 <= idx <= len(portals):
-            target = C.MAP_BY_ID.get(portals[idx - 1])
+            target = _cat_space.MAP_BY_ID.get(portals[idx - 1])
         else:
             yield event.plain_result(f"序号无效！你有 {len(portals)} 座已激活方碑，『方碑』查看～")
             return
     else:
         for mid in portals:
-            m = C.MAP_BY_ID.get(mid, {})
+            m = _cat_space.MAP_BY_ID.get(mid, {})
             p = PORTALS.get(mid, {})
             if dest in p.get("name", "") or dest in m.get("name", ""):
                 target = m
@@ -1850,9 +1875,9 @@ async def portal_travel(self, event: AstrMessageEvent, group_id, qq_id):
     # v39 坐骑：骑乘中传送折扣
     mounts = player.get("mounts") or {}
     active_mk = mounts.get("active")
-    if active_mk and active_mk in C.MOUNT_BY_KEY:
-        disc = C.MOUNT_BY_KEY[active_mk].get("discount", 0)
-        cost = max(C.ECON_CONFIG["portal_min_cost"], int(cost * (1 - disc)))
+    if active_mk and active_mk in _cat_life.MOUNT_BY_KEY:
+        disc = _cat_life.MOUNT_BY_KEY[active_mk].get("discount", 0)
+        cost = max(_cat_life.ECON_CONFIG["portal_min_cost"], int(cost * (1 - disc)))
     if player["gold"] < cost:
         yield event.plain_result(f"传送需要 {cost} 金币(你只有 {player['gold']})！打怪攒点金币吧～")
         return
@@ -1903,7 +1928,7 @@ async def quest_accept(self, event: AstrMessageEvent, group_id, qq_id):
     quests = db.get_quests(group_id, qq_id)
     # 主线（pending 可接）
     main_id = quests.get("main_quest")
-    mq = next((q for q in C.MAIN_QUESTS if q["id"] == main_id), None) if main_id else None
+    mq = next((q for q in _cat_quests.MAIN_QUESTS if q["id"] == main_id), None) if main_id else None
     # v123d：『接取 <序号>』——先按无参数列表全局序号映射到任务名（参数统一铁律：
     # 列表展示序号即可选），映射后统一走下方名字分支（主线/支线都命中）
     if raw and raw.isdigit():
@@ -1917,19 +1942,19 @@ async def quest_accept(self, event: AstrMessageEvent, group_id, qq_id):
     if mq:
         st = quests.get("main_status", "pending")
         if st == "pending" and (not raw or raw in (mq["name"], "任务", "主线")):
-            npc = C.NPCS.get(mq["giver"]) or C.ALL_WILD.get(mq["giver"]) or {}
+            npc = _cat_quests.NPCS.get(mq["giver"]) or _wild.ALL_WILD.get(mq["giver"]) or {}
             if npc.get("map") == player["cur_map"]:
                 lines = self._take_main_quest(group_id, qq_id, mq["giver"], npc)
                 yield event.plain_result("\n".join(lines))
                 return
-            giver_map = C.MAP_BY_ID.get(npc.get("map", ""), {}).get("name", "？")
+            giver_map = _cat_space.MAP_BY_ID.get(npc.get("map", ""), {}).get("name", "？")
             yield event.plain_result(f"当前主线『{mq['name']}』由 {npc.get('name', '？')}(在{giver_map}) 发布，去找他对话接取～")
             return
         # v95.8 #47：主线进行中/待交付时，无参数『接取』不应静默去接支线
         # v95.14：『接取任务』/『接取 主线』（raw=任务/主线）等同无参数，同样提示主线状态
         if not raw or raw in ("任务", "主线"):
             if st == "ready":
-                yield event.plain_result(f"主线『{mq['name']}』已完成目标！回 {(C.NPCS.get(mq['giver']) or C.ALL_WILD.get(mq['giver']) or {}).get('name', '发布人')} 处对话领奖励～")
+                yield event.plain_result(f"主线『{mq['name']}』已完成目标！回 {(_cat_quests.NPCS.get(mq['giver']) or _wild.ALL_WILD.get(mq['giver']) or {}).get('name', '发布人')} 处对话领奖励～")
             else:
                 yield event.plain_result(f"主线『{mq['name']}』进行中！输入『任务』查看进度～")
             return
@@ -1937,13 +1962,13 @@ async def quest_accept(self, event: AstrMessageEvent, group_id, qq_id):
         # （此前会落到底部"可接取任务列表"分支，回显无关支线误导玩家）
         if raw == mq["name"]:
             if st == "ready":
-                yield event.plain_result(f"主线『{mq['name']}』已完成目标！回 {(C.NPCS.get(mq['giver']) or C.ALL_WILD.get(mq['giver']) or {}).get('name', '发布人')} 处对话领奖励～")
+                yield event.plain_result(f"主线『{mq['name']}』已完成目标！回 {(_cat_quests.NPCS.get(mq['giver']) or _wild.ALL_WILD.get(mq['giver']) or {}).get('name', '发布人')} 处对话领奖励～")
             else:
                 yield event.plain_result(f"主线『{mq['name']}』已在进行中，无需重复接取！输入『任务』查看进度～")
             return
     # 支线：必须指名道姓才接（v95.8 #47：无参数/『接取 任务』不再静默接支线）
     if raw and raw not in ("任务", "主线"):
-        for sq in C.SIDE_QUESTS:
+        for sq in _cat_quests.SIDE_QUESTS:
             if raw not in (sq["name"],):
                 continue
             # v95.27：先判已接（此前 continue 跳过后 raw 落到底部无关列表，提示不明确）
@@ -1962,9 +1987,9 @@ async def quest_accept(self, event: AstrMessageEvent, group_id, qq_id):
                 _pre = sq.get("unlock")
                 _pn = []
                 if isinstance(_pre, list):
-                    _pn = [next((q["name"] for q in C.SIDE_QUESTS if q["id"] == x.get("id")), "前置任务") for x in _pre if isinstance(x, dict)]
+                    _pn = [next((q["name"] for q in _cat_quests.SIDE_QUESTS if q["id"] == x.get("id")), "前置任务") for x in _pre if isinstance(x, dict)]
                 elif isinstance(_pre, dict):
-                    _pn = [next((q["name"] for q in C.SIDE_QUESTS if q["id"] == _pre.get("id")), "前置任务")]
+                    _pn = [next((q["name"] for q in _cat_quests.SIDE_QUESTS if q["id"] == _pre.get("id")), "前置任务")]
                 yield event.plain_result(
                     f"🔒 『{sq['name']}』的线索还没出现——先完成『{_pn[0] if _pn else '前置任务'}』再来看看吧。"
                 )
@@ -1982,8 +2007,8 @@ async def quest_accept(self, event: AstrMessageEvent, group_id, qq_id):
                 _rr = sq["require_race"]
                 _cur = player.get("race") or "human"
                 if _cur != _rr:
-                    _rcn = (C.RACES.get(_rr) or {}).get("name", "对应血脉")
-                    _ccn = (C.RACES.get(_cur) or {}).get("name", "未知血脉")
+                    _rcn = (_cat_core.RACES.get(_rr) or {}).get("name", "对应血脉")
+                    _ccn = (_cat_core.RACES.get(_cur) or {}).get("name", "未知血脉")
                     yield event.plain_result(
                         f"⛔ 『{sq['name']}』需要{_rcn}的血脉才能接下——"
                         f"你身为{_ccn}，与这份传承无缘。"
@@ -2012,7 +2037,7 @@ async def quest_accept(self, event: AstrMessageEvent, group_id, qq_id):
                 ]
                 yield event.plain_result("\n".join(lines))
                 return
-            npc = C.NPCS.get(sq["giver"]) or C.ALL_WILD.get(sq["giver"]) or {}
+            npc = _cat_quests.NPCS.get(sq["giver"]) or _wild.ALL_WILD.get(sq["giver"]) or {}
             if npc.get("map") == player["cur_map"]:
                 # v95r65 #295：指名接取只接该任务（此前调 _offer_side_quests 按 giver 全接，
                 # 会连带接取同 giver 的告示板委托——『接取 史莱姆果冻』顺带接走『寻猫·虎斑』）
@@ -2027,7 +2052,7 @@ async def quest_accept(self, event: AstrMessageEvent, group_id, qq_id):
                 ]
                 yield event.plain_result("\n".join(lines))
                 return
-            giver_map = C.MAP_BY_ID.get(npc.get("map", ""), {}).get("name", "？")
+            giver_map = _cat_space.MAP_BY_ID.get(npc.get("map", ""), {}).get("name", "？")
             yield event.plain_result(f"支线『{sq['name']}』由 {npc.get('name', '？')}(在{giver_map}) 发布，去找他对话接取～")
             return
     # 无参数 → 列出当前地图可接任务（主线 pending + 未接支线）
@@ -2040,7 +2065,7 @@ async def quest_accept(self, event: AstrMessageEvent, group_id, qq_id):
         return
     # v95.15 #70：指名接取但上面没匹配到 → 明确提示未找到/已接取
     if raw and raw not in ("任务", "主线"):
-        all_names = [q["name"] for q in C.SIDE_QUESTS] + [q["name"] for q in C.MAIN_QUESTS]
+        all_names = [q["name"] for q in _cat_quests.SIDE_QUESTS] + [q["name"] for q in _cat_quests.MAIN_QUESTS]
         if raw in all_names:
             yield event.plain_result(f"任务『{raw}』已接取或已完成，输入『任务』查看进度～")
         else:
@@ -2087,7 +2112,7 @@ async def quest_abandon(self, event: AstrMessageEvent, group_id, qq_id):
     if not index_able:
         # v116 §3.4：主线不可放弃——指名主线/『主线』字样给明确拒绝提示
         main_id = quests.get("main_quest")
-        mq = next((q for q in C.MAIN_QUESTS if q["id"] == main_id), None) if main_id else None
+        mq = next((q for q in _cat_quests.MAIN_QUESTS if q["id"] == main_id), None) if main_id else None
         if raw in ("主线", "main") or (mq and raw == mq["name"]):
             yield event.plain_result("主线任务无法放弃！主线是奥兰迪亚之王赐下的使命～")
             return
@@ -2105,7 +2130,7 @@ async def quest_abandon(self, event: AstrMessageEvent, group_id, qq_id):
         sid, sq = side_items[idx - 1]
         del side[sid]
         quests["side"] = side
-        qname = next((q["name"] for q in C.SIDE_QUESTS if q["id"] == sid), "该支线")
+        qname = next((q["name"] for q in _cat_quests.SIDE_QUESTS if q["id"] == sid), "该支线")
         db.save_quests(group_id, qq_id, quests)
         yield event.plain_result(f"🗑️ 已放弃任务：『{qname}』")
         return
@@ -2154,11 +2179,11 @@ def _home_view(self, group_id, qq_id, cur_map_id):
         return "这个家的主人已经离开了……(『出门』离开)"
     is_mine = str(owner_qid) == str(qq_id)
     deed = owner.get("deed", "") or ""
-    prop = C.PROPERTIES.get(deed, {})
+    prop = _cat_life.PROPERTIES.get(deed, {})
     lines = [f"🏠 【{('我的' if is_mine else owner['name'] + '的') + '家'}】"]
     if prop:
         dlv = int(owner.get("deed_lv", 1) or 1)
-        hl = C.HOUSE_LEVELS.get(dlv, C.HOUSE_LEVELS[1])
+        hl = _cat_life.HOUSE_LEVELS.get(dlv, _cat_life.HOUSE_LEVELS[1])
         lines.append(f"{prop['name']}({hl['name']} Lv.{dlv})")
         lines.append(f"　{prop['desc']}")
     lines.append("━━━━━━━━━━━━")
@@ -2179,7 +2204,7 @@ def _home_view(self, group_id, qq_id, cur_map_id):
     else:
         # v104R3 P2：木屋(0 挂机位)不提示摆摊开张——与铺面挂机位实现对齐(25 章房产案)
         _odlv = int(owner.get("deed_lv", 1) or 1)
-        _oslots = C.HOUSE_LEVELS.get(_odlv, C.HOUSE_LEVELS[1]).get("stall_slots", 0)
+        _oslots = _cat_life.HOUSE_LEVELS.get(_odlv, _cat_life.HOUSE_LEVELS[1]).get("stall_slots", 0)
         if _oslots > 0:
             lines.append("🏪 铺面空着——房主可以『摆摊 <物品> [价格]』开张(不带价格 = 换摊)！")
         else:
@@ -2188,7 +2213,7 @@ def _home_view(self, group_id, qq_id, cur_map_id):
     if is_mine:
         storage = self._home_storage_load(group_id, qq_id)
         dlv = int(owner.get("deed_lv", 1) or 1)
-        hl = C.HOUSE_LEVELS.get(dlv, C.HOUSE_LEVELS[1])
+        hl = _cat_life.HOUSE_LEVELS.get(dlv, _cat_life.HOUSE_LEVELS[1])
         lines.append(f"📦 家中仓库：{len(storage)}/{hl['storage']} 件(『仓库』管理)")
         if hl.get("stall_slots"):
             lines.append(f"🏪 铺面挂机位：{hl['stall_slots']} 个(『摆摊 <物品> [价格]』开张)")
@@ -2201,14 +2226,14 @@ def _current_npcs(self, player):
     """v86 子区域：当前所在位置可交互的 NPC 列表(子区域优先，回退地图级)。
     v95.30 随机性：酱油 NPC 按 游走/概率/时段 过滤（功能 NPC 恒在）。"""
     cur_map = player["cur_map"]
-    m = C.MAP_BY_ID.get(cur_map, {})
+    m = _cat_space.MAP_BY_ID.get(cur_map, {})
     sa_id = player.get("cur_subarea") or ""
     for sa in (m.get("subareas") or []):
         if sa["id"] == sa_id:
             npc_ids = sa.get("npcs") or []
-            return [C.NPCS[nid] for nid in npc_ids if nid in C.NPCS
-                    and C.town_npc_visible(nid, C.NPCS[nid], sa_id)]
-    return [C.NPCS[nid] for nid in m.get("npcs", []) if nid in C.NPCS]
+            return [_cat_quests.NPCS[nid] for nid in npc_ids if nid in _cat_quests.NPCS
+                    and C.town_npc_visible(nid, _cat_quests.NPCS[nid], sa_id)]
+    return [_cat_quests.NPCS[nid] for nid in m.get("npcs", []) if nid in _cat_quests.NPCS]
 
 
 def _present_wild_hints(self, group_id, qq_id, cur_map) -> list:
@@ -2223,7 +2248,7 @@ def _present_wild_hints(self, group_id, qq_id, cur_map) -> list:
                        data_match={"map": cur_map})
     for ev in evs:
         nid = ev.get("data", {}).get("npc_id") or ""
-        wnpc = C.ALL_WILD.get(nid)
+        wnpc = _wild.ALL_WILD.get(nid)
         if not wnpc:
             continue
         remain_min = max(1, -(-int(ev.get("remain", 0)) // 60))  # ceil(remain/60)
@@ -2248,7 +2273,7 @@ def _start_talk_list(self, group_id, qq_id) -> list:
     # 在场野外旅人：续在城镇 NPC 之后编号（带 ⏳ 剩余分钟）
     for j, ev in enumerate(wild_evs, len(npcs) + 1):
         nid = ev.get("data", {}).get("npc_id") or ""
-        wnpc = C.ALL_WILD.get(nid)
+        wnpc = _wild.ALL_WILD.get(nid)
         if not wnpc:
             continue
         remain_min = max(1, -(-int(ev.get("remain", 0)) // 60))  # ceil(remain/60)
@@ -2264,14 +2289,14 @@ def _find_npc_in_map(self, player, name_key):
     → 仍返回 (nid, npc)（由调用方给"不在"提示），并置 player['_npc_absent'] 供提示。
     """
     cur_map = player["cur_map"]
-    m = C.MAP_BY_ID.get(cur_map, {})
+    m = _cat_space.MAP_BY_ID.get(cur_map, {})
     sa_id = player.get("cur_subarea") or ""
     player.pop("_npc_absent", None)
     # 子区域 NPC 优先
     for sa in (m.get("subareas") or []):
         if sa["id"] == sa_id:
             for nid in sa.get("npcs", []):
-                npc = C.NPCS.get(nid)
+                npc = _cat_quests.NPCS.get(nid)
                 if npc and (name_key in npc["name"] or name_key in nid):
                     if not C.town_npc_visible(nid, npc, sa_id):
                         player["_npc_absent"] = (nid, npc, sa_id)
@@ -2279,7 +2304,7 @@ def _find_npc_in_map(self, player, name_key):
             break
     # 地图级 NPC（含其他子区域）
     for nid in m.get("npcs", []):
-        npc = C.NPCS.get(nid)
+        npc = _cat_quests.NPCS.get(nid)
         if npc and (name_key in npc["name"] or name_key in nid):
             if not C.town_npc_visible(nid, npc, sa_id):
                 player["_npc_absent"] = (nid, npc, sa_id)
@@ -2301,7 +2326,7 @@ def _town_npc_absent_hint(self, nid, npc, sa_id):
     # D 时段
     per = npc.get("period")
     if per:
-        period_cn = (C.PERIOD_CN.get(C.current_period(), "") or "").strip()
+        period_cn = (PERIOD_CN.get(C.current_period(), "") or "").strip()
         return f"🌙 『{name}』现在({period_cn})不在这里，换个时间再来吧～"
     # C 概率未出
     return f"🍃 『{name}』今天没来这边，改天再来看看吧～"
@@ -2309,7 +2334,7 @@ def _town_npc_absent_hint(self, nid, npc, sa_id):
 
 def _player_map_name(self, sa_id):
     """按子区域 id 找所属地图名（用于游走提示）"""
-    for mid, m in C.MAP_BY_ID.items():
+    for mid, m in _cat_space.MAP_BY_ID.items():
         for sa in (m.get("subareas") or []):
             if sa["id"] == sa_id:
                 return m.get("name", "")
@@ -2318,7 +2343,7 @@ def _player_map_name(self, sa_id):
 
 def _subarea_name(self, sa_id):
     """按子区域 id 找显示名"""
-    for mid, m in C.MAP_BY_ID.items():
+    for mid, m in _cat_space.MAP_BY_ID.items():
         for sa in (m.get("subareas") or []):
             if sa["id"] == sa_id:
                 return sa.get("name", "")
@@ -2329,7 +2354,7 @@ def _find_wild_npc(self, player, name_key, group_id, qq_id):
     """9.4：在当前地图找野外 NPC（含 roam 定位 + 出现条件判定）。
     名字匹配但今天不在/条件不满足 → 返回 (None, None)，由调用方提示。"""
     cur = player["cur_map"]
-    for nid, wnpc in C.ALL_WILD.items():
+    for nid, wnpc in _wild.ALL_WILD.items():
         # v95.4：与 _find_npc_in_map 一致的子串匹配（『找 游商』→『游商·老马』）
         if name_key not in (wnpc.get("name") or ""):
             continue
@@ -2347,7 +2372,7 @@ def _wild_unseen_hint(self, player, name_key, group_id, qq_id):
     """v95.15 #71：野外 NPC 名字命中、在本图但当前条件(时段/季节/天气/解锁)不满足
     → 提示出现条件，区分『NPC 在但需定位』vs『当前时段 NPC 未出现』；无命中返回 None"""
     cur = player["cur_map"]
-    for nid, wnpc in C.ALL_WILD.items():
+    for nid, wnpc in _wild.ALL_WILD.items():
         if name_key not in (wnpc.get("name") or "") and name_key not in nid:
             continue
         if C.npc_map_id(nid, wnpc) != cur:
@@ -2355,7 +2380,7 @@ def _wild_unseen_hint(self, player, name_key, group_id, qq_id):
         if C.wild_npc_findable(nid, wnpc, player, group_id, qq_id):
             continue  # 条件满足（概率/保底问题），不归这里管
         label = self._wild_cond_label(wnpc)
-        period = (C.PERIOD_CN.get(C.current_period(), "") or "").strip()
+        period = (PERIOD_CN.get(C.current_period(), "") or "").strip()
         return f"🧭 『{name_key}』{label}，现在({period})还没到出现的时候，换个时间再来找找吧～"
     return None
 
@@ -2366,17 +2391,17 @@ def _npc_direction_hint(self, player, name_key):
     不再三城镇并列无方位（实测『找 城主』曾并列白鹿城/铁港城/珍珠城）"""
     cur = player["cur_map"]
     hits = []
-    for nid, npc in C.NPCS.items():
+    for nid, npc in _cat_quests.NPCS.items():
         if name_key in (npc.get("name") or "") or name_key in nid:
             hits.append((nid, npc))
-    for nid, wnpc in C.ALL_WILD.items():
+    for nid, wnpc in _wild.ALL_WILD.items():
         if name_key in (wnpc.get("name") or "") or name_key in nid:
             hits.append((nid, wnpc))
     # v101.29：野外精英/Boss 名也纳入搜索（任务目标常是强敌而非 NPC，
     # 如『找 铁牙』→ 丘陵狼王·铁牙在丘陵顶——旧代码只搜 NPC 表会命中同名
     # "地下守卫·铁牙/卫兵·铁牙" 给出错误方向）。精英/Boss 元组格式
     # (id, 显示名, role, lv, skills, drops)，伪 nid 用 "map:subarea" 便于定位。
-    for mid, m in C.MAP_BY_ID.items():
+    for mid, m in _cat_space.MAP_BY_ID.items():
         for sa in (m.get("subareas") or []):
             for ent in (sa.get("elite"), sa.get("boss")):
                 if not ent:
@@ -2389,7 +2414,7 @@ def _npc_direction_hint(self, player, name_key):
     locs = []  # (map_id, subarea_id 或 None, 显示位置)
     for nid, npc in hits:
         m_id = npc.get("map") or ""
-        m = C.MAP_BY_ID.get(m_id, {})
+        m = _cat_space.MAP_BY_ID.get(m_id, {})
         m_name = m.get("name", m_id or "未知之地")
         sa_name = ""
         sa_id = None
@@ -2440,7 +2465,7 @@ def _npc_dialogue(self, group_id, qq_id, npc_id, npc):
     if not main_id and quests.get("completed_main"):
         return npc.get("dialogue_done", base)
     # 当前主线不是这位 NPC 发布的 → 保持初始台词（提示语会在任务逻辑里给出）
-    mq = next((q for q in C.MAIN_QUESTS if q["id"] == main_id), None)
+    mq = next((q for q in _cat_quests.MAIN_QUESTS if q["id"] == main_id), None)
     if mq and mq["giver"] != npc_id:
         return base
     # 主线已接取或进行中 → 初始台词（任务提示在 _take_main_quest 里）
@@ -2460,15 +2485,15 @@ def _obj_text(self, obj):
         # v125.1 P2：s64 等 collect_count 无 count 的复合目标不再 KeyError
         return f"收集 {obj['collect']} ×{obj.get('collect_count') or obj.get('count', 1)}"
     if obj.get("explore"):
-        return f"前往 {C.MAP_BY_ID.get(obj['explore'], {}).get('name', '？')}"
+        return f"前往 {_cat_space.MAP_BY_ID.get(obj['explore'], {}).get('name', '？')}"
     if obj.get("find"):
         # v97.1 告示委托：在指定地图探索概率找到目标
-        return f"在 {C.MAP_BY_ID.get(obj.get('map', ''), {}).get('name', '？')} 寻找 {obj['find']}(探索有概率遇到)"
+        return f"在 {_cat_space.MAP_BY_ID.get(obj.get('map', ''), {}).get('name', '？')} 寻找 {obj['find']}(探索有概率遇到)"
     if obj.get("use"):
         # v124 use 目标：使用指定物品达成
         return f"使用 {obj['use']}"
     if obj.get("talk"):
-        npc = C.NPCS.get(obj["talk"], {})
+        npc = _cat_quests.NPCS.get(obj["talk"], {})
         return f"与 {npc.get('name', '？')} 交谈"
     return "？"
 
@@ -2484,9 +2509,9 @@ def _obj_text_lines(self, obj, st=None):
         # v125.1 P2：s64 等 collect_count 无 count 的复合目标不再 KeyError
         lines.append(f"收集 {obj['collect']} ×{obj.get('collect_count') or obj.get('count', 1)}")
     if obj.get("explore"):
-        lines.append(f"前往 {C.MAP_BY_ID.get(obj['explore'], {}).get('name', '？')}")
+        lines.append(f"前往 {_cat_space.MAP_BY_ID.get(obj['explore'], {}).get('name', '？')}")
     if obj.get("find"):
-        _mname = C.MAP_BY_ID.get(obj.get("map", ""), {}).get("name", "")
+        _mname = _cat_space.MAP_BY_ID.get(obj.get("map", ""), {}).get("name", "")
         if st == "ready":
             lines.append(f"{'在 ' + _mname + ' ' if _mname else ''}寻找 {obj['find']}（已找到）")
         elif _mname:
@@ -2496,7 +2521,7 @@ def _obj_text_lines(self, obj, st=None):
     if obj.get("use"):
         lines.append(f"使用 {obj['use']}")
     if obj.get("talk"):
-        npc = C.NPCS.get(obj["talk"], {})
+        npc = _cat_quests.NPCS.get(obj["talk"], {})
         lines.append(f"与 {npc.get('name', '？')} 交谈")
     return lines or ["？"]
 
@@ -2537,7 +2562,7 @@ def _wild_cond_label(self, npc: dict) -> str:
 async def time_cmd(self, event: AstrMessageEvent, group_id, qq_id, player):
     cur = player["cur_map"]
     summary = C.time_weather_summary(cur)
-    cur_map = C.MAP_BY_ID.get(cur, {})
+    cur_map = _cat_space.MAP_BY_ID.get(cur, {})
     lines = [
         "🕰️ 【时间】",
         f"⏰ {summary}",
@@ -2563,9 +2588,9 @@ async def wild_notes(self, event: AstrMessageEvent, group_id, qq_id, player):
             "去野外走走，那些藏在角落里的旅人、隐士、夜行者，都在等着被遇见。"
         )
         return
-    lines = [f"📖 【见闻录】你见过的人({len(met)}/{len(C.ALL_WILD)})：", "━━━━━━━━━━━━"]
+    lines = [f"📖 【见闻录】你见过的人({len(met)}/{len(_wild.ALL_WILD)})：", "━━━━━━━━━━━━"]
     for nid in met:
-        npc = C.ALL_WILD.get(nid)
+        npc = _wild.ALL_WILD.get(nid)
         if not npc:
             continue
         lines.append(f"{npc['icon']}{npc['name']}")
@@ -2679,12 +2704,12 @@ async def find_npc(self, event: AstrMessageEvent):
             return
         if idx <= len(npcs):
             npc = npcs[idx - 1]
-            npc_id = next((nid for nid, n in C.NPCS.items() if n is npc), None)
+            npc_id = next((nid for nid, n in _cat_quests.NPCS.items() if n is npc), None)
         else:
-            # v127.5 限时NPC：序号命中在场野外旅人（不在 C.NPCS，不能走反查）
+            # v127.5 限时NPC：序号命中在场野外旅人（不在 _cat_quests.NPCS，不能走反查）
             _ev = wild_evs[idx - len(npcs) - 1]
             npc_id = _ev.get("data", {}).get("npc_id") or ""
-            _w = C.ALL_WILD.get(npc_id)
+            _w = _wild.ALL_WILD.get(npc_id)
             if not _w:
                 yield event.plain_result("这位旅人似乎已经离开了……")
                 return
@@ -2702,7 +2727,7 @@ async def find_npc(self, event: AstrMessageEvent):
         if inst_row and inst_row["state"].get("mode") == "map":
             stage_npcs = self._stage_npcs(group_id, qq_id)
             for nid in stage_npcs:
-                n = C.HIDDEN_NPCS.get(nid, {})
+                n = _cat_quests.HIDDEN_NPCS.get(nid, {})
                 if n and (name_key in n.get("name", "") or name_key in nid):
                     npc_id, npc = nid, n
                     break
@@ -2748,7 +2773,7 @@ async def find_npc(self, event: AstrMessageEvent):
             # v95.9 对话式任务：有对话树的 NPC 通过对话选项接取/交付，这里只给引导
             _quests = db.get_quests(group_id, qq_id)
             _mid = _quests.get("main_quest")
-            _mq = next((q for q in C.MAIN_QUESTS if q["id"] == _mid), None) if _mid else None
+            _mq = next((q for q in _cat_quests.MAIN_QUESTS if q["id"] == _mid), None) if _mid else None
             if _mq and _mq["giver"] == npc_id:
                 _st = _quests.get("main_status", "pending")
                 if _st == "pending":
@@ -2761,13 +2786,13 @@ async def find_npc(self, event: AstrMessageEvent):
             for _av in self._side_available_list(group_id, qq_id, npc_id, npc):
                 lines.append(f"📜 支线『{_av['name']}』可接取——和{_ta}对话接下吧～")
             for _sid, _sq in list(_side.items()):
-                _sqd = next((q for q in C.SIDE_QUESTS if q["id"] == _sid), None)
+                _sqd = next((q for q in _cat_quests.SIDE_QUESTS if q["id"] == _sid), None)
                 if _sqd and _sqd["giver"] == npc_id and _sq.get("status") == "ready":
                     lines.append(f"✅ 支线『{_sqd['name']}』已完成！和{_ta}对话交付～")
                     break
             # v124 progress_text：该 NPC 名下有进行中的链式支线 → 输出推进台词（有对话树的 NPC 也显示）
             for _sid, _sq in list(_side.items()):
-                _sqd = next((q for q in C.SIDE_QUESTS if q["id"] == _sid), None)
+                _sqd = next((q for q in _cat_quests.SIDE_QUESTS if q["id"] == _sid), None)
                 if _sqd and _sqd["giver"] == npc_id and _sq.get("status") == "active":
                     _pt = _sqd.get("progress_text")
                     if _pt:
@@ -2822,7 +2847,7 @@ def _grant_wild_unlock_flags(self, group_id, qq_id, npc_id):
     本函数零改动。flag 存任意 NPC 桶即可，unlock_met 已改全桶扫描。
     返回首次授予的提示行；无授予返回 None。
     """
-    npc = (C.ALL_WILD or {}).get(npc_id)
+    npc = (_wild.ALL_WILD or {}).get(npc_id)
     if not isinstance(npc, dict):
         return None
     cfg = npc.get("unlock_flags") or {}
@@ -2841,7 +2866,7 @@ def _teach_by_npc(self, group_id, qq_id, player, npc_id):
     返回提示行列表；NPC 不在映射表时返回空列表（保持原行为）。
     v112：配置读 NPC 数据（teach_skills/teach_hint），无配置返回空列表。
     """
-    npc = (C.ALL_WILD or {}).get(npc_id, {})
+    npc = (_wild.ALL_WILD or {}).get(npc_id, {})
     if not isinstance(npc, dict):
         npc = {}
     cfg_skills = npc.get("teach_skills") or {}
@@ -2884,13 +2909,13 @@ async def interact_prop(self, event: AstrMessageEvent, group_id, qq_id):
         yield event.plain_result("☠️ 你是红名！城里的元素都绕着你走……(等红名消退再来)")
         return
     cur = player["cur_map"]
-    cur_map = C.MAP_BY_ID.get(cur, {})
+    cur_map = _cat_space.MAP_BY_ID.get(cur, {})
     sa_id = player.get("cur_subarea") or ""
     prop_ids = C.subarea_props(cur, sa_id)
     # v104 M23 修复：过滤孤儿 prop（SUBAREA_PROPS 挂载了但 PROPS 未定义）。
     # 显示列表与『交互 <序号>』按下标取条目必须同源，否则序号错位/取到空定义
     # 会在 pp['icon']/pp['name'] 处 KeyError 崩溃。
-    prop_ids = [e for e in prop_ids if C.prop_entry(e)[0] in C.PROPS]
+    prop_ids = [e for e in prop_ids if C.prop_entry(e)[0] in _cat_items.PROPS]
     if not name_key:
         # 无参：列出当前子区域的场景元素
         if not prop_ids:
@@ -2899,7 +2924,7 @@ async def interact_prop(self, event: AstrMessageEvent, group_id, qq_id):
         lines = ["✨ 这里的场景元素："]
         for i, entry in enumerate(prop_ids, 1):
             pid, label = C.prop_entry(entry)
-            pp = C.PROPS.get(pid, {})
+            pp = _cat_items.PROPS.get(pid, {})
             if pp:
                 name = label or pp['name']
                 lines.append(f"{i}. {pp['icon']}{name}：{pp.get('desc', '')}")
@@ -2914,13 +2939,13 @@ async def interact_prop(self, event: AstrMessageEvent, group_id, qq_id):
             return
         entry = prop_ids[idx - 1]
         pid, label = C.prop_entry(entry)
-        found = (pid, C.PROPS.get(pid, {}), label)
+        found = (pid, _cat_items.PROPS.get(pid, {}), label)
     else:
         # 找 prop：专属名/默认名子串 / id 匹配
         found = None
         for entry in prop_ids:
             pid, label = C.prop_entry(entry)
-            pp = C.PROPS.get(pid, {})
+            pp = _cat_items.PROPS.get(pid, {})
             name = label or pp.get("name", "")
             if pp and (name_key in name or name_key in pid):
                 found = (pid, pp, label)
@@ -2930,8 +2955,8 @@ async def interact_prop(self, event: AstrMessageEvent, group_id, qq_id):
             _cand = []
             for _entry in prop_ids:
                 _pid, _lbl = C.prop_entry(_entry)
-                if _pid in C.PROPS:
-                    _nm = _lbl or C.PROPS[_pid]["name"]
+                if _pid in _cat_items.PROPS:
+                    _nm = _lbl or _cat_items.PROPS[_pid]["name"]
                     if _nm not in _cand:
                         _cand.append(_nm)
             names = "、".join(_cand) or "没有"
@@ -2950,12 +2975,12 @@ async def interact_prop(self, event: AstrMessageEvent, group_id, qq_id):
         quests = db.get_quests(group_id, qq_id)
         side = quests.get("side") or {}
         here_board = []
-        for sq in C.SIDE_QUESTS:
+        for sq in _cat_quests.SIDE_QUESTS:
             if not sq.get("board"):
                 continue
             qmap = sq.get("map")
             if not qmap:
-                _g = C.NPCS.get(sq.get("giver")) or C.ALL_WILD.get(sq.get("giver")) or {}
+                _g = _cat_quests.NPCS.get(sq.get("giver")) or _wild.ALL_WILD.get(sq.get("giver")) or {}
                 qmap = _g.get("map")
             if qmap and qmap != cur:
                 continue
@@ -3019,7 +3044,7 @@ async def interact_prop(self, event: AstrMessageEvent, group_id, qq_id):
                         mname = C.display("materials", mid)
                         db.add_item(group_id, qq_id, mid, {
                             "name": mname, "type": "材料", "stackable": True,
-                            "price": C.MATERIALS[mid]["price"],
+                            "price": _cat_items.MATERIALS[mid]["price"],
                         }, 1)
                         lines.append(f"🎒 {eff.get('found_text', '你发现')}【{mname}】×1！")
                         # v104 M20：采集任务每日（collect_any）——场景元素获得材料 +1（主采集动作在 economy.py）
@@ -3070,8 +3095,8 @@ def _talk_ctx(self, group_id, qq_id, npc_id):
         "flags": db.get_talk_flags(group_id, qq_id, npc_id),
         "apprentices": player.get("apprentices", []),
         "npc_id": npc_id,
-        "side_quests": C.SIDE_QUESTS,
-        "item_counts": {m: db.count_item(group_id, qq_id, m) for m in {(o.get("objective") or {}).get("collect") for o in C.SIDE_QUESTS} if m},
+        "side_quests": _cat_quests.SIDE_QUESTS,
+        "item_counts": {m: db.count_item(group_id, qq_id, m) for m in {(o.get("objective") or {}).get("collect") for o in _cat_quests.SIDE_QUESTS} if m},
         # v127.6 side_menu 动态菜单：core.visible_options 渲染时用该回调
         # 把『有活儿要交给我吗』类选项展开成『每个可接支线一个子选项』
         "side_menu_expand": lambda opt: self._side_menu_expand(group_id, qq_id, npc_id, opt),
@@ -3175,7 +3200,7 @@ def _weapon_pick_choose(self, group_id, qq_id, num) -> str:
     # 生成装备入包（rid 优先名册；否则 fallback 名册按名查）
     try:
         _C = _host_attr("", "content")
-        rid_list = _C.EQUIP_ROSTER_BY_NAME.get(eq_name, []) if eq_name else []
+        rid_list = _cat_items.EQUIP_ROSTER_BY_NAME.get(eq_name, []) if eq_name else []
         if rid:
             rid_list = [rid]
         if not rid_list:
@@ -3224,10 +3249,10 @@ def _do_join_class(self, group_id, qq_id, player, new_cls):
     属性按新职业重算（base+成长×等级+种族，自由点保留），赠送基础技能书（职业 Lv.1 技能）。
     返回通知行列表。"""
     lines = []
-    if player.get("class_name") != C.CLASS_NOVICE:
+    if player.get("class_name") != _cat_core.CLASS_NOVICE:
         lines.append("你已经有正式职业了，冒险者行会只负责给新人就职。")
         return lines
-    cls = C.CLASSES.get(new_cls)
+    cls = _cat_core.CLASSES.get(new_cls)
     if not cls or cls.get("hidden"):
         lines.append("这个职业暂时无法就职……")
         return lines
@@ -3236,7 +3261,7 @@ def _do_join_class(self, group_id, qq_id, player, new_cls):
         new_cls, player.get("level", 1), player.get("equipment", {}), 0,
         player.get("attributes"), 0,
         self._title_bonus(group_id, qq_id), player.get("race"))
-    sk_table = C.PLAYER_SKILLS.get(new_cls, {})
+    sk_table = _cat_core.PLAYER_SKILLS.get(new_cls, {})
     if isinstance(sk_table, dict) and "skills" in sk_table:
         sk_table = sk_table["skills"]
     init_skills = [s for s, info in sk_table.items() if info["lv"] <= 1]
@@ -3260,9 +3285,9 @@ def _do_join_class(self, group_id, qq_id, player, new_cls):
 def _do_evolve_via_npc(self, group_id, qq_id, player, next_tier, path):
     """导师转职：Lv.30/60/90 找对应职业导师对话转职（同步版，返回通知行）。"""
     lines = []
-    cls = C.CLASSES.get(player.get("class_name", ""), {})
+    cls = _cat_core.CLASSES.get(player.get("class_name", ""), {})
     cur_tier = player.get("class_tier", 0)
-    need_lv = C.EVOLVE_LEVELS.get(next_tier)
+    need_lv = _cat_core.EVOLVE_LEVELS.get(next_tier)
     if not need_lv:
         lines.append("你已经完成了全部转职！")
         return lines
@@ -3415,7 +3440,7 @@ async def talk_choice(self, event: AstrMessageEvent, group_id, qq_id, player):
         yield event.plain_result("你现在没有正在进行的对话。输入『对话 <NPC名>』开始交谈～")
         return
     npc_id = st.get("npc", "")
-    npc = C.NPCS.get(npc_id) or C.ALL_WILD.get(npc_id)
+    npc = _cat_quests.NPCS.get(npc_id) or _wild.ALL_WILD.get(npc_id)
     if not npc:
         db.clear_talk_state(group_id, qq_id)
         yield event.plain_result("这位 NPC 似乎已经离开了……")
@@ -3430,7 +3455,7 @@ async def talk_choice(self, event: AstrMessageEvent, group_id, qq_id, player):
         return
     # v127.5 限时NPC：对话中野外NPC的在场的限时事件过期 → 会话作废
     # （倒计时结束显示与对话同时消失；与 npc_map_id 失效同位置、同文案风格）
-    if npc_id in C.ALL_WILD and not C.get_timed(group_id, qq_id, f"wild:{npc_id}"):
+    if npc_id in _wild.ALL_WILD and not C.get_timed(group_id, qq_id, f"wild:{npc_id}"):
         db.clear_talk_state(group_id, qq_id)
         _ta = "她" if npc.get("gender") == "女" else "他"  # v95 #141：代词跟随 NPC 性别
         yield event.plain_result(f"{npc['name']}已经离开了，对话只能作罢。去找{_ta}再聊聊吧～")
@@ -3549,16 +3574,16 @@ async def turn_in(self, event: AstrMessageEvent, group_id, qq_id, player):
         if not npc:
             return None
         if not C.base_conditions_met(npc_id, npc, player, group_id, qq_id):
-            period_cn = (C.PERIOD_CN.get(C.current_period(), "") or "").strip()
+            period_cn = (PERIOD_CN.get(C.current_period(), "") or "").strip()
             return f"🌙 {npc.get('name', '他')}现在({period_cn})不在这里，换个时间再来交付吧～"
         return None
     # 主线可交
     main_id = quests.get("main_quest")
     st = quests.get("main_status", "pending")
     if main_id and st == "ready":
-        mq = next((q for q in C.MAIN_QUESTS if q["id"] == main_id), None)
+        mq = next((q for q in _cat_quests.MAIN_QUESTS if q["id"] == main_id), None)
         if mq:
-            npc = C.NPCS.get(mq["giver"])
+            npc = _cat_quests.NPCS.get(mq["giver"])
             if npc and npc["map"] == player["cur_map"]:
                 absent = _npc_absent(mq["giver"], npc)
                 if absent:
@@ -3568,9 +3593,9 @@ async def turn_in(self, event: AstrMessageEvent, group_id, qq_id, player):
                 yield event.plain_result("\n".join(lines))
                 return
             else:
-                giver = C.NPCS.get(mq["giver"], {}).get("name", "？")
-                giver_map = C.NPCS.get(mq["giver"], {}).get("map", "")
-                yield event.plain_result(f"你需要到 {C.MAP_BY_ID.get(giver_map, {}).get('name', '？')} 找 {giver} 交付任务！")
+                giver = _cat_quests.NPCS.get(mq["giver"], {}).get("name", "？")
+                giver_map = _cat_quests.NPCS.get(mq["giver"], {}).get("map", "")
+                yield event.plain_result(f"你需要到 {_cat_space.MAP_BY_ID.get(giver_map, {}).get('name', '？')} 找 {giver} 交付任务！")
                 return
     # 支线可交
     # O100 修复：『交付任务』按当前 NPC/地图过滤——此前遍历 dict 顺序取第一个 ready
@@ -3580,12 +3605,12 @@ async def turn_in(self, event: AstrMessageEvent, group_id, qq_id, player):
     collect_missing = None  # 收集型材料还差的信息（用于最后提示）
     waiting = []  # O100：已达成但交付 NPC 不在当前地图的支线 [(任务名, NPC名, 地图名)]
     for sid, sq in list(quests.get("side", {}).items()):
-        sqd = next((q for q in C.SIDE_QUESTS if q["id"] == sid), None)
+        sqd = next((q for q in _cat_quests.SIDE_QUESTS if q["id"] == sid), None)
         if not sqd:
             continue
         if sq.get("status") == "done":  # v95.12：已交付支线不重复接取/交付
             continue
-        npc = C.NPCS.get(sqd["giver"]) or C.ALL_WILD.get(sqd["giver"]) or C.HIDDEN_NPCS.get(sqd["giver"])  # R3 P1-4：副本内 NPC（潮汐祭司）交付解析
+        npc = _cat_quests.NPCS.get(sqd["giver"]) or _wild.ALL_WILD.get(sqd["giver"]) or _cat_quests.HIDDEN_NPCS.get(sqd["giver"])  # R3 P1-4：副本内 NPC（潮汐祭司）交付解析
         obj = sqd["objective"]
         # 收集型：实时检查背包材料（不依赖 ready 状态）
         if obj.get("collect"):
@@ -3604,8 +3629,8 @@ async def turn_in(self, event: AstrMessageEvent, group_id, qq_id, player):
                     yield event.plain_result("\n".join(lines))
                     return
                 else:
-                    giver = (C.NPCS.get(sqd["giver"]) or C.ALL_WILD.get(sqd["giver"]) or C.HIDDEN_NPCS.get(sqd["giver"]) or {}).get("name", "？")  # R3 P1-4
-                    giver_map = C.MAP_BY_ID.get((C.NPCS.get(sqd["giver"]) or C.ALL_WILD.get(sqd["giver"]) or C.HIDDEN_NPCS.get(sqd["giver"]) or {}).get("map", ""), {}).get("name", "？")
+                    giver = (_cat_quests.NPCS.get(sqd["giver"]) or _wild.ALL_WILD.get(sqd["giver"]) or _cat_quests.HIDDEN_NPCS.get(sqd["giver"]) or {}).get("name", "？")  # R3 P1-4
+                    giver_map = _cat_space.MAP_BY_ID.get((_cat_quests.NPCS.get(sqd["giver"]) or _wild.ALL_WILD.get(sqd["giver"]) or _cat_quests.HIDDEN_NPCS.get(sqd["giver"]) or {}).get("map", ""), {}).get("name", "？")
                     waiting.append((sqd["name"], giver, giver_map))
             else:
                 collect_missing = (sqd["name"], obj["collect"], have, need)
@@ -3626,8 +3651,8 @@ async def turn_in(self, event: AstrMessageEvent, group_id, qq_id, player):
                 yield event.plain_result("\n".join(lines))
                 return
             else:
-                giver = (C.NPCS.get(sqd["giver"]) or C.ALL_WILD.get(sqd["giver"]) or C.HIDDEN_NPCS.get(sqd["giver"]) or {}).get("name", "？")  # R3 P1-4
-                giver_map = C.MAP_BY_ID.get((C.NPCS.get(sqd["giver"]) or C.ALL_WILD.get(sqd["giver"]) or C.HIDDEN_NPCS.get(sqd["giver"]) or {}).get("map", ""), {}).get("name", "？")
+                giver = (_cat_quests.NPCS.get(sqd["giver"]) or _wild.ALL_WILD.get(sqd["giver"]) or _cat_quests.HIDDEN_NPCS.get(sqd["giver"]) or {}).get("name", "？")  # R3 P1-4
+                giver_map = _cat_space.MAP_BY_ID.get((_cat_quests.NPCS.get(sqd["giver"]) or _wild.ALL_WILD.get(sqd["giver"]) or _cat_quests.HIDDEN_NPCS.get(sqd["giver"]) or {}).get("map", ""), {}).get("name", "？")
                 waiting.append((sqd["name"], giver, giver_map))
     # O100：无当场可交付时，列出全部"已达成待交付"任务（带位置），不再只报第一条
     if waiting:
@@ -3657,13 +3682,13 @@ def _complete_side_quest(self, group_id, qq_id, sid, branch_choice=None):
 
 
 async def rest_camp(self, event: AstrMessageEvent, group_id, qq_id, player):
-    cur_map = C.MAP_BY_ID.get(player["cur_map"], {})
+    cur_map = _cat_space.MAP_BY_ID.get(player["cur_map"], {})
     mid = cur_map.get("id", "")
-    if mid not in C.CAMP_SPOTS:
+    if mid not in _cat_life.CAMP_SPOTS:
         yield event.plain_result("这里没有篝火营地！找找野外地图的营地(地图上会显示🔥篝火营地)～")
         return
     # v87.17 子区域绑定：营地在指定子区域，不在那边够不着火堆
-    _camp = C.CAMP_SPOTS[mid]
+    _camp = _cat_life.CAMP_SPOTS[mid]
     _camp_sa = _camp.get("subarea", "") if isinstance(_camp, dict) else ""
     if _camp_sa and player.get("cur_subarea") != _camp_sa:
         _sa_name = ""
@@ -3697,7 +3722,7 @@ async def rest_camp(self, event: AstrMessageEvent, group_id, qq_id, player):
     _p2 = self._player(group_id, qq_id)
     _st_line = f"\n⚡ 恢复 {_st_gain} 点体力({self._stamina(_p2)}/{self._stamina_max(_p2)})" if _st_gain > 0 else ""
     yield event.plain_result(
-        f"🔥 你在{C.CAMP_SPOTS[mid]}的篝火旁歇了歇脚……\n"
+        f"🔥 你在{_cat_life.CAMP_SPOTS[mid]}的篝火旁歇了歇脚……\n"
         f"❤️ 恢复 {heal} 点生命({new_hp}/{player['max_hp']}){_st_line}\n"
         f"💡 营地只能恢复一半伤势，重伤请回旅店『住宿』～"
     )
@@ -3712,7 +3737,7 @@ async def rest(self, event: AstrMessageEvent, group_id, qq_id, player):
         hint = self._facility_hint(player, "healer")
         # v95.25 #134：示例不再写死"橡木镇旅店"——优先提示最近旅店（含当前城镇）
         if not hint:
-            _cur_m = C.MAP_BY_ID.get(player.get("cur_map"), {})
+            _cur_m = _cat_space.MAP_BY_ID.get(player.get("cur_map"), {})
             _near = []
             for _s in (_cur_m.get("subareas") or []):
                 if _s.get("healer"):
@@ -3728,7 +3753,7 @@ async def rest(self, event: AstrMessageEvent, group_id, qq_id, player):
     # v131：解耦 hp_stage_mult——怪物曲线放缓后住宿跟随掉到 900，违反拍板 1000；
     #       费用按等级不按百分比（鱼鱼铁律），金币产出侧已由 monster_gold ×1.3 补偿。
     # v125.1：数值下沉 econ_config.ECON_CONFIG
-    _ec = C.ECON_CONFIG
+    _ec = _cat_life.ECON_CONFIG
     lv = player.get("level") or 1
     if lv <= _ec["inn_cost_lv_cap"]:
         cost = max(_ec["inn_cost_min_low"], lv * _ec["inn_cost_per_lv"])
@@ -3753,8 +3778,8 @@ async def rest(self, event: AstrMessageEvent, group_id, qq_id, player):
 async def reputation(self, event: AstrMessageEvent, group_id, qq_id, player):
     rep = db.get_reputation(group_id, qq_id)
     lines = ["🏛️ 【七大势力 · 声望】", "━━━━━━━━━━━━"]
-    for i, fid in enumerate(C.FACTION_ORDER, 1):
-        f = C.FACTIONS[fid]
+    for i, fid in enumerate(_cat_b143.FACTION_ORDER, 1):
+        f = _cat_b143.FACTIONS[fid]
         pts = rep.get(fid, 0)
         tier = C.faction_reputation_tier(pts)
         lines.append(f"{i:>2}. {f['icon']} {f['name']}：{tier}({pts})")
@@ -3773,15 +3798,14 @@ async def rep_shop(self, event: AstrMessageEvent):
       声望商店 <势力名/序号>          → 查看该势力专属商品（🔒=声望不足）
       声望商店 <势力名/序号> 购买 <序号> → 购买商品（声望不足 → 提示所需等级）
     """
-    FACTION_SHOP = _host_attr("data.factions", "FACTION_SHOP")
-    # 原行尾注释： data/__init__ 未显式导出，局部导入避免动聚合层
+    # ★ B16-W11b：`FACTION_SHOP` 走包内门面（真源 game/data/factions.py:34；宿主聚合层未导出）
     group_id, qq_id = self._uid(event)
     raw = self._strip_cmd(event, "声望商店").strip()
     rep = db.get_reputation(group_id, qq_id)
     player = self._player(group_id, qq_id)
 
     def _tier_name(th):
-        for _t, _n in C.REPUTATION_TIERS:
+        for _t, _n in _cat_b143.REPUTATION_TIERS:
             if th <= _t:
                 return _n
         return "崇拜"
@@ -3791,19 +3815,19 @@ async def rep_shop(self, event: AstrMessageEvent):
             return None
         if arg.isdigit():
             i = int(arg)
-            if 1 <= i <= len(C.FACTION_ORDER):
-                return C.FACTION_ORDER[i - 1]
+            if 1 <= i <= len(_cat_b143.FACTION_ORDER):
+                return _cat_b143.FACTION_ORDER[i - 1]
             return None
-        for fid in C.FACTION_ORDER:
-            if arg in C.FACTIONS[fid]["name"]:
+        for fid in _cat_b143.FACTION_ORDER:
+            if arg in _cat_b143.FACTIONS[fid]["name"]:
                 return fid
         return None
 
     # 无参数：总览
     if not raw:
         lines = ["🏛️ 【势力声望商店】", "━━━━━━━━━━━━"]
-        for i, fid in enumerate(C.FACTION_ORDER, 1):
-            f = C.FACTIONS[fid]
+        for i, fid in enumerate(_cat_b143.FACTION_ORDER, 1):
+            f = _cat_b143.FACTIONS[fid]
             pts = rep.get(fid, 0)
             tier = C.faction_reputation_tier(pts)
             goods = FACTION_SHOP.get(fid, [])
@@ -3822,7 +3846,7 @@ async def rep_shop(self, event: AstrMessageEvent):
     if not fid:
         yield event.plain_result("没有这个势力！输入『声望商店』查看七个势力。")
         return
-    f = C.FACTIONS[fid]
+    f = _cat_b143.FACTIONS[fid]
     pts = rep.get(fid, 0)
     tier = C.faction_reputation_tier(pts)
     goods = FACTION_SHOP.get(fid, [])
@@ -3847,13 +3871,13 @@ async def rep_shop(self, event: AstrMessageEvent):
                 f"💡 击杀当地怪物、完成当地任务可提升声望。"
             )
             return
-        it = C.ITEMS[g["item"]]
+        it = _cat_items.ITEMS[g["item"]]
         price = int(g.get("price", it["price"]))
         if player["gold"] < price:
             yield event.plain_result(f"金币不足！需要 {price} 金币。")
             return
         db.update_player(group_id, qq_id, gold=player["gold"] - price)
-        itype = "材料" if g["item"] in C.MATERIALS else "消耗品"
+        itype = "材料" if g["item"] in _cat_items.MATERIALS else "消耗品"
         # v104 M09-P0 教训：全量拷贝定义字段（hot/effect 等），防丢字段
         db.add_item(group_id, qq_id, g["item"], {**it, "type": itype, "stackable": True, "price": price})
         yield event.plain_result(f"✅ 你用 {f['name']} 声望买到了【{it['name']}】！（花费 {price} 金币）")
@@ -3861,7 +3885,7 @@ async def rep_shop(self, event: AstrMessageEvent):
     # 商品列表
     lines = [f"🏛️ 【{f['icon']} {f['name']} · 声望商店】你的声望：{tier}({pts})", "━━━━━━━━━━━━"]
     for i, g in enumerate(goods, 1):
-        it = C.ITEMS[g["item"]]
+        it = _cat_items.ITEMS[g["item"]]
         need_name = _tier_name(g["tier"])
         price = int(g.get("price", it["price"]))
         if pts >= g["tier"]:
@@ -3903,9 +3927,6 @@ async def camp_join(self, event: AstrMessageEvent):
       加入阵营           → 查看四大阵营列表 + 当前状态
       加入阵营 <编号>     → 加入对应阵营（如『加入阵营 1』）
     """
-    FACTION_CAMPS = _host_attr("data.factions", "FACTION_CAMPS")
-    FACTION_CAMP_OPEN_LV = _host_attr("data.factions", "FACTION_CAMP_OPEN_LV")
-    FACTION_CAMP_SWITCH_COOLDOWN = _host_attr("data.factions", "FACTION_CAMP_SWITCH_COOLDOWN")
     group_id, qq_id = self._uid(event)
     player = self._player(group_id, qq_id)
     raw = self._strip_cmd(event, "加入阵营").strip()
@@ -3989,9 +4010,6 @@ async def camp_task(self, event: AstrMessageEvent):
       阵营任务 <序号>     → 交付对应任务（需背包有足够材料）
     说明：完成上限 FACTION_CAMP_DAILY_LIMIT（缺省 2）；击杀/Boss 型待 combat 挂钩二期。
     """
-    FACTION_CAMPS = _host_attr("data.factions", "FACTION_CAMPS")
-    FACTION_CAMP_DAILY_TASKS = _host_attr("data.factions", "FACTION_CAMP_DAILY_TASKS")
-    FACTION_CAMP_DAILY_LIMIT = _host_attr("data.factions", "FACTION_CAMP_DAILY_LIMIT")
     group_id, qq_id = self._uid(event)
     player = self._player(group_id, qq_id)
     cur = (player.get("faction") or "").strip()
@@ -4079,8 +4097,6 @@ async def camp_shop(self, event: AstrMessageEvent):
       阵营商店                 → 列出全部商品（贡献门槛）
       阵营商店 <序号>           → 购买对应商品（扣贡献，物品入包）
     """
-    FACTION_CAMPS = _host_attr("data.factions", "FACTION_CAMPS")
-    FACTION_CAMP_SHOP = _host_attr("data.factions", "FACTION_CAMP_SHOP")
     group_id, qq_id = self._uid(event)
     player = self._player(group_id, qq_id)
     cur = (player.get("faction") or "").strip()
@@ -4132,8 +4148,8 @@ async def camp_shop(self, event: AstrMessageEvent):
     # 扣贡献 + 发物品
     data["contrib"] = contrib - g["cost"]
     self._camp_save(group_id, qq_id, data)
-    it = C.ITEMS.get(g["item"]) or {"name": g["name"], "price": 0, "desc": ""}
-    itype = "材料" if g["item"] in C.MATERIALS else "消耗品"
+    it = _cat_items.ITEMS.get(g["item"]) or {"name": g["name"], "price": 0, "desc": ""}
+    itype = "材料" if g["item"] in _cat_items.MATERIALS else "消耗品"
     db.add_item(group_id, qq_id, g["item"], {**it, "type": itype, "stackable": True, "price": it.get("price", 0)})
     yield event.plain_result(
         f"🎁 你用 {g['cost']} 阵营贡献兑换了【{it.get('name', g['name'])}】！\n"
@@ -4146,7 +4162,6 @@ async def camp_rank(self, event: AstrMessageEvent):
 
     用法：阵营排行
     """
-    FACTION_CAMPS = _host_attr("data.factions", "FACTION_CAMPS")
     group_id, qq_id = self._uid(event)
     # 全服玩家（players 全局，跨群共用；group_id 仅作贡献键前缀用）
     players = db.all_players(group_id)
@@ -4178,7 +4193,7 @@ async def camp_rank(self, event: AstrMessageEvent):
 
 
 async def chronicle(self, event: AstrMessageEvent, group_id, qq_id, player):
-    c = random.choice(C.CHRONICLES)
+    c = random.choice(_cat_b143.CHRONICLES)
     yield event.plain_result(
         f"📖 【{c['title']}】\n"
         f"━━━━━━━━━━━━\n"

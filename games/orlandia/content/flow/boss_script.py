@@ -16,8 +16,8 @@
 ② 宿主耦合替身接口（调用方传什么 / 缺省行为）
 | 真源宿主耦合 | 包内替身 | 调用方传什么 | 缺省（不传） |
 |---|---|---|---|
-| `C.MONSTER_MODS` | `data.MONSTER_MODS` | 普通对象或 `dict`：怪 id → mods dict | 包内 `content/data/monster_roster.json[*].mods`（与真源 140 条逐项相等） |
-| `C.INSTANCES` | `data.INSTANCES` | 同上：副本 id → 副本 dict | 包内 `content/data/instances.json` |
+| 宿主聚合层 `MONSTER_MODS` | `data.MONSTER_MODS` | 普通对象或 `dict`：怪 id → mods dict | 包内 `content/data/monster_roster.json[*].mods`（与真源 140 条逐项相等） |
+| 宿主聚合层 `INSTANCES` | `data.INSTANCES` | 同上：副本 id → 副本 dict | 包内 `content/data/instances.json` |
 | `C.build_monster`（宿主 `game/core/drops.py:389`） | `build_monster=` | `callable(tpl_tuple, map_obj) -> mon dict` | **None** → 走真源自带的兜底（Boss×0.2，:494-504 原路径）；该构造器**未进包** = 缺口 |
 | `..data.boss_phases.merge_phase_config` | `phase_templates=` | `callable(phase_id, overrides) -> dict` | **None** → 与真源 import 失败同分支（`_merged = None`） |
 | 存档 `st["boss_script"]`（宿主持久化） | 同左 | 调用方给的普通 dict（宿主落库/序列化/迁移） | —— |

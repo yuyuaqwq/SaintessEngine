@@ -9,7 +9,9 @@
 
 正文改动面（**只有 1 处**：模块级 `from ..data import (…)` 那 17 行取件）：
   真源 `from ..data import (EQUIP_SLOT_BASE, …, ARMOR_FAMILY_ALIAS)`（data 聚合层再导出）
-  → 同表同源改走宿主句柄 `_D = _HostMod("data")` + 逐名绑定（行内注释一字不动）。
+  → ★ B14 收口（2026-09-14）起改为**包内门面**直取（`_cr` = `catalog_rules` 的
+     `game_config.stat_templates` 组 / `_c143` = `catalog_b143` 的 equipment 域键）—— 删宿主
+     `game/data` 后仍可 import；旧写法（`_HostMod("data")` 逐名绑定）已退场（行内注释一字未动）。
   绑定是**同一对象**（不是拷贝）→ `scripts/numeric_lib/monster.py` 的 `curve_override`
   就地改表（`S.MONSTER_ROLE_GROWTH[role][attr] = val`）依旧生效。
 
@@ -84,25 +86,33 @@ class _HostMod:
 
 # -*- coding: utf-8 -*-
 
-# 真源 `from ..data import (…)`（17 张表；表名与行内注释逐字保留）→ 宿主句柄同表同源（头注）。
-_D = _HostMod("data")
-EQUIP_SLOT_BASE = _D.EQUIP_SLOT_BASE
-EQUIP_SLOT_SCALING = _D.EQUIP_SLOT_SCALING
-MONSTER_EXP_BASE = _D.MONSTER_EXP_BASE
-MONSTER_GOLD_BASE = _D.MONSTER_GOLD_BASE
-MONSTER_ROLE_BASE = _D.MONSTER_ROLE_BASE
-MONSTER_ROLE_GROWTH = _D.MONSTER_ROLE_GROWTH
-QUALITY = _D.QUALITY
-NORMAL_HP_STAGE_MULT = _D.NORMAL_HP_STAGE_MULT      # v156 阶段 6 怪物数值修复
-BOSS_ATK_STAGE_MULT = _D.BOSS_ATK_STAGE_MULT        # v156 阶段 6 怪物数值修复
-INSTANCE_BOSS_ATK_STAGE_MULT = _D.INSTANCE_BOSS_ATK_STAGE_MULT  # v173.1 副本 Boss atk 段乘区（area=instance）
-HP_STAGE_MULT = _D.HP_STAGE_MULT        # P2F-2 hp/atk 分段曲线表（v131 收缓/v169.3 正斜率，原函数体数值）
-ATK_STAGE_MULT = _D.ATK_STAGE_MULT      # P2F-2 hp/atk 分段曲线表（v131 收缓/v169.3 正斜率，原函数体数值）
-MONSTER_ROLE_MODS = _D.MONSTER_ROLE_MODS    # P2F-3 F14 monster_stats 角色修正表（boss/elite 硬编码数值下沉）
-FORMULA_SKELETON = _D.FORMULA_SKELETON      # P2F-1 底层公式骨架参数（exp_to_next 兜底 / monster_exp / monster_gold）
-WEAPON_DIST = _D.WEAPON_DIST                # P2F-2 v156 装备分系表下沉（data/equipment.py）
-ARMOR_FAMILY = _D.ARMOR_FAMILY              # P2F-2 v156 装备分系表下沉（data/equipment.py）
-ARMOR_FAMILY_ALIAS = _D.ARMOR_FAMILY_ALIAS  # P2F-2 v156 装备分系表下沉（data/equipment.py）
+# ★ B14 收口（2026-09-14）：17 张表改**包内门面**直取 —— 这是删宿主 `game/data` 的
+#   **最后一道 import 期锁**（旧写法 `_D = _HostMod("data")` + 逐名绑定会在删表后 import 崩）。
+#   12 张段乘区/成长表 ← `content/catalog_rules.py`（`game_config.stat_templates` 13 键组；5 张
+#   段乘区表已做 tuple 还原）· `QUALITY` ← `content/catalog_b143.py` · `FORMULA_SKELETON` ←
+#   `catalog_rules` · `WEAPON_DIST`/`ARMOR_FAMILY`/`ARMOR_FAMILY_ALIAS` ← `catalog_b143`
+#   （equipment 域，2026-09-14 补导）。对拍：`overnight/b14_catalog_gate.py --names <17 名>`
+#   = `OK 17 · 门面缺 0 · 不等 0`（含键序与类型）。行内注释一字未动。
+from . import catalog_b143 as _c143
+from . import catalog_rules as _cr
+
+EQUIP_SLOT_BASE = _cr.EQUIP_SLOT_BASE
+EQUIP_SLOT_SCALING = _cr.EQUIP_SLOT_SCALING
+MONSTER_EXP_BASE = _cr.MONSTER_EXP_BASE
+MONSTER_GOLD_BASE = _cr.MONSTER_GOLD_BASE
+MONSTER_ROLE_BASE = _cr.MONSTER_ROLE_BASE
+MONSTER_ROLE_GROWTH = _cr.MONSTER_ROLE_GROWTH
+QUALITY = _c143.QUALITY
+NORMAL_HP_STAGE_MULT = _cr.NORMAL_HP_STAGE_MULT      # v156 阶段 6 怪物数值修复
+BOSS_ATK_STAGE_MULT = _cr.BOSS_ATK_STAGE_MULT        # v156 阶段 6 怪物数值修复
+INSTANCE_BOSS_ATK_STAGE_MULT = _cr.INSTANCE_BOSS_ATK_STAGE_MULT  # v173.1 副本 Boss atk 段乘区（area=instance）
+HP_STAGE_MULT = _cr.HP_STAGE_MULT        # P2F-2 hp/atk 分段曲线表（v131 收缓/v169.3 正斜率，原函数体数值）
+ATK_STAGE_MULT = _cr.ATK_STAGE_MULT      # P2F-2 hp/atk 分段曲线表（v131 收缓/v169.3 正斜率，原函数体数值）
+MONSTER_ROLE_MODS = _cr.MONSTER_ROLE_MODS    # P2F-3 F14 monster_stats 角色修正表（boss/elite 硬编码数值下沉）
+FORMULA_SKELETON = _cr.FORMULA_SKELETON      # P2F-1 底层公式骨架参数（exp_to_next 兜底 / monster_exp / monster_gold）
+WEAPON_DIST = _c143.WEAPON_DIST                # P2F-2 v156 装备分系表下沉（data/equipment.py）
+ARMOR_FAMILY = _c143.ARMOR_FAMILY              # P2F-2 v156 装备分系表下沉（data/equipment.py）
+ARMOR_FAMILY_ALIAS = _c143.ARMOR_FAMILY_ALIAS  # P2F-2 v156 装备分系表下沉（data/equipment.py）
 # v102.5 模板表下沉 data/stat_templates.py
 
 

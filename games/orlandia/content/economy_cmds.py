@@ -25,10 +25,24 @@ import time
 
 from .economy_host import _HostRef, _h  # noqa: F401
 
+# ---- 包内门面（B14-2 L1：宿主聚合层 `C` 的包内等价物；宿主 `game/data` 删掉后仍可取值）----
+# 453 处 `C.<名>` 读点 → 308 处切门面/读口；余下 = 21 个缺口名 + `C` 的函数名句柄
+# + 1 处「宿主 C 上的 STAT_NAMES 探测」（实测宿主 `C` 无此属性，恒 `{}`，切了会改文案 → 原样保留），见 W-B14-2-L1.md
+# ★ B14-3（2026-09-14）：那 21 个缺口名已由 `catalog_b143` 补上 → 本文件 140 处再切
+#   （`_b143` 138 处 + `ALL_WILD` 2 处走包内派生读口 `content/wild`）。余下只有 `C` 的宿主
+#   **函数名**句柄 + 上面那处 STAT_NAMES 探测；见 overnight/_w3_cut_economy_side.md。
+from . import catalog_core as _ccore
+from . import catalog_items as _cit
+from . import catalog_life as _clife
+from . import catalog_quests as _cquest
+from . import catalog_space as _cspace
+from . import catalog_b143 as _b143  # B14-3 收口名（装备品质/宝石/附魔/词条/钓鱼/世界事件表）
+from . import wild as _wild          # B14-3：`ALL_WILD` 派生读口（content/wild，PEP 562）
+from .panel import STAT_NAMES  # 既有读口（原 `_HostRef("STAT_NAMES")`，门禁证明与宿主面同值同序）
+
 # ---- 宿主面（宿主壳 bind_host() 注入；顺序铁律见 economy_host 模块头）----
 C = _HostRef("C")
 db = _HostRef("db")
-STAT_NAMES = _HostRef("STAT_NAMES")
 _set_info = _HostRef("_set_info")
 player_final_stats = _HostRef("player_final_stats")
 race_stats = _HostRef("race_stats")
@@ -82,7 +96,7 @@ class CommandBase:  # noqa: D101
 # ID 集合（与 core/drops.py 的 _BLUEPRINT_RECIPE_RIDS 同源判据，roll_blueprint 同池）。
 # bp_craft 图纸合成只允许合成有锻造配方的装备，杜绝"合成出来没配方/学不了"的死图纸。
 _RECIPE_ROSTER_IDS = frozenset(
-    rec.get("roster_id") for rec in C.CRAFT_RECIPES.values() if rec.get("roster_id")
+    rec.get("roster_id") for rec in _clife.CRAFT_RECIPES.values() if rec.get("roster_id")
 )
 
 # v181.P4-3：SHOP_EQUIP_PRICE_MULT 定义与随迁注释已迁 services/shop.py（P4-3 交易区服务化）。
@@ -99,7 +113,7 @@ _MAT_FACILITY_HINT = _shop_svc._MAT_FACILITY_HINT
 def _item_kind_type(t):
     """材料大类归并：采集/掉落可堆叠材料（C.MATERIAL_KIND_TYPES）→ '材料'；
     图纸/鱼/收藏/传说/宝物/鱼王/消耗品/符文/宠物蛋/坐骑 等保留各自 type（专属筛选类别）。"""
-    if t in C.MATERIAL_KIND_TYPES:
+    if t in _ccore.MATERIAL_KIND_TYPES:
         return "材料"
     return t
 
@@ -158,12 +172,12 @@ def _equip_affix_features(d: dict) -> list:
     """词条特色标签：按 affixes + legendary 的 name/effect 关键词归类（去重保序）。"""
     names = []
     for af in d.get("affixes", []):
-        info = C.AFFIXES.get(af) if isinstance(af, str) else None
+        info = _cit.AFFIXES.get(af) if isinstance(af, str) else None
         if info:
             names.append(info.get("name", ""))
     lg = d.get("legendary")
     if lg:
-        lgi = C.LEGENDARY_EFFECTS.get(lg)
+        lgi = _cit.LEGENDARY_EFFECTS.get(lg)
         if lgi:
             names.append(lgi.get("name", ""))
     features = []
@@ -204,7 +218,7 @@ def _upgrade_recalc_equip(d: dict, new_lv: int) -> dict:
             stats = C.equip_stats(slot, new_lv, quality, armor_family=_fam)
     # v29 武器类型特色（生成时并入 stats，升级后同口径重挂；非武器无 flavor）
     if slot == "weapon" and weapon_type:
-        flavor = C.WEAPON_FLAVOR.get(weapon_type, {})
+        flavor = _b143.WEAPON_FLAVOR.get(weapon_type, {})
         flavor_stats = {}
         if flavor:
             for fk, fv in flavor.items():
@@ -231,7 +245,7 @@ def _upgrade_recalc_equip(d: dict, new_lv: int) -> dict:
     stat_affix_stats = _h('stat_affix_stats')  # ← from ..core.affix import stat_affix_stats
     for k, v in stat_affix_stats([a for a in (d.get("affixes") or []) if isinstance(a, str)],
                                  slot, new_lv).items():
-        if k in C.PCT_STATS:
+        if k in _ccore.PCT_STATS:
             stats[k] = round(stats.get(k, 0) + v, 4)
         else:
             stats[k] = stats.get(k, 0) + int(v)
@@ -243,24 +257,24 @@ def _upgrade_recalc_equip(d: dict, new_lv: int) -> dict:
     d["stats"] = stats
     # 同步 price（生成公式：equip_value(stats) × (3 + lv×0.5) × 品质倍率）
     equip_value = _h('equip_value')  # ← from ..core.stats import equip_value
-    d["price"] = int(equip_value(stats) * (3 + new_lv * 0.5) * C.QUALITY[quality]["mult"])
+    d["price"] = int(equip_value(stats) * (3 + new_lv * 0.5) * _b143.QUALITY[quality]["mult"])
     return d
 
 
 def _render_equip(d, lines, equipped):
     """装备详情"""
     # ===== 装备 =====
-    q = C.QUALITY[d["quality"]]
+    q = _b143.QUALITY[d["quality"]]
     enh = d.get("enhance", 0)
     enh_str = f" +{enh}" if enh > 0 else ""
     equip_state = "(已装备)" if equipped else ""
-    lines.append(f"{q['color']}【{d['name']}{enh_str}】({C.EQUIP_SLOTS[d['slot']]}){equip_state}")
+    lines.append(f"{q['color']}【{d['name']}{enh_str}】({_b143.EQUIP_SLOTS[d['slot']]}){equip_state}")
     lines.append("━━━━━━━━━━━━")
     lines.append(f"品质：{q['name']} ｜ 需求等级：Lv.{d['lv']}")
     if d.get("weapon_type"):
         # 阶段八：武器不锁职业，只显示类型（20 章装备只限属性）
         lines.append(f"类型：{C.display('weapon_types', d['weapon_type'])}")
-        flavor_desc = C.WEAPON_FLAVOR.get(d["weapon_type"], {}).get("desc", "")
+        flavor_desc = _b143.WEAPON_FLAVOR.get(d["weapon_type"], {}).get("desc", "")
         if flavor_desc:
             lines.append(f"✦ {flavor_desc}")
     st = d.get("stats", {})
@@ -269,7 +283,7 @@ def _render_equip(d, lines, equipped):
     for k, v in st.items():
         if v:
             label = stat_names.get(k, k)
-            stat_lines.append(f"{label} + {int(v * 100)}%" if k in C.PCT_STATS else f"{label} + {v}")
+            stat_lines.append(f"{label} + {int(v * 100)}%" if k in _ccore.PCT_STATS else f"{label} + {v}")
     if stat_lines:
         # v101.21 排版：属性每项单独一行（鱼鱼：属性+两边空格+换行，别挤一行）
         lines.append("属性：")
@@ -281,9 +295,9 @@ def _render_equip(d, lines, equipped):
         if isinstance(af, dict):  # 旧结构兼容
             k, v = af.get("stat"), af.get("value", 0)
             label = stat_names.get(k, k)
-            aff_lines.append(f"{label} + {int(v * 100)}%" if k in C.PCT_STATS else f"{label} + {v}")
+            aff_lines.append(f"{label} + {int(v * 100)}%" if k in _ccore.PCT_STATS else f"{label} + {v}")
             continue
-        info = C.AFFIXES.get(af)
+        info = _cit.AFFIXES.get(af)
         if info:
             # v101.21 词条排版：『名称：描述』（类似属性面板的力量/智力每行一项）
             aff_lines.append(f"{info['name']}：{info['desc']}" if info.get("desc") else info["name"])
@@ -296,7 +310,7 @@ def _render_equip(d, lines, equipped):
     if feat:
         lines.append(f"⭐ 词条特色：{'｜'.join(feat)}")
     if d.get("legendary"):
-        lg = C.LEGENDARY_EFFECTS.get(d["legendary"])
+        lg = _cit.LEGENDARY_EFFECTS.get(d["legendary"])
         if lg:
             lines.append(f"✨ 专属·{lg['name']}：{lg['desc']}")
     # 阶段八：属性需求（不锁职业，只锁力量/智力/敏捷/耐力）
@@ -312,15 +326,15 @@ def _render_equip(d, lines, equipped):
     ench_lines = []
     for en in d.get("enchant", []):
         if en.get("effect"):
-            eff_name = C.RUNE_EFFECT_NAMES.get(en["effect"], en["effect"])
+            eff_name = _cit.RUNE_EFFECT_NAMES.get(en["effect"], en["effect"])
             lvl = int(en.get("lvl", 1) or 1)
-            roman = C.RUNE_LEVEL_ROMAN.get(lvl, "")
+            roman = _b143.RUNE_LEVEL_ROMAN.get(lvl, "")
             rune_lines.append(f"『{eff_name}{roman}』")
         else:
             k, v = en.get("stat"), en.get("value", 0)
             label = stat_names.get(k, k)
-            ench_lines.append(f"{label} + {int(v * 100)}%" if k in C.PCT_STATS else f"{label} + {v}")
-    _slots = C.ENCHANT_SLOTS.get(d.get("quality", ""), 0)
+            ench_lines.append(f"{label} + {int(v * 100)}%" if k in _ccore.PCT_STATS else f"{label} + {v}")
+    _slots = _b143.ENCHANT_SLOTS.get(d.get("quality", ""), 0)
     if _slots:
         lines.append(f"🔮 附魔槽：{len(d.get('enchant', []))}/{_slots}")
     if rune_lines:
@@ -329,7 +343,7 @@ def _render_equip(d, lines, equipped):
         lines.append("✨ 附魔： " + "  ".join(ench_lines))
     # v10：套装归属
     if d.get("set"):
-        sinfo = C.SETS.get(d["set"])
+        sinfo = _cit.SETS.get(d["set"])
         if sinfo:
             # v105 M07 P3-3：新套 4 件效果在 bonus_4_stats（旧套在 bonus_4.desc），
             # 拼装展示，杜绝「🌳橡木套()」空括号
@@ -341,7 +355,7 @@ def _render_equip(d, lines, equipped):
             b4_str = "  ".join(b4_parts)
             lines.append(f"🎴 套装：{sinfo['icon']}{d['set']}" + (f"(4件:{b4_str})" if b4_str else ""))
     if enh > 0:
-        info = C.ENHANCE_TABLE.get(enh)
+        info = _cit.ENHANCE_TABLE.get(enh)
         # v104R3 M11 P3-6：括号前补空格（数值+两侧空格排版），× 倍率防误读为 +136%
         lines.append(f"强化：+{enh} (属性 ×{info['mult']})" if info else f"强化：+{enh}")
     # v136 原石孔位展示
@@ -358,8 +372,8 @@ def _render_equip(d, lines, equipped):
         lines.append(f"描述：{d['desc']}")
     else:
         # v101.25g：存量背包装备可能无 desc 字段 → 名册兜底 / 按部位生成
-        rid_list = C.EQUIP_ROSTER_BY_NAME.get(d["name"], [])
-        rdesc = C.EQUIP_ROSTER[rid_list[0]].get("desc") if rid_list else None
+        rid_list = _cit.EQUIP_ROSTER_BY_NAME.get(d["name"], [])
+        rdesc = _cit.EQUIP_ROSTER[rid_list[0]].get("desc") if rid_list else None
         lines.append(f"描述：{rdesc or _eq_random_desc(d['name'], d.get('slot', 'armor'), d.get('weapon_type'))}")
     lines.append("")
     # v104R3 P3：装备详情"出售价"误导——实收 = 推导价×0.5（_sell_one 铁匠铺回收，v101.27 鱼鱼拍板），
@@ -372,8 +386,8 @@ def _render_material(d, lines, equipped):
     """材料详情"""
     # ===== 材料 =====
     # v101.25g：MATERIALS 的 key 是 mat_ ID，按名查必须用 MATERIALS_BY_NAME（原 MATERIALS.get 恒空）
-    mat = C.MATERIALS_BY_NAME.get(d["name"])
-    q = C.QUALITY.get((mat or {}).get("quality", "white"), {})
+    mat = _cit.MATERIALS_BY_NAME.get(d["name"])
+    q = _b143.QUALITY.get((mat or {}).get("quality", "white"), {})
     mtype = (mat or {}).get("type", "材料")
     lines.append(f"🧪 【{d['name']}】")
     lines.append("━━━━━━━━━━━━")
@@ -390,8 +404,8 @@ def _render_material(d, lines, equipped):
 def _render_fish(d, lines, equipped):
     """鱼详情（v126.4 拍板项 3：鱼专属渲染器，替代默认消耗品 📦 样式）"""
     # ===== 鱼 =====
-    fish = next((f for f in C.FISH_POOL if f["name"] == d.get("name", "")), None)
-    q = C.QUALITY.get(d.get("quality") or (fish or {}).get("quality", "white"), {})
+    fish = next((f for f in _clife.FISH_POOL if f["name"] == d.get("name", "")), None)
+    q = _b143.QUALITY.get(d.get("quality") or (fish or {}).get("quality", "white"), {})
     lines.append(f"🐟 【{d['name']}】")
     lines.append("━━━━━━━━━━━━")
     lines.append(f"类型：鱼 ｜ 品质：{q.get('color', '')}{q.get('name', '普通')}")
@@ -409,8 +423,8 @@ def _render_rune(d, lines, equipped):
     lines.append(f"💎 【{d['name']}】")
     lines.append("━━━━━━━━━━━━")
     # v104R3 M11 P3-1：品质显示中文名+颜色（此前直出英文 ID "purple"，与图鉴/名称不一致）
-    _rq = C.QUALITY.get(d.get("quality", ""), {})
-    lines.append(f"类型：符文 ｜ 品质：{_rq.get('color', '')}{_rq.get('name', '')} ｜ 等级：{C.RUNE_LEVEL_ROMAN.get(int(d.get('lvl', 1) or 1), '')}")
+    _rq = _b143.QUALITY.get(d.get("quality", ""), {})
+    lines.append(f"类型：符文 ｜ 品质：{_rq.get('color', '')}{_rq.get('name', '')} ｜ 等级：{_b143.RUNE_LEVEL_ROMAN.get(int(d.get('lvl', 1) or 1), '')}")
     if d.get("desc"):
         lines.append(f"效果：{d['desc']}")
     lines.append("")
@@ -421,8 +435,8 @@ def _render_encyclopedia_equip(r):
     """v169.x 意见#88：未拥有装备图鉴预览——复用百科 v167.1 装备单查渲染风格
     （⚔️ 名称(部位·Lv·品质) + 系列/需求/来源/套装/特效/描述 + 图鉴提示）。
     r 为名册条目（无随机词条/强化；属性见 desc，与商店/掉落生成的同原型装备一致）。"""
-    _q = C.QUALITY.get(r.get("quality", "white"), {})
-    _slot_nm = C.EQUIP_SLOTS.get(r.get("slot", ""), r.get("slot", "?"))
+    _q = _b143.QUALITY.get(r.get("quality", "white"), {})
+    _slot_nm = _b143.EQUIP_SLOTS.get(r.get("slot", ""), r.get("slot", "?"))
     _attr_cn = {"str": "力量", "agi": "敏捷", "int": "智力", "vit": "耐力"}
     _req = r.get("req") or {}
     _req_s = "、".join(f"{_attr_cn.get(k, k)}{v}" for k, v in _req.items()) if _req else "无需求"
@@ -448,8 +462,8 @@ def _roster_gen_equip(r: dict):
     """按名册条目生成一件标准装备用于百科展示。rid 不在条目内 → 用名册名反查
     EQUIP_ROSTER_BY_NAME（与掉落/商店生成同源）；失败返回 None（安全降级为无属性视图）。"""
     try:
-        _rids = C.EQUIP_ROSTER_BY_NAME.get(r.get("name", "")) or [
-            _k for _k, _rr in C.EQUIP_ROSTER.items() if _rr.get("name") == r.get("name")]
+        _rids = _cit.EQUIP_ROSTER_BY_NAME.get(r.get("name", "")) or [
+            _k for _k, _rr in _cit.EQUIP_ROSTER.items() if _rr.get("name") == r.get("name")]
         if not _rids:
             return None
         return C.generate_roster_equip(_rids[0])
@@ -461,9 +475,9 @@ def _render_blueprint(d, lines, equipped):
     """图纸详情"""
     # ===== 图纸（v41 毕业套锻造材料） =====
     # v101.28l #434：原模板抄的"阶段/职业"字段图纸根本没有（空显示），改用名册真实字段
-    q = C.QUALITY.get(d.get("quality", ""), {})
-    r = C.EQUIP_ROSTER.get(d.get("roster_id", ""), {}) if d.get("roster_id") else {}
-    slot_cn = C.EQUIP_SLOTS.get(r.get("slot", ""), "") if r else ""
+    q = _b143.QUALITY.get(d.get("quality", ""), {})
+    r = _cit.EQUIP_ROSTER.get(d.get("roster_id", ""), {}) if d.get("roster_id") else {}
+    slot_cn = _b143.EQUIP_SLOTS.get(r.get("slot", ""), "") if r else ""
     series = r.get("series", "") if r else ""
     _parts = [f"类型：图纸", f"品质：{q.get('name', '')}"]
     if series:
@@ -484,7 +498,7 @@ def _render_pet_egg(d, lines, equipped):
     # ===== 宠物蛋 =====
     lines.append(f"🥚 【{d['name']}】")
     lines.append("━━━━━━━━━━━━")
-    pdef = next((p for p in C.PET_POOL if p["key"] == d.get("pet_key")), None)
+    pdef = next((p for p in _clife.PET_POOL if p["key"] == d.get("pet_key")), None)
     if pdef:
         # v101.14 品质标签
         ql = C.pet_quality_label(pdef["key"])
@@ -503,9 +517,9 @@ def _render_mount(d, lines, equipped):
     lines.append(f"🐎 【{d['name']}】")
     lines.append("━━━━━━━━━━━━")
     mk = d.get("mount_key")
-    mdef = C.MOUNT_BY_KEY.get(mk) if mk else None
+    mdef = _clife.MOUNT_BY_KEY.get(mk) if mk else None
     if mdef:
-        _Q = _h('QUALITY')  # ← from ..data.equipment import QUALITY as _Q
+        _Q = _b143.QUALITY  # ← from ..data.equipment import QUALITY as _Q（B14-3：宿主 data 取件切包内门面）
         q = _Q.get(mdef.get("quality", "white"), {})
         ql = f"{q.get('color', '⚪')}{q.get('name', '普通')}"
         lines.append(f"坐骑：{ql} {mdef['icon']}{mdef['name']}（Lv.{mdef['lv']} 可骑乘）")
@@ -648,7 +662,7 @@ class EconomyImpl(CommandBase):
     def _nearest_town(self, cur_map: str) -> str:
         """BFS 找离当前地图最近的城镇（回城卷轴用）。cur_map 本身是城镇则原地。"""
         from collections import deque
-        if cur_map in C.MAP_BY_ID and C.MAP_BY_ID[cur_map].get("type") == C.MAP_TYPE_TOWN:
+        if cur_map in _cspace.MAP_BY_ID and _cspace.MAP_BY_ID[cur_map].get("type") == _ccore.MAP_TYPE_TOWN:
             return cur_map
         q = deque([(cur_map, 0)])
         seen = {cur_map}
@@ -656,15 +670,15 @@ class EconomyImpl(CommandBase):
             m, d = q.popleft()
             if d >= 6:
                 continue
-            for nxt in C.MAP_CONNECTIONS.get(m, []):
+            for nxt in _b143.MAP_CONNECTIONS.get(m, []):
                 if nxt in seen:
                     continue
                 seen.add(nxt)
-                mm = C.MAP_BY_ID.get(nxt, {})
-                if mm.get("type") == C.MAP_TYPE_TOWN:
+                mm = _cspace.MAP_BY_ID.get(nxt, {})
+                if mm.get("type") == _ccore.MAP_TYPE_TOWN:
                     return nxt
                 q.append((nxt, d + 1))
-        return C.START_MAP
+        return _ccore.START_MAP
 
 
     @declared("gather")
@@ -677,12 +691,12 @@ class EconomyImpl(CommandBase):
         if not ok:
             yield event.plain_result(act_msg)
             return
-        cur_map = C.MAP_BY_ID.get(player["cur_map"], {})
-        if cur_map.get("type") == C.MAP_TYPE_TOWN:
+        cur_map = _cspace.MAP_BY_ID.get(player["cur_map"], {})
+        if cur_map.get("type") == _ccore.MAP_TYPE_TOWN:
             yield event.plain_result("城镇里没有可采集的野生物资，去野外吧（『前往 <地图名>』）！")
             return
         # v104 R3 M14 P1-2：副本内采集白嫖强化石/怪物专属材料（副本怪掉落专属材料应走战斗获取）
-        if cur_map.get("type") == C.MAP_TYPE_INSTANCE:
+        if cur_map.get("type") == _ccore.MAP_TYPE_INSTANCE:
             yield event.plain_result("副本里没有可采集的野生物资，专心闯关吧！（怪物会掉落专属材料）")
             return
         # v173 采集副业等级门禁：采集图按池最高料价分档（采集 Lv.1→9），
@@ -723,7 +737,7 @@ class EconomyImpl(CommandBase):
             yield event.plain_result(act_msg + text)
             return
         # v94 体力：采集消耗 5 体力（确认开启新轮后才扣；体力不足回滚新轮等待，防白等）
-        _ok, _st = self._spend_stamina(group_id, qq_id, C.PROF_STAMINA_COST["gather"], player, "采集")
+        _ok, _st = self._spend_stamina(group_id, qq_id, _clife.PROF_STAMINA_COST["gather"], player, "采集")
         if not _ok:
             self._prof_wait_clear(group_id, qq_id)
             # v126.4 拍板项 4：体力不足也要带上旧轮结算播报（否则收获入包了玩家却毫不知情）
@@ -741,13 +755,13 @@ class EconomyImpl(CommandBase):
         if not ok:
             yield event.plain_result(act_msg)
             return
-        cur_map = C.MAP_BY_ID.get(player["cur_map"], {})
+        cur_map = _cspace.MAP_BY_ID.get(player["cur_map"], {})
         # v104 R3 M14 P2-3：城镇安全区拦挖掘（与采集规则一致，防城镇无风险挖高价值矿）
-        if cur_map.get("type") == C.MAP_TYPE_TOWN:
+        if cur_map.get("type") == _ccore.MAP_TYPE_TOWN:
             yield event.plain_result("城镇里没有矿脉，去野外矿点吧（『前往 <地图名>』）！")
             return
         # 矿脉点（v13：明确配置，地图上显示⛏️；v173 dict 化含 min_lv）
-        _mine = C.MINE_SPOTS.get(cur_map.get("id"))
+        _mine = _clife.MINE_SPOTS.get(cur_map.get("id"))
         if not _mine:
             yield event.plain_result("这里没有矿脉！地图上会显示⛏️矿脉的位置，去那边『挖掘』吧～")
             return
@@ -773,7 +787,7 @@ class EconomyImpl(CommandBase):
             yield event.plain_result(act_msg + text)
             return
         # v94 体力：挖掘消耗 5 体力（确认开启新轮后才扣；体力不足回滚新轮等待，防白等）
-        _ok, _st = self._spend_stamina(group_id, qq_id, C.PROF_STAMINA_COST["mining"], player, "挖掘")
+        _ok, _st = self._spend_stamina(group_id, qq_id, _clife.PROF_STAMINA_COST["mining"], player, "挖掘")
         if not _ok:
             self._prof_wait_clear(group_id, qq_id)
             # v126.4 拍板项 4：体力不足也要带上旧轮结算播报
@@ -795,7 +809,7 @@ class EconomyImpl(CommandBase):
         page = int(raw) if raw.isdigit() else 1
         prof_lv = db.get_prof_level(group_id, qq_id, "alchemy")
         # purify_only False → 只列普通配方；True → 只列提纯配方
-        recs = [(k, r) for k, r in C.ALCHEMY_RECIPES.items()
+        recs = [(k, r) for k, r in _clife.ALCHEMY_RECIPES.items()
                 if (r.get("purify") is True) == purify_only]
         recs.sort(key=lambda x: x[1].get("min_lv", 1))
         page_items, pages, page = self._page_items(recs, page, per_page=5)
@@ -841,7 +855,7 @@ class EconomyImpl(CommandBase):
         # v130.7 意见#30：『合成 <序号>』= 『炼金』面板第 N 个配方（取数列表与面板同源：非提纯 + min_lv 排序）
         if rname.isdigit():
             idx = int(rname)
-            _recs = [(k, r) for k, r in C.ALCHEMY_RECIPES.items() if r.get("purify") is not True]
+            _recs = [(k, r) for k, r in _clife.ALCHEMY_RECIPES.items() if r.get("purify") is not True]
             _recs.sort(key=lambda x: x[1].get("min_lv", 1))
             if idx < 1 or idx > len(_recs):
                 yield event.plain_result(f"没有第 {idx} 个炼金配方(共 {len(_recs)} 个)！『炼金』查看～")
@@ -849,7 +863,7 @@ class EconomyImpl(CommandBase):
             rname = _recs[idx - 1][0]
         # v48：配方 key 已是 ID，用户输入中文名需 resolve
         rkey = C.resolve("alchemy", rname)
-        r = C.ALCHEMY_RECIPES.get(rkey)
+        r = _clife.ALCHEMY_RECIPES.get(rkey)
         if not r:
             yield event.plain_result(f"没有『{rname}』这个配方！『炼金』查看全部～")
             return
@@ -886,7 +900,7 @@ class EconomyImpl(CommandBase):
                 yield event.plain_result(f"材料不足！需要 {mname}×{cnt}(你有 {have})")
                 return
         # v94 体力：炼金合成消耗 10 体力（材料校验通过后才扣）
-        _ok, _st = self._spend_stamina(group_id, qq_id, C.PROF_STAMINA_COST["alchemy"], player, "炼金")
+        _ok, _st = self._spend_stamina(group_id, qq_id, _clife.PROF_STAMINA_COST["alchemy"], player, "炼金")
         if not _ok:
             yield event.plain_result(_st)
             return
@@ -904,18 +918,18 @@ class EconomyImpl(CommandBase):
         # 发放产物（v48：product key 已是 ID，直接按 ID 入库）
         # G0-A1：注入 craft_cost=材料总成本，使 _sell_one 卖店封顶（售价≤成本），堵炼金→卖店净正收益；
         # 产物售价数据高于成本时下调注入价至 ≤0.9×成本（仅影响卖店回收，不改产物效果/正常消耗）
-        _cc = sum(C.MATERIALS.get(m, {}).get("price", 0) * cnt for m, cnt in r["cost"].items())
+        _cc = sum(_cit.MATERIALS.get(m, {}).get("price", 0) * cnt for m, cnt in r["cost"].items())
         _cc_price_floor = round(0.9 * _cc) if _cc > 0 else None
         lines = []
         for pkey, pcnt in r["product"].items():
             if pkey.startswith("mat_"):
                 mname = C.display("materials", pkey)
                 # v125.2 B3：产物价格兜底读 prof_config.RARE_MATERIAL_PRICE（原字面量 150，行为等价）
-                _mprice = C.MATERIALS.get(pkey, {}).get("price", C.RARE_MATERIAL_PRICE)
-                db.add_item(group_id, qq_id, pkey, {"name": mname, "type": C.MATERIALS.get(pkey, {}).get("type", "材料"), "stackable": True, "price": _mprice if _cc_price_floor is None or _mprice <= _cc_price_floor else _cc_price_floor, "craft_cost": _cc})
+                _mprice = _cit.MATERIALS.get(pkey, {}).get("price", _clife.RARE_MATERIAL_PRICE)
+                db.add_item(group_id, qq_id, pkey, {"name": mname, "type": _cit.MATERIALS.get(pkey, {}).get("type", "材料"), "stackable": True, "price": _mprice if _cc_price_floor is None or _mprice <= _cc_price_floor else _cc_price_floor, "craft_cost": _cc})
                 lines.append(f"  🎒 获得材料：{mname} ×{pcnt}")
             else:
-                itdef = C.ITEMS.get(pkey, {})
+                itdef = _cit.ITEMS.get(pkey, {})
                 _iprice = itdef.get("price", 100)
                 if _cc_price_floor is not None and _iprice > _cc_price_floor:
                     _iprice = _cc_price_floor
@@ -939,7 +953,7 @@ class EconomyImpl(CommandBase):
         C.check_achievements(group_id, qq_id, player)
         # v97.5 行为彩蛋规则：炼金成功后
         _rule_txt = self._rule_fire("craft_done", group_id, qq_id, player,
-                                    C.MAP_BY_ID.get(player["cur_map"], {}))
+                                    _cspace.MAP_BY_ID.get(player["cur_map"], {}))
         # v116 提纯：purify 配方用『提纯成功』专属提示（凑 3 份低档 → 1 份高档）
         if r.get("purify"):
             _cost_txt = " + ".join(f"{C.display('materials', cm)}×{cc}" for cm, cc in r["cost"].items())
@@ -960,7 +974,7 @@ class EconomyImpl(CommandBase):
         cook_lv = db.get_prof_level(group_id, qq_id, "cooking")
         raw = self._strip_cmd(event, "烹饪列表").strip()
         page = int(raw) if raw.isdigit() else 1
-        recs = list(C.COOKING_RECIPES.items())
+        recs = list(_clife.COOKING_RECIPES.items())
         page_items, pages, page = self._page_items(recs, page, per_page=5)
         lines = ["🍳 【烹饪灶台】料理配方：", "━━━━━━━━━━━━"]
         base = (page - 1) * 5
@@ -1000,18 +1014,18 @@ class EconomyImpl(CommandBase):
         # v130.7 意见#30：『烹饪 <序号>』= 『烹饪列表』面板第 N 道料理（取数列表与面板同源：COOKING_RECIPES 插入序）
         if raw.isdigit():
             idx = int(raw)
-            _recs = list(C.COOKING_RECIPES.items())
+            _recs = list(_clife.COOKING_RECIPES.items())
             if idx < 1 or idx > len(_recs):
                 yield event.plain_result(f"没有第 {idx} 道料理(共 {len(_recs)} 道)！『烹饪列表』查看～")
                 return
             raw = _recs[idx - 1][0]
         rkey = C.resolve("cooking", raw)
-        r = C.COOKING_RECIPES.get(rkey)
+        r = _clife.COOKING_RECIPES.get(rkey)
         if not r:
             # v113.5 O86：自制料理带"(自制)"后缀（如『烤肉串(自制)』），输入基础名
             # 『烹饪 烤肉串』解析不到——失败提示列出带后缀的完整名，引导正确指令
             full = list(dict.fromkeys(
-                rec["name"] for rec in C.COOKING_RECIPES.values()
+                rec["name"] for rec in _clife.COOKING_RECIPES.values()
                 if rec.get("name") == raw + "(自制)" or rec.get("name", "").startswith(raw + "(")))
             if full:
                 yield event.plain_result(
@@ -1050,7 +1064,7 @@ class EconomyImpl(CommandBase):
             yield event.plain_result(f"食材不足！做【{r['name']}】还缺：{'、'.join(lack)}。垂钓/采集收集食材～")
             return
         # v101.30 体力：烹饪消耗 5 体力（食材校验通过后才扣；制造副业半价，亲民入口）
-        _ok, _st = self._spend_stamina(group_id, qq_id, C.PROF_STAMINA_COST["cooking"], player, "烹饪")
+        _ok, _st = self._spend_stamina(group_id, qq_id, _clife.PROF_STAMINA_COST["cooking"], player, "烹饪")
         if not _ok:
             yield event.plain_result(_st)
             return
@@ -1093,15 +1107,15 @@ class EconomyImpl(CommandBase):
         # 发料理（读 ITEMS 定义；v101.28i 修复：必须带全效果字段 food_effect/hot/hot_turns/hot_mana，
         # 否则烹饪出的词条料理在战斗里没有特殊效果）
         pkey = next(iter(r["product"]))
-        itdef = C.ITEMS.get(pkey, {})
+        itdef = _cit.ITEMS.get(pkey, {})
         # G0-A1：注入 craft_cost=食材总成本（食材可为 mat_ 材料或 i_ 道具），使 _sell_one 卖店
         # 封顶（售价≤成本），堵烹饪→卖店净正收益；产物售价数据高于成本时下调注入价至 ≤0.9×成本
         _cc = 0
         for _m, _cnt in r["cost"].items():
             if _m.startswith("mat_"):
-                _cc += C.MATERIALS.get(_m, {}).get("price", 0) * _cnt
+                _cc += _cit.MATERIALS.get(_m, {}).get("price", 0) * _cnt
             else:
-                _cc += C.ITEMS.get(_m, {}).get("price", 0) * _cnt
+                _cc += _cit.ITEMS.get(_m, {}).get("price", 0) * _cnt
         _cc_price_floor = round(0.9 * _cc) if _cc > 0 else None
         _iprice = itdef.get("price", 10)
         if _cc_price_floor is not None and _iprice > _cc_price_floor:
@@ -1134,7 +1148,7 @@ class EconomyImpl(CommandBase):
         C.check_achievements(group_id, qq_id, player)
         # v97.5 行为彩蛋规则：烹饪成功后
         _rule_txt = self._rule_fire("craft_done", group_id, qq_id, player,
-                                    C.MAP_BY_ID.get(player["cur_map"], {}))
+                                    _cspace.MAP_BY_ID.get(player["cur_map"], {}))
         yield event.plain_result(act_msg + f"🍳 灶火升腾，香气四溢……\n"
             f"✅ 烹饪成功！【{itdef.get('name', pkey)}】({_item_kwargs.get('desc', '')})已放入背包！{_perfect_line}{lv_msg}"
             + (f"\n{_rule_txt}" if _rule_txt else "")
@@ -1165,7 +1179,7 @@ class EconomyImpl(CommandBase):
         # 可合成图纸池：名册 source=图纸/boss 且配方存在（rid ∈ _RECIPE_ROSTER_IDS，
         # v167.2 硬过滤——杜绝合成出无 CRAFT_RECIPES 配方的死图纸；
         # 原 'rid in EQUIP_ROSTER_BY_NAME[name]' 恒真（rid 必在自己 by_name 列表里）已废弃）
-        _cands = [(rid, r) for rid, r in C.EQUIP_ROSTER.items()
+        _cands = [(rid, r) for rid, r in _cit.EQUIP_ROSTER.items()
                   if r["source"] in ("图纸", "boss") and rid in _RECIPE_ROSTER_IDS]
         _cands.sort(key=lambda x: x[1]["lv"])
         if not raw:
@@ -1173,8 +1187,8 @@ class EconomyImpl(CommandBase):
             page_items, pages, page = self._page_items(_cands, page, per_page=5)
             lines = [f"📜 【图纸残页合成】(图纸残页×{_shards}/10)", "━━━━━━━━━━━━"]
             for i, (rid, r) in enumerate(page_items, 1):
-                q = C.QUALITY.get(r["quality"], {})
-                lines.append(f"{(page - 1) * 5 + i:>2}. {q.get('color', '')}【{r['name']}】Lv.{r['lv']} {C.EQUIP_SLOTS.get(r['slot'], r['slot'])}")
+                q = _b143.QUALITY.get(r["quality"], {})
+                lines.append(f"{(page - 1) * 5 + i:>2}. {q.get('color', '')}【{r['name']}】Lv.{r['lv']} {_b143.EQUIP_SLOTS.get(r['slot'], r['slot'])}")
             lines.append("━━━━━━━━━━━━")
             lines.append(f"📄 第 {page}/{pages} 页" + (f"｜『图纸合成 {page + 1}』下一页" if page < pages else ""))
             lines.append(f"💡 『图纸合成 <装备名>』消耗 10 张图纸残页，定向获得 1 张指定图纸（只列出有锻造配方的装备）")
@@ -1198,7 +1212,7 @@ class EconomyImpl(CommandBase):
                 f"没有『{raw}』这个可合成的装备图纸！『图纸合成』查看全部可合成图纸（仅图纸/Boss 来源装备可定向合成）～")
             return
         rid = _hit[0]
-        r = C.EQUIP_ROSTER[rid]
+        r = _cit.EQUIP_ROSTER[rid]
         if _shards < 10:
             yield event.plain_result(f"图纸残页不足！合成【{r['name']}图纸】需要 10 张图纸残页，你有 {_shards} 张。"
                                      f"Boss/宝箱/垂钓/副本掉落，或已学图纸自动折算～")
@@ -1226,7 +1240,7 @@ class EconomyImpl(CommandBase):
         bp = C.make_blueprint(rid)
         import uuid
         db.add_item(group_id, qq_id, f"bp_{uuid.uuid4().hex[:8]}", bp)
-        q = C.QUALITY.get(r["quality"], {})
+        q = _b143.QUALITY.get(r["quality"], {})
         yield event.plain_result(
             f"📜 10 张图纸残页在掌中拼合，微光闪过——\n"
             f"✅ 合成成功！获得【{bp['name']}】({q.get('name', '')}·Lv.{r['lv']})\n"
@@ -1426,7 +1440,7 @@ class EconomyImpl(CommandBase):
         if require_apprentice:
             player = self._player(group_id, qq_id) or {}
             if key not in (player.get("apprentices") or []):
-                tname, tmap = C.PROF_TUTORS.get(key, ("对应导师", "对应城市"))
+                tname, tmap = _clife.PROF_TUTORS.get(key, ("对应导师", "对应城市"))
                 return False, (
                     f"🔒 副业「{db.PROF_FIELDS.get(key, key)}」还没解锁！\n"
                     f"先去 {tmap} 找 {tname} 拜师学习吧～(『对话 {tname}』)"
@@ -1557,15 +1571,15 @@ class EconomyImpl(CommandBase):
                 # 从当前激活副业重新抽取，否则任务永久废掉；已领奖任务保留（防重复发奖）；
                 # 完全没有激活副业时保留原任务（无重抽对象，避免每次查询任务都变）
                 if (claimed or parts[0] in activated
-                        or not any(k in activated for k in C.DAILY_PROF_TASKS)):
+                        or not any(k in activated for k in _clife.DAILY_PROF_TASKS)):
                     return parts[0], parts[1], int(parts[2]), int(parts[3]), int(parts[4]), claimed
         # v167：副业已解除数量上限（可无限学/无限发展），任务只从已激活副业抽取（做得了），
         # 未激活任何副业才全随机（做不了 → 拜师引导，见 daily_prof 视图）
         import random as _rnd
         activated = db.get_activated_profs(group_id, qq_id)
-        cand = [k for k in C.DAILY_PROF_TASKS if k in activated] or list(C.DAILY_PROF_TASKS.keys())
+        cand = [k for k in _clife.DAILY_PROF_TASKS if k in activated] or list(_clife.DAILY_PROF_TASKS.keys())
         tkey = _rnd.choice(cand)
-        name, need, gold = C.DAILY_PROF_TASKS[tkey]
+        name, need, gold = _clife.DAILY_PROF_TASKS[tkey]
         db.set_event_state(self._daily_prof_key(qq_id), f"{tkey}|{name}|{need}|{gold}|0|0")
         return tkey, name, need, gold, 0, False
 
@@ -1587,9 +1601,9 @@ class EconomyImpl(CommandBase):
                 db.update_player(group_id, qq_id, gold=player["gold"] + gold)
             # v101.30: 副业经验奖励（主奖励，练级加速；金币为成本零头补贴）
             # v125.2 B3：每日副业奖励经验数据下沉 prof_config.DAILY_PROF_EXP（原字面量 50）
-            _nl, _lvl2 = db.add_prof_exp(group_id, qq_id, tkey2, C.DAILY_PROF_EXP)
+            _nl, _lvl2 = db.add_prof_exp(group_id, qq_id, tkey2, _clife.DAILY_PROF_EXP)
             _lvl2_msg = f"→ Lv.{_nl}！" if _lvl2 else ""
-            return True, f"\n🎯 今日副业任务完成！【{name}×{need}】奖励 {gold} 金币 + {C.DAILY_PROF_EXP} 副业经验{_lvl2_msg}！"
+            return True, f"\n🎯 今日副业任务完成！【{name}×{need}】奖励 {gold} 金币 + {_clife.DAILY_PROF_EXP} 副业经验{_lvl2_msg}！"
         return False, ""
 
     # v104 M24 P2-1：『每日副业/今日副业』别名（19 章旧称呼，策划案 §六统一为『副业任务』）
@@ -1605,7 +1619,7 @@ class EconomyImpl(CommandBase):
             "🎯 【今日副业任务】",
             "━━━━━━━━━━━━",
             f"目标：{name} ×{need} {mark}",
-            f"奖励：{gold} 金币 + {C.DAILY_PROF_EXP} 副业经验",
+            f"奖励：{gold} 金币 + {_clife.DAILY_PROF_EXP} 副业经验",
             "",
             "💡 完成对应副业动作自动推进，明天刷新新任务！",
         ]
@@ -1630,12 +1644,12 @@ class EconomyImpl(CommandBase):
             yield event.plain_result("你正在战斗中！先解决眼前的敌人(攻击/逃跑)")
             return
         cur = player["cur_map"]
-        spot_info = C.FISHING_SPOTS.get(cur)
+        spot_info = _clife.FISHING_SPOTS.get(cur)
         if not spot_info:
             # v105R3 M13 P3-1：钓点提示动态取自 FISHING_SPOTS 全量（11 个），
             # 旧版硬编码 6 个，迷雾海沟/龙鲸海域/风暴之海/深渊湖/彩虹云谷缺失
             _spots = "、".join(
-                s["name"] if isinstance(s, dict) else str(s) for s in C.FISHING_SPOTS.values()
+                s["name"] if isinstance(s, dict) else str(s) for s in _clife.FISHING_SPOTS.values()
             )
             yield event.plain_result(f"这里没有水域！找有水的地方垂钓：{_spots}")
             return
@@ -1643,7 +1657,7 @@ class EconomyImpl(CommandBase):
         _want_sa = spot_info.get("subarea", "") if isinstance(spot_info, dict) else ""
         if _want_sa and player.get("cur_subarea") != _want_sa:
             _sa_name = ""
-            for _s in (C.MAP_BY_ID.get(cur, {}).get("subareas") or []):
+            for _s in (_cspace.MAP_BY_ID.get(cur, {}).get("subareas") or []):
                 if _s["id"] == _want_sa:
                     _sa_name = _s.get("name", "")
                     break
@@ -1688,7 +1702,7 @@ class EconomyImpl(CommandBase):
             yield event.plain_result(act_msg + text)
             return
         # v94 体力：垂钓消耗 5 体力（确认开启新轮后才扣；体力不足回滚新轮等待，防白等）
-        _ok, _st = self._spend_stamina(group_id, qq_id, C.PROF_STAMINA_COST["fishing"], player, "垂钓")
+        _ok, _st = self._spend_stamina(group_id, qq_id, _clife.PROF_STAMINA_COST["fishing"], player, "垂钓")
         if not _ok:
             self._prof_wait_clear(group_id, qq_id)
             # v126.4 拍板项 4：体力不足也要带上旧轮结算播报（T3 审计：鱼已入包玩家却只看到体力不足）
@@ -1729,7 +1743,7 @@ class EconomyImpl(CommandBase):
                 yield event.plain_result(self._craft_list_available(player, int(t2)))
                 return
             cls = C.resolve("classes", t2)
-            if cls in C.CLASSES:
+            if cls in _ccore.CLASSES:
                 yield event.plain_result(self._craft_list_class(player, cls, 1))
                 return
             yield event.plain_result(f"未识别的职业『{t2}』！『锻造列表』或『锻造列表 <页码>』查看～")
@@ -1760,17 +1774,17 @@ class EconomyImpl(CommandBase):
             cls_page = int(_cls_parts[-1])
             cls_text = " ".join(_cls_parts[:-1])
         cls = C.resolve("classes", cls_text)
-        if cls not in C.CLASSES:
+        if cls not in _ccore.CLASSES:
             # M10 P2：支持『锻造 战士2』免空格粘页码（与『锻造列表2』『锻造全部2』对齐）
             _i = len(cls_text)
             while _i > 0 and cls_text[_i - 1].isdigit():
                 _i -= 1
             if 0 < _i < len(cls_text):
                 _cls2 = C.resolve("classes", cls_text[:_i])
-                if _cls2 in C.CLASSES:
+                if _cls2 in _ccore.CLASSES:
                     cls = _cls2
                     cls_page = int(cls_text[_i:])
-        if cls in C.CLASSES:
+        if cls in _ccore.CLASSES:
             yield event.plain_result(self._craft_list_class(player, cls, cls_page))
             return
         # 锻造指定装备（20 章 4.3：『锻造 <装备名> <词条倾向>』指定词条池）
@@ -1778,14 +1792,14 @@ class EconomyImpl(CommandBase):
         parts = text.split()
         if len(parts) >= 2:
             last = parts[-1]
-            if last in C.AFFIX_AFFINITY_CN:
-                affinity = C.AFFIX_AFFINITY_CN[last]
+            if last in _b143.AFFIX_AFFINITY_CN:
+                affinity = _b143.AFFIX_AFFINITY_CN[last]
                 text = " ".join(parts[:-1])
         rec_name = C.craft_recipe_search(text)
-        if rec_name and rec_name not in C.CRAFT_RECIPES:
+        if rec_name and rec_name not in _clife.CRAFT_RECIPES:
             # 旧别名指向已删除配方：直接提示未找到（防 CRAFT_RECIPES[rec_name] KeyError 崩溃）
             # M10 P2 死别名引导：旧版本已移除的配方给出明确提示
-            if any(text in al for als in C.CRAFT_RECIPE_ALIASES.values() for al in als):
+            if any(text in al for als in _clife.CRAFT_RECIPE_ALIASES.values() for al in als):
                 yield event.plain_result(f"『{text}』是旧版本已移除的配方！『锻造』查看当前可锻造配方～")
             else:
                 yield event.plain_result(f"没有找到『{text}』的锻造配方！『锻造』看职业分组，『锻造 配方 <装备名>』看详情～")
@@ -1799,11 +1813,11 @@ class EconomyImpl(CommandBase):
                     yield event.plain_result("格式：『锻造 配方 <装备名>』看配方详情，如『锻造 配方 铁剑』～")
                     return
                 rn = C.craft_recipe_search(t2)
-                if rn and rn in C.CRAFT_RECIPES:  # 旧别名指向已删除配方 → 不展示详情
+                if rn and rn in _clife.CRAFT_RECIPES:  # 旧别名指向已删除配方 → 不展示详情
                     yield event.plain_result(self._recipe_detail(rn))
                     return
                 # M10 P2：『锻造 配方 <旧名>』死别名引导（与锻造/代工/配方主入口一致）
-                if any(t2 in al for als in C.CRAFT_RECIPE_ALIASES.values() for al in als):
+                if any(t2 in al for als in _clife.CRAFT_RECIPE_ALIASES.values() for al in als):
                     yield event.plain_result(f"『{t2}』是旧版本已移除的配方！『锻造』查看当前可锻造配方～")
                     return
             # #24 材料关键词联想：没找到配方名 → 按材料名联想
@@ -1811,19 +1825,19 @@ class EconomyImpl(CommandBase):
             if mat_recs:
                 lines = [f"🔍 没找到『{text}』配方，但按材料联想到了 {len(mat_recs)} 个：", ""]
                 for name, rec in mat_recs:
-                    q = C.QUALITY[rec["quality"]]
+                    q = _b143.QUALITY[rec["quality"]]
                     bp = " 📜" if rec.get("blueprint") else ""
                     mats_show = " + ".join("%s×%s" % (C.display("materials", m), n) for m, n in rec["mats"].items())
                     if rec.get("blueprint"):
                         mats_show += " + %s×1" % rec["blueprint"]
-                    lines.append(f"{q['color']}【{C.display('recipes', name)}】Lv.{rec['lv']} {C.EQUIP_SLOTS[rec['slot']]}{bp}｜{mats_show}｜{rec['gold']}金")
+                    lines.append(f"{q['color']}【{C.display('recipes', name)}】Lv.{rec['lv']} {_b143.EQUIP_SLOTS[rec['slot']]}{bp}｜{mats_show}｜{rec['gold']}金")
                 lines.append("")
                 lines.append(self._tip("forge"))
                 yield event.plain_result("\n".join(lines))
                 return
             yield event.plain_result(f"没有找到『{text}』的锻造配方！『锻造』看职业分组，『锻造 配方 <装备名>』看详情～")
             return
-        rec = C.CRAFT_RECIPES[rec_name]
+        rec = _clife.CRAFT_RECIPES[rec_name]
         rec_disp = C.display("recipes", rec_name)
         # 检查等级门槛（装备等级比玩家高太多不能锻造）
         if rec["lv"] > player["level"] + 6:
@@ -1873,7 +1887,7 @@ class EconomyImpl(CommandBase):
             yield event.plain_result(f"金币不足！锻造【{rec_disp}】需要 {gold_need} 金币，你只有 {player['gold']}。")
             return
         # v94 体力：锻造消耗 10 体力（所有前置校验通过后再扣，材料/金币不足不白扣）
-        _ok, _st = self._spend_stamina(group_id, qq_id, C.PROF_STAMINA_COST["craft"], player, "锻造")
+        _ok, _st = self._spend_stamina(group_id, qq_id, _clife.PROF_STAMINA_COST["craft"], player, "锻造")
         if not _ok:
             yield event.plain_result(_st)
             return
@@ -1905,9 +1919,9 @@ class EconomyImpl(CommandBase):
         #   品质提升后重算 stats（equip_stats 按新品质）+ 品质色前缀
         quality_msg = ""
         if equip.get("quality") in ("blue", "purple"):
-            _bonus = C.QUALITY_UPGRADE_MASTER_BONUS if (prof_lv >= 10) else 0.0  # 神锻名家
-            if random.random() < C.QUALITY_UPGRADE_CHANCE + _bonus:
-                _cost = C.QUALITY_UPGRADE_COST
+            _bonus = _ccore.QUALITY_UPGRADE_MASTER_BONUS if (prof_lv >= 10) else 0.0  # 神锻名家
+            if random.random() < _ccore.QUALITY_UPGRADE_CHANCE + _bonus:
+                _cost = _ccore.QUALITY_UPGRADE_COST
                 _has_all = True
                 for _mk, _mn in _cost.items():
                     if db.count_item(group_id, qq_id, _mk) < _mn:
@@ -1923,10 +1937,10 @@ class EconomyImpl(CommandBase):
                     for k in equip.get("stats", {}):
                         if k in _new_stats:
                             equip["stats"][k] = _new_stats[k]
-                    equip["name"] = f"{C.QUALITY[_new_q]['color']}·{equip['name']}"
+                    equip["name"] = f"{_b143.QUALITY[_new_q]['color']}·{equip['name']}"
                     quality_msg = "✨ 品质升华！蓝装锻出了紫装！" if _new_q == "purple" else "✨ 品质升华！紫装锻出了橙装！"
         # v135 橙装 2% 精良前缀（属性 ×1.15）
-        if equip.get("quality") == "orange" and random.random() < C.MASTERPIECE_CHANCE:
+        if equip.get("quality") == "orange" and random.random() < _ccore.MASTERPIECE_CHANCE:
             equip["masterpiece"] = True
             for _k in equip.get("stats", {}):
                 equip["stats"][_k] = int(equip["stats"][_k] * 1.15)
@@ -1935,7 +1949,7 @@ class EconomyImpl(CommandBase):
         import uuid
         key = f"eq_{uuid.uuid4().hex[:8]}"
         db.add_item(group_id, qq_id, key, equip)
-        q = C.QUALITY[equip["quality"]]
+        q = _b143.QUALITY[equip["quality"]]
         afs = equip.get("affixes", [])
         af_str = ""
         if afs:
@@ -1943,7 +1957,7 @@ class EconomyImpl(CommandBase):
             if parts:
                 af_str = f"\n    ✨ 词条：{'  '.join(parts)}"
         if equip.get("legendary"):
-            lg = C.LEGENDARY_EFFECTS[equip["legendary"]]
+            lg = _cit.LEGENDARY_EFFECTS[equip["legendary"]]
             af_str += f"\n    ✨ 专属：{lg['name']}"
         set_str = ""
         if equip.get("set"):
@@ -1967,10 +1981,10 @@ class EconomyImpl(CommandBase):
         C.check_achievements(group_id, qq_id, player)
         # v97.5 行为彩蛋规则：锻造成功后
         _rule_txt = self._rule_fire("craft_done", group_id, qq_id, player,
-                                    C.MAP_BY_ID.get(player["cur_map"], {}))
+                                    _cspace.MAP_BY_ID.get(player["cur_map"], {}))
         affinity_str = f"({affinity}倾向)" if affinity else ""
         _msg_parts = [act_msg + f"🔨 铁匠挥锤敲打，火星四溅……\n"
-            f"✅ 锻造成功！{q['color']}【{equip['name']}】({C.EQUIP_SLOTS[equip['slot']]}) Lv.{equip['lv']} {affinity_str}"
+            f"✅ 锻造成功！{q['color']}【{equip['name']}】({_b143.EQUIP_SLOTS[equip['slot']]}) Lv.{equip['lv']} {affinity_str}"
             f"{af_str}{set_str}\n"]
         if quality_msg:
             _msg_parts.append(f"{quality_msg}\n")
@@ -2007,14 +2021,14 @@ class EconomyImpl(CommandBase):
                 return
             text = _recs[idx - 1][0]
         rec_name = C.craft_recipe_search(text)
-        if not rec_name or rec_name not in C.CRAFT_RECIPES:  # 旧别名指向已删除配方 → 视作未找到
+        if not rec_name or rec_name not in _clife.CRAFT_RECIPES:  # 旧别名指向已删除配方 → 视作未找到
             # M10 P2 死别名引导：旧版本已移除的配方给出明确提示
-            if any(text in al for als in C.CRAFT_RECIPE_ALIASES.values() for al in als):
+            if any(text in al for als in _clife.CRAFT_RECIPE_ALIASES.values() for al in als):
                 yield event.plain_result(f"『{text}』是旧版本已移除的配方！『锻造』查看当前可锻造配方～")
             else:
                 yield event.plain_result(f"没有找到『{text}』的锻造配方！『锻造 配方 <装备名>』查看详情～")
             return
-        rec = C.CRAFT_RECIPES[rec_name]
+        rec = _clife.CRAFT_RECIPES[rec_name]
         rec_disp = C.display("recipes", rec_name)
         if rec["lv"] > player["level"] + 6:
             yield event.plain_result(f"【{rec_disp}】是 Lv.{rec['lv']} 的装备，你才 Lv.{player['level']}，等级再高些才能驾驭！")
@@ -2059,10 +2073,10 @@ class EconomyImpl(CommandBase):
         import uuid
         key = f"eq_{uuid.uuid4().hex[:8]}"
         db.add_item(group_id, qq_id, key, equip)
-        q = C.QUALITY[equip["quality"]]
+        q = _b143.QUALITY[equip["quality"]]
         yield event.plain_result(
             f"🔨 铁匠接过材料，替你挥锤……\n"
-            f"✅ 代工完成！{q['color']}【{equip['name']}】({C.EQUIP_SLOTS[equip['slot']]}) Lv.{equip['lv']}\n"
+            f"✅ 代工完成！{q['color']}【{equip['name']}】({_b143.EQUIP_SLOTS[equip['slot']]}) Lv.{equip['lv']}\n"
             f"💰 代工费 {cost} 金币(锻造价×3)，装备已放入背包！"
         )
 
@@ -2101,15 +2115,15 @@ class EconomyImpl(CommandBase):
             return
         # M10 P2 学习废图纸白扣修复：先统计解锁配方数，0 个则不消耗图纸也不记录
         # v124：烹饪/炼金配方同样走图纸学习制（rec.blueprint=图纸名，与锻造一致）
-        unlocked = [rk for rk, rec in C.CRAFT_RECIPES.items() if rec.get("blueprint") == bp_disp]
-        unlocked += [rk for rk, rec in C.COOKING_RECIPES.items() if rec.get("blueprint") == bp_disp]
-        unlocked += [rk for rk, rec in C.ALCHEMY_RECIPES.items() if rec.get("blueprint") == bp_disp]
+        unlocked = [rk for rk, rec in _clife.CRAFT_RECIPES.items() if rec.get("blueprint") == bp_disp]
+        unlocked += [rk for rk, rec in _clife.COOKING_RECIPES.items() if rec.get("blueprint") == bp_disp]
+        unlocked += [rk for rk, rec in _clife.ALCHEMY_RECIPES.items() if rec.get("blueprint") == bp_disp]
         if not unlocked:
             # v164 图纸经济修正：蓝绿直锻装备（名册 source=锻造，配方无 blueprint）不再掉图纸，
             # 但玩家背包可能残留旧图纸。识别"图纸名 = 直锻配方名 + 图纸"→ 给明确出路（直接锻造/出售），
             # 而不是笼统的"旧版本残留"。
             _eq_name = bp_disp[:-2] if bp_disp.endswith("图纸") else bp_disp
-            _direct_rec = next((r for r in C.CRAFT_RECIPES.values()
+            _direct_rec = next((r for r in _clife.CRAFT_RECIPES.values()
                                 if r.get("name") == _eq_name and not r.get("blueprint")), None)
             if _direct_rec:
                 yield event.plain_result(
@@ -2128,13 +2142,13 @@ class EconomyImpl(CommandBase):
             f"🧠 永久解锁 {len(unlocked)} 个配方(制作时不再消耗图纸)！",
             "━━━━━━━━━━━━",
         ]
-        _craft_recs = {rk: C.CRAFT_RECIPES[rk] for rk in unlocked if rk in C.CRAFT_RECIPES}
-        _other_recs = [rk for rk in unlocked if rk not in C.CRAFT_RECIPES]
+        _craft_recs = {rk: _clife.CRAFT_RECIPES[rk] for rk in unlocked if rk in _clife.CRAFT_RECIPES}
+        _other_recs = [rk for rk in unlocked if rk not in _clife.CRAFT_RECIPES]
         for rk in sorted(_craft_recs, key=lambda x: _craft_recs[x]["slot"]):
             rec = _craft_recs[rk]
-            lines.append(f"  {C.QUALITY[rec['quality']]['color']}【{rec['name']}】Lv.{rec['lv']} {C.EQUIP_SLOTS[rec['slot']]}")
+            lines.append(f"  {_b143.QUALITY[rec['quality']]['color']}【{rec['name']}】Lv.{rec['lv']} {_b143.EQUIP_SLOTS[rec['slot']]}")
         for rk in _other_recs:
-            rec = C.COOKING_RECIPES.get(rk) or C.ALCHEMY_RECIPES.get(rk)
+            rec = _clife.COOKING_RECIPES.get(rk) or _clife.ALCHEMY_RECIPES.get(rk)
             lines.append(f"  📜【{rec['name']}】")
         lines.append("━━━━━━━━━━━━")
         lines.append(self._tip("blueprint"))
@@ -2142,7 +2156,7 @@ class EconomyImpl(CommandBase):
 
     def _craft_prof_need(self, rec_lv: int) -> int:
         """锻造配方副业等级门槛(v54：按装备等级折算)"""
-        tiers = C.RECIPE_LV_TIERS
+        tiers = _ccore.RECIPE_LV_TIERS
         for i, t in enumerate(tiers, 1):
             if rec_lv <= t:
                 return i
@@ -2169,18 +2183,18 @@ class EconomyImpl(CommandBase):
         for bp in learned:
             rec = None
             kind = "锻造"
-            for rk, r in C.CRAFT_RECIPES.items():
+            for rk, r in _clife.CRAFT_RECIPES.items():
                 if r.get("blueprint") == bp:
                     rec = r
                     break
             if not rec:
-                for rk, r in C.COOKING_RECIPES.items():
+                for rk, r in _clife.COOKING_RECIPES.items():
                     if r.get("blueprint") == bp:
                         rec = r
                         kind = "烹饪"
                         break
             if not rec:
-                for rk, r in C.ALCHEMY_RECIPES.items():
+                for rk, r in _clife.ALCHEMY_RECIPES.items():
                     if r.get("blueprint") == bp:
                         rec = r
                         kind = "炼金"
@@ -2189,15 +2203,15 @@ class EconomyImpl(CommandBase):
                 rows.append(f"📜【{bp}】（已失效/旧版本残留，可出售）")
                 continue
             name = rec.get("name", bp)
-            q = C.QUALITY.get(rec.get("quality", ""), {})
+            q = _b143.QUALITY.get(rec.get("quality", ""), {})
             lv = rec.get("lv", 0)
             cls = rec.get("class", "")
             wt = rec.get("weapon_type", "")
             cls_part = ""
-            if cls and cls in C.CLASSES:
+            if cls and cls in _ccore.CLASSES:
                 cls_part = f" {C.display('classes', cls)}"
             elif wt:
-                _names = [C.display("classes", ck) for ck, cv in C.CLASSES.items()
+                _names = [C.display("classes", ck) for ck, cv in _ccore.CLASSES.items()
                           if cv.get("weapon_type") == wt and ck != "cls_novice"]
                 if _names:
                     cls_part = f" {'、'.join(_names)}"
@@ -2231,7 +2245,7 @@ class EconomyImpl(CommandBase):
         town_lv = self._smith_town_lv(player)
         prof_lv = db.get_prof_level(player.get("group_id", ""), player.get("qq_id"), "craft")
         out = []
-        for rk, rec in C.CRAFT_RECIPES.items():
+        for rk, rec in _clife.CRAFT_RECIPES.items():
             if rec["lv"] > player["level"] + 6:
                 continue
             if town_lv is not None and abs(rec["lv"] - town_lv) > 8:
@@ -2254,7 +2268,7 @@ class EconomyImpl(CommandBase):
         低级城反而反直觉）；锻造（_craft_recs_filtered）才按城镇分阶段。
         """
         out = []
-        for rk, rec in C.CRAFT_RECIPES.items():
+        for rk, rec in _clife.CRAFT_RECIPES.items():
             if rec["lv"] > player["level"] + 6:
                 continue
             out.append((rk, rec))
@@ -2262,9 +2276,9 @@ class EconomyImpl(CommandBase):
         return out
 
     def _craft_line(self, rec, idx: int) -> str:
-        q = C.QUALITY[rec["quality"]]
+        q = _b143.QUALITY[rec["quality"]]
         bp = " 📜" if rec.get("blueprint") else ""
-        return (f"{idx}. {q['color']}【{rec['name']}】Lv.{rec['lv']} {C.EQUIP_SLOTS[rec['slot']]}"
+        return (f"{idx}. {q['color']}【{rec['name']}】Lv.{rec['lv']} {_b143.EQUIP_SLOTS[rec['slot']]}"
                 f" 锻造Lv.{self._craft_prof_need(rec['lv'])}{bp}\n"
                 f"    {self._craft_mats_str(rec)}｜{rec['gold']}金")
 
@@ -2278,7 +2292,7 @@ class EconomyImpl(CommandBase):
         if town_lv is None:
             return ""
         cur_map = player.get("cur_map", "") or ""
-        tname = (C.MAP_BY_ID.get(cur_map, {}).get("name")) or cur_map
+        tname = (_cspace.MAP_BY_ID.get(cur_map, {}).get("name")) or cur_map
         return f"｜{tname}锻造 Lv.{max(1, town_lv - 8)}-{town_lv + 8}"
 
     def _craft_list_available(self, player, page: int = 1) -> str:
@@ -2305,7 +2319,7 @@ class EconomyImpl(CommandBase):
         town_lv = self._smith_town_lv(player)
         town_hint = self._craft_town_hint(player)
         recs = []
-        for rk, rec in C.CRAFT_RECIPES.items():
+        for rk, rec in _clife.CRAFT_RECIPES.items():
             marks = []
             if rec["lv"] > player["level"] + 6:
                 marks.append("🔒等级")
@@ -2321,9 +2335,9 @@ class EconomyImpl(CommandBase):
         lines = [f"🔨 铁匠铺·全部配方(共 {len(recs)} 件){town_hint}", "━━━━━━━━━━━━"]
         base = (page - 1) * 5
         for i, (rk, rec, marks) in enumerate(page_items, 1):
-            q = C.QUALITY[rec["quality"]]
+            q = _b143.QUALITY[rec["quality"]]
             mark_str = " ".join(marks) if marks else "✅"
-            lines.append(f"{base + i}. {q['color']}【{rec['name']}】Lv.{rec['lv']} {C.EQUIP_SLOTS[rec['slot']]} {mark_str}")
+            lines.append(f"{base + i}. {q['color']}【{rec['name']}】Lv.{rec['lv']} {_b143.EQUIP_SLOTS[rec['slot']]} {mark_str}")
             lines.append(f"    {self._craft_mats_str(rec)}｜{rec['gold']}金")
         lines.append("━━━━━━━━━━━━")
         lines.append(f"📄 第 {page}/{pages} 页" + (f"｜『锻造 全部 {page + 1}』下一页" if page < pages else ""))
@@ -2335,12 +2349,12 @@ class EconomyImpl(CommandBase):
     def _craft_list_class(self, player, cls: str, page: int = 1) -> str:
         """『锻造 <职业>』：该职业可锻造列表"""
         cls_name = C.display("classes", cls)
-        wt = C.CLASSES[cls].get("weapon_type", "sword")
+        wt = _ccore.CLASSES[cls].get("weapon_type", "sword")
         # M10 P2：防具/饰品（slot≠weapon）全职业可锻，不再被武器过滤挡在列表外
         recs = [(rk, rec) for rk, rec in self._craft_recs_filtered(player)
                 if rec.get("class") == cls or rec.get("weapon_type") == wt or rec.get("slot") != "weapon"]
         page_items, pages, page = self._page_items(recs, page, per_page=5)
-        lines = [f"{C.CLASSES[cls].get('icon', '⚔️')} 【{cls_name}】当前可锻造({len(recs)} 件)", "━━━━━━━━━━━━"]
+        lines = [f"{_ccore.CLASSES[cls].get('icon', '⚔️')} 【{cls_name}】当前可锻造({len(recs)} 件)", "━━━━━━━━━━━━"]
         base = (page - 1) * 5
         for i, (rk, rec) in enumerate(page_items, 1):
             lines.append(self._craft_line(rec, base + i))
@@ -2352,15 +2366,15 @@ class EconomyImpl(CommandBase):
 
     def _recipe_detail(self, rec_name: str) -> str:
         """配方详情文本(v41 供锻造/配方命令复用)"""
-        rec = C.CRAFT_RECIPES[rec_name]
-        q = C.QUALITY[rec["quality"]]
+        rec = _clife.CRAFT_RECIPES[rec_name]
+        q = _b143.QUALITY[rec["quality"]]
         rec_disp = C.display("recipes", rec_name)
         mats_str = "、".join(f"{C.display('materials', m)}×{n}" for m, n in rec["mats"].items())
         if rec.get("blueprint"):
             mats_str += f"、{rec['blueprint']}×1"
         lines = [
             f"📜 配方：{q['color']}【{rec_disp}】",
-            f"🏷️ 类型：{C.EQUIP_SLOTS[rec['slot']]}  Lv.{rec['lv']}  {q['name']}",
+            f"🏷️ 类型：{_b143.EQUIP_SLOTS[rec['slot']]}  Lv.{rec['lv']}  {q['name']}",
             f"🧰 材料：{mats_str}",
             f"💰 费用：{rec['gold']} 金币",
         ]
@@ -2368,7 +2382,7 @@ class EconomyImpl(CommandBase):
         # 改为按 weapon_type 反查适用职业（与『锻造 <职业>』过滤口径一致），套装独立展示
         _wt = rec.get("weapon_type")
         if _wt:
-            _cls_names = [C.display("classes", ck) for ck, cv in C.CLASSES.items()
+            _cls_names = [C.display("classes", ck) for ck, cv in _ccore.CLASSES.items()
                           if cv.get("weapon_type") == _wt and ck != "cls_novice"]
             if _cls_names:
                 lines.append(f"🎭 适用职业：{'、'.join(_cls_names)}")
@@ -2401,10 +2415,10 @@ class EconomyImpl(CommandBase):
         # 无参数：按职业分组列出全部配方
         if not text or text == "列表":
             lines = ["📜 铁匠锻造配方(『锻造 <职业>』看该职业，『锻造 配方 <装备名>』看详情)：", ""]
-            for cls in C.CLASSES:
-                icon = C.CLASSES[cls].get("icon", "⚔️")
-                cls_recs = [(n, r) for n, r in C.CRAFT_RECIPES.items()
-                            if r.get("class") == cls or r.get("weapon_type") == C.CLASSES[cls].get("weapon_type")
+            for cls in _ccore.CLASSES:
+                icon = _ccore.CLASSES[cls].get("icon", "⚔️")
+                cls_recs = [(n, r) for n, r in _clife.CRAFT_RECIPES.items()
+                            if r.get("class") == cls or r.get("weapon_type") == _ccore.CLASSES[cls].get("weapon_type")
                             or r.get("slot") != "weapon"]  # M10 P2：防具/饰品全职业可锻，不再只在武器过滤下不可见
                 lines.append(f"{icon} {C.display('classes', cls)}：{'、'.join(C.display('recipes', n) for n, _ in sorted(cls_recs, key=lambda x: x[1]['lv']))}")
             lines.append("")
@@ -2413,9 +2427,9 @@ class EconomyImpl(CommandBase):
             return
         # 带参数：查看指定配方详情
         rec_name = C.craft_recipe_search(text)
-        if not rec_name or rec_name not in C.CRAFT_RECIPES:  # 旧别名指向已删除配方 → 视作未找到
+        if not rec_name or rec_name not in _clife.CRAFT_RECIPES:  # 旧别名指向已删除配方 → 视作未找到
             # M10 P2 死别名引导：旧版本已移除的配方给出明确提示
-            if any(text in al for als in C.CRAFT_RECIPE_ALIASES.values() for al in als):
+            if any(text in al for als in _clife.CRAFT_RECIPE_ALIASES.values() for al in als):
                 yield event.plain_result(f"『{text}』是旧版本已移除的配方！『配方』查看当前全部配方～")
             else:
                 yield event.plain_result(f"没有找到『{text}』的配方！")
@@ -2467,10 +2481,10 @@ class EconomyImpl(CommandBase):
                 return
         d = target["data"]
         cur_enh = d.get("enhance", 0)
-        if cur_enh >= C.MAX_ENHANCE:
+        if cur_enh >= _cit.MAX_ENHANCE:
             yield event.plain_result(f"【{d['name']}】已经强化到极限 +{cur_enh} 了！")
             return
-        info = C.ENHANCE_TABLE[cur_enh]
+        info = _cit.ENHANCE_TABLE[cur_enh]
         # v67 强化归位锻造 → 导师进修后强化为独立副业（19 章第八章）：强化 +N 需要强化副业 Lv.N
         ok, act_msg = self._prof_active_check(group_id, qq_id, "enhance", require_apprentice=True)
         if not ok:
@@ -2487,7 +2501,7 @@ class EconomyImpl(CommandBase):
             yield event.plain_result(f"强化 +{cur_enh} → +{cur_enh+1} 需要 {info['cost']} 金币，你只有 {player['gold']}。")
             return
         # v94 体力：强化消耗 10 体力（v104 M11：金币/副业等校验全通过后才扣，防白扣）
-        _ok, _st = self._spend_stamina(group_id, qq_id, C.PROF_STAMINA_COST["enhance"], player, "强化")
+        _ok, _st = self._spend_stamina(group_id, qq_id, _clife.PROF_STAMINA_COST["enhance"], player, "强化")
         if not _ok:
             yield event.plain_result(_st)
             return
@@ -2642,7 +2656,7 @@ class EconomyImpl(CommandBase):
             return
         # 金币：UPGRADE_TABLE cost 阶梯按装备当前级取（Lv.3→4 花 3 级档 675；超过 10 级封顶
         # 用 10 级档 11524——表只到 10，真等级化后高等级装备每 +1 级消耗表末档）
-        upg_tbl = C.UPGRADE_TABLE or {}
+        upg_tbl = _cit.UPGRADE_TABLE or {}
         info = upg_tbl.get(min(cur_lv, 10)) or upg_tbl.get(next_lv) or {"cost": 300}
         # 副业门：升级等级 ≤ 强化副业等级（与强化同门槛，形成强化→升级进阶路径）
         ok, act_msg = self._prof_active_check(group_id, qq_id, "enhance", require_apprentice=True)
@@ -2661,17 +2675,17 @@ class EconomyImpl(CommandBase):
             yield event.plain_result(f"升级 Lv.{cur_lv} → Lv.{next_lv} 需要 {info['cost']} 金币，你只有 {player['gold']}。")
             return
         # 材料：每级 1 精炼强化石
-        if db.count_item(group_id, qq_id, C.UPGRADE_STONE) < 1:
-            yield event.plain_result(f"升级 Lv.{cur_lv} → Lv.{next_lv} 需要 1 个{C.UPGRADE_MATERIAL_CN}！"
+        if db.count_item(group_id, qq_id, _cit.UPGRADE_STONE) < 1:
+            yield event.plain_result(f"升级 Lv.{cur_lv} → Lv.{next_lv} 需要 1 个{_cit.UPGRADE_MATERIAL_CN}！"
                                      f"(铁匠铺/炼金可得，『背包』查看～)")
             return
         # 体力：升级消耗 10（全校验通过后才扣，防白扣）
-        _ok, _st = self._spend_stamina(group_id, qq_id, C.UPGRADE_STAMINA, player, "升级")
+        _ok, _st = self._spend_stamina(group_id, qq_id, _cit.UPGRADE_STAMINA, player, "升级")
         if not _ok:
             yield event.plain_result(_st)
             return
         db.update_player(group_id, qq_id, gold=player["gold"] - info["cost"])
-        db.remove_item(group_id, qq_id, C.UPGRADE_STONE, 1)
+        db.remove_item(group_id, qq_id, _cit.UPGRADE_STONE, 1)
         # 升级必定成功（与强化差异化：稳定保底）——真等级化：lv +1 + 属性按生成公式重算
         _upgrade_recalc_equip(d, next_lv)
         if target.get("_equipped"):
@@ -2681,7 +2695,7 @@ class EconomyImpl(CommandBase):
         else:
             db.update_item_data(group_id, qq_id, target["key"], d)
         lines = [f"🔧 装备升级成功！【{d['name']}】Lv.{cur_lv} → Lv.{next_lv}"
-                 f" ｜ 属性随等级重算(消耗 {info['cost']} 金币 + {C.UPGRADE_MATERIAL_CN}×1)"]
+                 f" ｜ 属性随等级重算(消耗 {info['cost']} 金币 + {_cit.UPGRADE_MATERIAL_CN}×1)"]
         # 升级也给强化副业少量经验（高段多给，与强化同思路：养得越深练得越快）
         new_lv, leveled = db.add_prof_exp(group_id, qq_id, "enhance", max(1, next_lv))
         if leveled:
@@ -2767,15 +2781,15 @@ class EconomyImpl(CommandBase):
             return
         d = target["data"]
         quality = d.get("quality", "white")
-        qinfo = C.GEM_SOCKETS.get(quality)
+        qinfo = _b143.GEM_SOCKETS.get(quality)
         if not qinfo or qinfo.get("count", 0) <= 0:
             yield event.plain_result(
-                f"【{d['name']}】({C.QUALITY.get(quality, {}).get('name', '')})没有孔位可打，只有蓝/紫/橙装备可以打孔！")
+                f"【{d['name']}】({_b143.QUALITY.get(quality, {}).get('name', '')})没有孔位可打，只有蓝/紫/橙装备可以打孔！")
             return
         if d.get("sockets"):
             yield event.plain_result(f"【{d['name']}】已经有 {len(d['sockets'])} 个孔位了，不用再打～")
             return
-        info = C.GEM_DRILL.get(quality)
+        info = _b143.GEM_DRILL.get(quality)
         if not info:
             yield event.plain_result(f"【{d['name']}】的品质不支持打孔！")
             return
@@ -2793,7 +2807,7 @@ class EconomyImpl(CommandBase):
             yield event.plain_result(f"打孔需要 {info['cost']} 金币，你只有 {player['gold']}。")
             return
         # 体力：打孔消耗 10（全校验通过后才扣，防白扣）
-        _ok, _st = self._spend_stamina(group_id, qq_id, C.PROF_STAMINA_COST["craft"], player, "打孔")
+        _ok, _st = self._spend_stamina(group_id, qq_id, _clife.PROF_STAMINA_COST["craft"], player, "打孔")
         if not _ok:
             yield event.plain_result(_st)
             return
@@ -2851,13 +2865,13 @@ class EconomyImpl(CommandBase):
             return
         gd = gem_item["data"]
         quality = d.get("quality", "white")
-        cap = C.GEM_SOCKETS.get(quality)
+        cap = _b143.GEM_SOCKETS.get(quality)
         min_t = (cap or {}).get("min_tier", 0)
         max_t = (cap or {}).get("max_tier", 0)
         if not (min_t <= gd.get("tier", 0) <= max_t):
             yield event.plain_result(
-                f"【{d['name']}】({C.QUALITY.get(quality, {}).get('name', '')})的孔位只能镶 "
-                f"{C.GEM_TIER_NAMES.get(min_t, min_t)}~{C.GEM_TIER_NAMES.get(max_t, max_t)} 的幸运宝石"
+                f"【{d['name']}】({_b143.QUALITY.get(quality, {}).get('name', '')})的孔位只能镶 "
+                f"{_b143.GEM_TIER_NAMES.get(min_t, min_t)}~{_b143.GEM_TIER_NAMES.get(max_t, max_t)} 的幸运宝石"
                 f"(你选的是 {gd['name']})！")
             return
         # 孔位解析：显式孔位（S1/S2/S3）→ 校验存在且空；未给 → 第一个空孔
@@ -2979,7 +2993,7 @@ class EconomyImpl(CommandBase):
                 gd = by_tier[tier][0]["data"]
                 cnt = sum(it["count"] for it in by_tier[tier])
                 ok = "✅" if cnt >= 3 else "❌"
-                lines.append(f"{ok} {gd['name']} ×{cnt}/3  →  {C.GEM_TIER_NAMES.get(tier + 1, '?')}")
+                lines.append(f"{ok} {gd['name']} ×{cnt}/3  →  {_b143.GEM_TIER_NAMES.get(tier + 1, '?')}")
                 shown += 1
             if shown == 0:
                 lines.append("背包里还没有可合成的幸运宝石！打怪有概率掉落幸运宝石～")
@@ -3004,7 +3018,7 @@ class EconomyImpl(CommandBase):
         total = sum(it["count"] for it in same_tier)
         if total < 3:
             yield event.plain_result(
-                f"合成需要 3 颗 {C.GEM_TIER_NAMES.get(tier, tier)}，你有 {total} 颗！")
+                f"合成需要 3 颗 {_b143.GEM_TIER_NAMES.get(tier, tier)}，你有 {total} 颗！")
             return
         # 扣 3 颗同 tier（跨堆扣取，key 优先）
         remain = 3
@@ -3052,14 +3066,14 @@ class EconomyImpl(CommandBase):
         """符文制作面板（无参时展示全部配方：素材+碎片+制作费）。"""
         lines = ["🔮 【符文制作】掉落之外，铁匠铺可用怪物素材+符文碎片合成符文(1 级)！",
                  "━━━━━━━━━━━━"]
-        for rkey, r in C.RUNES.items():
-            cfg = C.RUNE_CRAFT.get(rkey)
+        for rkey, r in _cit.RUNES.items():
+            cfg = _cit.RUNE_CRAFT.get(rkey)
             if not cfg:
                 continue
             mname = C.display("materials", cfg["mat"])
-            shards = C.RUNE_CRAFT_SHARDS.get(r["quality"], 3)
+            shards = _b143.RUNE_CRAFT_SHARDS.get(r["quality"], 3)
             fee = r.get("cost", 0) // 2
-            lines.append(f"{C.QUALITY[r['quality']]['color']}符文·{r.get('name', rkey)}"
+            lines.append(f"{_b143.QUALITY[r['quality']]['color']}符文·{r.get('name', rkey)}"
                          f"：{mname}×{cfg['count']}+符文碎片×{shards}+{fee}金")
         lines.append("━━━━━━━━━━━━")
         lines.append("💡 『符文制作 <符文名>』消耗素材+符文碎片+金币，获得 1 级符文"
@@ -3072,7 +3086,7 @@ class EconomyImpl(CommandBase):
     async def rune_craft(self, event: AstrMessageEvent):
         """v136 符文制作：『符文制作 <符文名>』——铁匠铺用怪物素材+符文碎片+金币合成 1 级符文。
 
-        配方表 C.RUNE_CRAFT（素材按品质 2/3/4 个）+ C.RUNE_CRAFT_SHARDS（碎片 3/4/6 个）；
+        配方表 _cit.RUNE_CRAFT（素材按品质 2/3/4 个）+ C.RUNE_CRAFT_SHARDS（碎片 3/4/6 个）；
         制作费 = 符文 cost 的一半（rune_item price 同源）；体力 10（全校验通过后才扣）。
         产出 C.rune_item(effect, 1)，key=rune_<effect>_1（与掉落同 key，可堆叠）。
         """
@@ -3087,24 +3101,24 @@ class EconomyImpl(CommandBase):
             return
         # 解析符文：ID / 中文名 / 子串
         rkey = None
-        if raw in C.RUNES:
+        if raw in _cit.RUNES:
             rkey = raw
         else:
             rkey = C.resolve("runes", raw)
-            if rkey not in C.RUNES:
-                hits = [k for k, r in C.RUNES.items() if raw in r.get("name", "")]
+            if rkey not in _cit.RUNES:
+                hits = [k for k, r in _cit.RUNES.items() if raw in r.get("name", "")]
                 rkey = hits[0] if hits else rkey
-        if rkey not in C.RUNES:
+        if rkey not in _cit.RUNES:
             yield event.plain_result(
                 f"没有『{raw}』这个符文！『符文制作』查看全部可制作符文～")
             return
-        r = C.RUNES[rkey]
-        cfg = C.RUNE_CRAFT.get(rkey)
+        r = _cit.RUNES[rkey]
+        cfg = _cit.RUNE_CRAFT.get(rkey)
         if not cfg:
             yield event.plain_result(f"『{r.get('name', rkey)}』暂时不能制作，只能靠打怪掉落～")
             return
         # 体力：所有校验通过后才扣（防白扣，与炼金/附魔对齐）
-        _ok, _st = self._spend_stamina(group_id, qq_id, C.PROF_STAMINA_COST["craft"], player, "符文制作")
+        _ok, _st = self._spend_stamina(group_id, qq_id, _clife.PROF_STAMINA_COST["craft"], player, "符文制作")
         if not _ok:
             yield event.plain_result(_st)
             return
@@ -3115,7 +3129,7 @@ class EconomyImpl(CommandBase):
         if have_mat < cfg["count"]:
             yield event.plain_result(f"材料不足！制作【{r.get('name', rkey)}】需要 {mname}×{cfg['count']}(你有 {have_mat})")
             return
-        shards = C.RUNE_CRAFT_SHARDS.get(r["quality"], 3)
+        shards = _b143.RUNE_CRAFT_SHARDS.get(r["quality"], 3)
         have_shard = db.count_item(group_id, qq_id, "符文碎片")
         if have_shard < shards:
             yield event.plain_result(f"符文碎片不足！制作【{r.get('name', rkey)}】需要 符文碎片×{shards}(你有 {have_shard})"
@@ -3234,16 +3248,16 @@ class EconomyImpl(CommandBase):
         orig_pos, en = rune_pos[idx]
         eff = en.get("effect")
         lvl = int(en.get("lvl", 1) or 1)
-        cost = C.RUNE_REMOVE_COST * lvl
+        cost = _b143.RUNE_REMOVE_COST * lvl
         if player["gold"] < cost:
             yield event.plain_result(f"拆卸 Lv.{lvl} 符文需要 {cost} 金币(1000×等级)，你只有 {player['gold']}。")
             return
         # 回收符文碎片×等级（可堆叠，key=mat_fu_wen_sui_pian 已有定义）
         db.update_player(group_id, qq_id, gold=player["gold"] - cost)
-        shard_name = C.display("materials", C.RUNE_SHARD_KEY)
-        db.add_item(group_id, qq_id, C.RUNE_SHARD_KEY,
+        shard_name = C.display("materials", _cit.RUNE_SHARD_KEY)
+        db.add_item(group_id, qq_id, _cit.RUNE_SHARD_KEY,
                     {"name": shard_name, "type": "材料", "stackable": True,
-                     "price": C.MATERIALS.get(C.RUNE_SHARD_KEY, {}).get("price", 100)},
+                     "price": _cit.MATERIALS.get(_cit.RUNE_SHARD_KEY, {}).get("price", 100)},
                     lvl)
         # 从 enchant 移除该符文（保留属性附魔 stat 项）
         d["enchant"] = [e for i, e in enumerate(orig) if i != orig_pos]
@@ -3253,7 +3267,7 @@ class EconomyImpl(CommandBase):
             db.update_player(group_id, qq_id, equipment=eq)
         else:
             db.update_item_data(group_id, qq_id, target["key"], d)
-        eff_name = C.RUNE_EFFECT_NAMES.get(eff, eff)
+        eff_name = _cit.RUNE_EFFECT_NAMES.get(eff, eff)
         yield event.plain_result(
             f"🔧 符文拆卸成功！【{d['name']}】拆下了『{eff_name}』(Lv.{lvl})，"
             f"花费 {cost} 金币\n"
@@ -3277,15 +3291,15 @@ class EconomyImpl(CommandBase):
         if not raw:
             # 无参：列出全部可重锻配方（含路B 重锻专属——REFINE_EXCLUSIVE_RECIPES 以名册 rid 为目标）
             _src_rows = []
-            for _src, _cfg in C.REFINE_RECIPES.items():
-                _tgt_rec = C.CRAFT_RECIPES.get(_cfg["target"]) or {}
+            for _src, _cfg in _cit.REFINE_RECIPES.items():
+                _tgt_rec = _clife.CRAFT_RECIPES.get(_cfg["target"]) or {}
                 _tgt_nm = _tgt_rec.get("name") or C.display("recipes", _cfg["target"])
-                _tgt_nm = _tgt_nm or C.EQUIP_ROSTER.get(_cfg["target"], {}).get("name", _cfg["target"])
+                _tgt_nm = _tgt_nm or _cit.EQUIP_ROSTER.get(_cfg["target"], {}).get("name", _cfg["target"])
                 _src_rows.append((_src, _tgt_nm, _cfg.get("mats", {}), _cfg.get("gold", 0)))
             _ref_excl = getattr(C, "REFINE_EXCLUSIVE_RECIPES", None) or {}
             for _src, _cfg in _ref_excl.items():
                 _rid = _cfg.get("target", "")
-                _tgt_nm = C.EQUIP_ROSTER.get(_rid, {}).get("name", _rid)
+                _tgt_nm = _cit.EQUIP_ROSTER.get(_rid, {}).get("name", _rid)
                 _src_rows.append((_src, _tgt_nm, _cfg.get("mats", {}), _cfg.get("gold", 0)))
             lines = ["🔀 【装备重锻】（怪猎派生树：旧→新，继承一半强化/升级）", ""]
             for _src, _tgt_nm, _mats, _gold in _src_rows:
@@ -3303,7 +3317,7 @@ class EconomyImpl(CommandBase):
         src_name = d.get("name", "")
         # 名字可能带品质色前缀（如 🔵·弯刀），用 in 匹配配方 key
         rec = None
-        for _src, _cfg in C.REFINE_RECIPES.items():
+        for _src, _cfg in _cit.REFINE_RECIPES.items():
             if _src in src_name:
                 rec = _cfg
                 break
@@ -3319,14 +3333,14 @@ class EconomyImpl(CommandBase):
                 _excl_src = _src_k
                 break
         _is_exclusive = _excl_src is not None
-        tgt_rec = C.CRAFT_RECIPES.get(rec["target"]) if not _is_exclusive else None
+        tgt_rec = _clife.CRAFT_RECIPES.get(rec["target"]) if not _is_exclusive else None
         if not _is_exclusive and not tgt_rec:
             yield event.plain_result(f"【{src_name}】的重锻目标不存在(配置缺失)！")
             return
         # 校验等级门槛
-        _tgt_lv = tgt_rec["lv"] if tgt_rec else C.EQUIP_ROSTER.get(rec["target"], {}).get("lv", 0)
+        _tgt_lv = tgt_rec["lv"] if tgt_rec else _cit.EQUIP_ROSTER.get(rec["target"], {}).get("lv", 0)
         if _tgt_lv > player["level"] + 6:
-            yield event.plain_result(f"重锻目标【{C.EQUIP_ROSTER.get(rec['target'], {}).get('name', tgt_rec['name'] if tgt_rec else rec['target'])}】是 Lv.{_tgt_lv}，你才 Lv.{player['level']}，等级再高些才能驾驭！")
+            yield event.plain_result(f"重锻目标【{_cit.EQUIP_ROSTER.get(rec['target'], {}).get('name', tgt_rec['name'] if tgt_rec else rec['target'])}】是 Lv.{_tgt_lv}，你才 Lv.{player['level']}，等级再高些才能驾驭！")
             return
         # 校验材料
         lack = []
@@ -3365,8 +3379,8 @@ class EconomyImpl(CommandBase):
         # 旧装备名册基础 lv（按名反查名册；查不到兜底用当前 lv 当已含全部升级 → 不继承）
         _base_lv = d.get("lv", 0) or 0
         try:
-            for _rid in C.EQUIP_ROSTER_BY_NAME.get(src_name, []):
-                _base_lv = C.EQUIP_ROSTER[_rid].get("lv", _base_lv)
+            for _rid in _cit.EQUIP_ROSTER_BY_NAME.get(src_name, []):
+                _base_lv = _cit.EQUIP_ROSTER[_rid].get("lv", _base_lv)
                 break
         except Exception:
             pass
@@ -3388,7 +3402,7 @@ class EconomyImpl(CommandBase):
             _inh_str = (_inh_str + " / " if _inh_str else "") + f"升级继承 Lv.{_lv_boost}"
         _inh_str = _inh_str or "（新装备）"
         yield event.plain_result(
-            f"🔀 【装备重锻成功】{src_name} 淬炼成 {C.QUALITY[new_equip['quality']]['color']}【{new_equip['name']}】！\n"
+            f"🔀 【装备重锻成功】{src_name} 淬炼成 {_b143.QUALITY[new_equip['quality']]['color']}【{new_equip['name']}】！\n"
             f"🎯 {_inh_str}——旧装备的强化/升级投资不沉没！\n"
             f"💰 消耗 {rec['gold']} 金币 + 稀有素材")
 
@@ -3416,30 +3430,30 @@ class EconomyImpl(CommandBase):
             return
         d = target["data"]
         cnt = d.get("calamity_count", 0) or 0
-        if cnt >= C.CALAMITY_MAX:
-            yield event.plain_result(f"【{d['name']}】已经炼成 {cnt}/{C.CALAMITY_MAX} 次，到极限了！换装备继续炼吧～")
+        if cnt >= _clife.CALAMITY_MAX:
+            yield event.plain_result(f"【{d['name']}】已经炼成 {cnt}/{_clife.CALAMITY_MAX} 次，到极限了！换装备继续炼吧～")
             return
         # 校验材料/金币
         lack = []
-        for m, n in C.CALAMITY_COST["mats"].items():
+        for m, n in _clife.CALAMITY_COST["mats"].items():
             have = db.count_item(group_id, qq_id, m)
             if have < n:
                 lack.append(f"{C.display('materials', m)}×{n}(你有{have})")
         if lack:
             yield event.plain_result(f"炼成材料不足！还缺：{'、'.join(lack)}。Boss 掉落稀有素材～")
             return
-        if player["gold"] < C.CALAMITY_COST["gold"]:
-            yield event.plain_result(f"金币不足！怪异炼成需要 {C.CALAMITY_COST['gold']} 金币，你只有 {player['gold']}。")
+        if player["gold"] < _clife.CALAMITY_COST["gold"]:
+            yield event.plain_result(f"金币不足！怪异炼成需要 {_clife.CALAMITY_COST['gold']} 金币，你只有 {player['gold']}。")
             return
         # 扣材料/金币
-        for m, n in C.CALAMITY_COST["mats"].items():
+        for m, n in _clife.CALAMITY_COST["mats"].items():
             db.remove_item(group_id, qq_id, m, n)
-        db.update_player(group_id, qq_id, gold=player["gold"] - C.CALAMITY_COST["gold"])
+        db.update_player(group_id, qq_id, gold=player["gold"] - _clife.CALAMITY_COST["gold"])
         # 随机强化：90% 正面 +3% / 10% 负面 -1%
         import random as _rnd
-        _stat = _rnd.choice(C.CALAMITY_STATS)
-        _pos = _rnd.random() < C.CALAMITY_POSITIVE_CHANCE
-        _val = C.CALAMITY_BONUS if _pos else -C.CALAMITY_MALUS
+        _stat = _rnd.choice(_clife.CALAMITY_STATS)
+        _pos = _rnd.random() < _clife.CALAMITY_POSITIVE_CHANCE
+        _val = _clife.CALAMITY_BONUS if _pos else -_clife.CALAMITY_MALUS
         cb = dict(d.get("calamity_bonus") or {})
         cb[_stat] = round(cb.get(_stat, 0) + _val, 4)
         d["calamity_bonus"] = cb
@@ -3455,8 +3469,8 @@ class EconomyImpl(CommandBase):
         _sgn = "+" if _val > 0 else ""
         yield event.plain_result(
             f"{_arrow}【{d['name']}】{_stat_cn}{_sgn}{int(_val * 100)}%！"
-            f"({d.get('calamity_count', 1)}/{C.CALAMITY_MAX} 次)\n"
-            f"💰 消耗 {C.CALAMITY_COST['gold']} 金币 + 稀有素材")
+            f"({d.get('calamity_count', 1)}/{_clife.CALAMITY_MAX} 次)\n"
+            f"💰 消耗 {_clife.CALAMITY_COST['gold']} 金币 + 稀有素材")
 
     @declared("enchant")
     @require_player()
@@ -3473,12 +3487,12 @@ class EconomyImpl(CommandBase):
             # v104R3 M11 P3-2：符文名带品质前缀，与背包掉落名（rune_item 构造）一致，
             # 例『史诗符文·残忍』（用户输入名或子串均能匹配）
             _rune_list = "、".join(
-                f"{C.QUALITY[r.get('quality', 'white')]['name']}符文·{r.get('name', k)}"
-                for k, r in C.RUNES.items()
+                f"{_b143.QUALITY[r.get('quality', 'white')]['name']}符文·{r.get('name', k)}"
+                for k, r in _cit.RUNES.items()
             )
             yield event.plain_result(
                 "附魔哪件装备？输入『附魔 <装备名> <属性/符文>』\n"
-                f"属性附魔：{'、'.join(r['label'] for r in C.ENCHANT_RECIPES.values())}\n"
+                f"属性附魔：{'、'.join(r['label'] for r in _b143.ENCHANT_RECIPES.values())}\n"
                 f"符文(MC 式，独特效果+等级)：{_rune_list}\n"
                 "例：『附魔 烈焰之刃 攻击』『附魔 烈焰之刃 史诗符文·残忍 II』\n"
                 + self._tip("enchant")
@@ -3540,13 +3554,13 @@ class EconomyImpl(CommandBase):
                 yield event.plain_result(f"背包里没有叫『{item_name}』的装备！(已装备的也可以直接『附魔 <装备名> <属性/符文>』)")
                 return
             d = target["data"]
-            slots = C.ENCHANT_SLOTS.get(d.get("quality", ""), 0)
+            slots = _b143.ENCHANT_SLOTS.get(d.get("quality", ""), 0)
             # v101.30/30b 附魔槽：Lv.7 史诗工艺（紫装 3 槽）/ Lv.8 传说工艺（橙装 3 槽）
             # v125.2 B3：槽位等级门数据下沉 prof_config.ENCHANT_SLOT_UNLOCK（原双处拷贝收敛单点读表）
-            if prof_lv >= C.ENCHANT_SLOT_UNLOCK.get(d.get("quality", ""), 99):
+            if prof_lv >= _clife.ENCHANT_SLOT_UNLOCK.get(d.get("quality", ""), 99):
                 slots += 1
             if slots <= 0:
-                yield event.plain_result(f"【{d['name']}】({C.QUALITY[d['quality']]['name']})没有附魔槽，只有蓝/紫/橙装备可以附魔！")
+                yield event.plain_result(f"【{d['name']}】({_b143.QUALITY[d['quality']]['name']})没有附魔槽，只有蓝/紫/橙装备可以附魔！")
                 return
             enchanted = d.get("enchant", [])
             if len(enchanted) >= slots:
@@ -3556,7 +3570,7 @@ class EconomyImpl(CommandBase):
             conflict_hit = None
             for en in enchanted:
                 if en.get("effect") and C.rune_conflict(rd["effect"], en["effect"]):
-                    conflict_hit = C.RUNE_EFFECT_NAMES.get(en["effect"], en["effect"])
+                    conflict_hit = _cit.RUNE_EFFECT_NAMES.get(en["effect"], en["effect"])
                     break
             if conflict_hit:
                 yield event.plain_result(f"符文冲突！『{rd['name']}』与『{conflict_hit}』效果相斥，不能共存于同一件装备～")
@@ -3567,14 +3581,14 @@ class EconomyImpl(CommandBase):
             # v101.28i 符文等级解锁：附魔 Lv.2 刻 lvl.1、Lv.4 刻 lvl.2、Lv.6 刻 lvl.3（附魔等级不再是摆设）
             # v125.2 B3：符文等级门数据下沉 prof_config.RUNE_LEVEL_GATE（原 {1:2, 2:4, 3:6} 硬编码）
             _rune_lv = rd.get("lvl", 1)
-            _need_lv = C.RUNE_LEVEL_GATE.get(_rune_lv, 2)
+            _need_lv = _clife.RUNE_LEVEL_GATE.get(_rune_lv, 2)
             if prof_lv < _need_lv:
                 yield event.plain_result(
                     f"『{rd['name']}』是 {_rune_lv} 级符文，需要附魔副业 Lv.{_need_lv}(你 Lv.{prof_lv})！多附魔练练手艺吧～"
                 )
                 return
             # v94 体力：附魔消耗 10 体力（v105 P1：移到此处——符文/装备/槽位/冲突/等级校验全过后才扣，防白扣）
-            _ok, _st = self._spend_stamina(group_id, qq_id, C.PROF_STAMINA_COST["enchant"], player, "附魔")
+            _ok, _st = self._spend_stamina(group_id, qq_id, _clife.PROF_STAMINA_COST["enchant"], player, "附魔")
             if not _ok:
                 yield event.plain_result(_st)
                 return
@@ -3610,12 +3624,12 @@ class EconomyImpl(CommandBase):
         # ---- 原属性附魔路径（v10） ----
         # 属性标签 → stat 键
         stat_key = None
-        for k, r in C.ENCHANT_RECIPES.items():
+        for k, r in _b143.ENCHANT_RECIPES.items():
             if r["label"] == stat_label:
                 stat_key = k
                 break
         if not stat_key:
-            yield event.plain_result(f"没有『{stat_label}』这个附魔属性！可用：{'、'.join(r['label'] for r in C.ENCHANT_RECIPES.values())}")
+            yield event.plain_result(f"没有『{stat_label}』这个附魔属性！可用：{'、'.join(r['label'] for r in _b143.ENCHANT_RECIPES.values())}")
             return
         items = db.get_inventory(group_id, qq_id)
         target = None
@@ -3635,19 +3649,19 @@ class EconomyImpl(CommandBase):
             yield event.plain_result(f"背包里没有叫『{item_name}』的装备！(已装备的也可以直接『附魔 <装备名> <属性/符文>』)")
             return
         d = target["data"]
-        slots = C.ENCHANT_SLOTS.get(d.get("quality", ""), 0)
+        slots = _b143.ENCHANT_SLOTS.get(d.get("quality", ""), 0)
         # v101.30/30b 附魔槽：Lv.7 史诗工艺（紫装 3 槽）/ Lv.8 传说工艺（橙装 3 槽）
         # v125.2 B3：槽位等级门数据下沉 prof_config.ENCHANT_SLOT_UNLOCK（原双处拷贝收敛单点读表）
-        if prof_lv >= C.ENCHANT_SLOT_UNLOCK.get(d.get("quality", ""), 99):
+        if prof_lv >= _clife.ENCHANT_SLOT_UNLOCK.get(d.get("quality", ""), 99):
             slots += 1
         if slots <= 0:
-            yield event.plain_result(f"【{d['name']}】({C.QUALITY[d['quality']]['name']})没有附魔槽，只有蓝/紫/橙装备可以附魔！")
+            yield event.plain_result(f"【{d['name']}】({_b143.QUALITY[d['quality']]['name']})没有附魔槽，只有蓝/紫/橙装备可以附魔！")
             return
         enchanted = d.get("enchant", [])
         if len(enchanted) >= slots:
             yield event.plain_result(f"【{d['name']}】的 {slots} 个附魔槽已满！先『出售』旧装备，或等新装备吧～")
             return
-        rec = C.ENCHANT_RECIPES[stat_key]
+        rec = _b143.ENCHANT_RECIPES[stat_key]
         # v105 M11 P1：同属性附魔去重——符文路径有去重(2041-2043)而属性路径没有，
         # 同武器『附魔 攻击』×3 可叠白板攻击 ×54%（atk ratio 0.18×3），实现不一致且明显失衡
         if stat_key in [e.get("stat") for e in enchanted]:
@@ -3665,7 +3679,7 @@ class EconomyImpl(CommandBase):
             yield event.plain_result(f"附魔需要 {rec['cost']} 金币，你只有 {player['gold']}。")
             return
         # v94 体力：附魔消耗 10 体力（v105 P1：移到此处——属性名/装备/槽位/材料/金币校验全过后才扣，防白扣）
-        _ok, _st = self._spend_stamina(group_id, qq_id, C.PROF_STAMINA_COST["enchant"], player, "附魔")
+        _ok, _st = self._spend_stamina(group_id, qq_id, _clife.PROF_STAMINA_COST["enchant"], player, "附魔")
         if not _ok:
             yield event.plain_result(_st)
             return
@@ -3680,7 +3694,7 @@ class EconomyImpl(CommandBase):
                 break
         db.update_player(group_id, qq_id, gold=player["gold"] - rec["cost"])
         # 附魔：5% 大成功 1.5x（v101.30 Lv.10 大师手艺 → 10%）
-        _crit = 0.10 if prof_lv >= 10 else C.ENCHANT_CRIT_CHANCE
+        _crit = 0.10 if prof_lv >= 10 else _b143.ENCHANT_CRIT_CHANCE
         big = random.random() < _crit
         v = C.enchant_value(d["slot"], d["lv"], stat_key, big=big)
         enchanted.append({"stat": stat_key, "value": v})
@@ -3694,7 +3708,7 @@ class EconomyImpl(CommandBase):
             # F1 P0-1：背包格原子写回（替代 remove+add 两步非原子替换）
             db.update_item_data(group_id, qq_id, target["key"], d)
         sn = {"atk": "攻击", "matk": "魔攻", "def": "防御", "mdef": "魔防", "hp": "生命", "spd": "速度", "crit": "暴击"}
-        val_str = f"+{int(v * 100)}%" if stat_key in C.PCT_STATS else f"+{v}"
+        val_str = f"+{int(v * 100)}%" if stat_key in _ccore.PCT_STATS else f"+{v}"
         big_str = "🌟 大成功！" if big else ""
         # 阶段九：附魔次数 + 成就判定
         db.bump_stats(group_id, qq_id, enchant_count=1)
@@ -3788,9 +3802,9 @@ class EconomyImpl(CommandBase):
                 "💡 也可以用『百科 <名称>』查材料掉落/地图怪物~"
             )
             return
-        locs = C.MONSTER_LOCS.get(raw)
+        locs = _cspace.MONSTER_LOCS.get(raw)
         if not locs:
-            fuzzy = [k for k in C.MONSTER_LOCS if raw in k][:5]
+            fuzzy = [k for k in _cspace.MONSTER_LOCS if raw in k][:5]
             if fuzzy:
                 yield event.plain_result(
                     f"👹 没有叫『{raw}』的怪物，你是不是想找：{' / '.join(fuzzy)}？\n发『怪物 <完整名字>』即可~"
@@ -3859,10 +3873,10 @@ class EconomyImpl(CommandBase):
             vis = tot = 0
             try:
                 _visited = db.get_visited_subareas(qq_id)
-                for _m in C.MAPS:
+                for _m in _cspace.MAPS:
                     if _m.get("type") in ("副本", "隐藏区域"):
                         continue
-                    for _sa in ((C.SUBAREAS or {}).get(_m["id"]) or []):
+                    for _sa in ((_cspace.SUBAREAS or {}).get(_m["id"]) or []):
                         tot += 1
                         if f"{_m['id']}:{_sa['id']}" in _visited:
                             vis += 1
@@ -3881,22 +3895,22 @@ class EconomyImpl(CommandBase):
             try:
                 _inv0 = {it["key"]: it["count"] for it in db.get_inventory(group_id, qq_id)}
                 _ach = {r["ach_key"] for r in db.get_achievements(group_id, qq_id)}
-                _fish_ach = {(_a.get("cond") or {}).get("key"): _a["id"] for _a in C.ACHIEVEMENTS
+                _fish_ach = {(_a.get("cond") or {}).get("key"): _a["id"] for _a in _cquest.ACHIEVEMENTS
                              if (_a.get("cond") or {}).get("type") == "collect_fish"}
-                fish_n = len([cf for cf in C.FISH_COLLECT
+                fish_n = len([cf for cf in _b143.FISH_COLLECT
                               if cf["id"] in _inv0 or _fish_ach.get(cf["id"]) in _ach])
             except Exception:
                 pass
             # 收藏品 defs（type=收藏 非鱼，去重；与 _collect_items_bestiary 同源）
             _defs = 0
             try:
-                _fish_names = {cf["name"] for cf in C.FISH_COLLECT}
+                _fish_names = {cf["name"] for cf in _b143.FISH_COLLECT}
                 _def_names = set()
-                for _k, _v in (C.MATERIALS or {}).items():
+                for _k, _v in (_cit.MATERIALS or {}).items():
                     if isinstance(_v, dict) and _v.get("type") == "收藏" \
                             and _v.get("name") not in _fish_names:
                         _def_names.add(_v.get("name", _k))
-                for _k, _v in (C.ITEMS or {}).items():
+                for _k, _v in (_cit.ITEMS or {}).items():
                     if isinstance(_v, dict) and _v.get("type") == "收藏" \
                             and _v.get("name") not in _fish_names:
                         _def_names.add(_v.get("name", _k))
@@ -3906,14 +3920,14 @@ class EconomyImpl(CommandBase):
             _kill = sum(r["kills"] for r in best)
             # v173.3 意见#125：宠物维度（pet_dex 孵化记录）
             _pet_dex = db.pet_dex_get(qq_id)
-            _pet_total = len(C.PET_POOL)
+            _pet_total = len(_clife.PET_POOL)
             lines = [
                 "📖 【冒险手册】",
                 "━━━━━━━━━━━━",
                 f"📍 足迹 {vis}/{tot} 子区域",
                 f"👹 怪物 {len(best)}/{best_total} 种 · 累计击杀 {_kill}",
                 f"🎒 物品 {poss} 种曾拥有 · 当前持有 {len(inv_keys)} 种",
-                f"🎣 收藏 鱼 {fish_n}/{len(C.FISH_COLLECT)} ｜ 收藏品 {0}/{_defs}",
+                f"🎣 收藏 鱼 {fish_n}/{len(_b143.FISH_COLLECT)} ｜ 收藏品 {0}/{_defs}",
                 f"🐾 宠物 {len(_pet_dex)}/{_pet_total} 种（孵过）",
                 "━━━━━━━━━━━━",
                 "💡 『足迹』区域 ｜ 『冒险手册 怪物/物品/收藏/垂钓/宠物』看明细",
@@ -3938,7 +3952,7 @@ class EconomyImpl(CommandBase):
             # 只统计城镇/野外（副本/隐藏不进足迹）
             by_reg = {}
             order = []
-            for _m in C.MAPS:
+            for _m in _cspace.MAPS:
                 if _m.get("type") in ("副本", "隐藏区域"):
                     continue
                 reg = _m.get("region") or "?"
@@ -3953,13 +3967,13 @@ class EconomyImpl(CommandBase):
             # 先算全量剔副本总数（分母固定，不因折叠变化）
             for reg0 in order:
                 for _m0 in by_reg[reg0]:
-                    ov_tot += len((C.SUBAREAS or {}).get(_m0["id"]) or [])
+                    ov_tot += len((_cspace.SUBAREAS or {}).get(_m0["id"]) or [])
             for reg in order:
                 maps = by_reg[reg]
                 reg_vis = reg_tot = 0
                 rows = []
                 for _m in maps:
-                    sas = (C.SUBAREAS or {}).get(_m["id"]) or []
+                    sas = (_cspace.SUBAREAS or {}).get(_m["id"]) or []
                     if not sas:
                         continue
                     mv = 0
@@ -4039,15 +4053,15 @@ class EconomyImpl(CommandBase):
             # 结构 {大类: [(display名, key, 是否曾拥有, 当前持有), ...]}
             cat_items = {}
             try:
-                for _k, _v in (C.MATERIALS or {}).items():
+                for _k, _v in (_cit.MATERIALS or {}).items():
                     _nm = _v.get("name") or _k
                     _cat = self._item_cat(_v)
                     if _cat is None:
                         continue
                     cat_items.setdefault(_cat, []).append(
                         (_nm, _k, _k in poss, inv_cnt.get(_k, 0)))
-                for _k, _v in (C.ITEMS or {}).items():
-                    if _k in (C.MATERIALS or {}):
+                for _k, _v in (_cit.ITEMS or {}).items():
+                    if _k in (_cit.MATERIALS or {}):
                         continue
                     if not isinstance(_v, dict):
                         continue
@@ -4205,18 +4219,18 @@ class EconomyImpl(CommandBase):
         except Exception:
             pass
         _fish_ach = {}
-        for _a in C.ACHIEVEMENTS:
+        for _a in _cquest.ACHIEVEMENTS:
             _c = _a.get("cond") or {}
             if _c.get("type") == "collect_fish":
                 _fish_ach[_c.get("key")] = _a["id"]
-        owned = [cf for cf in C.FISH_COLLECT
+        owned = [cf for cf in _b143.FISH_COLLECT
                  if cf["id"] in inv or _fish_ach.get(cf["id"]) in _ach_unlocked]
         owned_ids = {cf["id"] for cf in owned}
         _stats = db.get_stats(group_id, qq_id) or {}
         _total = int(_stats.get("catch_collect", 0) or 0)
         lines = ["", "🌈 【彩蛋收藏鱼】已收藏 {}/{} · 累计钓获 {} 次".format(
-            len(owned), len(C.FISH_COLLECT), _total), "━━━━━━━━━━━━"]
-        for cf in C.FISH_COLLECT:
+            len(owned), len(_b143.FISH_COLLECT), _total), "━━━━━━━━━━━━"]
+        for cf in _b143.FISH_COLLECT:
             if cf["id"] in owned_ids:
                 _cnt = f" ×{inv[cf['id']]}" if cf["id"] in inv else ""
                 lines.append(f"  ✅ {cf['name']}{_cnt}")
@@ -4237,9 +4251,9 @@ class EconomyImpl(CommandBase):
             dex = db.pet_dex_get(qq_id)
             cur_pet = db.pet_get(qq_id)
             cur_key = (cur_pet or {}).get("key") if isinstance(cur_pet, dict) else None
-            q_map = C.QUALITY
+            q_map = _b143.QUALITY
             rows = []
-            for pd in C.PET_POOL:
+            for pd in _clife.PET_POOL:
                 key = pd.get("key") or ""
                 owned = key in dex
                 q = q_map.get(pd.get("quality", ""), {})
@@ -4247,7 +4261,7 @@ class EconomyImpl(CommandBase):
                 rows.append((owned, f"{q.get('color', '')}{pd.get('icon', '')}{pd.get('name', key)}{q.get('name', '')} · {tag}"))
             # 已孵过排前
             rows.sort(key=lambda x: (not x[0]))
-            lines = [f"🐾 【宠物图鉴】({len(dex)}/{len(C.PET_POOL)})", "━━━━━━━━━━━━"]
+            lines = [f"🐾 【宠物图鉴】({len(dex)}/{len(_clife.PET_POOL)})", "━━━━━━━━━━━━"]
             lines += [f"  {r[1]}" for r in rows]
             lines.append("━━━━━━━━━━━━")
             lines.append("💡 宠物蛋『使用』孵化即收录；放生后仍留图鉴；当前跟随标🐾")
@@ -4262,14 +4276,14 @@ class EconomyImpl(CommandBase):
         只列定义全量，让玩家知道有哪些可收集）。"""
         inv = {it["data"].get("name", ""): it["count"] for it in db.get_inventory(group_id, qq_id)}
         _defs = {}
-        for _k, _v in C.MATERIALS_BY_NAME.items():
+        for _k, _v in _cit.MATERIALS_BY_NAME.items():
             if isinstance(_v, dict) and _v.get("type") == "收藏":
                 _defs[_v.get("name", _k)] = _v
-        for _k, _v in (C.ITEMS or {}).items():
+        for _k, _v in (_cit.ITEMS or {}).items():
             if isinstance(_v, dict) and _v.get("type") == "收藏":
                 _defs[_v.get("name", _k)] = _v
         # 彩蛋收藏鱼单独走『图鉴 垂钓』（3 条 FISH_COLLECT 在 MATERIALS 里也是 type=收藏，剔除）
-        _fish_names = {cf["name"] for cf in C.FISH_COLLECT}
+        _fish_names = {cf["name"] for cf in _b143.FISH_COLLECT}
         _defs = {n: v for n, v in _defs.items() if n not in _fish_names}
         owned = [n for n in _defs if n in inv]
         lines = [f"🏺 【收藏品图鉴】已收藏 {len(owned)}/{len(_defs)} 件", "━━━━━━━━━━━━"]
@@ -4345,7 +4359,7 @@ class EconomyImpl(CommandBase):
         # 「史诗符文·rn_brutal」；desc 模板 {v}/{v1} 未填值 → 效果行出现「攻击 {v}% 概率」
         # 原始占位符。查询按 中文名/效果key/掉落物品名 三路匹配）
         stone_name = None
-        _rune_by_key = {k: r for k, r in C.RUNES.items()}
+        _rune_by_key = {k: r for k, r in _cit.RUNES.items()}
         for _rk, _rr in _rune_by_key.items():
             # 匹配：中文名子串 / 内部 key 子串（玩家查 rn_brutal 时给详情而非报错）
             if _rr.get("name") and _rr["name"] in raw:
@@ -4358,21 +4372,21 @@ class EconomyImpl(CommandBase):
             if stone_name:
                 st = _rune_by_key[stone_name]
                 st_name = st.get("name", stone_name)
-                q_name = C.QUALITY[st["quality"]]["name"]
+                q_name = _b143.QUALITY[st["quality"]]["name"]
                 # 效果按等级 I/II/III 填 {v}/{v1}/{v2}（与掉落物品 rune_item 同源换算，等级 I 起步）
                 _mk_rune_item = _h('rune_item')  # ← from ..core.runes import rune_item as _mk_rune_item
                 _ri = _mk_rune_item(st["effect"], 1) or {}
                 st_desc = _ri.get("desc") or st["desc"]
                 # 冲突符文名（同 effect 池内互斥项，按冲突对把 effect → 中文名）
                 _conf_names = []
-                for _x, _y in C.RUNE_CONFLICTS:
+                for _x, _y in _cit.RUNE_CONFLICTS:
                     _pair = None
                     if _x == st["effect"]:
                         _pair = _y
                     elif _y == st["effect"]:
                         _pair = _x
                     if _pair is not None:
-                        _cn = C.RUNE_EFFECT_NAMES.get(_pair, _pair)
+                        _cn = _cit.RUNE_EFFECT_NAMES.get(_pair, _pair)
                         if _cn not in _conf_names:
                             _conf_names.append(_cn)
                 _conf_txt = "、".join(_conf_names) + "(不能共存)" if _conf_names else "无"
@@ -4390,11 +4404,11 @@ class EconomyImpl(CommandBase):
                 return
             # 无命中但带「符文」关键词 → 列出全部（中文名 + desc 填等级 I 数值，同 rune_item 换算）
             _rune_lines = []
-            for _rn, _rs in C.RUNES.items():
+            for _rn, _rs in _cit.RUNES.items():
                 _mk_rune_item2 = _h('rune_item')  # ← from ..core.runes import rune_item as _mk_rune_item2
                 _ri2 = _mk_rune_item2(_rs["effect"], 1) or {}
                 _rune_lines.append(
-                    f"  💎 {C.QUALITY[_rs['quality']]['name']}符文·{_rs.get('name', _rn)}"
+                    f"  💎 {_b143.QUALITY[_rs['quality']]['name']}符文·{_rs.get('name', _rn)}"
                     f"({_ri2.get('desc') or _rs['desc']})"
                 )
             yield event.plain_result("没找到这颗符文！可用：\n" + "\n".join(_rune_lines))
@@ -4402,18 +4416,18 @@ class EconomyImpl(CommandBase):
         # 2. 材料查询（含词条材料来源）
         # v101.29：MATERIALS 的 key 是 mat_ ID（v48 后），按中文名查必须用 MATERIALS_BY_NAME
         # （旧代码 raw in C.MATERIALS 恒 False → 所有材料百科查询全部失效）
-        mats_byname = C.MATERIALS_BY_NAME
+        mats_byname = _cit.MATERIALS_BY_NAME
         # 2.1 装备名册精确命中优先于材料模糊（v167.1：『百科 龙鳞头盔』应查装备，
         #    不被材料『龙鳞』的模糊子串抢先；材料精确 raw in mats_byname 仍最先）
-        _roster_exact = [r for r in C.EQUIP_ROSTER.values() if r.get("name") == raw]
+        _roster_exact = [r for r in _cit.EQUIP_ROSTER.values() if r.get("name") == raw]
         if raw not in mats_byname and _roster_exact:
             # 重名多件 → 逐件列出（同名牌不同品质/Lv 是合法数据）
             if len(_roster_exact) > 1:
                 elines = [f"⚔️ 找到 {len(_roster_exact)} 件同名装备『{raw}』：", "━━━━━━━━━━━━"]
                 _attr_cn0 = {"str": "力量", "agi": "敏捷", "int": "智力", "vit": "耐力"}
                 for _ri, _rx in enumerate(sorted(_roster_exact, key=lambda r: (r.get("lv", 0), r.get("quality", ""))), 1):
-                    _qx = C.QUALITY.get(_rx.get("quality", "white"), {})
-                    _sx = C.EQUIP_SLOTS.get(_rx.get("slot", ""), "?")
+                    _qx = _b143.QUALITY.get(_rx.get("quality", "white"), {})
+                    _sx = _b143.EQUIP_SLOTS.get(_rx.get("slot", ""), "?")
                     _reqx = _rx.get("req") or {}
                     _reqsx = "、".join(f"{_attr_cn0.get(k, k)}{v}" for k, v in _reqx.items()) if _reqx else "无需求"
                     elines.append(f"{_ri}. {_qx.get('color', '')}【{_rx['name']}】({_sx}·Lv.{_rx.get('lv', '?')}·{_qx.get('name', '')})｜{_reqsx}｜{_rx.get('source', '?')}")
@@ -4428,13 +4442,13 @@ class EconomyImpl(CommandBase):
             # 该件在 CRAFT_RECIPES 中是否有锻造配方（获取链提示用；rid 与生成路径同源）
             _rid_s = ""
             try:
-                _rids0 = C.EQUIP_ROSTER_BY_NAME.get(_r.get("name", "")) or [
-                    _k for _k, _rr in C.EQUIP_ROSTER.items() if _rr.get("name") == _r.get("name")]
+                _rids0 = _cit.EQUIP_ROSTER_BY_NAME.get(_r.get("name", "")) or [
+                    _k for _k, _rr in _cit.EQUIP_ROSTER.items() if _rr.get("name") == _r.get("name")]
                 _rid_s = _rids0[0] if _rids0 else ""
             except Exception:
                 _rid_s = ""
-            _q = C.QUALITY.get(_r.get("quality", "white"), {})
-            _slot_nm = C.EQUIP_SLOTS.get(_r.get("slot", ""), _r.get("slot", "?"))
+            _q = _b143.QUALITY.get(_r.get("quality", "white"), {})
+            _slot_nm = _b143.EQUIP_SLOTS.get(_r.get("slot", ""), _r.get("slot", "?"))
             _attr_cn = {"str": "力量", "agi": "敏捷", "int": "智力", "vit": "耐力"}
             _req = _r.get("req") or {}
             _req_s = "、".join(f"{_attr_cn.get(k, k)}{v}" for k, v in _req.items()) if _req else "无需求"
@@ -4445,14 +4459,14 @@ class EconomyImpl(CommandBase):
                 if _r.get("weapon_type"):
                     _wt_nm = C.display("weapon_types", _r["weapon_type"])
                     elines.append(f"类型：{_wt_nm}")
-                    _fl = C.WEAPON_FLAVOR.get(_r["weapon_type"], {}).get("desc", "")
+                    _fl = _b143.WEAPON_FLAVOR.get(_r["weapon_type"], {}).get("desc", "")
                     if _fl:
                         elines.append(f"✦ {_fl}")
                 _stat_lines = []
                 for _k, _v in (_eq.get("stats") or {}).items():
                     if _v:
                         _lb = _STAT_NAMES.get(_k, _k)
-                        _stat_lines.append(f"{_lb} + {int(_v * 100)}%" if _k in C.PCT_STATS else f"{_lb} + {_v}")
+                        _stat_lines.append(f"{_lb} + {int(_v * 100)}%" if _k in _ccore.PCT_STATS else f"{_lb} + {_v}")
                 if _stat_lines:
                     elines.append("属性：")
                     for _s in _stat_lines:
@@ -4462,9 +4476,9 @@ class EconomyImpl(CommandBase):
                     if isinstance(_af, dict):  # 旧结构兼容
                         _k, _v = _af.get("stat"), _af.get("value", 0)
                         _lb = _STAT_NAMES.get(_k, _k)
-                        _aff_lines.append(f"{_lb} + {int(_v * 100)}%" if _k in C.PCT_STATS else f"{_lb} + {_v}")
+                        _aff_lines.append(f"{_lb} + {int(_v * 100)}%" if _k in _ccore.PCT_STATS else f"{_lb} + {_v}")
                         continue
-                    _ai = C.AFFIXES.get(_af)
+                    _ai = _cit.AFFIXES.get(_af)
                     if _ai:
                         _aff_lines.append(f"{_ai.get('name', _af)}：{_ai.get('desc', '')}" if _ai.get("desc") else _ai.get("name", _af))
                 if _aff_lines:
@@ -4475,7 +4489,7 @@ class EconomyImpl(CommandBase):
                 if _feat:
                     elines.append(f"⭐ 词条特色：{'｜'.join(_feat)}")
                 if _eq.get("legendary"):
-                    _lg = C.LEGENDARY_EFFECTS.get(_eq["legendary"])
+                    _lg = _cit.LEGENDARY_EFFECTS.get(_eq["legendary"])
                     if _lg:
                         elines.append(f"✨ 专属·{_lg.get('name', '')}：{_lg.get('desc', '')}")
             if _r.get("series"):
@@ -4490,7 +4504,7 @@ class EconomyImpl(CommandBase):
             if _r.get("desc"):
                 elines.append(f"{_r['desc']}")
             # ---- 获取链提示：锻造可得 / 可作重锻源 / 可由重锻获得（v172）----
-            _has_craft = any((rec.get("roster_id") == _rid_s and _rid_s) for rec in C.CRAFT_RECIPES.values() if rec.get("roster_id"))
+            _has_craft = any((rec.get("roster_id") == _rid_s and _rid_s) for rec in _clife.CRAFT_RECIPES.values() if rec.get("roster_id"))
             if _has_craft:
                 elines.append("🔨 获取：锻造可得（铁匠铺『锻造』）")
             # 重锻配方两张表兜底（v172 改名进行时：REFINE_RECIPES / REFINE_EXCLUSIVE_RECIPES）
@@ -4498,14 +4512,14 @@ class EconomyImpl(CommandBase):
             _as_src = [(_src_k, _rc) for _src_k, _rc in _ref_tbl.items() if _src_k in _r.get("name", "")]
             _refine_hints = []
             for _src_k, _rc in _as_src:
-                _tgt_rec = C.CRAFT_RECIPES.get(_rc.get("target")) or {}
+                _tgt_rec = _clife.CRAFT_RECIPES.get(_rc.get("target")) or {}
                 _tgt_nm = _tgt_rec.get("name") or (C.display("recipes", _rc.get("target")) if _rc.get("target") else "?")
                 _refine_hints.append(f"可重锻为 {_tgt_nm}")
             if _refine_hints:
                 elines.append("🔀 " + "；".join(_refine_hints) + "（重锻继承一半强化/升级）")
             _as_tgt_names = []
             for _src_k, _rc in _ref_tbl.items():
-                _tn = C.CRAFT_RECIPES.get(_rc.get("target")) or {}
+                _tn = _clife.CRAFT_RECIPES.get(_rc.get("target")) or {}
                 if _tn.get("name") == _r.get("name") or (_tn.get("roster_id") == _rid_s and _rid_s):
                     _as_tgt_names.append(_src_k)
             if _as_tgt_names:
@@ -4519,13 +4533,13 @@ class EconomyImpl(CommandBase):
             # 装备名以 raw 开头。这里只防明显误伤：raw 以部位词结尾（头/甲/腿/靴/戒/链/杖/剑…）
             _equip_like = bool(re.search(r"(头盔|头|胸甲|甲|护腿|腿|战靴|靴子|靴|戒指|戒|项链|链|杖|剑|弓|锤|枪|匕首|拳套|袍|衣|披风|斗篷|帽)$", raw))
             if _equip_like:
-                _efuzzy = [r for r in C.EQUIP_ROSTER.values() if raw in r.get("name", "")][:8]
+                _efuzzy = [r for r in _cit.EQUIP_ROSTER.values() if raw in r.get("name", "")][:8]
                 if _efuzzy:
                     _attr_cn2 = {"str": "力量", "agi": "敏捷", "int": "智力", "vit": "耐力"}
                     flines = [f"❓ 找到 {len(_efuzzy)} 件装备名含『{raw}』，用全名查询（或『百科装备 <部位>』浏览）："]
                     for _i, _r in enumerate(_efuzzy, 1):
-                        _q = C.QUALITY.get(_r.get("quality", "white"), {})
-                        _snm = C.EQUIP_SLOTS.get(_r.get("slot", ""), "?")
+                        _q = _b143.QUALITY.get(_r.get("quality", "white"), {})
+                        _snm = _b143.EQUIP_SLOTS.get(_r.get("slot", ""), "?")
                         _req = _r.get("req") or {}
                         _reqs = "、".join(f"{_attr_cn2.get(k, k)}{v}" for k, v in _req.items()) if _req else "无需求"
                         flines.append(f"  {_i}. {_q.get('color', '')}【{_r['name']}】({_snm}·Lv.{_r.get('lv', '?')})｜{_reqs}")
@@ -4535,7 +4549,7 @@ class EconomyImpl(CommandBase):
             mat = mats_byname.get(raw) or next((m for k, m in mats_byname.items() if k in raw), None)
             if mat:
                 mat_key = mat["name"]
-                srcs = C.ENCY_MATERIAL_SOURCE.get(mat_key, [])
+                srcs = _cspace.ENCY_MATERIAL_SOURCE.get(mat_key, [])
                 lines = [f"🧪 【{mat_key}】", "━━━━━━━━━━━━"]
                 if mat.get("desc"):
                     lines.append(f"描述：{mat['desc']}")
@@ -4550,25 +4564,25 @@ class EconomyImpl(CommandBase):
                 yield event.plain_result("\n".join(l for l in lines if l))
                 return
         # 2.25 装备单查（v167.1）：按名册精确/模糊匹配——此前『百科 <装备名>』查不到装备
-        _roster_hits = [r for r in C.EQUIP_ROSTER.values() if r.get("name") == raw]
+        _roster_hits = [r for r in _cit.EQUIP_ROSTER.values() if r.get("name") == raw]
         if not _roster_hits:
-            _roster_hits = [r for r in C.EQUIP_ROSTER.values() if raw in r.get("name", "")][:8]
+            _roster_hits = [r for r in _cit.EQUIP_ROSTER.values() if raw in r.get("name", "")][:8]
         if _roster_hits:
             if len(_roster_hits) == 1:
                 _r = _roster_hits[0]
-                _slot_nm = C.EQUIP_SLOTS.get(_r.get("slot", ""), _r.get("slot", "?"))
+                _slot_nm = _b143.EQUIP_SLOTS.get(_r.get("slot", ""), _r.get("slot", "?"))
                 # v172 百科详情：名册只有基础字段，先按名册生成一件标准装备（确定性统计词条
                 # 池随机与真实生成同源）再渲染完整属性/词条/专属——与『物品详情』同源口径。
                 _eq = _roster_gen_equip(_r)
                 # 该件在 CRAFT_RECIPES 中是否有锻造配方（获取链提示用；rid 与生成路径同源）
                 _gen_rid = ""
                 try:
-                    _rids0 = C.EQUIP_ROSTER_BY_NAME.get(_r.get("name", "")) or [
-                        _k for _k, _rr in C.EQUIP_ROSTER.items() if _rr.get("name") == _r.get("name")]
+                    _rids0 = _cit.EQUIP_ROSTER_BY_NAME.get(_r.get("name", "")) or [
+                        _k for _k, _rr in _cit.EQUIP_ROSTER.items() if _rr.get("name") == _r.get("name")]
                     _gen_rid = _rids0[0] if _rids0 else ""
                 except Exception:
                     _gen_rid = ""
-                _q = C.QUALITY.get(_r.get("quality", "white"), {})
+                _q = _b143.QUALITY.get(_r.get("quality", "white"), {})
                 _attr_cn = {"str": "力量", "agi": "敏捷", "int": "智力", "vit": "耐力"}
                 _req = _r.get("req") or {}
                 _req_s = "、".join(f"{_attr_cn.get(k, k)}{v}" for k, v in _req.items()) if _req else "无需求"
@@ -4580,14 +4594,14 @@ class EconomyImpl(CommandBase):
                     if _r.get("weapon_type"):
                         _wt_nm = C.display("weapon_types", _r["weapon_type"])
                         lines.append(f"类型：{_wt_nm}")
-                        _fl = C.WEAPON_FLAVOR.get(_r["weapon_type"], {}).get("desc", "")
+                        _fl = _b143.WEAPON_FLAVOR.get(_r["weapon_type"], {}).get("desc", "")
                         if _fl:
                             lines.append(f"✦ {_fl}")
                     _stat_lines = []
                     for _k, _v in _st.items():
                         if _v:
                             _lb = _STAT_NAMES.get(_k, _k)
-                            _stat_lines.append(f"{_lb} + {int(_v * 100)}%" if _k in C.PCT_STATS else f"{_lb} + {_v}")
+                            _stat_lines.append(f"{_lb} + {int(_v * 100)}%" if _k in _ccore.PCT_STATS else f"{_lb} + {_v}")
                     if _stat_lines:
                         lines.append("属性：")
                         for _s in _stat_lines:
@@ -4597,9 +4611,9 @@ class EconomyImpl(CommandBase):
                         if isinstance(_af, dict):  # 旧结构兼容
                             _k, _v = _af.get("stat"), _af.get("value", 0)
                             _lb = _STAT_NAMES.get(_k, _k)
-                            _aff_lines.append(f"{_lb} + {int(_v * 100)}%" if _k in C.PCT_STATS else f"{_lb} + {_v}")
+                            _aff_lines.append(f"{_lb} + {int(_v * 100)}%" if _k in _ccore.PCT_STATS else f"{_lb} + {_v}")
                             continue
-                        _ai = C.AFFIXES.get(_af)
+                        _ai = _cit.AFFIXES.get(_af)
                         if _ai:
                             _aff_lines.append(f"{_ai.get('name', _af)}：{_ai.get('desc', '')}" if _ai.get("desc") else _ai.get("name", _af))
                     if _aff_lines:
@@ -4610,7 +4624,7 @@ class EconomyImpl(CommandBase):
                     if _feat:
                         lines.append(f"⭐ 词条特色：{'｜'.join(_feat)}")
                     if _eq.get("legendary"):
-                        _lg = C.LEGENDARY_EFFECTS.get(_eq["legendary"])
+                        _lg = _cit.LEGENDARY_EFFECTS.get(_eq["legendary"])
                         if _lg:
                             lines.append(f"✨ 专属·{_lg.get('name', '')}：{_lg.get('desc', '')}")
                 if _r.get("series"):
@@ -4628,7 +4642,7 @@ class EconomyImpl(CommandBase):
                 # 锻造配方按 名册名→rid 反查（名册条目本身无 rid 键，与生成路径同源）
                 _has_craft = any(
                     (rec.get("roster_id") == _gen_rid)
-                    for rec in C.CRAFT_RECIPES.values() if rec.get("roster_id"))
+                    for rec in _clife.CRAFT_RECIPES.values() if rec.get("roster_id"))
                 if _has_craft:
                     lines.append("🔨 获取：锻造可得（铁匠铺『锻造』）")
                 # 重锻配方两张表兜底（v172 改名进行时：REFINE_RECIPES / REFINE_EXCLUSIVE_RECIPES）
@@ -4636,7 +4650,7 @@ class EconomyImpl(CommandBase):
                 _as_src = [(_src_k, _rc) for _src_k, _rc in _ref_tbl.items() if _src_k in _r.get("name", "")]
                 _refine_hints = []
                 for _src_k, _rc in _as_src:
-                    _tgt_rec = C.CRAFT_RECIPES.get(_rc.get("target")) or {}
+                    _tgt_rec = _clife.CRAFT_RECIPES.get(_rc.get("target")) or {}
                     _tgt_nm = _tgt_rec.get("name") or (C.display("recipes", _rc.get("target")) if _rc.get("target") else "?")
                     _refine_hints.append(f"可重锻为 {_tgt_nm}")
                 if _refine_hints:
@@ -4644,7 +4658,7 @@ class EconomyImpl(CommandBase):
                 # 作为重锻目标（其他名册装备能重锻成它）：按目标装备名反向查
                 _as_tgt_names = []
                 for _src_k, _rc in _ref_tbl.items():
-                    _tn = C.CRAFT_RECIPES.get(_rc.get("target")) or {}
+                    _tn = _clife.CRAFT_RECIPES.get(_rc.get("target")) or {}
                     if _tn.get("name") == _r.get("name") or (_tn.get("roster_id") == _gen_rid and _gen_rid):
                         _as_tgt_names.append(_src_k)
                 if _as_tgt_names:
@@ -4655,15 +4669,15 @@ class EconomyImpl(CommandBase):
             # 模糊多个 → 列候选
             flines = [f"❓ 找到 {len(_roster_hits)} 件名字含『{raw}』的装备，用全名查询："]
             for _i, _r in enumerate(_roster_hits, 1):
-                _q = C.QUALITY.get(_r.get("quality", "white"), {})
-                _snm = C.EQUIP_SLOTS.get(_r.get("slot", ""), "?")
+                _q = _b143.QUALITY.get(_r.get("quality", "white"), {})
+                _snm = _b143.EQUIP_SLOTS.get(_r.get("slot", ""), "?")
                 flines.append(f"  {_i}. {_q.get('color', '')}【{_r['name']}】({_snm}·Lv.{_r.get('lv', '?')})")
             yield event.plain_result("\n".join(flines))
             return
         # 2.5 副本钥匙/信物查询（v134 意见#36：玩家打副本卡主线不知道钥匙哪掉 → 通用百科）
         #   双向：『百科 王陵钥匙』→ 哪个副本要它 + 获取途径；『百科 旧王陵』→ 副本要什么钥匙 + 途径。
         #   数据源 INSTANCES.key_item / key_source（20 本带钥匙副本），与副本列表引导同源。
-        _key_hits = [inst for inst in C.INSTANCES.values() if inst.get("key_item")]
+        _key_hits = [inst for inst in _cspace.INSTANCES.values() if inst.get("key_item")]
         _inst_by_key = {inst["key_item"]: inst for inst in _key_hits if inst.get("key_item")}
         if raw in _inst_by_key:
             inst = _inst_by_key[raw]
@@ -4676,7 +4690,7 @@ class EconomyImpl(CommandBase):
             return
         # v134.2 修复：副本名匹配覆盖全部副本（不只带钥匙的）——
         # 哥布林营地等无钥匙副本此前落进「地图查询」只显怪物，等级/人数/进入条件全漏
-        _inst_by_name = {inst["name"]: inst for inst in C.INSTANCES.values()}
+        _inst_by_name = {inst["name"]: inst for inst in _cspace.INSTANCES.values()}
         if raw in _inst_by_name:
             inst = _inst_by_name[raw]
             lines = [f"🏰 【{inst['name']}】", "━━━━━━━━━━━━"]
@@ -4698,9 +4712,9 @@ class EconomyImpl(CommandBase):
             yield event.plain_result("\n".join(lines))
             return
         # 3. 地图查询
-        if raw in C.ENCY_MAP_MONSTERS:
-            entries = C.ENCY_MAP_MONSTERS[raw]
-            mdef = next((m for m in C.MAPS if m["name"] == raw), None)
+        if raw in _cspace.ENCY_MAP_MONSTERS:
+            entries = _cspace.ENCY_MAP_MONSTERS[raw]
+            mdef = next((m for m in _cspace.MAPS if m["name"] == raw), None)
             lines = [f"🗺️ 【{raw}】", "━━━━━━━━━━━━"]
             if mdef and mdef.get("desc"):
                 lines.append(f"{mdef['desc']}")
@@ -4711,8 +4725,8 @@ class EconomyImpl(CommandBase):
             yield event.plain_result("\n".join(lines))
             return
         # 4. 怪物查询
-        if raw in C.ENCY_MONSTER_MAP:
-            locs = C.ENCY_MONSTER_MAP[raw]
+        if raw in _cspace.ENCY_MONSTER_MAP:
+            locs = _cspace.ENCY_MONSTER_MAP[raw]
             lines = [f"👹 【{raw}】", "━━━━━━━━━━━━"]
             lines.append("出现地点：")
             for mname, mtype in locs:
@@ -4720,7 +4734,7 @@ class EconomyImpl(CommandBase):
             yield event.plain_result("\n".join(lines))
             return
         # 5. 怪物名模糊匹配
-        fuzzy = [k for k in C.ENCY_MONSTER_MAP if raw in k][:5]
+        fuzzy = [k for k in _cspace.ENCY_MONSTER_MAP if raw in k][:5]
         if fuzzy:
             yield event.plain_result(f"你是不是要找：{'、'.join(fuzzy)}？输入『百科 <完整名>』查看～")
             return
@@ -4730,8 +4744,8 @@ class EconomyImpl(CommandBase):
     def _ency_browse_instances(self) -> str:
         """『百科 副本』：全部副本一览（含等级/人数/钥匙/主线章）——比『副本』指令的
         开本列表更全（那是按玩家等级上锁的玩法引导），这里是百科向完整编目。"""
-        lines = ["🏰 【副本百科】共 {} 个副本".format(len(C.INSTANCES)), "━━━━━━━━━━━━"]
-        for _i, (_kid, inst) in enumerate(C.INSTANCES.items(), 1):
+        lines = ["🏰 【副本百科】共 {} 个副本".format(len(_cspace.INSTANCES)), "━━━━━━━━━━━━"]
+        for _i, (_kid, inst) in enumerate(_cspace.INSTANCES.items(), 1):
             _lv = inst.get("lv", "?")
             _mn = inst.get("min_players", 1)
             _mx = inst.get("max_players", _mn)
@@ -4768,8 +4782,8 @@ class EconomyImpl(CommandBase):
         每件一行：品质色【名】(Lv.X) + 需求 + 来源。部位词=武器/头盔/胸甲/护腿/靴子/戒指/项链。
         v167.1：记录 last_list 状态，支持通用翻页快捷键 +/−/=（cmd='百科装备 <部位>'）。
         """
-        _roster = C.EQUIP_ROSTER
-        _slot_cn = C.EQUIP_SLOTS
+        _roster = _cit.EQUIP_ROSTER
+        _slot_cn = _b143.EQUIP_SLOTS
         # 尝试解析部位 + 页码
         _parts = (raw or "").split()
         _slot = None
@@ -4798,7 +4812,7 @@ class EconomyImpl(CommandBase):
             _nm = _slot_cn.get(_slot, _parts[1])
             lines = [f"⚔️ 【{_nm}】共 {len(_items)} 件 · 第{_page}/{_pages}页", "━━━━━━━━━━━━"]
             for _ri, _r in enumerate(_view, (_page - 1) * _per + 1):
-                _q = C.QUALITY.get(_r.get("quality", "white"), {})
+                _q = _b143.QUALITY.get(_r.get("quality", "white"), {})
                 _lv = _r.get("lv", "?")
                 _src = _r.get("source", "")
                 _req = _r.get("req") or {}
@@ -4821,14 +4835,14 @@ class EconomyImpl(CommandBase):
                 continue
             _nm = _slot_cn[_slot_k]
             _cnt = len(_items)
-            _qcnt = {q: 0 for q in C.QUALITY_ORDER}
+            _qcnt = {q: 0 for q in _b143.QUALITY_ORDER}
             for _r in _items:
                 _q = _r.get("quality")
                 if _q in _qcnt:
                     _qcnt[_q] += 1
-            _qb = " ".join("{}{}".format(C.QUALITY[q]["color"], _qcnt[q]) for q in C.QUALITY_ORDER if _qcnt[q])
+            _qb = " ".join("{}{}".format(_b143.QUALITY[q]["color"], _qcnt[q]) for q in _b143.QUALITY_ORDER if _qcnt[q])
             _reps = []
-            for _q in C.QUALITY_ORDER:
+            for _q in _b143.QUALITY_ORDER:
                 _pool = sorted((r for r in _items if r.get("quality") == _q), key=lambda r: -r.get("lv", 0))
                 if not _pool:
                     continue
@@ -4837,7 +4851,7 @@ class EconomyImpl(CommandBase):
                 _src_icon = {"图纸": "📜", "锻造": "🔨", "商店": "💰", "boss": "👹",
                              "副本Boss": "👹", "精英": "⚡", "精英专属": "⚡",
                              "legend": "🌟", "任务": "📕", "支线": "📕", "宝藏": "🗝️"}.get(_src, "·")
-                _reps.append("{}{} {}(Lv.{})".format(_src_icon, C.QUALITY[_q]["name"], _top["name"], _top.get("lv", "?")))
+                _reps.append("{}{} {}(Lv.{})".format(_src_icon, _b143.QUALITY[_q]["name"], _top["name"], _top.get("lv", "?")))
             lines.append("")
             lines.append(f"◈ {_nm} ×{_cnt}　{_qb}")
             lines.append("　代表：" + "　".join(_reps))
@@ -4850,7 +4864,7 @@ class EconomyImpl(CommandBase):
         """『百科 材料』：材料按分类（type 字段）分组摘要——每类数量 + 代表性材料名。
         新材料（v167 等）只要进 MATERIALS 即自动带出，无硬编码名单。"""
         _by_type = {}
-        for _k, _m in C.MATERIALS.items():
+        for _k, _m in _cit.MATERIALS.items():
             _t = _m.get("type") or "杂物"
             _by_type.setdefault(_t, []).append(_m.get("name", _k))
         # 显示顺序：craft 原料大分类在前，任务/杂物/收藏垫底；未收录分类自动追加
@@ -4860,7 +4874,7 @@ class EconomyImpl(CommandBase):
         _order = [t for t in _order if t in _by_type]
         _rest = sorted(t for t in _by_type if t not in _order)
         _order += _rest
-        lines = ["🧪 【材料百科】共 {} 种材料 · 按分类速览".format(len(C.MATERIALS)), "━━━━━━━━━━━━"]
+        lines = ["🧪 【材料百科】共 {} 种材料 · 按分类速览".format(len(_cit.MATERIALS)), "━━━━━━━━━━━━"]
         for _t in _order:
             _names = _by_type[_t]
             _cnt = len(_names)
@@ -4869,7 +4883,7 @@ class EconomyImpl(CommandBase):
                 lines.append(f"{_t} ×{_cnt}　{'、'.join(_names)}")
                 continue
             # 大分类：数量 + 每类代表性 3 个（价格降序即稀有度观感，稳定且不随插入序漂移）
-            _rep = sorted(_names, key=lambda n: -int(C.MATERIALS_BY_NAME[n].get("price", 0)))[:3]
+            _rep = sorted(_names, key=lambda n: -int(_cit.MATERIALS_BY_NAME[n].get("price", 0)))[:3]
             lines.append(f"{_t} ×{_cnt}　例：{'、'.join(_rep)}")
         lines.append("━━━━━━━━━━━━")
         lines.append("💡 输入『百科 <材料名>』看掉落来源；『图鉴』看收藏品")
@@ -4879,10 +4893,10 @@ class EconomyImpl(CommandBase):
         """『百科 世界』：全大陆区域总览——按大区(region)分组，
         每组：等级范围 + 城镇列表 + 代表野外/副本。数据读 MAPS，无硬编码。"""
         _by_reg = {}
-        for _m in C.MAPS:
+        for _m in _cspace.MAPS:
             _reg = _m.get("region") or "未划分区域"
             _by_reg.setdefault(_reg, []).append(_m)
-        _total = len(C.MAPS)
+        _total = len(_cspace.MAPS)
         lines = [f"🗺️ 【奥兰迪亚大陆】{len(_by_reg)} 大区域 · {_total} 地点",
                  "━━━━━━━━━━━━"]
         # 大区排序：按区内最低等级（新手区在前，符合探索顺序）
@@ -4919,13 +4933,13 @@ class EconomyImpl(CommandBase):
     @staticmethod
     def _affix_q_label(ak: str) -> str:
         """词条适用品质标签：qualities 显式字段 > 池归属推导（blue/purple/orange/legendary 稀有度）。"""
-        _av = C.AFFIXES.get(ak) or {}
+        _av = _cit.AFFIXES.get(ak) or {}
         _qs = _av.get("qualities")
         if _qs:
             _qn = {"blue": "稀有", "purple": "史诗", "orange": "传说"}.get(_qs[0], str(_qs[0]))
             return f"{_qn}+" if len(_qs) > 1 else _qn
         for _pool_q in ("blue", "purple", "orange"):
-            if ak in C.AFFIX_POOL_BY_QUALITY.get(_pool_q, []):
+            if ak in _b143.AFFIX_POOL_BY_QUALITY.get(_pool_q, []):
                 return {"blue": "稀有", "purple": "史诗", "orange": "传说"}.get(_pool_q, _pool_q)
         return "传说"
 
@@ -4940,7 +4954,7 @@ class EconomyImpl(CommandBase):
         # ---- 单个词条查询：名称/ID/关键词 命中（精确名 > 子串）----
         _hits = []
         if _q_word:
-            for _ak, _av in C.AFFIXES.items():
+            for _ak, _av in _cit.AFFIXES.items():
                 _nm = _av.get("name", "")
                 if _q_word == _nm or _ak == _q_word or (_q_word and (_q_word in _nm or _q_word in _ak or _q_word in (_av.get("desc", "") or ""))):
                     _hits.append((_ak, _av))
@@ -4950,7 +4964,7 @@ class EconomyImpl(CommandBase):
                 _hits = _exact
             if _hits:
                 if len(_hits) > 1:
-                    _lk = [f"  · {C.AFFIXES[h[0]].get('name', h[0])}（{self._affix_q_label(h[0])}）" for h in _hits[:10]]
+                    _lk = [f"  · {_cit.AFFIXES[h[0]].get('name', h[0])}（{self._affix_q_label(h[0])}）" for h in _hits[:10]]
                     return "🔍 词条『{}』命中 {} 个：\n{}\n━━━━━━━━━━━━\n💡 用完整词条名查单个（如『百科 词条 破甲』）".format(
                         _q_word, len(_hits), "\n".join(_lk))
                 _ak, _av = _hits[0]
@@ -4976,14 +4990,14 @@ class EconomyImpl(CommandBase):
                 lines.append(f"💡 出现在装备『✨ 词条』栏；『百科 词条』看全部")
                 return "\n".join(lines)
         # ---- 全量分页 ----
-        _items = sorted(C.AFFIXES.items(), key=lambda kv: (0 if kv[1].get("kind") == "attack" else 1, kv[1].get("name", kv[0])))
+        _items = sorted(_cit.AFFIXES.items(), key=lambda kv: (0 if kv[1].get("kind") == "attack" else 1, kv[1].get("name", kv[0])))
         _per = 12
         _pages = (len(_items) + _per - 1) // _per
         _page = 1
         if _q_word and _q_word.isdigit():
             _page = max(1, min(int(_q_word), _pages))
         _view = _items[(_page - 1) * _per: _page * _per]
-        lines = [f"✨ 【词条百科】共 {len(C.AFFIXES)} 个 · 第{_page}/{_pages}页", "━━━━━━━━━━━━"]
+        lines = [f"✨ 【词条百科】共 {len(_cit.AFFIXES)} 个 · 第{_page}/{_pages}页", "━━━━━━━━━━━━"]
         for _i, (_ak2, _av2) in enumerate(_view, (_page - 1) * _per + 1):
             _qcn = self._affix_q_label(_ak2)
             _desc = _av2.get("desc", "")
@@ -5008,17 +5022,17 @@ class EconomyImpl(CommandBase):
         # ---- 单阶查询：阶名关键词命中（GEM_TIER_NAMES / GEM_TIERS.name）----
         if _q_word:
             _hit_t = None
-            for _t, _tn in C.GEM_TIER_NAMES.items():
-                if _q_word in _tn or (_q_word in (C.GEM_TIERS.get(_t, {}).get("name", ""))):
+            for _t, _tn in _b143.GEM_TIER_NAMES.items():
+                if _q_word in _tn or (_q_word in (_b143.GEM_TIERS.get(_t, {}).get("name", ""))):
                     _hit_t = _t
                     break
             if _hit_t is not None:
                 return self._gem_tier_detail(_hit_t)
         # ---- 全量 10 阶 ----
-        _lines = [f"💎 【幸运宝石百科】共 {len(C.GEM_TIERS)} 阶 · 碎裂 → 神话", "━━━━━━━━━━━━"]
-        for _t in sorted(C.GEM_TIERS):
-            _g = C.GEM_TIERS[_t]
-            _nm = C.GEM_TIER_NAMES.get(_t, str(_t))
+        _lines = [f"💎 【幸运宝石百科】共 {len(_b143.GEM_TIERS)} 阶 · 碎裂 → 神话", "━━━━━━━━━━━━"]
+        for _t in sorted(_b143.GEM_TIERS):
+            _g = _b143.GEM_TIERS[_t]
+            _nm = _b143.GEM_TIER_NAMES.get(_t, str(_t))
             _pct = int(_g.get("mult", 0) * 100)
             _lines.append(f"{_t:>2}. {_nm}：随机属性 ×{_pct}%")
         _lines.append("")
@@ -5030,20 +5044,20 @@ class EconomyImpl(CommandBase):
 
     def _gem_tier_detail(self, tier: int) -> str:
         """幸运宝石单阶详情（wiki 展示口径）"""
-        _g = C.GEM_TIERS.get(tier) or {}
-        _nm = C.GEM_TIER_NAMES.get(tier, str(tier))
+        _g = _b143.GEM_TIERS.get(tier) or {}
+        _nm = _b143.GEM_TIER_NAMES.get(tier, str(tier))
         _pct = int(_g.get("mult", 0) * 100)
         _lines = [f"💎 【{_nm}】", "━━━━━━━━━━━━"]
         _lines.append(f"阶位：{tier}/10 ｜ 效果：镶嵌后随机属性 ×{_pct}%")
         _up = tier + 1
-        _up_nm = C.GEM_TIER_NAMES.get(_up)
+        _up_nm = _b143.GEM_TIER_NAMES.get(_up)
         if _up_nm:
             _lines.append(f"合成：3 颗『{_nm}』→ 1 颗『{_up_nm}』（『原石合成』）")
         else:
             _lines.append("已是最高阶，无法再合成！")
         _lines.append("获取：打怪概率掉落（普通怪碎裂-无瑕 · 精英更高 · Boss 可出传说/神话）")
         if tier >= 8:
-            _lines.append(f"🌟 传说级特效：{' / '.join(C.GEM_LEGENDARY_EFFECTS)}（仅传说阶触发）")
+            _lines.append(f"🌟 传说级特效：{' / '.join(_b143.GEM_LEGENDARY_EFFECTS)}（仅传说阶触发）")
         _lines.append("")
         _lines.append(f"💡 『镶嵌 <装备名> <幸运宝石>』塞进装备孔位｜『百科 宝石』看全部 10 阶")
         return "\n".join(_lines)
@@ -5056,14 +5070,14 @@ class EconomyImpl(CommandBase):
         _mk_rune = _h('rune_item')  # ← from ..core.runes import rune_item as _mk_rune
         _parts = (raw or "").split()
         _page = int(_parts[1]) if len(_parts) >= 2 and _parts[1].isdigit() else 1
-        _items = sorted(C.RUNES.items(), key=lambda kv: kv[1].get("name", kv[0]))
+        _items = sorted(_cit.RUNES.items(), key=lambda kv: kv[1].get("name", kv[0]))
         _per = 12
         _pages = max(1, (len(_items) + _per - 1) // _per)
         _page = max(1, min(_page, _pages))
         _view = _items[(_page - 1) * _per: _page * _per]
-        lines = [f"💎 【符文百科】共 {len(C.RUNES)} 个 · 第{_page}/{_pages}页", "━━━━━━━━━━━━"]
+        lines = [f"💎 【符文百科】共 {len(_cit.RUNES)} 个 · 第{_page}/{_pages}页", "━━━━━━━━━━━━"]
         for _i, (_rk, _rs) in enumerate(_view, (_page - 1) * _per + 1):
-            _q = C.QUALITY.get(_rs.get("quality", ""), {})
+            _q = _b143.QUALITY.get(_rs.get("quality", ""), {})
             _ri = _mk_rune(_rs.get("effect"), 1) or {}
             _d = _ri.get("desc") or _rs.get("desc", "")
             if len(_d) > 30:
@@ -5090,7 +5104,7 @@ class EconomyImpl(CommandBase):
             "visited_maps": self._visited_maps,
         })
         earned = []
-        for t in C.TITLES:
+        for t in _cquest.TITLES:
             tid = t["id"]
             fn = CONDITIONS.get(tid)
             if fn is not None:
@@ -5144,7 +5158,7 @@ class EconomyImpl(CommandBase):
             yield event.plain_result("🏅 已卸下称号。")
             return
         earned = self._earned_titles(group_id, qq_id, player)
-        got = [C.TITLES[i]["name"] for i in range(len(C.TITLES)) if earned[i]]
+        got = [_cquest.TITLES[i]["name"] for i in range(len(_cquest.TITLES)) if earned[i]]
         # 阶段九：成就称号合并（14 章：达成成就自动获得称号）
         try:
             got += C.achievement_titles(qq_id)
@@ -5177,7 +5191,7 @@ class EconomyImpl(CommandBase):
             yield event.plain_result("格式：『称号 装备 <称号名>』～")
             return
         earned = self._earned_titles(group_id, qq_id, player)
-        got = [C.TITLES[i]["name"] for i in range(len(C.TITLES)) if earned[i]]
+        got = [_cquest.TITLES[i]["name"] for i in range(len(_cquest.TITLES)) if earned[i]]
         try:
             got += C.achievement_titles(qq_id)
         except Exception:
@@ -5206,13 +5220,13 @@ class EconomyImpl(CommandBase):
         text = (text or "").strip()
         # 带空格形式：『材料』『材料 2』『2』
         for p in text.split():
-            if p in C.BAG_FILTER_TYPES:
+            if p in _clife.BAG_FILTER_TYPES:
                 category = p
             elif p.isdigit():
                 page = int(p)
         # 无空格形式：『材料2』『2』
         if category is None:
-            for t in C.BAG_FILTER_TYPES:
+            for t in _clife.BAG_FILTER_TYPES:
                 if text.startswith(t):
                     category = t
                     rest = text[len(t):].strip()
@@ -5296,9 +5310,9 @@ class EconomyImpl(CommandBase):
             if _item_kind_type(d.get("type")) == "材料":
                 # v101.25e 材料品质色 + 类型标签（鱼鱼拍板：材料也要品质；v101.25f 去掉"可出售"尾巴）
                 # v126.3：type 为配置细分值（兽材/矿石/…）→ 按大类归并后命中本分支
-                _mm = C.MATERIALS_BY_NAME.get(d["name"])
-                if _mm and _mm.get("quality") in C.QUALITY:
-                    lines.append(f"{i:>2}. {C.QUALITY[_mm['quality']]['color']}{d['name']} ×{it['count']} ({_mm.get('type', '杂物')})")
+                _mm = _cit.MATERIALS_BY_NAME.get(d["name"])
+                if _mm and _mm.get("quality") in _b143.QUALITY:
+                    lines.append(f"{i:>2}. {_b143.QUALITY[_mm['quality']]['color']}{d['name']} ×{it['count']} ({_mm.get('type', '杂物')})")
                 else:
                     lines.append(f"{i:>2}. {d['name']} ×{it['count']} (材料)")
             elif d.get("type") == "图纸":
@@ -5307,17 +5321,17 @@ class EconomyImpl(CommandBase):
                 # 小白实测珍珠项链图纸与行为矛盾），改为动作指引
                 lines.append(f"{i:>2}. 📜 {d['name']} ×{it['count']} (图纸：学习后到铁匠铺锻造)")
             elif d.get("slot"):
-                q = C.QUALITY[d["quality"]]
+                q = _b143.QUALITY[d["quality"]]
                 enh = d.get("enhance", 0)
                 enh_str = f" +{enh}" if enh > 0 else ""
-                lines.append(f"{i:>2}. {q['color']}【{d['name']}{enh_str}】({C.EQUIP_SLOTS[d['slot']]}) Lv.{d['lv']}")
+                lines.append(f"{i:>2}. {q['color']}【{d['name']}{enh_str}】({_b143.EQUIP_SLOTS[d['slot']]}) Lv.{d['lv']}")
             else:
                 # v101.27：符文等带品质字段的物品也显示品质 emoji——v101.25i6 品质统一后
                 # 新符文 quality=blue/purple/orange，但存量背包符文是旧格式中文(稀有/史诗/传说)
                 _q = d.get("quality")
                 _q = {"稀有": "blue", "史诗": "purple", "传说": "orange"}.get(_q, _q)
-                if _q and _q in C.QUALITY and _q != "white":
-                    lines.append(f"{i:>2}. {C.QUALITY[_q]['color']}{d['name']} ×{it['count']}")
+                if _q and _q in _b143.QUALITY and _q != "white":
+                    lines.append(f"{i:>2}. {_b143.QUALITY[_q]['color']}{d['name']} ×{it['count']}")
                 else:
                     lines.append(f"{i:>2}. {d['name']} ×{it['count']}")
         lines.append("━━━━━━━━━━━━")  # v127.2 提示区上方分隔
@@ -5395,7 +5409,7 @@ class EconomyImpl(CommandBase):
             if _lst_cmd.startswith("百科装备 "):
                 _parts_cmd = _lst_cmd.split()
                 if len(_parts_cmd) >= 2:
-                    _slot_map_c = {v: k for k, v in C.EQUIP_SLOTS.items()}
+                    _slot_map_c = {v: k for k, v in _b143.EQUIP_SLOTS.items()}
                     _slot_map_c.update({"武器": "weapon", "头盔": "helm", "帽子": "helm", "头": "helm",
                                         "胸甲": "armor", "护甲": "armor", "衣服": "armor", "衣": "armor",
                                         "护腿": "legs", "腿": "legs", "靴子": "boots", "鞋": "boots", "靴": "boots",
@@ -5403,15 +5417,15 @@ class EconomyImpl(CommandBase):
                     _slot_c = _slot_map_c.get(_parts_cmd[1])
                     _attr_cn3 = {"str": "力量", "agi": "敏捷", "int": "智力", "vit": "耐力"}
                     if _slot_c:
-                        _items_c = sorted((r for r in C.EQUIP_ROSTER.values() if r.get("slot") == _slot_c),
+                        _items_c = sorted((r for r in _cit.EQUIP_ROSTER.values() if r.get("slot") == _slot_c),
                                           key=lambda r: (r.get("lv", 0), r.get("name", "")))
                         _idx_c = int(item_name)
                         # 行号=全局序号（列表每页行号连续 1..N），直接定位
                         _pos = _idx_c - 1
                         if 0 <= _pos < len(_items_c):
                             _r = _items_c[_pos]
-                            _q = C.QUALITY.get(_r.get("quality", "white"), {})
-                            _snm = C.EQUIP_SLOTS.get(_r.get("slot", ""), "?")
+                            _q = _b143.QUALITY.get(_r.get("quality", "white"), {})
+                            _snm = _b143.EQUIP_SLOTS.get(_r.get("slot", ""), "?")
                             _req = _r.get("req") or {}
                             _reqs = "、".join(f"{_attr_cn3.get(k, k)}{v}" for k, v in _req.items()) if _req else "无需求"
                             el = [f"⚔️ {_q.get('color', '')}【{_r['name']}】({_snm}·Lv.{_r.get('lv', '?')}·{_q.get('name', _r.get('quality'))})",
@@ -5441,7 +5455,7 @@ class EconomyImpl(CommandBase):
             # 原实现部位词检查在背包查找之后，注释说"优先"实际不优先（背包有同名项链先背包命中）。
             # 玩家意图：部位词=看身上装备；背包同名物品用『背包』列表序号或全名查。
             if not item_name.isdigit():
-                _slot_map0 = {v: k for k, v in C.EQUIP_SLOTS.items()}
+                _slot_map0 = {v: k for k, v in _b143.EQUIP_SLOTS.items()}
                 _slot_map0.update({"武器": "weapon", "头盔": "helm", "帽子": "helm", "头": "helm",
                                    "胸甲": "armor", "护甲": "armor", "衣服": "armor", "衣": "armor",
                                    "护腿": "legs", "腿": "legs", "靴子": "boots", "鞋": "boots", "靴": "boots",
@@ -5453,7 +5467,7 @@ class EconomyImpl(CommandBase):
                         target = {"data": _worn0}
                         equipped = True
                     else:
-                        yield event.plain_result(f"{C.EQUIP_SLOTS[_slot_key0]}部位未穿戴装备！『我的装备』查看穿戴情况～")
+                        yield event.plain_result(f"{_b143.EQUIP_SLOTS[_slot_key0]}部位未穿戴装备！『我的装备』查看穿戴情况～")
                         return
             if not target:
                 # v101.28l #420：名称查找装备优先于图纸（同名图纸不再抢占命中）
@@ -5477,17 +5491,17 @@ class EconomyImpl(CommandBase):
                     break
         # v169.x 意见#88：背包/已装备都没有 → 装备名册按名查（未拥有装备图鉴预览）
         if not target and not item_name.isdigit():
-            _rids = C.EQUIP_ROSTER_BY_NAME.get(item_name, [])
+            _rids = _cit.EQUIP_ROSTER_BY_NAME.get(item_name, [])
             if not _rids:
-                _hit_r = [r for r in C.EQUIP_ROSTER.values() if item_name in r.get("name", "")]
+                _hit_r = [r for r in _cit.EQUIP_ROSTER.values() if item_name in r.get("name", "")]
                 if len(_hit_r) == 1:
                     yield event.plain_result(_render_encyclopedia_equip(_hit_r[0]))
                     return
                 if len(_hit_r) > 1:
                     fl = [f"❓ 找到 {len(_hit_r)} 件名字含『{item_name}』的装备（未拥有），用全名查询："]
                     for _i, _r in enumerate(_hit_r[:8], 1):
-                        _q = C.QUALITY.get(_r.get("quality", "white"), {})
-                        _snm = C.EQUIP_SLOTS.get(_r.get("slot", ""), "?")
+                        _q = _b143.QUALITY.get(_r.get("quality", "white"), {})
+                        _snm = _b143.EQUIP_SLOTS.get(_r.get("slot", ""), "?")
                         fl.append(f"  {_i}. {_q.get('color', '')}【{_r['name']}】({_snm}·Lv.{_r.get('lv', '?')})")
                     fl.append("💡 『百科装备 <部位>』按部位浏览全部装备")
                     yield event.plain_result("\n".join(fl))
@@ -5495,7 +5509,7 @@ class EconomyImpl(CommandBase):
             else:
                 _rids = _rids[:1]
             if _rids:
-                yield event.plain_result(_render_encyclopedia_equip(C.EQUIP_ROSTER[_rids[0]]))
+                yield event.plain_result(_render_encyclopedia_equip(_cit.EQUIP_ROSTER[_rids[0]]))
                 return
         if not target:
             yield event.plain_result(f"背包里没有叫『{item_name}』的物品！『背包』查看全部～")
@@ -5515,22 +5529,22 @@ class EconomyImpl(CommandBase):
         eq = player.get("equipment") or {}
         lines = ["⚔️ 【当前穿戴】", "━━━━━━━━━━━━"]
         worn = 0
-        for slot in C.EQUIP_SLOTS:
+        for slot in _b143.EQUIP_SLOTS:
             item = eq.get(slot)
             if not item:
-                lines.append(f"  {C.EQUIP_SLOTS[slot]}：未穿戴")
+                lines.append(f"  {_b143.EQUIP_SLOTS[slot]}：未穿戴")
                 continue
             worn += 1
-            q = C.QUALITY.get(item.get("quality", ""), {})
+            q = _b143.QUALITY.get(item.get("quality", ""), {})
             enh = item.get("enhance", 0)
             enh_str = f" +{enh}" if enh > 0 else ""
-            lines.append(f"  {C.EQUIP_SLOTS[slot]}：{q.get('color', '')}【{item.get('name', '?')}{enh_str}】{q.get('name', '')}")
+            lines.append(f"  {_b143.EQUIP_SLOTS[slot]}：{q.get('color', '')}【{item.get('name', '?')}{enh_str}】{q.get('name', '')}")
             st = item.get("stats") or {}
             _stat_names = _STAT_NAMES
             for k, v in st.items():
                 if v:
                     label = _stat_names.get(k, k)
-                    if k in C.PCT_STATS:
+                    if k in _ccore.PCT_STATS:
                         lines.append(f"      · {label} + {int(v * 100)}%")
                     else:
                         lines.append(f"      · {label} + {v}")
@@ -5538,13 +5552,13 @@ class EconomyImpl(CommandBase):
                 if isinstance(af, dict):
                     k, v = af.get("stat"), af.get("value", 0)
                     label = _stat_names.get(k, k)
-                    lines.append(f"      · {label} + {int(v * 100)}%" if k in C.PCT_STATS else f"      · {label} + {v}")
+                    lines.append(f"      · {label} + {int(v * 100)}%" if k in _ccore.PCT_STATS else f"      · {label} + {v}")
                     continue
-                info = C.AFFIXES.get(af)
+                info = _cit.AFFIXES.get(af)
                 if info:
                     lines.append(f"      · {info.get('name', af)}：{info.get('desc', '')}" if info.get("desc") else f"      · {info.get('name', af)}")
         lines.append("━━━━━━━━━━━━")
-        lines.append(f"已穿戴 {worn}/{len(C.EQUIP_SLOTS)} 件 ｜ 『装备 <序号>』换装 ｜ 『卸下 <部位>』脱下 ｜ 『物品详情 <名称>』看详情")
+        lines.append(f"已穿戴 {worn}/{len(_b143.EQUIP_SLOTS)} 件 ｜ 『装备 <序号>』换装 ｜ 『卸下 <部位>』脱下 ｜ 『物品详情 <名称>』看详情")
         return "\n".join(lines)
 
     def _req_check(self, player: dict, d: dict):
@@ -5654,10 +5668,10 @@ class EconomyImpl(CommandBase):
                 lines = [f"❓ 找到 {len(matches)} 件『{name_part}』，用序号指定穿哪件："]
                 for i, it in enumerate(matches, 1):
                     d = it["data"]
-                    q = C.QUALITY[d["quality"]]
+                    q = _b143.QUALITY[d["quality"]]
                     enh = d.get("enhance", 0)
                     enh_str = f" +{enh}" if enh > 0 else ""
-                    lines.append(f"  {i}. {q['color']}【{d['name']}{enh_str}】({C.EQUIP_SLOTS[d['slot']]}) Lv.{d['lv']}")
+                    lines.append(f"  {i}. {q['color']}【{d['name']}{enh_str}】({_b143.EQUIP_SLOTS[d['slot']]}) Lv.{d['lv']}")
                 lines.append(self._tip("equip"))
                 yield event.plain_result("\n".join(lines))
                 return
@@ -5692,7 +5706,7 @@ class EconomyImpl(CommandBase):
         equipment[d["slot"]] = d
         db.update_player(group_id, qq_id, equipment=equipment)
         db.remove_item(group_id, qq_id, target["key"])
-        q = C.QUALITY[d["quality"]]
+        q = _b143.QUALITY[d["quality"]]
         st = player_final_stats(player["class_name"], player["level"], equipment, player.get("class_tier", 0), player.get("attributes"), player.get("evolve_path", 0), self._title_bonus(group_id, qq_id), player.get("race"))
         # v16：属性变化对比（对比穿上前后的差值——旧装备属性已含在穿前快照里，
         # 即"卸下旧装备再穿上新装备"的净变化；空槽穿第一件=新装备全加成）
@@ -5703,7 +5717,7 @@ class EconomyImpl(CommandBase):
             for k, label in keys:
                 diff = st[k] - old_stats[k]
                 if abs(diff) >= 1e-9:
-                    if k in C.PCT_STATS:
+                    if k in _ccore.PCT_STATS:
                         diff_parts.append(f"{label} {'+' if diff > 0 else '-'} {abs(int(diff*100))}%")
                     else:
                         diff_parts.append(f"{label} {'+' if diff > 0 else '-'} {abs(int(diff))}")
@@ -5730,7 +5744,7 @@ class EconomyImpl(CommandBase):
         equipment = dict(player["equipment"])
         # 匹配部位：中文部位名或装备名
         slot = None
-        slot_by_name = {v: k for k, v in C.EQUIP_SLOTS.items()}
+        slot_by_name = {v: k for k, v in _b143.EQUIP_SLOTS.items()}
         if raw in slot_by_name:
             slot = slot_by_name[raw]
         else:
@@ -5741,12 +5755,12 @@ class EconomyImpl(CommandBase):
         if not slot:
             yield event.plain_result(
                 f"没找到『{raw}』对应装备！用『卸下 <部位/装备名>』，如『卸下 头盔』『卸下 烈焰之刃』。\n"
-                f"部位：{'、'.join(C.EQUIP_SLOTS.values())}"
+                f"部位：{'、'.join(_b143.EQUIP_SLOTS.values())}"
             )
             return
         item = equipment.get(slot)
         if not item:
-            yield event.plain_result(f"{C.EQUIP_SLOTS[slot]}位置没有装备！")
+            yield event.plain_result(f"{_b143.EQUIP_SLOTS[slot]}位置没有装备！")
             return
         # 属性变化对比（复用 equip 逻辑；v95.7 #28：title_bonus 与卸后一致）
         old_stats = player_final_stats(player["class_name"], player["level"], equipment,
@@ -5762,15 +5776,15 @@ class EconomyImpl(CommandBase):
         for k, label in keys:
             diff = st[k] - old_stats[k]
             if abs(diff) >= 1e-9:
-                if k in C.PCT_STATS:
+                if k in _ccore.PCT_STATS:
                     diff_parts.append(f"{label} {'+' if diff > 0 else '-'} {abs(int(diff*100))}%")
                 else:
                     diff_parts.append(f"{label} {'+' if diff > 0 else '-'} {abs(int(diff))}")
-        q = C.QUALITY[item["quality"]]
+        q = _b143.QUALITY[item["quality"]]
         enh = item.get("enhance", 0)
         enh_str = f" +{enh}" if enh > 0 else ""
         # v101.21b 排版：每项一行 + 两侧空格，不显示当前属性
-        lines = [f"✅ 你卸下了 {q['color']}【{item['name']}{enh_str}】({C.EQUIP_SLOTS[slot]})", "📊 属性变化："]
+        lines = [f"✅ 你卸下了 {q['color']}【{item['name']}{enh_str}】({_b143.EQUIP_SLOTS[slot]})", "📊 属性变化："]
         if diff_parts:
             for p in diff_parts:
                 lines.append(f"  · {p}")
@@ -6339,7 +6353,7 @@ class EconomyImpl(CommandBase):
                     flines = [f"❓ 找到 {len(fuzzy)} 件名字含『{name_part}』的物品，用全名指定卖哪件："]
                     for i, it in enumerate(fuzzy, 1):
                         fd = it["data"]
-                        fq = C.QUALITY[fd["quality"]] if fd.get("quality") and fd.get("slot") else None
+                        fq = _b143.QUALITY[fd["quality"]] if fd.get("quality") and fd.get("slot") else None
                         fname_s = f"{fq['color']}【{fd['name']}】" if fq else fd["name"]
                         flines.append(f"  {i}. {fname_s} ×{it['count']}（出售价 {self._pawn_rate(player, fd) or '需对应店铺'}）")
                     flines.append(self._tip("sell"))
@@ -6369,7 +6383,7 @@ class EconomyImpl(CommandBase):
                     + (f"({hint})" if hint else "")
                 )
             else:
-                _mm = C.MATERIALS_BY_NAME.get(d.get("name", "")) or {}
+                _mm = _cit.MATERIALS_BY_NAME.get(d.get("name", "")) or {}
                 _need = _MAT_FACILITY.get(_mm.get("type", "杂物"), "shop")
                 _hint_map = {"smith": "铁匠铺（矿石/兽材/木材/宝石）", "alchemy": "草药铺/炼金工坊（草药/精华）", "shop": "商店（食材/织物/杂物）"}
                 # q7-8：单件提示到具体柜台，并附完整分店品类说明帮新手不跑错柜台（纯文案）
@@ -6410,7 +6424,7 @@ class EconomyImpl(CommandBase):
             yield event.plain_result("☠️ 你是红名！商店老板把你轰了出来……（等红名消退再来）")
             return
         cur = player["cur_map"]
-        cur_map = C.MAP_BY_ID.get(cur, {})
+        cur_map = _cspace.MAP_BY_ID.get(cur, {})
         if not self._at_shop(player, group_id, qq_id):
             hint = self._facility_hint(player, "shop")
             yield event.plain_result(
@@ -6445,31 +6459,31 @@ class EconomyImpl(CommandBase):
         if is_smith:
             # 铁匠类商店：武器 + 锻造材料 + 全套装备 + 图纸（v101.25h 追加子区域军需补给如强化石）
             sa_id = player.get("cur_subarea") or ""
-            sa_items = C.SHOP_SUBAREA_ITEMS.get(sa_id)
+            sa_items = _clife.SHOP_SUBAREA_ITEMS.get(sa_id)
             for iid in sa_items or []:
-                it = C.ITEMS[iid]
+                it = _cit.ITEMS[iid]
                 _lim = self._shop_limit_label(sa_id, f"item:{iid}")  # v166 限购标注
                 entries.append((iid, f"{it['name']}{_owned(it['name'])} —— {it['price']} 金币（{it['desc']}）{_lim}"))
-            materials = C.SHOP_SMITH_MATERIALS.get(cur) or C.SHOP_SMITH_MATERIALS.get(area_id, [])
+            materials = _clife.SHOP_SMITH_MATERIALS.get(cur) or _clife.SHOP_SMITH_MATERIALS.get(area_id, [])
             for mid in materials:
-                mt = C.MATERIALS[mid]
+                mt = _cit.MATERIALS[mid]
                 _lim = self._shop_limit_label(sa_id, f"mat:{mid}")  # v166 限购标注
                 entries.append((mid, f"{mt['name']}{_owned(mt['name'])} —— {mt['price']} 金币（锻造材料）{_lim}"))
             # v94 图纸经济：铁匠铺兜底卖图纸（随机一张，价格 = 图纸价×3 = (lv×3+20)×3）
-            bp_price = int((max(1, player["level"]) * C.ECON_CONFIG["bp_price_per_lv"]
-                            + C.ECON_CONFIG["bp_price_base"]) * C.ECON_CONFIG["bp_smith_mult"])
+            bp_price = int((max(1, player["level"]) * _clife.ECON_CONFIG["bp_price_per_lv"]
+                            + _clife.ECON_CONFIG["bp_price_base"]) * _clife.ECON_CONFIG["bp_smith_mult"])
             entries.append(("bp:rand", f"📜 神秘锻造图纸（随机一张）—— {bp_price} 金币"))
-            equip_items = self._shop_equip_roster(player, C.SHOP_EQUIP.get(cur) or C.SHOP_EQUIP.get(area_id, []))
+            equip_items = self._shop_equip_roster(player, _clife.SHOP_EQUIP.get(cur) or _clife.SHOP_EQUIP.get(area_id, []))
             for rid in equip_items:
-                r = C.EQUIP_ROSTER[rid]
-                q = C.QUALITY[r["quality"]]
+                r = _cit.EQUIP_ROSTER[rid]
+                q = _b143.QUALITY[r["quality"]]
                 _lim = self._shop_limit_label(sa_id, f"equip:{rid}")  # v166 限购标注
-                entries.append((f"e:{rid}", f"{q['color']}{r['name']}{_owned(r['name'])}（{C.EQUIP_SLOTS[r['slot']]}）Lv.{r['lv']}{' · ' + self._req_label(r) if self._req_label(r) else ''} —— {self._shop_equip_price(r['slot'], r['lv'], r['quality'], r.get('weapon_type'), rid)} 金币{_lim}"))
-            weapons = C.SHOP_WEAPONS.get(cur) or C.SHOP_WEAPONS.get(area_id, [])
+                entries.append((f"e:{rid}", f"{q['color']}{r['name']}{_owned(r['name'])}（{_b143.EQUIP_SLOTS[r['slot']]}）Lv.{r['lv']}{' · ' + self._req_label(r) if self._req_label(r) else ''} —— {self._shop_equip_price(r['slot'], r['lv'], r['quality'], r.get('weapon_type'), rid)} 金币{_lim}"))
+            weapons = _clife.SHOP_WEAPONS.get(cur) or _clife.SHOP_WEAPONS.get(area_id, [])
             for wname, wtype, wlv, wq in weapons:
-                q = C.QUALITY[wq]
-                _ids = C.EQUIP_ROSTER_BY_NAME.get(wname, [])
-                _r = C.EQUIP_ROSTER.get(_ids[0], {}) if _ids else {}
+                q = _b143.QUALITY[wq]
+                _ids = _cit.EQUIP_ROSTER_BY_NAME.get(wname, [])
+                _r = _cit.EQUIP_ROSTER.get(_ids[0], {}) if _ids else {}
                 # v104 M09 P2 修复：非名册武器需求按 random_req 确定性推导标注（与 _buy_weapon 生成同源）
                 if not _r:
                     _r = {"req": C.random_req("weapon", wlv, wtype)}
@@ -6481,10 +6495,10 @@ class EconomyImpl(CommandBase):
             _npc = _ss.SMITH_NPC_NAMES.get(cur, "铁匠")
             for _sit in smith_items:
                 _rid = _sit["rid"]
-                _r = C.EQUIP_ROSTER[_rid]
-                _q = C.QUALITY[_r["quality"]]
+                _r = _cit.EQUIP_ROSTER[_rid]
+                _q = _b143.QUALITY[_r["quality"]]
                 _sl = _r["slot"]
-                _slot_cn = C.EQUIP_SLOTS[_sl] if _sl in C.EQUIP_SLOTS else (C.display('weapon_types', _r.get('weapon_type')) or _sl)
+                _slot_cn = _b143.EQUIP_SLOTS[_sl] if _sl in _b143.EQUIP_SLOTS else (C.display('weapon_types', _r.get('weapon_type')) or _sl)
                 _n = f"{_r['name']}（{_npc}的作品）"
                 _price = int(_ss.smith_stock_price(_rid, _sit["price_mult"]))
                 entries.append((f"s:{_rid}", f"{_q['color']}{_n}{_owned(_r['name'])}（{_slot_cn}）Lv.{_r['lv']}{' · ' + self._req_label(_r) if self._req_label(_r) else ''} ×{_sit['qty']} —— {_price} 金币"))
@@ -6492,12 +6506,12 @@ class EconomyImpl(CommandBase):
             # 普通商店：消耗品 + 武器（v101.28g：只挂子区域配货，无城镇级兜底）
             sa_kind = self._sa_shop_kind(player)
             sa_id = player.get("cur_subarea") or ""
-            sa_items = C.SHOP_SUBAREA_ITEMS.get(sa_id)
+            sa_items = _clife.SHOP_SUBAREA_ITEMS.get(sa_id)
             shop_items = sa_items if sa_items is not None else []
             trader = self._wild_trader_here(player, group_id, qq_id)
             if not shop_items and trader:
-                shop_items = C.SHOP_WILD_TRADE  # v95.4：野外行商货物
-                tname = C.WILD_NPCS.get(trader, {}).get("name", "行商")
+                shop_items = _clife.SHOP_WILD_TRADE  # v95.4：野外行商货物
+                tname = _cquest.WILD_NPCS.get(trader, {}).get("name", "行商")
                 shop_title = f"🧭 {tname}的货摊"  # #151：标题跟随实际在场的交易 NPC
             # 意见#130（2026-09-03 白云白云狸雾理云/鱼神）：铁港码头栈桥(harbor_docks_1)挂着
             # 行商(NPC 夜钓翁·老竿 map=harbor_docks 整图 roam)，本子区域没有商店也没有货摊，
@@ -6507,26 +6521,26 @@ class EconomyImpl(CommandBase):
             #  _wild_trader_here 原本只按 NPC 静态 map 判定，夜钓翁 map=harbor_docks 全图放行）。
             _here_trader_ok = False
             if trader:
-                _tr_npc = C.ALL_WILD.get(trader, {})
+                _tr_npc = _wild.ALL_WILD.get(trader, {})
                 _tr_roam = _tr_npc.get("roam")
                 _tr_timed = bool(C.get_timed(group_id, qq_id, f"wild:{trader}"))
                 # 无 roam 的 NPC 若 map 命中当前整图但未偶遇（无线时事件）→ 不在场，不显示行商
                 _here_trader_ok = bool(_tr_timed) if not _tr_roam else True
             if not shop_items and _here_trader_ok:
-                shop_items = C.SHOP_WILD_TRADE  # v95.4：野外行商货物
-                tname = C.WILD_NPCS.get(trader, {}).get("name", "行商")
+                shop_items = _clife.SHOP_WILD_TRADE  # v95.4：野外行商货物
+                tname = _cquest.WILD_NPCS.get(trader, {}).get("name", "行商")
                 shop_title = f"🧭 {tname}的货摊"  # #151：标题跟随实际在场的交易 NPC
             for iid in shop_items:
-                it = C.ITEMS[iid]
+                it = _cit.ITEMS[iid]
                 _lim = self._shop_limit_label(sa_id, f"item:{iid}")  # v166 限购标注
                 entries.append((iid, f"{it['name']}{_owned(it['name'])} —— {it['price']} 金币（{it['desc']}）{_lim}"))
             # 武器：铁匠/锻造类 + 普通商店（集市/商行/码头）可卖；草药铺/酒馆不卖
             if sa_kind in ("smith", "general"):
-                weapons = C.SHOP_WEAPONS.get(cur) or C.SHOP_WEAPONS.get(area_id, [])
+                weapons = _clife.SHOP_WEAPONS.get(cur) or _clife.SHOP_WEAPONS.get(area_id, [])
                 for wname, wtype, wlv, wq in weapons:
-                    q = C.QUALITY[wq]
-                    _ids = C.EQUIP_ROSTER_BY_NAME.get(wname, [])
-                    _r = C.EQUIP_ROSTER.get(_ids[0], {}) if _ids else {}
+                    q = _b143.QUALITY[wq]
+                    _ids = _cit.EQUIP_ROSTER_BY_NAME.get(wname, [])
+                    _r = _cit.EQUIP_ROSTER.get(_ids[0], {}) if _ids else {}
                     # v104 M09 P2 修复：非名册武器需求按 random_req 确定性推导标注（与 _buy_weapon 生成同源）
                     if not _r:
                         _r = {"req": C.random_req("weapon", wlv, wtype)}
@@ -6534,9 +6548,9 @@ class EconomyImpl(CommandBase):
                     entries.append((f"w:{wname}", f"{q['color']}{wname}{_owned(wname)}（{C.display('weapon_types', wtype)}）Lv.{wlv}{' · ' + self._req_label(_r) if self._req_label(_r) else ''} —— {self._shop_equip_price('weapon', wlv, wq, wtype)} 金币{_lim}"))
         # v104 修 M17-P2：橡木镇（新手村）商店面板列出可购坐骑（price>0 的老马/小毛驴），并入序号购买
         # v130.7 意见#23：坐骑只挂 smith/general 贸易场所（草药铺 herb/酒馆 tavern 不再隔空卖坐骑，口径同武器块）
-        if area_id == "oak" and cur == C.START_MAP and sa_kind in ("smith", "general"):
+        if area_id == "oak" and cur == _ccore.START_MAP and sa_kind in ("smith", "general"):
             _mount_owned = set((player.get("mounts") or {}).get("owned") or [])
-            for mdef in C.MOUNT_POOL:
+            for mdef in _clife.MOUNT_POOL:
                 if (mdef.get("price") or 0) > 0:
                     _mo = "（已拥有）" if mdef["key"] in _mount_owned else ""
                     entries.append((f"mount:{mdef['key']}",
@@ -6545,7 +6559,7 @@ class EconomyImpl(CommandBase):
         cur_evt = db.get_world_event()
         _discount_tip = ""
         if cur_evt:
-            _evt_def = next((e for e in C.WORLD_EVENT_POOL if e["type"] == cur_evt["etype"]), None)
+            _evt_def = next((e for e in _b143.WORLD_EVENT_POOL if e["type"] == cur_evt["etype"]), None)
             _sd = (_evt_def.get("effects") or {}).get("shop_discount") if _evt_def else None
             if _sd:
                 _discount_tip = f"（{_evt_def['name']} {int(round(_sd * 10))} 折！）"
@@ -6571,12 +6585,12 @@ class EconomyImpl(CommandBase):
         group_id, qq_id = self._uid(event)
         item_name = self._strip_cmd(event, "购买")
         player = self._player(group_id, qq_id)
-        _ec = C.ECON_CONFIG
+        _ec = _clife.ECON_CONFIG
         if self._is_redname(qq_id):
             yield event.plain_result("☠️ 你是红名！商店老板不敢卖你东西……（等红名消退再来）")
             return
         cur = player["cur_map"]
-        cur_map = C.MAP_BY_ID.get(cur, {})
+        cur_map = _cspace.MAP_BY_ID.get(cur, {})
         if not self._at_shop(player, group_id, qq_id):
             hint = self._facility_hint(player, "shop")
             yield event.plain_result(
@@ -6587,7 +6601,7 @@ class EconomyImpl(CommandBase):
         is_smith = self._is_smith_shop(player)
         sa_kind = self._sa_shop_kind(player)
         sa_id = player.get("cur_subarea") or ""
-        sa_items = C.SHOP_SUBAREA_ITEMS.get(sa_id)
+        sa_items = _clife.SHOP_SUBAREA_ITEMS.get(sa_id)
         # v101.28g：子区域独立配货（无城镇级兜底）；smith 分支无配货则空
         if sa_items is not None:
             shop_items = sa_items
@@ -6597,11 +6611,11 @@ class EconomyImpl(CommandBase):
             # 意见#130 同源修复（与 shop 面板一致）：未偶遇的静态野外行商不隔空放行——夜钓翁
             # map=harbor_docks 但没探索偶遇时，玩家在码头任何子区域都会被判定可买它的货
             _trader = self._wild_trader_here(player, group_id, qq_id)
-            _tr_npc = C.ALL_WILD.get(_trader, {}) if _trader else {}
+            _tr_npc = _wild.ALL_WILD.get(_trader, {}) if _trader else {}
             _tr_timed = bool(C.get_timed(group_id, qq_id, f"wild:{_trader}")) if _trader else False
             if _trader and (_tr_npc.get("roam") or _tr_timed):
-                shop_items = C.SHOP_WILD_TRADE  # v95.4：野外行商货物
-        materials = (C.SHOP_SMITH_MATERIALS.get(cur) or C.SHOP_SMITH_MATERIALS.get(area_id, [])) if is_smith else []
+                shop_items = _clife.SHOP_WILD_TRADE  # v95.4：野外行商货物
+        materials = (_clife.SHOP_SMITH_MATERIALS.get(cur) or _clife.SHOP_SMITH_MATERIALS.get(area_id, [])) if is_smith else []
         item_name = item_name.strip()
         # F2-2：『购买 』空参静默买第一件（空串是任意名称的子串恒 True，report_18 P1-1）
         #   ——显式格式提示（与『加点 』空参提示风格一致），不执行购买
@@ -6661,19 +6675,19 @@ class EconomyImpl(CommandBase):
         _evt_tip = ""
         cur_evt = db.get_world_event()
         if cur_evt:
-            _evt_def = next((e for e in C.WORLD_EVENT_POOL if e["type"] == cur_evt["etype"]), None)
+            _evt_def = next((e for e in _b143.WORLD_EVENT_POOL if e["type"] == cur_evt["etype"]), None)
             _sd = (_evt_def.get("effects") or {}).get("shop_discount") if _evt_def else None
             if _sd:
                 discount = float(_sd)
                 _evt_tip = f"（{_evt_def['name']} {int(round(_sd * 10))} 折！）"
-        weapons = C.SHOP_WEAPONS.get(cur) or C.SHOP_WEAPONS.get(area_id, [])
+        weapons = _clife.SHOP_WEAPONS.get(cur) or _clife.SHOP_WEAPONS.get(area_id, [])
         # v101.25h：武器/名册装备只在 smith/general 卖（草药铺/酒馆不卖）
         # v101.28o：is_smith 也放行——craft+alchemy 双职能店（如晨曦药剂坊 dawn_city_5）
         #   面板 is_smith 分支会列出武器，购买侧若按 herb 过滤则"看得到买不到"（#445）
         can_sell_weapons = is_smith or sa_kind in ("smith", "general")
         if not can_sell_weapons:
             weapons = []
-        equip_items = self._shop_equip_roster(player, C.SHOP_EQUIP.get(cur) or C.SHOP_EQUIP.get(area_id, []))
+        equip_items = self._shop_equip_roster(player, _clife.SHOP_EQUIP.get(cur) or _clife.SHOP_EQUIP.get(area_id, []))
         # v104 M09 P1 修复：装备只在 is_smith（铁匠类）面板列出——general 商店序号列表与面板严格同源
         #   （此前 general 序号含 e: 名册装备，『购买 4』实测买到面板未显示的翡翠皮甲）
         if not is_smith:
@@ -6688,8 +6702,8 @@ class EconomyImpl(CommandBase):
                 entries += [f"s:{sit['rid']}" for sit in smith_items]
             # v104 修 M17-P2：橡木镇序号购买含坐骑（与商店面板顺序一致，追加在末尾）
             # v130.7 意见#23：序号购买与面板同口径（草药铺/酒馆序号不挂坐骑）
-            if area_id == "oak" and cur == C.START_MAP and sa_kind in ("smith", "general"):
-                entries += [f"mount:{m['key']}" for m in C.MOUNT_POOL if (m.get("price") or 0) > 0]
+            if area_id == "oak" and cur == _ccore.START_MAP and sa_kind in ("smith", "general"):
+                entries += [f"mount:{m['key']}" for m in _clife.MOUNT_POOL if (m.get("price") or 0) > 0]
             idx = int(item_name)
             if idx < 1 or idx > len(entries):
                 yield event.plain_result(f"没有第 {idx} 号商品！『商店』查看商品列表。")
@@ -6732,7 +6746,7 @@ class EconomyImpl(CommandBase):
             return
         # 找补给品（按名称）
         for iid in shop_items:
-            it = C.ITEMS[iid]
+            it = _cit.ITEMS[iid]
             if item_name in it["name"] or (item_name and item_name in it["name"].replace("(", "").replace(")", "")):
                 price = int(it["price"] * discount)
                 total = price * qty
@@ -6755,7 +6769,7 @@ class EconomyImpl(CommandBase):
                 return
         # 找材料（按名称）
         for mid in materials:
-            mt = C.MATERIALS[mid]
+            mt = _cit.MATERIALS[mid]
             if item_name in mt["name"]:
                 price = int(mt["price"] * discount)
                 total = price * qty
@@ -6802,7 +6816,7 @@ class EconomyImpl(CommandBase):
                 return
         # 找装备（按名称）
         for rid in equip_items:
-            r = C.EQUIP_ROSTER[rid]
+            r = _cit.EQUIP_ROSTER[rid]
             if item_name in r["name"]:
                 # v95.34：价格与显示/序号购买同源（v101.25e _shop_equip_price），修 #414 名称购买走旧公式低价漏洞
                 price = int(self._shop_equip_price(r["slot"], r["lv"], r["quality"], r.get("weapon_type"), rid) * discount)
@@ -6831,7 +6845,7 @@ class EconomyImpl(CommandBase):
             _npc = _ss.SMITH_NPC_NAMES.get(cur, "铁匠")
             _want_stock = ("作品" in item_name) or (_npc in item_name)
             for _sit in smith_items:
-                _r = C.EQUIP_ROSTER[_sit["rid"]]
+                _r = _cit.EQUIP_ROSTER[_sit["rid"]]
                 if _want_stock and (item_name in _r["name"] or _r["name"] in item_name):
                     ok, item_data, price = _ss.buy_stock_item(cur, _ss.town_level(cur), _sit["rid"])
                     if not ok:
@@ -6850,11 +6864,11 @@ class EconomyImpl(CommandBase):
                     yield event.plain_result(f"✅ 你买下了【{item_data['name']}】！铁匠的手艺交到你手里，输入『装备』查看。")
                     return
         # v39/v101.15 坐骑：橡木镇马厩购买（老马/小毛驴等 price>0 的坐骑）
-        shop_mounts = [m for m in C.MOUNT_POOL if (m.get("price") or 0) > 0]
+        shop_mounts = [m for m in _clife.MOUNT_POOL if (m.get("price") or 0) > 0]
         for mdef in shop_mounts:
             if item_name in mdef["name"] or item_name.strip() == mdef["key"]:
                 # v130.7 意见#23：名称购买同口径（草药铺/酒馆『购买 老马』同样拦截）
-                if area_id != "oak" or cur != C.START_MAP or sa_kind not in ("smith", "general"):
+                if area_id != "oak" or cur != _ccore.START_MAP or sa_kind not in ("smith", "general"):
                     yield event.plain_result(f"橡木镇的商人才能买到{mdef['name']}！去橡木镇『商店』看看～")
                     return
                 mounts = player.get("mounts") or {}

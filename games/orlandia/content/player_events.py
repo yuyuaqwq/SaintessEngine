@@ -15,7 +15,7 @@
 | 真源写法 | 包内写法 | 说明 |
 |---|---|---|
 | 总线 `_bus = EventBus(EVENTS, logger=LOG)`（宿主 `log_setup.LOG`） | `_get_bus()` 惰性建总线，logger 由注入给出 | 保证宿主薄壳**先注入 logger 再首次使用**；未注入 → 引擎门面 logger（同默认值） |
-| 订阅方模块级 `from .. import db` / `from .. import content as C` | 模块级惰性代理 `db` / `C` | 正文 `db.xxx` / `C.HIDDEN_MONSTERS` 一字未改 |
+| 订阅方模块级 `from .. import db` / `from .. import content as C` | 模块级惰性代理 `db`；`C.HIDDEN_MONSTERS` → **包内门面** `content/catalog_b143.py`（W4，2026-09-14） | 正文 `db.xxx` 一字未改；`HIDDEN_MONSTERS` 门禁逐键逐值（含键序）相等 ⇒ 取值来源换、行为不变，`C` 替身随之删除 |
 | 订阅方模块级 `from ..core.achievements import check_achievements` 等 8 个宿主函数 | 同名 `_HostFn("core.achievements","check_achievements")` | **调用时解析**（别线并行搬模块期间不会瞬时 ImportError，见 BRIEF §3-B-5） |
 
 ⚠️ 结构差异（唯一一处，**行为等价**）：真源 `player_event_subscribers.py` 末尾在 import 期自动
@@ -29,7 +29,8 @@
     `core.wild_king`=B13-L2 · `services.guild`/`services.quests_flow`/`services.tower_progress`/
     `services.weekly_progress`=B12-L5 · `content_rules.gameplay` 升级结算）⇒ 本线一律走宿主句柄，
     待对应线落地后切包内直取。
-  · `C.HIDDEN_MONSTERS`（隐藏怪 id 集）包内无等价域/读口 ⇒ 走注入句柄。
+  · `C.HIDDEN_MONSTERS`（隐藏怪 id 集）→ ★ W4（2026-09-14）已切包内门面
+    `content/catalog_b143.py:HIDDEN_MONSTERS`（`game_config.hidden_monsters` 组），逐键逐值+键序相等。
 
 真源模块 docstring（逐字保留）
 ------------------------------
@@ -71,6 +72,9 @@ from __future__ import annotations
 import sys
 
 from saintess_engine.events import EventBus
+
+# ★ W4（2026-09-14）：`C.HIDDEN_MONSTERS` → 包内门面（真源 `game/data/hidden_monsters.py:18`）
+from . import catalog_b143 as _cat_b143
 
 # ============================================================
 # ① 宿主替身口（注入优先 → sys.modules → importlib；**绝不静默空跑**）
@@ -135,7 +139,6 @@ class _HostFn:
 
 
 db = _HostMod("db")
-C = _HostMod("content")
 
 # 订阅方真源模块级 import 的 8 个宿主函数（逐名同义替身；调用时解析）
 check_player_level_up = _HostFn("content_rules.gameplay", "check_player_level_up")
@@ -320,7 +323,7 @@ def _sub_achievements(ctx):
         _hm_st = db.get_event_state(f"hm_defeated_{ctx['group_id']}_{ctx['qq_id']}")
         if _hm_st:
             hm_defeated = set(_hm_st.split(",")) if _hm_st else set()
-        if monster.get("id") in C.HIDDEN_MONSTERS:
+        if monster.get("id") in _cat_b143.HIDDEN_MONSTERS:
             hm_defeated.add(monster["id"])
             db.set_event_state(f"hm_defeated_{ctx['group_id']}_{ctx['qq_id']}", ",".join(sorted(hm_defeated)))
     except Exception:

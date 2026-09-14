@@ -33,12 +33,14 @@
      （`content/panel.py:83` 已端口；实测全种族逐值相等：0 不等，见报告 §1）。
 3. 命令方法级「取玩家」那种改造：本模块无需（纯逻辑，ctx 由调用方构造）。
 
-★ 数据读口（I1）：本模块**不读任何宿主表** —— `C`（宿主聚合层）上只有**函数与常量**
-（`C.resolve` / `C.display` / `C.MATERIALS` / `C.roll_blueprint` / `C.generate_equip` /
-`C.QUALITY` / `C.TRADER_DEAL_CHANCE` / `C.AUCTION_POOL`…）：`MATERIALS` 与 `QUALITY`
-在包内**无同名域**（BRIEF §5 明列「无同名域」），`resolve`/`display` 的权威索引在装配期宿主侧
-（`content/quests_flow.py:_Dom.resolve` 同口径委托宿主）→ 本线**不建第二份读口**（防双源漂移），
-登记为**缺口**：待 materials/quality 域进包后，把 `C` 替身换成包内域门面。
+★ 数据读口（I1）：`C`（宿主聚合层）上只剩**函数** —— `C.resolve` / `C.display` /
+`C.roll_blueprint` / `C.generate_equip`（函数名，按 B14 派工口径不切）：`resolve`/`display` 的权威索引
+在装配期宿主侧（`content/quests_flow.py:_Dom.resolve` 同口径委托宿主）→ `C` 替身保留。
+★ W4（2026-09-14）核对：原记「缺口常量」`QUALITY` / `AUCTION_POOL` 已由 B14-3 收口门面
+`content/catalog_b143.py` 提供（门禁逐键逐值+键序 OK）；本文件**只有头注提到、无代码读点** → 未动。
+B14-2（L7 线）已切门面：材料表 → `content/catalog_items.py:MATERIALS`（10 处调用点，门禁逐名
+OK · 不等 0，含键序）；`TRADER_DEAL_CHANCE`（真源 `game/data/battle_config.py`）包内落在
+`content/catalog_core.py`，但本文件**只在头注出现、无代码读点** → 未动。
 
 等价证据：`overnight/w1213_b13l3_snap.py`（改前/改后 124 用例逐字节快照，含真实副作用）
 · `overnight/W-B13-L3-events-dialogue.md`。
@@ -111,6 +113,9 @@ class _HostMod:
 
 C = _HostMod("content")         # 真源 `from .. import content as C`
 db = _HostMod("db")             # 真源 `from .. import db`
+
+# B14-2（L7 线）：数据名读点切包内门面 —— 原 `C.MATERIALS` 直取换成门面同名绑定
+from .catalog_items import MATERIALS   # 真源 `C.MATERIALS`
 
 
 def check_player_level_up(group_id, qq_id, player):
@@ -235,10 +240,10 @@ def tpl_loot_materials(ctx):
     for _ in range(n):
         m = random.choice(mats_choice)
         mid = C.resolve("materials", m)
-        if mid in C.MATERIALS:
+        if mid in MATERIALS:
             db.add_item(ctx.group_id, ctx.qq_id, mid,
                         {"name": C.display("materials", mid), "type": "材料",
-                         "stackable": True, "price": C.MATERIALS[mid]["price"]})
+                         "stackable": True, "price": MATERIALS[mid]["price"]})
             got.append(C.display("materials", mid))
     extra = ""
     bp_chance = ctx.param("blueprint_chance", 0)
@@ -274,10 +279,10 @@ def tpl_loot_gold_mats(ctx):
     mats_choice = ctx.mat_choice_pool(mats_pool)
     if mats_choice:
         mid = C.resolve("materials", random.choice(mats_choice))
-        if mid in C.MATERIALS:
+        if mid in MATERIALS:
             db.add_item(ctx.group_id, ctx.qq_id, mid,
                         {"name": C.display("materials", mid), "type": "材料",
-                         "stackable": True, "price": C.MATERIALS[mid]["price"]})
+                         "stackable": True, "price": MATERIALS[mid]["price"]})
             mat_line = ctx.param("mat_line", "\n🎒 还得到一份材料：{mat}！").replace("{mat}", C.display("materials", mid))
     bp_line = ""
     bp_chance = ctx.param("blueprint_chance", 0)
@@ -419,10 +424,10 @@ def tpl_mystery_chest(ctx):
     mats = ctx.mat_choice_pool(mats)
     if mats:
         mid = C.resolve("materials", random.choice(mats))
-        if mid in C.MATERIALS:
+        if mid in MATERIALS:
             db.add_item(ctx.group_id, ctx.qq_id, mid,
                         {"name": C.display("materials", mid), "type": "材料",
-                         "stackable": True, "price": C.MATERIALS[mid]["price"]})
+                         "stackable": True, "price": MATERIALS[mid]["price"]})
             mat_line = f"\n🎒 还得到一份材料：{C.display('materials', mid)}！"
     bp = C.roll_blueprint(max(1, ctx.lv))
     _learned, _bpn, _pages = _add_bp_or_pages(ctx, db, bp)
@@ -458,10 +463,10 @@ def tpl_wandering(ctx):
                      "effect": "return_vila", "price": 500})
     else:
         mid = C.resolve("materials", rw)
-        if mid in C.MATERIALS:
+        if mid in MATERIALS:
             db.add_item(ctx.group_id, ctx.qq_id, mid,
                         {"name": C.display("materials", mid), "type": "材料",
-                         "stackable": True, "price": C.MATERIALS[mid]["price"]})
+                         "stackable": True, "price": MATERIALS[mid]["price"]})
     db.update_player(ctx.group_id, ctx.qq_id, explore_wandering=1)
     # v105 M23 P3-2：rw 为 key（i_scroll_escape）时原样输出会泄漏内部 ID，改显示中文名
     rw_disp = "回城卷轴" if rw == "i_scroll_escape" else rw
@@ -591,10 +596,10 @@ def tpl_rare_find(ctx):
     for _ in range(n):
         m = random.choice(mats_pool)
         mid = C.resolve("materials", m)
-        if mid in C.MATERIALS:
+        if mid in MATERIALS:
             db.add_item(ctx.group_id, ctx.qq_id, mid,
                         {"name": C.display("materials", mid), "type": "材料",
-                         "stackable": True, "price": C.MATERIALS[mid]["price"]})
+                         "stackable": True, "price": MATERIALS[mid]["price"]})
             got.append(C.display("materials", mid))
     header = ctx.param("header", "✨ 稀有发现！🎒 获得稀有材料：{mats}！{extra}")
     return (header.replace("{name}", ctx.name)

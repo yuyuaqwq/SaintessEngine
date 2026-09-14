@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """内容侧玩家面板公式（S5：自 `game/engine.py` 拆出，docs/ENGINE_CONTENT_SPLIT_PLAN.md §6.4）。
 
-读《奥兰迪亚》专属表 / 职业名：
-  - `C.CLASSES` / `C.CLASS_NOVICE` / `C.RACES` / `C.SETS` / `C.ENHANCE_TABLE`
-  - `C.PCT_CAPS` / `C.PCT_STATS` / `C.PENE_PCT_STATS`（属性上限/百分比域）
+读《奥兰迪亚》专属表 / 职业名（B14-2 L5：读口 = 包内 `content/tables.py`）：
+  - `tables.CLASSES` / `tables.CLASS_NOVICE` / `tables.RACES` / `tables.SETS` / `tables.ENHANCE_TABLE`
+  - `tables.PCT_CAPS` / `tables.PCT_STATS` / `tables.PENE_PCT_STATS`（属性上限/百分比域）
   - `data.battle_config.TIER_GROWTH` / `BRANCH_BONUS` / `BRANCH_BONUS_BY_CLASS`
   - `data.base_growth.PLAYER_BASE_GROWTH`（成长结构声明）
 
@@ -19,7 +19,7 @@ saintess_engine/stats.py 的 `_player_base_stats` 消费；纯怪路径不经过
 # 真源：游戏仓 `game/content_rules/panel.py`（584 行）。
 # 生成 + 校验：`overnight/d3_port_panel.py --check`（把真源重新推导一遍、与包内那份逐字节比对）。
 # 改动面（本块 + 上面那 6 行 import，**其余一字不改**）：
-#   · `C` 由游戏仓聚合层换成包内门面 `content/tables.py` —— 同一个名字，正文里的 `C.XXX` 全部原样；
+#   · 读表口 = 包内门面 `content/tables.py`（B14-2 L5 起正文直接写 `tables.<名>`，无 `C` 替身）；
 #   · 种族 / 套装 / 强化表 / 面板常量四个域由本批导出进包（`content/data|rules/*.json`，见 tables.py 头注）；
 #   · 面板常量里的 **int 档位键**（TIER_GROWTH / BRANCH_BONUS* / ENHANCE_TABLE）由 tables.py 还原 ——
 #     不还原 = `.get(1)` 恒 None = 转职/分支/强化三个乘区静默归零。
@@ -29,7 +29,8 @@ saintess_engine/stats.py 的 `_player_base_stats` 消费；纯怪路径不经过
 from saintess_engine.battle.formulas import skill_learn_cost
 
 # ---- 包内来源（原文 6 行 import → 包内等价；本段 + 上面那段说明是**唯一**改动面）----
-from . import tables as C          # 原文 `from .. import content as C`（游戏仓聚合层 → 包内门面）
+from . import tables               # 原文 `from .. import content as C`（游戏仓聚合层 → 包内门面）
+#   B14-2 L5：`C` 替身（= tables 别名）删掉，正文读点显式写 `tables.<名>`（取值对象不变）
 from .mech.kinds import K_PASSIVE  # 原文 `from ..data.kinds import K_PASSIVE`（2026-09-13 下沉进包）
 from .tables import (BRANCH_BONUS, BRANCH_BONUS_BY_CLASS, PLAYER_BASE_GROWTH, TIER_GROWTH,
                      skill_info)
@@ -44,12 +45,12 @@ from .tables import (BRANCH_BONUS, BRANCH_BONUS_BY_CLASS, PLAYER_BASE_GROWTH, TI
 def player_base_stats(class_name: str, level: int, tier: int = 0, evolve_path: int = 0, race: str = None) -> dict:
     """职业基础 + 等级成长（含转职成长加成 + v25 分支属性倾向）
     阶段九：race 种族天赋（凡人之躯 growth_mult 只影响基础成长）"""
-    class_name = C.resolve("classes", class_name)  # v48：中文或 ID → ID
-    cls = C.CLASSES.get(class_name)
+    class_name = tables.resolve("classes", class_name)  # v48：中文或 ID → ID
+    cls = tables.CLASSES.get(class_name)
     if cls is None:
         # v105 P1(M01#6)：未知/脏 class_name 兜底——脏档/职业迁移改名后全属性链路不崩
         # （原先直接 KeyError，player_base_stats 是面板/战斗/升级的公共入口）
-        cls = C.CLASSES.get(C.CLASS_NOVICE)
+        cls = tables.CLASSES.get(tables.CLASS_NOVICE)
         if cls is None:
             raise ValueError(f"未知职业 class_name={class_name!r}，且见习兜底职业缺失")
     base = dict(cls["base"])
@@ -84,7 +85,7 @@ def race_stats(race: str | None) -> dict:
     """种族天赋表(08 章)。未知/空种族返回空 dict(无天赋，向后兼容)。"""
     if not race:
         return {}
-    info = C.RACES.get(race) or {}
+    info = tables.RACES.get(race) or {}
     return info.get("talents") or {}
 
 
@@ -92,7 +93,7 @@ def race_name(race: str | None) -> str:
     """种族显示名(未知返回空串，兼容旧档无 race 字段)"""
     if not race:
         return ""
-    return (C.RACES.get(race) or {}).get("name", "")
+    return (tables.RACES.get(race) or {}).get("name", "")
 
 
 def player_final_stats(class_name: str, level: int, equipment: dict, tier: int = 0, attributes: dict = None, evolve_path: int = 0, title_bonus: dict = None, race: str = None, learned_skills: list | None = None) -> dict:
@@ -167,7 +168,7 @@ def player_passive_stats(class_name: str, learned_skills: list | None = None) ->
              "elem_res_add": 0.0, "luck_add": 0.0, "summon_power_add": 0.0,
              "heal_power_add": 0.0, "dodge_add": 0.0,
              "spd_crit_add": 0.0}  # v134.1 意见#45：速度→暴击被动（游侠/刺客"疾风之眼"）
-    learned = [C.display("skills", s) for s in (learned_skills or []) if s]
+    learned = [tables.display("skills", s) for s in (learned_skills or []) if s]
     for name in learned:
         info = skill_info(class_name, name)
         if not info or info.get("kind") != K_PASSIVE:
@@ -191,7 +192,7 @@ def apply_passive_to_stats(st: dict, class_name: str, learned_skills: list | Non
     """v110.4 X2 P1-2：把已学属性被动结算进属性 dict。
 
     与 battle.py:886-920 完全同键同 cap（mp/spd 乘算、crit 加算 cap0.6、
-    cdr 加算 cap0.4、穿透乘算 cap0.6、其余加法并入 cap= C.PCT_CAPS），
+    cdr 加算 cap0.4、穿透乘算 cap0.6、其余加法并入 cap= tables.PCT_CAPS），
     保证面板(player_stats_detail) == 战斗(_player_stats) 单一来源。
     条件型被动（cond rage>=5/hp_low_50 等）战斗内动态结算，此处不处理。
     """
@@ -203,12 +204,12 @@ def apply_passive_to_stats(st: dict, class_name: str, learned_skills: list | Non
         st["spd"] = int(st.get("spd", 0) * pb["spd_mult"])
     if pb.get("crit_add", 0.0):
         # v110 §三：暴击率上限统一 0.5（PCT_CAPS 权威；原 0.6 与 buff 1.0 不一致）
-        st["crit"] = min(st.get("crit", 0) + pb["crit_add"], C.PCT_CAPS.get("crit", 0.5))
+        st["crit"] = min(st.get("crit", 0) + pb["crit_add"], tables.PCT_CAPS.get("crit", 0.5))
     # v134.1 意见#45：速度→暴击转化（游侠/刺客"疾风之眼"）——每点速度 +0.001×mult 暴击
     #   mult=0.1 → 每 10 点速度 +1%；须在 spd_mult 应用后折算，受 PCT_CAPS.crit 0.5 约束
     if pb.get("spd_crit_add", 0.0):
         spd_crit = st.get("spd", 0) * 0.001 * pb["spd_crit_add"]
-        st["crit"] = min(st.get("crit", 0) + spd_crit, C.PCT_CAPS.get("crit", 0.5))
+        st["crit"] = min(st.get("crit", 0) + spd_crit, tables.PCT_CAPS.get("crit", 0.5))
     if pb.get("cdr_add", 0.0):
         st["cdr"] = min(st.get("cdr", 0) + pb["cdr_add"], 0.4)
     if pb.get("pene_phys_add", 0.0):
@@ -218,29 +219,29 @@ def apply_passive_to_stats(st: dict, class_name: str, learned_skills: list | Non
     for _pk, _pv in (("lifesteal_add", "lifesteal"), ("crit_dmg_add", "crit_dmg"),
                      ("block_add", "block")):
         if pb.get(_pk, 0.0):
-            st[_pv] = min(st.get(_pv, 0) + pb[_pk], C.PCT_CAPS.get(_pv, 0.6))
+            st[_pv] = min(st.get(_pv, 0) + pb[_pk], tables.PCT_CAPS.get(_pv, 0.6))
     for _pk, _pv in (("thorns_add", "thorns"), ("phys_reduce_add", "phys_reduce"),
                      ("magic_reduce_add", "magic_reduce"),
                      ("lifesteal_phys_add", "lifesteal_phys"),
                      ("lifesteal_magi_add", "lifesteal_magi")):
         if pb.get(_pk, 0.0):
-            st[_pv] = min(st.get(_pv, 0) + pb[_pk], C.PCT_CAPS.get(_pv, 0.6))
+            st[_pv] = min(st.get(_pv, 0) + pb[_pk], tables.PCT_CAPS.get(_pv, 0.6))
     # v107 隐藏职业专属属性被动（龙魂/星辰之力/万兽之力；shield_power/abyss_res 无技能，已删）
     for _pk, _pv in (("elem_res_add", "elem_res"), ("luck_add", "luck"),
                      ("summon_power_add", "summon_power")):
         if pb.get(_pk, 0.0):
-            st[_pv] = min(st.get(_pv, 0) + pb[_pk], C.PCT_CAPS.get(_pv, 0.6))
+            st[_pv] = min(st.get(_pv, 0) + pb[_pk], tables.PCT_CAPS.get(_pv, 0.6))
     # v113.1 觉醒被动：heal_power（圣光祝福 /+）与 dodge（风之加护 /+）加法并入，
     # 同 cap 权威（heal_power 0.5，dodge 0.4 见 core/constants.py PCT_CAPS）
     for _pk, _pv in (("heal_power_add", "heal_power"), ("dodge_add", "dodge")):
         if pb.get(_pk, 0.0):
-            st[_pv] = min(st.get(_pv, 0) + pb[_pk], C.PCT_CAPS.get(_pv, 0.6))
+            st[_pv] = min(st.get(_pv, 0) + pb[_pk], tables.PCT_CAPS.get(_pv, 0.6))
     return st
 
 
 def passive_skills_learned(class_name: str, learned_skills: list | None = None) -> list:
     """返回已学被动技能的中文名列表(v64)。battle.py 用它查触发型被动。"""
-    learned = [C.display("skills", s) for s in (learned_skills or []) if s]
+    learned = [tables.display("skills", s) for s in (learned_skills or []) if s]
     out = []
     for name in learned:
         info = skill_info(class_name, name)
@@ -328,7 +329,7 @@ def player_stats_detail(class_name: str, level: int, equipment: dict, tier: int 
         enh = item.get("enhance", 0)
         mult = 1.0
         if enh > 0:
-            info = C.ENHANCE_TABLE.get(enh)
+            info = tables.ENHANCE_TABLE.get(enh)
             if info:
                 mult = info["mult"]
         item_src = {}
@@ -337,7 +338,7 @@ def player_stats_detail(class_name: str, level: int, equipment: dict, tier: int 
                 # v101.21e 修复：PCT_STATS（crit/dodge）保留小数——原代码只特判 crit，
                 # dodge 0.05 被 int() 截断成 0，装备闪避加成全部丢失
                 # v172 真等级化：升级乘区已移除（装备 lv 提升 → stats 重算），此处仅乘强化
-                item_src[k] = item_src.get(k, 0) + (int(v * mult) if k not in C.PCT_STATS else v)
+                item_src[k] = item_src.get(k, 0) + (int(v * mult) if k not in tables.PCT_STATS else v)
         for af in item.get("affixes", []):
             # 阶段八：词条 v2 是 ID 列表（str），常驻属性已在生成时折算进 stats；
             # 旧结构 [{"stat","value"}] 兼容处理
@@ -372,11 +373,11 @@ def player_stats_detail(class_name: str, level: int, equipment: dict, tier: int 
         if src["name"] in ("基础", "自由属性点"):
             continue
         for k, v in src["stats"].items():
-            if k in C.PENE_PCT_STATS:
+            if k in tables.PENE_PCT_STATS:
                 # v106：百分比穿透乘算合成 1-(1-a)(1-b)，不加法（职业/词条/被动多来源）
-                st[k] = min(1 - (1 - st.get(k, 0)) * (1 - v), C.PCT_CAPS.get(k, 0.6))
-            elif k in C.PCT_STATS:
-                st[k] = min(st.get(k, 0) + v, C.PCT_CAPS.get(k, 0.6))
+                st[k] = min(1 - (1 - st.get(k, 0)) * (1 - v), tables.PCT_CAPS.get(k, 0.6))
+            elif k in tables.PCT_STATS:
+                st[k] = min(st.get(k, 0) + v, tables.PCT_CAPS.get(k, 0.6))
             elif k == "hp":
                 st["max_hp"] += v
             elif k == "mp":
@@ -389,12 +390,12 @@ def player_stats_detail(class_name: str, level: int, equipment: dict, tier: int 
     if sb2:
         src2 = {}
         for k, v in sb2.items():
-            if k in C.PENE_PCT_STATS:
+            if k in tables.PENE_PCT_STATS:
                 src2[k] = v
-                st[k] = min(1 - (1 - st.get(k, 0)) * (1 - v), C.PCT_CAPS.get(k, 0.6))
-            elif k in C.PCT_STATS:
+                st[k] = min(1 - (1 - st.get(k, 0)) * (1 - v), tables.PCT_CAPS.get(k, 0.6))
+            elif k in tables.PCT_STATS:
                 src2[k] = v
-                st[k] = min(st.get(k, 0) + v, C.PCT_CAPS.get(k, 0.6))
+                st[k] = min(st.get(k, 0) + v, tables.PCT_CAPS.get(k, 0.6))
             elif k == "hp":
                 src2["hp"] = v
                 st["max_hp"] = int(st["max_hp"] * (1 + v))
@@ -429,7 +430,7 @@ def player_stats_detail(class_name: str, level: int, equipment: dict, tier: int 
                 st["dodge"] = min(st["dodge"] + v, 0.4)
             else:
                 eff_src[k] = eff_src.get(k, 0) + v
-                st[k] = min(st.get(k, 0) + v, C.PCT_CAPS.get(k, 0.6))
+                st[k] = min(st.get(k, 0) + v, tables.PCT_CAPS.get(k, 0.6))
     if eff_src:
         names4 = [s for s, c in active_sets(equipment).items() if c >= 4]
         sources.append({"name": f"套装4件({'/'.join(names4)})", "stats": eff_src, "pct": True})
@@ -438,10 +439,10 @@ def player_stats_detail(class_name: str, level: int, equipment: dict, tier: int 
         tb = {k: v for k, v in title_bonus.items() if k in STAT_NAMES and v}
         if tb:
             for k, v in tb.items():
-                if k in C.PENE_PCT_STATS:
-                    st[k] = min(1 - (1 - st.get(k, 0)) * (1 - v), C.PCT_CAPS.get(k, 0.6))
-                elif k in C.PCT_STATS:
-                    st[k] = min(st.get(k, 0) + v, C.PCT_CAPS.get(k, 0.6))
+                if k in tables.PENE_PCT_STATS:
+                    st[k] = min(1 - (1 - st.get(k, 0)) * (1 - v), tables.PCT_CAPS.get(k, 0.6))
+                elif k in tables.PCT_STATS:
+                    st[k] = min(st.get(k, 0) + v, tables.PCT_CAPS.get(k, 0.6))
                 elif k == "hp":
                     st["max_hp"] += int(v)
                 elif k == "mp":
@@ -466,17 +467,17 @@ def player_stats_detail(class_name: str, level: int, equipment: dict, tier: int 
         for _rk in ("exp_bonus", "luck", "elem_res", "abyss_res", "cdr"):
             if rt.get(_rk):
                 race_src[_rk] = rt[_rk]
-                st[_rk] = min(st.get(_rk, 0) + rt[_rk], C.PCT_CAPS.get(_rk, 0.6))
+                st[_rk] = min(st.get(_rk, 0) + rt[_rk], tables.PCT_CAPS.get(_rk, 0.6))
         # v106.3：吸血/暴击伤害/格挡种族天赋（矮人岩壁格挡/精灵月华暴伤/兽人嗜血）
         for _rk in ("lifesteal", "crit_dmg", "block"):
             if rt.get(_rk):
                 race_src[_rk] = rt[_rk]
-                st[_rk] = min(st.get(_rk, 0) + rt[_rk], C.PCT_CAPS.get(_rk, 0.6))
+                st[_rk] = min(st.get(_rk, 0) + rt[_rk], tables.PCT_CAPS.get(_rk, 0.6))
         # v106.4：反伤/物魔免种族天赋（石肤物免/龙鳞魔免/兽人鲁莽魔免负值已存在，统一聚合）
         for _rk in ("thorns", "phys_reduce", "magic_reduce", "lifesteal_phys", "lifesteal_magi"):
             if rt.get(_rk):
                 race_src[_rk] = rt[_rk]
-                st[_rk] = min(st.get(_rk, 0) + rt[_rk], C.PCT_CAPS.get(_rk, 0.6))
+                st[_rk] = min(st.get(_rk, 0) + rt[_rk], tables.PCT_CAPS.get(_rk, 0.6))
         if race_src:
             sources.append({"name": "种族天赋", "stats": race_src, "pct": True})
     # 8. 已学属性被动（v110.4 X2 P1-2：面板接入永久被动，与 battle.py:886-920 同键同 cap）
@@ -516,9 +517,9 @@ def active_sets(equipment: dict) -> dict:
 
 def _set_info(set_name: str) -> dict | None:
     """按套装名(装备 set 字段，中文)查 SETS 条目(SETS key 是 set_xxx ID)"""
-    if set_name in C.SETS:
-        return C.SETS[set_name]
-    for info in C.SETS.values():
+    if set_name in tables.SETS:
+        return tables.SETS[set_name]
+    for info in tables.SETS.values():
         if info.get("name") == set_name:
             return info
     return None
@@ -563,7 +564,7 @@ def set_bonus_2(equipment: dict, class_name: str | None = None) -> dict:
         if cnt >= 5:
             for k, v in info.get("bonus_5", {}).items():
                 # 5 件 stat 型效果（crit/dodge 直接是属性）；desc/effect 型（战斗特效）不在这里结算
-                if k in C.PCT_STATS and isinstance(v, (int, float)) and not isinstance(v, bool):
+                if k in tables.PCT_STATS and isinstance(v, (int, float)) and not isinstance(v, bool):
                     bonus[k] = bonus.get(k, 0) + v * _disc
     return bonus
 

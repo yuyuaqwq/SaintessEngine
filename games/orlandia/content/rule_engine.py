@@ -6,7 +6,10 @@
 （`game/commands/base.py:511` 函数内、`game/services/battle_settlement.py:36` 顶层）零改动。
 
 正文改动面（**只有宿主取件**，判定/触发逻辑一字未改）：
-  ① `_rules()` 的 `from ..data.rules import RULES` → `_host_attr("data.rules", "RULES")`（规则表在宿主数据层）
+  ① `_rules()` 的 `from ..data.rules import RULES` → **包内门面直取**
+     `from .catalog_b143 import RULES as _R`（W12 收口 2026-09-14：`catalog_b143.RULES` =
+     `content/rules/game_config.json` 的 `rules` 组，20 条；逐值 + 键序对拍
+     `overnight/_w12_precheck_sources.py` A → OK）
   ② `_db()` 的 `from .. import db` → 模块级 `db = _HostMod("db")`
   ③ `fire()` 内 `from ..core.event_templates import EventContext, execute_event_template`
      → `_host_attr("core.event_templates", …)`（**跨线**：event_templates 归 B13-L3，别线正在并行搬
@@ -16,8 +19,10 @@
      `_match_cond` 直接调本模块全局 `_is_time`，搬包后若仍读包内全局，该覆盖会失效（测试必红）。
      取件优先读宿主薄壳同名函数（它就是包内这一份的再导出），被覆盖时拿到覆盖值。
 
-缺口（报告登记）：规则表 `data/rules.py:RULES`（20 条）包内无域（`content/rules/effect_rules.json`
-是另一张表：引擎效果规则 85 条）；`event_templates` 待 L3；计数落库 `event_state` 属存档面（留宿主）。
+缺口（报告登记）：规则表 `data/rules.py:RULES`（20 条）已于 W12 收口切包内门面
+（`catalog_b143.RULES` ← `rules/game_config.json` 的 `rules` 组；**不是**
+`content/rules/effect_rules.json`，那是另一张表：引擎效果规则 85 条）；
+`event_templates` 待 L3；计数落库 `event_state` 属存档面（留宿主）。
 """
 
 # ============================================================
@@ -112,14 +117,16 @@ cond 支持字段：
 """
 import random
 
-# 延迟导入 data.rules（避免 data 层循环）
+# 延迟导入规则表（避免 data 层循环）
 RULES = None
 
 
 def _rules():
     global RULES
     if RULES is None:
-        RULES = _host_attr("data.rules", "RULES")   # 真源 `from ..data.rules import RULES as _R`
+        # W12 收口：真源 `from ..data.rules import RULES as _R` → 包内门面（域：rules/game_config.json）
+        from .catalog_b143 import RULES as _R
+        RULES = _R
     return RULES
 
 

@@ -38,7 +38,7 @@
 | `from .. import db as _db`（:408） | 调用方传 `db_update_fn` | 玩家 DB 血量同步 |
 | `from .battle_item_use import make_override`（:201） | `from ..mech.item_use import make_override` | 道具翻译器已进包（B8.2 线4 端口） |
 | `from .boss_script import …`（:206-224） | 调用方传 `script_api` | 缺省 = 包内 `content/flow/boss_script.py`（D3 端口） |
-| `C.MONSTER_MODS`（:134，嘲讽/仇恨 target_policy） | `_monster_mods()` | 包内域 `content/data/monster_mods.json`（140 条，与真源逐项相等） |
+| 宿主聚合层 `MONSTER_MODS`（:134，嘲讽/仇恨 target_policy） | `_monster_mods()` | 包内域 `content/data/monster_mods.json`（140 条，与真源逐项相等） |
 
 ② 宿主耦合替身接口（调用方传什么 / 缺省行为）
 | 真源宿主耦合 | 包内替身 | 调用方传什么 | 缺省（不传） |

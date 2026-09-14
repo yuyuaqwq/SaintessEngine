@@ -12,15 +12,15 @@ re-export」（`CONDITIONS` / `register` / `TitleCtx` / `check_pro_title` / 各 
 1. 宿主取件 → 惰性替身：`TitleCtx._db()` 里函数内 `from .. import db` → 模块级
    `db = _HostMod("db")`（`_db()` 仍返回该句柄，调用点 `ctx._db().xxx()` 一行未改）；
    函数内 `from .. import content as C`（rep_honor / rep_legend / hidden 三处）删除；
-   `_has_flag` 的 `from .. import content as _C` → 同位置 `_C = C`。
-2. 读点：本模块的 `C.faction_reputation_tier`（函数，真源 `core/factions.py`，B13-L7 线未落地）·
-   `C.HIDDEN_MAP_UNLOCK` · `C.MAPS` · `C.NPCS` · `C.ALL_WILD` · `C.HIDDEN_NPCS`
-   —— **全部保留宿主句柄**（缺口登记）：
-     · `C.MAPS`：包内 maps 域是 nodes/roles 投影（无 `hidden`/`type`）→ 切过去 `_t_hidden` 恒 False；
-     · `C.NPCS`：宿主 362 条 vs 包内 npcs 域 **431 条**（域是超集，含层内 NPC）→ `_has_flag`
-       的 flag 扫描面会变大（行为变更）；
-     · `C.ALL_WILD` / `C.HIDDEN_NPCS`：来源 `core/wild.py`（B13-L2 线未落地）；
-     · `C.faction_reputation_tier`：函数在 `core/factions.py`（B13-L7 线）。
+   `_has_flag` 的 `from .. import content as _C` → ★ W4 切包内读口 `content/wild.py`（原 `_C = C`）。
+2. 读点（B14-2，L7 线已切三名包内门面）：`C.MAPS` → `content/catalog_space.py:MAPS` ·
+   `C.NPCS` / `C.HIDDEN_NPCS` → `content/catalog_quests.py`（门禁逐名 OK · 不等 0，含键序；
+   MAPS 实测保留 `hidden`/`type`，NPCS=362 / HIDDEN_NPCS=22 与宿主同值同序 —— B13-L4 时期
+   「maps 域是投影 / npcs 域是超集」的判断已随 B14-A/C 重造失效）。
+   ★ W4（2026-09-14）：原「仍走宿主句柄」的两名已切门面 —— `C.HIDDEN_MAP_UNLOCK` →
+   `content/catalog_b143.py`（B14-3 建 `game_config.maps` 组，门禁含键序不等 0）；
+   `C.ALL_WILD` → 包内读口 `content/wild.py`（B13-L2 已落地；派生口径与宿主 `C.ALL_WILD`
+   一致）。仍走宿主句柄的只剩**函数**：`C.faction_reputation_tier`（`core/factions.py`）。
 
 真源原文头注（逐字保留）
 ------------------------
@@ -103,6 +103,13 @@ class _HostMod:
 
 C = _HostMod("content")     # 真源 `from .. import content as C`
 db = _HostMod("db")         # 真源 `from .. import db`
+
+# B14-2（L7 线）：数据名读点切包内门面 —— 原 `C.<名>` / `_C.<名>` 直取换成门面同名绑定
+from .catalog_quests import HIDDEN_NPCS, NPCS   # 真源 `C.HIDDEN_NPCS` / `C.NPCS`
+from .catalog_space import MAPS                 # 真源 `C.MAPS`
+# ★ W4（2026-09-14）：缺口两名切包内 —— `HIDDEN_MAP_UNLOCK` → `catalog_b143`；`ALL_WILD` → `wild`
+from . import catalog_b143 as _cb143            # 真源 `C.HIDDEN_MAP_UNLOCK`（`game/data/maps.py:4343`）
+from . import wild as _wild                     # 真源 `C.ALL_WILD`（`core/wild.py:26` 派生式）
 
 import re
 
@@ -240,8 +247,8 @@ def _t_hidden(ctx):
     # 与成就 ach_mythril（hidden_area≥1，achievement_conds.py 已修复）同语义：
     # 到访任一隐藏区域即达成（lost_library / ember_corridor，或 hidden=True 地图）
     visited = ctx.hook("visited_maps", ctx.group_id, ctx.qq_id) or []
-    hidden = set(getattr(C, "HIDDEN_MAP_UNLOCK", None) or {})
-    for m in (C.MAPS or []):
+    hidden = set(_cb143.HIDDEN_MAP_UNLOCK or {})
+    for m in (MAPS or []):
         if m.get("hidden") or m.get("type") == "隐藏区域":
             hidden.add(m["id"])
     if not hidden:
@@ -281,9 +288,9 @@ def _side_done(ctx, sid):
 
 def _has_flag(ctx, flag):
     """任意 NPC flag 桶含指定 flag（扫描全桶，同 wild.py unlock_met flag: 先例）"""
-    _C = C                              # 真源 `from .. import content as _C`（宿主句柄）
+    _AW = _wild.ALL_WILD                # 真源 `from .. import content as _C` 的 `_C.ALL_WILD`（★ W4 切包内读口）
     db = ctx._db()
-    for nid in list(_C.NPCS.keys()) + list(_C.ALL_WILD.keys()) + list(_C.HIDDEN_NPCS.keys()):
+    for nid in list(NPCS.keys()) + list(_AW.keys()) + list(HIDDEN_NPCS.keys()):
         if flag in db.get_talk_flags(ctx.group_id, ctx.qq_id, nid):
             return True
     return False

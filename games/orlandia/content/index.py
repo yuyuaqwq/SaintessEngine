@@ -1,14 +1,24 @@
 # -*- coding: utf-8 -*-
 """包内名字索引（`content/index.py`）—— 游戏仓 `game/core/index.py`（56 行）**逐字端口**（B13-L7）。
 
-正文一字未改，只换「宿主取件」：
-    `from ..data import _INDEXES`  →  宿主 `data` 句柄（`_INDEXES` 是宿主运行期建的**同一只字典**，
-                                      包内 `build_index` 写进去、`resolve/display` 读出来，
-                                      对象身份不变 → 宿主侧 `C.resolve(...)` 行为逐字相同）
+正文（`pinyin_id` / `build_index` / `resolve` / `display`）一字未改；本文件另管**索引归属**：
 
-为什么 `_INDEXES` 不切包内域：它是**运行期索引**（`build_index` 的产物，不是声明表），
-`editor/domains.json` 里没有对应域；宿主 `game/data/_assembly.py:179+` 用宿主表建它，
-建完的索引对象就在宿主 `game.data._INDEXES` 上（消费者：`C.resolve/C.display`）。
+归属变化（B15-W1，2026-09-14）
+------------------------------
+* **改前**：`_INDEXES` 是**宿主装配产物** —— 宿主 `game/data/_assembly.py:179-278` 用宿主表建好，
+  放在宿主 `game.data._INDEXES` 上；包内 `_indexes()` 反向去读宿主（`_host_module("data")._INDEXES`）
+  ⇒ 删掉宿主 `game/data`，`resolve/display` 立刻死。
+* **改后**：`_INDEXES` = **包内自建**（`content/index_build.py` 逐字端口那份构建逻辑，表来源 = 包内
+  门面 / 域读口）；`_indexes()` 首次访问时构建一次，之后同一只字典（宿主 `_assembly` 的
+  `build_index(...)` 调用也落在它上面 —— 写入语义与改前「包内写、宿主读同一只字典」等价）。
+  **不再有「读宿主 data」的路径**。
+
+兼容面（宿主薄壳 `game/core/index.py` 仍在调，签名/行为保持）
+----------------------------------------------------------
+* `bind_host(data=…)` / `lazy_host_module(全名)`：保留。**主构建路径不碰它**——唯一消费者是
+  `_host_data()`，只给 3 张**无域缺口表**（`WEAPON_TYPES` / `WT_CN` / `QUALITY_CN`）兜底，
+  见 `content/index_build.py` 头注「缺口」与报告 `overnight/_w1_index_to_pkg.md`。
+* `content/index_build.py::GAP_SOURCES` 记录每张缺口表的实际来源（探针/报告取证用）。
 
 ⚠️ `pypinyin` 是第三方纯计算库（无 IO/无宿主知识）—— 包内直接用，与宿主同源同版本。
 """
@@ -23,9 +33,17 @@ _HOST_PKG = "data.plugins.dragonfall.game"
 _HOST_PKG_FALLBACK = "game"
 _INJECTED = {}
 
+# 包内自建索引（`content/index_build.build_into` 的产物；模块级唯一一份）
+_INDEXES: dict = {}
+_BUILT = False
+
 
 def bind_host(**objs):
-    """宿主替身注入（幂等）——键 = 模块名（`data`）。"""
+    """宿主替身注入（幂等）——键 = 模块名（`data`）。
+
+    兼容注入口：宿主薄壳 `game/core/index.py` 仍按老签名调它（不让宿主 import 炸）。
+    **索引构建不依赖它**（15/17 张表全部来自包内）；只有「无域缺口表」在包内无源时才经它兜底。
+    """
     for k, v in (objs or {}).items():
         if v is not None:
             _INJECTED[k] = v
@@ -65,9 +83,46 @@ def _host_module(name: str):
     raise RuntimeError("index：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
 
 
+def _host_data():
+    """宿主 `data` 模块 —— **只给「无域缺口表」兜底 + 宿主兼容镜像**（`index_build._gap_tables` 第 ③ 级、
+    `_mirror_to_host`）。主构建路径（15/17 张表）的**取值**完全不碰宿主；宿主不可导入 → 抛，
+    调用处各自吞掉（缺口表 → `missing`；镜像 → 跳过）。"""
+    return _host_module("data")
+
+
 def _indexes() -> dict:
-    """宿主 `game.data._INDEXES`（**同一只字典**；包内写入宿主可见）。"""
-    return _host_module("data")._INDEXES
+    """包内自建的名字索引（`content/index_build.build_into` 的产物）。
+
+    首次访问触发构建（惰性：包 import 期不读任何域文件，也不会撞宿主半初始化）；
+    构建恰好一次 —— `_BUILT` 先置位再进 `build_into`，故其内部的 `build_index(...)` 重入是安全的。
+    """
+    global _BUILT
+    if not _BUILT:
+        _BUILT = True
+        from . import index_build as _index_build
+        _index_build.build_into(_INDEXES, _host_getter=_host_data)
+    return _INDEXES
+
+
+def _mirror_to_host(table_name: str) -> None:
+    """宿主兼容镜像（写入方向，宿主不在就跳过）—— 为什么必须有、为什么是**同一对象**：
+
+    宿主 `game/data/_assembly.py:179-278` 混用两种写法：`build_index(...)` 建表之后
+    **直接对 `_INDEXES[...]` 下标读写**（`:193` 写 quality、`:203` 又要 `build_index("weapon_types",…)`、
+    `:204/:205` 用 `dict(WT_CN)` 覆盖该表的两个子键、`:252/:260/:268/:278` 写 monsters/fish/npcs/shop_weapons）。
+    改前两处指向**同一只 dict**；产物搬到包内 dict 后若不同步，宿主 `:204` 会 `KeyError: 'weapon_types'`，
+    而且 `:203` 的裸 `build_index` 会**覆盖掉包内已建好的那把（含 WT_CN 覆盖）**、`:204` 又修不回来
+    （实测症状：`C.display("weapon_types","sword")` 由 `剑` 退化成 `sword`）。
+
+    所以镜像写的是**同一只子 dict 对象**（不是拷贝）：宿主随后的子键覆盖 (`:204/:205`) 就落在包内那份上，
+    与改前「一只 dict」的语义逐字等价。宿主删掉后这里静默跳过 —— `resolve/display` 不依赖它。
+    """
+    try:
+        host_dict = getattr(_host_data(), "_INDEXES", None)
+        if isinstance(host_dict, dict):
+            host_dict[table_name] = _INDEXES[table_name]
+    except Exception:                                        # noqa: BLE001
+        pass
 
 
 def pinyin_id(name: str) -> str:
@@ -108,6 +163,7 @@ def build_index(table_name: str, table: dict, prefix: str = "", name_field: str 
         n2i[nm] = eid
         i2n[eid] = nm
     _indexes()[table_name] = {"name_to_id": n2i, "id_to_name": i2n}
+    _mirror_to_host(table_name)          # 宿主兼容镜像（宿主 `_assembly` 仍直接下标读写宿主 dict）
 
 
 def resolve(table_name: str, name_or_id: str):
@@ -122,4 +178,4 @@ def display(table_name: str, entity_id: str):
     return idx.get(entity_id, entity_id)
 
 
-__all__ = ["pinyin_id", "build_index", "resolve", "display", "bind_host"]
+__all__ = ["pinyin_id", "build_index", "resolve", "display", "bind_host", "_INDEXES", "_indexes"]

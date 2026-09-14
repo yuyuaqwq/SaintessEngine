@@ -10,8 +10,7 @@
 `store/players.py:231` · 测试 `tests/test_m_bonus.py` / `test_numeric_reward_unify.py`）零改动。
 
 正文改动面（**只有宿主取件**，聚合逻辑一字未改）：
-  ① `from .. import content as C` → `C = _HostMod("content")`（TITLES/ACHIEVEMENTS/
-     COLLECTION_BOOKS/ITEMS/MATERIALS/`display` 全在宿主聚合层）
+  ① `from .. import content as C` → `C = _HostMod("content")`（B14-2 L8 后只剩 **`display`** 一个读点）
   ② `from ..log_setup import LOG` → `LOG = _host_attr("log_setup", "LOG")`
   ③ 函数内 3 处 `from .. import db` → 删（改用模块级 `db = _HostMod("db")`，同一模块对象）
   ④ `_collection_completed_bonus` 内 `from .. import content as _C` → `_C = C`
@@ -19,10 +18,15 @@
      → 三个 `_host_attr("core.title_conds", …)`（**跨线**：title_conds 归 B13-L4，别线并行中
        → 按 BRIEF §3 B-5 用宿主句柄；L4 落地后切包内直取）
 
-缺口（报告登记）：TITLES / ACHIEVEMENTS / ITEMS / MATERIALS / COLLECTION_BOOKS / `display`
-全走宿主聚合层句柄。本线实测（`overnight/w1213_l6_probe.py` 输出）：包内 `titles.json`（68 条）
-**条目无 `bonus` 键**、`achievements.json` 只有 `reward` 无 `bonus` → 直接切会**静默丢加成**，
-故不切（形状不等价，I3）。`db`/`log_setup` 属存档/平台面（留宿主，I2 注入）。
+★ B14-2 L8（2026-09-14）：数据读点已切包内门面/读口（`catalog_quests` / `catalog_items` /
+  `collection.books()`）。**实测推翻本文件旧注**（旧注称「`titles.json` 条目无 `bonus`、直接切会静默丢加成」）：
+  `content/data/titles.json` 68 条**带 `bonus` 9 条**、`achievements.json` 119 条**带 `bonus` 25 条**，
+  与宿主 `C.TITLES` / `C.ACHIEVEMENTS` **逐键逐值 deep-equal True**（门禁 + `_b14_2_L8_probe.py`）。
+  故切；`COLLECTION_BOOKS` ↔ `collection.books()`（5 册 · id 序一致 · 去注入 `order` 后逐册全等）。
+
+缺口（报告登记）：`display`（展示名索引，宿主 `game/core/index.py`）包内**无同名域/读口** ⇒ 保留宿主句柄；
+  `TitleCtx/CONDITIONS/check_pro_title`（`game/core/title_conds.py`）= 函数，非数据名 ⇒ 保留宿主句柄。
+  `db`/`log_setup` 属存档/平台面（留宿主，I2 注入）。
 """
 
 # ============================================================
@@ -123,9 +127,14 @@ engine.player_final_stats 的 title_bonus 位置参数保留（旧引擎冻结�
 计算值，升级回满血只回到旧上限，面板长期"生命 861/891"不满）。
 - player 参数：已加载玩家 dict 时传入，避免重复读档（get_player 持锁调用必须传）。
 """
-C = _HostMod("content")                     # 真源 `from .. import content as C`
+C = _HostMod("content")                     # 真源 `from .. import content as C`（B14-2 L8 后残 `display`）
 LOG = _host_attr("log_setup", "LOG")        # 真源 `from ..log_setup import LOG`
 db = _HostMod("db")                         # 真源函数内 `from .. import db`（3 处）
+
+# ★ B14-2 L8（2026-09-14）：数据读点 → 包内门面 / 读口（门禁 `b14_catalog_gate.py` 逐值+键序 OK）
+from . import catalog_items as _ci          # noqa: E402  ITEMS / MATERIALS
+from . import catalog_quests as _cq         # noqa: E402  TITLES / ACHIEVEMENTS
+from . import collection as _col            # noqa: E402  COLLECTION_BOOKS → books()（源列表序）
 
 
 def _visited_maps(group_id, qq_id):
@@ -182,7 +191,7 @@ def stat_bonus(group_id, qq_id, player=None) -> dict:
             "visited_maps": _visited_maps,
         })
         earned = []
-        for t in C.TITLES:
+        for t in _cq.TITLES:
             tid = t["id"]
             fn = CONDITIONS.get(tid)
             if fn is not None:
@@ -192,19 +201,19 @@ def stat_bonus(group_id, qq_id, player=None) -> dict:
             else:
                 ok = False  # 未知称号 id：不获得（数据错误时安全降级）
             earned.append(ok)
-        for i, t in enumerate(C.TITLES):
+        for i, t in enumerate(_cq.TITLES):
             if earned[i] and t.get("bonus"):
                 for k, v in t["bonus"].items():
                     bonus[k] = bonus.get(k, 0) + v
         # 阶段九：成就称号 bonus（14 章 3.3，达成即生效）
         # M18 修复：跳过与 TITLES 同名且带 bonus 的成就（副业 Lv.10 大师称号已由上方
         # TITLES 段累加，成就侧 ach_pro_*10 为同一称号的重复数据 → 跳过避免双倍发放）
-        title_bonus_names = {t["name"] for t in C.TITLES if t.get("bonus")}
+        title_bonus_names = {t["name"] for t in _cq.TITLES if t.get("bonus")}
         try:
             unlocked_achs = {r["ach_key"] for r in db.get_achievements("", qq_id)}
         except Exception:
             unlocked_achs = set()
-        for a in C.ACHIEVEMENTS:
+        for a in _cq.ACHIEVEMENTS:
             if a.get("bonus") and a["id"] in unlocked_achs and a.get("name") not in title_bonus_names:
                 for k, v in a["bonus"].items():
                     if k == "prof_exp_mult":
@@ -232,7 +241,9 @@ def _collection_completed_bonus(qq_id: str, player: dict) -> dict:
     bonus = {}
     try:
         _C = C
-        books = list(getattr(_C, "COLLECTION_BOOKS", None) or [])
+        # B14-2 L8：`C.COLLECTION_BOOKS` → 包内读口 `collection.books()`（5 册 / id 序一致 / 去注入
+        # `order` 后逐册 deep-equal True，实测 `_b14_2_L8_probe.py`）
+        books = list(_col.books())
         if not books:
             return bonus
         poss = set()
@@ -244,10 +255,10 @@ def _collection_completed_bonus(qq_id: str, player: dict) -> dict:
         # key → 显示名映射（收藏册条目常用中文名，把曾拥有 key 的中文名也纳入）
         try:
             for _ik in list(poss):
-                if _ik in _C.ITEMS:
-                    poss.add(str(_C.ITEMS[_ik].get("name", "")))
-                elif _ik in _C.MATERIALS:
-                    poss.add(str(_C.MATERIALS[_ik].get("name", "")))
+                if _ik in _ci.ITEMS:
+                    poss.add(str(_ci.ITEMS[_ik].get("name", "")))
+                elif _ik in _ci.MATERIALS:
+                    poss.add(str(_ci.MATERIALS[_ik].get("name", "")))
         except Exception:
             pass
         # 图鉴击杀怪名（key + display 名）

@@ -12,6 +12,20 @@
 """
 from .economy_host import _HostRef, _h  # noqa: F401
 
+# ---- B14-2 L5：数据名读点切包内门面（`C.<数据名>` → 门面直取；函数名/缺口名仍留 `C.<名>`）----
+from . import catalog_core as _cc     # 常量/职业/种族/面板公式
+from . import catalog_items as _ci    # 物品/材料/符文/装备名册
+from . import catalog_life as _cl     # 生活/副业/商店/宠物/经济配置
+from . import catalog_space as _sp    # 地图/子区域
+from . import catalog_b143 as _b143   # B14-3 收口名（QUALITY/WEAPON_FLAVOR）
+# ---- B14-2 L5 读点切换（2026-09-14）----
+# 数据名读点（SHOP_EQUIP/SHOP_WEAPONS/PAWN_RATES/ECON_CONFIG/FISH_POOL/MOUNT_BY_KEY ·
+# EQUIP_ROSTER/EQUIP_ROSTER_BY_NAME/MATERIALS/MATERIALS_BY_NAME/ITEMS · MAP_BY_ID ·
+# ITEM_TYPE_PET_EGG/ITEM_TYPE_MOUNT）已切包内门面（见文件头 `_cc/_ci/_cl/_sp` import 块）。
+# 仍留 `C.<名>` 的只有：① 宿主函数（equip_stats/equip_value/generate_equip/mount_effects/
+# get_dialogue/dialogue_node/roll_blueprint/generate_roster_equip）
+# （② 域缺口 QUALITY/WEAPON_FLAVOR 已由 B14-3 门面 `catalog_b143` 补上 → 2026-09-14 切净）。
+
 # ---- 宿主面（宿主壳 bind_host() 注入；顺序铁律见 economy_host 模块头）----
 C = _HostRef("C")
 db = _HostRef("db")
@@ -31,7 +45,7 @@ SHOP_EQUIP_PRICE_MULT = {"white": 2.0, "green": 2.4, "blue": 3.0, "purple": 4.0,
 # v130.2d R2：SHOP_EQUIP 条目可选 dict 覆盖价 {"rid": ..., "price": ...}
 # （圣徽·誓约新手保底：推导价公式对低等级蓝装过贵；显示与购买同源取本表，事件折扣仍生效）
 _SHOP_EQUIP_PRICE_OVERRIDE = {}
-for _shop_list in C.SHOP_EQUIP.values():
+for _shop_list in _cl.SHOP_EQUIP.values():
     for _entry in _shop_list:
         if isinstance(_entry, dict) and _entry.get("rid") and _entry.get("price") is not None:
             _SHOP_EQUIP_PRICE_OVERRIDE[_entry["rid"]] = int(_entry["price"])
@@ -70,7 +84,7 @@ def equip_price(slot: str, lv: int, quality: str, weapon_type: str | None = None
     if rid and rid in _SHOP_EQUIP_PRICE_OVERRIDE:
         return _SHOP_EQUIP_PRICE_OVERRIDE[rid]
     stats = C.equip_stats(slot, lv, quality)
-    flavor = C.WEAPON_FLAVOR.get(weapon_type, {}) if slot == "weapon" else {}
+    flavor = _b143.WEAPON_FLAVOR.get(weapon_type, {}) if slot == "weapon" else {}
     for fk, fv in flavor.items():
         if fk == "desc" or not isinstance(fv, (int, float)):
             continue
@@ -82,7 +96,7 @@ def equip_price(slot: str, lv: int, quality: str, weapon_type: str | None = None
             stats["hp"] = stats.get("hp", 0) + int(fv)
         else:
             stats[fk] = stats.get(fk, 0) + int(stats.get(fk, 0) * fv)
-    base = int(C.equip_value(stats) * (C.ECON_CONFIG["shop_equip_price_base"] + lv * C.ECON_CONFIG["shop_equip_price_lv"]) * C.QUALITY[quality]["mult"])
+    base = int(C.equip_value(stats) * (_cl.ECON_CONFIG["shop_equip_price_base"] + lv * _cl.ECON_CONFIG["shop_equip_price_lv"]) * _b143.QUALITY[quality]["mult"])
     return int(base * SHOP_EQUIP_PRICE_MULT.get(quality, 1.5))
 
 
@@ -96,15 +110,15 @@ def equip_roster(player: dict, equip_items: list) -> list:
     # v101.28m #440：排除 SHOP_WEAPONS 已上架的武器名册（圣光长剑重复上架事件——
     # 静态武器表与动态补档各加一次，同价 7998G 出现两行）
     cur = player.get("cur_map", "")
-    _area_id = C.MAP_BY_ID.get(cur, {}).get("area", cur)
-    for wname, *_rest in (C.SHOP_WEAPONS.get(cur) or C.SHOP_WEAPONS.get(_area_id, [])):
-        for _rid in C.EQUIP_ROSTER_BY_NAME.get(wname, []):
+    _area_id = _sp.MAP_BY_ID.get(cur, {}).get("area", cur)
+    for wname, *_rest in (_cl.SHOP_WEAPONS.get(cur) or _cl.SHOP_WEAPONS.get(_area_id, [])):
+        for _rid in _ci.EQUIP_ROSTER_BY_NAME.get(wname, []):
             exist.add(_rid)
     plv = player["level"]
     cands = sorted(
-        (rid for rid, r in C.EQUIP_ROSTER.items()
+        (rid for rid, r in _ci.EQUIP_ROSTER.items()
          if r.get("source") in ("商店", "锻造") and abs(r["lv"] - plv) <= 2 and rid not in exist),
-        key=lambda rid: abs(C.EQUIP_ROSTER[rid]["lv"] - plv),
+        key=lambda rid: abs(_ci.EQUIP_ROSTER[rid]["lv"] - plv),
     )
     return base + cands[:3]
 
@@ -113,7 +127,7 @@ def buy_weapon(wname: str, wtype: str, wlv: int, wq: str) -> dict:
     """阶段八：商店武器生成。名册名走名册精确生成（正确 req + 固定词条），
     非名册武器名（兜底）走随机生成再覆盖名。"""
     _eq_random_desc = _h('_eq_random_desc')  # ← from ..core.drops import _eq_random_desc  # 原 economy.py:22 模块级 import（函数内等位）
-    ids = C.EQUIP_ROSTER_BY_NAME.get(wname, [])
+    ids = _ci.EQUIP_ROSTER_BY_NAME.get(wname, [])
     if ids:
         return C.generate_roster_equip(ids[0])
     eq = C.generate_equip("weapon", wlv, wq, wtype)
@@ -131,7 +145,7 @@ def cur_subarea(player: dict) -> dict:
     """当前所在子区域 dict（无则 {}）。"""
     cur_map = player.get("cur_map", "")
     sa_id = player.get("cur_subarea") or ""
-    cm = C.MAP_BY_ID.get(cur_map, {})
+    cm = _sp.MAP_BY_ID.get(cur_map, {})
     for sa in (cm.get("subareas") or []):
         if sa["id"] == sa_id:
             return sa
@@ -166,18 +180,18 @@ def pawn_rate(player: dict, d: dict, *, is_smith_shop_=None, at_shop=None):
         is_smith_shop_ = is_smith_shop
     if d.get("slot"):  # 装备必须去铁匠铺卖（回收装备是铁匠的活）
         if is_smith_shop_(player):
-            return C.PAWN_RATES["equip"]
+            return _cl.PAWN_RATES["equip"]
         return None
     # v105 M17 P3-3：宠物蛋/坐骑缰绳回收折价 0.5（此前无 slot 且非材料 → 1.0 全价，
     # 掉落蛋/缰绳=白送金币；与装备回收同档，防刷钱。宠物蛋按品质已分档定价 100~500）
-    if d.get("type") in (C.ITEM_TYPE_PET_EGG, C.ITEM_TYPE_MOUNT):
-        return C.PAWN_RATES["pet_mount"]
+    if d.get("type") in (_cc.ITEM_TYPE_PET_EGG, _cc.ITEM_TYPE_MOUNT):
+        return _cl.PAWN_RATES["pet_mount"]
     # v95.32 #397b：材料判定按名查表（data.type 可能是分类名如"精华/草药"，非"材料"）
-    mm = C.MATERIALS_BY_NAME.get(d.get("name", "")) or {}
+    mm = _ci.MATERIALS_BY_NAME.get(d.get("name", "")) or {}
     if not mm:
         # F1 P1-5：非材料、非装备（药水/食物/卷轴/炼金/烹饪产物等消耗品）回收 0.85，
         # 与材料档对齐，避免白送金币（收藏鱼等特殊物在 _sell_one 单独置回 1.0）
-        return C.PAWN_RATES["consumable"]
+        return _cl.PAWN_RATES["consumable"]
     mtype = mm.get("type", "杂物")
     need = _MAT_FACILITY.get(mtype, "shop")
     sa = cur_subarea(player)
@@ -186,11 +200,11 @@ def pawn_rate(player: dict, d: dict, *, is_smith_shop_=None, at_shop=None):
     name = sa.get("name", "")
     funcs = sa.get("funcs") or []
     if need == "alchemy" and ("炼金" in name or "alchemy" in funcs):
-        return C.PAWN_RATES["mat_alchemy"]
+        return _cl.PAWN_RATES["mat_alchemy"]
     if need == "smith" and is_smith_shop_(player):
-        return C.PAWN_RATES["mat_smith"]
+        return _cl.PAWN_RATES["mat_smith"]
     if need == "shop" and at_shop(player):
-        return C.PAWN_RATES["mat_shop"]
+        return _cl.PAWN_RATES["mat_shop"]
     return None
 
 
@@ -203,14 +217,14 @@ def is_quest_item(d: dict) -> bool:
     """
     if d.get("type", "") == "任务道具":
         return True
-    mm = C.MATERIALS_BY_NAME.get(d.get("name", ""))
+    mm = _ci.MATERIALS_BY_NAME.get(d.get("name", ""))
     return bool(mm and mm.get("type") == "任务道具")
 
 
 def fish_weight_max(d: dict):
     """v126.1 大鱼卖更贵：鱼种 weight_range 上限（kg）——FISH_POOL 按名反查；
     非鱼种/未配区间返回 None（按原价 1.0 系数）。"""
-    for f in C.FISH_POOL:
+    for f in _cl.FISH_POOL:
         if f.get("name") == d.get("name"):
             wr = f.get("weight_range")
             return wr[1] if wr and len(wr) > 1 else None
@@ -229,7 +243,7 @@ def sell_one(group_id, qq_id, player, it, rate, *, is_smith_shop_=None, at_shop=
     # 装备误购回收惨淡；0.5 仍低于买入价，不构成刷钱渠道）
     # v95.32 #397b：判据用 slot 而非 quality——v101.25e 起材料也注入全服品质字段，材料被打 0.3 折是 bug
     if d.get("slot"):
-        rate = min(rate, C.ECON_CONFIG["equip_resale_rate"])
+        rate = min(rate, _cl.ECON_CONFIG["equip_resale_rate"])
     # M10 P1-2 锻造→卖店印钞修复：锻造产物（craft_cost=材料价+锻造费）卖店最多回本，
     # 杜绝 材料→锻造→卖店 金币永动机（104/114 配方净赚，最高 +1234%）。
     # F1 P1-5：原仅覆盖装备分支持有 craft_cost 的造物，现扩展到炼金/烹饪等带 craft_cost 的
@@ -241,7 +255,7 @@ def sell_one(group_id, qq_id, player, it, rate, *, is_smith_shop_=None, at_shop=
     # （原 int(1×0.8)=0 返回 None，收藏鱼永久占包无法回收）
     # v104 R3 M15 P1-1：双判据按名兜底——v98.1 采集池可采出星骸遗鳞时期入包的
     # 历史堆 data.type 被写死为"材料"，仅判 data.type 仍卖不掉（0.8 折 int(0.8)=0）
-    if d.get("type") == "收藏" or (C.MATERIALS_BY_NAME.get(d.get("name", "")) or {}).get("type") == "收藏":
+    if d.get("type") == "收藏" or (_ci.MATERIALS_BY_NAME.get(d.get("name", "")) or {}).get("type") == "收藏":
         rate = 1.0
     price = int(d.get("price", 0) * rate * sell_mult)
     if price <= 0:
@@ -320,7 +334,7 @@ def buy_index_dispatch(key, group_id, qq_id, player, qty, discount, *,
         pass
     db = _h('db')  # ← from .. import db  # 惰性导入
     _ss = _h('_ss')  # ← from ..core import smith_stock as _ss  # v135 铁匠铺全服共享货架（注入缺省）
-    _ec = ec or C.ECON_CONFIG
+    _ec = ec or _cl.ECON_CONFIG
     _limit_guard = limit_guard or (lambda *a, **k: (True, ""))
     _at_shop = at_shop or (lambda p: False)
     _ss = smith_stock or _ss
@@ -347,7 +361,7 @@ def buy_index_dispatch(key, group_id, qq_id, player, qty, discount, *,
     if str(key).startswith("m:"):
         # 锻造材料购买
         mid = str(key)[2:]
-        mt = C.MATERIALS[mid]
+        mt = _ci.MATERIALS[mid]
         price = int(mt["price"] * discount)
         total = price * qty
         if _gold < total:
@@ -386,7 +400,7 @@ def buy_index_dispatch(key, group_id, qq_id, player, qty, discount, *,
         return None, f"✅ 你购买了【{wname}】！放到背包了，输入『装备 {wname}』使用。"
     if str(key).startswith("mount:"):
         # v104 修 M17-P2：序号购买坐骑（老马/小毛驴，与面板序号一致，仅橡木镇可买）
-        mdef = C.MOUNT_BY_KEY[str(key)[6:]]
+        mdef = _cl.MOUNT_BY_KEY[str(key)[6:]]
         mounts = player.get("mounts") or {}
         if mdef["key"] in (mounts.get("owned") or []):
             return None, f"你已经拥有{mdef['name']}了！"
@@ -407,7 +421,7 @@ def buy_index_dispatch(key, group_id, qq_id, player, qty, discount, *,
     if str(key).startswith("e:"):
         # 名册装备购买（铁匠铺全套装备）
         rid = str(key)[2:]
-        r = C.EQUIP_ROSTER[rid]
+        r = _ci.EQUIP_ROSTER[rid]
         price = int(equip_price(r["slot"], r["lv"], r["quality"], r.get("weapon_type"), rid) * discount)
         # v105 M09 P3-9：装备单件商品（数量参数不适用）
         if qty > 1:
@@ -440,7 +454,7 @@ def buy_index_dispatch(key, group_id, qq_id, player, qty, discount, *,
         return None, f"✅ 你买下了【{item_data['name']}】！铁匠的手艺交到你手里，输入『装备』查看。"
     # else：普通消耗品（iid = key，非冒号前缀 key）
     iid = key
-    it = C.ITEMS[iid]
+    it = _ci.ITEMS[iid]
     price = int(it["price"] * discount)
     total = price * qty
     if _gold < total:

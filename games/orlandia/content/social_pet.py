@@ -19,8 +19,9 @@
 | 真源写法 | 包内写法 | 说明 |
 |---|---|---|
 | `from .. import db` + `db.xxx(...)` | 模块级 `db` = 惰性宿主代理 `_HostDB` | 正文 `db.xxx` 一行未改；注入优先 → 已加载宿主模块（**不 import**） |
-| `C.PET_POOL` / `C.PET_MAX_LEVEL` / `C.pet_exp_need()` / `C.pet_exp_bonus()` / `C.pct_str()` / `C.pet_skill_label()` / `C.PET_SKILL_UNLOCK_LV` / `C.pet_quality_label()` / `C.ITEMS` / `C.MATERIALS` / `C.MOUNT_BY_KEY` / `C.MOUNT_POOL` | `bind_host(content=C)` 注入的**读表口** `_content()` | 类型/数值表都属宿主内容面（L7 与各数据域），本域不搬 |
-| `from ..data.equipment import QUALITY as _Q`（坐骑面板品质色） | `QUALITY()`（`bind_host(quality=C.QUALITY)` 注入） | 同上一条：只搬运不复制 |
+| `ITEMS` / `MATERIALS` / `PET_POOL` / `MOUNT_BY_KEY` / `MOUNT_POOL`（真源写法 `C.<名>`） | **包内门面直取**：`catalog_items`（`_ci`）/ `catalog_life`（`_cl`） | ★ B14-2 L6：切共享门面（宿主 `game/data` 删掉后本域仍能活）；`b14_catalog_gate.py` 对拍逐值 + 键序相等 |
+| `C.PET_MAX_LEVEL` / `C.PET_SKILL_UNLOCK_LV` / `C.pet_exp_need()` / `C.pet_exp_bonus()` / `C.pct_str()` / `C.pet_skill_label()` / `C.pet_quality_label()` | **两名数据表切包内门面** `catalog_b143`（`_b143`，★ B14-3 2026-09-14；两名的域 B14-3 已建、门禁逐值相等）；其余 `C.<函数名>` 仍走 `bind_host(content=C)` 注入的**读表口** `_content()` | `PET_MAX_LEVEL` / `PET_SKILL_UNLOCK_LV` 原为缺口名，B14-3 收口后切净；函数名句柄非数据名，按总则保留 |
+| `from ..data.equipment import QUALITY as _Q`（坐骑面板品质色） | `QUALITY()`（`bind_host(quality=C.QUALITY)` 注入；兜底 ★ B14-3 改读包内门面 `_b143.QUALITY`） | `QUALITY` 的域已由 B14-3 建立（`catalog_b143`，门禁逐值+键序相等）→ 兜底不再直取宿主 `game/data` |
 
 返回结构（与真源逐字一致）
 --------------------------
@@ -37,6 +38,11 @@
     lines, has_pet = SP.pet_view(qq_id)
 """
 from __future__ import annotations
+
+# ★ B14-2 L6：数据表切包内门面（宿主 `game/data` 删掉后本域仍能活）
+from . import catalog_items as _ci        # ITEMS / MATERIALS
+from . import catalog_life as _cl         # PET_POOL / MOUNT_POOL / MOUNT_BY_KEY
+from . import catalog_b143 as _b143       # B14-3：PET_MAX_LEVEL / PET_SKILL_UNLOCK_LV（原缺口名已建域）
 
 # ============================================================
 # ① 宿主替身口（存储层 / 读表口 / 品质色表）
@@ -86,10 +92,14 @@ def _content():
 
 
 def QUALITY() -> dict:
-    """装备品质色表（真源 `from ..data.equipment import QUALITY`；注入优先）。"""
+    """装备品质色表（真源 `from ..data.equipment import QUALITY`；注入优先）。
+
+    ★ B14-3（2026-09-14）：兜底来源由宿主 `game/data/equipment.py` 换成包内门面
+    `catalog_b143.QUALITY`（门禁 `b14_catalog_gate.py` 逐值 + 键序相等）。
+    """
     if _QUALITY is not None:
         return _QUALITY
-    return getattr(_resolve_host("data.equipment"), "QUALITY")
+    return _b143.QUALITY
 
 
 # ============================================================
@@ -110,10 +120,10 @@ def pet_view(qq_id):
         dex = db.pet_dex_get(qq_id)
         dex_line = ""
         if dex:
-            names = [next((p["name"] for p in C.PET_POOL if p["key"] == k), k) for k in dex]
+            names = [next((p["name"] for p in _cl.PET_POOL if p["key"] == k), k) for k in dex]
             dex_line = f"\n📖 图鉴收集：{'、'.join(names)}"
         return [f"你还没有宠物！打怪有概率掉落宠物蛋，『使用 宠物蛋』孵化～{dex_line}"], False
-    pdef = next((p for p in C.PET_POOL if p["key"] == pet["pet_key"]), None)
+    pdef = next((p for p in _cl.PET_POOL if p["key"] == pet["pet_key"]), None)
     icon = pdef["icon"] if pdef else "🐾"
     # 饱食度衰减持久化
     db.pet_update(qq_id, satiety=pet["satiety"], last_sat_time=pet["last_sat_time"])
@@ -126,13 +136,13 @@ def pet_view(qq_id):
     bonus = C.pct_str(_pb)
     skill_line = ""
     if pdef:
-        skill_line = f"\n🎯 技能：{C.pet_skill_label(pet['pet_key'])} (Lv.{int(C.PET_SKILL_UNLOCK_LV)} 解锁)"
+        skill_line = f"\n🎯 技能：{C.pet_skill_label(pet['pet_key'])} (Lv.{int(_b143.PET_SKILL_UNLOCK_LV)} 解锁)"
     if sat <= 0:
         skill_line = "\n😵 技能失效(饱食度归零)"
     lines = [
         f"{icon} 【宠物 · {pdef['name'] if pdef else pet['name']}】",
         f"━━━━━━━━━━━━",
-        f"名字：{pet['name']} | Lv.{pet['level']}/{C.PET_MAX_LEVEL}",
+        f"名字：{pet['name']} | Lv.{pet['level']}/{_b143.PET_MAX_LEVEL}",
     ]
     # v101.14 品质/出处展示
     if pdef:
@@ -177,7 +187,7 @@ def pet_feed(group_id, qq_id, mat_name: str):
             d = it["data"]
             if d.get("food") or d.get("type") == "鱼":
                 return True
-            cfg = C.ITEMS.get(it["key"]) or C.MATERIALS.get(it["key"]) or {}
+            cfg = _ci.ITEMS.get(it["key"]) or _ci.MATERIALS.get(it["key"]) or {}
             return bool(cfg.get("food"))
 
         _foods = [it for it in db.get_inventory(group_id, qq_id) if _is_feed_food(it)]
@@ -233,7 +243,7 @@ def pet_feed(group_id, qq_id, mat_name: str):
         if d.get("food") or d.get("type") in FOOD_TYPES:
             return True
         # v126.3 瘦身存储水合只带类字段，food 标记按 key 回查配置表（材料/消耗品同一判定）
-        cfg = C.ITEMS.get(it["key"]) or C.MATERIALS.get(it["key"]) or {}
+        cfg = _ci.ITEMS.get(it["key"]) or _ci.MATERIALS.get(it["key"]) or {}
         return bool(cfg.get("food"))
 
     target = None
@@ -269,11 +279,11 @@ def pet_feed(group_id, qq_id, mat_name: str):
             _bond = min(100, pet["bond"] + 5)
             _exp = pet["exp"] + 10
             _lv = pet["level"]
-            while _lv < C.PET_MAX_LEVEL and _exp >= C.pet_exp_need(_lv):
+            while _lv < _b143.PET_MAX_LEVEL and _exp >= C.pet_exp_need(_lv):
                 _exp -= C.pet_exp_need(_lv)
                 _lv += 1
-            if _lv >= C.PET_MAX_LEVEL:
-                _exp = min(_exp, C.pet_exp_need(C.PET_MAX_LEVEL) - 1)
+            if _lv >= _b143.PET_MAX_LEVEL:
+                _exp = min(_exp, C.pet_exp_need(_b143.PET_MAX_LEVEL) - 1)
             db.pet_update(qq_id, satiety=_sat, bond=_bond, exp=_exp, level=_lv)
             pet = {**pet, "satiety": _sat, "bond": _bond, "exp": _exp, "level": _lv}
             _lv_end = _lv
@@ -291,11 +301,11 @@ def pet_feed(group_id, qq_id, mat_name: str):
     bond = min(100, pet["bond"] + 5)
     exp = pet["exp"] + 10
     lv = pet["level"]
-    while lv < C.PET_MAX_LEVEL and exp >= C.pet_exp_need(lv):
+    while lv < _b143.PET_MAX_LEVEL and exp >= C.pet_exp_need(lv):
         exp -= C.pet_exp_need(lv)
         lv += 1
-    if lv >= C.PET_MAX_LEVEL:
-        exp = min(exp, C.pet_exp_need(C.PET_MAX_LEVEL) - 1)
+    if lv >= _b143.PET_MAX_LEVEL:
+        exp = min(exp, C.pet_exp_need(_b143.PET_MAX_LEVEL) - 1)
     db.pet_update(qq_id, satiety=sat, bond=bond, exp=exp, level=lv)
     lv_str = f"\n🎉 宠物升级到 Lv.{lv}！" if lv > pet["level"] else ""
     return [f"🍖 你喂了【{pet['name']}】一份{target['data']['name']}！\n😋 饱食度 +30 ｜ 💕 亲密度 +5 ｜ ✨ 经验 +10{lv_str}"]
@@ -334,13 +344,13 @@ def mount_run(group_id, qq_id, player, raw: str, msg: str, cmd: str, tip_fn):
         if name:
             target = None
             for mk in owned:
-                m = C.MOUNT_BY_KEY.get(mk)
+                m = _cl.MOUNT_BY_KEY.get(mk)
                 if m and name in (m["name"], mk):
                     target = m
                     break
             if not target:
                 # 未拥有的坐骑 → 提示
-                for m in C.MOUNT_POOL:
+                for m in _cl.MOUNT_POOL:
                     if name in (m["name"], m["key"]):
                         # v105 M17 P3-4：提示按真实渠道（商店直购/desc 括号渠道），
                         # 此前驼马/驯鹿/独角兽等生活渠道坐骑也提示打精英/Boss，误导玩家
@@ -373,7 +383,7 @@ def mount_run(group_id, qq_id, player, raw: str, msg: str, cmd: str, tip_fn):
     if not owned:
         lines.append("你还没有坐骑。去橡木镇商店『购买 老马』，或者打精英/Boss 碰碰运气！")
     for mk in owned:
-        m = C.MOUNT_BY_KEY.get(mk)
+        m = _cl.MOUNT_BY_KEY.get(mk)
         if not m:
             continue
         mark = " 🟢 骑乘中" if active == mk else ""
@@ -383,7 +393,7 @@ def mount_run(group_id, qq_id, player, raw: str, msg: str, cmd: str, tip_fn):
         lines.append(tip_fn())
     else:
         lines.append("")
-        lines.append("💡 可获得的坐骑：" + "、".join(f"{_q_label(m)}{m['name']}" for m in C.MOUNT_POOL))
+        lines.append("💡 可获得的坐骑：" + "、".join(f"{_q_label(m)}{m['name']}" for m in _cl.MOUNT_POOL))
     return ["\n".join(lines)]
 
 

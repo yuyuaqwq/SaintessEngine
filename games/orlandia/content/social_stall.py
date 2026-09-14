@@ -18,7 +18,8 @@
 | 真源写法 | 包内写法 | 说明 |
 |---|---|---|
 | `from .. import db` + `db.xxx(...)` | 模块级 `db` = 惰性宿主代理 `_HostDB` | 正文 `db.xxx` 一行未改；注入优先 → 已加载宿主模块（**不 import**） |
-| `C.MAP_BY_ID` / `C.HOUSE_LEVELS` / `C.QUALITY` / `C.ECON_CONFIG` | `bind_host(maps=…, house_levels=…, quality=…, econ=…)` | 全是宿主常量/配置（L7 面），**本域不搬**；缺注入 → 抛（不静默空表） |
+| `MAP_BY_ID` / `HOUSE_LEVELS` / `ECON_CONFIG`（真源写法 `C.<名>`） | **包内门面直取**：`catalog_space`（`_cs`）/ `catalog_life`（`_cl`） | ★ **B14-2 L6**：切共享门面（`b14_catalog_gate.py` 逐值 + 键序相等）；`bind_host(maps=…, house_levels=…, econ=…)` 三个注入位**保留（宿主薄壳仍在传）但本域不再取用** |
+| `QUALITY`（真源写法 `C.<名>`） | `bind_host(quality=…)` → `_host_attr("QUALITY", …)` | **缺口**：包内无品质表域（B14-B/E 已登记）⇒ 仍走宿主句柄；缺注入且宿主无该名 → 抛（不静默空表） |
 
 返回结构（与真源逐字一致）
 --------------------------
@@ -31,23 +32,26 @@
 用法::
 
     from content import social_stall as SS
-    SS.bind_host(db, maps=C.MAP_BY_ID, house_levels=C.HOUSE_LEVELS,
-                 quality=C.QUALITY, econ=C.ECON_CONFIG)
+    SS.bind_host(db, quality=…)          # maps/house_levels/econ 注入位已不用（B14-2 L6）
     ok, res = SS.stall_place(group_id, qq_id, player, item_name, price, count)
 """
 from __future__ import annotations
 
 import re
 
+# ★ B14-2 L6：数据表切包内门面（宿主 `game/data` 删掉后本域仍能活）
+from . import catalog_life as _cl        # HOUSE_LEVELS / ECON_CONFIG
+from . import catalog_space as _cs       # MAP_BY_ID
+
 # ============================================================
 # ① 宿主替身口（存储层 / 宿主常量）
 # ============================================================
 _HOST_DB = None
 _HOST_STORE_SOCIAL = None   # 宿主 `game.store.social`（market_sell_atomic 不在 db 门面上）
-_MAPS = None            # C.MAP_BY_ID
-_HOUSE_LEVELS = None    # C.HOUSE_LEVELS
-_QUALITY = None         # C.QUALITY（装备品质色表）
-_ECON = None            # C.ECON_CONFIG（economy 数值配置，L7 面）
+_MAPS = None            # 遗留注入位（B14-2 L6 起 `MAP_BY_ID()` 走包内门面 catalog_space）
+_HOUSE_LEVELS = None    # 遗留注入位（B14-2 L6 起 `HOUSE_LEVELS()` 走包内门面 catalog_life）
+_QUALITY = None         # `QUALITY`（装备品质色表）—— 包内无域 ⇒ 仍走宿主句柄（缺口）
+_ECON = None            # 遗留注入位（B14-2 L6 起 `ECON_CONFIG()` 走包内门面 catalog_life）
 
 _HOST_PKG = "data.plugins.dragonfall.game"
 _HOST_PKG_FALLBACK = "game"
@@ -91,7 +95,10 @@ db = _HostDB()
 
 
 def _host_attr(name: str, injected):
-    """宿主常量取值：注入优先 → 已加载的宿主 `game.content` → 抛（不静默空表）。"""
+    """宿主常量取值：注入优先 → 已加载的宿主 `game.content` → 抛（不静默空表）。
+
+    B14-2 L6 后只剩 `QUALITY`（包内无域）走这里；另三张表已切包内门面。
+    """
     if injected is not None:
         return injected
     c = _resolve_host("content")
@@ -101,19 +108,23 @@ def _host_attr(name: str, injected):
 
 
 def MAP_BY_ID() -> dict:
-    return _host_attr("MAP_BY_ID", _MAPS)
+    """★ B14-2 L6：包内门面直取（`maps` 注入值保留兼容、不再取用）。"""
+    return _cs.MAP_BY_ID
 
 
 def HOUSE_LEVELS() -> dict:
-    return _host_attr("HOUSE_LEVELS", _HOUSE_LEVELS)
+    """★ B14-2 L6：包内门面直取（`house_levels` 注入值保留兼容、不再取用）。"""
+    return _cl.HOUSE_LEVELS
 
 
 def QUALITY() -> dict:
+    """装备品质色表 —— **缺口**（包内无域）：仍走宿主句柄。"""
     return _host_attr("QUALITY", _QUALITY)
 
 
 def ECON_CONFIG() -> dict:
-    return _host_attr("ECON_CONFIG", _ECON)
+    """★ B14-2 L6：包内门面直取（`econ` 注入值保留兼容、不再取用）。"""
+    return _cl.ECON_CONFIG
 
 
 # ============================================================

@@ -124,7 +124,7 @@ def overall_progress(visited) -> dict:
 # | `SUBAREAS.get(map_id)` / `sa.get("hidden")` / `sa.get("id")` | 本模块探索点表（键 `地图:子区域`，字段同源） | 键空间与宿主 `visited_subareas` 逐字相同；628 点 = 628 子区域 |
 # | `_map_by_id(map_id).get("lv", 1)` | `content/data/worlds.json`（= 宿主 `MAPS` 条目原样，含 `lv`） | 缺图 → `{}` → lv=1（与真源 `_map_by_id` 返回 `{}` 同义） |
 # | `from .. import db` + `db.xxx(...)` | 模块级 `db`（`bind_host` 注入 / `sys.modules` 兜底） | 存储层留宿主（写库、读档、入包全在宿主） |
-# | `C.resolve/C.display/C.MATERIALS`（材料名↔id↔价） | 模块级 `C`（宿主 `content` 聚合层句柄） | `MATERIALS` **未进包**（BRIEF §5：无同名域）→ 缺口登记 |
+# | `C.resolve/C.display/C.MATERIALS`（材料名↔id↔价） | `MATERIALS` → **包内门面**（B14-2 L8 已切，`catalog_items`）；`resolve`/`display` 仍走模块级 `C`（宿主 `content` 聚合层句柄） | `MATERIALS` 门禁逐值+键序 OK ✅；`resolve`/`display` 是**函数**（`game/core/index.py`），包内无读口 → 缺口登记 |
 #
 # 接口不变式：`visited` 那半边（`region_progress(visited)` / `overall_progress(visited)`）签名
 # **一字未动**（宿主命令 `game/commands/exploration.py` 与 `game/core/exploration.py` 薄壳都按它调）。
@@ -198,6 +198,10 @@ class _HostMod:
 
 db = _HostMod("db")
 C = _HostMod("content")
+
+# ★ B14-2 L8（2026-09-14）：`C.MATERIALS`（材料价）→ 包内物品门面直取
+#   （门禁 `b14_catalog_gate.py` 逐值+键序 OK；`C` 仍有残余 `resolve`/`display`）
+from . import catalog_items as _ci      # noqa: E402
 
 
 def _map_by_id(map_id: str) -> dict:
@@ -297,7 +301,7 @@ def C_display_material(mat_id):
 def C_material_price(mat_id):
     """mat_ id → 商店价（无定义给 10）。"""
     try:
-        m = C.MATERIALS.get(mat_id, {})
+        m = _ci.MATERIALS.get(mat_id, {})        # B14-2 L8：包内物品门面（真源 `C.MATERIALS`）
         return m.get("price", 10)
     except Exception:                            # noqa: BLE001
         return 10

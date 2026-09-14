@@ -58,10 +58,34 @@
 （`content/mech/kinds.py`）· `skill_*` 纯公式 / `Battle` / `formation_view` / `alive_units` /
 `state_effects` / `gauge`（引擎公开 API）。
 
-⚠️ 缺口（报告同步登记）：`C` 仍是**宿主聚合层**（`C.roll_poi` / `C.build_monster` /
-`C.build_monster_group` / `C.MAP_BY_ID` / `C.roll_explore_event` / `C.MAIN_QUESTS` / `C.QUALITY` /
-`C.WISH_POOL` / `C.HONOR_SHOP` / `C.PVP_TIMEOUT_SEC` / `C.PET_SKILL_UNLOCK_LV` / …）—— 函数/表读口，
-常量模块按 B9 铁律归 L7 线 → 本线**不建第二份读口**（防双源漂移）。
+★ B14-2（L4）+ W5（2026-09-14）读点现状 —— 22 个数据名已切**包内门面**（宿主 `game/data` 删掉后仍能取值）
+----------------------------------------------------------------------------------
+门禁 `overnight/b14_catalog_gate.py --names …` → **不等 0（含键序）**（真实输出见
+`overnight/W-B14-2-L4.md` / `overnight/_w5_cut_combat_instance.md`）。本模块切掉的名字（正文 `C.<名>` → 门面别名）：
+
+| 门面别名 | 名字（本模块已切） |
+|---|---|
+| `_cc` = `content/catalog_core.py` | `CLASSES` · `PLAYER_SKILLS` · `BRANCH_SKILLS` · `TUTOR_SKILLS` · `MAP_TYPE_TOWN` · `MAP_TYPE_INSTANCE` · `ENCOUNTER_EVENT_CHANCE` · `SA_BOSS_CHANCE` · `PVP_TIMEOUT_SEC` |
+| `_ci` = `content/catalog_items.py` | `MATERIALS` |
+| `_cl` = `content/catalog_life.py` | `MOUNT_BY_KEY` |
+| `_cq` = `content/catalog_quests.py` | `MAIN_QUESTS` · `SIDE_QUESTS` · `NPCS` · `MONSTER_SKILLS` |
+| `_cs` = `content/catalog_space.py` | `MAP_BY_ID` |
+| `_b143` = `content/catalog_b143.py`（W5） | `QUALITY` · `WISH_POOL` · `HONOR_SHOP` · `HIDDEN_MONSTERS` · `PET_SKILL_UNLOCK_LV` |
+| `_wild` = `content/wild.py`（W5，PEP 562 惰性） | `ALL_WILD` |
+
+★ W5（2026-09-14）收口：上列原「缺口 6 表」**已全部切包内门面**（门禁逐名深比较含键序 → 不等 0，
+  取值来源换门面，数值/顺序/默认值一字未动）：
+* **表**：`QUALITY`（`game/data/equipment.py` → `equipment` 域）· `WISH_POOL`
+  （`game/data/poi_pools.py` → `poi_pools` 域）· `HONOR_SHOP`（`game/data/honor_shop.py` →
+  `shop.honor_shop.ranks`，int 键已还原）· `HIDDEN_MONSTERS`（`game/data/hidden_monsters.py` →
+  `game_config.hidden_monsters`）· `ALL_WILD`（真源 `game/core/wild.py:26` 在 import 期求值 →
+  `content/wild.py` 惰性快照，宿主薄壳本就 `is` 同一模块）· `PET_SKILL_UNLOCK_LV`
+  （`game/data/pets.py:192` 常量段 → `game_config.pets`）。
+* **函数名**（按总则 §2.3「函数名 / 缺口名不硬连」保留宿主句柄）：`C.roll_poi` ·
+  `C.roll_wild_encounter` · `C.roll_explore_egg` · `C.roll_explore_event` · `C.build_monster` ·
+  `C.build_monster_group` · `C.mount_effects` · `C.resolve` · `C.display` ·
+  `C.check_achievements` · `C.exp_to_next`（后者包内已有同名端口
+  `content/catalog_core.py:exp_to_next`，但函数族归后续「函数单元」→ 本线不动）。
 """
 from __future__ import annotations
 
@@ -78,6 +102,17 @@ from saintess_engine.formation import formation_view
 from .mech.kinds import K_PHYS, K_MAGI, K_HEAL, K_BUFF, K_PASSIVE, K_TAUNT  # v176 去魔法字符串
 from .panel import passive_skills_learned, player_final_stats, skill_learn_cost_for
 from .skills import _sk_table, branch_skill_owner, is_skill_learned, skill_info, skill_level_of
+
+# ---- 包内门面（B14-2 L4：宿主聚合层 `C` 的包内等价物；宿主 `game/data` 删掉后仍可取值）----
+# 16 个数据名切门面（门禁逐名 OK · 不等 0，含键序）；余下 = 缺口名 + `C` 的函数名句柄。
+# ⚠️ 纯包内 import（不碰宿主）⇒ 不改本模块「时序不变式」（rule/action 注册顺序）那一条。
+from . import catalog_core as _cc        # CLASSES / PLAYER_SKILLS / BRANCH_SKILLS / TUTOR_SKILLS / MAP_TYPE_* / *_CHANCE / PVP_TIMEOUT_SEC
+from . import catalog_items as _ci       # MATERIALS
+from . import catalog_life as _cl        # MOUNT_BY_KEY
+from . import catalog_quests as _cq      # MAIN_QUESTS / SIDE_QUESTS / NPCS / MONSTER_SKILLS
+from . import catalog_space as _cs       # MAP_BY_ID
+from . import catalog_b143 as _b143      # QUALITY / WISH_POOL / HONOR_SHOP / HIDDEN_MONSTERS / PET_SKILL_UNLOCK_LV（W5）
+from . import wild as _wild              # ALL_WILD（W5；宿主薄壳 game/core/wild.py `is content.wild`，同对象）
 
 
 # ============================================================
@@ -260,10 +295,10 @@ def pet_battle_status_note(pet: dict | None) -> str:
         lv = int(pet.get("level", 0) or 0)
         sat = int(pet.get("satiety", 0) or 0)
         name = pet.get("name") or "宠物"
-        if lv >= int(C.PET_SKILL_UNLOCK_LV) and sat <= 0:
+        if lv >= int(_b143.PET_SKILL_UNLOCK_LV) and sat <= 0:
             return (f"🐾 {name} 饿得没力气战斗了……『喂养 <食物>』（肉/鱼/草药）恢复饱食度！")
-        if lv < int(C.PET_SKILL_UNLOCK_LV):
-            return f"🐾 {name} 还小（Lv.{lv}），Lv.{int(C.PET_SKILL_UNLOCK_LV)} 解锁战斗技能！"
+        if lv < int(_b143.PET_SKILL_UNLOCK_LV):
+            return f"🐾 {name} 还小（Lv.{lv}），Lv.{int(_b143.PET_SKILL_UNLOCK_LV)} 解锁战斗技能！"
     except Exception:
         pass
     return ""
@@ -334,7 +369,7 @@ def _res_display_name(key: str) -> str:
     cap 亦同表）。读数据表本体而非 config 挂载，保证脱战/技能列表等命令上下文不依赖挂载时机。
     """
     try:
-        _ER = _host_attr("data.battle_rules", "EFFECT_RULES")
+        from .catalog_rules import EFFECT_RULES as _ER   # ★ B16-W11b：包内门面（真源 rules/effect_rules.json，85 条逐值+键序同）
         _n = (_ER.get(key) or {}).get("name")
         return _n or key
     except Exception:
@@ -440,9 +475,9 @@ async def explore(self, event: AstrMessageEvent, group_id, qq_id, player):
     if cur.startswith("home_"):
         yield event.plain_result("在家里安心休息吧，没有怪物会闯进来～(『出门』去冒险)")
         return
-    cur_map = C.MAP_BY_ID[cur]
+    cur_map = _cs.MAP_BY_ID[cur]
     # 城镇区域（安全区）：可触发 POI，无怪
-    if cur_map.get("type") == C.MAP_TYPE_TOWN:
+    if cur_map.get("type") == _cc.MAP_TYPE_TOWN:
         # v105 M23 P2-1：冷却 key 去掉 group_id——玩家数据全局化（battle 按 qq 全局），
         # 原 key 含群号可跨群绕过：A 群刷完 B 群立刻再刷，城镇 POI 每小时可白嫖约 60 次（60s 冷却）
         _town_cd_key = f"town_explore_cd_{qq_id}"
@@ -478,7 +513,7 @@ async def explore(self, event: AstrMessageEvent, group_id, qq_id, player):
     # v105 M19 P0：主线击杀目标只挂载在副本类地图（q3_3/q6_2/q9_4/q10_1/q12_1/q12_2）
     # 时，探索放行——主线目标 Boss/精英走下方 SA_BOSS_CHANCE 独立判定，保证主线可单人推进
     # （否则第 3 章 q3_3 起主线击杀任务永远卡死）。
-    if cur_map.get("type") == C.MAP_TYPE_INSTANCE and not self._main_kill_target_on_map(group_id, qq_id, cur_map):
+    if cur_map.get("type") == _cc.MAP_TYPE_INSTANCE and not self._main_kill_target_on_map(group_id, qq_id, cur_map):
         inst_name = cur_map.get("name", "这个副本")
         yield event.plain_result(
             f"🏰 【{inst_name}】是组队副本区域，这里的敌人按队伍强度设计！\n"
@@ -567,7 +602,7 @@ async def explore(self, event: AstrMessageEvent, group_id, qq_id, player):
             yield event.plain_result(egg_text)
             return
     # 探索随机事件（野外/外郊/核心区 35% 概率，事件优先于遇怪）
-    _ev_chance = C.ENCOUNTER_EVENT_CHANCE
+    _ev_chance = _cc.ENCOUNTER_EVENT_CHANCE
     if self._rain_boost(group_id, qq_id):
         # v104 M23：『突如其来的雨』30 分钟窗口内探索遇怪率 +15%（事件概率让渡给遇怪）
         _ev_chance = max(0.0, _ev_chance - 0.15)
@@ -628,7 +663,7 @@ async def explore(self, event: AstrMessageEvent, group_id, qq_id, player):
     # v95.23 #247：副本区域探索不触发精英/Boss 独立判定——副本 Boss 只能走『副本 <名字>』
     # 开本流程（有等级/人数校验和通关结算），探索撞 Boss 打赢也不计入副本进度，纯坑玩家
     # v105 M19 P0：但主线击杀目标只挂副本时放行——否则主线 q3_3 起 6 个击杀任务永远卡死
-    if cur_map.get("type") == C.MAP_TYPE_INSTANCE:
+    if cur_map.get("type") == _cc.MAP_TYPE_INSTANCE:
         if main_target:
             if main_target[2] == "boss":
                 sa_boss = boss_target or sa_boss
@@ -686,7 +721,7 @@ async def explore(self, event: AstrMessageEvent, group_id, qq_id, player):
     if sa_elite and (random.random() < (0.08 + eb + _fx.get("elite_chance", 0)) or not events):
         monster = C.build_monster(sa_elite, cur_map)
         tag = "⭐ 精英"
-    elif sa_boss and (random.random() < C.SA_BOSS_CHANCE or not events):
+    elif sa_boss and (random.random() < _cc.SA_BOSS_CHANCE or not events):
         monster = C.build_monster(sa_boss, cur_map)
         tag = "👑 BOSS"
         # v95.20 #101：Boss 战无法逃跑且每刻耗体力，体力低时预警，避免中途耗尽被困
@@ -801,7 +836,7 @@ def _main_kill_target_on_map(self, group_id, qq_id, cur_map):
     if not quests or quests.get("main_status") != "active":
         return None
     mid = quests.get("main_quest")
-    mq = next((q for q in C.MAIN_QUESTS if q["id"] == mid), None) if mid else None
+    mq = next((q for q in _cq.MAIN_QUESTS if q["id"] == mid), None) if mid else None
     if not mq:
         return None
     target = (mq.get("objective") or {}).get("kill")
@@ -891,8 +926,8 @@ def _mount_explore_bonus(self, player) -> float:
     """v39 坐骑：骑乘中探索精英率提升"""
     mounts = player.get("mounts") or {}
     active_mk = mounts.get("active")
-    if active_mk and active_mk in C.MOUNT_BY_KEY:
-        return C.MOUNT_BY_KEY[active_mk].get("elite_bonus", 0)
+    if active_mk and active_mk in _cl.MOUNT_BY_KEY:
+        return _cl.MOUNT_BY_KEY[active_mk].get("elite_bonus", 0)
     return 0.0
 
 def _roll_hidden_monster(self, group_id, qq_id, player, cur_map):
@@ -914,10 +949,10 @@ def _roll_hidden_monster(self, group_id, qq_id, player, cur_map):
     # 地图环境分类（v98.3：数据化 → core/hidden_cond.py ENV_KEYWORDS）
     envs_of, check_cond, HiddenCtx = _host_attrs("core.hidden_cond", "envs_of", "check_cond", "HiddenCtx")
     envs = envs_of(mid)
-    if cur_map.get("type") == C.MAP_TYPE_TOWN:
+    if cur_map.get("type") == _cc.MAP_TYPE_TOWN:
         return None  # 城镇不出隐藏怪
     hctx = HiddenCtx(mid, cur_map, is_night, envs)
-    for hid, hdef in C.HIDDEN_MONSTERS.items():
+    for hid, hdef in _b143.HIDDEN_MONSTERS.items():
         # v97.6 区域限定：maps 字段指定地图 id 列表，当前图不在其中则跳过
         if hdef.get("maps") and mid not in hdef["maps"]:
             continue
@@ -977,12 +1012,12 @@ async def wish(self, event: AstrMessageEvent, group_id, qq_id, player, opt):
         msg = f"💰 流星回应了你的愿望！金币 +{gain}"
     else:
         # v101.4：流星愿望材料池数据化 → data/poi_pools.py WISH_POOL
-        mat = random.choice(C.WISH_POOL)
+        mat = random.choice(_b143.WISH_POOL)
         mid = C.resolve("materials", mat)
-        if mid in C.MATERIALS:
+        if mid in _ci.MATERIALS:
             db.add_item(group_id, qq_id, mid,
                         {"name": C.display("materials", mid), "type": "材料",
-                         "stackable": True, "price": C.MATERIALS[mid]["price"]})
+                         "stackable": True, "price": _ci.MATERIALS[mid]["price"]})
         msg = f"🎒 流星回应了你的愿望！获得材料：{C.display('materials', mid)}"
     C.check_achievements(group_id, qq_id, player, {"wish_met": True})
     yield event.plain_result(f"🌠 【许愿成真】{msg}")
@@ -1022,7 +1057,7 @@ async def trader_confirm(self, event: AstrMessageEvent, group_id, qq_id):
         return
     db.update_player(group_id, qq_id, gold=player["gold"] - price)
     db.add_item(group_id, qq_id, f"eq_{uuid.uuid4().hex[:8]}", equip)
-    q = C.QUALITY.get(equip.get("quality", "white"), {})
+    q = _b143.QUALITY.get(equip.get("quality", "white"), {})
     qtxt = q.get("color", "")
     yield event.plain_result(f"🛒 你花 {price} 金币买下了 {qtxt}【{equip.get('name', '装备')}】")
 
@@ -1086,7 +1121,7 @@ def _roll_find_quest_events(self, group_id, qq_id, player, cur_map):
     for sid, sq in list(side.items()):
         if sq.get("status") != "active":
             continue
-        sqd = next((q for q in C.SIDE_QUESTS if q["id"] == sid), None)
+        sqd = next((q for q in _cq.SIDE_QUESTS if q["id"] == sid), None)
         if not sqd:
             continue
         obj = sqd.get("objective") or {}
@@ -1105,7 +1140,7 @@ def _roll_find_quest_events(self, group_id, qq_id, player, cur_map):
         db.save_quests(group_id, qq_id, quests)
         target = obj["find"]
         mname = cur_map.get("name", "此地")
-        giver = C.NPCS.get(sqd["giver"]) or C.ALL_WILD.get(sqd["giver"]) or {}
+        giver = _cq.NPCS.get(sqd["giver"]) or _wild.ALL_WILD.get(sqd["giver"]) or {}
         gname = giver.get("name", "发布人")
         return (
             f"🐱【找到目标】你在{mname}的灌木丛里听到一声细弱的『喵——』！\n"
@@ -1616,11 +1651,11 @@ async def skill(self, event: AstrMessageEvent, group_id, qq_id, player, skill_na
 def _skill_panel(self, player: dict) -> str:
     """技能系统面板(无参『技能』)"""
     cls = player["class_name"]
-    cls_info = C.CLASSES.get(cls, {})
+    cls_info = _cc.CLASSES.get(cls, {})
     total = len(_sk_table(cls))
     learned = player.get("learned_skills", [])
     # v101.20：已学导师专属技能计入总数（避免"已学>总数"怪相）
-    _tutor = (C.TUTOR_SKILLS or {}).get(cls, {}) or {}
+    _tutor = (_cc.TUTOR_SKILLS or {}).get(cls, {}) or {}
     _tutor_learned = sum(1 for _sid in _tutor if _sid in [C.resolve("skills", s) for s in learned if s])
     total += _tutor_learned
     have = len(learned)
@@ -1644,7 +1679,7 @@ def _skill_panel(self, player: dict) -> str:
 
 def _branch_skills_for(self, player: dict) -> dict:
     """玩家已解锁分支的专属技能表 {技能名: info}(v26：按 tier 升序合并，只含已转职分支)"""
-    cls = C.BRANCH_SKILLS.get(player["class_name"], {})
+    cls = _cc.BRANCH_SKILLS.get(player["class_name"], {})
     if isinstance(cls, dict) and "branches" in cls:
         cls = cls["branches"]
     tier = player.get("class_tier", 0)
@@ -1668,7 +1703,7 @@ def _player_skill_table(self, player: dict) -> dict:
 
     v48：PLAYER_SKILLS[cls] 结构为 {"name": 中文名, "skills": {技能表}}
     """
-    cls_skills = C.PLAYER_SKILLS.get(player["class_name"], {})
+    cls_skills = _cc.PLAYER_SKILLS.get(player["class_name"], {})
     if isinstance(cls_skills, dict) and "skills" in cls_skills:
         table = dict(cls_skills["skills"])
     else:
@@ -1676,7 +1711,7 @@ def _player_skill_table(self, player: dict) -> dict:
     table.update(self._branch_skills_for(player))
     # v101.20 职业导师专属技能：未学会不进列表（保持神秘感），学会后追加（序号稳定在尾部）
     learned = player.get("learned_skills", [])
-    _tutor = (C.TUTOR_SKILLS or {}).get(player["class_name"], {}) or {}
+    _tutor = (_cc.TUTOR_SKILLS or {}).get(player["class_name"], {}) or {}
     for _sid, _info in _tutor.items():
         if _sid in [C.resolve("skills", s) for s in learned if s]:
             table[_sid] = _info
@@ -1832,7 +1867,7 @@ def _skill_list_page(self, player: dict, page: int = 1) -> str:
         else:
             _cost.append("无")
         # v122d 攻击距离（鱼鱼拍板用「射程」：技能自带 reach 覆盖职业 reach）
-        _cls_reach = int((C.CLASSES.get(player.get("class_name", ""), {}) or {}).get("reach", 2) or 2)
+        _cls_reach = int((_cc.CLASSES.get(player.get("class_name", ""), {}) or {}).get("reach", 2) or 2)
         _cost.append(f"射程：{int(info.get('reach') or _cls_reach)}")
         _rg = info.get("res_gain") or 0
         if _rg:
@@ -2207,7 +2242,7 @@ def _player_unit_for_formation(self, player: dict) -> dict:
     """v2 多对多站位图：把玩家单机单位表示为站位单位 dict（并入我方阵列展示用）。
     只读 player，不改动原 dict；rank/reach 按职业 default_rank/reach（数据层已落地）。"""
     cls = player.get("class_name", "")
-    cls_info = C.CLASSES.get(cls, {}) or {}
+    cls_info = _cc.CLASSES.get(cls, {}) or {}
     cls_cn = cls_info.get("name") or cls
     return {
         "uid": "p_self",
@@ -2365,7 +2400,7 @@ async def hunt_boss(self, event: AstrMessageEvent, group_id, qq_id, player):
     # v49 意见#5：世界 Boss 指定地点，必须到达该地图才能讨伐
     boss_map = b.get("map", "")
     if boss_map and player["cur_map"] != boss_map:
-        cur_map_name = C.MAP_BY_ID.get(player["cur_map"], {}).get("name", player["cur_map"])
+        cur_map_name = _cs.MAP_BY_ID.get(player["cur_map"], {}).get("name", player["cur_map"])
         yield event.plain_result(
             f"👹 世界 Boss【{b.get('name', '?')}】出现在【{b.get('map_name', '未知之地')}】！\n"
             f"📍 你当前在【{cur_map_name}】，不在 Boss 出没地！\n"
@@ -2414,7 +2449,7 @@ async def hunt_boss(self, event: AstrMessageEvent, group_id, qq_id, player):
     # 第一次进入：创建世界BOSS战斗（Boss 没技能则按等级配 2 个攻击技能）
     import random as _rnd
     if not b.get("skills"):
-        cand = [s for s, si in C.MONSTER_SKILLS.items() if si.get("kind") in (K_PHYS, K_MAGI)]
+        cand = [s for s, si in _cq.MONSTER_SKILLS.items() if si.get("kind") in (K_PHYS, K_MAGI)]
         b["skills"] = _rnd.sample(cand, min(2, len(cand)))
     # v2 多对多：世界 Boss 经 build_monster_group 生成敌方阵列（Boss+2 爪牙）。
     # 全局数据升级为 {"enemies": [...]}（首元素=主目标），旧 hp/max_hp/name 保留作主目标汇总兼容。
@@ -2749,7 +2784,7 @@ def _pvp_snapshot(self, p: dict, group_id: str = "", qq_id: str = "") -> dict:
     v109.2 P0 修复：补全战斗结算属性（此前缺 atk/def/mdef/tenacity 等 → PVP 中防御/韧性全失效，
     玩家攻击打敌方 0 防御、暴击不受敌方韧性削减——审计 P1-7 快照不消费根源）。"""
     st = player_final_stats(p["class_name"], p["level"], p.get("equipment", {}), p.get("class_tier", 0), p.get("attributes"), p.get("evolve_path", 0), self._title_bonus(group_id, qq_id), p.get("race"))
-    cls_info = C.CLASSES.get(p["class_name"], {}) or {}
+    cls_info = _cc.CLASSES.get(p["class_name"], {}) or {}
     return {
         "qq_id": str(p["qq_id"]), "name": p["name"],
         "class_name": p["class_name"], "level": p["level"],
@@ -2778,7 +2813,7 @@ def _pvp_snapshot(self, p: dict, group_id: str = "", qq_id: str = "") -> dict:
 
 def _pvp_handle_timeout(self, battle, group_id, qq_id) -> bool:
     """PVP 超时检查：5 分钟无行动自动解除(防对方离线卡死)。返回 True=已解除"""
-    if time.time() - battle.get("updated_at", 0) > C.PVP_TIMEOUT_SEC:
+    if time.time() - battle.get("updated_at", 0) > _cc.PVP_TIMEOUT_SEC:
         st = battle["state"]
         # N5b4-4（saintess_engine）：双方 qq 从 meta/sides 读（旧格式快照键兜底兼容）
         _att_qq, _def_qq = self._pvp_meta_qqs(st)
@@ -2817,7 +2852,7 @@ async def honor_shop(self, event: AstrMessageEvent, group_id, qq_id, player, raw
         return
     honor = self._get_honor(qq_id)
     lines = [f"⚜️ 【荣誉商店】(荣誉：{honor})", "━━━━━━━━━━━━"]
-    for i, item in C.HONOR_SHOP.items():
+    for i, item in _b143.HONOR_SHOP.items():
         lines.append(f"{i}. {item['name']} ｜ {item['cost']} 荣誉")
         lines.append(f"   {item['desc']}")
     lines.append("━━━━━━━━━━━━")
@@ -2828,7 +2863,7 @@ async def honor_shop(self, event: AstrMessageEvent, group_id, qq_id, player, raw
 
 async def _honor_buy(self, event, group_id, qq_id, player, num):
     """荣誉兑换：扣荣誉 → 按 reward 类型发放（v99.4 数据化 → data/honor_shop.py）"""
-    item = C.HONOR_SHOP.get(num)
+    item = _b143.HONOR_SHOP.get(num)
     if not item:
         yield event.plain_result(f"没有第 {num} 件商品！『荣誉』查看商店～")
         return
@@ -2898,9 +2933,9 @@ async def _pvp_start(self, event, group_id, qq_id, player, target_arg):
         yield event.plain_result(f"你才 Lv.{player['level']}，处于新手保护期(Lv.<10 不能攻击玩家)！去野外打怪练练级吧～")
         return
     # 安全区检查（城镇区域不可 PK；'城镇外郊' 类型数据不存在，v102.1 清理）
-    cur_map = C.MAP_BY_ID.get(player["cur_map"], {})
-    tgt_map = C.MAP_BY_ID.get(target_player["cur_map"], {})
-    if cur_map.get("type") == C.MAP_TYPE_TOWN or tgt_map.get("type") == C.MAP_TYPE_TOWN:
+    cur_map = _cs.MAP_BY_ID.get(player["cur_map"], {})
+    tgt_map = _cs.MAP_BY_ID.get(target_player["cur_map"], {})
+    if cur_map.get("type") == _cc.MAP_TYPE_TOWN or tgt_map.get("type") == _cc.MAP_TYPE_TOWN:
         yield event.plain_result("🏘️ 这里是安全区，禁止攻击玩家！去野外地图才能 PK。")
         return
     # v110 审计修复：26 章 §二「发起：野外同地图」——原实现可跨任意地图按名远程袭击
@@ -3118,7 +3153,7 @@ async def _pvp_finish(self, event, group_id, winner_qq, loser_qq, attacker_qq, l
     # v104 P2(M22)：PVP 战败与打怪战败(_handle_defeat)一致——回最近城镇（原固定回橡木镇
     # START_MAP，Lv.60+ 败者也回 Lv.1 新手图），落该城中心广场 subareas[0]；HP=1 惩罚保留
     _town_id = self._nearest_town(loser.get("cur_map", ""))
-    _town_sas = C.MAP_BY_ID.get(_town_id, {}).get("subareas") or []
+    _town_sas = _cs.MAP_BY_ID.get(_town_id, {}).get("subareas") or []
     _town_sa = _town_sas[0]["id"] if _town_sas else ""
     db.update_player(group_id, loser_qq, gold=max(0, loser["gold"] - lost - extra), hp=1,
                      cur_map=_town_id, cur_subarea=_town_sa)
@@ -3147,7 +3182,7 @@ async def _pvp_finish(self, event, group_id, winner_qq, loser_qq, attacker_qq, l
         lines.append(f"☠️ 红名期间战败：额外损失 {extra} 金币(上限 2000)！")
     if grey_active:
         lines.append(f"⚪ 【{loser['name']}】灰名期间被击败（主动袭击标记；本次战败按普通规则结算）。")
-    _town_name = C.MAP_BY_ID.get(_town_id, {}).get("name", "城镇")
+    _town_name = _cs.MAP_BY_ID.get(_town_id, {}).get("name", "城镇")
     lines.append(f"🏥 对方被送回{_town_name}疗养(HP 1)。")
     if self._is_redname(loser_qq):
         honor = self._get_honor(winner_qq) + 50

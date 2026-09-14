@@ -125,6 +125,51 @@
           "type": "object",
           "title": "行为彩蛋规则",
           "description": "（1 张规则表）游戏仓 `game/data/rules.py:10 RULES`（20 条，v97.5 行为彩蛋）：每条 = `{id, trigger, desc, cond, count, action}`，`action.template` 指向宿主的文案/效果模板注册表（**模板本体未进包** = 空引用，见报告缺口）。"
+        },
+        "pets": {
+          "type": "object",
+          "title": "宠物常量",
+          "description": "（2 个常量）B14-3 新增。游戏仓 `game/data/pets.py:190/192`：`PET_MAX_LEVEL`（品种等级上限 = 30）/ `PET_SKILL_UNLOCK_LV`（战斗技能解锁等级 = 10）。**为什么在本组而不是 `pets` 域**：`pets` 域的 primary def 是「一条 = 一个品种」（`required=[key,name,quality,focus,skill_type,skill_interval,skill_value,spd]`），常量行塞不进（硬塞 = 硬造品种字段或放水 required）。品种池本体在 `pets` 域。消费端：`content/social_pet.py` / `content/settlement.py` / `content/combat_cmds.py`。"
+        },
+        "maps": {
+          "type": "object",
+          "title": "地图图间常量",
+          "description": "（3 张表）B14-3 新增。游戏仓 `game/data/maps.py`：`MAP_CONNECTIONS`（**跨图**连通 116 键 —— 图与图之间，`maps` 域有意只描述**图内形状**）/ `LEGACY_MAP_ALIAS`（旧地图名/中文名 → 现行图 id，13 键）/ `HIDDEN_MAP_UNLOCK`（隐藏区解锁条件 2 键）。⚠ 同模块的 `ENCY_*` / `MONSTER_LOCS` 是**空 dict**、由 `game/core/maps` 运行期填充的运行期索引 → 不进域（列在导出器 `owned_elsewhere`）。消费端：`content/world_cmds.py` / `content/travel.py` / `content/economy_cmds.py` / `content/settlement.py`。"
+        },
+        "world": {
+          "type": "object",
+          "title": "世界事件与拍卖池",
+          "description": "（3 张池子）B14-3 新增。游戏仓 `game/data/world.py`：`WORLD_EVENT_POOL`（14 条世界事件定义 `{type,name,icon,duration,desc}`）/ `AUCTION_POOL`（10 条拍卖品 `{slot,lv,quality,base,buyout}`）/ `WORLD_BOSS_POOL`（6 条世界 Boss `{name,icon,lv,hp,reward,map,map_name,mech}`）。消费端：`content/world_event_templates.py` / `content/social_cmds.py` / `content/settlement.py` / `content/economy_cmds.py`（含 `world_cmds` 的报告口径）。"
+        },
+        "runes": {
+          "type": "object",
+          "title": "符文常量",
+          "description": "（3 张表）B14-3 新增。游戏仓 `game/data/runes.py`：`RUNE_CRAFT_SHARDS`（品质 → 制作需碎片数 3/4/6）/ `RUNE_DROP`（品质 → 掉落率）/ `RUNE_LEVEL_ROMAN`（等级 1..3 → 罗马数字）。**符文条目本体**在 `runes` 域（`RUNES` + 注入的 `craft`/`conflicts`），本组不重复。消费端：`content/economy_cmds.py` / `content/settlement.py`。"
+        },
+        "affixes": {
+          "type": "object",
+          "title": "词条池与别名",
+          "description": "（2 张索引表）B14-3 新增。游戏仓 `game/data/affixes.py`：`AFFIX_POOL_BY_QUALITY`（品质 → 可出词条 id 列表，**随机池**）/ `AFFIX_AFFINITY_CN`（玩家输入别名 → 锻造倾向词，12 键）。**词条条目本体**在 `affixes` 域。消费端：`content/economy_cmds.py`（锻造词条抽取与倾向匹配）。"
+        },
+        "fishing": {
+          "type": "object",
+          "title": "垂钓常量与收藏",
+          "description": "（1 张收藏表 + 1 个常量）B14-3 新增。游戏仓 `game/data/fishing.py`：`FISH_COLLECT`（3 条收藏鱼 `{id,name,chance,spots,desc}`，`spots = null` 表示不限钓点）/ `FISH_EXP`（品质 → 垂钓经验）。**钓点表**在 `fishing_spots` 域、**鱼种池**在 `fishing_pool` 域，本组不重复。消费端：`content/economy_cmds.py` / `content/profession.py`。"
+        },
+        "pois": {
+          "type": "object",
+          "title": "交互点定义表",
+          "description": "（1 张定义表）B14-3 新增。游戏仓 `game/data/pois.py:9 POIS`（83 条交互点**定义**：`{name,icon,desc,effect}`，键 = 交互点类型如 `campfire`/`shrine`/`herb_patch`）。**落点表**（哪个子区域有哪些交互点）在 `pois` 域 —— 两者形状不同（定义 vs 落点），故定义表归本组。消费端：`content/instance_cmds.py` / `content/world_cmds.py` / `content/effects/poi_effects.py`。"
+        },
+        "hidden_monsters": {
+          "type": "object",
+          "title": "隐藏怪",
+          "description": "（1 张表）B14-3 新增。游戏仓 `game/data/hidden_monsters.py:18 HIDDEN_MONSTERS`（25 条 `e_*` 隐藏精英：`{id,name,role,lv_off,skills,drops,gold_mult,cond,chance,tag,flavor}`）。**为什么在本组**：`monsters` 域是「一条 = 一个怪技能」（`required=[name,kind,desc]`）、`monster_roster` 域是「一条 = 一个怪名册行」（要求 `kind_class`/`lv_rule`/`spawns`）—— 本表的 `lv_off`（等级偏移）+ `cond`/`chance`（出现条件）形状与两者都不同。消费端：`content/player_events.py`（按 id 判定）/ `content/combat_cmds.py`。"
+        },
+        "instance_investigation": {
+          "type": "object",
+          "title": "副本调查常量",
+          "description": "（1 张收藏样本表）B14-3 新增。游戏仓 `game/data/instance_investigation.py:47 INVESTIGATE_COLLECT_SAMPLES`（5 个材料 id：调查点「收藏」分支的样本池）。**调查点表本体**在 `instance_investigation` 域（22 本 / 90 个点），本组不重复；同模块的三个概率常量（`INVESTIGATE_*_CHANCE`）与两个派生计数（`INVESTIGATION_COUNT`/`INVESTIGATION_INST_COUNT`）本轮不进域（非缺口名，列在导出器 `owned_elsewhere`）。消费端：`content/instance_cmds.py`。"
         }
       }
     }

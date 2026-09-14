@@ -1,39 +1,42 @@
 # -*- coding: utf-8 -*-
 """包内位置结构体（`content/position.py`）—— 游戏仓 `game/core/position.py`（140 行）**逐字端口**（B13-L7）。
 
-正文一字未改，只换「宿主取件」（三处，全部**函数内**解析，与真源同位置）：
-| 真源取件 | 包内替身 |
+正文一字未改，只换「宿主取件」（三处）：
+| 真源取件 | 包内替身（★ W12 收口 2026-09-14） |
 |---|---|
-| `from ..data import MAP_BY_ID` | 宿主 `data` 句柄 |
-| `from ..data import SUBAREAS` | 宿主 `data` 句柄 |
-| `from .worlds import get_instance_world` | 宿主 `core.worlds` 句柄（**别线在搬** → 见缺口） |
+| `from ..data import MAP_BY_ID` | ★ **已切包内门面** `_cs.MAP_BY_ID`（`catalog_space`，值/键序对拍 OK） |
+| `from ..data import SUBAREAS` | ★ **已切包内门面** `_cs.SUBAREAS`（同上） |
+| `from .worlds import get_instance_world` | ★ **已切包内直取**（`from .worlds import get_instance_world`，函数内惰性）|
 
-为什么这两张表没切包内域（**实测依据，不是偷懒**）
---------------------------------------------------
-1. `MAP_BY_ID`：`editor/domains.json` **无同名域**；它是 `MAPS` 的派生索引
-   （`_assembly.py:145-146` 用 MAPS 重建），且值 = MAPS 条目**含装配期注入的 `subareas` 键**
-   （`_assembly.py:137`）。宿主 15+ 处消费点读 `C.MAP_BY_ID.get(...).get("subareas")`
-   （base.py / instance.py / item_templates.py …），而包内 `worlds` 域**有意剔除** `subareas`
-   （导出插件文件头：那是装配期注入的嵌套列表，与 subareas 域同批对象）→ 换源 = 静默丢键。
-2. `SUBAREAS`：同名 `subareas` 域存在且**内容等价**（B13-L7 对拍：628 条逐字段 0 差异、
-   逐图列表序相同）。但本模块的返回语义是「返回宿主那份子区域列表/条目」—— 包内域是
-   **扁平 + 注入 `map`** 的投影，重建后是**新 dict**（不是宿主行对象身份）。同一份判断在
-   `content/maps.py` 里已按「域重建 = 内容等价」切过（那里只读 id/name/type/hidden/reveal，
-   不向外抛行对象）；本模块把行对象**抛给调用方**，行对象身份/后续就地改写的语义无法保证 →
-   本线按「不确定 → 宿主句柄 + 缺口登记」处理，切点留给 B14（统一裁）。
+★ W12 收口（2026-09-14）：两张表切门面。**身份语义的落点与验证**
+--------------------------------------------------------------
+* B14 第一段门面 `content/catalog_space.py` 值与键序逐项相等（`b14_catalog_gate.py` OK；
+  `MAP_BY_ID` 值含装配期注入的 `subareas`，门面同款重建 ⇒ 无旧注的「静默丢键」）。
+* 宿主 `tests/test_v141_instance_world.py:128/133/192` 按**对象身份**断言
+  （`rm is C.MAP_BY_ID.get("oak_town")` / `sa is C.SUBAREAS.get("oak_town")`）。
+  **当前宿主 `game/content.py` 还是旧形（`from .data import *`）⇒ `C.MAP_BY_ID` 是宿主那份**，
+  与本模块读到的门面对象「值等而身份不等」→ 该 2 条断言在**收口前**必红（实测见
+  `overnight/_w12_identity_report.log`，这是**已知且预期**的中间态）。
+  收口步（`overnight/_b14_close_new_content_py.py` 把 `game/content.py` 改成再导出包内门面）生效后
+  `C.MAP_BY_ID is catalog_space.MAP_BY_ID` ⇒ 两句断言恢复真值（收口模拟 probe
+  `overnight/_w12_identity_probe.py` 末行 + `_w12_v141_sim.py` 全绿）。
+* `get_instance_world`：宿主 `game/core/worlds.py` 已是薄壳（`sys.modules[__name__] = content.worlds`）
+  → 切包内直取是**零行为变更**（B14-2 L8 已实测，函数同一）。
 
-缺口登记
+缺口登记（交主 agent 收口）
 --------
-* `MAP_BY_ID` / `SUBAREAS` 两处读点 = 宿主句柄 → 待 B14（要么给 `maps`/`worlds` 域补 MAPS 序与
-  `subareas` 注入语义，要么让消费端改读 `maps`/`subareas` 域拼装）。
-* `get_instance_world`（副本大陆实例）= 宿主句柄 → **待 B13-L2（`core/worlds.py` 那条线）落地后**
-  切包内直取（本线不许直接 import 别线在搬的模块：会瞬时 ImportError）。
+* 本模块已无宿主 `data` 读点；**身份断言的最后一环 = `game/content.py` 改再导出**（同上）。
+* 同款身份断言还有 `content/worlds.py:355`（`resolve_map_for`，测试 `:192`）—— 该文件**不在本线
+  范围**，须同期切门面，否则收口后 `:192` 变 RuntimeError。
 """
 from __future__ import annotations
 
 import importlib
 import sys
 from typing import Optional
+
+# ---- 包内门面读口（W12 收口：真源 `from ..data import MAP_BY_ID / SUBAREAS`）----
+from . import catalog_space as _cs       # noqa: E402  MAP_BY_ID / SUBAREAS（值 + 键序对拍 OK）
 
 _HOST_PKG = "data.plugins.dragonfall.game"
 _HOST_PKG_FALLBACK = "game"
@@ -82,8 +85,14 @@ def _host_module(name: str):
 
 
 def _get_instance_world(world_id):
-    """真源 `from .worlds import get_instance_world`（函数内惰性 import）→ 宿主句柄。"""
-    return getattr(_host_module("core.worlds"), "get_instance_world")(world_id)
+    """真源 `from .worlds import get_instance_world`（函数内惰性 import）→ **包内直取**（B14-2 L8）。
+
+    宿主 `game/core/worlds.py` 是薄壳（`sys.modules[__name__] = content.worlds`，实测
+    `game.core.worlds is content.worlds` 且函数同一）⇒ 与原宿主句柄取到的是**同一个函数对象**，
+    零行为变更（实测 `overnight/_b14_2_L8_idprobe.py` ④）。
+    """
+    from .worlds import get_instance_world
+    return get_instance_world(world_id)
 
 
 class Position:
@@ -134,7 +143,8 @@ class Position:
     def resolve_map(self) -> Optional[dict]:
         """按世界解析地图 dict——唯一入口，替换全游戏 C.MAP_BY_ID.get(map_id)。
 
-        主大陆 → 宿主 `MAP_BY_ID`；副本实例 → instance_worlds[world_id].maps。
+        主大陆 → 包内门面 `catalog_space.MAP_BY_ID`（收口后 `C.MAP_BY_ID` 即同一对象）；
+        副本实例 → instance_worlds[world_id].maps。
         找不到返回 None（调用方自行兜底，与原 C.MAP_BY_ID.get 语义一致）。
         """
         if self.is_instance():
@@ -142,7 +152,7 @@ class Position:
             if inst is None:
                 return None
             return inst.get("maps", {}).get(self.map_id)
-        return _host_module("data").MAP_BY_ID.get(self.map_id)
+        return _cs.MAP_BY_ID.get(self.map_id)
 
     def resolve_subareas(self) -> list:
         """当前地图的子区域列表（按世界解析）。"""
@@ -151,7 +161,7 @@ class Position:
             if inst is None:
                 return []
             return inst.get("subareas", {}).get(self.map_id, [])
-        return _host_module("data").SUBAREAS.get(self.map_id, [])
+        return _cs.SUBAREAS.get(self.map_id, [])
 
     # ---- 复制 ----
 

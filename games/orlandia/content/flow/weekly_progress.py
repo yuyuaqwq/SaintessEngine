@@ -15,7 +15,7 @@
 |---|---|---|
 | `from .. import db` + `db.get_event_state(k)` / `db.set_event_state(k, v)` | 模块级 `db` = **惰性宿主代理** `_HostDB`（属性访问时才解析宿主模块） | 正文里 `db.xxx(...)` **一行未改**；宿主由 `bind_host(db)` 注入，或按 `sys.modules` 找**已加载**的宿主模块（绝不 import，防在包侧另起一份宿主模块树） |
 | `from ..reward import grant_reward`（函数内 import） | `grant_reward = _host_grant_reward()` | 同一分发：注入优先，否则取宿主 `game.reward` 模块 |
-| `from .. import content as C` + `C.WEEKLY_QUESTS`（`game/commands/weekly.py:56/135`） | `weekly_pool()` —— 读包内 `content/data/weekly_quests.json` | **域文件单源**；按条目 `seq`（= 源列表插入序，导出期注入）还原顺序 |
+| `from .. import content as C` + 宿主聚合层 `WEEKLY_QUESTS`（`game/commands/weekly.py:56/135`） | `weekly_pool()` —— 读包内 `content/data/weekly_quests.json` | **域文件单源**；按条目 `seq`（= 源列表插入序，导出期注入）还原顺序 |
 | 模块常量 `_WEEKLY_PICK = 3` / `_WEEKLY_MIN_LV = 50`（命令层硬编码） | `WEEKLY_PICK` / `WEEKLY_MIN_LV` = `_CFG.const("weekly_quests", …)` | ★ B9-L7：常量不再是包内字面量，改读 `game_config` 域（真源 `game/data/weekly_quests.py:152/155`，导出器 `b9_l7_domains.py:derive_game_config`） |
 
 顺序不变式（**渲染逐字等价的关键**）
@@ -123,7 +123,7 @@ def _read_domain():
 def weekly_pool() -> list:
     """悬赏池 —— **源列表顺序**（按条目 `seq`，= 真源 `WEEKLY_QUESTS` 插入序）的条目 list。
 
-    与真源 `list(C.WEEKLY_QUESTS)` 逐条等价（条目字段原样 + 导出期注入的 `seq`）。
+    与真源 `list(WEEKLY_QUESTS)`（宿主聚合层）逐条等价（条目字段原样 + 导出期注入的 `seq`）。
     """
     global _POOL
     if _POOL is None:
@@ -238,7 +238,7 @@ def _assign_week(player) -> dict:
     池内顺序取前 3（同周全员一致更公平——避免『同一周不同人任务不同』的攀比，
     也比每日 random.sample 少一个随机调用点，不扰动战斗回归随机序列）。
 
-    包内改动：`C.WEEKLY_QUESTS` → `weekly_pool()`（包内域文件，按源插入序）；
+    包内改动：宿主聚合层 `WEEKLY_QUESTS` → `weekly_pool()`（包内域文件，按源插入序）；
     `_WEEKLY_PICK` → `WEEKLY_PICK`（同值 3）。其余逐字。
     """
     lv = int(player.get("level") or 1)

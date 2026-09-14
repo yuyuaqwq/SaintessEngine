@@ -29,7 +29,7 @@ v184 起它已在引擎 `saintess_engine.loot`（引擎零知识），真源与�
 | 真源宿主耦合 | 包内替身 | 调用方给什么 |
 |---|---|---|
 | `game.data.drop_pools.DROP_POOLS`（596 池数据） | `install_pools(pools)`；未挂 → 包内 `content/data/drop_pools.json` | 池 dict（`{池key: {type, entries/rolls/…}}`），与真源数据逐条同源 |
-| `game.content`：`ITEMS` / `EQUIP_ROSTER` / `RUNES` / `roll_blueprint` / `roll_gem_drop` / `roll_drop_equip` / `generate_roster_equip` / `generate_equip` / `rune_item` / `make_pet_egg` | `install_content_api(api)`（**模块 or 普通对象**，只按属性取）；也认 `ctx.content_api`（逐次覆盖）。未挂 → 包内默认 `_PackageContent` | 见 `content_api_keys()`：`ITEMS`/`EQUIP_ROSTER` 读包内 JSON，装备/图纸/宝石/符文/宠物蛋**构造器**尚未进包 → 默认一律 `None`（= 该条出不来） |
+| `game.content`：`ITEMS` / `EQUIP_ROSTER` / `RUNES` / `roll_blueprint` / `roll_gem_drop` / `roll_drop_equip` / `generate_roster_equip` / `generate_equip` / `rune_item` / `make_pet_egg` | `install_content_api(api)`（**模块 or 普通对象**，只按属性取）；也认 `ctx.content_api`（逐次覆盖）。未挂 → 包内默认 `_PackageContent` | 见 `content_api_keys()`：`ITEMS`/`EQUIP_ROSTER` 读包内门面 `content/catalog_items.py`（B14-2 起；原就地 JSON），装备/图纸/宝石/符文/宠物蛋**构造器**尚未进包 → 默认一律 `None`（= 该条出不来） |
 | `game.core.quality_tiers.FISH_TIERS`（垂钓档位表） | `install_quality_tiers(order, info=…, weights_by_level=…, aliases=…, clamp=…)`（或直接给 `TierTable`） | 档位表；未挂 → 空表 → `_roll_fish` 守卫返回 `[]`（抽不出，不抛） |
 | 事件钩子（真源 `ctx.hooks[hook]`） | **不变**（引擎 `SimpleCtx.hooks` 恒为 dict） | `special:xxx` 的 hook 表，由调用方塞进 ctx |
 
@@ -50,6 +50,9 @@ from collections.abc import Mapping
 from typing import Any
 
 from saintess_engine.loot import LootTable, SimpleCtx, TierTable
+
+# B14-2（L7 线）：包内默认内容 API 的**数据来源**切到包内门面（原就地读 content/data/*.json）
+from .catalog_items import EQUIP_ROSTER, ITEMS   # 真源 `game.content`:ITEMS / :EQUIP_ROSTER
 
 # ============================================================
 # 搬运头：替身接口落点（包内新增，非真源正文）
@@ -125,11 +128,17 @@ class _PackageContent:
 
 
 def _package_content() -> _PackageContent:
-    """包内默认内容 API（惰性单例：第一次解析引用时才读 JSON）。"""
+    """包内默认内容 API（惰性单例：第一次解析引用时才取门面）。
+
+    B14-2（L7 线）：数据来源由「就地读 `content/data/{items,equip_roster}.json`」切到
+    **包内门面** `content/catalog_items.py`（实测键集 900 / 687 与本文件直读 JSON 全等，
+    本文件对这两表只做 `in` 成员判定 → 逐条同果）。`_PackageContent.RUNES` 默认空表
+    **保持原样**（引擎侧约定：包内默认不产符文；真源 `C.RUNES` 由调用方
+    `install_content_api()` 注入，见模块头 ②）。
+    """
     global _PACKAGE_CONTENT
     if _PACKAGE_CONTENT is None:
-        _PACKAGE_CONTENT = _PackageContent(_read_json("items.json", {}) or {},
-                                           _read_json("equip_roster.json", {}) or {})
+        _PACKAGE_CONTENT = _PackageContent(ITEMS, EQUIP_ROSTER)
     return _PACKAGE_CONTENT
 
 

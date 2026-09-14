@@ -91,6 +91,13 @@ class _HostMod:
     def __getattr__(self, attr):
         return getattr(_host_module(self._name), attr)
 
+# ★ B14-2 L8（2026-09-14）：`create_instance_world` 克隆用的三张表切**包内门面**
+#   （`deepcopy` 落地 → 与宿主表**身份无关**，只需内容相等；门禁逐值+键序 OK）。
+#   `resolve_map_for` 的 MAP_BY_ID **仍走宿主句柄**：宿主 `tests/test_v141_instance_world.py:192`
+#   按**对象身份**断言（`is C.MAP_BY_ID.get(...)`）—— 待主 agent 收口（`game/content.py` 改再导出
+#   包内门面）时同批切，否则该断言红（实测见报告 §保留/阻塞）。
+from . import catalog_space as _cs      # noqa: E402
+
 # 运行时内存态：world_id -> {
 #   "name": 副本名,
 #   "inst_id": 副本配置 id（inst_goblin_camp）,
@@ -174,9 +181,9 @@ def create_instance_world(
     - st: 副本战斗状态快照（_instance_build_state 产物）
     - rooms / resources_pool: v137 副本地图化怪池/资源池
     """
-    MAP_BY_ID = _host_attr("data", "MAP_BY_ID")  # 宿主真源（maps 域是投影，见报告缺口）
-    SUBAREAS = _host_attr("data", "SUBAREAS")
-    INSTANCES = _host_attr("data", "INSTANCES")
+    MAP_BY_ID = _cs.MAP_BY_ID            # B14-2 L8：包内空间门面（真源 `data.MAP_BY_ID`，逐值+键序 OK）
+    SUBAREAS = _cs.SUBAREAS              # B14-2 L8：包内空间门面（真源 `data.SUBAREAS`）
+    INSTANCES = _cs.INSTANCES            # B14-2 L8：包内空间门面（真源 `data.INSTANCES`）
     world_id = f"inst:{uuid.uuid4().hex[:12]}"
     map_id = inst_id[5:] if str(inst_id).startswith("inst_") else inst_id
     inst = INSTANCES.get(inst_id, {})
@@ -352,5 +359,5 @@ def resolve_map_for(world_id: str, map_id: str) -> Optional[dict]:
         if data is None:
             return None
         return data.get("maps", {}).get(map_id)
-    MAP_BY_ID = _host_attr("data", "MAP_BY_ID")  # 宿主真源
+    MAP_BY_ID = _host_attr("data", "MAP_BY_ID")  # ★ 保留宿主句柄（B14-2 L8：身份断言未解，见文件头注）
     return MAP_BY_ID.get(map_id)

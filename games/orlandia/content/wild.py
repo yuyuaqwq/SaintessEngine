@@ -2,7 +2,10 @@
 # ==============================================================================
 # 包内实现（唯一真源）· B13-L2（2026-09-14）—— 逐字搬自宿主
 #   `qqbot/data/plugins/dragonfall/game/core/wild.py`
-# 搬运改动面**只有「宿主取件」**一类：5 处 `from .. import db` → `db` 替身；`data.wild_npcs` 两张表 → 宿主句柄；`ALL_WILD` → 惰性快照 `_ALL_WILD()`（PEP 562 兼容真源名）
+# 搬运改动面**只有「宿主取件」**一类：5 处 `from .. import db` → `db` 替身；`ALL_WILD` → 惰性快照 `_ALL_WILD()`（PEP 562 兼容真源名）
+# ★ B16-W8（2026-09-14）：「宿主取件」最后一处 `data.wild_npcs` 两张表**归包** ——
+#   `_wild_tables()` 改读包内 `npcs` 域（经 `catalog_quests` 的保序门面，序表在那边显式声明），
+#   宿主句柄清零；本模块此后 `import` 不碰 `game.data`（见 ② 与 `overnight/_w8_wild_daily_events.md`）。
 # 宿主同名文件 = 薄壳（指向本模块，见那边的头注）。
 # ==============================================================================
 """奥兰迪亚·余烬纪年 核心 - wild.py（18 章野外 NPC 判定引擎，2026-08-06）
@@ -22,6 +25,7 @@
 """
 import datetime
 import json
+import os
 import random
 
 from .time_weather import current_period, current_season, today_weather   # 包内（本线同名模块）
@@ -92,19 +96,70 @@ class _HostMod:
 db = _HostMod("db")     # 真源 5 处函数内 `from .. import db`
 
 
-# 全部野外/隐藏 NPC（HIDDEN 后合并，同 map 遍历顺序：普通先、隐藏后）
-# 真源 `from ..data.wild_npcs import WILD_NPCS, HIDDEN_NPCS` = 宿主两张数据表。
-# 为什么走宿主句柄而不是包内 `content/data/npcs.json`：那份是**排序键序**落盘，
-# 迭代序不可逆，而本模块 4 处消费（`unlock_met`/`base_conditions_met` 的 any 不算，
-# `roll_wild_encounter`/`nearby_hints` 是**按 ALL_WILD 顺序取第一个命中**）顺序=行为。
-# 缺口登记：npcs 域待补「真源顺序」字段后可切包内（见报告）。
+# ============================================================
+# ② 野外/隐藏 NPC 三表 —— 包内域读口（★ B16-W8 · 2026-09-14 宿主句柄归包）
+#    真源模块级 `from ..data.wild_npcs import WILD_NPCS, HIDDEN_NPCS` = 宿主两张数据表；
+#    宿主 `game/data/` 要删，所以本模块必须自带。取值来源换成包内：
+#
+#        `npcs` 域 `content/data/npcs.json`（431 条 = town 362 / wild 47 / hidden 22）
+#          ↓ 经包内门面 `content/catalog_quests.py` 的**保序还原**
+#        `WILD_NPCS`（47）· `HIDDEN_NPCS`（22）
+#
+#    为什么不能直接读域 JSON：域外层键是**字典序**落盘（导出契约 `sort_table`，幂等优先），
+#    真源是插入序，而本模块的 `roll_wild_encounter` / `nearby_hints` 是**按 ALL_WILD 顺序
+#    取第一个命中** ⇒ 顺序 = 行为。序表（`_WILD_NPCS_ORDER` 47 / `_HIDDEN_NPCS_ORDER` 22）
+#    在 `catalog_quests.py` 里显式声明 + 导入期集合守卫（`_ordered()`：域键集 ≠ 序表键集
+#    → raise），实测与宿主 `C.WILD_NPCS` / `C.HIDDEN_NPCS` **键集 / 键序 / 逐条值全等**。
+#    ⚠️ 本模块**不再本地派生这两张表** —— 同一张表两份定义必漂移（与 `content/talk_actions.py`
+#       「ALL_WILD 切包内读口后本地派生随之删除」同纪律）。
+# ============================================================
+from .catalog_quests import (WILD_NPCS as _WILD_NPCS_47,          # 包内门面（npcs 域 + 序表）
+                             HIDDEN_NPCS as _HIDDEN_NPCS_22)
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def _inst_stage_ids():
+    """域里带 `inst_stage` 的 6 条**层内 NPC**（`data/_assembly.py:163` 装配期并入 HIDDEN_NPCS）。
+
+    真源 `ALL_WILD` 是 `core/wild.py` **import 期**求值的 `{**WILD_NPCS, **HIDDEN_NPCS}`，
+    那一刻装配还没把 `INSTANCE_STAGE_NPCS` 并进去 ⇒ 真源 63 = wild 47 ∪ hidden **16**。
+    宿主真源条目里**没有** `inst_stage` 这个键（它是导出器 `derive_npcs` 为折三张表注入的），
+    所以**域是包内唯一能分辨这 6 条的地方** —— 用字段判定，不硬编码 id 名册。
+    """
+    try:
+        with open(os.path.join(_HERE, "data", "npcs.json"), encoding="utf-8") as fh:
+            dom = json.load(fh)
+    except Exception:                                       # noqa: BLE001
+        return frozenset()
+    return frozenset(k for k, v in dom.items()
+                     if isinstance(v, dict) and v.get("inst_stage"))
+
+
+_INST_STAGE_IDS = _inst_stage_ids()
+
+# 导入期守卫：形状漂移 → 大声抛（绝不静默少条目 / 静默换序 —— 两者都会改行为）
+if (len(_WILD_NPCS_47), len(_HIDDEN_NPCS_22)) != (47, 22):
+    raise ValueError(
+        "content/wild：npcs 域两张表条数变了（wild=%d / hidden=%d，期望 47 / 22）—— "
+        "域或 catalog_quests 序表变了，拒绝静默降级"
+        % (len(_WILD_NPCS_47), len(_HIDDEN_NPCS_22)))
+if set(_WILD_NPCS_47) & set(_HIDDEN_NPCS_22):
+    raise ValueError(
+        "content/wild：WILD_NPCS 与 HIDDEN_NPCS 键集有交集 %s —— 真源三表零交集"
+        % sorted(set(_WILD_NPCS_47) & set(_HIDDEN_NPCS_22))[:5])
+if len(_INST_STAGE_IDS) != 6 or not _INST_STAGE_IDS <= set(_HIDDEN_NPCS_22):
+    raise ValueError(
+        "content/wild：域里 `inst_stage` 标记不是 6 条、或不在 HIDDEN_NPCS 里（%d 条 %s）—— "
+        "层内 NPC 并入路径（_assembly.py:163）变了，拒绝静默把 ALL_WILD 从 63 变 69"
+        % (len(_INST_STAGE_IDS), sorted(_INST_STAGE_IDS)[:8]))
+
 _ALL_WILD_CACHE = None
 
 
 def _wild_tables():
-    """宿主两张 NPC 表（真源模块级 `from ..data.wild_npcs import WILD_NPCS, HIDDEN_NPCS`）。"""
-    return (_host_attr("data.wild_npcs", "WILD_NPCS"),
-            _host_attr("data.wild_npcs", "HIDDEN_NPCS"))
+    """包内两张 NPC 表（真源模块级 `from ..data.wild_npcs import WILD_NPCS, HIDDEN_NPCS`）。"""
+    return _WILD_NPCS_47, _HIDDEN_NPCS_22
 
 
 def _ALL_WILD() -> dict:
@@ -113,12 +168,16 @@ def _ALL_WILD() -> dict:
     真源快照发生在 `data/_assembly.py:163` 把 6 条层内 NPC 并进 `HIDDEN_NPCS` **之前**
     ⇒ 真源 ALL_WILD = wild 47 ∪ hidden 16 = **63** 条；这里用 `not inst_stage` 精确还原
     （与 `content/talk_actions.py` 同口径），首次调用后缓存 = 真源的「import 期求值一次」。
+
+    ★ B16-W8：源在包内 ⇒ 取值与「谁先触发」解耦，恒为 63。改前两张表走宿主句柄，
+    而宿主 `HIDDEN_NPCS` 是**会被装配期就地 update 的同一只字典**，`game.*` 回退路径下
+    实测取到过 69（并入后）。
     """
     global _ALL_WILD_CACHE
     if _ALL_WILD_CACHE is None:
-        wild_npcs, hidden_npcs = _wild_tables()
-        _ALL_WILD_CACHE = {**wild_npcs,
-                           **{k: v for k, v in hidden_npcs.items() if not v.get("inst_stage")}}
+        _ALL_WILD_CACHE = {**_WILD_NPCS_47,
+                           **{k: v for k, v in _HIDDEN_NPCS_22.items()
+                              if k not in _INST_STAGE_IDS}}
     return _ALL_WILD_CACHE
 
 

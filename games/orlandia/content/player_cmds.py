@@ -27,25 +27,25 @@
    `C.CLASS_NOVICE`（7）· `C.PCT_STATS`（2）→ **包内读口** `content/tables.py` 的同名符号。
    等价性实测：`display`/`resolve` 在 classes 400 输入 / skills 415 输入上 **0 处不等**
    （`overnight/w1213_l3_probe.py`）。
-4. `db` / `C`（宿主聚合层）→ `_HostMod` 惰性代理，正文 `db.xxx` / `C.xxx` **一行未改**。
+4. `db` / `C`（宿主聚合层）→ `_HostMod` 惰性代理。**B14-2 L3（2026-09-14）已把本文件 63 处数据读点
+   切到包内门面**（`from . import catalog_{core,quests,space} as _cat_*`；只改「取值来源」，
+   数值 / 文案 / 遍历顺序一字未动）。残余 `C` 只服务函数读口 + 2 张缺口表（见下）。
 5. 技能详情 `from .combat import CombatCmds` 那处：宿主 `CombatCmds._EFFECT_CN` 是**类级常量表**，
    B10 L5 已定「常量表原样留宿主类」（包内 `self._X` 读同一份）→ 本模块经上表第 1 类替身读同一对象。
 
-⚠️ 缺口（报告同步登记）—— 这一批**没切**的读点及理由
+⚠️ 缺口（报告同步登记）—— **没切**的读点及理由
 --------------------------------------------------
-* **`C.CLASSES`(30) · `C.RACES`(10) · `C.PLAYER_SKILLS`(6) · `C.BRANCH_SKILLS`(2) · `C.TUTOR_SKILLS`(1)
-  保持宿主句柄**：同名域（classes / races / skills）**值逐键相等、但键序不等** —— 域文件外层键是
-  导出契约的**字典序**（`sort_table`），真源声明序在域里没处存（与 `job_guide` 域当初要显式声明
-  `JOB_ORDER` 同族问题）。实测差异：真源 CLASSES 序 = 见习/战士/法师/游侠/牧师/刺客/拳师/吟游诗人，
-  域序 = 刺客/法师/牧师/见习/吟游诗人/拳师/游侠/战士 → 切了会改「注册·可选职业/可选种族」文案、
-  『种族』一览顺序、`_hidden_alias_map` / `_hidden_class_routes` 的冲突判定（后者是 last-wins）。
-  **待域侧补「声明序」声明**（tables.py:JOB_ORDER 同款，共享文件 → 本线不动）后即可整表切包内读口。
-* `C.resolve("races", …)`（1 处，注册段种族解析）保持宿主句柄：包内 `tables.resolve` **无 races 索引**
-  （实测 12 处不等：`resolve("银月精灵")` 宿主 → `elf`、包内 → 原样返回）。
-* 无包内读口（§5 已登记，B14 统一裁）：`C.CLASS_NOVICE` 之外的常量/函数 —— `C.START_MAP` /
-  `C.START_SUBAREA` / `C.MAP_BY_ID` / `C.QUALITY` / `C.EQUIP_SLOTS` / `C.exp_to_next` /
-  `C.EVOLVE_LEVELS` / `C.RESET_SKILL_COST` / `C.EVOLVE_FEES` / `C.OPTIONAL_STATS` / `C.BUILDS` /
-  `C.check_achievements` / `data.battle_rules.EFFECT_RULES`（↓ 见下）。
+* **B14-2 L3 已切**（门面 = `content/catalog_{core,quests,space}.py`；下面这段旧记录的「域是字典序 /
+  声明序没处存」问题已由门面的显式声明序 `_ORDER_*` 解决，`b14_catalog_gate.py` 对 33 名实测
+  **OK 29 · 门面缺 4 · 不等 0**）：`CLASSES` `RACES` `PLAYER_SKILLS` `BRANCH_SKILLS`
+  `TUTOR_SKILLS` `START_MAP` `START_SUBAREA` `EVOLVE_LEVELS` `EVOLVE_FEES` `RESET_SKILL_COST`
+  `OPTIONAL_STATS` `BUILDS` `MAP_BY_ID`（`CLASS_NOVICE` / `PCT_STATS` 走 `tables.py`，门面亦复用同源）。
+* **残余 `C.<名>` —— ★ W4（2026-09-14）已清零（原缺口两名切包内门面）**：`C.QUALITY`（1 处：装备面板品质
+  颜色/名）· `C.EQUIP_SLOTS`（2 处：装备面板槽位名）→ `content/catalog_b143.py`（B14-3 建 `equipment`
+  域，门禁逐键逐值+键序不等 0）。真源宿主 `game/data/equipment.py`；原缺口见 `overnight/W-B14-B.md` / `W-B14-E.md`。
+* 函数读口仍是宿主（同一批不改）：`C.resolve("races", …)`（1 处，包内 `tables.resolve` 无 races 索引）·
+  `C.check_achievements` · `C.exp_to_next` · ~~`data.battle_rules.EFFECT_RULES`~~（★ W12 收口已切
+  包内门面 `catalog_rules.EFFECT_RULES`）。
 * **跨线依赖**（按 WAVE11-13_BRIEF §3-B-5：别线在并行搬 → 用宿主句柄惰性替身，别直接 import）：
   `format_talent` → 待 **B13-L6** 落地 `content/race_talent_display.py` 后切包内直取；
   `COND_LABELS` → 待 **B13-L6** 的 `content/battle_cond_labels.py`；
@@ -73,6 +73,13 @@ from saintess_engine.battle.formulas import skill_buff_turns, skill_cond_mult, s
 from .panel import player_final_stats, player_stats_detail, race_name, race_stats, skill_learn_cost_for
 from .skills import _sk_table, branch_path_index, branch_skill_owner, is_skill_learned, skill_info, skill_level_of, skill_upgrade_cost
 from .tables import CLASS_NOVICE, PCT_STATS, display, resolve
+
+# B14-2 L3：数据读点切包内门面（宿主 game/data 删后仍可活；缺口名仍走 C）
+from . import catalog_core as _cat_core
+from . import catalog_quests as _cat_quests
+from . import catalog_space as _cat_space
+# ★ W4（2026-09-14）：原缺口两名切包内门面 —— `QUALITY` / `EQUIP_SLOTS`
+from . import catalog_b143 as _cat_b143
 
 
 # ============================================================
@@ -137,8 +144,11 @@ class _HostMod:
 C = _HostMod("content")     # 真源 `from .. import content as C`（聚合层**同对象**）
 db = _HostMod("db")         # 真源 `from .. import db`
 
-# 真源宿主顶层 `from ..data.battle_rules import EFFECT_RULES`（资源名单源；包内无同名读口 → 惰性取）
-EFFECT_RULES = _host_attr("data.battle_rules", "EFFECT_RULES")
+# W12 收口：真源宿主顶层 `from ..data.battle_rules import EFFECT_RULES`（资源名单源）
+#   → 包内门面直取（`rules/effect_rules.json`，85 条；键序由门面序声明守卫）
+#   对拍：`overnight/_w12_precheck_sources.py` B → OK（逐值 + 键序，对真源模块；宿主聚合层未导出该名）
+from . import catalog_rules as _cat_rules   # noqa: E402
+EFFECT_RULES = _cat_rules.EFFECT_RULES
 
 
 # ============================================================
@@ -150,7 +160,7 @@ EFFECT_RULES = _host_attr("data.battle_rules", "EFFECT_RULES")
 # v112 数据驱动收敛（D4）：导师名/地点下沉 CLASSES[职业]["tutor"]，逻辑层只读数据
 def _tutor_mentor(cls_id: str):
     """职业导师 (导师名, 所在城市)。未配置兜底通用文案。"""
-    return C.CLASSES.get(cls_id, {}).get("tutor", ("职业导师", "各城"))
+    return _cat_core.CLASSES.get(cls_id, {}).get("tutor", ("职业导师", "各城"))
 
 
 # v112：核心资源 key → 中文名（skill 消耗展示用，新增资源只改数据）
@@ -375,9 +385,9 @@ async def register(self, event: AstrMessageEvent, group_id, qq_id):
     class_name = first
     name = rest
     glued = False
-    if cls_id not in C.CLASSES:
+    if cls_id not in _cat_core.CLASSES:
         # 无空格注册兼容：职业名与角色名粘在一起（如"注册战士格温"）
-        for cid, cinfo in C.CLASSES.items():
+        for cid, cinfo in _cat_core.CLASSES.items():
             cn = cinfo.get("name", cid)
             if first.startswith(cn) and len(first) > len(cn) + 1:
                 # v105 P1(M01#3)：粘连剩余段必须 ≥2 字才算旧格式粘连——
@@ -407,19 +417,19 @@ async def register(self, event: AstrMessageEvent, group_id, qq_id):
     # v105 P2(M01)：角色名恰等于职业名（『注册 战士 女』）——名字槽是性别词/空时
     # 旧格式解析必失败（"名字不能为空"），按新格式处理：名字=职业名，职业转见习。
     # 注：性别词永不可能成为合法名字槽（性别强制必选），故可安全拦截。
-    if not glued and cls_id in C.CLASSES and cls_id != CLASS_NOVICE:
+    if not glued and cls_id in _cat_core.CLASSES and cls_id != CLASS_NOVICE:
         _nm = (name or "").strip()
         if not _nm or _nm.lower() in GENDER_MAP:
             cls_id = CLASS_NOVICE
             class_name = ""
             name = first
-    if cls_id not in C.CLASSES:
-        avail = "、".join(cinfo.get("name", cid) for cid, cinfo in C.CLASSES.items())
+    if cls_id not in _cat_core.CLASSES:
+        avail = "、".join(cinfo.get("name", cid) for cid, cinfo in _cat_core.CLASSES.items())
         yield event.plain_result(f"未知职业『{class_name}』！可选职业：{avail}")
         return
     # v83 22 章：隐藏职业不可直接注册（需传承解锁）
-    if C.CLASSES.get(cls_id, {}).get("hidden"):
-        avail = "、".join(cinfo.get("name", cid) for cid, cinfo in C.CLASSES.items())
+    if _cat_core.CLASSES.get(cls_id, {}).get("hidden"):
+        avail = "、".join(cinfo.get("name", cid) for cid, cinfo in _cat_core.CLASSES.items())
         yield event.plain_result(
             f"『{class_name}』是传说中才会出现的隐藏职业，普通人无法选择……\n"
             f"💡 世界深处藏着它的线索(隐藏成就/隐藏区域)。可选职业：{avail}"
@@ -443,19 +453,19 @@ async def register(self, event: AstrMessageEvent, group_id, qq_id):
             continue
         if not _race_done:
             r = C.resolve("races", tok)
-            if r not in C.RACES:
+            if r not in _cat_core.RACES:
                 # 简称兼容：输入"精灵"匹配"银月精灵"
-                r = next((rid for rid, ri in C.RACES.items() if tok in ri["name"]), r)
-            if r in C.RACES:
+                r = next((rid for rid, ri in _cat_core.RACES.items() if tok in ri["name"]), r)
+            if r in _cat_core.RACES:
                 race_id = r
-                race_display = C.RACES[r]["name"]
+                race_display = _cat_core.RACES[r]["name"]
                 _race_done = True
                 continue
         g = GENDER_MAP.get(tok.strip().lower())
         if g and not gender_id:
             gender_id = g
             continue
-        races_avail = "、".join(ri.get("name", rid) for rid, ri in C.RACES.items())
+        races_avail = "、".join(ri.get("name", rid) for rid, ri in _cat_core.RACES.items())
         yield event.plain_result(
             f"未知种族或性别『{tok}』！可选种族：{races_avail}，性别：男/女\n"
             f"格式：注册 <名字> <性别> [种族]，如『注册 格温 女 精灵』"
@@ -485,7 +495,7 @@ async def register(self, event: AstrMessageEvent, group_id, qq_id):
     if db.find_player_by_name(name):
         yield event.plain_result("这个名字已经有人用啦，换一个吧～")
         return
-    cls = C.CLASSES[cls_id]
+    cls = _cat_core.CLASSES[cls_id]
     cls_display = cls.get("name", cls_id)
     # v100.7 注册初始血量必须乘种族倍率（银月精灵月缺 HP-5% 等），否则初始当前生命 > 上限
     st0, _ = player_stats_detail(cls_id, 1, {}, 0, None, 0, None, race_id)
@@ -493,11 +503,11 @@ async def register(self, event: AstrMessageEvent, group_id, qq_id):
     # v95 #47：注册送 1 技能点 → Lv.1 有 1 点、Lv.2 有 2 点正好学第一个技能（Lv.1/Lv.2 技能 cost=2），断层消除
     db.update_player(group_id, qq_id, skill_points=1)
     # v86 子区域：新手出生落中心广场
-    db.update_player(group_id, qq_id, cur_map=C.START_MAP, cur_subarea=C.START_SUBAREA)
+    db.update_player(group_id, qq_id, cur_map=_cat_core.START_MAP, cur_subarea=_cat_core.START_SUBAREA)
     db.init_stats(group_id, qq_id)
-    db.add_portal(qq_id, C.START_MAP)  # v10：新手自动激活橡木镇方碑（v83：原维拉方碑旧地图）
+    db.add_portal(qq_id, _cat_core.START_MAP)  # v10：新手自动激活橡木镇方碑（v83：原维拉方碑旧地图）
     # v12：自动学会初始技能（职业 Lv.1 技能），后续技能用技能点学习
-    sk_table = C.PLAYER_SKILLS.get(cls_id, {}).get("skills", {}) if isinstance(C.PLAYER_SKILLS.get(cls_id), dict) and "skills" in C.PLAYER_SKILLS.get(cls_id) else C.PLAYER_SKILLS.get(cls_id, {})
+    sk_table = _cat_core.PLAYER_SKILLS.get(cls_id, {}).get("skills", {}) if isinstance(_cat_core.PLAYER_SKILLS.get(cls_id), dict) and "skills" in _cat_core.PLAYER_SKILLS.get(cls_id) else _cat_core.PLAYER_SKILLS.get(cls_id, {})
     init_skills = [s for s, info in sk_table.items() if info["lv"] <= 1]
     if init_skills:
         db.update_player(group_id, qq_id, learned_skills=init_skills)
@@ -513,8 +523,8 @@ async def register(self, event: AstrMessageEvent, group_id, qq_id):
     # 注册欢迎语种族行：图标+名称+天赋明细（#50 种族说明模糊——原本只有一行哲学 desc，
     # 玩家看不出种族实际给什么；改为把天赋逐条列在注册回执，与『种族』一览同口径）
     race_line = ""
-    if race_id in C.RACES:
-        _rd = C.RACES[race_id]
+    if race_id in _cat_core.RACES:
+        _rd = _cat_core.RACES[race_id]
         _tnames = _rd.get("talent_names", {})
         format_talent = _host_attr("core.race_talent_display", "format_talent")
         _tl = []
@@ -630,7 +640,7 @@ async def bind_identity(self, event: AstrMessageEvent):
     )
 
 async def profile(self, event: AstrMessageEvent, group_id, qq_id, player):
-    cls = C.CLASSES.get(player["class_name"], {})  # v105 P1(M01#10)：脏 class_name 兜底
+    cls = _cat_core.CLASSES.get(player["class_name"], {})  # v105 P1(M01#10)：脏 class_name 兜底
     # v55.2：属性也统一「总值(+加成)」格式，每项单独一行（与『属性』面板一致）
     st, sources = player_stats_detail(
         player["class_name"], player["level"], player["equipment"],
@@ -645,19 +655,19 @@ async def profile(self, event: AstrMessageEvent, group_id, qq_id, player):
     if _inst_row:
         cur_map = "副本战斗中"
     else:
-        cur_map = (C.MAP_BY_ID.get(player["cur_map"]) or C.MAP_BY_ID.get(C.START_MAP, {}))
+        cur_map = (_cat_space.MAP_BY_ID.get(player["cur_map"]) or _cat_space.MAP_BY_ID.get(_cat_core.START_MAP, {}))
         cur_map = cur_map.get("name", "橡木镇")
     # 装备展示（v33：固定部位顺序，空位显示 —）
     eq_lines = []
     for slot in ["weapon", "helm", "armor", "legs", "boots", "ring", "necklace"]:
         item = player["equipment"].get(slot)
         if item:
-            q = C.QUALITY[item["quality"]]
+            q = _cat_b143.QUALITY[item["quality"]]
             enh = item.get("enhance", 0)
             enh_str = f" +{enh}" if enh > 0 else ""
-            eq_lines.append(f"  {C.EQUIP_SLOTS[slot]}：{q['color']}{item['name']}{enh_str}")
+            eq_lines.append(f"  {_cat_b143.EQUIP_SLOTS[slot]}：{q['color']}{item['name']}{enh_str}")
         else:
-            eq_lines.append(f"  {C.EQUIP_SLOTS[slot]}：—")
+            eq_lines.append(f"  {_cat_b143.EQUIP_SLOTS[slot]}：—")
     eq_str = "\n".join(eq_lines) if eq_lines else "  无"
     need = C.exp_to_next(player["level"])
     exp_pct = min(100, int(player["exp"] / need * 100)) if need else 0
@@ -755,7 +765,7 @@ async def leaderboard(self, event: AstrMessageEvent, group_id, qq_id):
         lines = ["🏆 【奥兰迪亚战力榜】 🏆", "━━━━━━━━━━━━"]
         for i, p in enumerate(ranked):
             lines.append(f"{medals[i]} {_pw(p):,} 战力 Lv.{p['level']} "
-                         f"{C.CLASSES[p['class_name']]['icon']}{p['name']} ({display('classes', p['class_name'])})")
+                         f"{_cat_core.CLASSES[p['class_name']]['icon']}{p['name']} ({display('classes', p['class_name'])})")
         lines.append("")
         lines.append(self._tip("rank"))
         yield event.plain_result("\n".join(lines))
@@ -766,7 +776,7 @@ async def leaderboard(self, event: AstrMessageEvent, group_id, qq_id):
         return
     lines = ["🏆 【奥兰迪亚强者榜】 🏆", "━━━━━━━━━━━━"]
     for i, p in enumerate(tops):
-        _ci = C.CLASSES.get(p['class_name'], {})  # v105 P1(M01#10)：脏 class_name 兜底
+        _ci = _cat_core.CLASSES.get(p['class_name'], {})  # v105 P1(M01#10)：脏 class_name 兜底
         lines.append(f"{medals[i]} Lv.{p['level']} {_ci.get('icon', '❓')}{p['name']} ({display('classes', p['class_name'])})")
     lines.append("")
     lines.append(self._tip("rank"))
@@ -775,7 +785,7 @@ async def leaderboard(self, event: AstrMessageEvent, group_id, qq_id):
 async def races(self, event: AstrMessageEvent):
     """阶段九：种族一览(08 章，注册前查看 6 族天赋)"""
     lines = ["🧬 【种族】6 大种族各有取舍(注册时选择：注册 <名字> <性别> <种族>)", "━━━━━━━━━━━━"]
-    for rid, r in C.RACES.items():
+    for rid, r in _cat_core.RACES.items():
         t = r["talents"]
         tnames = r.get("talent_names", {})
         # v98.3：展示格式化全数据化 → core/race_talent_display.py
@@ -818,20 +828,20 @@ async def evolve(self, event: AstrMessageEvent, group_id, qq_id, player):
             yield r
         return
     # v109.2 P2-6：隐藏职业玩家『转职 <未识别名>』拦截——防落基础路径错门槛/导师断链
-    if _raw0 and C.CLASSES.get(player["class_name"], {}).get("hidden"):
+    if _raw0 and _cat_core.CLASSES.get(player["class_name"], {}).get("hidden"):
         yield event.plain_result(
             f"⚠️ 未识别『{_raw0}』！你已踏上传承之路，『转职』可查看下一阶传承。")
         return
     # 隐藏职业玩家『转职』(无参数)：显示传承之路（下一阶/已满）
-    if not _raw0 and C.CLASSES.get(player["class_name"], {}).get("hidden"):
+    if not _raw0 and _cat_core.CLASSES.get(player["class_name"], {}).get("hidden"):
         async for r in self._evolve_hidden_status(event, group_id, qq_id, player):
             yield r
         return
-    cls = C.CLASSES[player["class_name"]]
+    cls = _cat_core.CLASSES[player["class_name"]]
     tier = player.get("class_tier", 0)
     # 转职等级门槛：tier 1→30级 / tier 2→60级 / tier 3→90级（21 章三转体系）
     next_tier = tier + 1
-    need_lv = C.EVOLVE_LEVELS.get(next_tier)
+    need_lv = _cat_core.EVOLVE_LEVELS.get(next_tier)
     branches = cls.get("evolve_branches", {}).get(next_tier, [])
     # 已满级转职
     if not need_lv:
@@ -845,7 +855,7 @@ async def evolve(self, event: AstrMessageEvent, group_id, qq_id, player):
         line = f"{cls['icon']}{display('classes', player['class_name'])}"
         evo_lines = []
         for t, branch_list in cls.get("evolve_branches", {}).items():
-            lv = C.EVOLVE_LEVELS[t]
+            lv = _cat_core.EVOLVE_LEVELS[t]
             tagged = []
             for i, b in enumerate(branch_list):
                 tag = "攻" if i == 0 else "守"
@@ -862,7 +872,7 @@ async def evolve(self, event: AstrMessageEvent, group_id, qq_id, player):
         return
     # 可以转职：v95.23 改为找职业导师 NPC 转职（不再直接指令转职）
     # v112 D4：导师表下沉 CLASSES[职业]["tutor"]
-    tname, tloc = C.CLASSES.get(player["class_name"], {}).get("tutor", ("职业导师", "对应城市"))
+    tname, tloc = _cat_core.CLASSES.get(player["class_name"], {}).get("tutor", ("职业导师", "对应城市"))
     # v130.2f.2 苦修改名收尾：分支 key → 展示名（武僧→淬势者、大地武僧→锻势行者）
     branch_names = " / ".join(_BRANCH_KEY_DISPLAY.get(b, b) for b in branches) if branches else "对应分支"
     yield event.plain_result(
@@ -877,7 +887,7 @@ async def evolve(self, event: AstrMessageEvent, group_id, qq_id, player):
 
 def _branch_title(self, class_name: str, tier: int, evolve_path: int = 0) -> str:
     """分支称号：优先返回所选分支的名字，否则默认第一条"""
-    cls = C.CLASSES.get(class_name, {})
+    cls = _cat_core.CLASSES.get(class_name, {})
     # F1 P1-1（report_02）：未转职(tier=0)时显示基础职业名，不再取 evolve[-1] 最高阶称号
     if int(tier or 0) <= 0:
         return display("classes", class_name) if isinstance(class_name, str) else class_name
@@ -897,7 +907,7 @@ def _branch_title(self, class_name: str, tier: int, evolve_path: int = 0) -> str
 def _hidden_alias_map(self) -> dict:
     """全局短别名表：短别名 → (cls_id, 流派索引)。数据源 CLASSES[线]["aliases"]"""
     out = {}
-    for cid, cinfo in C.CLASSES.items():
+    for cid, cinfo in _cat_core.CLASSES.items():
         for alias, path in (cinfo.get("aliases") or {}).items():
             out[alias] = (cid, int(path))
     return out
@@ -906,7 +916,7 @@ def _hidden_class_routes(self) -> dict:
     """动态构建：隐藏职业档位全名 → (cls_id, tier, 流派索引)（evolve_branches 反查）
     v112：档位名按流派对齐，索引即流派（『转职 符文剑士』→ 龙裔线 T2 龙咒流派）"""
     routes = {}
-    for cls_id, cls in C.CLASSES.items():
+    for cls_id, cls in _cat_core.CLASSES.items():
         if not cls.get("hidden"):
             continue
         for tier, names in (cls.get("evolve_branches") or {}).items():
@@ -916,12 +926,12 @@ def _hidden_class_routes(self) -> dict:
 
 def _hidden_tier_levels(self, cls_id: str) -> dict:
     """隐藏线档位门槛：CLASSES["tier_levels"] 配置优先，缺省 40/60/90"""
-    return C.CLASSES.get(cls_id, {}).get("tier_levels") or {1: 40, 2: 60, 3: 90}
+    return _cat_core.CLASSES.get(cls_id, {}).get("tier_levels") or {1: 40, 2: 60, 3: 90}
 
 async def _evolve_hidden_status(self, event, group_id, qq_id, player):
     """隐藏职业玩家『转职』(无参数)：显示传承之路（下一阶/已满）"""
     cls_id = player["class_name"]
-    cls = C.CLASSES[cls_id]
+    cls = _cat_core.CLASSES[cls_id]
     tier = player.get("class_tier", 0)
     tlv = self._hidden_tier_levels(cls_id)
     next_tier = tier + 1
@@ -950,7 +960,7 @@ async def _evolve_hidden_generic(self, event, group_id, qq_id, player, cls_id, t
     修为继承：目标档位由命令名决定、等级门槛校验——60 级『转职 奥法大师』= 直接 T2。
     技能继承：线级基础 + 本流派分支技能中 lv <= 当前等级的全部（v112 主题线制：
     流派 = evolve_path 1/2/3，传承按所选流派授予，其余流派技能不可习得）。"""
-    cls = C.CLASSES[cls_id]
+    cls = _cat_core.CLASSES[cls_id]
     cname = cls["name"]
     icon = cls.get("icon", "✨")
     unlocks = player.get("hidden_class_unlock", [])
@@ -962,10 +972,10 @@ async def _evolve_hidden_generic(self, event, group_id, qq_id, player, cls_id, t
     # v112.1：src_base 为空的"中立线"跳过血缘检查（当前无中立线，预留通用性）
     src = cls.get("src_base", "")
     if src and player["class_name"] != cls_id and player["class_name"] != src:
-        src_name = C.CLASSES.get(src, {}).get("name", "对应职业")
+        src_name = _cat_core.CLASSES.get(src, {}).get("name", "对应职业")
         # v109.2 P3-7：同源隐藏玩家拒绝文案区分（魔剑→龙血 不再说"先以战士身份历练"误导）
-        if C.CLASSES.get(player["class_name"], {}).get("hidden"):
-            cur_name = C.CLASSES.get(player["class_name"], {}).get("name", "当前职业")
+        if _cat_core.CLASSES.get(player["class_name"], {}).get("hidden"):
+            cur_name = _cat_core.CLASSES.get(player["class_name"], {}).get("name", "当前职业")
             yield event.plain_result(
                 f"{icon} {cname}的传承与你的血脉有所共鸣，但一脉相承不可兼得……\n"
                 f"💡 你已踏上【{cur_name}】之路，若想改换门庭可『转职重置』回到{src_name}一脉再传承。")
@@ -979,8 +989,8 @@ async def _evolve_hidden_generic(self, event, group_id, qq_id, player, cls_id, t
     if src_race:
         cur_race = player.get("race") or "human"
         if cur_race != src_race:
-            need_cn = (C.RACES.get(src_race) or {}).get("name", "对应种族")
-            cur_cn = (C.RACES.get(cur_race) or {}).get("name", "未知种族")
+            need_cn = (_cat_core.RACES.get(src_race) or {}).get("name", "对应种族")
+            cur_cn = (_cat_core.RACES.get(cur_race) or {}).get("name", "未知种族")
             yield event.plain_result(
                 f"{icon} {cname}的传承需要{need_cn}的血脉才能唤醒……\n"
                 f"💡 你身为{cur_cn}，与这份力量格格不入。")
@@ -1021,10 +1031,10 @@ async def _evolve_hidden_generic(self, event, group_id, qq_id, player, cls_id, t
     # v109：同职业升档保留已学+只补未学——已付费技能不因升档重复发放
     # v110.4 X2 P1-1：grant 为技能 key（基础表 sk_ ID、分支表中文名）、kept 为显示名
     # （get_player 已 C.display）——先把 kept 统一 resolve 再求并/差，避免混型致重复条目
-    sk_table = C.PLAYER_SKILLS.get(cls_id, {}).get("skills", {})
+    sk_table = _cat_core.PLAYER_SKILLS.get(cls_id, {}).get("skills", {})
     grant = [s for s, info in sk_table.items() if info["lv"] <= player.get("level", 1)]
     _eb = cls.get("evolve_branches", {})
-    _br = C.BRANCH_SKILLS.get(cls_id, {}).get("branches", {})
+    _br = _cat_core.BRANCH_SKILLS.get(cls_id, {}).get("branches", {})
     for _t in range(1, tgt_tier + 1):
         _names = _eb.get(_t, [])
         if path - 1 < len(_names):
@@ -1070,7 +1080,7 @@ def _evolve_auto_skills(self, player: dict, next_tier: int) -> list:
         return []
     cls = player.get("class_name", "")
     path = player.get("evolve_path", 0)
-    branches = C.BRANCH_SKILLS.get(cls, {}).get("branches", {})
+    branches = _cat_core.BRANCH_SKILLS.get(cls, {}).get("branches", {})
     tier_branches = branches.get(next_tier, {})
     names = list(tier_branches.keys())
     if not names:
@@ -1094,7 +1104,7 @@ def _evolve_auto_skills(self, player: dict, next_tier: int) -> list:
 
 def _tier_title(self, class_name: str, tier: int, evolve_path: int = 0) -> str:
     """职业进阶称号(v25：按分支返回)"""
-    return f"{C.CLASSES.get(class_name, {}).get('icon', '')} {self._branch_title(class_name, tier, evolve_path)}"
+    return f"{_cat_core.CLASSES.get(class_name, {}).get('icon', '')} {self._branch_title(class_name, tier, evolve_path)}"
 
 async def attributes(self, event: AstrMessageEvent, group_id, qq_id, player):
     # v55.2：每个属性单独一行，格式「总值(+加成)」——加成为基础以外全部来源之和
@@ -1183,7 +1193,7 @@ async def attributes(self, event: AstrMessageEvent, group_id, qq_id, player):
     for icon, skey, fkey, cname in stat_rows:
         final = st.get(fkey, 0)  # v105：precise 无来源时 st 无键，.get 兜底（防 KeyError）
         # v106.4：特殊属性 0 时不显示（有加成才显示，防面板爆炸）
-        if skey in C.OPTIONAL_STATS and not final:
+        if skey in _cat_core.OPTIONAL_STATS and not final:
             continue
         bonus = final - base.get(skey, 0)
         if skey in PCT_STATS:
@@ -1231,7 +1241,7 @@ async def reset_skill(self, event: AstrMessageEvent, group_id, qq_id, player):
     if not player.get("learned_skills"):
         yield event.plain_result("你还没有学习过任何技能，无需洗点～")
         return
-    cost = C.RESET_SKILL_COST
+    cost = _cat_core.RESET_SKILL_COST
     if player["gold"] < cost:
         yield event.plain_result(f"技能洗点需要 {cost} 金币，你只有 {player['gold']} 金币。")
         return
@@ -1259,18 +1269,18 @@ async def evolve_reset(self, event: AstrMessageEvent, group_id, qq_id, player):
     if tier <= 0:
         yield event.plain_result("你还没有转职过，无需重置～『转职』查看路线。")
         return
-    cost = C.EVOLVE_FEES.get(tier, 500)
+    cost = _cat_core.EVOLVE_FEES.get(tier, 500)
     if player["gold"] < cost:
         yield event.plain_result(f"转职重置需要 {cost} 金币(当前 {tier} 转)，你只有 {player['gold']} 金币。")
         return
     # 清除分支技能（learned_skills 中属于分支的）+ 分支技能等级
     cls = player["class_name"]
-    cls_meta = C.CLASSES.get(cls, {})
+    cls_meta = _cat_core.CLASSES.get(cls, {})
     if cls_meta.get("hidden"):
         # v108 职业树：隐藏职业重置 = 回到渊源根基职业（付费反悔通道）
         src = cls_meta.get("src_base", "cls_zhan_shi")
-        src_cls = C.CLASSES.get(src, {})
-        src_table = C.PLAYER_SKILLS.get(src, {})
+        src_cls = _cat_core.CLASSES.get(src, {})
+        src_table = _cat_core.PLAYER_SKILLS.get(src, {})
         if isinstance(src_table, dict) and "skills" in src_table:
             src_table = src_table["skills"]
         init_skills = [s for s, info in src_table.items() if info["lv"] <= 1]
@@ -1355,7 +1365,7 @@ async def reset_attr(self, event: AstrMessageEvent, group_id, qq_id, player):
     if used == 0:
         yield event.plain_result("你还没有分配过属性点，无需洗点～")
         return
-    cost = C.RESET_SKILL_COST
+    cost = _cat_core.RESET_SKILL_COST
     if player["gold"] < cost:
         yield event.plain_result(f"洗点需要 {cost} 金币，你只有 {player['gold']} 金币。")
         return
@@ -1528,7 +1538,7 @@ def _skill_detail_message(self, player: dict, skill_name: str) -> str | None:
         _own_tier, _own_key = owner[0], owner[1]
         _disp_branch = _own_key
         try:
-            _eb_paths = C.CLASSES.get(player["class_name"], {}).get("evolve_branches", {})
+            _eb_paths = _cat_core.CLASSES.get(player["class_name"], {}).get("evolve_branches", {})
             _eb_list = _eb_paths.get(_own_tier, [])
             # owner key 是该 tier 分支表 key（如"神谕者"），定位其在分支组的位置 → 取同 index 档位名
             _cand_path = branch_path_index(player["class_name"], _own_tier, _own_key)
@@ -1536,7 +1546,7 @@ def _skill_detail_message(self, player: dict, skill_name: str) -> str | None:
                 _disp_branch = _BRANCH_KEY_DISPLAY.get(_eb_list[_cand_path], _eb_list[_cand_path])
         except Exception:
             pass
-        lines.append(f"专属：{_disp_branch}(Lv.{C.EVOLVE_LEVELS[_own_tier]} 转职解锁)")
+        lines.append(f"专属：{_disp_branch}(Lv.{_cat_core.EVOLVE_LEVELS[_own_tier]} 转职解锁)")
     _multi_disp = int(info.get("multi") or info.get("hits") or 0)
     if _multi_disp > 1:
         lines.append(f"连击：x{_multi_disp}")
@@ -1611,7 +1621,7 @@ def _skill_learn_msg(self, group_id, player: dict, skill_name: str) -> str:
         return f"『{display_name}』你已学会了，去战斗里试试吧～"
     # v101.20 职业导师专属技能拦截：TUTOR_SKILLS 只能找导师学，技能点学不到
     _sid = resolve("skills", skill_name)
-    if _sid in ((C.TUTOR_SKILLS or {}).get(player["class_name"], {}) or {}):
+    if _sid in ((_cat_core.TUTOR_SKILLS or {}).get(player["class_name"], {}) or {}):
         _mname, _mcity = _tutor_mentor(player["class_name"])
         return f"『{display_name}』是 {_mname}({_mcity}) 的看家本领，普通学习学不到——去{_mcity}找{_mname}请教吧～"
     # v26 分支专属技能门槛：必须先转职到对应分支
@@ -1624,7 +1634,7 @@ def _skill_learn_msg(self, group_id, player: dict, skill_name: str) -> str:
         my_path = player.get("evolve_path", 0)
         if my_tier < need_tier or not my_path:
             return f"『{display_name}』是 {bname} 的专属技能，需要先转职为 {bname} 才能学习！(Lv.30/60/90 可转职)"
-        branches = C.CLASSES[player["class_name"]].get("evolve_branches", {}).get(need_tier, [])
+        branches = _cat_core.CLASSES[player["class_name"]].get("evolve_branches", {}).get(need_tier, [])
         # v112：多分支索引通用化（攻/守 path=1/2；隐藏流派 path=1/2/3）
         idx = max(0, int(my_path or 0) - 1)
         # v130.2f.2 苦修改名收尾：当前流派分支 key → 展示名（与 bname 同口径比较）
@@ -1859,7 +1869,7 @@ async def build_view(self, event: AstrMessageEvent, group_id, qq_id, player):
     """流派(v52 Build 系统)：查看本职业流派 / 一键配置技能栏"""
     raw = self._strip_cmd(event, "流派").strip()
     cid = player["class_name"]
-    builds = C.BUILDS.get(cid, {})
+    builds = _cat_quests.BUILDS.get(cid, {})
     if not builds:
         yield event.plain_result("你的职业暂时没有流派方案～")
         return

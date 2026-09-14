@@ -1,4 +1,20 @@
 {
+  "config": {
+    "create_cost": 1000,
+    "create_level": 30,
+    "sign_exp": 20,
+    "sign_contribute": 10,
+    "sign_gold": 50,
+    "task_exp": 40,
+    "task_contribute": 20,
+    "task_gold": 100,
+    "kill_task": 5,
+    "donate_items": 3,
+    "exp_bonus_per_level": 0.01,
+    "max_bonus": 0.2,
+    "vice_leader_level": 3,
+    "elite_level": 1
+  },
   "roles": {
     "map": {
       "leader": [

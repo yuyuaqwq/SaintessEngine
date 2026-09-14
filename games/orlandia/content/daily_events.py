@@ -2,7 +2,9 @@
 # ==============================================================================
 # 包内实现（唯一真源）· B13-L2（2026-09-14）—— 逐字搬自宿主
 #   `qqbot/data/plugins/dragonfall/game/core/daily_events.py`
-# 搬运改动面**只有「宿主取件」**一类：`DAILY_MAP_EVENTS` → 宿主句柄 `_host_attr("data.daily_events", …)`
+# 搬运改动面**只有「宿主取件」**一类：`DAILY_MAP_EVENTS` ← 宿主句柄。
+# ★ B16-W8（2026-09-14）：该句柄**归包** —— `_daily_map_events()` 改读包内门面
+#   `content/catalog_rules.py`（包内无 `daily_events` 域，缺口见 ① 与报告）；宿主面清零。
 # 宿主同名文件 = 薄壳（指向本模块，见那边的头注）。
 # ==============================================================================
 """《奥兰迪亚·余烬纪年》今日奇遇核心（v115）
@@ -15,77 +17,28 @@
   - game/commands/world.py :: map_view()——地图面板底部显示今日奇遇行
 """
 import datetime
-import importlib
-import sys
 
 
 # ============================================================
-# ① 宿主替身口（B13-L2 搬包 2026-09-14；正文 `db.xxx(...)` / `C.xxx` 一行未改）
-#    写法照抄包内 `content/world_cmds.py`（B9 线2）：注入优先 → sys.modules → importlib，
-#    取不到**大声抛**（绝不静默空跑）。
+# ① 包内数据读口（★ B16-W8 · 2026-09-14 宿主句柄归包）
+#    真源模块级 `from ..data.daily_events import DAILY_MAP_EVENTS` = 宿主数据表；
+#    宿主 `game/data/` 要删，本模块**零 `_HostMod` / 零 `_host_attr`**（import 期不碰宿主）。
+#    包内域 `daily_events` **从未被导出器建过**（`content/data/` 无该 JSON，
+#    `scripts/export_domains/*` 里也没有 `derive_daily_events`）⇒ 取值来源 =
+#    包内门面 `content/catalog_rules.py:DAILY_MAP_EVENTS`（B14 收口建的尾部长尾名门面，
+#    值由 `overnight/w2_gen_catalog_rules.py` 从宿主真源 import 后 pprint dump，逐字非手抄）。
+#    实测：20 图 / 键序 / 逐值与本模块旧宿主句柄取到的表**全等**。
+#    缺口登记（待主 agent 建域）：`DAILY_MAP_EVENTS` 在门面里挂在 `NOT_YET_DOMAINED`，
+#    建域后本函数改读 `content/data/daily_events.json` 一行即可（本模块是唯一读口）。
 # ============================================================
-_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
-_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
-_INJECTED = {}
-
-
-def bind_host(**objs):
-    """宿主薄壳 import 期注入（幂等）——键 = `_HostMod` 的模块名（`db` / `content`）。"""
-    for k, v in (objs or {}).items():
-        if v is not None:
-            _INJECTED[k] = v
-
-
-def _host_module(name: str):
-    """取宿主子模块（`name` 为空 = 宿主 `game` 包本身，真源 `from .. import X` 那一类）。"""
-    if name in _INJECTED:
-        return _INJECTED[name]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        full = prefix if not name else "%s.%s" % (prefix, name)
-        m = sys.modules.get(full)
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module(prefix if not name else "%s.%s" % (prefix, name))
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("B13-L2：宿主模块 %s 取不到（%s）——拒绝静默空跑" % (name, last))
-
-
-def _host_attr(mod: str, attr: str):
-    """宿主模块属性 —— 真源「`from ..<mod> import <attr>`」的同义替身（调用时解析）。"""
-    m = _host_module(mod)
-    try:
-        return getattr(m, attr)
-    except AttributeError:
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            try:
-                return importlib.import_module("%s.%s" % (
-                    prefix if not mod else "%s.%s" % (prefix, mod), attr))
-            except Exception:                   # noqa: BLE001
-                continue
-        raise
-
-
-class _HostMod:
-    """宿主模块替身（`db` / `C`）——`db.xxx` / `C.xxx` 正文一字未改，属性访问时解析。"""
-
-    def __init__(self, name):
-        self._name = name
-
-    def __getattr__(self, attr):
-        return getattr(_host_module(self._name), attr)
-
-
 def _daily_map_events() -> dict:
-    """宿主数据表 `DAILY_MAP_EVENTS`（真源模块级 `from ..data.daily_events import …`）。
+    """包内表 `DAILY_MAP_EVENTS`（真源模块级 `from ..data.daily_events import …`）。
 
-    域未进包（`content/data/` 无 daily_events.json）→ 宿主句柄（缺口登记见报告）；
-    **不准在包内新建第二份表**。调用时解析（import 期零宿主接触 = 包可独立加载）。
+    延迟 import（调用时解析）⇒ 包加载期零依赖、无循环 import。
+    **不准在包内新建第二份表**（同表两份定义必漂移）。
     """
-    return _host_attr("data.daily_events", "DAILY_MAP_EVENTS")
+    from .catalog_rules import DAILY_MAP_EVENTS as _tbl
+    return _tbl
 
 
 def __getattr__(name):

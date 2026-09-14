@@ -19,13 +19,14 @@
 1. **宿主取件**：函数体内 `from ..X import y` → 同位置惰性替身
    （`_HostMod` / `_host_attr` / `_host_module`，调用时解析；与 `content/world_cmds.py` 同款）。
 2. **数据读口（I1）**：`C.<表>` 中**包内域逐值等同**的 3 张表切包内域读口 ——
-   `C.CLASSES→classes` · `C.ITEMS→items` · `C.AFFIXES→affixes`；
-   其余（INSTANCES / MATERIALS / MAP_BY_ID / POIS / RUNES / EQUIP_ROSTER / SUBAREAS /
-   INVESTIGATION_POINTS / PLAYER_SKILLS / BRANCH_SKILLS / TUTOR_SKILLS / MAIN_QUESTS /
-   SIDE_QUESTS / 常量）**包内无等价域**（探针 `overnight/w1213_b11l1_datasrc.py` 实测：
-   键集/字段不同 = 投影未补等价，如 `instances.boss→boss+boss_data`、`stages[].monsters`
-   由「完整元组」变「id 表」、`pois` 键由 poi_id 变 `地图:房间:poi`）→ 走宿主句柄，
-   报告登记「缺口」，B14 统一裁。**包内不建第二份表**。
+   宿主聚合层 `CLASSES`→包内 `classes` 域 · `ITEMS`→`items` 域 · `AFFIXES`→`affixes` 域；
+   **B14-2 L3（2026-09-14）**把其余 16 个数据名（67 处读点）切到包内门面
+   （`from . import catalog_{core,items,life,quests,space} as _cat_*`）：`INSTANCES` `MATERIALS`
+   `MAP_BY_ID` `SUBAREAS` `INVESTIGATION_POINTS` `RUNES` `EQUIP_ROSTER` `PLAYER_SKILLS`
+   `BRANCH_SKILLS` `TUTOR_SKILLS` `MAIN_QUESTS` `SIDE_QUESTS` `PROF_WAIT_BASE` `DEFAULT_MAX_MP`
+   `INSTANCE_BP_CHANCE` `INST_EVENT_CHANCE`（= 旧头注判「包内无等价域」的那批；门面按真源形状
+   重建，`b14_catalog_gate.py` 逐名**含键序**对拍 → **不等 0**）。只改「取值来源」，数值 / 文案 /
+   遍历顺序一字未动。
 
 宿主替身口（注入优先 → sys.modules → importlib；**绝不静默空跑**）
 ----------------------------------------------------------------
@@ -40,12 +41,16 @@
 | `from ._platform import AstrMessageEvent` | `AstrMessageEvent = _HostRef(...)`（只作类型标注） |
 | `IR`（副本运行态） | 包内 `content/flow/instance_run.py`（★ B11-L2 同波收口该模块：本线只用其现有 API） |
 
-★ 缺口（报告同步登记）：`C` 上仍是宿主聚合层（函数读口 `C.set_instance_st` / `C.build_monster` /
+★ 缺口（报告同步登记）：`C` 上仍是宿主聚合层 —— **函数读口**（`C.set_instance_st` / `C.build_monster` /
 `C.subarea_pois` / `C.resolve_map_for` / `C.display` / `C.resolve` / `C.rune_item` /
-`C.pet_exp_need` / `C.roll_blueprint` / `C.roll_gem_drop` / `C.create_instance_world` … 与
-常量 `MATERIALS` / `MAP_BY_ID` / `DEFAULT_MAX_MP` / `INST_*` / `PROF_WAIT_BASE` /
-`INVESTIGATION_POINTS` / `MAIN_QUESTS` / `SIDE_QUESTS` / `PLAYER_SKILLS` / `BRANCH_SKILLS` /
-`TUTOR_SKILLS` / `INSTANCE_BOSS_EQUIP_DROP` 等）—— 常量模块按 B9 铁律归 L7/B13，本线不建第二份读口。
+`C.pet_exp_need` / `C.roll_blueprint` / `C.roll_gem_drop` / `C.create_instance_world` /
+`C.destroy_instance_world` / `C.get_instance_world` / `C.map_entry_subarea` / `C.subarea_links` …，
+B14-2 只裁数据名，函数归「待函数单元」）。
+★ **W5（2026-09-14）收口**：原「2 张缺口表」已切包内门面 `_cat_b143`（门禁逐名深比较含键序 →
+**不等 0**，未自建第二份表）：`POIS`（原 5 处；真源 `game/data/pois.py:9` 的 83 条定义 →
+`game_config.pois` 域，含原包内 `pois` 域缺的 17 条世界 POI 型）· `INVESTIGATE_COLLECT_SAMPLES`
+（原 1 处；真源 `game/data/instance_investigation.py:47` 手挑 5 个收藏 id →
+`game_config.instance_investigation`）。
 """
 import importlib
 import json
@@ -57,6 +62,14 @@ import time
 import uuid
 
 from .flow import instance_run as IR
+
+# B14-2 L3：数据读点切包内门面（宿主 game/data 删后仍可活；缺口名仍走 C）
+from . import catalog_core as _cat_core
+from . import catalog_items as _cat_items
+from . import catalog_life as _cat_life
+from . import catalog_quests as _cat_quests
+from . import catalog_space as _cat_space
+from . import catalog_b143 as _cat_b143   # POIS / INVESTIGATE_COLLECT_SAMPLES（W5）
 
 
 # ============================================================
@@ -234,9 +247,11 @@ def _read_domain(name: str) -> dict:
         return {}
 
 
-CLASSES = _read_domain("classes")      # 真源 game/data/classes.py C.CLASSES（探针逐值等同，8 键）
-ITEMS = _read_domain("items")          # 真源 C.ITEMS（逐值等同，900 键）
-AFFIXES = _read_domain("affixes")      # 真源 C.AFFIXES（逐值等同，76 键）
+CLASSES = _read_domain("classes")      # 真源 game/data/classes.py 的 CLASSES（宿主聚合层；探针逐值等同，8 键）
+ITEMS = _read_domain("items")          # 真源 ITEMS（宿主聚合层；逐值等同，900 键）
+AFFIXES = _read_domain("affixes")      # 真源 AFFIXES（宿主聚合层；逐值等同，76 键）
+# B14-2 L3：本文件其余数据读点（16 名 / 67 处）走模块顶部包内门面 `_cat_*`；
+# 本段这三张表仍由**裸名**消费（CLASSES/ITEMS/AFFIXES 的 `C.` 读点本来 0 处，未动）。
 
 __all__ = ["InstanceImpl", "bind_host", "INSTANCE_TIMEOUT", "INVESTIGATE_DAILY_LIMIT"]
 
@@ -363,8 +378,8 @@ class InstanceImpl:
             "class_name": _p["class_name"], "level": _p["level"],
             "hp": min(int(_p.get("hp", 0)), int(_st2.get("max_hp", _p.get("max_hp", 100)))),
             "max_hp": int(_st2.get("max_hp", _p.get("max_hp", 100))),
-            "mp": min(int(_p.get("mp", 0)), int(_st2.get("max_mp", _p.get("max_mp", C.DEFAULT_MAX_MP)))),
-            "max_mp": int(_st2.get("max_mp", _p.get("max_mp", C.DEFAULT_MAX_MP))),
+            "mp": min(int(_p.get("mp", 0)), int(_st2.get("max_mp", _p.get("max_mp", _cat_core.DEFAULT_MAX_MP)))),
+            "max_mp": int(_st2.get("max_mp", _p.get("max_mp", _cat_core.DEFAULT_MAX_MP))),
             "atk": _p.get("atk", 0), "def": _p.get("def", 0),
             "matk": _p.get("matk", 0), "mdef": _p.get("mdef", 0),
             "spd": _spd,
@@ -518,8 +533,8 @@ class InstanceImpl:
                     for _m in ok_members:
                         db.update_player(group_id, _m, cur_map=_mid, cur_subarea=_entry_sa)
             if old_st.get("inst_id") and (old_st["inst_id"] == arg or
-                                          C.INSTANCES.get(old_st["inst_id"], {}).get("name") == arg):
-                inst = C.INSTANCES.get(old_st["inst_id"], {})
+                                          _cat_space.INSTANCES.get(old_st["inst_id"], {}).get("name") == arg):
+                inst = _cat_space.INSTANCES.get(old_st["inst_id"], {})
                 # 人数/等级/0 血/战斗中 四连同源校验（v185：core/instance_gate.resume_admission）
                 # 旧语义照旧——**不查副业等待**、不查钥匙/位置/体力；不满足则放弃旧进度，
                 # 落到 _instance_start 输出对应拦截提示（判定用 v.ok，理由仅作诊断）。
@@ -591,9 +606,9 @@ class InstanceImpl:
         if st.get("rooms"):
             # v141 审计：副本大陆路径统一走 resolve_map_for（唯一入口契约）；
             # 大陆实例已销毁（world_id 残留 inst:）→ resolve_map_for None → 回退全局静态图
-            # （副本图在 MAP_BY_ID 始终存在，与原 C.MAP_BY_ID.get 语义一致）
+            # （副本图在 MAP_BY_ID 始终存在，与原 MAP_BY_ID.get 语义一致）
             _dun_map = C.resolve_map_for(st.get("world_id") or "", _inst_map_id(st.get("inst_id") or "")) \
-                or C.MAP_BY_ID.get(_inst_map_id(st.get("inst_id") or ""), {})
+                or _cat_space.MAP_BY_ID.get(_inst_map_id(st.get("inst_id") or ""), {})
             _dun = _dun_map.get("dungeon") or {}
             _br = _dun.get("boss_room")
             _rooms = st["rooms"]
@@ -748,7 +763,7 @@ class InstanceImpl:
         # v141 审计：副本大陆路径统一走 resolve_map_for（唯一入口契约）；
         # 大陆实例已销毁（world_id 残留 inst:）→ resolve_map_for None → 回退全局静态图
         cur_map = C.resolve_map_for(st.get("world_id") or "", _inst_map_id(st.get("inst_id") or "")) \
-            or C.MAP_BY_ID.get(_inst_map_id(st.get("inst_id") or ""), {})
+            or _cat_space.MAP_BY_ID.get(_inst_map_id(st.get("inst_id") or ""), {})
         cur_sa = None
         for _sa in (cur_map.get("subareas") or []):
             if _sa["id"] == cur_sa_id:
@@ -762,7 +777,7 @@ class InstanceImpl:
             for _pid in (C.subarea_pois(cur_map.get("id", ""), cur_sa_id) or []):
                 if _pois_left is not None and _pid not in _pois_left:
                     continue
-                _p = C.POIS.get(_pid)
+                _p = _cat_b143.POIS.get(_pid)
                 if _p and (name == _p.get("name") or (name and name in _p.get("name", ""))):
                     poi = _p
                     poi_id = _pid
@@ -838,7 +853,7 @@ class InstanceImpl:
         _ck = f"retreat_confirm_{qq_id}"
         _pending = db.get_event_state(_ck)
         if not _pending:
-            inst = C.INSTANCES.get(st["inst_id"], {})
+            inst = _cat_space.INSTANCES.get(st["inst_id"], {})
             db.set_event_state(_ck, _json.dumps({"ts": int(_time.time()), "inst": st.get("inst_id", "")}, ensure_ascii=False))
             yield event.plain_result(
                 T.text("instance.面板_撤退_确认", name=inst.get('name', '副本'))
@@ -884,7 +899,7 @@ class InstanceImpl:
             db.set_event_state(_ck, "")
             yield event.plain_result(T.static("instance.面板_撤退_确认过期"))
             return
-        inst = C.INSTANCES.get(st["inst_id"], {})
+        inst = _cat_space.INSTANCES.get(st["inst_id"], {})
         cur = self._instance_current_members(group_id, st)
         # 清战斗锁 + battle 行
         for m in IR.roster_of(st).members:
@@ -927,7 +942,7 @@ class InstanceImpl:
         if st.get("mode") != "map":
             yield event.plain_result(T.static("instance.面板_离开_战斗中"))
             return
-        inst = C.INSTANCES.get(st["inst_id"], {})
+        inst = _cat_space.INSTANCES.get(st["inst_id"], {})
         # v104 P1（第二轮）：只清当前队伍成员——退队者可能已在别处战斗，不能动 TA 的锁/battle
         cur = self._instance_current_members(group_id, st)
         for m in IR.roster_of(st).members:
@@ -1011,7 +1026,7 @@ class InstanceImpl:
         # v141 审计：副本大陆路径统一走 resolve_map_for（唯一入口契约）；
         # 大陆实例已销毁（world_id 残留 inst:）→ resolve_map_for None → 回退全局静态图
         cur_map = C.resolve_map_for(st.get("world_id") or "", _inst_map_id(st.get("inst_id") or "")) \
-            or C.MAP_BY_ID.get(_inst_map_id(st.get("inst_id") or ""), {})
+            or _cat_space.MAP_BY_ID.get(_inst_map_id(st.get("inst_id") or ""), {})
         cur_sa = None
         for _sa in (cur_map.get("subareas") or []):
             if _sa["id"] == cur_sa_id:
@@ -1032,7 +1047,7 @@ class InstanceImpl:
                        if _pois_left is None or pid in _pois_left]
             if poi_ids and random.random() < _agro:
                 poi_id = poi_ids[0]  # 确定性：取剩余列表首个（不新增 random 调用点）
-                poi = C.POIS.get(poi_id, {})
+                poi = _cat_b143.POIS.get(poi_id, {})
                 if _pois_left is not None:
                     IR.take_poi(st, cur_sa_id, poi_id)  # v185：POI 消费写口（探索完即空）
                 text = self._handle_poi(group_id, qq_id, player, cur_sa or cur_map, poi_id, poi, st=st)
@@ -1074,7 +1089,7 @@ class InstanceImpl:
             self._enter_stage_combat(group_id, st, nxt, stage)
             self._instance_save(group_id, st)
             # v126 副本剧情化：Boss 战前台词（仅 role=boss 且 inst 有 boss_line 字段才渲染）
-            _inst2 = C.INSTANCES.get(st.get("inst_id") or "", {})
+            _inst2 = _cat_space.INSTANCES.get(st.get("inst_id") or "", {})
             boss_line_note = f"💬 {_inst2['boss_line']}\n" if nxt[2] == "boss" and _inst2.get("boss_line") else ""
             yield event.plain_result(
                 T.text("instance.面板_探索_遇怪", area=stage.get('name', '')) + "\n"
@@ -1088,7 +1103,7 @@ class InstanceImpl:
         # 无怪：检查陷阱（未用的 trap POI）——50% 概率踩中
         for p in stage.get("pois") or []:
             if p.get("type") == "trap" and not self._poi_used(st, sidx, p.get("id", "")):
-                if random.random() < C.INST_EVENT_CHANCE:
+                if random.random() < _cat_core.INST_EVENT_CHANCE:
                     text = self._handle_poi(group_id, qq_id, player, stage, p.get("id", ""), p, st=st)
                     self._check_stage_secret_cond(st)
                     # R3 P1-2：陷阱扣血同步 DB（同调查路径，防快照刷新覆盖回滚）
@@ -1103,7 +1118,7 @@ class InstanceImpl:
     def _instance_elite_scale(self, st: dict, mon: dict) -> dict:
         """v101.28l #423：副本精英按队伍人数缩放强度（超出 min_players 每人 +50% 血/攻/魔攻）。
         与 Boss 缩放（hp_mult + 0.65/人）同思路，幅度略低——精英不该比 Boss 还肉。"""
-        inst2 = C.INSTANCES.get(st.get("inst_id") or "", {})
+        inst2 = _cat_space.INSTANCES.get(st.get("inst_id") or "", {})
         n_extra = len(IR.roster_of(st).members) - inst2.get("min_players", 1)
         if n_extra > 0:
             m = 1.0 + 0.5 * n_extra
@@ -1134,7 +1149,7 @@ class InstanceImpl:
         # （v104 M17 P2 旧设定『副本不携带宠物』已废弃，见 git log v167.3。）
         st["boss"] = C.build_monster(mon_def, {"id": st["inst_id"], "name": st["inst_id"], "area": "instance"})
         if mon_def[2] == "boss":
-            inst2 = C.INSTANCES[st["inst_id"]]
+            inst2 = _cat_space.INSTANCES[st["inst_id"]]
             # v178 E1：副本 Boss 带 inst_id 上下文（供 _boss_cfg 按副本条目解析
             # phases/opening/triggers——旧逻辑按 b_xxx id 查 INSTANCES 命中不了）
             st["boss"]["_inst_id"] = st["inst_id"]
@@ -1338,7 +1353,7 @@ class InstanceImpl:
             return [boss]
         enemies = [boss]
         boss.setdefault("ct", _ict(boss.get("spd", 0)))
-        inst = C.INSTANCES.get(st.get("inst_id") or "", {})
+        inst = _cat_space.INSTANCES.get(st.get("inst_id") or "", {})
         mcfg = inst.get("minions") or []
         base_name = boss.get("name", "BOSS")
         base_uid = boss.get("uid", "e_0")
@@ -1570,7 +1585,7 @@ class InstanceImpl:
         # v173.x 意见#162：副本列表按等级升序渲染（数据文件按主线/支线/外域分区登记，
         # 插入顺序≠等级序，低等级本会被排到后面）——排序在渲染层做，新增副本自动有序。
         for i, (kid, inst) in enumerate(
-            sorted(C.INSTANCES.items(), key=lambda kv: (int(kv[1].get("lv", 0) or 0), kv[0])),
+            sorted(_cat_space.INSTANCES.items(), key=lambda kv: (int(kv[1].get("lv", 0) or 0), kv[0])),
             1,
         ):
             locked = player["level"] < inst["lv"]
@@ -1587,7 +1602,7 @@ class InstanceImpl:
                                 name=inst['name'], lv=inst['lv'], size=size))
             lines.append(f"   {inst['desc']}")
             mats = "、".join(
-                C.display("materials", m) if m in C.MATERIALS else m
+                C.display("materials", m) if m in _cat_items.MATERIALS else m
                 for m in inst.get("materials", [])
             )
             lines.append(T.text("instance.日志_列表_首领", name=inst['boss'][1], lv=inst['boss'][3], mats=mats))
@@ -1597,9 +1612,9 @@ class InstanceImpl:
                 lines.append(T.text("instance.日志_列表_钥匙", key_item=ki, source=inst.get('key_source', '？？？')))
             ent = inst.get("entry")
             if ent:
-                _em = C.MAP_BY_ID.get(ent.get("map", ""), {}).get("name", ent.get("map", ""))
+                _em = _cat_space.MAP_BY_ID.get(ent.get("map", ""), {}).get("name", ent.get("map", ""))
                 _esa_n = ""
-                for _esa2 in (C.MAP_BY_ID.get(ent.get("map", ""), {}).get("subareas") or []):
+                for _esa2 in (_cat_space.MAP_BY_ID.get(ent.get("map", ""), {}).get("subareas") or []):
                     if _esa2.get("id") == ent.get("subarea"):
                         _esa_n = _esa2.get("name", "")
                         break
@@ -1614,7 +1629,7 @@ class InstanceImpl:
         # v87.2 副本地图化：地图模式显示层全景
         if st.get("mode") == "map":
             return self._instance_map_view(st, group_id)
-        inst = C.INSTANCES.get(st["inst_id"], {})
+        inst = _cat_space.INSTANCES.get(st["inst_id"], {})
         self._instance_ensure_player_fields(st)
         stage_line = ""
         if IR.stage_count(st):
@@ -1876,11 +1891,11 @@ class InstanceImpl:
             _lp = self._player(group_id, leader) if leader else None
             if not cur_sa_id and _lp:
                 cur_sa_id = _lp.get("cur_subarea") or ""
-            inst = C.INSTANCES.get(st["inst_id"], {})
+            inst = _cat_space.INSTANCES.get(st["inst_id"], {})
             # v141 审计：副本大陆路径统一走 resolve_map_for（唯一入口契约）；
             # 大陆实例已销毁（world_id 残留 inst:）→ resolve_map_for None → 回退全局静态图
             cur_map = C.resolve_map_for(st.get("world_id") or "", _inst_map_id(st.get("inst_id") or "")) \
-                or C.MAP_BY_ID.get(_inst_map_id(st.get("inst_id") or ""), {})
+                or _cat_space.MAP_BY_ID.get(_inst_map_id(st.get("inst_id") or ""), {})
             sas = cur_map.get("subareas") or []
             cur_sa = next((s for s in sas if s["id"] == cur_sa_id), None)
             lines = []
@@ -1904,7 +1919,7 @@ class InstanceImpl:
             _poi_names = []
             if _pl is not None:
                 for _pid in _pl:
-                    _p = C.POIS.get(_pid)
+                    _p = _cat_b143.POIS.get(_pid)
                     if _p and _p.get("name"):
                         _poi_names.append(_p["name"])
             if _ml:
@@ -1929,7 +1944,7 @@ class InstanceImpl:
                 if st.get("secret_crack"):
                     lines.append(T.static("instance.日志_墙砖提示"))
                 # v140 波2：通关后调查点层（cleared 专属；未调查完的列提示，已翻完的省略）
-                _inv_pts = (C.INVESTIGATION_POINTS or {}).get(st.get("inst_id") or "", [])
+                _inv_pts = (_cat_space.INVESTIGATION_POINTS or {}).get(st.get("inst_id") or "", [])
                 if _inv_pts:
                     _inv_done = set(st.get("investigated") or [])
                     _inv_remain = [p for p in _inv_pts if p.get("id") not in _inv_done]
@@ -1942,7 +1957,7 @@ class InstanceImpl:
         stages = st.get("inst_stages") or []
         sidx = IR.stages_progress(st).index  # v185：当前层下标走 core/instance_run
         stage = stages[sidx] if sidx < len(stages) else {}
-        inst = C.INSTANCES.get(st["inst_id"], {})
+        inst = _cat_space.INSTANCES.get(st["inst_id"], {})
         lines = [T.text("instance.面板_地图_层标题", icon=inst.get('icon', '🏰'),
                         name=inst.get('name', ''), n=sidx + 1,
                         stage=stage.get('name', ''))]
@@ -1973,7 +1988,7 @@ class InstanceImpl:
             if st.get("secret_chest"):
                 lines.append(T.static("instance.日志_层_宝箱"))
             # v140 波2：通关后调查点层（cleared 专属；未调查完的列提示，已翻完的省略）
-            _inv_pts = (C.INVESTIGATION_POINTS or {}).get(st.get("inst_id") or "", [])
+            _inv_pts = (_cat_space.INVESTIGATION_POINTS or {}).get(st.get("inst_id") or "", [])
             if _inv_pts:
                 _inv_done = set(st.get("investigated") or [])
                 _inv_remain = [p for p in _inv_pts if p.get("id") not in _inv_done]
@@ -2098,8 +2113,8 @@ class InstanceImpl:
         # resources_pool 由 POI loot（gold/materials/equip）+ 副本奖励配置（inst.gold/materials）
         # 汇总生成——开本时创建好资源总量，探索拾取逐次扣减（consume_poi_loot）。
         _map_id = kid[5:] if str(kid).startswith("inst_") else kid
-        _dun_map = C.MAP_BY_ID.get(_map_id, {})
-        _rooms_def = C.SUBAREAS.get(_map_id) or []
+        _dun_map = _cat_space.MAP_BY_ID.get(_map_id, {})
+        _rooms_def = _cat_space.SUBAREAS.get(_map_id) or []
         if _dun_map.get("dungeon") and _rooms_def:
             _rooms = {}
             _pool_gold = 0
@@ -2120,7 +2135,7 @@ class InstanceImpl:
                 _poi_ids = list(C.subarea_pois(_map_id, _sa_id) or [])
                 # 资源池汇总：本房间 POI loot（gold/materials/equip）
                 for _pid in _poi_ids:
-                    _p = C.POIS.get(_pid) or {}
+                    _p = _cat_b143.POIS.get(_pid) or {}
                     _loot = _p.get("loot") or {}
                     _g = int(_loot.get("gold") or 0)
                     if _g > 0:
@@ -2144,7 +2159,7 @@ class InstanceImpl:
             st["rooms"] = _rooms
             # 资源池 = POI loot 总量 + 副本通关奖励配置（inst.gold / inst.materials，
             # 通关奖励走 _instance_victory 发放但池先记总量，防探索收益超配置上限）
-            _inst_cfg = C.INSTANCES.get(kid) or {}
+            _inst_cfg = _cat_space.INSTANCES.get(kid) or {}
             _pool_gold += int(_inst_cfg.get("gold") or 0)
             for _mn in (_inst_cfg.get("materials") or []):
                 _pool_mats[_mn] = _pool_mats.get(_mn, 0) + int(_inst_cfg.get("mat_count", 1) or 1)
@@ -2176,7 +2191,7 @@ class InstanceImpl:
 
         校验链：
           ① poi_id 必须仍在 rooms[sa_id].pois_left（探索完即空，重复调查返回 None）
-          ② POI 定义从 C.POIS 查（dungeon_pois 已并入），无 loot 的 POI（篝火/石碑/机关/
+          ② POI 定义从包内门面 `POIS`（`_cat_b143`）查（dungeon_pois 已并入），无 loot 的 POI（篝火/石碑/机关/
              陷阱等非拾取型）→ 返回 {"gold": 0, "materials": [], "equip": []}（效果仍结算）
           ③ 资源池扣减：gold 从 resources_pool.gold_left 扣（不足则只发剩余）；
              materials 同名从 mats_left 扣（不足 1 件则跳过）；equip 从 equip_left 移出
@@ -2194,7 +2209,7 @@ class InstanceImpl:
         # v185：消费前提（POI 仍在房间剩余表）与资源池扣减/移出全走 core/instance_run
         if not IR.poi_left(st, sa_id, poi_id):
             return None
-        poi = C.POIS.get(poi_id) or {}
+        poi = _cat_b143.POIS.get(poi_id) or {}
         loot = poi.get("loot") or {}
         reward = {"gold": 0, "materials": [], "equip": []}
         # 金币：资源池扣减（不足则只发剩余——spend_gold 返回实得量）
@@ -2216,14 +2231,14 @@ class InstanceImpl:
     async def _instance_start(self, event, group_id, qq_id, player, arg):
         from saintess_engine.battle.schedule import initial_ct as _ict
         kid = None
-        for k, inst in C.INSTANCES.items():
+        for k, inst in _cat_space.INSTANCES.items():
             if inst["name"] == arg or k == arg:
                 kid = k
                 break
         if not kid:
             yield event.plain_result(T.text("instance.面板_开本_找不到", arg=arg))
             return
-        inst = C.INSTANCES[kid]
+        inst = _cat_space.INSTANCES[kid]
         min_players = inst.get("min_players", 2)
         max_players = inst.get("max_players", 3)
         # v185：队伍解析（纯单人副本/弹性副本无队/非队长/人数越界）→ core/instance_gate（唯一真相源）
@@ -2268,23 +2283,23 @@ class InstanceImpl:
                 if not _exempt:
                     _quests = db.get_quests(group_id, qq_id)
                     if _quests.get("main_status") == "active":
-                        _mq = next((q for q in C.MAIN_QUESTS if q["id"] == _quests.get("main_quest")), None)
+                        _mq = next((q for q in _cat_quests.MAIN_QUESTS if q["id"] == _quests.get("main_quest")), None)
                         if _mq and _mq.get("objective", {}).get("explore") == _inst_map_id(kid):
                             _exempt = True
                     if not _exempt:
                         _side = _quests.get("side") or {}
                         if any(
                             sq.get("status") == "active"
-                            and next((q for q in C.SIDE_QUESTS if q["id"] == sid), {}).get("objective", {}).get("explore") == _inst_map_id(kid)
+                            and next((q for q in _cat_quests.SIDE_QUESTS if q["id"] == sid), {}).get("objective", {}).get("explore") == _inst_map_id(kid)
                             for sid, sq in _side.items()
                         ):
                             _exempt = True
                 if _exempt:
                     _entry_ok = True
                 else:
-                    _em_name = C.MAP_BY_ID.get(_entry_map, {}).get("name", _entry_map)
+                    _em_name = _cat_space.MAP_BY_ID.get(_entry_map, {}).get("name", _entry_map)
                     _esa_name = ""
-                    for _esa in (C.MAP_BY_ID.get(_entry_map, {}).get("subareas") or []):
+                    for _esa in (_cat_space.MAP_BY_ID.get(_entry_map, {}).get("subareas") or []):
                         if _esa.get("id") == _entry_sa:
                             _esa_name = _esa.get("name", "")
                             break
@@ -2296,7 +2311,7 @@ class InstanceImpl:
             "player_of": lambda m: self._player(group_id, m),
             "in_battle": lambda m: self._in_battle(group_id, m),
             "prof_wait": lambda m: self._prof_wait_state(group_id, m),
-            "prof_label": lambda t: C.PROF_WAIT_BASE.get(t, (0, 0, "副业"))[2],
+            "prof_label": lambda t: _cat_life.PROF_WAIT_BASE.get(t, (0, 0, "副业"))[2],
             "key_entry": key_entry,
             "cleared": cleared,
             "entry_ok": _entry_ok,
@@ -2336,8 +2351,8 @@ class InstanceImpl:
                 "class_name": p["class_name"], "level": p["level"],
                 "hp": min(int(p.get("hp", 0)), int(_st.get("max_hp", p.get("max_hp", 100)))),
                 "max_hp": int(_st.get("max_hp", p.get("max_hp", 100))),
-                "mp": min(int(p.get("mp", 0)), int(_st.get("max_mp", p.get("max_mp", C.DEFAULT_MAX_MP)))),
-                "max_mp": int(_st.get("max_mp", p.get("max_mp", C.DEFAULT_MAX_MP))),
+                "mp": min(int(p.get("mp", 0)), int(_st.get("max_mp", p.get("max_mp", _cat_core.DEFAULT_MAX_MP)))),
+                "max_mp": int(_st.get("max_mp", p.get("max_mp", _cat_core.DEFAULT_MAX_MP))),
                 "atk": p.get("atk", 0), "def": p.get("def", 0),
                 "matk": p.get("matk", 0), "mdef": p.get("mdef", 0),
                 # v57：快照补算真实 spd（此前 p 无 spd 字段恒为 0，速度机制无从生效）
@@ -2578,7 +2593,7 @@ class InstanceImpl:
                             return r
                 return None
             # 依次扫三张表
-            for tb in (C.PLAYER_SKILLS, C.BRANCH_SKILLS, C.TUTOR_SKILLS or {}):
+            for tb in (_cat_core.PLAYER_SKILLS, _cat_core.BRANCH_SKILLS, _cat_core.TUTOR_SKILLS or {}):
                 if not isinstance(tb, dict):
                     continue
                 sub = tb.get(cls)
@@ -2663,8 +2678,8 @@ class InstanceImpl:
                             mid = resolve_drop(mat_name)
                             if mid is None:
                                 continue
-                            if mid in C.MATERIALS:
-                                mprice = C.MATERIALS[mid].get("price", 0)
+                            if mid in _cat_items.MATERIALS:
+                                mprice = _cat_items.MATERIALS[mid].get("price", 0)
                                 if mprice <= 0:
                                     continue
                                 # q7-5 审计：向下取整（原 round 会 ±1 抖动）
@@ -2773,7 +2788,7 @@ class InstanceImpl:
         于调查点名时，包含匹配不算真命中（同样回落）。
         """
         inst_id = st.get("inst_id") or ""
-        points = (C.INVESTIGATION_POINTS or {}).get(inst_id) or []
+        points = (_cat_space.INVESTIGATION_POINTS or {}).get(inst_id) or []
         if not points:
             return None
         # 名称命中：先完全匹配，再包含匹配（与 POI 命中规则一致）
@@ -2816,7 +2831,7 @@ class InstanceImpl:
             # 同上：已翻不是真命中——回落第②③层（房间 POI 可自由调查，互不冲突）
             return None
         # 奖励四层 roll
-        inst = C.INSTANCES.get(inst_id) or {}
+        inst = _cat_space.INSTANCES.get(inst_id) or {}
         lines = [T.text("instance.面板_调查点_开头", name=poi.get('name', '调查点'))]
         reward = self._instance_investigate_reward(group_id, qq_id, player, st, poi, inst)
         if not reward:
@@ -2849,25 +2864,25 @@ class InstanceImpl:
         if r < collect_chance:
             collect = poi.get("collect")
             if collect is None:
-                collect = C.INVESTIGATE_COLLECT_SAMPLES
+                collect = _cat_b143.INVESTIGATE_COLLECT_SAMPLES
             if not isinstance(collect, (list, tuple)):
                 collect = [collect]
             for cid in collect:
                 mid = C.resolve("materials", cid) if cid else None
-                if mid and mid in C.MATERIALS:
+                if mid and mid in _cat_items.MATERIALS:
                     mname = C.display("materials", mid)
                     db.add_item(group_id, qq_id, mid, {
                         "name": mname, "type": "收藏", "stackable": True,
-                        "price": C.MATERIALS[mid].get("price", 1),
+                        "price": _cat_items.MATERIALS[mid].get("price", 1),
                     })
                     return [T.text("instance.面板_调查点_收藏", name=mname)]
             return []  # 收藏池空 → 放弃（不入保底，防刷稀有）
         # ③ 蓝符（Lv.60+）
         if inst_lv >= 60 and r < collect_chance + rune_chance:
-            blue_runes = [k for k, rr in C.RUNES.items() if (rr.get("quality") or "") == "blue"]
+            blue_runes = [k for k, rr in _cat_items.RUNES.items() if (rr.get("quality") or "") == "blue"]
             if blue_runes:
                 rk = random.choice(blue_runes)
-                r_def = C.RUNES[rk]
+                r_def = _cat_items.RUNES[rk]
                 lvl = random.randint(1, 2) if inst_lv < 82 else random.randint(2, 3)
                 rune_data = C.rune_item(r_def["effect"], lvl)
                 if rune_data:
@@ -2886,11 +2901,11 @@ class InstanceImpl:
         mats = poi.get("materials") or inst.get("materials", [])
         mat = random.choice(mats) if mats else None
         mat_id = C.resolve("materials", mat) if mat else None
-        if mat_id and mat_id in C.MATERIALS:
+        if mat_id and mat_id in _cat_items.MATERIALS:
             mname = C.display("materials", mat_id)
             db.add_item(group_id, qq_id, mat_id, {
                 "name": mname, "type": "材料", "stackable": True,
-                "price": C.MATERIALS[mat_id]["price"],
+                "price": _cat_items.MATERIALS[mat_id]["price"],
             })
             return [T.text("instance.面板_调查点_材料", name=mname)]
         return [T.static("instance.面板_调查点_零碎")]
@@ -2915,7 +2930,7 @@ class InstanceImpl:
 
         v174 统一抽象：掉落走 drop_engine roll('loot_pile:{inst_id}')。
         """
-        inst = C.INSTANCES[st["inst_id"]]
+        inst = _cat_space.INSTANCES[st["inst_id"]]
         _drop_roll = _host_attr("drop_engine", "roll")
         _DropCtx = _host_attr("drop_engine", "_SimpleCtx")
         ctx = _DropCtx(inst_id=st["inst_id"], monster_lv=int(inst.get("lv", 0) or 0),
@@ -2929,11 +2944,11 @@ class InstanceImpl:
                 lines.append(T.text("instance.日志_搜刮_金币", gold=gold))
             elif r.get("type") == "item":
                 mat_id = r["item_id"]
-                if mat_id and mat_id in C.MATERIALS:
+                if mat_id and mat_id in _cat_items.MATERIALS:
                     mname = C.display("materials", mat_id)
                     db.add_item(group_id, qq_id, mat_id, {
-                        "name": mname, "type": C.MATERIALS[mat_id].get("type", "材料"), "stackable": True,
-                        "price": C.MATERIALS[mat_id]["price"],
+                        "name": mname, "type": _cat_items.MATERIALS[mat_id].get("type", "材料"), "stackable": True,
+                        "price": _cat_items.MATERIALS[mat_id]["price"],
                     })
                     lines.append(T.text("instance.日志_搜刮_拾取", name=mname))
         if not lines:  # 引擎兜底（数据异常时保底不给空）
@@ -2992,7 +3007,7 @@ class InstanceImpl:
         v174 统一抽象：掉落判定走 drop_engine roll('secret_chest:{inst_id}')（table_choice
         互斥档策略，5 档 cutoff 与旧 elif 语义精确一致）；本层只负责入包与展示文案。
         """
-        inst = C.INSTANCES[st["inst_id"]]
+        inst = _cat_space.INSTANCES[st["inst_id"]]
         _drop_roll = _host_attr("drop_engine", "roll")
         _DropCtx = _host_attr("drop_engine", "_SimpleCtx")
         ctx = _DropCtx(inst_id=st["inst_id"], monster_lv=int(inst.get("lv", 0) or 0),
@@ -3027,11 +3042,11 @@ class InstanceImpl:
                 text = T.text("instance.面板_宝箱_符文", name=rune_data['name'])
             elif t == "item" and r.get("item_id") and r["item_id"] != "mat_tu_zhi_can_ye":
                 mat_id = r["item_id"]
-                if mat_id in C.MATERIALS:
+                if mat_id in _cat_items.MATERIALS:
                     n = r.get("count", 2)
                     db.add_item(group_id, qq_id, mat_id, {
                         "name": C.display("materials", mat_id), "type": "材料",
-                        "stackable": True, "price": C.MATERIALS[mat_id]["price"],
+                        "stackable": True, "price": _cat_items.MATERIALS[mat_id]["price"],
                     }, count=n)
                     text = T.text("instance.面板_宝箱_材料",
                                   name=C.display('materials', mat_id), n=n)
@@ -3040,7 +3055,7 @@ class InstanceImpl:
             mat_id = C.resolve("materials", mat)
             db.add_item(group_id, qq_id, mat_id, {
                 "name": C.display("materials", mat_id), "type": "材料",
-                "stackable": True, "price": C.MATERIALS[mat_id]["price"],
+                "stackable": True, "price": _cat_items.MATERIALS[mat_id]["price"],
             }, count=2)
             text = T.text("instance.面板_宝箱_材料",
                           name=C.display('materials', mat_id), n=2)
@@ -3049,7 +3064,7 @@ class InstanceImpl:
         return T.static("instance.面板_宝箱_开启") + "\n" + text
 
     async def _instance_victory(self, event, group_id, qq_id, player, st, logs):
-        inst = C.INSTANCES[st["inst_id"]]
+        inst = _cat_space.INSTANCES[st["inst_id"]]
         # v137：Boss 可能已从 st["boss"] 置空（enemies 阵列承载），从阵列找 role=boss 或取首个
         boss = st.get("boss")
         if not boss or not isinstance(boss, dict):
@@ -3121,7 +3136,7 @@ class InstanceImpl:
                 pass
             # v135 副本全员图纸小概率：每名存活成员独立判定（首功图纸之外的全员奖励，
             # 概率 constants.INSTANCE_BP_CHANCE=10%）。已学图纸折算图纸残页，未学整张入包。
-            if random.random() < C.INSTANCE_BP_CHANCE:
+            if random.random() < _cat_core.INSTANCE_BP_CHANCE:
                 bp2 = C.roll_blueprint(boss.get("lv", 1) or 1)
                 if bp2:
                     _learned2 = (p.get("learned_blueprints") or [])
@@ -3149,7 +3164,7 @@ class InstanceImpl:
                 for _r in _eq_results:
                     _be_eq = _r["data"]
                     db.add_item(group_id, m, f"eq_{uuid.uuid4().hex[:8]}", _be_eq)
-                    _is_excl = bool(_excl_rid) and _be_eq.get("name") == C.EQUIP_ROSTER.get(_excl_rid, {}).get("name")
+                    _is_excl = bool(_excl_rid) and _be_eq.get("name") == _cat_items.EQUIP_ROSTER.get(_excl_rid, {}).get("name")
                     if _is_excl:
                         lines.append(T.text("instance.日志_通关_专属装备", name=p['name'], eq_name=_be_eq['name']))
                     else:
@@ -3161,11 +3176,11 @@ class InstanceImpl:
             for _ in range(inst.get("mat_count", 1)):
                 mat = random.choice(mats) if mats else None
                 mat_id = C.resolve("materials", mat) if mat else None  # v48：中文名 → ID
-                if mat_id and mat_id in C.MATERIALS:
+                if mat_id and mat_id in _cat_items.MATERIALS:
                     mname = C.display("materials", mat_id)
                     db.add_item(group_id, m, mat_id, {
                         "name": mname, "type": "材料", "stackable": True,
-                        "price": C.MATERIALS[mat_id]["price"],
+                        "price": _cat_items.MATERIALS[mat_id]["price"],
                     })
                     lines.append(T.text("instance.日志_通关_材料", name=p['name'], mat_name=mname))
         # 贡献最高 → 职业图纸
@@ -3252,7 +3267,7 @@ class InstanceImpl:
         lines.append(T.static("instance.日志_通关_停留搜刮"))
         lines.append(T.static("instance.日志_通关_战利品堆"))
         # v140 波2：通关调查点提示（未翻完时给入口）
-        _inv_pts = (C.INVESTIGATION_POINTS or {}).get(st.get("inst_id") or "", [])
+        _inv_pts = (_cat_space.INVESTIGATION_POINTS or {}).get(st.get("inst_id") or "", [])
         if _inv_pts:
             lines.append(T.text("instance.日志_通关_调查痕迹提示", limit=INVESTIGATE_DAILY_LIMIT))
         if st["secret_crack"]:
@@ -3285,10 +3300,10 @@ class InstanceImpl:
                 # （cur_map 仍是开本前所在图），按该图 BFS 最近城镇，落中心广场 subareas[0]，
                 # 与野外战败 combat._handle_defeat(M22 P3) 同规则。
                 _town_id = self._nearest_town(p.get("cur_map", ""))
-                _town_sas = C.MAP_BY_ID.get(_town_id, {}).get("subareas") or []
+                _town_sas = _cat_space.MAP_BY_ID.get(_town_id, {}).get("subareas") or []
                 _town_sa = _town_sas[0]["id"] if _town_sas else ""
                 _town_sa_name = _town_sas[0]["name"] if _town_sas else "广场"
-                _town_name = C.MAP_BY_ID.get(_town_id, {}).get("name", "城镇")
+                _town_name = _cat_space.MAP_BY_ID.get(_town_id, {}).get("name", "城镇")
                 db.update_player(group_id, m, hp=0, mp=p.get("max_mp", 0),
                                  cur_map=_town_id, cur_subarea=_town_sa,
                                  world_id="mainland")

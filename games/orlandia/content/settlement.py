@@ -33,6 +33,18 @@ random 调用顺序/落库顺序**一字未改**）：
 import random
 import time
 
+# ---- B14-2 L5：数据名读点切包内门面（`C.<数据名>` → 门面直取；函数名/缺口名仍留 `C.<名>`）----
+from . import catalog_core as _cc     # 常量/职业/种族/面板公式
+from . import catalog_items as _ci    # 物品/材料/符文/装备名册
+from . import catalog_life as _cl     # 生活/副业/商店/宠物/经济配置
+from . import catalog_quests as _cq   # 任务/剧情族
+from . import catalog_space as _sp    # 地图/子区域
+from . import catalog_b143 as _b143   # B14-3 收口名（宠物/公会/势力/符文掉落/地图连边/世界事件表）
+# ---- B14-3（2026-09-14）读点切换 ----
+# 上一段留下的 8 个「域缺口名」（GUILD_CONFIG/PET_MAX_LEVEL/PET_SKILL_UNLOCK_LV/WORLD_EVENT_POOL/
+# AREA_FACTION/FACTIONS/MAP_CONNECTIONS/RUNE_DROP）已由 `catalog_b143` 提供 → 本段 15 处切 `_b143`；
+# 仍留 `C.<名>` 的只剩宿主**函数**（pet_exp_bonus/roll_drop/display/…）。见 overnight/_w3_cut_economy_side.md。
+
 
 # ============ 胜利结算主段小函数（combat._handle_victory 原段顺序 1803–2201） ============
 
@@ -78,7 +90,7 @@ def guild_exp_bonus(host, qq_id, exp):
     guild_bonus = []
     g = db.guild_get_by_member(qq_id)
     if g:
-        gb = min(g["level"] * C.GUILD_CONFIG["exp_bonus_per_level"], C.GUILD_CONFIG["max_bonus"])
+        gb = min(g["level"] * _b143.GUILD_CONFIG["exp_bonus_per_level"], _b143.GUILD_CONFIG["max_bonus"])
         if gb > 0:
             exp = int(exp * (1 + gb))
             guild_bonus.append(f"🏰 公会加成：经验 +{int(gb*100)}%")
@@ -113,15 +125,15 @@ def pet_exp_gain(host, qq_id, exp, monster):
         p_exp = pet["exp"] + p_gain
         p_lv = pet["level"]
         p_lvup = False
-        while p_lv < C.PET_MAX_LEVEL and p_exp >= C.pet_exp_need(p_lv):
+        while p_lv < _b143.PET_MAX_LEVEL and p_exp >= C.pet_exp_need(p_lv):
             p_exp -= C.pet_exp_need(p_lv)
             p_lv += 1
             p_lvup = True
-        if p_lv >= C.PET_MAX_LEVEL:
-            p_exp = min(p_exp, C.pet_exp_need(C.PET_MAX_LEVEL) - 1)  # 封顶溢出封存
+        if p_lv >= _b143.PET_MAX_LEVEL:
+            p_exp = min(p_exp, C.pet_exp_need(_b143.PET_MAX_LEVEL) - 1)  # 封顶溢出封存
         db.pet_update(qq_id, exp=p_exp, level=p_lv)
         if p_lvup:
-            pet_bonus.append(f"🎉 宠物升到 Lv.{p_lv}！(Lv.{int(C.PET_SKILL_UNLOCK_LV)} 解锁宠物技能)" if p_lv == int(C.PET_SKILL_UNLOCK_LV) else (f"🎉 宠物升到 Lv.{p_lv}！(已满级)" if p_lv >= C.PET_MAX_LEVEL else f"🎉 宠物升到 Lv.{p_lv}！"))
+            pet_bonus.append(f"🎉 宠物升到 Lv.{p_lv}！(Lv.{int(_b143.PET_SKILL_UNLOCK_LV)} 解锁宠物技能)" if p_lv == int(_b143.PET_SKILL_UNLOCK_LV) else (f"🎉 宠物升到 Lv.{p_lv}！(已满级)" if p_lv >= _b143.PET_MAX_LEVEL else f"🎉 宠物升到 Lv.{p_lv}！"))
     return exp, pet_bonus
 
 
@@ -152,7 +164,7 @@ def world_event_bonus(host, group_id, qq_id, exp, gold):
             db.bump_stats(group_id, qq_id, world_events=1)
         except Exception:
             pass
-        evt_def = next((e for e in C.WORLD_EVENT_POOL if e["type"] == cur_evt["etype"]), None)
+        evt_def = next((e for e in _b143.WORLD_EVENT_POOL if e["type"] == cur_evt["etype"]), None)
         if evt_def:
             evt_effects = evt_def.get("effects") or {}
             _em = evt_effects.get("exp_mult")
@@ -201,14 +213,14 @@ def bump_kill_stats(host, group_id, qq_id, monster, evt_effects):
     db.bump_bestiary(group_id, qq_id, monster["name"])
     rep_lines = []
     area_key = monster.get("map_area")
-    if area_key and area_key in C.AREA_FACTION:
-        faction = C.AREA_FACTION[area_key]
+    if area_key and area_key in _b143.AREA_FACTION:
+        faction = _b143.AREA_FACTION[area_key]
         rep_gain = 5 if monster.get("is_boss") else (3 if monster.get("is_elite") else 1)
         # 世界事件声望加成（effects 数据驱动：rep_mult，如兽潮声望双倍）
         rep_gain = int(rep_gain * evt_effects.get("rep_mult", 1))
         db.add_reputation(group_id, qq_id, faction, rep_gain)
         if rep_gain > 1:
-            rep_lines.append(f"🏛️ {C.FACTIONS[faction]['icon']} 声望 +{rep_gain}")
+            rep_lines.append(f"🏛️ {_b143.FACTIONS[faction]['icon']} 声望 +{rep_gain}")
     return rep_lines
 
 
@@ -257,10 +269,10 @@ def roll_equip_drop(host, group_id, qq_id, monster, drop_equip, drop_lines):
     if drop_equip is None and monster.get("role") in ("elite", "boss"):
         _elite_rid = None
         if monster.get("role") == "elite":
-            _elite_rid = C.ELITE_EQUIP_DROP.get(monster.get("name", ""))
+            _elite_rid = _cq.ELITE_EQUIP_DROP.get(monster.get("name", ""))
         if _elite_rid:
             # 专属判定：15% 基础率（与 roll_drop_equip elite 档一致，不吃幸运防叠加膨胀）
-            if random.random() < C.ELITE_EQ_DROP_CHANCE:
+            if random.random() < _cc.ELITE_EQ_DROP_CHANCE:
                 try:
                     drop_equip = C.generate_roster_equip(_elite_rid)
                 except Exception:
@@ -286,7 +298,7 @@ def roll_pet_egg(host, group_id, qq_id, monster):
     db, C = host.db, host.C
     pet_egg_line = ""
     egg_key = None
-    for rule in C.PET_EGG_ROLL:
+    for rule in _cl.PET_EGG_ROLL:
         ok = True
         if rule.get("role") and monster.get("role") != rule["role"]:
             ok = False
@@ -327,19 +339,19 @@ def roll_rune_drop(host, group_id, qq_id, monster):
     rune_quality = None
     is_elite_boss = monster.get("is_boss") or monster.get("is_elite")
     if is_elite_boss:
-        for rq, w in sorted(C.RUNE_DROP.items(), key=lambda x: -x[1]):
+        for rq, w in sorted(_b143.RUNE_DROP.items(), key=lambda x: -x[1]):
             if roll < w * 3:
                 rune_quality = rq
                 break
             roll -= w * 3
     else:
-        if roll < C.RUNE_DROP["blue"]:
+        if roll < _b143.RUNE_DROP["blue"]:
             rune_quality = "blue"
     if rune_quality:
-        cand_runes = [n for n, r in C.RUNES.items() if r["quality"] == rune_quality]
+        cand_runes = [n for n, r in _ci.RUNES.items() if r["quality"] == rune_quality]
         if cand_runes:
             rname = random.choice(cand_runes)
-            r_def = C.RUNES[rname]
+            r_def = _ci.RUNES[rname]
             # 等级：稀有 1-2 级，史诗 1-3 级，传说 2-3 级（高等级更稀有）
             if rune_quality == "blue":
                 r_lvl = random.randint(1, 2)
@@ -433,8 +445,8 @@ def material_fold(host, group_id, qq_id, player, monster, gold, lucky_line):
             mid = host.resolve_drop(mat_name)
             if mid is None:
                 continue
-            if mid in C.MATERIALS:
-                mprice = C.MATERIALS[mid].get("price", 0)
+            if mid in _ci.MATERIALS:
+                mprice = _ci.MATERIALS[mid].get("price", 0)
                 if mprice <= 0:
                     continue
                 # q7-5 审计：向下取整（原 round 会 ±1 抖动，低阶怪刷低价材料可能白拿）
@@ -449,7 +461,7 @@ def material_fold(host, group_id, qq_id, player, monster, gold, lucky_line):
                 drop_lines.append(f"🎒 拾取材料：{C.display('materials', mid)} ×{n}（可到城镇商店/铁匠铺出售）")
             else:
                 # v110 审计修复：掉落结算支持消耗品（副本钥匙 i_key_* 等，29 章发放链补全）
-                _it = C.ITEMS.get(mid, {})
+                _it = _ci.ITEMS.get(mid, {})
                 db.add_item(group_id, qq_id, mid,
                             {"name": _it.get("name", mat_name), "type": _it.get("type", "消耗品"),
                              "stackable": True, "price": _it.get("price", 0)}, 1)
@@ -490,7 +502,7 @@ def grant_player_exp(host, group_id, qq_id, player, exp):
                                       player.get("class_tier", 0), player.get("attributes"),
                                       player.get("evolve_path", 0), player.get("_title_bonus") or {}, player.get("race"))
         player["max_hp"] = int(_st.get("max_hp", player.get("max_hp", 100)))
-        player["max_mp"] = int(_st.get("max_mp", player.get("max_mp", host.C.DEFAULT_MAX_MP)))
+        player["max_mp"] = int(_st.get("max_mp", player.get("max_mp", _cc.DEFAULT_MAX_MP)))
     except Exception:
         pass
     return player
@@ -529,7 +541,7 @@ def nearest_town(host, cur_map: str) -> str:
     """BFS 找离当前地图最近的城镇（战败回城用；与回城卷轴 economy._nearest_town 同逻辑，M22 P3）。"""
     from collections import deque
     C = host.C
-    if cur_map in C.MAP_BY_ID and C.MAP_BY_ID[cur_map].get("type") == C.MAP_TYPE_TOWN:
+    if cur_map in _sp.MAP_BY_ID and _sp.MAP_BY_ID[cur_map].get("type") == _cc.MAP_TYPE_TOWN:
         return cur_map
     q = deque([(cur_map, 0)])
     seen = {cur_map}
@@ -537,15 +549,15 @@ def nearest_town(host, cur_map: str) -> str:
         m, d = q.popleft()
         if d >= 6:
             continue
-        for nxt in C.MAP_CONNECTIONS.get(m, []):
+        for nxt in _b143.MAP_CONNECTIONS.get(m, []):
             if nxt in seen:
                 continue
             seen.add(nxt)
-            mm = C.MAP_BY_ID.get(nxt, {})
-            if mm.get("type") == C.MAP_TYPE_TOWN:
+            mm = _sp.MAP_BY_ID.get(nxt, {})
+            if mm.get("type") == _cc.MAP_TYPE_TOWN:
                 return nxt
             q.append((nxt, d + 1))
-    return C.START_MAP
+    return _cc.START_MAP
 
 
 def red_until(host, qq_id) -> int:
@@ -568,10 +580,10 @@ def grant_worldboss_drop(host, group_id, qq_id, key):
             rein = C.make_mount_rein(key)
             db.add_item(group_id, qq_id, f"mountrein_{key}", rein)
             return rein["name"]
-        if key in C.MATERIALS:
+        if key in _ci.MATERIALS:
             db.add_item(group_id, qq_id, key,
                         {"name": C.display("materials", key), "type": "材料",
-                         "stackable": True, "price": C.MATERIALS[key]["price"]})
+                         "stackable": True, "price": _ci.MATERIALS[key]["price"]})
             return C.display("materials", key)
     except Exception:
         return None
@@ -660,7 +672,7 @@ def victory_settle(host, group_id, qq_id, player, monster, result, extra_kills=N
     # ---- 段20 rule_fire（原 L2167 位置：进度条前） ----
     # 签名照抄 base._rule_fire：fire(group_id, qq_id, player, cur_map, trigger, evt, hooks)
     _rule_txt = _rule_fire(group_id, qq_id, player,
-                           C.MAP_BY_ID.get(player.get("cur_map"), {}),
+                           _sp.MAP_BY_ID.get(player.get("cur_map"), {}),
                            "battle_win",
                            {"event": "win", "enemy": monster},
                            hooks={"title_bonus": lambda q: host.stat_bonus(group_id, q, db.get_player(group_id, q) or {})})
@@ -735,9 +747,9 @@ def defeat_settle(host, group_id, qq_id, player, monster, result):
     # M22 P3 修复：战败回最近城镇（原固定回橡木镇 START_MAP——Lv.60+ 也被送回 Lv.1 图），
     # 落该城中心广场（subareas[0]，与方碑传送/回城卷轴同款落点）
     _town_id = nearest_town(host, player.get("cur_map", ""))
-    _town_sas = C.MAP_BY_ID.get(_town_id, {}).get("subareas") or []
+    _town_sas = _sp.MAP_BY_ID.get(_town_id, {}).get("subareas") or []
     _town_sa = _town_sas[0]["id"] if _town_sas else ""
-    _town_name = C.MAP_BY_ID.get(_town_id, {}).get("name", "城镇")
+    _town_name = _sp.MAP_BY_ID.get(_town_id, {}).get("name", "城镇")
     _town_sa_name = _town_sas[0]["name"] if _town_sas else "广场"
     # O119 复活羽毛：背包有复活羽毛 → 战败结算提示『消耗复活羽毛？或损失金币』。
     # 先回城满血（玩家已阵亡不能滞留），金币扣款挂起到 revive_confirm 二段回复
@@ -768,7 +780,7 @@ def defeat_settle(host, group_id, qq_id, player, monster, result):
         # v97.5 行为彩蛋规则：战败（用于清零连胜等计数，不产出彩蛋）
         # 签名照抄 base._rule_fire：fire(group_id, qq_id, player, cur_map, trigger, evt, hooks)
         _rule_fire("battle_win", group_id, qq_id, player,
-                   C.MAP_BY_ID.get(player.get("cur_map"), {}),
+                   _sp.MAP_BY_ID.get(player.get("cur_map"), {}),
                    {"event": "lose"},
                    hooks={"title_bonus": lambda q: host.stat_bonus(group_id, q, db.get_player(group_id, q) or {})})
         return {"lines": lines, "revive_state": {"lost": lost, "extra": extra,
@@ -786,7 +798,7 @@ def defeat_settle(host, group_id, qq_id, player, monster, result):
     # v97.5 行为彩蛋规则：战败（用于清零连胜等计数，不产出彩蛋）
     # 签名照抄 base._rule_fire：fire(group_id, qq_id, player, cur_map, trigger, evt, hooks)
     _rule_fire("battle_win", group_id, qq_id, player,
-               C.MAP_BY_ID.get(player.get("cur_map"), {}),
+               _sp.MAP_BY_ID.get(player.get("cur_map"), {}),
                {"event": "lose"},
                hooks={"title_bonus": lambda q: host.stat_bonus(group_id, q, db.get_player(group_id, q) or {})})
     return {"lines": lines, "revive_state": None, "player": player}
