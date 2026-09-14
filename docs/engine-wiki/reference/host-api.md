@@ -52,6 +52,9 @@ class MyAdapter:
 <包目录>/content/apply.py          entry：install_engine()（全局一次、幂等）
                                           apply_game_content(actor)（每 actor 一次、幂等）
                                           可选 initial_save(uid, ctx)（新玩家初始档 = 内容）
+<包目录>/game.json 的 `bind`（可选）      ★ **注入声明**：{"module": "content/index.py", "func": "bind_host"}
+                                          声明了 = 引擎在 import 命令模块**之前**，把宿主注入对象
+                                          交给这个函数（见 §四「宿主注入面」）；不声明 = 无宿主耦合
 <包目录>/content/data/commands.json       ★ 指令**声明**（平台无关元数据）：
                                           patterns / desc / category / usage / order / guards / page_size
 <包目录>/content/commands.py              ★ 指令**处理器表**：
@@ -74,7 +77,9 @@ class MyAdapter:
                               │     · `hook:<名>` → 包侧 content/guards.py::GUARDS
                               ├─ 构造 Env（注入面，见下）
                               ├─ 调包内 handler（content.cmds.x:fn）
-                              └─ save_player（一条消息一次）+ say（逐段投递）
+                              └─ 落档：**处理器自己调 `env.save()`**（引擎不代劳 —— 见 §四末）
+                                 ＋ 新玩家**建档**由引擎落一次（initial_save 有档时必须落库）
+                                 ＋ say（逐段投递）
 ```
 
 包没给处理器（纯数据包 / 尚未实现）→ **回显声明**（降级说明，不是兼容壳）。
@@ -105,6 +110,28 @@ class MyAdapter:
 def my_cmd(env) -> str | list[str] | Iterable[str] | None: ...
 ```
 返回「**已渲染文本段**」；引擎负责投递（`None` = 空回话）。**渲染属内容**（文案表在包里）。
+
+### 宿主注入面（`inject`：一个 dict，两处用）
+
+宿主用**一个 dict** 把「包运行期需要的宿主对象」交给引擎；引擎在两处用它：
+
+| 时机 | 行为 |
+|---|---|
+| **加载期** | 包若在 `game.json` 声明了 `bind`，引擎在 **import `content/commands.py` 之前**调 `bind_host(**inject)`。**声明了却没给注入 → `PackageError`**（拒绝静默空跑：否则包会在 import 期炸在包内某模块里，错误指不到根因） |
+| **运行期** | `inject` 并入每条消息的 `Env.state`：引擎自有键 `spec` / `prefix` / `package` 在前，注入键在后，**同名以注入为准** |
+
+- 引擎**不解释** `inject` 的键值（零游戏知识，只原样转交）。
+- 入口两个：`Host(adapter, package_dir, inject={...})` 与 `load_package(root, inject={...})`（同一个面）。
+- `Package.command_handlers()` 只在「包确实没有 `content/commands.py`」时给空表；
+  包自己 import 期抛的错**原样抛出**（曾经是 `except Exception → 空表`，把真错吞成静默失效）。
+
+### 落档归处理器（引擎不代劳）
+
+| 事情 | 归谁 |
+|---|---|
+| 处理一条消息后把改动写回 | **包内处理器**：改完调用 `env.save()` |
+| 新玩家**建档**（`initial_save` 返回了非空档） | **引擎**：落库一次（否则"新玩家"永远是瞬时判断） |
+| 「哪些字段可写」的过滤 | **适配器**：引擎把整份 player dict 交给 `save_player`，字段策略由宿主定 |
 
 ## 五、换包
 

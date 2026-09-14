@@ -66,7 +66,7 @@ class Host:
     def __init__(self, adapter, package_dir, *, scenario=None, prefix="/", seed=None,
                  idle_sleep=0.05, echo_battle=True, tlog_limit=500, id_key="uid",
                  register_hint=DEFAULT_REGISTER_HINT, battle_hint=DEFAULT_BATTLE_HINT,
-                 battle_check=None, texts_domain="texts"):
+                 battle_check=None, texts_domain="texts", inject=None):
         self.adapter = adapter
         self.package_dir = package_dir
         self.scenario = scenario or Scenario()
@@ -80,6 +80,9 @@ class Host:
         self.battle_hint = str(battle_hint or "")
         self.battle_check = battle_check
         self.texts_domain = str(texts_domain or "texts")
+        #: **宿主注入面**：一个 dict，两处用 —— ① 加载期交给包声明的 `bind` 钩子（在 import
+        #: 包命令模块之前）② 每轮消息并入 `Env.state`。引擎**不解释**其键值（零游戏知识）。
+        self.inject: dict = dict(inject or {})
         self.pkg: Package | None = None
         self.commands = CommandRegistry(name="host")
         self.handlers: dict = {}          # 包内命令处理器表（content/commands.py::COMMANDS）
@@ -91,7 +94,7 @@ class Host:
     # ------------------------------------------------------------ 装配
     def boot(self) -> Package:
         """加载包 → 装引擎 → 装载「声明 + 处理器 + 守卫钩子 + 文案表」。"""
-        self.pkg = load_package(self.package_dir)
+        self.pkg = load_package(self.package_dir, inject=self.inject or None)
         self.pkg.install_engine()
         try:
             self.commands = CommandRegistry(name=self.pkg.id).load(self.pkg.command_declarations())
@@ -218,7 +221,8 @@ class Host:
             texts=self.texts,
             blob_load=self.blob,
             blob_save=self.put_blob,
-            state={"spec": spec, "prefix": self.prefix, "package": (self.pkg.id if self.pkg else "")},
+            state={"spec": spec, "prefix": self.prefix,
+                   "package": (self.pkg.id if self.pkg else ""), **self.inject},
         )
         # 两段式：`save` 存的是 **env.player 的当前值**（处理器可整体替换 player 对象）
         env.save = lambda: self.save_player(env.uid, env.player)
@@ -447,7 +451,12 @@ class Host:
 
     # ------------------------------------------------------------ 一条消息
     def handle(self, ctx: dict) -> None:
-        """处理一条消息：认人 → 读档 → 路由 → （改档）→ **落档** → 回话。"""
+        """处理一条消息：认人 → 读档 → 路由 → 回话。
+
+        **落档由处理器自己负责**：改完档调 `env.save()`（引擎契约第 6 条）。引擎**不代劳** ——
+        历史上这里每条消息无条件整档回写，与契约文档矛盾（且与宿主"按需存 + 剔身份字段"的
+        既有实现不一致）。
+        """
         ctx = ctx or {}
         uid = str(ctx.get("uid") or "")
         to = {"uid": uid, "group_id": ctx.get("group_id")}
@@ -458,8 +467,11 @@ class Host:
             player = self.pkg.initial_save(uid, ctx, id_key=self.id_key) or {}
             if not isinstance(player, dict):
                 player = {}
+            if player:
+                # **建档是引擎级副作用**：新档必须落库一次，否则"这个人是新玩家"永远是瞬时判断。
+                # 注意与"每条消息整档回写"的区别 —— 后者已删（落档归处理器，见 handle 文档串）。
+                self.save_player(uid, player)
         replies = self.route(ctx, player, text)
-        self.save_player(uid, player)                            # 一条消息处理完存一次
         for part in replies:
             self.say(to, part)
 

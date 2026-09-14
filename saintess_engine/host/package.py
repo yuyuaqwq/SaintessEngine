@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import json
 import os
 import sys
@@ -56,6 +57,7 @@ class Package:
         self._subs: dict = {}
         self._handlers: dict | None = None
         self._guards: dict | None = None
+        self._bound = False
 
     # ------------------------------------------------------------ 清单
     @property
@@ -77,6 +79,44 @@ class Package:
         if not ok:
             raise PackageError("包 %s 的引擎门槛不满足：%s" % (self.id, note))
         return note
+
+    # ------------------------------------------------------------ 宿主注入面
+    def bind_decl(self) -> dict:
+        """包清单里的**注入声明**：`"bind": {"module": "content/index.py", "func": "bind_host"}`。
+
+        声明了 = 引擎必须在 import 包命令模块**之前**，把宿主注入对象交给这个函数
+        （见 `load_package(root, inject=…)`）。没声明 → `{}`（纯数据包 / 无宿主耦合的包）。
+        """
+        decl = self.manifest.get("bind")
+        return dict(decl) if isinstance(decl, dict) else {}
+
+    def apply_bind(self, inject) -> None:
+        """把宿主注入对象交给包声明的中间人（未声明 → 不调）。
+
+        声明了却没给注入 → `PackageError`：包自己会在 import 期因为取不到宿主对象而炸在包内
+        某模块里（错误信息指不到根因）—— 这里**拒绝静默空跑**。
+        注入内容引擎**不解释**（零游戏知识，只原样转发）。
+        """
+        decl = self.bind_decl()
+        if not decl:
+            return
+        if not inject:
+            raise PackageError("包 %s 声明了 bind=%s，但宿主未提供注入对象（拒绝静默空跑）"
+                               % (self.id, decl))
+        mod_name = str(decl.get("module") or "")
+        fn_name = str(decl.get("func") or "")
+        if not mod_name or not fn_name:
+            raise PackageError("包 %s 的 bind 声明不完整（需 module + func）：%s" % (self.id, decl))
+        fn = getattr(self._decl_module(mod_name), fn_name, None)
+        if not callable(fn):
+            raise PackageError("包 %s 的 bind.func 不可调用：%s:%s" % (self.id, mod_name, fn_name))
+        fn(**inject)
+        self._bound = True
+
+    def _decl_module(self, mod_name: str):
+        """按包根解析声明里的模块路径（`content/index.py` → `content.index`）。"""
+        dotted = (mod_name[:-3] if mod_name.endswith(".py") else mod_name).replace("/", ".")
+        return importlib.import_module(dotted)
 
     # ------------------------------------------------------------ 契约面
     def entry_fn(self, name: str):
@@ -182,16 +222,21 @@ class Package:
         mod = None
         dotted = self.entry[:-3].replace("/", ".") if self.entry.endswith(".py") else ""
         if dotted and "." in dotted:
-            try:
-                mod = importlib.import_module(dotted.rsplit(".", 1)[0] + "." + name)
-            except Exception:                                    # noqa: BLE001
-                mod = None
+            target = dotted.rsplit(".", 1)[0] + "." + name
+            # **存在性用 find_spec 判，不拿异常当信号**（否则"模块自身 import 失败"会被
+            # 误当成"包没有这个模块"而静默吞掉 —— 这正是旧版 `except Exception` 的病根）。
+            if importlib.util.find_spec(target) is not None:
+                mod = importlib.import_module(target)     # 包自己的错误原样抛
         self._subs[name] = mod
         return mod
 
 
-def load_package(root: str) -> Package:
-    """按包契约加载一个包目录（清单 → entry → import）。"""
+def load_package(root: str, *, inject=None) -> Package:
+    """按包契约加载一个包目录（清单 → entry → import → **宿主注入**）。
+
+    `inject`：宿主提供的注入对象（引擎不解释其键值）。包若在清单里声明了 `bind`，
+    引擎在这里、**在 import 包命令模块之前**调它 —— 这是"包能脱离原宿主自跑"的关键时序。
+    """
     root = os.path.abspath(root)
     manifest = read_json(os.path.join(root, "game.json"))
     if not isinstance(manifest, dict):
@@ -207,5 +252,6 @@ def load_package(root: str) -> Package:
         dotted = entry[:-3].replace("/", ".") if entry.endswith(".py") else entry.replace("/", ".")
         module = importlib.import_module(dotted)
     pkg = Package(root, manifest, module)
+    pkg.apply_bind(inject)          # ★ 必须在命令模块被 import 之前（见 Package.apply_bind）
     pkg.check_engine()
     return pkg

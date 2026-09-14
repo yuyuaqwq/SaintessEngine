@@ -69,8 +69,7 @@
     "primary": "command",
     "icon": "⌨️",
     "owner": "package",
-    "tier": "fixed",
-    "_owner_note": "域模块 content/commands.py 是**包特定聚合器**（import 包内 cmds_*.py 组装 handler 表）→ 按 check_domain_owner.py 口径归包；schema(command.schema.json) 仍由引擎定义"
+    "tier": "fixed"
   },
   "texts": {
     "label": "文案",
