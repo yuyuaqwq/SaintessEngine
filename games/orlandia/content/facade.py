@@ -44,7 +44,6 @@ __all__ = ["C", "bind_host", "resolve_name", "AGGREGATE_MODULES"]
 AGGREGATE_MODULES = (
     # ① core 层（顺序与宿主 `game/core/__init__.py` 的再导出面一致：先 index/tables 这类索引面）
     "content.index",
-    "content.tables",
     "content.constants",
     "content.stats",
     "content.achievements",
@@ -68,6 +67,8 @@ AGGREGATE_MODULES = (
     "content.catalog_quests",
     "content.catalog_rules",
     "content.catalog_space",
+    # ★ `tables` 放最后：它是同值不同键序的门面（`ITEMS` 等），放前面会遮住 catalog_items 的宿主同序
+    "content.tables",
 )
 
 _NS = None
