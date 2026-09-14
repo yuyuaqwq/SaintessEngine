@@ -102,14 +102,15 @@ class _HostMod:
 
 
 C = _HostMod("content")
-db = _HostMod("db")
+from ._pkgref import DB as db
 
 
 def _panel_stats():
     """真源函数体内 `from ..content_rules.panel import player_final_stats` 的同义替身（注入优先）。"""
     if "panel_stats" in _INJECTED:
         return _INJECTED["panel_stats"]
-    return _host_attr("content_rules.panel", "player_final_stats")
+    from .panel import player_final_stats
+    return player_final_stats
 
 
 # ============================================================

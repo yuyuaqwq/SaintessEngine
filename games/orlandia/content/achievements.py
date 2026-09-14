@@ -153,7 +153,7 @@ class _HostMod:
 
 
 C = _HostMod("content")     # 真源 `from .. import content as C`
-db = _HostMod("db")         # 真源 `from .. import db`
+from ._pkgref import DB as db
 
 
 # v140 波2：3 个新条件类型注册（数据已有零消费点或最小接线）
@@ -355,8 +355,8 @@ def claim_achievement_rewards(group_id, qq_id) -> tuple:
     （{item_key: count}），与经验/金币一同发放——db.add_item 入包，
     物品 key 走 _key_to_id 兼容中文名；发放失败静默跳过（物品缺失不影响其他奖励）。
     """
-    check_player_level_up = _host_attr("content_rules.gameplay", "check_player_level_up")
-    stat_bonus = _host_attr("core.stat_bonus", "stat_bonus")   # ← B13-L6 线落地后切包内直取
+    from .gameplay_rules import check_player_level_up
+    from .stat_bonus import stat_bonus
     try:
         rows = db.get_achievements(group_id, qq_id) or []
         pending = [r for r in rows if not r.get("claimed")]
@@ -399,7 +399,7 @@ def claim_achievement_rewards(group_id, qq_id) -> tuple:
                 _all_items[ik] = int(_all_items.get(ik, 0)) + int(ic)
         if _all_items:
             try:
-                grant_items_batch = _host_attr("reward", "grant_items_batch")
+                from .reward import grant_items_batch
                 item_lines, _reward_ok = grant_items_batch(group_id, qq_id, _all_items, lines=item_lines)
             except Exception:
                 _reward_ok = False

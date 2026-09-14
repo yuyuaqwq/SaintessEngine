@@ -93,7 +93,7 @@ class _HostMod:
         return getattr(_host_module(self._name), attr)
 
 
-db = _HostMod("db")     # 真源 5 处函数内 `from .. import db`
+from ._pkgref import DB as db
 
 
 # ============================================================

@@ -94,7 +94,7 @@ class _HostMod:
     def __getattr__(self, attr):
         return getattr(_host_module(self._name), attr)
 
-db = _HostMod("db")                     # 真源 9 处函数内 `from .. import db`
+from ._pkgref import DB as db
 C = _HostMod("content")                 # 真源 `from .. import content as C`（残 `roll_blueprint`，见缺口）
 
 # ★ B14-2 L8（2026-09-14）：`C.ITEMS` / `C.MATERIALS` / `data.maps.MAP_BY_ID` 三处读点
@@ -597,8 +597,8 @@ def _roll_chest_rewards(group_id: str, qq_id: str, king: dict, tier: dict,
     DROP_POOLS（gold/bp/gem/equip_drop/rune/stone/mats/collect 统一配置可审计），
     本层只做入包 + 文案 + 广播。战利箱(is_loot) bp 必出 与 图纸残页 20% 是动态特例保留。
     """
-    _drop_roll = _host_attr("drop_engine", "roll")  # noqa: E402（宿主真源：池/内容 API 由宿主装配）
-    _DropCtx = _host_attr("drop_engine", "_SimpleCtx")  # noqa: E402
+    from .loot import roll as _drop_roll
+    from .loot import _SimpleCtx as _DropCtx
     import uuid
     player = db.get_player(group_id, qq_id) or {}
     lv = int(king.get("lv", 30) or 30)

@@ -200,8 +200,8 @@ class _HostVal(_HostObj):
 
 
 C = _HostMod("content")            # 真源 `from .. import content as C`
-db = _HostMod("db")                # 真源 `from .. import db`
-T = _HostMod("core.texts")         # 真源 `from ..core import texts as T`
+from ._pkgref import DB as db
+from . import texts as T
 player_final_stats = _HostFn("content_rules.panel", "player_final_stats")
 resolve_drop = _HostFn("content_rules.gameplay", "resolve_drop")
 ACT_TICK = _HostVal("core.constants", "ACT_TICK")
@@ -1037,7 +1037,7 @@ class InstanceImpl:
             # ---- v137 dungeon 房间池消费 ----
             # v141 审计：遇怪概率统一走 core/encounter.encounter_chance（数据表驱动，
             # 读 dungeon.discovery_agro；与野外 _travel_ambush 等级差模型互为设计差异）
-            _enc_chance = _host_attr("core.encounter", "encounter_chance")
+            from .encounter import encounter_chance as _enc_chance
             _agro = _enc_chance(cur_map)
             rstate = rooms.get(cur_sa_id) or {}
             _left = IR.monsters_left(st, cur_sa_id)  # v185：剩余怪数读取走 core/instance_run
@@ -2757,8 +2757,9 @@ class InstanceImpl:
             # 取代 _instance_main_kill_progress：quests 订阅方按怪名/属性全量推进
             # （主线/每日/支线/周常）+ 公会（每场胜利+1）+ 成就（kind=instance）。
             # 副本内升级守卫在订阅方（levelup 仅 field）——经验攒到出副本统一结算。
-            _pe_fire = _host_attr("services.player_event_bus", "fire")
-            _pe_subs = _host_module("services.player_event_subscribers")  # noqa: F401  触发注册（幂等）
+            from .player_events import fire as _pe_fire
+            from .player_events import ensure_registered as _pe_ensure   # 触发注册（幂等）
+            _pe_ensure()
             _vctx = {
                 "kind": "instance",
                 "group_id": group_id, "qq_id": _key,
@@ -2857,7 +2858,7 @@ class InstanceImpl:
         蓝符 = 蓝色品质 RUNES 符文（C.rune_item 构造，与 _instance_secret_chest 同款），
         按副本等级就近出符：Lv.60-74 → lvl 1-2，Lv.82+ → lvl 2-3。
         """
-        _runes_core = _host_module("core.runes")  # 延迟：rune_item 在 core.runes
+        from . import runes as _runes_core
         inst_lv = int(inst.get("lv", 0) or 0)
         bp_chance = float(poi.get("bp_chance", INVESTIGATE_BP_CHANCE))
         rune_chance = float(poi.get("rune_chance", INVESTIGATE_RUNE_CHANCE)) if inst_lv >= 60 else 0.0
@@ -2934,8 +2935,8 @@ class InstanceImpl:
         v174 统一抽象：掉落走 drop_engine roll('loot_pile:{inst_id}')。
         """
         inst = _cat_space.INSTANCES[st["inst_id"]]
-        _drop_roll = _host_attr("drop_engine", "roll")
-        _DropCtx = _host_attr("drop_engine", "_SimpleCtx")
+        from .loot import roll as _drop_roll
+        from .loot import _SimpleCtx as _DropCtx
         ctx = _DropCtx(inst_id=st["inst_id"], monster_lv=int(inst.get("lv", 0) or 0),
                        player_level=int(inst.get("lv", 0) or 0),
                        gold_base=int(inst.get("gold", 100) or 100))
@@ -3011,8 +3012,8 @@ class InstanceImpl:
         互斥档策略，5 档 cutoff 与旧 elif 语义精确一致）；本层只负责入包与展示文案。
         """
         inst = _cat_space.INSTANCES[st["inst_id"]]
-        _drop_roll = _host_attr("drop_engine", "roll")
-        _DropCtx = _host_attr("drop_engine", "_SimpleCtx")
+        from .loot import roll as _drop_roll
+        from .loot import _SimpleCtx as _DropCtx
         ctx = _DropCtx(inst_id=st["inst_id"], monster_lv=int(inst.get("lv", 0) or 0),
                        player_level=int(inst.get("lv", 0) or 0))
         results = _drop_roll(f"secret_chest:{st['inst_id']}", ctx)
@@ -3155,8 +3156,8 @@ class InstanceImpl:
             # v174 统一抽象：Boss 装备掉落判定走 drop_engine table 池（boss:{inst_id}）
             # 产出 equip 类型（主题装/专属）由本层入包；材料档保持原逻辑下方处理。
             try:
-                _boss_roll = _host_attr("drop_engine", "roll")
-                _BossCtx = _host_attr("drop_engine", "_SimpleCtx")
+                from .loot import roll as _boss_roll
+                from .loot import _SimpleCtx as _BossCtx
                 _bctx = _BossCtx(inst_id=st.get("inst_id"), monster_lv=boss.get("lv", 1) or 1,
                                  player_level=boss.get("lv", 1) or 1)
                 # 当前实例专属 rid（区分展示文案：👑专属 vs ⚔️珍藏）
@@ -3238,8 +3239,9 @@ class InstanceImpl:
                 # quests 订阅方按 boss 名/属性推进主线/每日/支线/周常（取代
                 # _instance_main_kill_progress）；公会每场胜利+1；成就 kind=instance
                 # extra(inst_id+flawless)。levelup 订阅方 kind 守卫仅 field（副本不升级）。
-                _pe_fire = _host_attr("services.player_event_bus", "fire")
-                _pe_subs = _host_module("services.player_event_subscribers")  # noqa: F401  触发注册（幂等）
+                from .player_events import fire as _pe_fire
+                from .player_events import ensure_registered as _pe_ensure   # 触发注册（幂等）
+                _pe_ensure()
                 _vctx = {
                     "kind": "instance",
                     "group_id": group_id, "qq_id": m,

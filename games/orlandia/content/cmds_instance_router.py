@@ -126,8 +126,8 @@ class _HostFn(_HostObj):
 
 
 C = _HostMod("content")                                     # 真源 `from .. import content as C`
-db = _HostMod("db")                                        # 真源 `from .. import db`
-T = _HostMod("core.texts")                                 # 真源 `from ..core import texts as T`
+from ._pkgref import DB as db
+from . import texts as T
 skill_info = _HostFn("content_rules.skills", "skill_info")  # 真源 `from ..content_rules.skills import skill_info`
 IB = _HostMod("commands.instance_battle")                   # 真源 `from . import instance_battle as IB`
 _tlog = _HostMod("tlog_setup")                              # 真源 `from .. import tlog_setup as _tlog`

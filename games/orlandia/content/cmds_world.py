@@ -127,7 +127,8 @@ def _run(env, fn, *args) -> list:
 
 def _svc(name):
     """宿主 `services.quests` 上的常量/函数（真源写法 `from ..services.quests import X`）。"""
-    return _host_attr("services.quests", name)
+    from . import profession_quests as _pq
+    return getattr(_pq, name)
 
 
 # ============================================================

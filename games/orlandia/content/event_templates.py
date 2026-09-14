@@ -112,7 +112,7 @@ class _HostMod:
 
 
 C = _HostMod("content")         # 真源 `from .. import content as C`
-db = _HostMod("db")             # 真源 `from .. import db`
+from ._pkgref import DB as db
 
 # B14-2（L7 线）：数据名读点切包内门面 —— 原 `C.MATERIALS` 直取换成门面同名绑定
 from .catalog_items import MATERIALS   # 真源 `C.MATERIALS`
@@ -124,7 +124,8 @@ def check_player_level_up(group_id, qq_id, player):
     **宿主边界**：写 `db` / 写背包 / 读章节礼包 —— `content/gameplay.py` 归属表 :75 明写「不搬
     （宿主边界）」，`content/combat_cmds.py:192` 同款处置（`_host_attr` 调用时解析）。
     """
-    return _host_attr("content_rules.gameplay", "check_player_level_up")(group_id, qq_id, player)
+    from .gameplay_rules import check_player_level_up as _pkg_level_up
+    return _pkg_level_up(group_id, qq_id, player)
 
 
 # ============================================================

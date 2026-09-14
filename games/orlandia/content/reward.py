@@ -85,7 +85,8 @@ def _host_attr(name: str, attr: str):
 
 def _host_db():
     """宿主存储层模块（真源 `from .import db`）。"""
-    return _resolve("db", lambda: _host_module("db"))
+    from ._pkgref import DB as _pdb     # B1：包内直取（原 `_host_module("db")`）
+    return _resolve("db", lambda: _pdb)
 
 
 class _HostDB:
@@ -122,17 +123,20 @@ def _host_content():
 
 def _host_key_to_id():
     """物品 key → ID（真源 `_grant_items` 内 `from .store.inventory import _key_to_id`）。"""
-    return _resolve("key_to_id", lambda: _host_attr("store.inventory", "_key_to_id"))
+    from .persistence.inventory import _key_to_id as _k2i   # B1：包内直取
+    return _resolve("key_to_id", lambda: _k2i)
 
 
 def _host_levelup():
     """升级结算（真源 `from .content_rules.gameplay import check_player_level_up`）。"""
-    return _resolve("levelup", lambda: _host_attr("content_rules.gameplay", "check_player_level_up"))
+    from .gameplay_rules import check_player_level_up as _lv   # B1：包内直取
+    return _resolve("levelup", lambda: _lv)
 
 
 def _host_stat_bonus():
     """属性加成（真源 `from .core.stat_bonus import stat_bonus`）。"""
-    return _resolve("stat_bonus", lambda: _host_attr("core.stat_bonus", "stat_bonus"))
+    from .stat_bonus import stat_bonus as _sb   # B1：包内直取
+    return _resolve("stat_bonus", lambda: _sb)
 
 
 # ============================================================

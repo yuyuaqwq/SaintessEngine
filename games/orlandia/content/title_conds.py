@@ -102,7 +102,7 @@ class _HostMod:
 
 
 C = _HostMod("content")     # 真源 `from .. import content as C`
-db = _HostMod("db")         # 真源 `from .. import db`
+from ._pkgref import DB as db
 
 # B14-2（L7 线）：数据名读点切包内门面 —— 原 `C.<名>` / `_C.<名>` 直取换成门面同名绑定
 from .catalog_quests import HIDDEN_NPCS, NPCS   # 真源 `C.HIDDEN_NPCS` / `C.NPCS`
@@ -140,7 +140,7 @@ class TitleCtx:
         # B13-L4：真源「函数内 from .. import db」→ 宿主 db 模块本体
         # （`_host_module("db")` 返回的**就是宿主 db 模块对象**：类型/身份与真源一致；
         #   调用点 `ctx._db().xxx()` 一字未改）
-        return _host_module("db")
+        return db    # B1：包内直取（`content.persistence`；原 `_host_module("db")`）
 
     def hook(self, name, *args, **kwargs):
         fn = self.hooks.get(name)

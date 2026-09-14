@@ -174,4 +174,3 @@ class _HostMod:
 
 
 C = _HostMod("content")     # 真源 模块级 `from .. import content as C`
-db = _HostMod("db")         # 真源 函数内 `from .. import db`

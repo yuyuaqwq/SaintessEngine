@@ -131,7 +131,7 @@ def get_battle(group_id, qq_id):
                     try:
                         _wid = state.get("world_id") or ""
                         if isinstance(_wid, str) and _wid.startswith("inst:"):
-                            _diw = _host_attr("core.worlds", "destroy_instance_world")
+                            from ..worlds import destroy_instance_world as _diw
                             _diw(_wid)
                     except Exception:
                         pass

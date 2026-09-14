@@ -89,7 +89,7 @@ from .catalog_rules import ENCHANT_MAX_VALUE                 # 包内无域 → 
 """奥兰迪亚·余烬纪年数据层 - enchant.py"""
 def enchant_value(slot: str, lv: int, stat: str, big: bool = False) -> int | float:
     """附魔数值：白板基础 * ratio；大成功 1.5x；crit/dodge 固定小值"""
-    equip_stats = _host_attr("core.stats", "equip_stats")   # B13-L6 线在搬；落地后切包内直取
+    from .stats import equip_stats
     rec = ENCHANT_RECIPES.get(stat)
     if not rec:
         return 0

@@ -160,7 +160,8 @@ class _HostDB:
     """惰性宿主存储层代理（真源 `from .. import db`）。"""
 
     def __getattr__(self, name):
-        return getattr(_host_module("db"), name)
+        from ._pkgref import DB as _pdb   # B1：包内直取（原 `_host_module("db")`）
+        return getattr(_pdb, name)
 
 
 db = _HostDB()

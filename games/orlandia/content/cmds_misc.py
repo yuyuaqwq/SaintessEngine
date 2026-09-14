@@ -149,7 +149,7 @@ def signin(env):
             #    B18 口径把「壳 + 包内 cmds_* 实现」两侧拼接读，判据不削弱）；取件保持
             #    **函数内惰性解析**（宿主 `core/quality_tiers` 薄壳再导出 = 包内同一对象，
             #    包加载早于它就绪 ⇒ 不能在 import 期取）。
-            QUALITY_TIERS = _host_attr("core.quality_tiers", "QUALITY_TIERS")
+            from .quality_tiers import QUALITY_TIERS
             _wq = dict(zip(("green", "blue", "purple"),
                            SIGNIN_CONFIG["week_quality_weights"]))
             q = QUALITY_TIERS.pick_weights(_wq, rng=random)

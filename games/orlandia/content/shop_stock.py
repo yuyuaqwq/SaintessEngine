@@ -68,7 +68,7 @@ class _HostMod:
         return getattr(_host_module(self._name), attr)
 
 
-db = _HostMod("db")
+from ._pkgref import DB as db
 
 # ============================================================
 # ② 包内域读口 —— 商店限购配置（域 `shop_stock`；真源 = `game/data/shop_limit.py:39 SHOP_LIMIT`，

@@ -130,7 +130,7 @@ def _rules():
     return RULES
 
 
-db = _HostMod("db")          # 真源 `from .. import db`（函数内惰性取件）
+from ._pkgref import DB as db
 
 
 def _db():
@@ -172,7 +172,7 @@ def _time_check(span: str) -> bool:
     `tests/test_v97_05_rule_engine.py:35` 用 `RE._is_time = lambda span: span == "day"`
     覆盖宿主模块属性钉死时段；取不到宿主那份时回落包内 `_is_time`（真源逐字实现）。"""
     try:
-        fn = _host_attr("core.rule_engine", "_is_time")
+        from .rule_engine import _is_time as fn
     except Exception:                                # noqa: BLE001
         fn = None
     return (fn or _is_time)(span)

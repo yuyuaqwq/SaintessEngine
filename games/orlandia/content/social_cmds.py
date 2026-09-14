@@ -113,7 +113,7 @@ class _HostMod:
 
 
 C = _HostMod("content")     # 真源 `from .. import content as C`
-db = _HostMod("db")         # 真源 `from .. import db`
+from ._pkgref import DB as db
 
 
 # ============================================================
@@ -135,7 +135,8 @@ async def maybe_roll_event(group_id: str, broadcast) -> str:
         if cur["etype"] == "auction":
             # v181 P4-5：结算本体+过期判定已下沉 services.auction；过期拍卖在此先结算后清槽
             try:
-                _lines = _host_attr("services.auction", "settle_auction")(cur, group_id)
+                from .auction import settle_auction as _settle_auction
+                _lines = _settle_auction(cur, group_id)
                 if _lines:
                     await broadcast(f"🏪 【拍卖行 · 落槌结算】\n{_lines}")
             except Exception as _e:                 # noqa: BLE001
@@ -156,7 +157,8 @@ async def maybe_roll_event(group_id: str, broadcast) -> str:
     evt = _rnd.choice(_cat_b143.WORLD_EVENT_POOL)
     ends = now + evt["duration"]
     # v100.2：事件 data 初始化数据化 → core/world_event_templates.py INITIALIZERS
-    init_fn = _host_attr("core.world_event_templates", "INITIALIZERS").get(evt["type"])
+    from .world_event_templates import INITIALIZERS as _we_initializers
+    init_fn = _we_initializers.get(evt["type"])
     data = init_fn(_rnd) if init_fn else {}
     db.save_world_event(evt["type"], ends, data)
     db.set_event_state("last_event_end", str(ends))
@@ -192,7 +194,8 @@ async def world_event_run(group_id: str, notice: str, broadcast, host_self):
         lines.append(evt["desc"])
     lines.append("")
     # v98.5：etype 展示数据化 → core/world_event_templates.py DISPLAYS
-    disp_fn = _host_attr("core.world_event_templates", "DISPLAYS").get(cur["etype"])
+    from .world_event_templates import DISPLAYS as _we_displays
+    disp_fn = _we_displays.get(cur["etype"])
     if disp_fn:
         disp_fn(host_self, cur, lines, group_id)
     lines.append("")
@@ -215,7 +218,8 @@ async def auction_run(group_id: str, player_lookup, tip_fn, broadcast):
     now = int(time.time())
     if not cur:
         # 是否有过期的拍卖待结算（过期结算+清槽收敛至 services.auction.settle_expired_auction）
-        lines = _host_attr("services.auction", "settle_expired_auction")(group_id)
+        from .auction import settle_expired_auction as _settle_expired_auction
+        lines = _settle_expired_auction(group_id)
         if lines:
             broadcast_text = f"🏪 【拍卖行 · 落槌结算】\n{lines}"
             try:
@@ -259,7 +263,8 @@ async def bid_run(group_id: str, qq_id: str, player, args, player_lookup, broadc
     now = int(time.time())
     if not cur:
         # 过期的拍卖待结算（过期结算+清槽收敛至 services.auction.settle_expired_auction）
-        lines = _host_attr("services.auction", "settle_expired_auction")(group_id)
+        from .auction import settle_expired_auction as _settle_expired_auction
+        lines = _settle_expired_auction(group_id)
         if lines:
             broadcast_text = f"🏪 【拍卖行 · 落槌结算】\n{lines}"
             try:

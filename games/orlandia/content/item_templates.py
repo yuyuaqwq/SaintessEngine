@@ -135,7 +135,7 @@ TIPS: dict = {
 }
 
 # 宿主面惰性替身（正文 `db.` / `C.` 一字未改）
-db = _HostMod("db")
+from ._pkgref import DB as db
 C = _HostMod("content")
 
 TEMPLATES = {}

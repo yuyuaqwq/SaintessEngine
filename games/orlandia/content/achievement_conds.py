@@ -124,7 +124,7 @@ class _HostMod:
 
 
 C = _HostMod("content")     # 真源 `from .. import content as C`
-db = _HostMod("db")         # 真源 `from .. import db`
+from ._pkgref import DB as db
 
 from .skills import PLAYER_SKILLS, BRANCH_SKILLS   # 包内读口（实测与宿主深等）
 from .catalog_space import MAPS                    # B14-2：真源 `C.MAPS`（门禁 OK，含键序）

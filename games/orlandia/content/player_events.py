@@ -138,7 +138,7 @@ class _HostFn:
         return "<host fn %s.%s>" % (self._mod, self._attr)
 
 
-db = _HostMod("db")
+from ._pkgref import DB as db
 
 # 订阅方真源模块级 import 的 8 个宿主函数（逐名同义替身；调用时解析）
 check_player_level_up = _HostFn("content_rules.gameplay", "check_player_level_up")

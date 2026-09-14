@@ -119,7 +119,10 @@ def HOUSE_LEVELS() -> dict:
 
 def QUALITY() -> dict:
     """装备品质色表 —— **缺口**（包内无域）：仍走宿主句柄。"""
-    return _host_attr("QUALITY", _QUALITY)
+    if _QUALITY is not None:          # 注入位优先（真源语义），B1：兜底切包内门面
+        return _QUALITY
+    from .catalog_b143 import QUALITY as _cb_quality   # 与宿主 `C.QUALITY` 同对象（is）
+    return _cb_quality
 
 
 def ECON_CONFIG() -> dict:

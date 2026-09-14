@@ -196,7 +196,7 @@ class _HostMod:
         return getattr(_host_module(self._name), attr)
 
 
-db = _HostMod("db")
+from ._pkgref import DB as db
 C = _HostMod("content")
 
 # ★ B14-2 L8（2026-09-14）：`C.MATERIALS`（材料价）→ 包内物品门面直取

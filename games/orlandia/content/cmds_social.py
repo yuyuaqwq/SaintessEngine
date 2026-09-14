@@ -63,22 +63,26 @@ def _gsd(name):
     （并在 import 期 `bind_host`），故取到的就是原 `_GSD.<name>` 那一个函数对象，
     **且顺带保证包内 `social_guild` 的宿主替身已注入**（惰性解析，调用时才 import）。
     """
-    return _host_attr("services.guild", name)
+    from . import social_guild as _sg
+    return getattr(_sg, name)
 
 
 def _party(name):
     """宿主 `game/services/party.py` 上的一个名字（= 原函数内 `from ..services.party import X`）。"""
-    return _host_attr("services.party", name)
+    from . import party as _pt
+    return getattr(_pt, name)
 
 
 def _snapshot_one(item_data):
     """宿主 `store.inventory._snapshot_one`（v126.4 单件回流快照裁剪）——调用时解析。"""
-    return _host_attr("store.inventory", "_snapshot_one")(item_data)
+    from .persistence.inventory import _snapshot_one
+    return _snapshot_one(item_data)
 
 
 def _final_stats():
     """宿主 `content_rules.panel.player_final_stats`（队伍面板速度值）——调用时解析。"""
-    return _host_attr("content_rules.panel", "player_final_stats")
+    from .panel import player_final_stats
+    return player_final_stats
 
 
 def _declare(key, guards=(), params=()):
@@ -586,7 +590,8 @@ def guild_shop(env):
     g = db.guild_get_by_member(qq_id)
     if not g:
         return ["你还没有公会！先『加入公会 <名字>』吧～"]
-    member = _host_attr("store.social", "guild_get_member")(g["gid"], qq_id)
+    from .persistence.social import guild_get_member as _guild_get_member
+    member = _guild_get_member(g["gid"], qq_id)
     raw = shell._strip_cmd(env.raw, "公会商店").strip()
     # 带编号 → 购买
     if raw.isdigit():

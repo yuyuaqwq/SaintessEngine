@@ -113,7 +113,7 @@ class _HostMod:
         return getattr(_host_module(self._name), attr)
 
 
-db = _HostMod("db")     # 真源 3 处函数内 `from .. import db`（延迟 import 防循环）
+from ._pkgref import DB as db
 
 # 玩家事件存储 key 模板（按玩家全局，跨群共享——倒计时只属于玩家本人）
 _PLAYER_KEY = "timed_events_{qq_id}"

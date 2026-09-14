@@ -129,7 +129,7 @@ engine.player_final_stats 的 title_bonus 位置参数保留（旧引擎冻结�
 """
 C = _HostMod("content")                     # 真源 `from .. import content as C`（B14-2 L8 后残 `display`）
 LOG = _host_attr("log_setup", "LOG")        # 真源 `from ..log_setup import LOG`
-db = _HostMod("db")                         # 真源函数内 `from .. import db`（3 处）
+from ._pkgref import DB as db
 
 # ★ B14-2 L8（2026-09-14）：数据读点 → 包内门面 / 读口（门禁 `b14_catalog_gate.py` 逐值+键序 OK）
 from . import catalog_items as _ci          # noqa: E402  ITEMS / MATERIALS
@@ -178,9 +178,9 @@ def stat_bonus(group_id, qq_id, player=None) -> dict:
     """
     bonus = {}
     try:
-        TitleCtx = _host_attr("core.title_conds", "TitleCtx")
-        CONDITIONS = _host_attr("core.title_conds", "CONDITIONS")
-        check_pro_title = _host_attr("core.title_conds", "check_pro_title")
+        from .title_conds import TitleCtx
+        from .title_conds import CONDITIONS
+        from .title_conds import check_pro_title
         if player is None:
             player = db.get_player(group_id, qq_id) or {}
         stats = db.get_stats(group_id, qq_id) or {}

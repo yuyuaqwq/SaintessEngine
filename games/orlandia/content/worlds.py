@@ -131,7 +131,7 @@ def get_instance_world(world_id: str) -> Optional[dict]:
 def _restore_from_db(world_id: str) -> None:
     """重启后从 event_state 恢复大陆实例（惰性：首次访问才加载）。"""
     try:
-        get_event_state = _host_attr("store.world", "get_event_state")
+        from .persistence.world import get_event_state
         raw = get_event_state(f"{EVENT_STATE_PREFIX}{world_id}")
         if raw:
             data = json.loads(raw) if isinstance(raw, str) else raw
@@ -211,7 +211,7 @@ def destroy_instance_world(world_id: str) -> None:
     """退本/通关/失败/过期：销毁大陆实例。"""
     instance_worlds.pop(world_id, None)
     try:
-        delete_event_state = _host_attr("store.world", "delete_event_state")
+        from .persistence.world import delete_event_state
         delete_event_state(f"{EVENT_STATE_PREFIX}{world_id}")
     except Exception:
         pass
@@ -241,7 +241,7 @@ def _persist(world_id: str) -> None:
     if data is None:
         return
     try:
-        set_event_state = _host_attr("store.world", "set_event_state")
+        from .persistence.world import set_event_state
         set_event_state(f"{EVENT_STATE_PREFIX}{world_id}",
                         json.dumps(_json_ready(data), ensure_ascii=False))
     except Exception:
@@ -314,9 +314,9 @@ def cleanup_stale_instances(max_age_sec: int = 24 * 3600) -> int:
     cleaned += len(stale)
     # 2. DB event_state 孤儿键扫描（内存已无该 world_id 的 instance_world_* 键）
     try:
-        _connect = _host_attr("store.connection", "_connect")
-        _db_lock = _host_attr("store.connection", "_lock")
-        delete_event_state = _host_attr("store.world", "delete_event_state")
+        from .persistence.handles import _connect
+        from .persistence.handles import _lock as _db_lock
+        from .persistence.world import delete_event_state
         with _db_lock:
             conn = _connect()
             try:

@@ -168,7 +168,7 @@ def check_player_level_up(group_id, qq_id, player: dict) -> tuple[list, dict]:
         # v140 波3.3：章节礼包——每 10 级里程碑发放一次（event_state 防重复）
         if player["level"] % 10 == 0:
             try:
-                _db = _host_module("db")
+                from ._pkgref import DB as _db
                 _ck = f"chapter_pack_{player['level']}_{qq_id}"
                 if not _db.get_event_state(_ck):
                     _packs = {p["lv"]: p for p in CHAPTER_PACK}

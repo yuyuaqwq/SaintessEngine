@@ -105,8 +105,7 @@ def get_group_players(group_id):
 
 def create_player(group_id, qq_id, name, class_name, base_stats, max_hp, max_mp, race="human", gender=""):
     # v98.2 默认值收敛：gold/attr_pts/stamina/出生地图 由 core.constants 提供（原写死 SQL）
-    START_MAP, DEFAULT_GOLD, DEFAULT_ATTR_PTS, DEFAULT_STAMINA = _host_attrs(
-        "core.constants", "START_MAP", "DEFAULT_GOLD", "DEFAULT_ATTR_PTS", "DEFAULT_STAMINA")
+    from ..constants import START_MAP, DEFAULT_GOLD, DEFAULT_ATTR_PTS, DEFAULT_STAMINA
     with _lock:
         conn = _connect()
         try:
@@ -239,13 +238,12 @@ def get_player(group_id, qq_id):
             try:
                 _lv0 = p.get("level", 1)
                 if p.get("exp", 0) >= C.exp_to_next(_lv0):
-                    check_player_level_up = _host_attr(
-                        "content_rules.gameplay", "check_player_level_up")  # 取件替身（原：函数内 import）
+                    from ..gameplay_rules import check_player_level_up
                     # v105 P1(M01#11)：惰性升级前注入称号加成——升级重算 max_hp/max_mp 缺
                     # 称号加成会写低上限（存档 861 vs 面板 891，回血回不满永久复发）。
                     # 全 store 共用 connection._lock（已改 RLock），此处可安全调用 store 函数。
                     try:
-                        stat_bonus = _host_attr("core.stat_bonus", "stat_bonus")
+                        from ..stat_bonus import stat_bonus
                         p["_title_bonus"] = stat_bonus(group_id, qq_id, p)
                     except Exception:
                         p["_title_bonus"] = {}
@@ -267,7 +265,7 @@ def get_player(group_id, qq_id):
             #   清空 learned_skills/skill_levels，skill_spent 返还 skill_points，标记防重复。
             try:
                 if not p.get("_v151_skill_reset"):
-                    skill_info = _host_attr("content_rules.skills", "skill_info")
+                    from ..skills import skill_info
                     _cls = p.get("class_name") or ""
                     _stale = [s for s in (p.get("learned_skills") or []) if s and not skill_info(_cls, s)]
                     if _stale:

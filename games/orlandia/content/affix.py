@@ -117,7 +117,7 @@ TRIGGER_TYPES = {"stat", "on_hit", "on_taken", "turn_start", "battle_start", "pa
 
 def _affix_base_value(slot: str, lv: int, stat: str) -> int:
     """附魔数值兜底：优先部位白板属性，无则用保底模板(旧词条系统遗留，enchant 用)"""
-    equip_stats = _host_attr("core.stats", "equip_stats")   # B13-L6 线在搬；落地后切包内直取
+    from .stats import equip_stats
     base = equip_stats(slot, lv, "white")
     if base.get(stat, 0) > 0:
         return base[stat]
@@ -229,7 +229,7 @@ def stat_affix_stats(affix_ids: list, slot: str, lv: int) -> dict:
             out[stat] = round(out.get(stat, 0) + fx["flat"], 4)
         else:
             # 按装备基础值百分比折算（生成时已拿到 equip_stats 基础）
-            equip_stats = _host_attr("core.stats", "equip_stats")   # B13-L6 线在搬
+            from .stats import equip_stats
             base = equip_stats(slot, lv, "white").get(stat, 0)
             add = int(base * fx["pct"]) if base else max(1, lv // 10)
             out[stat] = out.get(stat, 0) + max(1, add)

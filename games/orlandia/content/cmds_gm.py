@@ -45,7 +45,7 @@ from .panel import player_final_stats as _player_final_stats
 from .persistence.handles import _HostMod as _HostMod
 from .tables import display as _display
 
-_db = _HostMod("db")                     # 宿主 `game.db`（= 桥接层 `_save_player` 的同一个）
+from ._pkgref import DB as _db
 
 
 class _CHost:

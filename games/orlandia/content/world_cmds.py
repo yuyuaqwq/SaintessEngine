@@ -146,10 +146,10 @@ class _HostMod:
 
 
 C = _HostMod("content")     # 真源 `from .. import content as C`
-db = _HostMod("db")         # 真源 `from .. import db`
+from ._pkgref import DB as db
 
 # 真源宿主顶层 `from ..services.quests import DAILY_META_KEYS as _DAILY_META_KEYS`
-_DAILY_META_KEYS = _host_attr("services.quests", "DAILY_META_KEYS")
+from .profession_quests import DAILY_META_KEYS as _DAILY_META_KEYS
 
 # v104 M23 许愿井彩蛋概率（真源 world.py:47；唯一常量定义点搬到本模块，宿主薄壳再导出同名）
 WISH_WELL_EGG_CHANCE = 0.05
@@ -330,19 +330,19 @@ def _map_scene(self, cur_map: dict, player: dict = None, sa_id_override: str = N
 
 def _visible_sas(self, player: dict, cur_map: dict, group_id: str, qq_id: str) -> list:
     """v115 当前位置地图中**可见**的子区域列表（供面板/移动统一使用）——v181 P4-8 已下沉 travel.visible_sas。"""
-    visible_sas = _host_attr("services.travel", "visible_sas")
+    from .travel import visible_sas
     return visible_sas(player, cur_map, group_id, qq_id)
 
 
 def _conn_target(conn) -> tuple:
     """解析可前往连接项 → (目标地图 dict, 指定子区域 id 或 None) ——v181 P4-8 已下沉 travel.conn_target。"""
-    conn_target = _host_attr("services.travel", "conn_target")
+    from .travel import conn_target
     return conn_target(conn)
 
 
 def _conn_subarea_name(nm: dict, want_sa) -> str:
     """目标地图的落点子区域显示名(默认入口子区域，可指定) ——v181 P4-8 已下沉 travel.conn_subarea_name。"""
-    conn_subarea_name = _host_attr("services.travel", "conn_subarea_name")
+    from .travel import conn_subarea_name
     return conn_subarea_name(nm, want_sa)
 
 
@@ -1205,7 +1205,7 @@ async def hurry_view(self, event: AstrMessageEvent, group_id, qq_id, player):
 
 def _move_blocked_msg(self, cur_map: dict, player: dict, target_sa: dict) -> str:
     """v87.14 同图内不可直达时的提示(城镇星形 / 野外线性)——v181 P4-8 已下沉 travel.move_blocked_msg。"""
-    move_blocked_msg = _host_attr("services.travel", "move_blocked_msg")
+    from .travel import move_blocked_msg
     return move_blocked_msg(cur_map, player, target_sa)
 
 
@@ -1362,7 +1362,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
                     return
                 # v87.14 空间连接：同图只能移动到相邻子区域
                 # v115：隐藏未揭示房不能直接前往（提示需先探索揭开）
-                subarea_hidden_block = _host_attr("services.travel", "subarea_hidden_block")
+                from .travel import subarea_hidden_block
                 _hidden_txt = subarea_hidden_block(group_id, qq_id, cur, sa)
                 if _hidden_txt:
                     yield event.plain_result(_hidden_txt)
@@ -1405,14 +1405,14 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
             yield event.plain_result(f"序号无效！这里可前往 {total} 处，输入『地图』查看～")
             return
     else:
-        resolve_map_target = _host_attr("services.travel", "resolve_map_target")
+        from .travel import resolve_map_target
         target = resolve_map_target(dest)
     if not target:
         names = "、".join([m["name"] for m in _cat_space.MAPS])
         yield event.plain_result(f"找不到『{dest}』！输入『地图』查看可前往区域，或『传送 <名称>』用方碑快速旅行～")
         return
     # 隐藏图检查
-    hidden_map_block = _host_attr("services.travel", "hidden_map_block")
+    from .travel import hidden_map_block
     _hid_block = hidden_map_block(group_id, qq_id, player, target)
     if _hid_block:
         yield event.plain_result(_hid_block)
@@ -1436,10 +1436,10 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
             "(红名期间不能进入安全区，去野外避避风头吧)")
         return
     # 等级提示
-    level_warn = _host_attr("services.travel", "level_warn")
+    from .travel import level_warn
     lv_msg = level_warn(player, target)
     # v87.14 出图必须在该图出口子区域（城镇=城门，野外=入口）
-    leave_map_block_msg = _host_attr("services.travel", "leave_map_block_msg")
+    from .travel import leave_map_block_msg
     _leave_block = leave_map_block_msg(cur_map, player)
     if _leave_block:
         yield event.plain_result(_leave_block)
@@ -1464,14 +1464,14 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
             yield _r
         return
     # v86 子区域：跨图移动 → 落点：城镇=城门，野外=入口（v87.14）
-    landing_subarea = _host_attr("services.travel", "landing_subarea")
+    from .travel import landing_subarea
     first_sa = landing_subarea(target, want_sa)
     # v94 体力：跨图移动扣 1；体力 0 拒绝（同图移动免费已在上方处理）；v101.13 坐骑 stamina_reduce 概率免费
     if self._stamina(player) < 1:
-        stamina_tired_line = _host_attr("services.travel", "stamina_tired_line")
+        from .travel import stamina_tired_line
         yield event.plain_result(stamina_tired_line(player))
         return
-    move_stamina_cost = _host_attr("services.travel", "move_stamina_cost")
+    from .travel import move_stamina_cost
     _mv_cost = move_stamina_cost(player)
     if _mv_cost > 0:
         self._spend_stamina(group_id, qq_id, _mv_cost, player, "移动")
@@ -1487,7 +1487,7 @@ async def move(self, event: AstrMessageEvent, group_id, qq_id):
     if quest_lines:
         extra = "\n\n" + "\n".join(quest_lines)
     # 旅者方碑提示（未激活时）
-    portal_arrive_note = _host_attr("services.travel", "portal_arrive_note")
+    from .travel import portal_arrive_note
     portal_msg = portal_arrive_note(group_id, qq_id, target)
     # v13：到达后显示可前往 + 设施/场景（v87.13 拆分）
     # v87.16 与地图面板一致：links 顺序号 + 邻居从 len(links)+1 编号
@@ -1758,7 +1758,7 @@ def _travel_ambush(self, player: dict, target_map: dict, group_id=None, qq_id=No
     生物趋避利害/副本分支/v130.7 越级线性档位逐行等价随迁；撞怪档位双轨
     （core/constants.MOVE_ENCOUNTER_CHANCE）本批先搬后统一，见 docs/REFACTOR_P4_services.md §P4-8。
     """
-    travel_ambush = _host_attr("services.travel", "travel_ambush")
+    from .travel import travel_ambush
     return travel_ambush(player, target_map, group_id, qq_id,
                          main_kill_hook=self._main_kill_target_on_map)
 
@@ -1918,7 +1918,7 @@ async def portal_travel(self, event: AstrMessageEvent, group_id, qq_id):
 
 def _update_explore_quests(self, group_id, qq_id, map_id):
     """到达子区域时检查 explore 型任务（P4-2 壳：转调 services.quests_flow.update_explore_quests）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.update_explore_quests(group_id, qq_id, map_id)
 
 
@@ -2077,19 +2077,19 @@ async def quest_accept(self, event: AstrMessageEvent, group_id, qq_id):
 
 def _sq_unlocked(self, quests, sq):
     """v124 链式支线：unlock 前置解锁检查（P4-2 壳：转调 services.quests_flow.sq_unlocked）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.sq_unlocked(quests, sq)
 
 
 def _sq_stats_met(self, player, sq):
     """v124 隐藏线/副业线：require_stats 动作计数门槛（P4-2 壳：转调 services.quests_flow.sq_stats_met）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.sq_stats_met(player, sq)
 
 
 def _available_quest_list(self, player, quests, mq) -> list:
     """当前地图可接取任务列表（P4-2 壳：转调 services.quests_flow.available_quest_list——本体含 sq_unlocked/sq_stats_met 收敛）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.available_quest_list(player, quests, mq)
 
 
@@ -2149,14 +2149,14 @@ async def daily(self, event: AstrMessageEvent, group_id, qq_id, player):
         return
     # v181 P4-1 试点：抽取/衰减/发布已收敛至 services.quests.draw_daily（红名守卫留命令层，
     # 上限/已有任务/跨天清理/面板行拼装全在 service 内，逐行原样搬迁）
-    draw_daily = _host_attr("services.quests", "draw_daily")
+    from .profession_quests import draw_daily
     ok, text = draw_daily(group_id, qq_id, player)
     yield event.plain_result(text)
 
 
 def _daily_pool(self, player, dq):
     """（P4-1 兼容壳：转调 game/services/quests.daily_pool——『每日』抽取已改 services 直调）"""
-    _daily_pool_impl = _host_attr("services.quests", "daily_pool")
+    from .profession_quests import daily_pool as _daily_pool_impl
     return _daily_pool_impl(player, dq)
 
 
@@ -2169,7 +2169,8 @@ def _bump_daily_progress(self, group_id, qq_id, obj_key, lines=None):
     （P4-1：本体已收敛 services.quests.bump_daily_progress，本方法为兼容壳。
     模块级 _bump_daily_progress 同款壳在文件头；此处保留因调用点是 self._bump_daily_progress。）
     """
-    _host_attr("services.quests", "bump_daily_progress")(group_id, qq_id, obj_key, lines)
+    from .profession_quests import bump_daily_progress as _bump_daily_progress
+    _bump_daily_progress(group_id, qq_id, obj_key, lines)
 
 
 def _home_view(self, group_id, qq_id, cur_map_id):
@@ -2475,7 +2476,7 @@ def _npc_dialogue(self, group_id, qq_id, npc_id, npc):
 
 def _take_main_quest(self, group_id, qq_id, npc_id, npc):
     """从 NPC 接主线任务；返回通知行列表（P4-2 壳：转调 services.quests_flow.take_main_quest）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.take_main_quest(group_id, qq_id, npc_id, npc)
 
 
@@ -2529,7 +2530,7 @@ def _obj_text_lines(self, obj, st=None):
 
 def _quest_reputation(self, group_id, qq_id, npc_id):
     """完成任务时给对应势力加声望，返回提示行（P4-2 壳：转调 services.quests_flow.quest_reputation）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.quest_reputation(group_id, qq_id, npc_id)
 
 
@@ -3159,7 +3160,7 @@ def _render_talk_node(self, npc, dlg, node, ctx) -> list:
 
 def _branch_wait_sid(self, group_id, qq_id):
     """v124 分支等待支线 sid 查询（P4-2 壳：转调 services.quests_flow.branch_wait_sid）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.branch_wait_sid(group_id, qq_id)
 
 
@@ -3235,13 +3236,13 @@ def _remove_one_by_name(self, group_id, qq_id, item_name) -> bool:
 
 def _update_use_quests(self, group_id, qq_id, item_name):
     """v124 use 目标支线：使用物品后置 ready（P4-2 壳：转调 services.quests_flow.update_use_quests）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.update_use_quests(group_id, qq_id, item_name)
 
 
 def _talk_quest_progress(self, group_id, qq_id, npc_id) -> list:
     """talk/collect/explore 型主线对话即达成（P4-2 壳：转调 services.quests_flow.talk_quest_progress）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.talk_quest_progress(group_id, qq_id, npc_id)
 
 
@@ -3544,25 +3545,25 @@ async def talk_choice(self, event: AstrMessageEvent, group_id, qq_id, player):
 
 def _deliver_hint(self, npc_id):
     """交付方式提示（P4-2 壳：转调 services.quests_flow.deliver_hint）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.deliver_hint(npc_id)
 
 
 def _side_available_list(self, group_id, qq_id, npc_id, npc) -> list:
     """该 NPC 名下当前"可接"的支线清单（P4-2 壳：转调 services.quests_flow.side_available_list）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.side_available_list(group_id, qq_id, npc_id, npc)
 
 
 def _offer_side_quest(self, group_id, qq_id, npc_id, sid) -> list:
     """单条支线接取（P4-2 壳：转调 services.quests_flow.offer_side_quest）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.offer_side_quest(group_id, qq_id, npc_id, sid)
 
 
 def _offer_side_quests(self, group_id, qq_id, npc_id, npc):
     """NPC 有未接的支线任务时自动接取，返回通知行列表（P4-2 壳：转调 services.quests_flow.offer_side_quests）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.offer_side_quests(group_id, qq_id, npc_id, npc)
 
 
@@ -3672,13 +3673,13 @@ async def turn_in(self, event: AstrMessageEvent, group_id, qq_id, player):
 
 def _grant_quest_rewards(self, group_id, qq_id, qdef, lines):
     """v124.3 统一任务奖励发放（P4-2 壳：转调 services.quests_flow.grant_quest_rewards）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.grant_quest_rewards(group_id, qq_id, qdef, lines)
 
 
 def _complete_side_quest(self, group_id, qq_id, sid, branch_choice=None):
     """交支线任务，返回通知行列表（P4-2 壳：转调 services.quests_flow.complete_side_quest；_tip/_rule_fire 以 hooks 注入）"""
-    qf = _host_attr("services", "quests_flow")
+    from . import quests_flow as qf
     return qf.complete_side_quest(group_id, qq_id, sid, branch_choice, hooks={"tip": self._tip, "rule_fire": self._rule_fire})
 
 

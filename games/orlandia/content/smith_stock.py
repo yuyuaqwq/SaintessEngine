@@ -141,7 +141,7 @@ class _HostAttr:
         return self._v()(*a, **kw)
 
 
-db = _HostMod("db")
+from ._pkgref import DB as db
 # ★ B16-W11d：五张表改包内门面直取（原 `_HostAttr("data", …)` 盲区形态）
 from .catalog_b143 import QUALITY, WEAPON_FLAVOR
 from .catalog_items import EQUIP_ROSTER, EQUIP_ROSTER_BY_NAME

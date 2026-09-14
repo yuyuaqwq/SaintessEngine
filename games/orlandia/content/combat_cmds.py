@@ -218,15 +218,16 @@ class _LazyHostAttr:
 
 
 C = _HostMod("content")     # 真源 `from .. import content as C`
-db = _HostMod("db")         # 真源 `from .. import db`
+from ._pkgref import DB as db
 
-ACT_TICK = _LazyHostAttr("core.constants", "ACT_TICK")
+from .constants import ACT_TICK
 LOG = _LazyHostAttr("log_setup", "LOG")
 
 
 def _host_level_up(group_id, qq_id, player):
     """真源 `from ..content_rules.gameplay import check_player_level_up`（宿主边界：写库/写背包）。"""
-    return _host_attr("content_rules.gameplay", "check_player_level_up")(group_id, qq_id, player)
+    from .gameplay_rules import check_player_level_up as _pkg_level_up
+    return _pkg_level_up(group_id, qq_id, player)
 
 
 def check_player_level_up(*args, **kwargs):
@@ -942,12 +943,12 @@ def _roll_hidden_monster(self, group_id, qq_id, player, cur_map):
     # 中后两个值永不可能（死代码），收敛为 == "night"
     is_night = False
     try:
-        current_period = _host_attr("core.time_weather", "current_period")
+        from .time_weather import current_period
         is_night = current_period() == "night"
     except Exception:
         pass
     # 地图环境分类（v98.3：数据化 → core/hidden_cond.py ENV_KEYWORDS）
-    envs_of, check_cond, HiddenCtx = _host_attrs("core.hidden_cond", "envs_of", "check_cond", "HiddenCtx")
+    from .hidden_cond import envs_of, check_cond, HiddenCtx
     envs = envs_of(mid)
     if cur_map.get("type") == _cc.MAP_TYPE_TOWN:
         return None  # 城镇不出隐藏怪
@@ -2328,8 +2329,9 @@ def _handle_victory(self, event, group_id, qq_id, player, monster, result, extra
     killed = [dict(k) for k in (extra_kills or [])]
     if monster and not any(k.get("name") == monster.get("name") for k in killed):
         killed.insert(0, monster)
-    _pe_fire = _host_attr("services.player_event_bus", "fire")
-    _pe_subs = _host_module("services.player_event_subscribers")  # 触发注册（幂等）
+    from .player_events import fire as _pe_fire
+    from .player_events import ensure_registered as _pe_ensure   # 触发注册（幂等）
+    _pe_ensure()
     _vctx = {
         "kind": "field",
         "group_id": group_id, "qq_id": qq_id,
@@ -2647,8 +2649,9 @@ async def _worldboss_act(self, event, group_id, qq_id, player, b, action, skill_
             # （主线/每日/支线/周常，现状不推=漏接）、公会每场胜利+1、成就
             # kind=worldboss extra(worldboss:1，原 L2432 手动调用收敛)。
             # levelup 订阅方 kind 守卫仅 field（参与奖励现状不升级）。
-            _pe_fire = _host_attr("services.player_event_bus", "fire")
-            _pe_subs = _host_module("services.player_event_subscribers")  # 触发注册（幂等）
+            from .player_events import fire as _pe_fire
+            from .player_events import ensure_registered as _pe_ensure   # 触发注册（幂等）
+            _pe_ensure()
             _wb_monster = {"name": gboss.get("name", "世界Boss"),
                            "lv": gboss.get("lv", 30) or 30,
                            "is_boss": True}
@@ -2957,7 +2960,7 @@ async def _pvp_start(self, event, group_id, qq_id, player, target_arg):
     from saintess_engine import Battle as B2
     # 0. 双方各自外部增幅聚合（core 直调 + 已 load 的 player dict，避免 _title_bonus
     #    内部再读档；失败降级空 dict）
-    _core_tb = _host_attr("core.stat_bonus", "stat_bonus")
+    from .stat_bonus import stat_bonus as _core_tb
     _tb_me = {}
     _tb_opp = {}
     try:

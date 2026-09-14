@@ -142,7 +142,7 @@ class _HostMod:
 
 
 C = _HostMod("content")     # 真源 `from .. import content as C`（聚合层**同对象**）
-db = _HostMod("db")         # 真源 `from .. import db`
+from ._pkgref import DB as db
 
 # W12 收口：真源宿主顶层 `from ..data.battle_rules import EFFECT_RULES`（资源名单源）
 #   → 包内门面直取（`rules/effect_rules.json`，85 条；键序由门面序声明守卫）
@@ -526,7 +526,7 @@ async def register(self, event: AstrMessageEvent, group_id, qq_id):
     if race_id in _cat_core.RACES:
         _rd = _cat_core.RACES[race_id]
         _tnames = _rd.get("talent_names", {})
-        format_talent = _host_attr("core.race_talent_display", "format_talent")
+        from .race_talent_display import format_talent
         _tl = []
         for _tk, _tv in (_rd.get("talents") or {}).items():
             _txt = format_talent(_tk, _tv, _tnames.get(_tk, _tk))
@@ -789,7 +789,7 @@ async def races(self, event: AstrMessageEvent):
         t = r["talents"]
         tnames = r.get("talent_names", {})
         # v98.3：展示格式化全数据化 → core/race_talent_display.py
-        format_talent = _host_attr("core.race_talent_display", "format_talent")
+        from .race_talent_display import format_talent
         # v113.6 排版优化：种族描述一行 + 每个天赋独立一行（此前 '，'.join 全挤一行）
         lines.append(f"{r['icon']} {r['name']}：{r['desc']}")
         for k, v in t.items():
@@ -1570,7 +1570,7 @@ def _skill_detail_message(self, player: dict, skill_name: str) -> str | None:
         label = cond.get("label", "")
         # v101.2 条件显示文案数据化 → battle_cond_labels.py COND_LABELS
         #（v181 拆分：判定在 services/battle_cond_procs.py，文案在本表）
-        COND_LABELS = _host_attr("core.battle_cond_labels", "COND_LABELS")
+        from .battle_cond_labels import COND_LABELS
         label_fn = COND_LABELS.get(ctype)
         ctext = label_fn(cond) if label_fn else ctype
         lines.append(f"⚔️ 条件转化：{ctext}时激活『{label}』(威力 ×{mult})")
