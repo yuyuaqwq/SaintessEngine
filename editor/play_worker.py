@@ -287,8 +287,14 @@ class PlayShell:
 
     # ---------- 规则 / 称号 ----------
     def _title_bonus(self, group_id, qq_id):
+        """外部面板增益聚合（真源 = 包内 `stat_bonus`；与线上 `host/shell.py::_title_bonus` 同款）。
+
+        ★ 2026-09-15 修：此前写的是 `mod.title_bonus(...)` —— **包内没有这个名字**（线上壳用的是
+        `stat_bonus(gid, qid, player)`）⇒ 试玩一走到玩家/战斗路径就报
+        `AttributeError: module 'content.stat_bonus' has no attribute 'title_bonus'`。
+        """
         mod = self._pkg_mod("content.stat_bonus")
-        return mod.title_bonus(group_id, qq_id)
+        return mod.stat_bonus(group_id, qq_id, self._player(group_id, qq_id) or {})
 
     def _rule_fire(self, trigger, group_id, qq_id, player, cur_map, evt=None):
         mod = self._pkg_mod("content.rule_engine")
