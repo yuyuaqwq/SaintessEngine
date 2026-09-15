@@ -194,6 +194,23 @@ _NAME_SRC = {
     "ELITE_EQUIP_DROP": "content.catalog_quests",
     "INSTANCES": "content.catalog_space",
     "WILD_KING_CHEST_TIERS": "content.catalog_rules",
+    # ---- ★ P5E-DELETE（2026-09-15，删壳批）：R5 登记表的补名 ----
+    # `ALL_WILD`：宿主门面对应名 = `game/core/wild.py:26 ALL_WILD = {**WILD_NPCS, **HIDDEN_NPCS}`
+    # （import 期求值；宿主 `game.content` 上是一只 dict）。包内真源 = `content/wild.py`，
+    # 该模块用 **PEP 562 模块级 `__getattr__`** 提供同名惰性快照（见 `content/wild.py:185-191`，
+    # `talk_actions.py:198` 已在用 `_wild.ALL_WILD`）⇒ 本行就是「宿主有而包内聚合面取不到」的
+    # 最后一个缺口，登记后 `C.ALL_WILD` 取到同一只 63 条 dict（值/键序与真源同源）。
+    # 实测消费点：`tests/test_v104_npc_dialogue.py:61/182/187/196/201`（`C.ALL_WILD` 读 + 就地改表）。
+    "ALL_WILD": "content.wild",
+    # `unlock_met`：旧宿主门面经 `game/core/wild.py` 提供（`wild.py:230`，公开函数、非下划线），
+    # 包内真源 = `content/wild.py` 同名函数。实测消费点：
+    # `tests/test_v104_npc_dialogue.py:67/…`（隐藏 NPC 解锁路径判据，本函数就是它的判据对象）。
+    "unlock_met": "content.wild",
+    # `portal_cost`：旧宿主门面经 `game/core/portals.py` 提供（公开函数）。包内真源 =
+    # `content/portals.py::portal_cost`（纯函数：只读传入的 target_map dict，不碰数据表）。
+    # 包内 `content/world_cmds.py:1816/1898` 就是 `_portals.portal_cost(m)` 直调；
+    # 本行只为「按名聚合读」的旧读点补登记。实测消费点：`tests/test_core_world.py:31-38`。
+    "portal_cost": "content.portals",
 }
 
 #: 别名层：`C.<门面名>` → `(包内真源模块全名, 真源属性名)`。
@@ -315,6 +332,12 @@ _PKG_SURFACE = {
     "_eq_random_desc": ("content.drops", "_eq_random_desc"),
     "_merge_legendary_stats": ("content.drops", "_merge_legendary_stats"),
     "build_monster": ("content.drops", "build_monster"),
+    # ★ P5E-DELETE（2026-09-15，删壳批）：`content/profession.py::_expand()` 的宿主口
+    #   真源 `from ..drop_engine import expand_pool`（函数体内惰性 import）——`game/drop_engine.py`
+    #   属删壳面；包内逐字端口 = `content/loot.py::expand_pool(:631)`（`loot.__all__` 成员）。
+    #   本键进 `_BIND_SLOTS` 的 `content.profession` 槽（表里早已登记 `"expand_pool"`），
+    #   只是此前没有供体 ⇒ 未注入时仍回退旧宿主模块名 → 删壳后必抛（实测 `test_v1023_life_prof`）。
+    "expand_pool": ("content.loot", "expand_pool"),
     "resolve_drop": ("content.gameplay_rules", "resolve_drop"),
     "rule_fire": ("content.rule_engine", "fire"),
     "rune_item": ("content.runes", "rune_item"),

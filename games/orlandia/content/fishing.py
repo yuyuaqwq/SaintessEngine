@@ -141,8 +141,17 @@ FISH_POOL: list = [{k: v for k, v in _e.items() if k != "seq"}
 # ============================================================
 from .catalog_rules import FISH_COLLECT   # ★ B16-W11d：包内门面（无域 → dump）          # v101.25i6 别名：= QUALITY_ORDER
 from .catalog_b143 import QUALITY_ORDER as FISH_QUALITY_ORDER   # ★ B16-W11d：真源 = `QUALITY_ORDER` 别名      # v184：垂钓档位/权重唯一真相源
-FISH_TIERS = _HostAttr("core.quality_tiers", "FISH_TIERS")        # v116 季节限定：垂钓随季节变化
-current_season = _HostAttr("core.time_weather", "current_season")
+# ★ P5E-DELETE（2026-09-15，删壳批）：下面两行原为宿主句柄
+#   `_HostAttr("core.quality_tiers", "FISH_TIERS")` / `_HostAttr("core.time_weather", "current_season")`
+#   —— 它们写在「B13-L1/L2 线并行未落地」时。**两线的包内真源如今都已在位**
+#   （`content/quality_tiers.py::FISH_TIERS` 惰性档位表 · `content/time_weather.py::current_season`
+#   逐字端口），宿主薄壳 `game/core/{quality_tiers,time_weather}.py` 随即被删。
+#   本批按「真源已在包内 → 包内直取」（与 `content/world_cmds.py:80 from .time_weather import PERIOD_CN`
+#   同款）改口径：**取值来源不动（同一份档位表 / 同一函数）、计算一字未改**，只把取件路径
+#   从已删的宿主薄壳移到包内真源。断言强度不变；`tests/test_v116_fishing_season.py` 的
+#   `F.current_season = lambda …` 打桩语义也不变（仍是**模块级同名对象**）。
+from .quality_tiers import FISH_TIERS as FISH_TIERS
+from .time_weather import current_season as current_season
 
 
 def _quality_weights(prof_lv: int) -> list:

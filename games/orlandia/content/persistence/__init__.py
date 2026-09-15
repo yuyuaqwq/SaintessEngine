@@ -61,3 +61,29 @@ from .feedback import (  # noqa: F401
 from .props_use import (  # noqa: F401
     get_props_use, mark_props_use, props_use_claim_atomic,
 )
+
+
+def __getattr__(name):
+    """模块级 `__getattr__`（PEP 562）—— 只补两个**旧宿主名的只读兼容读点**。
+
+    ★ P5E-DELETE（2026-09-15，删壳批）：删壳后仍有测试读旧宿主 `game/db.py` 的两个模块级
+    成员，本模块头注早已写明「库路径是部署信息、锁在 `handles`」：
+
+    * `DB_PATH` —— 旧宿主模块级常量；包侧真源 = `handles.db_path()`（每次访问求值）。
+      受影响（全删态实测 7 个文件）：commands_fishing · legacy_schema_migration ·
+      f1_atomicity · store_concurrency · v116_props_daily · v87_12_props_effects ·
+      v135_quality_roll。
+    * `_lock` —— 旧宿主模块级重入锁；包侧真源 = `handles._lock`（`_LockProxy`，
+      `handles.py:121`）。受影响：`tests/test_store_concurrency.py:56`
+      （「锁内再进 store 不死锁」——本测试的判据对象就是这把锁本身）。
+
+    处置口径：**不把库路径/锁变成包内状态**（那与 R2 的 fail-closed 设计相反），
+    只提供同名兼容读（`DB_PATH` 未注入时照旧抛 RuntimeError —— fail-closed 语义一字不动）。
+    ⇒ 测试侧一行都不用改，断言强度也不变。
+    """
+    if name == "DB_PATH":
+        return db_path()
+    if name == "_lock":
+        from . import handles as _handles
+        return _handles._lock
+    raise AttributeError("module %r has no attribute %r" % (__name__, name))

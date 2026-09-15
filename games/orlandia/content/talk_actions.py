@@ -481,3 +481,62 @@ async def action_hidden_evolve(world, group_id, qq_id, player, npc_id, action):
     async for _ in world._evolve_hidden_generic(sink, group_id, qq_id, player, cls_id, tier, path):
         pass
     return sink.lines
+
+
+# ============================================================
+# ★ P5E-DELETE（2026-09-15，删壳批）：消费端防御 `check_action_keys` **逐字回归包内真源**
+# ------------------------------------------------------------
+# 为什么必须补回（实测，不是推测）
+#   旧宿主壳 `game/commands/talk_actions.py` 的末两行是：
+#       from content import world_cmds as _WC
+#       _WC.bind_host(check_action_keys=check_action_keys)
+#   —— `game/commands/talk_actions.py` 随 `game/**` 删除后，这条**注入**消失，而
+#   `content/world_cmds.py` 的 `_check_action_keys()` 旧兜底只认宿主模块
+#   `game.commands.talk_actions`（也已删）⇒ 该口必抛 `RuntimeError`，实测全删态
+#   **13 个测试文件**红（对话/任务/职业/声望等全部走 talk 动作的路径）。
+#
+# 补法（口径 = 与旧壳逐字同源，不引第二份实现）
+#   本模块**就是** `game/commands/talk_actions.py`（385 行）的逐字端口，`ACTIONS` 注册表
+#   也在这里 ⇒ 该防御的真源天然在本模块。函数体与旧壳逐字相同，**只换日志出口**：
+#   旧壳写宿主 `game/log_setup.LOG`，包内唯一观测口是 `content/obs.log()`
+#   （未绑定 → 退回 stdlib logger，绝不因日志而抛 —— 生产放行语义不变）。
+#   判据（测试环境直接 raise 抓数据笔误；生产 warn 并放行）一字未改。
+# ============================================================
+def _log_warning(msg: str) -> None:
+    """宿主日志出口（`content/obs.log()`）；未接上宿主时退回 stdlib logger（不抛）。"""
+    try:
+        from . import obs as _obs
+        _obs.log().warning(msg)
+        return
+    except Exception:                                       # noqa: BLE001
+        pass
+    import logging as _logging
+    _logging.getLogger("dragonfall").warning(msg)
+
+
+def check_action_keys(action):
+    """消费端防御：action 中未注册的动作键（set(action) - set(ACTIONS)）告警。
+
+    v124.3（审计）：此前 `_apply_talk_action` 对未知 action 键静默忽略（qest_take
+    笔误无告警），与 check_need 的未知 need 键防御不对称。与 core/dialogue.py
+    check_need（v104 M21 P1）对齐：
+      生产环境 → 日志 warn 并放行（防数据笔误静默失效）；
+      测试环境（GWEN_GAME_DB 含 "test" / GWEN_TEST_MODE=1）→ 直接 raise 让单测抓笔误。
+    `_apply_talk_action_async` / `_apply_talk_action` 入口调用。
+
+    ★ P5E-DELETE：逐字搬自旧宿主壳 `game/commands/talk_actions.py::check_action_keys`
+    （真源即本模块的 `ACTIONS`），唯一差异 = 日志出口走 `content/obs.log()`。
+    """
+    if not action:
+        return
+    unknown = set(action) - set(ACTIONS)
+    if not unknown:
+        return
+    _db_name = os.environ.get("GWEN_GAME_DB", "")
+    _msg = (f"[dragonfall] 对话动作未注册键 action{unknown}："
+            f"数据笔误？已按'无动作'放行，请检查 dialogues.py")
+    _test = ("test" in os.path.basename(_db_name).lower()
+             or os.environ.get("GWEN_TEST_MODE") == "1")
+    if _test:
+        raise ValueError(_msg)
+    _log_warning(_msg)

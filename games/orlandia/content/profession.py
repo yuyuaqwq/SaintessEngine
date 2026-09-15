@@ -200,10 +200,19 @@ _te = _PkgModule("content.timed_events")
 
 
 def _expand(*args, **kwargs):
-    """产出池展开（真源 `from ..drop_engine import expand_pool`，函数体内惰性 import）。"""
+    """产出池展开（真源 `from ..drop_engine import expand_pool`，函数体内惰性 import）。
+
+    ★ P5E-DELETE（2026-09-15，删壳批）：未注入时的兜底原来按**旧宿主模块名**
+    `drop_engine`（`game/drop_engine.py`）取件 —— 该树随删壳消失，本口在未注入时必抛
+    （实测 `test_v1023_life_prof`：`profession：宿主模块 drop_engine 不可用`）。
+    包内真源 = `content/loot.py::expand_pool`（逐字端口，`__all__` 成员），
+    同时 `content/facade._PKG_SURFACE` 已登记 `"expand_pool"`（`_BIND_SLOTS` 的
+    `content.profession` 槽早就认这个键）⇒ 正常装配期由 `bind_host` 注入 `_HOST_EXPAND`。
+    """
     if _HOST_EXPAND is not None:
         return _HOST_EXPAND(*args, **kwargs)
-    return getattr(_resolve_host("drop_engine"), "expand_pool")(*args, **kwargs)
+    from .loot import expand_pool as _pkg_expand_pool          # noqa: PLC0415（同位置惰性取件）
+    return _pkg_expand_pool(*args, **kwargs)
 
 
 _expand_pool = _expand

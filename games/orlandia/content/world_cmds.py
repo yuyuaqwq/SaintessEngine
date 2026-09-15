@@ -143,25 +143,15 @@ def _check_action_keys(action):
     """
     fn = _INJECTED.get("check_action_keys")
     if fn is None:
-        mod = None
-        for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-            mod = sys.modules.get("%s.commands.talk_actions" % prefix)
-            if mod is not None:
-                break
-        if mod is None:
-            last = None
-            for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-                try:
-                    mod = importlib.import_module("%s.commands.talk_actions" % prefix)
-                    break
-                except Exception as exc:                # noqa: BLE001
-                    last = exc
-            if mod is None:
-                raise RuntimeError(
-                    "world_cmds：宿主模块 commands.talk_actions 取不到（%s）——拒绝静默空跑" % (last,))
-        fn = getattr(mod, "check_action_keys", None)
+        # ★ P5E-DELETE（2026-09-15，删壳批）：兜底原来按**旧宿主模块名**
+        #   `game.commands.talk_actions` 取件 —— 删壳后该模块不复存在，本口在「未被注入」时
+        #   必抛（实测 13 个测试文件红）。该防御的**真源已在包内**：`content/talk_actions.py`
+        #   就是旧壳的逐字端口（动作注册表 `ACTIONS` 在本模块；`check_action_keys` 本批按
+        #   同一段逻辑补回包内，见那边 docstring）。故兜底改为**包内真源**，
+        #   与外层「包内直取」口径一致；仍保留 `_INJECTED` 优先（宿主/测试可覆盖）。
+        from .talk_actions import check_action_keys as fn      # noqa: PLC0415（同位置惰性取件）
     if fn is None:
-        raise RuntimeError("world_cmds：check_action_keys 取不到（未注入且宿主模块未加载）——拒绝静默空跑")
+        raise RuntimeError("world_cmds：check_action_keys 取不到（未注入且包内真源缺件）——拒绝静默空跑")
     return fn(action)
 
 
