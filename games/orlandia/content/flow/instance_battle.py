@@ -103,24 +103,41 @@ def bind_host(**objs):
             _INJECTED[k] = v
 
 
-def _default_db_update():
-    """缺省写库口 = 包内 `content.persistence`（B1 落地的包内存储层；与宿主 `game.db` 同库同实现）。"""
-    from .._pkgref import DB as _db
+def _make_db_update(mod):
+    """把「db **模块**句柄」包成 6 参写库口（`db_update_fn` 的调用契约，见 `sync_views`）。
+
+    ★ R2（终态补债）：真源 `db.update_player(group_id, key, hp=…, mp=…, max_hp=…, max_mp=…)`
+    是**关键字**签名（`content/persistence/players.py:311`，宿主 `game.db` 同名同签名），
+    而本文件的调用点按 **6 个位置参数**调用 `db_update_fn(group_id, key, hp, mp, max_hp,
+    max_mp)`（`sync_views` 末段）。原写法 `return mod.update_player` 直接把关键字签名交出去
+    ⇒ 终态（bind 在位 ⇒ 注入槽 `db` = 包内 `content.persistence`，本分支从此**必然走到**）下
+    当场 TypeError，被 `sync_views` 的 `try/except` 吞掉 ⇒ 副本战斗玩家 DB 血量**静默不落库**
+    （R2 实测：`bind` 在位时 `test_battle_n5b4_instance_router` 的「DB hp=0」两处红、
+    摘掉 bind 即绿）。按文件头 ② 表冻结的契约包一层，与 `_default_db_update` 同一口径。
+    """
 
     def _update(group_id, key, hp, mp, max_hp, max_mp):
-        _db.update_player(group_id, key, hp=hp, mp=mp, max_hp=max_hp, max_mp=max_mp)
+        mod.update_player(group_id, key, hp=hp, mp=mp, max_hp=max_hp, max_mp=max_mp)
 
     return _update
 
 
+def _default_db_update():
+    """缺省写库口 = 包内 `content.persistence`（B1 落地的包内存储层；与宿主 `game.db` 同库同实现）。"""
+    from .._pkgref import DB as _db
+
+    return _make_db_update(_db)
+
+
 def _resolve_db_update():
-    """取写库口：注入槽 `db_update` → 注入槽 `db`（模块）→ 包内直取。"""
+    """取写库口：注入槽 `db_update`（6 参 callable）→ 注入槽 `db`（模块，按同一契约包一层）
+    → 包内直取。"""
     fn = _INJECTED.get("db_update")
     if fn is not None:
         return fn
     mod = _INJECTED.get("db")
     if mod is not None:
-        return mod.update_player
+        return _make_db_update(mod)
     return _default_db_update()
 
 

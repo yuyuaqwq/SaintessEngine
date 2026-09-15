@@ -35,6 +35,7 @@
 from __future__ import annotations
 
 import importlib
+import inspect
 import sys
 import uuid
 
@@ -65,11 +66,39 @@ def bind_host(**objs):
             _INJECTED[k] = v
 
 
+def _live_provider(v):
+    """`v` 是否宿主薄壳口径的**零参活源**（`bind_host` docstring：「零参可调用（活源，每次取用
+    时调用一次）」）—— 非零参的可调用对象是**定值**（函数对象本身就是要用的东西）。
+
+    ★ R2（终态补债）：原判据 `callable(v)` 过宽。宿主薄壳注入的 `levelup` / `stat_bonus` /
+    `key_to_id` 都是零参 provider（`game/reward.py:73-88` 的 `_levelup` / `_stat_bonus` /
+    `_key_to_id_fn`），而**终态**（`game.json` 的 `bind` 在位 ⇒ `content/facade.py::bind_host`
+    扇出 `_PKG_SURFACE` 的包内落点）注入的是**目标函数本身**（`check_player_level_up` /
+    `stat_bonus` / `_key_to_id`，都是带参函数）⇒ 被误当活源**零参调用** ⇒
+    `TypeError: check_player_level_up() missing 3 required positional arguments`，
+    `grant_reward` 整条断（R2 实测：`bind` 在位时 `test_commands_dialogue` /
+    `test_commands_apprentice` / `test_v1242_audit_fix` 红，摘掉 bind 即绿）。
+    按文档契约改成「零参」判据后，两种注入形态各归其位，宿主壳活源语义不变。
+    """
+    if not callable(v):
+        return False
+    try:
+        params = inspect.signature(v).parameters
+    except (TypeError, ValueError):          # 内建/无签名对象：按定值处理（不冒零参调用的险）
+        return False
+    for p in params.values():
+        if p.kind in (p.VAR_POSITIONAL, p.VAR_KEYWORD):
+            continue
+        if p.default is p.empty:
+            return False
+    return True
+
+
 def _resolve(key: str, fallback):
-    """注入优先（可调用 = 活源 → 调一次；模块/对象 = 定值）→ 否则走 `fallback()`（包内兜底）。"""
+    """注入优先（**零参**可调用 = 活源 → 调一次；模块/对象 = 定值）→ 否则走 `fallback()`（包内兜底）。"""
     v = _INJECTED.get(key)
     if v is not None:
-        return v() if callable(v) else v
+        return v() if _live_provider(v) else v
     return fallback()
 
 

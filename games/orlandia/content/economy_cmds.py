@@ -39,6 +39,11 @@ from . import catalog_space as _cspace
 from . import catalog_b143 as _b143  # B14-3 收口名（装备品质/宝石/附魔/词条/钓鱼/世界事件表）
 from . import wild as _wild          # B14-3：`ALL_WILD` 派生读口（content/wild，PEP 562）
 from .panel import STAT_NAMES  # 既有读口（原 `_HostRef("STAT_NAMES")`，门禁证明与宿主面同值同序）
+from ._pkgref import HANDLES   # ★ R2（终态补债）：库路径真源 `content/persistence/handles.db_path()`
+# ★ R2（终态补债）：`db.DB_PATH` → `HANDLES.db_path()`。`db` 是宿主面 `_HostRef("db")`：
+#   旧路径拿到宿主 `game.db`（有 `DB_PATH` 常量），终态（bind 在位）拿到包内
+#   `content.persistence`（**故意不导出 `DB_PATH`**，真源 = `handles.db_path()`，见该包
+#   `__init__` 头注）。不改则 AttributeError 被 `except Exception` 吞掉 ⇒ 「已探索地图」静默恒空。
 from .prof_config import gather_map_min_lv  # ★ B15b：宿主函数进包（原 `C.gather_map_min_lv`，宿主已无对象）
 
 # ---- 宿主面（宿主壳 bind_host() 注入；顺序铁律见 economy_host 模块头）----
@@ -5120,7 +5125,7 @@ class EconomyImpl(CommandBase):
     def _visited_maps(self, group_id, qq_id):
         import sqlite3
         try:
-            conn = sqlite3.connect(db.DB_PATH)
+            conn = sqlite3.connect(HANDLES.db_path())
             rows = conn.execute("SELECT map_id FROM visited WHERE qq_id=?", (qq_id,)).fetchall()
             conn.close()
             return [r[0] for r in rows]

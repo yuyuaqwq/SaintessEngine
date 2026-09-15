@@ -79,7 +79,13 @@ engine.player_final_stats 的 title_bonus 位置参数保留（旧引擎冻结�
 """
 from . import obs                           # noqa: E402  包内唯一 LOG/tlog 取用口（fail-closed）
 from .index import display as _index_display  # noqa: E402  真源 `C.display`（同一对象）
-from ._pkgref import DB as db
+from ._pkgref import DB as db, HANDLES
+# ★ R2（终态补债）：库路径的包内真源 = `content/persistence/handles.py::db_path()`
+#   （`content/persistence/__init__.py` 头注逐字写明：`DB_PATH` **不在包侧** —— 库路径是部署
+#   信息，由宿主 `store_factory` 解析后注入 `handles`；「需要读路径时用 `handles.db_path()`」）。
+#   原写法 `db.DB_PATH` 的目标是宿主 `game.db` 的面，终态（bind 在位 ⇒ `db` 解析到包内
+#   `content.persistence`）下该名不存在，AttributeError 被下面的 `except Exception` 吞掉 ⇒
+#   「已探索地图 / 强化装备」静默恒空。改指真源（同一注入值得同一路径字符串）。
 
 # ---- 壳面兼容段（★ B2-W2 已删）--------------------------------------------------
 # 原 `_HOST_PKG`/`_INJECTED`/`_HostFace` + `C = _HostFace("content")` /
@@ -97,7 +103,7 @@ def _visited_maps(group_id, qq_id):
     """已探索地图 id 列表（独立直连，不占用 store 锁）。"""
     import sqlite3
     try:
-        conn = sqlite3.connect(db.DB_PATH)
+        conn = sqlite3.connect(HANDLES.db_path())
         rows = conn.execute("SELECT map_id FROM visited WHERE qq_id=?", (qq_id,)).fetchall()
         conn.close()
         return [r[0] for r in rows]
@@ -110,7 +116,7 @@ def _has_enhanced(group_id, qq_id, level):
     import json
     import sqlite3
     try:
-        conn = sqlite3.connect(db.DB_PATH)
+        conn = sqlite3.connect(HANDLES.db_path())
         rows = conn.execute(
             "SELECT item_data FROM inventory WHERE qq_id=?", (qq_id,)).fetchall()
         conn.close()

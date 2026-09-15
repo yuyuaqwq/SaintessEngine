@@ -252,7 +252,14 @@ _PKG_SURFACE = {
     "item_templates": "content.item_templates",
     "timed": "content.timed_events",
     "store_social": "content.persistence.social",
-    "quests_svc": "content.persistence.quests",
+    # ★ R2（终态补债）：`quests_svc` 的宿主对象 = `game/services/quests.py`，它的**包内真源**
+    #   是 `content/profession_quests.py`（宿主薄壳头注逐字写明「逻辑真源已进内容包：
+    #   `content/profession_quests.py`」，并按名再导出 `bump_daily_progress` /
+    #   `settle_daily_quest` / `DAILY_META_KEYS`）。原值 `content.persistence.quests` 是
+    #   **同名不同物**的存档域模块（只有 get_quests / save_quests / expire_daily），
+    #   终态下 `content/quests_flow.py:204/211` 与 `_HostAttr("services.quests", …)` 当场
+    #   AttributeError（旧路径靠宿主惰性句柄穿透到 profession_quests 才看不见）。
+    "quests_svc": "content.profession_quests",
     "bridge": "content.bridge",
     "services.battle_bridge": "content.bridge",
     "combat": "content.combat_cmds",
