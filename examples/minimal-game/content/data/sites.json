@@ -1,0 +1,38 @@
+{
+  "bottle_reef": {
+    "name": "浮瓶礁",
+    "desc": "退潮时露出一圈旧航标的碎瓶，回声最清。",
+    "days": 1,
+    "bonus_domain": "panel",
+    "bonus_per_visit": 2,
+    "bonus_max_visits": 4,
+    "find": "回声螺壳"
+  },
+  "kiln_wreck": {
+    "name": "沉炉残骸",
+    "desc": "半沉的旧铆炉，炉温还没散尽，一趟要三天。",
+    "days": 3,
+    "bonus_domain": "panel",
+    "bonus_per_visit": 6,
+    "bonus_max_visits": 2,
+    "find": "余温铆钉"
+  },
+  "salt_vein": {
+    "name": "盐脉井",
+    "desc": "井壁结满盐花的旧钻井，回声被盐层吃掉一半。",
+    "days": 2,
+    "bonus_domain": "cap",
+    "bonus_per_visit": 1,
+    "bonus_max_visits": 3,
+    "find": "盐晶簇"
+  },
+  "tide_mill": {
+    "name": "潮磨坊",
+    "desc": "靠潮汐推的旧磨坊，磨盘还在转。",
+    "days": 1,
+    "bonus_domain": "panel",
+    "bonus_per_visit": 3,
+    "bonus_max_visits": 3,
+    "find": "潮磨屑"
+  }
+}

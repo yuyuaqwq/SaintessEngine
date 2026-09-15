@@ -10,7 +10,8 @@
     "monsters",
     "effect_rules",
     "passive_proc",
-    "mech_verbs"
+    "mech_verbs",
+    "sites"
   ],
   "created": "2026-09-13"
 }

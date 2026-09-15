@@ -66,9 +66,13 @@ def discover():
     files = sorted(f for f in os.listdir(HERE)
                    if f.startswith("test_") and f.endswith(".py") and f not in SKIP)
     paths = [os.path.join(HERE, f) for f in files]
-    smoke = os.path.join(ROOT, "examples", "minimal-game", "tests", "test_smoke.py")
-    if os.path.exists(smoke):
-        paths.append(smoke)
+    # ★ 最小示例包的测试也进门禁（它断言「新包只写数据 + 声明就能跑」的**形态**，
+    #   必须持续绿 —— 2026-09-15 起收全部 test_*.py，不再只收 test_smoke.py）。
+    ex_dir = os.path.join(ROOT, "examples", "minimal-game", "tests")
+    if os.path.isdir(ex_dir):
+        for f in sorted(os.listdir(ex_dir)):
+            if f.startswith("test_") and f.endswith(".py"):
+                paths.append(os.path.join(ex_dir, f))
     return paths
 
 

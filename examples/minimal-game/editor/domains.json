@@ -41,5 +41,12 @@
     "schema": "schemas/mech_verbs.schema.json",
     "primary": "mech_verb",
     "icon": "🔧"
+  },
+  "sites": {
+    "label": "据点",
+    "kind": "data",
+    "schema": "schemas/sites.schema.json",
+    "primary": "site",
+    "icon": "🗼"
   }
 }

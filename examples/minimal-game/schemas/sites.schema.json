@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "sites",
+  "description": "铆炉回声 · 据点资料域（勘探闭环的只读资料表；运行时真源 = content/data/sites.json，由 content/outpost.py 的 records.Records 读）",
+  "$defs": {
+    "site": {
+      "type": "object",
+      "required": ["name", "desc", "days", "bonus_domain", "bonus_per_visit", "bonus_max_visits"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "description": "据点展示名"},
+        "desc": {"type": "string", "minLength": 1, "description": "一句话描述"},
+        "days": {"type": "integer", "minimum": 1, "description": "勘探往返天数（作业时长 = days × 86400 秒）"},
+        "bonus_domain": {"type": "string", "enum": ["panel", "cap", "cost"], "description": "据点到点后往哪个档域加（bonus.Bonus 的三档域）"},
+        "bonus_per_visit": {"type": "number", "description": "每次有效访问的加成值"},
+        "bonus_max_visits": {"type": "integer", "minimum": 1, "description": "计入加成的访问次数上限（到顶不再涨）"},
+        "find": {"type": "string", "description": "这一趟带回来的东西（展示用）"}
+      },
+      "additionalProperties": true
+    }
+  }
+}

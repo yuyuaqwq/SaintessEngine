@@ -259,9 +259,9 @@ def main():
               and set(PK.package_domains(REAL_MINIMAL)) == set(decl_m), sorted(decl_m))
         check("声明里写了 $builtin: false（域表 = 它自己声明的，不夹带框架内置域）",
               PK.package_uses_builtin_defaults(REAL_MINIMAL) is False)
-        check("有效域表 == 声明那 6 个（顺序一致 / 无框架域掺进来）",
+        check("有效域表 == 声明那 7 个（顺序一致 / 无框架域掺进来）",
               list(eff_m) == list(decl_m) == ["skills", "classes", "monsters",
-                                              "effect_rules", "passive_proc", "mech_verbs"],
+                                              "effect_rules", "passive_proc", "mech_verbs", "sites"],
               list(eff_m))
         check("框架内置域一个都没混进来（items / instances / texts 等不在）",
               not (set(eff_m) & {"items", "instances", "texts", "commands", "maps"}))
@@ -290,14 +290,14 @@ def main():
         print("\n【4. 样板包副本走 HTTP：清单 / 列表 / 存 / 校验 / schema】")
         st, j = req(base, "GET", "/api/domains?pkg=minimal-game")
         doms_m = {d["id"]: d for d in (j.get("domains") or [])}
-        check("域注册表 200 且 6 域、每一域 from_package",
-              st == 200 and len(doms_m) == 6 and all(d["from_package"] for d in doms_m.values()),
+        check("域注册表 200 且 7 域、每一域 from_package",
+              st == 200 and len(doms_m) == 7 and all(d["from_package"] for d in doms_m.values()),
               f"{st} {sorted(doms_m)}")
         check("域注册表 0 告警", (j.get("warnings") or []) == [], j.get("warnings"))
         st, j = req(base, "GET", "/api/package/minimal-game")
         od = {d["id"]: d for d in (j.get("domains") or [])}
-        check("包概览 200 / 6 域 / 全 ok",
-              st == 200 and j.get("ok") and len(od) == 6 and all(v["ok"] for v in od.values()),
+        check("包概览 200 / 7 域 / 全 ok",
+              st == 200 and j.get("ok") and len(od) == 7 and all(v["ok"] for v in od.values()),
               f"{st}")
         # ★ B2b：package_domains = 差值口径（内置集里没有的域）= 样板包声明的内容域 + mech_verbs
         _expect_pkgonly = sorted(set(eff_m) - set(PK.DOMAINS))
