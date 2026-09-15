@@ -20,6 +20,13 @@ PY="C:/Users/yuyu/AppData/Roaming/uv/tools/astrbot/Scripts/python.exe"
 
 # ② 冒烟测试 + 纯度自检（20 项，exit 0 全绿）
 "$PY" examples/minimal-game/tests/test_smoke.py
+
+# ③ 让**宿主骨架**对本包开一场战斗（宿主侧口径；那半边 = content/bridge.py）
+#    场景 JSON（挑职业 / 敌组）属内容策略、由调用方给，例：
+#      {"btype":"monster","player":{"name":"阿铆","class_name":"cls_kiln","level":6},
+#       "enemies":[{"uid":"e-1","key":"rustmite"},{"uid":"e-2","key":"ironbuoy"}]}
+"$PY" examples/host-skeleton/adapter_cli.py --package examples/minimal-game \
+    --db /tmp/mg.db --scenario /tmp/mg-scenario.json --seed 20260913   # 输入 /battle
 ```
 
 零第三方依赖（只用标准库 + 引擎），Python 3.11 / 3.12 实测。
@@ -42,6 +49,9 @@ examples/minimal-game/
 │  ├─ apply.py            唯一装配入口，幂等：
 │  │                        install_engine()      全局挂 hook + 声明表
 │  │                        apply_game_content()  单个 actor 挂 资源渠道/机制/被动
+│  ├─ bridge.py           ★ **战斗构造半边**（宿主 run_battle 要的那一半，可选半边）：
+│  │                        build_sides(player, enemies) → {player:[actor], enemy:[actor]}
+│  │                        存档 dict / 场景数据 → 引擎 actor；缺它宿主 fail-closed（拒绝静默空跑）
 │  ├─ data/
 │  │  ├─ rules.py         声明表：EFFECT_RULES / EFFECT_ACTIONS / MECH_CASH / PASSIVE_PROC
 │  │  │                   + KIND_NAMES（kind 词表）+ FORMULA_SKELETON / SKILL_FLAT（公式参数）
@@ -195,6 +205,10 @@ mech/actions.py            data/rules.py                      apply.py
   刻意**不采用**这套约定（`PASSIVE_PROC` 则采用了，用来演示"内容侧约定"的两种态度）。
 - 玩家自动战斗用普攻（`auto_run`）；主动技能与资源扣减由 `tests/test_smoke.py` 里
   `human_act("skill", "过载铆钉")` 显式驱动（原因见第 6 节坑 4）。
+- 不做结算 / 掉落半边（`content/settlement.py` / `content/loot.py`）：宿主 `run_battle`
+  照常跑完并把这半边记**桩**（`stubs`）——两者属策略，留给按 wiki 扩展。
+- 包内冒烟（20 项）不覆盖 `content/bridge.py`（那条链要宿主在场）；宿主侧实证 =
+  第 1 节第 ③ 条 `examples/host-skeleton/adapter_cli.py --package examples/minimal-game`。
 
 ## 8. ★ 编辑器扩展：本包自带域（**最小样板**）
 
