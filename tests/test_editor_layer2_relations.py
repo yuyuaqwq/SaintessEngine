@@ -314,9 +314,26 @@ def main() -> int:
     check("PK.package_overview 零回归（不声明 → 无声明面告警）",
           PK.package_overview(plain)["domain_warnings"] == [],
           PK.package_overview(plain)["domain_warnings"])
+    def _empty_decl(_p):
+        """声明文件「无有效声明」= 不存在 / 空 / 只有 `{}`/`null`。
+
+        ★ 2026-09-15（B16 拆仓后）：原实现按 `os.path.isfile()` 判「未声明」，
+        而包仓里可能留着一个 **0 字节**的 `editor/relations.json`（编辑器写过空声明/散落文件），
+        语义上它等于「没声明」（解析结果 `{}`，下一条断言正是这么判的）—— 按文件存在性判会让这条
+        零回归门槛被一个空文件绊红（引擎门禁 53/54 的那条红就是这么来的）。改成按**内容**判，
+        有真声明（哪怕只有一条）照样红。
+        """
+        if not os.path.isfile(_p):
+            return True
+        try:
+            with open(_p, "r", encoding="utf-8") as _fh:
+                return _fh.read().strip() in ("", "{}", "null")
+        except Exception:                                  # noqa: BLE001
+            return False
+
     check("旗舰包 games/orlandia 当前未声明第 2 层面（可选面；声明了才是行为变更）",
-          not os.path.isfile(REL.relations_decl_path(REAL_ORLANDIA))
-          and not os.path.isfile(REL.views_decl_path(REAL_ORLANDIA)))
+          _empty_decl(REL.relations_decl_path(REAL_ORLANDIA))
+          and _empty_decl(REL.views_decl_path(REAL_ORLANDIA)))
     check("orlandia 的引用/联动/视图声明为空 + 视图分派走默认",
           REL.package_relations(REAL_ORLANDIA) == {} and REL.package_views(REAL_ORLANDIA) == {}
           and REL.resolve_view(REAL_ORLANDIA, "drop_pools") == ("loot_view", "builtin", []))
