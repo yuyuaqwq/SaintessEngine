@@ -1095,6 +1095,16 @@ def main(argv=None):
         srv.server_close()
     return 0
 
+# ★ 补丁生效的关键前提（2026-09-15 实测踩坑，症状：试玩接口一律 404「未知接口」）：
+#   用 `python editor/server.py` 启动时，本模块的 __name__ 是 `__main__`；
+#   而补丁文件 `routes_play.py` 里写的是 `from editor import server as SRV` ——
+#   这会**再导入一份** `editor.server`（另一个模块对象）⇒ `SRV.H._api_get = ...` 打在副本的类上，
+#   正在服务的那份 `__main__.H` 毫发无损 ⇒ 补丁静默失效。
+#   （测试里不暴露：测试是 `import editor.server` 模块式导入，两边是同一个模块 ⇒ 补丁生效 ⇒ 全绿。）
+#   修法：显式把 `editor.server` 指向正在运行的 `__main__`，使补丁落到同一个类。
+if __name__ == "__main__":
+    sys.modules.setdefault("editor.server", sys.modules[__name__])
+
 # B20「试玩」路由（类方法补丁）：必须在 `class H` 定义**之后**导入
 from editor import routes_play as _routes_play  # noqa: F401,E402
 
