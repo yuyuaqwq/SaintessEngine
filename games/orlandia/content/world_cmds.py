@@ -2685,8 +2685,8 @@ async def npc_quick_dialog(self, event: AstrMessageEvent, group_id, qq_id):
             self._stop_event_safe(event)
             return
         event.message_str = f"前往 {num}"
-        async for r in self.move(event):
-            yield r
+        async for r in self.move(event, group_id, qq_id):      # ★ 修：move 需要 group_id/qq_id
+            yield r                                      #   （此前漏传 ⇒ TypeError ⇒ 该快捷指令整条挂掉）
         self._stop_event_safe(event)
         return
     # v128.2：『位置 0』/发 0 进入赶路模式的旧捷径已移除——无状态可消费时
