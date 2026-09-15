@@ -22,6 +22,7 @@
     limit.reset()                                     # 跨日清理（幂等，返回清掉几条）
 
     unit = apply_rate(100, rate=0.85, discount=1.0)   # 85 = round(100×0.85×1.0)，不低于 floor
+    low = apply_rate(7, rate=0.85, mode="trunc", floor=None)   # 5 = int(7×0.85)，不设下界
     r = settle_sale(3, unit, tax=0.0, floor=0, on_change=wallet.add)
     r.gross, r.tax, r.net                             # 255, 0, 255
 
@@ -34,7 +35,7 @@
 * **不碰钱包/背包**：结算只算数并回调一次 `on_change(net)`，谁收款、谁扣件是内容的事。
 * **不发号、不生成实例标识**：`key` 由内容侧给（引擎只把它拼进当日计数键）。
 * **不判「今天」**：日历日由注入的 `today()` 决定（同一天怎么算，是内容/宿主的事）。
-* **不做定价**：折价率与折扣由调用方给；本模块只做一次乘算与取整。
+* **不做定价**：折价率、折扣、取整方式与下界由调用方给；本模块只做一次乘算与一次取整。
 * **不落盘**：`state` 是调用方给的映射，持久化在存档层。
 * **不留旧口径别名**：语义只有一种（超上限抛 `DailyLimitExceeded`）。
 """
@@ -229,18 +230,28 @@ def settle_sale(qty, unit_price, *, tax=0.0, floor=0, on_change=None) -> SaleRes
 
 
 # ───────────────────────────────────────────────────────── 折价换算
-def apply_rate(price, *, rate=1.0, discount=1.0, floor=1) -> int:
-    """折价/折扣换算：`round(price × rate × discount)`，不低于 `floor`。
+def apply_rate(price, *, rate=1.0, discount=1.0, floor=1, mode="round") -> int:
+    """折价/折扣换算：`price × rate × discount` 按 `mode` 取整，不低于 `floor`。
 
     `rate`（折价率）与 `discount`（折扣）都是乘性系数，分开放是为了让调用处读得懂
     「回收折价」和「活动折扣」是两件事；引擎不规定它们的来源与取值范围。
-    `floor` 默认 1：小额条目不被折成 0（0 = 白送/无成交）。
+
+    * `mode="round"`（默认）：四舍六入五成双（同本模块 `settle_sale` 的税额口径）
+    * `mode="trunc"`：向零截断（等价 `int(price × rate × discount)`；负值也向零）
+    * `floor`：整数下界，默认 1（小额条目不被折成 0）；显式传 `None` = **不施加下界**，
+      返回值可能就是 0 或负，怎么处理由调用方定
     """
     if isinstance(price, bool) or not isinstance(price, int):
         raise TypeError(f"price 必须是整数，收到 {price!r}")
-    if isinstance(floor, bool) or not isinstance(floor, int):
-        raise TypeError(f"floor 必须是整数，收到 {floor!r}")
-    if floor < 0:
-        raise ValueError(f"floor 不能为负，收到 {floor!r}")
-    value = int(round(price * float(rate) * float(discount)))
+    if floor is not None:
+        if isinstance(floor, bool) or not isinstance(floor, int):
+            raise TypeError(f"floor 必须是整数，收到 {floor!r}")
+        if floor < 0:
+            raise ValueError(f"floor 不能为负，收到 {floor!r}")
+    if mode not in ("round", "trunc"):
+        raise ValueError(f"mode 必须是 'round' 或 'trunc'，收到 {mode!r}")
+    scaled = price * float(rate) * float(discount)
+    value = int(round(scaled)) if mode == "round" else int(scaled)
+    if floor is None:
+        return value
     return max(floor, value)

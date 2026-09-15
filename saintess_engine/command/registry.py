@@ -15,23 +15,40 @@
 * **派生**：把声明还原成宿主需要的形状 —— 正则池 / `{key: 正则}` 表
 * **自检**：`validate()` 查声明自身；`audit_handlers()` 查**声明 ↔ 实际 handler 漂移**
 
+声明与处理器分开
+----------------
+**声明**（`CommandSpec`：正则/分类/顺序/守卫名）与**处理器**（一段可调用）是两件事，
+本模块各给一条登记路：
+
+* `register()` / `load()` —— 登记声明；
+* `bind()` —— 登记处理器（同步函数或**协程函数**都收，引擎**不包装**它：
+  是否 render、要不要 `await`，都由使用方决定）；`handler_of()` / `is_async()` 取件，
+  `binding_of()` / `bindings()` 取回绑定时的元数据（guards / params）。
+
+未登记的处理器一律 `HandlerMissing`（点名 key，**不返回 None**）。声明了但没有处理器、
+或登记了处理器但没声明，都是使用方自己的节奏 —— 模块不做隐式补全。
+
 可拔插
 ------
 本模块不依赖任何宿主、不注册任何东西、也不被自动调用：使用方显式建注册表、
-显式装载、显式取派生结果。**不装载 = 零行为**（对既有代码无影响）。
+显式装载、显式取派生结果。**不装载 = 零行为**（对既有代码无影响）；
+**不 bind = 零处理器**（任何 key 取处理器都 fail-closed）。
 
 引擎零知识
 ----------
 只认「key / 正则 / 分类 / 顺序 / 优先级 / 可见性」这类通用形状字段；指令名、文案、
 守卫语义一律由使用方给。守卫只记**名字**，语义由使用方自己实现（框架不认「角色」）。
+处理器只被当作「可调用」保存与取出，引擎不解释它的参数与返回值。
 """
 from __future__ import annotations
 
+import inspect
 import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Optional, Sequence
 
-__all__ = ["CommandSpec", "CommandRegistry", "combine_patterns"]
+__all__ = ["CommandSpec", "CommandRegistry", "CommandBinding", "HandlerMissing",
+           "combine_patterns"]
 
 
 def combine_patterns(patterns: Sequence[str]) -> str:
@@ -172,13 +189,93 @@ def _any_hit(patterns: Sequence[str], text: str, mode: str = "search") -> bool:
     return False
 
 
+class HandlerMissing(RuntimeError):
+    """取处理器时**没有这条登记**（fail-closed）。
+
+    消息里必须点名是哪个 key；`key` 属性同值，便于程序化判定。
+    与「声明缺失」分开：声明归 `validate()` / `audit_handlers()` 报告，
+    本异常只说「这条处理器没登记（或 key 拼错）」。
+    """
+
+    def __init__(self, message: str, *, key: Any = None) -> None:
+        super().__init__(message)
+        self.key = key
+
+
+def _handler_missing(key: Any) -> HandlerMissing:
+    """构造一条点名报错：消息里一定含 key。"""
+    return HandlerMissing(
+        "未登记处理器：key=%r（先调用 bind() 登记；拒绝静默降级成 None）" % (key,),
+        key=key)
+
+
+def _checked_key(key: Any, where: str) -> str:
+    """登记键必须是**非空字符串**；否则点名抛错（不静默转字符串）。"""
+    if not isinstance(key, str) or not key:
+        raise ValueError("%s：key 必须是非空字符串：%r" % (where, key))
+    return key
+
+
+def _as_tuple(value: Any, what: str, key: Any) -> tuple:
+    """元数据归一成 tuple：`None` → `()`；单个字符串 → 一元组；其余照 `tuple()`。
+
+    不可迭代 → 点名抛 `TypeError`（不静默丢）。
+    """
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (value,)
+    try:
+        return tuple(value)
+    except TypeError:
+        raise TypeError("%s 必须可迭代（key=%r）：%r" % (what, key, value)) from None
+
+
+def _is_async_handler(handler: Any) -> bool:
+    """处理器是不是**协程函数**（供调用方决定 `await` 与否）。
+
+    * `async def` / `functools.partial(async def)` → True（`inspect` 会拆 partial）
+    * 可调用对象且 `__call__` 是 `async def` → True
+    * 同步函数 / 普通 lambda / 同步 `__call__` → False
+    * **异步生成器函数 → False**：调用它得到 async generator（该 `async for`，不是 `await`）
+    """
+    if not callable(handler):
+        return False
+    if inspect.iscoroutinefunction(handler):
+        return True
+    if inspect.isfunction(handler) or inspect.ismethod(handler) or inspect.isbuiltin(handler):
+        return False
+    return inspect.iscoroutinefunction(getattr(handler, "__call__", None))
+
+
+@dataclass(frozen=True)
+class CommandBinding:
+    """一条**处理器登记**（`bind()` 的存档）：处理器本体 + 声明侧元数据。
+
+    * `key`     —— 登记键（= 声明 key）
+    * `handler` —— 处理器本体，**原样保存**（引擎不包装：是否 render 由使用方决定）
+    * `guards`  —— 守卫**名字**（通用元数据，引擎不解释语义）
+    * `params`  —— 取参槽位（通用元数据，引擎不解释语义）
+    * `is_async` —— 处理器是否协程函数（= `CommandRegistry.is_async(key)`，现场判定）
+    """
+    key: str
+    handler: Any
+    guards: tuple = ()
+    params: tuple = ()
+
+    @property
+    def is_async(self) -> bool:
+        return _is_async_handler(self.handler)
+
+
 class CommandRegistry:
-    """指令声明注册表（装载 / 查询 / 匹配 / 派生 / 自检）。"""
+    """指令注册表：声明（装载 / 查询 / 匹配 / 派生 / 自检）+ 处理器登记（bind 族）。"""
 
     def __init__(self, *, name: str = "") -> None:
         self.name = name
         self._specs: dict = {}
         self._order: list = []
+        self._bindings: dict = {}
 
     # ============================================================ 装载
     def register(self, spec: CommandSpec, *, replace: bool = False) -> CommandSpec:
@@ -216,6 +313,49 @@ class CommandRegistry:
     @classmethod
     def from_data(cls, items, **kw) -> "CommandRegistry":
         return cls(**kw).load(items)
+
+    # ============================================================ 处理器登记
+    def bind(self, key: str, handler, *, guards=(), params=(), replace: bool = False) -> None:
+        """登记一条命令的**处理器**（与声明分离）。
+
+        同 key 重复 → 默认抛 `ValueError`（与 `register()` 同口径，防静默覆盖）；
+        `replace=True` 才覆盖。`handler` 可以是同步函数或协程函数，**引擎不包装**它
+        （是否 render、要不要 `await` 由使用方决定）；`guards` / `params` 只原样存档
+        （通用元数据，引擎不解释语义），经 `binding_of()` / `bindings()` 取回。
+
+        参数非法（key 不是非空字符串 / handler 不可调用）→ 点名抛错。
+        """
+        k = _checked_key(key, "bind")
+        if not callable(handler):
+            raise TypeError("bind：handler 必须可调用（key=%r）：%r" % (k, handler))
+        if k in self._bindings and not replace:
+            raise ValueError("指令处理器 key 重复：%r（要覆盖请 replace=True）" % k)
+        self._bindings[k] = CommandBinding(key=k, handler=handler,
+                                           guards=_as_tuple(guards, "guards", k),
+                                           params=_as_tuple(params, "params", k))
+
+    def _binding(self, key) -> CommandBinding:
+        """取一条登记；未登记 → `HandlerMissing`（点名 key）。"""
+        try:
+            return self._bindings[key]
+        except (KeyError, TypeError):
+            raise _handler_missing(key) from None
+
+    def handler_of(self, key: str):
+        """取处理器；未登记 → `HandlerMissing`（点名 key，fail-closed，**不是 None**）。"""
+        return self._binding(key).handler
+
+    def is_async(self, key: str) -> bool:
+        """该处理器是不是协程函数（供调用方决定 `await` 与否）；未登记 → `HandlerMissing`。"""
+        return self._binding(key).is_async
+
+    def binding_of(self, key: str) -> CommandBinding:
+        """取整条登记（处理器 + guards / params 元数据）；未登记 → `HandlerMissing`。"""
+        return self._binding(key)
+
+    def bindings(self) -> tuple:
+        """全部登记，按 `bind()` 顺序 → `((key, CommandBinding), …)`（覆盖不改顺序）。"""
+        return tuple(self._bindings.items())
 
     # ============================================================ 查询
     def get(self, key: str) -> Optional[CommandSpec]:
