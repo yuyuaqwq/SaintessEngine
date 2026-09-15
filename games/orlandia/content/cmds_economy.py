@@ -72,9 +72,39 @@ def _shell(env):
     return (env.state or {}).get("shell")
 
 
+class _Say:
+    """`env.raw`（平台事件）的最小替身：`plain_result(文本)` → **文本行**（返回 text 本身）。
+
+    ★ W-L9 定点修（2026-09-15）：本族 handler 是 async generator，实现体是历史形状
+    `yield event.plain_result(文本)`。此前 `_event()` 把**真事件**原样交给实现体 ⇒ `yield`
+    出来的是**平台结果对象**（`MessageEventResult`），引擎 `Host._as_replies` 再 `str()` 它
+    ⇒ 交付面成了 dataclass repr（实测 `str(MessageEventResult().message('hello'))` =
+    `MessageEventResult(chain=[Plain(...)])`），**不是文案** —— 违反交付契约「只交 list[str]」。
+
+    与 `content/cmds_player.py::_Say` / `content/cmds_world.py::_Say` 同形：`plain_result`
+    收成已渲染行并返回文本；其余属性原样代理真事件（`get_message_str` / 壳的 `_strip_cmd` /
+    转发期 `message_str` 赋值 / `stop_event` 全部照旧）⇒ 实现体**零改动**。
+    """
+
+    def __init__(self, ev):
+        object.__setattr__(self, "_ev", ev)
+        object.__setattr__(self, "lines", [])
+
+    def plain_result(self, text):
+        """把「一行文本」收起来并**返回文本本身**（实现体的 `yield` 值 = 一行文案）。"""
+        self.lines.append(text)
+        return text
+
+    def __getattr__(self, name):
+        return getattr(object.__getattribute__(self, "_ev"), name)
+
+    def __setattr__(self, name, value):        # 转发期 `message_str` 交换等语义逐字保留
+        setattr(object.__getattribute__(self, "_ev"), name, value)
+
+
 def _event(env):
-    """平台事件原样透传（包内禁解释，只原样交给实现体 —— 与改造前同一个对象）。"""
-    return env.raw
+    """实现体看到的「平台事件」= **文本收集替身**（`plain_result` 落文本；其余代理真事件）。"""
+    return _Say(env.raw)
 
 
 async def _messages(agen) -> list:
