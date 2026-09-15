@@ -67,6 +67,40 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from editor import actions as AC     # noqa: E402
 from editor import dist as DIST      # noqa: E402
 from editor import glossary as GL    # noqa: E402
+
+#: `/api/glossary` 响应缓存（内容戳 → payload）。只留最近一档，见路由处注释。
+_GLOSSARY_CACHE: dict = {}
+
+
+def _glossary_stamp(pkg_dir):
+    """`/api/glossary` 的内容戳 =（受影响的文件数, 最新 mtime）。
+
+    覆盖：① 包内 `editor/**` 声明面（glossary/<域>.json · relations.json · views.json ·
+    domains.json · render/* 等）；② 框架侧参与拼装的源码（glossary / relations / render_decl）。
+    改任何一处 ⇒ 戳变 ⇒ 立刻重拼（保证「编辑即刻可见」）；没改 ⇒ 复用整份 payload。
+    """
+    paths = []
+    if pkg_dir:
+        for sub in ("editor",):
+            d = os.path.join(pkg_dir, sub)
+            if os.path.isdir(d):
+                for dp, dn, fn in os.walk(d):
+                    dn[:] = [x for x in dn if x not in ("__pycache__", ".git")]
+                    paths.extend(os.path.join(dp, f) for f in fn)
+    here = os.path.dirname(os.path.abspath(__file__))
+    for f in ("glossary.py", "relations.py", "render_decl.py"):
+        p = os.path.join(here, f)
+        if os.path.exists(p):
+            paths.append(p)
+    newest = 0.0
+    for p in paths:
+        try:
+            mt = os.path.getmtime(p)
+        except OSError:
+            continue
+        if mt > newest:
+            newest = mt
+    return (len(paths), round(newest, 3))
 from editor import hints as HN       # noqa: E402
 from editor import loot_view as LV   # noqa: E402
 from editor import instance_view as IV  # noqa: E402
@@ -498,20 +532,33 @@ class H(BaseHTTPRequestHandler):
             # `?pkg=<id>` → **包声明优先**的控件/引用/词汇表（第 2 层：包内 `editor/relations.json`
             # 改「哪个字段引用哪个域」；包自带词汇表 `editor/glossary/<域>.json` 改
             # 「字段中文名/注脚/分组/控件」；坏声明降级 + warnings，不静默。不给包 = 旧行为逐字不变）
+            #
+            # ★ 性能（2026-09-15 实测）：本接口**首次**要现拼 8 份数据（71 域 entries + 65 groups +
+            #   73 widgets + 关系/视图/告警/渲染面），冷态实测 **5.4s**（切包时必打 ⇒ 用户感觉「加载半天」）。
+            #   改为**按内容戳缓存整份 payload**（戳 = 包内 `editor/**` 声明面 + 框架侧 glossary/relations/
+            #   render_decl 源码的 文件数+最新 mtime）：改任何声明文件 ⇒ 戳变 ⇒ 立刻重拼（原意保留：
+            #   编辑即刻可见）；没改 ⇒ 直接复用。只留最近一档，防增长。
             q = parse_qs(getattr(self, "_query", ""))
             pkg_id = (q.get("pkg") or [""])[0]
             pkg_dir = PK.resolve_package(pkg_id, GAMES_DIR) if pkg_id else None
             if pkg_id and not pkg_dir:
                 return self._err(404, f"包不存在：{pkg_id}")
-            return self._send(200, {"ok": True, "domains": GL.all_entries(pkg_dir),
-                                    "groups": GL.all_groups(pkg_dir),
-                                    "widgets": GL.all_widgets(pkg_dir),
-                                    "relations": REL.package_relations(pkg_dir) if pkg_dir else {},
-                                    "views": REL.package_views(pkg_dir) if pkg_dir else {},
-                                    "warnings": (REL.all_warnings(pkg_dir) if pkg_dir else [])
-                                                + GL.glossary_warnings(pkg_dir)
-                                                + (RENDER.render_warnings(pkg_dir) if pkg_dir else []),
-                                    "panel_keys": GL.PANEL_KEYS})
+            gkey = (pkg_id, _glossary_stamp(pkg_dir))
+            hit = _GLOSSARY_CACHE.get(gkey)
+            if hit is not None:
+                return self._send(200, hit)
+            payload = {"ok": True, "domains": GL.all_entries(pkg_dir),
+                       "groups": GL.all_groups(pkg_dir),
+                       "widgets": GL.all_widgets(pkg_dir),
+                       "relations": REL.package_relations(pkg_dir) if pkg_dir else {},
+                       "views": REL.package_views(pkg_dir) if pkg_dir else {},
+                       "warnings": (REL.all_warnings(pkg_dir) if pkg_dir else [])
+                                   + GL.glossary_warnings(pkg_dir)
+                                   + (RENDER.render_warnings(pkg_dir) if pkg_dir else []),
+                       "panel_keys": GL.PANEL_KEYS}
+            _GLOSSARY_CACHE.clear()
+            _GLOSSARY_CACHE[gkey] = payload
+            return self._send(200, payload)
         if len(parts) >= 2 and parts[0] == "wiki":
             q = parse_qs(getattr(self, "_query", ""))
             # `?pkg=<id>` → 该包自带的 wiki（`<pkg>/docs/wiki/**.md`）；解析口径是
