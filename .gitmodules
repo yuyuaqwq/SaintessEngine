@@ -1,0 +1,3 @@
+[submodule "games/orlandia"]
+	path = games/orlandia
+	url = git@github.com:yuyuaqwq/orlandia.git
