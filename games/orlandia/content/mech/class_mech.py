@@ -646,13 +646,15 @@ def class_res_channel_gain(battle, caster, target, params, logs):
     # v181 磐核：嵌套 fire 会覆写 battle._fire_ctx —— 广播前存、广播后还原，
     # 否则同一事件批次里**排在渠道后的动作**（如 guard_core_burst 的 skill_hit
     # 清层 mech_cash_clear 读 info.mech）会读到 threshold ctx 而静默失效。
+    # ★ R5（静默降级扫描）：原写法把「还原」放在 try 体内、异常被 `except Exception: pass`
+    #   吞掉 —— `fire` 一旦抛，`battle._fire_ctx` 就**永久停在 threshold ctx**（正是注释警告的
+    #   那种静默失效）。改为 `finally` 还原 + import/广播失败照原样抛（装配缺陷不吞）。
+    from saintess_engine.battle.effect_triggers import fire as _fire
+    _prev_ctx = getattr(battle, "_fire_ctx", None)
     try:
-        from saintess_engine.battle.effect_triggers import fire as _fire
-        _prev_ctx = getattr(battle, "_fire_ctx", None)
         _fire(battle, "threshold", {"actor": owner, "key": res, "value": n}, logs)
+    finally:
         battle._fire_ctx = _prev_ctx
-    except Exception:
-        pass
 
 
 @register_action("class_faith_load_tier")

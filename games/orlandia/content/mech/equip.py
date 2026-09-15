@@ -168,13 +168,16 @@ _WE_TABLE = None
 
 
 def _we_data() -> dict:
+    """武器特效数据表（包内 `mech/we_data.py` 唯一真源）。
+
+    ★ R5（静默降级扫描）：删掉 `try/except Exception: _WE_TABLE = {}` —— 它把
+    「数据模块缺失 / 属性名写错」静默降级成**空表 = 所有武器特效全部失效**（玩家侧零提示）。
+    这是装配缺陷，取不到就抛。
+    """
     global _WE_TABLE
     if _WE_TABLE is None:
-        try:
-            from . import we_data as W
-            _WE_TABLE = getattr(W, "WEAPON_EFFECT_DATA", {})
-        except Exception:
-            _WE_TABLE = {}
+        from . import we_data as W
+        _WE_TABLE = W.WEAPON_EFFECT_DATA
     return _WE_TABLE
 
 

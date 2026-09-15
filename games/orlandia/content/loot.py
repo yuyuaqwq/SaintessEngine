@@ -39,8 +39,8 @@ v184 起它已在引擎 `saintess_engine.loot`（引擎零知识），真源与�
 | 真源宿主耦合 | 包内替身 | 调用方给什么 |
 |---|---|---|
 | `game.data.drop_pools.DROP_POOLS`（596 池数据） | `install_pools(pools)` / `install_pools_source(fn)`（活源优先）；未挂 → 包内 `content/data/drop_pools.json` | 池 dict（`{池key: {type, entries/rolls/…}}`），与真源数据逐条同源 |
-| `game.content`：`ITEMS` / `EQUIP_ROSTER` / `RUNES` / `roll_blueprint` / `roll_gem_drop` / `roll_drop_equip` / `generate_roster_equip` / `generate_equip` / `rune_item` / `make_pet_egg` | `install_content_api(api)`（**模块 or 普通对象**，只按属性取） / `install_content_api_source(fn)`；也认 `ctx.content_api`（逐次覆盖）。未挂 → 包内默认 `_PackageContent` | 见 `content_api_keys()`：`ITEMS`/`EQUIP_ROSTER` 读包内门面 `content/catalog_items.py`（B14-2 起；原就地 JSON），装备/图纸/宝石/符文/宠物蛋**构造器**尚未进包 → 默认一律 `None`（= 该条出不来） |
-| `game.core.quality_tiers.FISH_TIERS`（垂钓档位表） | `install_quality_tiers(order, info=…, weights_by_level=…, aliases=…, clamp=…)`（或直接给 `TierTable`） / `install_quality_tiers_source(fn)` | 档位表；未挂 → 空表 → `_roll_fish` 守卫返回 `[]`（抽不出，不抛） |
+| `game.content`：`ITEMS` / `EQUIP_ROSTER` / `RUNES` / `roll_blueprint` / `roll_gem_drop` / `roll_drop_equip` / `generate_roster_equip` / `generate_equip` / `rune_item` / `make_pet_egg` | `install_content_api(api)`（**模块 or 普通对象**，只按属性取） / `install_content_api_source(fn)`；也认 `ctx.content_api`（逐次覆盖）。未挂 → 包内默认 `_PackageContent` | 见 `content_api_keys()`：十支键**全部**转引包内真源（`ITEMS`/`EQUIP_ROSTER`/`RUNES` ← `content/catalog_items.py`；构造器七支 ← `content/{drops,gems,runes,pets}.py`）。★ R4（2026-09-15）：B14-2 时构造器七支还留在宿主（当时按「半边未搬」返 None/抛），C2/B15b 落地后已补齐，不再有「无人注入 = 该条出不来」的缺口 |
+| `game.core.quality_tiers.FISH_TIERS`（垂钓档位表） | `install_quality_tiers(order, info=…, weights_by_level=…, aliases=…, clamp=…)`（或直接给 `TierTable`） / `install_quality_tiers_source(fn)` | 档位表；未挂 → **包内真源** `content/quality_tiers.py::FISH_TIERS`（★ R4 补齐；此前回落空表 ⇒ `_roll_fish` 抽空） |
 | 事件钩子（真源 `ctx.hooks[hook]`） | **不变**（引擎 `SimpleCtx.hooks` 恒为 dict） | `special:xxx` 的 hook 表，由调用方塞进 ctx |
 
 ⚠️ 不变式：`ctx` 只是**调用方给的普通袋子**（引擎 `SimpleCtx`：缺属性 → None）。本文件不读玩家 DB /
@@ -85,7 +85,8 @@ _QUALITY_TIERS_SOURCE = None
 _POOLS_CACHE = None
 _PACKAGE_CONTENT = None
 
-# 未挂档位表时的空表（`_roll_fish` 守卫读它 → 抽不出；不是「等权兜底」那种静默降级）
+# 调用方显式 `install_quality_tiers(None)` 时挂的空表（`_roll_fish` 守卫读它 → 抽不出；
+# 不是「等权兜底」那种静默降级）。未挂任何值时不再走它 —— R4 起默认 = 包内真源 FISH_TIERS。
 _EMPTY_TIERS = TierTable(())
 
 
@@ -99,47 +100,64 @@ def _read_json(name: str, default):
 
 
 class _PackageContent:
-    """包内默认内容 API：`ITEMS` / `EQUIP_ROSTER` 读包内 JSON（审计判定用得着），
-    构造器（图纸 / 宝石 / 符文 / 宠物蛋 / 装备生成）属**宿主侧尚未进包**的那半：
-    `bp`/`gem`/`rune`/`equip_drop` 四支返回 `None`（= 真源「无候选 / 没抽中」同果），
-    `equip:`/`petegg:` 两支**抛**（真源那两支本来就在 `try/except` 里，抛 = 该条出不来）。
-    两者都落回真源注释里的「池空/失败优雅跳过」，不把半边实现伪装成完整实现。"""
+    """包内默认内容 API —— **十支键全部转引包内真源**（R4 2026-09-15 补齐）。
+
+    为什么必须补（实测，`out/texts_diffs.txt` + `out/logs/*/test_numeric_drop_unify.py.log`）：
+    B14-2 时只有 `ITEMS` / `EQUIP_ROSTER`（+ B15b `RUNES`）进了包，装备/图纸/宝石/符文/
+    宠物蛋**构造器**七支还留在宿主（`game.content` / `game.drop_engine`），本类当时按
+    「半边未搬」返回 `None` / 抛 —— 那是**过渡期**口径。C2（`content/drops.py`）·
+    `content/gems.py` · `content/rune*`（`content/runes.py`）· `content/pets.py` 落地后，
+    这七支在包内都有逐字真源 ⇒ 终态默认**必须转引它们**；否则无人注入时：
+
+      · `equip:` 引用一律 `None`（`generate_roster_equip` 抛）⇒ 副本 Boss 装备掉落整族消失
+        （实测：`test_texts_table` [10] IN16 少 `⚔️ 拾取 Boss 珍藏`、IN20 少 `⚔️/👑` 两行，
+        且 random 消耗位次变化 → 后续图纸/原石档位整片漂移）；
+      · `roll_drop_equip` / `roll_blueprint` / `roll_gem_drop` 返 `None` ⇒ 精英专属出装、
+        垂钓档、暗格装备/符文/蛋五档全抽不出（实测 `test_numeric_drop_unify` 4 条红）。
+
+    取件韧性：惰性 `from . import …`（不在 import 期拉构造器模块，与真源「函数内 import
+    宿主」同时机）；真源模块缺名 → `AttributeError` 原样抛（不静默造空实现）。
+    """
 
     def __init__(self, items: dict, roster: dict):
         self.ITEMS = items
         self.EQUIP_ROSTER = roster
-        self.RUNES = {}
+        self.RUNES = RUNES          # 包内 `catalog_items.RUNES`（B15b 真源；原为恒空表）
 
     @staticmethod
-    def roll_blueprint(monster_lv):                          # noqa: ARG004
-        return None
+    def roll_blueprint(monster_lv):                          # 真源 `game.content:roll_blueprint`
+        from . import drops as _d                             # → 包内 `content/drops.py`
+        return _d.roll_blueprint(monster_lv)
 
     @staticmethod
-    def roll_gem_drop(mon):                                  # noqa: ARG004
-        return None
+    def roll_gem_drop(mon):                                  # 真源 `game.content:roll_gem_drop`
+        from . import gems as _g                              # → 包内 `content/gems.py`
+        return _g.roll_gem_drop(mon)
 
     @staticmethod
-    def roll_drop_equip(monster_lv, role):                   # noqa: ARG004
-        return None
+    def roll_drop_equip(monster_lv, role):                   # 真源 `game.drop_engine` 同名
+        from . import drops as _d                             # → 包内 `content/drops.py`
+        return _d.roll_drop_equip(monster_lv, role)
 
     @staticmethod
     def generate_roster_equip(rid):
-        # 真源这一支在 try/except 里：名册 id 不存在时抛 → 该条出不来。包内未搬名册生成
-        # → 抛同款（被真源原样的 try/except 吞掉 → `equip:` 引用优雅跳过）。
-        raise NotImplementedError(f"宿主内容 API 未挂：generate_roster_equip({rid!r})")
+        from . import drops as _d                             # → 包内 `content/drops.py`
+        return _d.generate_roster_equip(rid)
 
     @staticmethod
     def generate_equip(slot, lv, quality):                   # noqa: ARG004
-        return None
+        from . import drops as _d                             # → 包内 `content/drops.py`
+        return _d.generate_equip(slot, lv, quality)
 
     @staticmethod
-    def rune_item(effect, lv):                               # noqa: ARG004
-        return None
+    def rune_item(effect, lv):                               # 真源 `game.content:rune_item`
+        from . import runes as _r                             # → 包内 `content/runes.py`
+        return _r.rune_item(effect, lv)
 
     @staticmethod
-    def make_pet_egg(pet_id):
-        # 同上（真源这一支也在 try/except 里）→ 抛 = 该条出不来。
-        raise NotImplementedError(f"宿主内容 API 未挂：make_pet_egg({pet_id!r})")
+    def make_pet_egg(pet_id):                                # 真源 `game.content:make_pet_egg`
+        from . import pets as _p                              # → 包内 `content/pets.py`
+        return _p.make_pet_egg(pet_id)
 
 
 def _package_content() -> _PackageContent:
@@ -197,7 +215,7 @@ def install_pools(pools=None) -> dict:
 def install_content_api(api=None):
     """替身接口：挂内容 API（等价真源 `game.content` 的只读子集，键见 `content_api_keys()`）。
 
-    传 `None` → 撤下，回落包内默认（`items.json` / `equip_roster.json` + 构造器恒 None）。
+    传 `None` → 撤下，回落包内默认（十支键全部转引包内真源，见 `_PackageContent`）。
     """
     global _CONTENT_API
     _CONTENT_API = api
@@ -421,15 +439,21 @@ class _LazyPools(Mapping):
 def _fish_tiers():
     """垂钓档位表（真源唯一真相源 `game/core/quality_tiers.py:29 FISH_TIERS`）。
 
-    包内替身（宿主耦合 → 调用方给）：`install_quality_tiers(order=…, info=…, weights_by_level=…,
+    替身接口（宿主耦合 → 调用方给）：`install_quality_tiers(order=…, info=…, weights_by_level=…,
     aliases=…, clamp=(1, 9))` 挂**真源那份档位表**，或 `install_quality_tiers_source(fn)` 挂**活源**
     （每次取表问一次；真源 `_fish_tiers()` 的「先确保本树数据层装配 → 取档位表」原文搬进 thunk）。
-    档位取值 —— QUALITY / FISH_QUALITY_WEIGHTS —— 不在包内数据域，见报告「未搬」；
-    未挂 → 空表 → `_roll_fish` 首行守卫返回 []（抽不出，不抛）。
+
+    ★ R4（2026-09-15）：未挂时的默认从「空表」改为**包内真源**
+    `content/quality_tiers.py::FISH_TIERS`（B16-W11 档位四表已全数归包）——空表会让
+    `_roll_fish` 首行守卫直接 `[]`（实测 `test_numeric_drop_unify` 的 `fish 垂钓出鱼` 红）。
+    显式 `install_quality_tiers(None)` 仍挂**空表**（调用方要「抽不出」时照旧）。
     """
     if _QUALITY_TIERS_SOURCE is not None:
         return _QUALITY_TIERS_SOURCE()
-    return _QUALITY_TIERS if _QUALITY_TIERS is not None else _EMPTY_TIERS
+    if _QUALITY_TIERS is not None:
+        return _QUALITY_TIERS
+    from .quality_tiers import FISH_TIERS as _PKG_FISH_TIERS
+    return _PKG_FISH_TIERS
 
 
 def _roll_fish(pool: dict, ctx: Any, table) -> list[dict]:

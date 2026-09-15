@@ -287,11 +287,13 @@ def record_visit(group_id, qq_id, map_id, sa_id):
 
 # ---- 材料解析辅助（宿主 `content` 聚合层句柄）----
 def C_resolve_material(name):
-    """材料中文名 → mat_ 拼音 id（查不到返回原名字，add_item 兜底）。"""
-    try:
-        return C.resolve("materials", name)
-    except Exception:                            # noqa: BLE001
-        return name
+    """材料中文名 → mat_ 拼音 id（查不到返回原名字，add_item 兜底）。
+
+    ★ R5（静默降级扫描）：删掉 `except Exception: return name` ——「查不到返回原名」本身就是
+    `content/index.py::resolve` 的定义（`idx.get(name_or_id, name_or_id)`），那层 except 只会把
+    **装配缺陷**（聚合句柄/索引未注入 ⇒ `RuntimeError`）静默降级成「当材料名用」，玩家侧看不出。
+    """
+    return C.resolve("materials", name)
 
 
 def C_display_material(mat_id):

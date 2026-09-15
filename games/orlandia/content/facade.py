@@ -179,6 +179,28 @@ _NAME_SRC = {
     "equip_stats": "content.stats",
     "equip_value": "content.stats",
     "exp_to_next": "content.stats",
+    # ---- ★ R5（缺口①）：P5D-2 §2.1 的 9 个 + 附 A 主线 11 个缺名。
+    #      每一行都由附录 A 的探针实测（宿主门面有、包内聚合面取不到；真源模块同名可直接取），
+    #      映射主线见 `overnight/VALLEY4_LINES_BRIEF.md` 附 A（主线探针 12/12 可用）。
+    #      不引第二份实现、不兜底 —— `__getattr__` 取不到仍 AttributeError。
+    "roll_poi": "content.pois",
+    "subarea_props": "content.pois",
+    "subarea_pois": "content.pois",
+    "prop_entry": "content.pois",
+    "today_event_effects": "content.daily_events",
+    "roll_wild_encounter": "content.wild",
+    "Position": "content.position",
+    "ITEM_TAG_DISPLAY": "content.catalog_legacy",
+    "ELITE_EQUIP_DROP": "content.catalog_quests",
+    "INSTANCES": "content.catalog_space",
+    "WILD_KING_CHEST_TIERS": "content.catalog_rules",
+}
+
+#: 别名层：`C.<门面名>` → `(包内真源模块全名, 真源属性名)`。
+#: 只用于「宿主门面名 ≠ 包内真源名」的情形（附 A 实测：全部缺名里只有这一个换了名，
+#: 其余 11 个同名）。`__getattr__` **先查本表**（它比 `_NAME_SRC` 更具体），`__dir__` 也带上。
+_NAME_ALIAS = {
+    "exploration_record_visit": ("content.exploration", "record_visit"),
 }
 
 _NS = None
@@ -207,6 +229,11 @@ class _Aggregate(object):
     __slots__ = ()
 
     def __getattr__(self, attr):
+        # ★ 别名层优先：`_NAME_ALIAS` 是「宿主门面名 ≠ 包内真源名」的唯一一处（换名取），
+        #   比 `_NAME_SRC`（同名取）更具体，故先查。
+        alias = _NAME_ALIAS.get(attr)
+        if alias is not None:
+            return getattr(importlib.import_module(alias[0]), alias[1])
         # ★ 覆盖层优先：`_NAME_SRC` 每一行都是探针实测的「宿主同一只」，
         #   聚合面里若有同名异对象（`content.tables` 这类同值不同序的再导出面）不应遮住它。
         src = _NAME_SRC.get(attr)
@@ -221,7 +248,7 @@ class _Aggregate(object):
             "请查 overnight/C_NAME_TO_PACKAGE_MAP.md 并登记缺口，别静默兜底）" % (attr,))
 
     def __dir__(self):
-        return sorted(set(_namespace()) | set(_NAME_SRC))
+        return sorted(set(_namespace()) | set(_NAME_SRC) | set(_NAME_ALIAS))
 
     def __repr__(self):
         return "<content.facade.C 聚合句柄（%d 名）>" % len(_namespace())
@@ -327,7 +354,10 @@ _BIND_SLOTS = (
     ("content.achievement_conds", ()),
     ("content.affix", ()),
     ("content.auction", ("db", "content")),
-    ("content.bridge", ()),
+    # ★ R5 缺口③：`content/bridge.py::attach_tlog` 与 `content/combat_cmds.py::_attach_tlog`
+    #   是同一个平台件（`attach_tlog`，接口表第 11 行）的两个消费口；两个槽都要喂，
+    #   否则 bridge 那条会退化成 `_host_mod("services.battle_bridge")`（终态树已无此模块 → 抛）。
+    ("content.bridge", ("attach_tlog",)),
     ("content.class_sets", ("data",)),
     ("content.cmds_instance_router", ("c", "build_monster", "instance_battle")),
     ("content.combat_cmds", ("db", "content", "attach_tlog", "commands.combat")),

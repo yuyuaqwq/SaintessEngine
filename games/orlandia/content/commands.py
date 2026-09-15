@@ -78,11 +78,54 @@ def raw(s: str):
     return ("raw", s, None)
 
 
+def _fold_blank_segments(seq) -> list:
+    """把「空行段」（`""` 元素）折进相邻段 —— 等价旧桥 `"\\n".join(seq)` 的**逐字节**结果。
+
+    ★ R4（2026-09-15）实测（P6_BEHAVIOR_PROBES §3 A 组 5 条里的 3 条）：
+    迁移前宿主桥 `game/commands/_host_bridge.py::run` 是
+    `"\\n".join(str(x) for x in out if x is not None)` —— **只滤 `None`，保留 `""`**，
+    于是 `lines.append("")` 的空行段渲染成真·空行（`…\\n\\n💡…`）。
+    终态引擎通道 `saintess_engine/host/runtime.py::_as_replies` 把 `None` 与 `""` **一起滤掉**，
+    空行随之消失 ⇒ 「周常 4/6 · 补给箱 3/3 · 任务面板 4/4」共 11 个冻结分支逐字不一致
+    （实测 `out/texts_diffs.txt`，差异段全是 `-<空行>`）。
+
+    本函数在**包内渲染单点**把空行编码回段内换行，使 `"\\n".join(结果) == "\\n".join(原序列)`：
+
+        ["A", "", "B"] → ["A\\n", "B"]      （join = "A\\n\\nB"）
+        ["A", "", ""]  → ["A\\n\\n"]        （join = "A\\n\\n"）
+        ["", "A"]      → ["\\nA"]            （join = "\\nA"）
+        [""]           → [""]               （join = ""）
+
+    为什么改包内而不是引擎：三个通道（QQ 适配器 loopback / 编辑器试玩 / 引擎直调）都经包内
+    `render_panel` 渲染面板，改这里一次覆盖三通道；引擎 `_as_replies` 的「空段不是一条回话」
+    口径不必动（异步族逐段投递不受影响：`_declare` 族不经本函数）。
+    """
+    res = []
+    lead = 0
+    for s in seq:
+        if s == "":
+            if res:
+                res[-1] = res[-1] + "\n"
+            else:
+                lead += 1
+            continue
+        res.append(("\n" * lead) + s)
+        lead = 0
+    if lead:
+        if res:
+            res[-1] = res[-1] + ("\n" * lead)
+        else:
+            res.append("\n" * (lead - 1))
+    return res
+
+
 def render_panel(panel, env=None) -> list:
     """面板 → **已渲染文本段**（`list[str]`，元素顺序 = 输出行序）。
 
     元素三种形态都收：`str`（已渲染，原样保留）/ 面板节点 / `None`（跳过）。
     渲染点唯一 = 包内 `content/texts.py`（宿主 SPEC_PATH 由宿主薄壳 `game/core/texts.py` 注入）。
+
+    末尾按 `_fold_blank_segments` 折叠空行段（与旧宿主桥 `"\\n".join` 逐字节等价）。
     """
     from . import texts as _texts
     out = []
@@ -97,7 +140,7 @@ def render_panel(panel, env=None) -> list:
             out.append(key)
         else:
             out.append(_texts.text(key, **(slots or {})))
-    return out
+    return _fold_blank_segments(out)
 
 
 # ============================================================

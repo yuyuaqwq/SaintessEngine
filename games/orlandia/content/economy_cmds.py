@@ -5166,10 +5166,9 @@ class EconomyImpl(CommandBase):
         earned = self._earned_titles(group_id, qq_id, player)
         got = [_cquest.TITLES[i]["name"] for i in range(len(_cquest.TITLES)) if earned[i]]
         # 阶段九：成就称号合并（14 章：达成成就自动获得称号）
-        try:
-            got += C.achievement_titles(qq_id)
-        except Exception:
-            pass
+        # ★ R5（静默降级扫描）：删掉 `try/except Exception: pass` —— 它把「成就称号取值失败」
+        #   静默降成「称号列表少了全部成就称号」（玩家可见的错值、日志零痕迹）。取不到就抛。
+        got += C.achievement_titles(qq_id)
         got = list(dict.fromkeys(got))  # 去重保序
         cur = player.get("equipped_title") or ""
         if not got:
@@ -5198,10 +5197,8 @@ class EconomyImpl(CommandBase):
             return
         earned = self._earned_titles(group_id, qq_id, player)
         got = [_cquest.TITLES[i]["name"] for i in range(len(_cquest.TITLES)) if earned[i]]
-        try:
-            got += C.achievement_titles(qq_id)
-        except Exception:
-            pass
+        # ★ R5：同上（`_equip_title` 侧同款吞掉）—— 少列成就称号 ⇒ 「还没获得称号『X』」误判。
+        got += C.achievement_titles(qq_id)
         got = list(dict.fromkeys(got))
         hit = next((n for n in got if tname in n), None)
         if not hit:

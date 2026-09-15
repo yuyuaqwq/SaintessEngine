@@ -21,6 +21,19 @@
 `tests/test_texts_table.py` 会 `T.SPEC_PATH = 坏文件; T.reload()` 验证修复路径 ——
 所以路径必须是**调用时**从宿主薄壳模块取的（`bind_spec_path(source=lambda: SPEC_PATH)`），
 常量拷贝会让「改宿主 SPEC_PATH」失效（测试当场红）。
+
+★ R5 修（P5D-2 §6.5：改 `SPEC_PATH` 后 `reload()` 不生效、`load_error` 恒空）
+--------------------------------------------------------------------------
+上一条 thunk 有个**反向**缺口：取件一旦注入，**包内常量就被永久遮蔽** ——
+终态测试 `from content import texts as T` 改的是**包内** `SPEC_PATH`，而
+`spec_path()` 直接返回注入取件（宿主壳那份），于是坏文件路径读不到：
+`reload()` 照旧成功、`load_error()` 恒空、渲染照旧返回真文案（**静默**）。
+修法是**单源裁定**（无开关、无第二份路径、无兜底）：
+
+  ① 包内常量 `SPEC_PATH` **被显式改写** → 以包内为准（终态的唯一真源就是它）；
+  ② 否则（包内常量仍是初始值）→ 用注入取件（宿主薄壳在位时 `T.SPEC_PATH` 可写，语义不变）。
+
+判据：包内/宿主两侧「改谁的常量，谁生效」；`load_error()` 在坏文件下必须有原因。
 """
 from __future__ import annotations
 
@@ -36,6 +49,8 @@ _HOST_PKG_FALLBACK = "game"
 _HERE = os.path.dirname(os.path.abspath(__file__))          # <pkg>/content
 # 包内真源：本模块自己定位（宿主 `game/data/text_specs.json` 只是构建期镜像）
 SPEC_PATH = os.path.join(_HERE, "data", "text_specs.json")
+#: 包内**初始**路径（`spec_path()` 的「包内常量是否被显式改写」判据；不随注入变）
+_PKG_SPEC_PATH = SPEC_PATH
 # 导出投影（编辑器/域导出用；非装载真源）
 PROJECTION_PATH = os.path.join(_HERE, "data", "texts.json")
 
@@ -73,7 +88,13 @@ def bind_log(log=None) -> None:
 
 
 def spec_path() -> str:
-    """当前生效的声明文件路径（宿主薄壳注入的取件优先）。"""
+    """当前生效的声明文件路径（单源裁定，见模块头注「★ R5 修」）。
+
+    ① 包内 `SPEC_PATH` 被显式改写（`T.SPEC_PATH = …`，终态测试/编辑器路径）→ 以包内为准；
+    ② 否则用宿主薄壳注入的取件（`bind_spec_path(source=…)`，其常量同样可写）。
+    """
+    if SPEC_PATH != _PKG_SPEC_PATH:
+        return SPEC_PATH
     if _SPEC_SOURCE is not None:
         return _SPEC_SOURCE()
     return SPEC_PATH

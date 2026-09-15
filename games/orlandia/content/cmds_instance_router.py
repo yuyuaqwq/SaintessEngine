@@ -322,6 +322,32 @@ class InstanceRouterImpl:
         _live = set(IR.living_players(st))
         return any(k in _live for k in self._instance_current_members(group_id, st))
 
+    def _instance_current_members(self, group_id, st) -> list:
+        """当前仍在队伍中的副本成员（str 列表）—— 旧宿主 `InstanceImpl` 混入的**逐字复刻**。
+
+        ★ R4（2026-09-15）补洞：旧宿主 `class InstanceCmds(InstanceImpl, InstanceRouterCmds,
+        CommandBase)` 的多 Mixin MRO 里，本方法由 `InstanceImpl` 提供；整块搬包后
+        `InstanceRouterImpl` 是**独立类**（无基类），`self._instance_current_members(…)`
+        只能靠宿主壳按名回取 —— 本类自带一份，类的静态调用面不再有洞。
+
+        语义（= 旧 `game/commands/instance.py::_instance_current_members`
+        → `game/core/instance_run.py::current_members(group_id, st)`，三态逐字）：
+          · **有队伍**（`db.party_members(group_id, st["leader"])` 非空）
+            → `members ∩ 队伍`（保序；退队者不白拿奖励 / 不被 Boss 攻击 / 不被全灭误杀）
+          · **单人本**（队伍空 且 members == [leader]）→ `[leader]`
+          · **队伍散了且不是单人本** → `[]`
+
+        party 的**取法与调用时机**与旧宿主一致：每次调用现取
+        `db.party_members(group_id, st.get("leader"))`（不缓存、不看会话），故队员退队后
+        的下一帧立即生效。实现体委托**包内单点**
+        `content/instance_cmds.py::_cur_members`（`InstanceImpl._instance_current_members`）；
+        **每次调用重新解析**（不缓存函数对象）⇒ 测试/工具在实现类上打桩照旧生效
+        （`tests/test_battle_n5b4_instance_router.py` / `tests/test_texts_table.py` 的
+        `InstanceImpl._instance_current_members = …`）。
+        """
+        from . import instance_cmds as _IC
+        return _IC.InstanceImpl._instance_current_members(self, group_id, st)
+
     # ------------------------------------------------------------------
     # 主入口
     # ------------------------------------------------------------------
