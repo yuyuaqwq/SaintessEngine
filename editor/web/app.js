@@ -713,7 +713,7 @@ async function selectPkg(id) {
     await loadGlossary(id);            // ★ 控件/引用表也随包（包内 relations.json 的引用 → 下拉）
     renderPkgMenu(); renderRail(); renderSettingsForm(); updateStatusbar();
     closeEntry();
-    await loadActions(false);          // 动作清单随包（包内可有 mech/）
+    loadActionsOnce();                 // ★ 动作清单**后台预热**（不再阻塞切包；冷扫可达数秒）
     await loadHints();                 // 联想数据随包（跨域 key + 已有取值）
     await loadRenderInfo();            // ★ 第 3 层：渲染声明面随包（第 5 档的显隐判据）
     await loadDomain(S.dom);
@@ -1334,6 +1334,20 @@ async function loadActions(fresh) {
   if (fresh) toast(`动作清单已刷新（${S.actions.length} 个）`, 'ok');
 }
 
+/* ★ 动作清单「单飞 + 后台预热」：切包时**不再同步等待**（冷扫可达数秒），
+   改为切包完成后在后台跑；用到的地方（enhanceActionFields）兜底 await 一次。
+   同一时刻只跑一次；失败不抛（清单空 ⇒ 联想不显示，不影响别的）。 */
+let _actionsPending = null;
+function loadActionsOnce() {
+  if (S.actions && S.actions.length) return Promise.resolve();
+  if (!_actionsPending) {
+    _actionsPending = loadActions(false)
+      .catch(() => {})
+      .finally(() => { _actionsPending = null; });
+  }
+  return _actionsPending;
+}
+
 /* 把某个字段的 input 变成「带联想的输入框」（不改元素、不动事件） */
 function attachDatalist(fieldEl, listId, values) {
   const inp = fieldEl.querySelector('input.ctl, textarea.ctl');
@@ -1350,9 +1364,13 @@ function attachDatalist(fieldEl, listId, values) {
 }
 
 /* 表单渲染后的「动作字段」增强 */
-function enhanceActionFields() {
+async function enhanceActionFields() {
   const host = $('formHost');
-  if (!host || !S.actions.length) return;
+  if (!host) return;
+  // ★ 兜底：动作清单改为**后台预热**（不再阻塞切包）。用户若在预热完成前就点进动作字段，
+  //   这里补一次等待 —— 保证联想列表与参数反推不空（原来靠切包时同步 await 保证）。
+  await loadActionsOnce();
+  if (!S.actions.length) return;
   els('.field', host).forEach((f) => {
     const path = f.dataset.path || '';
     const leaf = path.split('.').pop();
