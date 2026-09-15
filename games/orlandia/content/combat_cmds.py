@@ -11,11 +11,12 @@
   攻击/技能面板族/防御/逃跑/讨伐世界Boss/PVP 族/荣誉商店/战前指令），含 `_handle_victory`、
   `_handle_defeat` 两个**已是薄壳**的编排器（B10_BRIEF：本线不动其行为，只搬位置）。
 * **不搬**：命令入口的装饰器/守卫（注册动作必须在宿主：正则来自 `game/data/command_specs.json`，
-  框架注册表 + `_registry` 都从它派生）；**类级常量表**（`_MECH_CN` / `_EFFECT_CN` /
+  框架注册表 + `_registry` 都从它派生）；**常量表**（`_MECH_CN` / `_EFFECT_CN` /
   `_P_BUFF_NAMES` / `_E_BUFF_NAMES` / `_STACK_NAMES` / `_ENEMY_MECH_STACKS` / `_DEBUFF_NAMES` /
   `_RAIN_WINDOW` / `_EXPLORE_RECENT_KEY` / `_EXPLORE_RECENT_MAX` / `_DF139_CLASS_FORMS` /
-  `_FINISHER139_OPTIONS` / `_ARCANE_FIELD_OPTIONS`）原样留宿主类，包内实现体经 `self._X` 读
-  **同一份**（单源，不复制第二份）。
+  `_FINISHER139_OPTIONS` / `_ARCANE_FIELD_OPTIONS`）**B10-L5 期原样留宿主类** —— ★ L7（2026-09-15）
+  已**正位回本模块级**：类属性在宿主壳上取不到（`self` = 壳）⇒ 事故 `EngineShell has no attribute
+  '_EXPLORE_RECENT_KEY'`；现为模块级常量、实现体直接量名读（值一字不改）。
 
 正文改动面（**三类，全部登记**；差异面自检 `overnight/b10_l5_check.py`）
 ---------------------------------------------------------------------
@@ -407,110 +408,125 @@ def _settle_host():
     return _SettleHost()
 
 
+# ============================================================================
+# 模块级常量表（L7 正位：13 张表的**所有者 = 本模块**，不再挂 `class CombatCmds`）
+# ----------------------------------------------------------------------------
+# 背景（线上 2026-09-15 事故）：这 13 张表原为 `class CombatCmds` 的类属性；但本模块的
+# 74 个实现体是**模块级函数**，被宿主壳按名绑定后 `self` = 宿主壳
+# （`host/shell.py::_package_helper` → `functools.partial(fn, shell)`），壳上只有转发、
+# **零包内词汇** ⇒ `self._X` 当场 `AttributeError: EngineShell has no attribute
+# '_EXPLORE_RECENT_KEY'`（快捷指令整条挂）。修法 = 把表放回**本模块**（唯一所有者），
+# 实现体直接读模块全局名 —— 归属正确，且壳一行不用改。
+# 值逐字节取自原类属性（只改归属不改值；改前/改后逐表 sha256 对拍见 out/CONST_SHA.md）。
+# 跨模块读者经 `combat_cmds._EFFECT_CN` 取同一份（`content/player_cmds.py`）。
+# ============================================================================
+
+_RAIN_WINDOW = 1800  # 30 分钟
+
+_EXPLORE_RECENT_KEY = "explore_recent_{gid}_{qq_id}"
+
+_EXPLORE_RECENT_MAX = 3
+
+_MECH_CN = {"rage": "狂暴", "burn": "灼烧", "freeze": "冰冻", "poison": "中毒", "mark": "标记",
+            "shadow": "影袭", "chi": "气力", "wind": "风印", "judge": "审判", "bless": "神恩",
+            "iron": "铁壁", "shield": "圣盾", "arcane": "奥术", "cleanse": "净化", "stun": "眩晕",
+            "spd_down": "减速", "mark_burst": "引爆", "arcane_burst": "奥爆",
+            "bleed": "流血", "bone_rush": "骸骨", "corros": "腐蚀", "curse": "诅咒",
+            "curse_refresh": "诅咒刷新", "element_burst": "元素引爆", "element_burst_3": "三系引爆",
+            "element_burst_all": "全系引爆", "element_multi_mark": "多系印记", "faith_unload": "卸负",
+            "finisher": "终结", "fire_mark": "火印", "guard_core_burst": "磐核爆发",
+            "hunt_mark": "猎印", "ice_mark": "冰印", "lian_duan": "连段", "melody": "旋律",
+            "melody_chant": "吟唱", "poison_burst": "毒爆", "poison_burst_finisher": "毒爆终结",
+            "sacrifice": "献祭", "silence": "沉默", "soul_mark": "魂印", "thunder_mark": "雷印",
+            "zhan_yi": "战意", "zhan_yi_cash": "战意兑换", "zhan_yi_fury": "战意狂暴"}
+
+_EFFECT_CN = {"atk_up": "攻击", "def_up": "防御", "matk_up": "魔攻", "spd_up": "速度", "crit_up": "暴击",
+              "atk_up_strong": "强攻", "matk_up_strong": "强魔攻", "mon_atk_down": "威压", "lifesteal": "吸血",
+              "counter": "反击", "rage_burst": "爆发", "burn_burst": "引爆", "bless_shield": "护盾",
+              "all_stat_cc": "全属性", "arcane_field": "奥术力场", "arcane_matrix": "奥术矩阵",
+              "arcane_shield": "相位盾", "atk_all": "全队攻击", "atk_matk_all": "全队攻魔",
+              "block_reflect": "格挡反伤", "cc_immune": "免控", "cleanse": "净化", "cleanse_all": "净化全队",
+              "crit_all": "全队暴击", "crit_hit_buff": "暴击命中", "disengage_dodge": "脱战闪避",
+              "dodge_buff": "闪避", "dodge_reduce_all": "全队闪避", "element_switch": "换系",
+              "hunt_team_dmg": "猎杀增伤", "matk_all": "全队魔攻", "protect": "守护",
+              "reduce": "减伤", "reduce_all": "全队减伤", "reduce_shield_all": "减伤护盾",
+              "shadow_dance": "影舞", "shield_all": "全队护盾", "shield_all_reduce": "护盾减伤",
+              "shield_block": "格挡盾", "shield_self": "护盾", "spd_all": "全队速度",
+              "spd_buff": "加速", "star_lock": "星轨锁定", "stealth": "潜行", "stealth_cc": "影遁",
+              "taunt": "嘲讽", "vuln": "死亡标记"}
+
+_P_BUFF_NAMES = {
+    "atk_up": "⚔️攻击↑", "atk_up_strong": "⚔️攻击↑↑", "matk_up": "🔮魔攻↑",
+    "matk_up_strong": "🔮魔攻↑↑", "def_up": "🛡️防御↑", "spd_up": "💨速度↑",
+    "crit_up": "💥暴击↑", "counter": "🔄反击", "mon_atk_down": "😵敌攻↓",
+    "food_atk_up": "🍖攻↑", "food_def_up": "🍖防↑", "food_spd_up": "🍖速↑",
+    "food_crit_up": "🍖暴击↑", "food_matk_up": "🍖魔攻↑",
+    # v101.28f 药水强度分档 + 特殊效果
+    "atk_up_big": "⚔️攻击↑↑", "atk_up_small": "⚔️攻击↑", "spd_up_small": "💨速度↑",
+    "crit_up_small": "💥暴击↑", "crit_up_big": "💥暴击↑↑",
+    "next_atk_up": "⚔️蓄力", "heal_up": "✨治疗↑", "magic_resist": "🛡️魔抗↑",
+    "thorns_pot": "🌵反伤", "dodge_pot": "💨闪避", "cc_immune": "🗿免疫控制",
+    "execute_pot": "💀处决",
+    "stun": "🌀眩晕", "freeze": "❄️冻结", "silence": "🤐沉默",
+    "mortal_wound": "🤕重伤",
+    # v125.1 P2-4：补漏显键（对照 BUFF_MULT 24 键 + 全量 p_buffs 写入点）
+    "echo_bless": "✨回声祝福", "matk_up_pot": "🔮魔攻↑", "food_spd_up_small": "🍖速↑",
+    "pene_pot": "🗡️物穿", "pene_magi_pot": "🔮法穿", "lifesteal_pot": "🩸吸血",
+    "crit_dmg_pot": "💥暴伤", "block_pot": "🧱格挡",
+    "spd_down": "💨减速", "atk_down": "😵攻↓", "revenge_atk": "⚔️复仇",
+    "spellblade_surge": "🔮魔涌", "stealth": "🌫️潜行", "dodge_up": "💨闪避↑",
+    # 注：atk_down 由 Boss 开场技『低吼削弱』写入（battle_mech.py _b_opening），
+    # 目前无属性消费端（死键）——状态栏照实显示作透明标注，待数值接入
+    # 注：reduce_all 存减伤百分比（float）且刻数由 _reduce_all_left 单独计时，
+    # 无刻数可显示，故意不进本表（避免"剩0.3 刻"误导）
+}
+
+_E_BUFF_NAMES = {
+    "freeze": "❄️冻结", "stun": "🌀眩晕", "silence": "🤐沉默",
+    "mon_atk_down": "😵攻↓", "mon_atk_up": "⚔️攻↑",
+    "mon_atk_up_strong": "⚔️攻↑↑", "mon_def_up": "🛡️防↑", "def_down": "💔破甲",
+    "spd_down": "💨减速", "poison": "☠️中毒", "mark": "🎯标记", "burn": "🔥灼烧",
+    "summon": "👥召唤", "mortal_wound": "🤕重伤",
+    # v125.1 P2-4：补漏显键（对照全量 e_buffs 写入点：Boss 盾/速/睡眠/减速 + 元素印记）
+    "shield": "🛡️护盾", "spd_up": "💨速↑", "sleep": "😴睡眠",
+    "mon_spd_down": "💨减速", "fire_mark": "🔥火印", "ice_mark": "❄️冰印",
+    "thunder_mark": "⚡雷印",
+}
+
+_STACK_NAMES = {
+    "burn": "🔥灼烧", "poison": "☠️毒层", "rage": "🔥狂暴", "shadow": "🌑影袭",
+    "chi": "🌀气力", "judge": "⚖️审判", "mark": "🎯标记", "wind": "💨风印",
+    "iron": "🪨铁壁", "shield": "🛡️圣盾", "bless": "✨神恩",
+}
+
+_ENEMY_MECH_STACKS = ("burn", "poison", "mark", "bleed")
+
+_DEBUFF_NAMES = {
+    "poison": "☠️毒", "burn": "🔥灼烧", "mark": "🎯标记", "bleed": "🩸流血",
+}
+
+_DF139_CLASS_FORMS = {
+    "cls_zhan_shi": ("狂暴", "fury"),
+}
+
+_FINISHER139_OPTIONS = ("快刀", "满刃", "残血", "满段")
+
+_ARCANE_FIELD_OPTIONS = ("盾", "刃")
+
+
 class CombatCmds:
     """`game.commands.combat.CombatCmds` 的**类入口包内等价面**（B2-C1；接口表第 2 行「公开名」）。
 
-    ⚠️ 单一来源：下面这批类级常量表**逐字取自宿主类** `game/commands/combat.py`（B10-L5 起宿主类
-    保留原表、包内实现体经 `self._X` 读**同一份**）。本波宿主冻结 ⇒ 包内这份是**等价面**
-    （供跨模块读者用：`content/player_cmds.py:1558` 的 `CombatCmds._EFFECT_CN`）；B4 删宿主壳时
-    宿主那份消失、包内这份即唯一来源。对拍证据 = `out/evidence/combatcmds_tables.txt`
-    （逐表值 / 类型 / dict 键序全等，不等 0）。
+    ⚠️ 常量表已**正位**（L7，2026-09-15）：13 张表是本模块的**模块级常量**（见本文件上方
+    `_RAIN_WINDOW` …），**不是**本类的类属性 —— 本模块实现体是模块级函数、绑定后 `self` = 宿主壳，
+    只有「模块级归属」才不依赖壳。本类只保留「名字」这一层（按名取件的等价面）；跨模块读者经
+    `content.combat_cmds._EFFECT_CN` 取同一份（`content/player_cmds.py`）。值一字不改，
+    改前/改后逐表 sha256 对拍见 `out/CONST_SHA.md`。
 
     命令方法本体不在这里 —— 它们是本模块的 **74 个模块级函数**（宿主壳逐个转发调它们）。
     """
 
-    _RAIN_WINDOW = 1800  # 30 分钟
-    
-    _EXPLORE_RECENT_KEY = "explore_recent_{gid}_{qq_id}"
-    
-    _EXPLORE_RECENT_MAX = 3
-    
-    _MECH_CN = {"rage": "狂暴", "burn": "灼烧", "freeze": "冰冻", "poison": "中毒", "mark": "标记",
-                "shadow": "影袭", "chi": "气力", "wind": "风印", "judge": "审判", "bless": "神恩",
-                "iron": "铁壁", "shield": "圣盾", "arcane": "奥术", "cleanse": "净化", "stun": "眩晕",
-                "spd_down": "减速", "mark_burst": "引爆", "arcane_burst": "奥爆",
-                "bleed": "流血", "bone_rush": "骸骨", "corros": "腐蚀", "curse": "诅咒",
-                "curse_refresh": "诅咒刷新", "element_burst": "元素引爆", "element_burst_3": "三系引爆",
-                "element_burst_all": "全系引爆", "element_multi_mark": "多系印记", "faith_unload": "卸负",
-                "finisher": "终结", "fire_mark": "火印", "guard_core_burst": "磐核爆发",
-                "hunt_mark": "猎印", "ice_mark": "冰印", "lian_duan": "连段", "melody": "旋律",
-                "melody_chant": "吟唱", "poison_burst": "毒爆", "poison_burst_finisher": "毒爆终结",
-                "sacrifice": "献祭", "silence": "沉默", "soul_mark": "魂印", "thunder_mark": "雷印",
-                "zhan_yi": "战意", "zhan_yi_cash": "战意兑换", "zhan_yi_fury": "战意狂暴"}
-    
-    _EFFECT_CN = {"atk_up": "攻击", "def_up": "防御", "matk_up": "魔攻", "spd_up": "速度", "crit_up": "暴击",
-                  "atk_up_strong": "强攻", "matk_up_strong": "强魔攻", "mon_atk_down": "威压", "lifesteal": "吸血",
-                  "counter": "反击", "rage_burst": "爆发", "burn_burst": "引爆", "bless_shield": "护盾",
-                  "all_stat_cc": "全属性", "arcane_field": "奥术力场", "arcane_matrix": "奥术矩阵",
-                  "arcane_shield": "相位盾", "atk_all": "全队攻击", "atk_matk_all": "全队攻魔",
-                  "block_reflect": "格挡反伤", "cc_immune": "免控", "cleanse": "净化", "cleanse_all": "净化全队",
-                  "crit_all": "全队暴击", "crit_hit_buff": "暴击命中", "disengage_dodge": "脱战闪避",
-                  "dodge_buff": "闪避", "dodge_reduce_all": "全队闪避", "element_switch": "换系",
-                  "hunt_team_dmg": "猎杀增伤", "matk_all": "全队魔攻", "protect": "守护",
-                  "reduce": "减伤", "reduce_all": "全队减伤", "reduce_shield_all": "减伤护盾",
-                  "shadow_dance": "影舞", "shield_all": "全队护盾", "shield_all_reduce": "护盾减伤",
-                  "shield_block": "格挡盾", "shield_self": "护盾", "spd_all": "全队速度",
-                  "spd_buff": "加速", "star_lock": "星轨锁定", "stealth": "潜行", "stealth_cc": "影遁",
-                  "taunt": "嘲讽", "vuln": "死亡标记"}
-    
-    _P_BUFF_NAMES = {
-        "atk_up": "⚔️攻击↑", "atk_up_strong": "⚔️攻击↑↑", "matk_up": "🔮魔攻↑",
-        "matk_up_strong": "🔮魔攻↑↑", "def_up": "🛡️防御↑", "spd_up": "💨速度↑",
-        "crit_up": "💥暴击↑", "counter": "🔄反击", "mon_atk_down": "😵敌攻↓",
-        "food_atk_up": "🍖攻↑", "food_def_up": "🍖防↑", "food_spd_up": "🍖速↑",
-        "food_crit_up": "🍖暴击↑", "food_matk_up": "🍖魔攻↑",
-        # v101.28f 药水强度分档 + 特殊效果
-        "atk_up_big": "⚔️攻击↑↑", "atk_up_small": "⚔️攻击↑", "spd_up_small": "💨速度↑",
-        "crit_up_small": "💥暴击↑", "crit_up_big": "💥暴击↑↑",
-        "next_atk_up": "⚔️蓄力", "heal_up": "✨治疗↑", "magic_resist": "🛡️魔抗↑",
-        "thorns_pot": "🌵反伤", "dodge_pot": "💨闪避", "cc_immune": "🗿免疫控制",
-        "execute_pot": "💀处决",
-        "stun": "🌀眩晕", "freeze": "❄️冻结", "silence": "🤐沉默",
-        "mortal_wound": "🤕重伤",
-        # v125.1 P2-4：补漏显键（对照 BUFF_MULT 24 键 + 全量 p_buffs 写入点）
-        "echo_bless": "✨回声祝福", "matk_up_pot": "🔮魔攻↑", "food_spd_up_small": "🍖速↑",
-        "pene_pot": "🗡️物穿", "pene_magi_pot": "🔮法穿", "lifesteal_pot": "🩸吸血",
-        "crit_dmg_pot": "💥暴伤", "block_pot": "🧱格挡",
-        "spd_down": "💨减速", "atk_down": "😵攻↓", "revenge_atk": "⚔️复仇",
-        "spellblade_surge": "🔮魔涌", "stealth": "🌫️潜行", "dodge_up": "💨闪避↑",
-        # 注：atk_down 由 Boss 开场技『低吼削弱』写入（battle_mech.py _b_opening），
-        # 目前无属性消费端（死键）——状态栏照实显示作透明标注，待数值接入
-        # 注：reduce_all 存减伤百分比（float）且刻数由 _reduce_all_left 单独计时，
-        # 无刻数可显示，故意不进本表（避免"剩0.3 刻"误导）
-    }
-    
-    _E_BUFF_NAMES = {
-        "freeze": "❄️冻结", "stun": "🌀眩晕", "silence": "🤐沉默",
-        "mon_atk_down": "😵攻↓", "mon_atk_up": "⚔️攻↑",
-        "mon_atk_up_strong": "⚔️攻↑↑", "mon_def_up": "🛡️防↑", "def_down": "💔破甲",
-        "spd_down": "💨减速", "poison": "☠️中毒", "mark": "🎯标记", "burn": "🔥灼烧",
-        "summon": "👥召唤", "mortal_wound": "🤕重伤",
-        # v125.1 P2-4：补漏显键（对照全量 e_buffs 写入点：Boss 盾/速/睡眠/减速 + 元素印记）
-        "shield": "🛡️护盾", "spd_up": "💨速↑", "sleep": "😴睡眠",
-        "mon_spd_down": "💨减速", "fire_mark": "🔥火印", "ice_mark": "❄️冰印",
-        "thunder_mark": "⚡雷印",
-    }
-    
-    _STACK_NAMES = {
-        "burn": "🔥灼烧", "poison": "☠️毒层", "rage": "🔥狂暴", "shadow": "🌑影袭",
-        "chi": "🌀气力", "judge": "⚖️审判", "mark": "🎯标记", "wind": "💨风印",
-        "iron": "🪨铁壁", "shield": "🛡️圣盾", "bless": "✨神恩",
-    }
-    
-    _ENEMY_MECH_STACKS = ("burn", "poison", "mark", "bleed")
-    
-    _DEBUFF_NAMES = {
-        "poison": "☠️毒", "burn": "🔥灼烧", "mark": "🎯标记", "bleed": "🩸流血",
-    }
-    
-    _DF139_CLASS_FORMS = {
-        "cls_zhan_shi": ("狂暴", "fury"),
-    }
-    
-    _FINISHER139_OPTIONS = ("快刀", "满刃", "残血", "满段")
-    
-    _ARCANE_FIELD_OPTIONS = ("盾", "刃")
-
+    # 13 张常量表已下移为**模块级常量**（见本文件上方 `_RAIN_WINDOW` …）：L7 正位，本类不再持有、壳侧零痕迹。
 
 
 class _PoiDom:
@@ -1444,7 +1460,7 @@ def _rain_boost(self, group_id, qq_id) -> bool:
             ts = float(json.loads(raw).get("ts", 0))
         except Exception:
             ts = float(raw)  # 兼容裸时间戳旧值
-        return 0 <= time.time() - ts <= self._RAIN_WINDOW
+        return 0 <= time.time() - ts <= _RAIN_WINDOW
     except Exception:
         return False
 
@@ -1480,20 +1496,20 @@ def _handle_explore_event(self, group_id, qq_id, player, cur_map, _fx=None):
     return False, ""
 
 def _recent_explore_events(self, group_id, qq_id):
-    raw = db.get_event_state(self._EXPLORE_RECENT_KEY.format(gid=group_id, qq_id=qq_id))
+    raw = db.get_event_state(_EXPLORE_RECENT_KEY.format(gid=group_id, qq_id=qq_id))
     if not raw:
         return []
     try:
         lst = json.loads(raw)
-        return [x for x in lst if isinstance(x, str)][-self._EXPLORE_RECENT_MAX:]
+        return [x for x in lst if isinstance(x, str)][-_EXPLORE_RECENT_MAX:]
     except Exception:
         return []
 
 def _remember_explore_event(self, group_id, qq_id, eid):
     recent = self._recent_explore_events(group_id, qq_id)
     recent = [x for x in recent if x != eid] + [eid]
-    db.set_event_state(self._EXPLORE_RECENT_KEY.format(gid=group_id, qq_id=qq_id),
-                       json.dumps(recent[-self._EXPLORE_RECENT_MAX:]))
+    db.set_event_state(_EXPLORE_RECENT_KEY.format(gid=group_id, qq_id=qq_id),
+                       json.dumps(recent[-_EXPLORE_RECENT_MAX:]))
 
 def _poi_daily_used(self, group_id, qq_id, cur, sa_id, poi_id) -> bool:
     """v105 M23 P2-3：POI 每日重置（策划案 02 章 7.6 阶段 D『探索 15% 触发 POI + 每日重置』）。
@@ -2006,9 +2022,9 @@ def _skill_tag(self, info: dict) -> str:
     if info.get("kind") == K_PASSIVE:
         return "被动"
     if info.get("effect"):
-        return self._EFFECT_CN.get(info["effect"], info["effect"])
+        return _EFFECT_CN.get(info["effect"], info["effect"])
     if info.get("mech"):
-        return self._MECH_CN.get(info["mech"], info["mech"])
+        return _MECH_CN.get(info["mech"], info["mech"])
     if info.get("cond"):
         label = info["cond"].get("label", "")
         return label[:2] if label else ""
@@ -2357,7 +2373,7 @@ def _status_line(self, player: dict, b) -> str:
     # 玩家效果源 = effects 单容器（V 系列四容器已合并；旧 buffs 分支随 N10 删除）
     _pb_src = (player.get("effects") or {}) if isinstance(player.get("effects"), dict) else {}
     for k, v in _pb_src.items():
-        if k not in self._P_BUFF_NAMES:
+        if k not in _P_BUFF_NAMES:
             continue
         # dict 条目（saintess_engine {expire,stat,...}/bar 状态）或旧 int 刻号；
         # 无效值（0/空）由 helper 过滤，这里只查名字表避免 dict 比较 TypeError
@@ -2367,7 +2383,7 @@ def _status_line(self, player: dict, b) -> str:
         elif not v or not (v > 0):
             continue
         left_tag, _ = self._buff_left_ticks(k, v, _now_t)
-        pbuf.append(f"{self._P_BUFF_NAMES[k]}{('(' + left_tag + ')') if left_tag else ''}")
+        pbuf.append(f"{_P_BUFF_NAMES[k]}{('(' + left_tag + ')') if left_tag else ''}")
     # 玩家叠层（V 系列：effects 条目 stacks——rage/战意等 stat_scale 声明 key；
     # O96：burn/poison/mark 是敌方减益叠层，不在玩家栏显示）
     stacks = {}
@@ -2375,13 +2391,13 @@ def _status_line(self, player: dict, b) -> str:
         from saintess_engine.battle.state_effects import all_state_effects as _ase
         _stk_table = _ase()
         for _k, _ent in (player.get("effects") or {}).items():
-            if isinstance(_ent, dict) and (_k in _stk_table or _k in self._STACK_NAMES):
+            if isinstance(_ent, dict) and (_k in _stk_table or _k in _STACK_NAMES):
                 _sv = int(_ent.get("stacks", 0) or 0)
                 if _sv > 0:
                     stacks[_k] = _sv
     for k, v in stacks.items():
-        if v and v > 0 and k in self._STACK_NAMES and k not in self._ENEMY_MECH_STACKS:
-            pbuf.append(f"{self._STACK_NAMES[k]}×{v}")
+        if v and v > 0 and k in _STACK_NAMES and k not in _ENEMY_MECH_STACKS:
+            pbuf.append(f"{_STACK_NAMES[k]}×{v}")
     # 玩家护盾（读 player dict shields；expire_at 绝对秒折算，同旧逻辑）
     shields = player.get("shields") or {}
     for sname, s in shields.items():
@@ -2407,7 +2423,7 @@ def _status_line(self, player: dict, b) -> str:
     if not isinstance(_eb_disp, dict):
         _eb_disp = {}
     for k, v in _eb_disp.items():
-        if k not in self._E_BUFF_NAMES:
+        if k not in _E_BUFF_NAMES:
             continue
         # bar 状态/复杂值（shaken/curse = {val, threshold, ...}）非刻 buff，跳过；
         # dict 有 expire（saintess_engine 控制/buff 形态）参与折算，不做 dict>int 比较
@@ -2419,19 +2435,19 @@ def _status_line(self, player: dict, b) -> str:
             if _vsv > 0 and "expire" not in (v or {}) and not v.get("mode"):
                 v = _vsv
             elif _vsv > 0 and k in ("fire_mark", "ice_mark", "thunder_mark", "hunt_mark", "soul_mark"):
-                ebuf.append(f"{self._E_BUFF_NAMES[k]}×{_vsv}")
+                ebuf.append(f"{_E_BUFF_NAMES[k]}×{_vsv}")
                 continue
         elif not v or not (v > 0):
             continue
         # shield 存护盾值（HP 量）、元素印记存层数——非刻语义，按各自格式显示
         if k == "shield":
-            ebuf.append(f"{self._E_BUFF_NAMES[k]}{v}")
+            ebuf.append(f"{_E_BUFF_NAMES[k]}{v}")
             continue
         if k in ("fire_mark", "ice_mark", "thunder_mark"):
-            ebuf.append(f"{self._E_BUFF_NAMES[k]}×{v}")
+            ebuf.append(f"{_E_BUFF_NAMES[k]}×{v}")
             continue
         left_tag, _ = self._buff_left_ticks(k, v, _now_t)
-        ebuf.append(f"{self._E_BUFF_NAMES[k]}{('(' + left_tag + ')') if left_tag else ''}")
+        ebuf.append(f"{_E_BUFF_NAMES[k]}{('(' + left_tag + ')') if left_tag else ''}")
     # 挂敌身条（破绽/诅咒等）：effects[BAR_STATE_PREFIX+key] → 显示当刻积蓄/阈值
     # （结算到当前刻再读；阈值随触发递增，玩家据此决策「继续推还是换目标」）
     try:
@@ -2466,10 +2482,10 @@ def _status_line(self, player: dict, b) -> str:
     # DOT/减益重构（契约 §7）：敌方持续减益（毒/灼烧/标记/流血）读 enemy["debuffs"]
     deb = _eb.get("debuffs") or {}
     for k, d in deb.items():
-        if k in self._DEBUFF_NAMES:
+        if k in _DEBUFF_NAMES:
             _n = int((d or {}).get("n", 0) or 0)
             if _n > 0:
-                ebuf.append(f"{self._DEBUFF_NAMES[k]}×{_n}")
+                ebuf.append(f"{_DEBUFF_NAMES[k]}×{_n}")
     # 异常抗性（dot_res>0 才显示——普通怪不设键=0）
     _dres = float(_eb.get("dot_res", 0) or 0)
     if _dres > 0:
@@ -3491,7 +3507,7 @@ async def _pvp_finish(self, event, group_id, winner_qq, loser_qq, attacker_qq, l
 async def battle_prefs_form(self, event: AstrMessageEvent, group_id, qq_id, player, arg):
     lines = []
     cls_id = _resolve("classes", player.get("class_name", ""))
-    forms = self._DF139_CLASS_FORMS.get(cls_id)
+    forms = _DF139_CLASS_FORMS.get(cls_id)
     if not forms:
         lines.append("🗡️ 当前职业不支持双形态预设（狂战士/龙裔/暮影/淬势者专属）。")
         yield event.plain_result("\n".join(lines))
@@ -3526,8 +3542,8 @@ async def battle_prefs_finisher(self, event: AstrMessageEvent, group_id, qq_id, 
         lines.append("档位：快刀(cp≥3) / 满刃(cp=5) / 残血(HP<40%+cp≥3) / 满段(链值≥8)")
         yield event.plain_result("\n".join(lines))
         return
-    if arg not in self._FINISHER139_OPTIONS:
-        lines.append(f"⚠️ 未知档位『{arg}』！可用：{'/'.join(self._FINISHER139_OPTIONS)}")
+    if arg not in _FINISHER139_OPTIONS:
+        lines.append(f"⚠️ 未知档位『{arg}』！可用：{'/'.join(_FINISHER139_OPTIONS)}")
         yield event.plain_result("\n".join(lines))
         return
     prefs = dict(player.get("battle_prefs") or {})
@@ -3549,8 +3565,8 @@ async def battle_prefs_arcane_field(self, event: AstrMessageEvent, group_id, qq_
         lines.append("档位：盾（护盾，消耗 2 充能 × 8% 魔攻） / 刃（下次奥术技伤害 ×1.3）")
         yield event.plain_result("\n".join(lines))
         return
-    if arg not in self._ARCANE_FIELD_OPTIONS:
-        lines.append(f"⚠️ 未知档位『{arg}』！可用：{'/'.join(self._ARCANE_FIELD_OPTIONS)}")
+    if arg not in _ARCANE_FIELD_OPTIONS:
+        lines.append(f"⚠️ 未知档位『{arg}』！可用：{'/'.join(_ARCANE_FIELD_OPTIONS)}")
         yield event.plain_result("\n".join(lines))
         return
     prefs = dict(player.get("battle_prefs") or {})

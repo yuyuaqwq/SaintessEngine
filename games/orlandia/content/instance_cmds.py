@@ -111,7 +111,8 @@ from .runes import rune_item as _rune_item
 from .pois import subarea_pois as _subarea_pois
 from .panel import player_final_stats                  # 真源 content_rules.panel（同一对象）
 from .combat_cmds import (pet_battle_status_note as _pet_battle_status_note,
-                          resource_stack_text as _resource_stack_text)   # 同一对象（build 后不再裸引用）
+                          resource_stack_text as _resource_stack_text,
+                          _P_BUFF_NAMES, _E_BUFF_NAMES)   # 同一对象（build 后不再裸引用）+ L7 模块级常量表
 from .gameplay_rules import resolve_drop               # 真源 content_rules.gameplay（同一对象）
 from .catalog_rules import (INSTANCE_BOSS_EQUIP_DROP as _INSTANCE_BOSS_EQUIP_DROP,
                             )                          # 真源：宿主聚合层同名（逐值相等，27 键）
@@ -1715,16 +1716,19 @@ class InstanceImpl:
         全队成员血蓝 + 每人职业资源叠层 + buff/减伤/护盾状态 + 选敌引导。
         数据全部从 st（players/enemies/effects 视图键...）取——V 系列战斗状态
         权威 = saintess_engine actor.effects（sync_views 回写 snap.effects），
-        与野外面板共用 _P_BUFF_NAMES/_E_BUFF_NAMES 显示名表
-        （Main mixin 同时含 CombatCmds/InstanceCmds，getattr 兜底测试直用）。
+        与野外面板共用 `combat_cmds` 的**模块级** `_P_BUFF_NAMES` / `_E_BUFF_NAMES` 显示名表
+        （★ L7 正位：表在本模块的包内家，不经 `self` 取 —— 壳上没有，getattr 会静默空表）。
 
         单人副本也走同一面板（我方一行 = 自己），保证观感与野外一致。
         """
         from saintess_engine import formation as FM
         from saintess_engine.formation import alive_units
-        # 显示名表（CombatCmds mixin 提供；独立测试 InstanceCmds 时兜底空表）
-        pbuf_names = getattr(self, "_P_BUFF_NAMES", {}) or {}
-        ebuf_names = getattr(self, "_E_BUFF_NAMES", {}) or {}
+        # 显示名表：★ L7 起真源 = 包内 `content/combat_cmds.py` 的**模块级常量**
+        # （`_P_BUFF_NAMES` / `_E_BUFF_NAMES`，见该文件头「L7 正位」）——
+        # 不再 `getattr(self, …)`：壳上取不到会**静默回落空表**（线上表现为 buff 行整段消失），
+        # 且旧写法只在「宿主 Mixin 汇编」下偶然可取（终态壳没有这些表）。
+        pbuf_names = _P_BUFF_NAMES or {}
+        ebuf_names = _E_BUFF_NAMES or {}
 
         lines = []
         # ① 站位图：敌方阵列 + 我方存活玩家阵列（蓄力带标记，formation_view 处理）

@@ -18,7 +18,8 @@
 ------------------------------------------------------------------------
 1. 函数体内**宿主 import** → **包内直取/同位置惰性取件**（B2-C4 收口）：
    `from . import _identity`（包内 `content/_identity.py`，B2-C4 真搬）；
-   `from .combat import CombatCmds` → `_combat_cmds_cls()`（宿主独有类，包内无同对象）；
+   `from .combat import CombatCmds` → ★ L7（2026-09-15）起直接 `from . import combat_cmds`
+   （常量表已**正位**为模块级，读 `combat_cmds._EFFECT_CN`；原宿主类取件口 `_combat_cmds_cls()` 已删）；
    `from ..core.race_talent_display import format_talent`（2 处）→ 包内 `content/race_talent_display.py`；
    `from ..core.battle_cond_labels import COND_LABELS` → 包内 `content/battle_cond_labels.py`。
 2. 命令开头那两行「取 (group_id, qq_id) + `self._player(...)`」→ 提到宿主薄壳当参数传进来（20 个命令；
@@ -31,8 +32,9 @@
    63 处数据读点切到包内门面**（`from . import catalog_{core,quests,space} as _cat_*`），
    B2-C4（2026-09-14）再把残余 `C.<函数名>` 读口全切**包内直取**（`_ach` / `_idx` / `_stats`，
    与宿主聚合层同一对象，证据 `out/evidence/identity_map.txt`）。
-5. 技能详情 `from .combat import CombatCmds` 那处：宿主 `CombatCmds._EFFECT_CN` 是**类级常量表**，
-   B10 L5 已定「常量表原样留宿主类」（包内 `self._X` 读同一份）→ 本模块经上表第 1 类替身读同一对象。
+5. 技能详情 `from .combat import CombatCmds` 那处：★ L7（2026-09-15）起 `_EFFECT_CN` 是**包内模块级
+   常量**（`content/combat_cmds.py`），本模块 `from . import combat_cmds` 直接读
+   `combat_cmds._EFFECT_CN` —— 不再经宿主类（B10-L5 的「常量表留宿主类」口径已被 L7 正位取代）。
 
 ⚠️ 缺口（报告同步登记）—— **没切**的读点及理由
 --------------------------------------------------
@@ -62,10 +64,8 @@
 """
 from __future__ import annotations
 
-import importlib
 import json
 import re
-import sys
 import time
 
 from saintess_engine.battle.formulas import skill_buff_turns, skill_cond_mult, skill_expr_preview, skill_formula_expr, skill_formula_expr_for_seg, skill_lifesteal_pct, skill_max_level, skill_mech_val, skill_power_mult
@@ -84,10 +84,10 @@ from . import catalog_b143 as _cat_b143
 
 # ============================================================
 # ① 宿主面取件口（B2-C4 收口）—— B2 单元读点已全部**包内直取**；
-#    本口只剩 `commands.combat.CombatCmds` 一个**宿主独有类**（见 `_combat_cmds_cls`）。
+#    ★ L7（2026-09-15）：原本残留的 `commands.combat.CombatCmds` 宿主类取件口
+#    （`_combat_cmds_cls`）随常量表正位一并**删除** —— 本模块不再有宿主类读点，
+#    只剩下面这个通用注入字典（键 = 宿主面名 `content` / `db`）。
 # ============================================================
-_HOST_PKG = "data.plugins.dragonfall.game"      # 运行时（main.py 的模块路径）
-_HOST_PKG_FALLBACK = "game"                     # 测试/工具按 `game.xxx` 直接 import 时
 _INJECTED = {}
 
 
@@ -96,29 +96,6 @@ def bind_host(**objs):
     for k, v in (objs or {}).items():
         if v is not None:
             _INJECTED[k] = v
-
-
-def _combat_cmds_cls():
-    """宿主 `commands.combat.CombatCmds` 类 —— 本文件唯一残留的宿主取件面。
-
-    判据（`out/evidence/hostface_map.txt` + `probe_c4_faces.py`）：`CombatCmds` 类**包内无同对象**
-    （`content/combat_cmds.py` 是该类**方法**的逐字端口 = 模块级函数；类本体 + 类级常量表
-    `_EFFECT_CN` 按 B10-L5 定留宿主类）⇒ 只能惰性取宿主。解析：注入优先 → `sys.modules` →
-    `importlib` → 抛（不静默空跑）。
-    """
-    if "combat" in _INJECTED:
-        return _INJECTED["combat"]
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        m = sys.modules.get("%s.commands.combat" % prefix)
-        if m is not None:
-            return m
-    last = None
-    for prefix in (_HOST_PKG, _HOST_PKG_FALLBACK):
-        try:
-            return importlib.import_module("%s.commands.combat" % prefix)
-        except Exception as exc:                # noqa: BLE001
-            last = exc
-    raise RuntimeError("player_cmds：宿主模块 commands.combat 取不到（%s）——拒绝静默空跑" % (last,))
 
 
 from ._pkgref import DB as db
@@ -134,6 +111,10 @@ from . import stats as _stats                 # noqa: E402
 #   对拍：`overnight/_w12_precheck_sources.py` B → OK（逐值 + 键序，对真源模块；宿主聚合层未导出该名）
 from . import catalog_rules as _cat_rules   # noqa: E402
 EFFECT_RULES = _cat_rules.EFFECT_RULES
+
+# ★ L7（2026-09-15）：技能详情「特效」汉化表的真源 = 包内 `content/combat_cmds.py` 的
+#   **模块级** `_EFFECT_CN`（原为宿主 `CombatCmds` 类属性，绑壳读不到 ⇒ 线上 AttributeError）。
+from . import combat_cmds as _combat_cmds_mod   # noqa: E402
 
 
 # ============================================================
@@ -1540,8 +1521,8 @@ def _skill_detail_message(self, player: dict, skill_name: str) -> str | None:
     if info.get("effect"):
         # v63/#99 汉化：effect key → 中文 tag（与技能列表 _skill_tag 同源映射；
         # 此前 spd_buff/atk_all 等英文 key 原样泄漏到『技能详情·特效』行）
-        CombatCmds = _combat_cmds_cls().CombatCmds
-        eff_cn = CombatCmds._EFFECT_CN.get(info["effect"], info["effect"])
+        # ★ L7：真源 = 包内 `content/combat_cmds.py` 的模块级 `_EFFECT_CN`（不再经宿主类）
+        eff_cn = _combat_cmds_mod._EFFECT_CN.get(info["effect"], info["effect"])
         lines.append(f"特效：{eff_cn}")
     if info.get("team"):
         team_cn = {"heal_all": "治疗全队", "def_all": "防御全队", "reduce_all": "减伤全队",
