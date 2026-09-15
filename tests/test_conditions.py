@@ -187,9 +187,13 @@ def t4_fail_closed():
     check("evaluate 空串 key → ValueError（空键 = 无名条件）",
           raises(ValueError, c.evaluate, "   ", Ctx())[0])
     check("register 空串 key → ValueError", raises(ValueError, c.register, "", None)[0])
-    check("register 非字符串 key → TypeError", raises(TypeError, c.register, 1, None)[0])
-    check("evaluate 非字符串 key → TypeError",
-          raises(TypeError, c.evaluate, object(), Ctx())[0])
+    check("register 不可哈希 key → TypeError", raises(TypeError, c.register, [], None)[0])
+    check("evaluate 不可哈希 key → TypeError",
+          raises(TypeError, c.evaluate, [], Ctx())[0])
+    # 键口径与字典同口径：任意可哈希键都收（内容侧的条件键可能是编号，如 tid=0）
+    check("★ int key 可注册、可求值（编号型条件键）",
+          raises(TypeError, c.register, 0, lambda ctx: True)[0] is False
+          and c.evaluate(0, Ctx()) is True)
     check("register(fn=不可调用) → TypeError（当场报错，不留到求值）",
           raises(TypeError, c.register, "knew", 123)[0])
     check("register(fn=不可调用) 不写进注册表", not c.has("knew"))
@@ -201,6 +205,16 @@ def t4_fail_closed():
 
     check("get 未注册 → None（查表口径：没有就是没有）", c.get("k9") is None)
     check("★ get 是纯查表：不调用判定函数", c.get("k1") is not None)
+    # 迭代口径：与 dict 同口径（迭代键、声明序）——
+    # 若只实现 __getitem__ 而不实现 __iter__，Python 旧式迭代协议会退化成 self[0]/self[1]…
+    _c2 = Conditions()
+    for _k in ("b", "a", "c"):
+        _c2.register(_k, lambda ctx: True)
+    check("★ 迭代口径 = 键、声明序（sorted/for 不退化成一串 __getitem__）",
+          list(_c2) == ["b", "a", "c"] and sorted(_c2) == ["a", "b", "c"],
+          (list(_c2), sorted(_c2)))
+    check("迭代与 keys() 同源", list(_c2) == _c2.keys())
+
     check("has 非字符串 → False（查询不报错）",
           c.has(None) is False and c.has("") is False and c.has(7) is False)
 

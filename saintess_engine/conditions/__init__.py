@@ -59,6 +59,8 @@ from typing import Callable, Iterable, Optional
 
 __all__ = ["Conditions", "Ctx", "UnknownCondition"]
 
+_MISSING = object()   # pop 的"未给默认值"哨兵
+
 
 class UnknownCondition(LookupError):
     """求值一个没注册的 key —— fail-closed：点名，不静默降级成 False/None。"""
@@ -69,11 +71,14 @@ class UnknownCondition(LookupError):
         super().__init__(f"未注册的条件：{key!r}（已注册：{list(self.known)}）")
 
 
-def _check_key(key: object) -> str:
-    """键的口径：非空字符串（不规整、不裁剪、不猜）。"""
-    if not isinstance(key, str):
-        raise TypeError(f"key 必须是字符串，收到 {type(key).__name__}：{key!r}")
-    if not key.strip():
+def _check_key(key: object):
+    """键的口径：任意**可哈希**键（与字典同口径 —— 内容侧的条件键既可能是名，也可能是编号）。
+    字符串键额外要求非空（空串 = 无名条件）；不规整、不裁剪、不猜。"""
+    try:
+        hash(key)
+    except TypeError:
+        raise TypeError(f"key 必须是可哈希对象，收到 {type(key).__name__}：{key!r}") from None
+    if isinstance(key, str) and not key.strip():
         raise ValueError("key 必须非空（空键 = 无名条件，拒绝登记与求值）")
     return key
 
@@ -148,6 +153,25 @@ class Conditions:
     def keys(self) -> list:
         """已注册的 key，**声明序**（注册顺序；同 key 覆盖不动位置）。"""
         return list(self._fns)
+
+    def __getitem__(self, key) -> Callable:
+        """`conds[key]` ≡ `conds.get(key)`，但未注册 → `UnknownCondition`（fail-closed）。"""
+        return self._fn_of(key)
+
+    def __iter__(self):
+        """迭代已注册的 key（与 `dict` 同口径：迭代的是键，且是声明序）。
+        必须显式实现 —— 否则 Python 的旧式迭代协议会退化成 `self[0] / self[1] …`，
+        把 `sorted(conds)` / `for k in conds` 变成一路 `__getitem__` 求值（踩过）。"""
+        return iter(self._fns)
+
+    def pop(self, key: str, default=_MISSING):
+        """摘掉一个 key 并返回它的判定函数（注册表可逆）；未注册时：
+        给了 `default` → 返回它；没给 → `UnknownCondition`。语义同 `dict.pop`。"""
+        if key in self._fns:
+            return self._fns.pop(key)
+        if default is not _MISSING:
+            return default
+        raise UnknownCondition(key, self.keys())
 
     def missing(self, needed: Iterable[str]) -> list:
         """`needed` 里**没实现**的那些，按传入顺序（重复项各算一次）。
