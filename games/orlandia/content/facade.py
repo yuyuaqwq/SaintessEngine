@@ -290,6 +290,13 @@ _PKG_SURFACE = {
     "C": C,
     "c": C,
     "db": "content.persistence",                   # 宿主 `game.db`（包内同库同实现）
+    # ★ P5D-2 §6 缺口③ 补齐（2026-09-15，CLEANUP 线）：`_BIND_SLOTS` 的
+    #   `("content.flow.instance_battle", ("db", "db_update"))` 槽登记了 `db_update` 键，
+    #   但本表原先**没有 `db_update` 项** ⇒ 扇出 `{k: payload[k] for k in keys if k in payload}`
+    #   对 `db_update` 恒不命中 = 空承诺（注入槽永远没人喂，只剩等价兜底在跑）。
+    #   供体 = 该模块的**模块级 6 参写库口**（`db_update`），与 `_default_db_update()` 同源同契约；
+    #   不能直接指 `_default_db_update`（那是 0 参工厂，注入槽契约是 6 参 callable 本身）。
+    "db_update": ("content.flow.instance_battle", "db_update"),
     "data": "content.catalog_legacy",              # 宿主 `game.data`（已删；包内等价物 = 丢名再导出面）
     "T": "content.texts",
     "texts": "content.texts",

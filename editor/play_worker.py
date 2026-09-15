@@ -621,30 +621,53 @@ def _import_host_commands(host_root: str):
     return names
 
 
-def _make_platform_shell(host_root: str, adapter, seed):
-    """平台宿主壳：**插件自己的 `Main(None)`**（`context=None` = 无平台回环，测试同款）。
+def _make_platform_shell(host_root: str, adapter, seed, pkg=None):
+    """平台宿主壳（`env.state["shell"]`）。
 
     为什么用真的壳而不是手搓 stub：包内实现体（`economy_cmds.EconomyImpl` /
     `world_cmds` / `player_cmds` / `combat_cmds` / `instance_cmds` 的模块级函数）以
-    `self` = 壳调用 **~235 个宿主 Mixin 私有方法**（`_bag_view` / `_craft_line` / `_instance_*` …），
+    `self` = 壳调用 **~235 个宿主私有方法**（`_bag_view` / `_craft_line` / `_instance_*` …），
     它们不是引擎 host 契约的一部分，手搓 stub 等于把宿主命令层再抄一遍（不可避免的漂移）。
-    `Main(None)` 在插件测试里是既有惯例（`tests/conftest.py::new_main()`），且：
-      · 不注册平台 handler 回环（`context is None` 分支）；
-      · `__init__` 只做 `db.init_db()` + 幂等的 event_state 清理；
-      · `_uid/_player/_in_any_battle` 等框架钩子当场可用（`CommandBase` 提供）。
     试玩侧与 QQ 侧共用**同一个壳类**：差异只剩「事件对象」（`PlayEvent` vs AstrBot 事件）
-    与「驱动方式」（引擎 `Host.handle` vs `_host_bridge`）。
+    与「驱动方式」（引擎 `Host.handle` vs 通道派发）。
 
-    `_uid` 需要 `self._session`（`CommandBase.__init__` 不设它）→ 此处补上引擎
-    `SessionAdapter`（与 QQ 宿主 `game/commands/base.py::_session` 同款口径）。
+    ★ 终态装配（2026-09-15，P5C/P5F 删壳后）——「测试装配差」修正
+    ----------------------------------------------------------
+    宿主壳已从「`game/commands/**` 194 个 Mixin 汇编」收编为**单文件**
+    `host/shell.py::HostShell`（通用半边在引擎 `CommandBase`，内容半边经
+    `Package.optional_submodule` 转引包内真源）。旧写法 `import game.commands` 取 Mixin 类，
+    在删壳后的树上拿到的是**空 namespace package**（`game/commands/` 只剩两个孤立 `.pyc`，
+    零 `.py`）⇒ `bases=()` ⇒ `type("B20PlayShell", (), {})` ⇒ 壳上 `_uid/_player/_db/...`
+    全缺。**实测**（本文件修改前，`work/host/framework/tests/test_editor_play.py`）：
+    44 条对拍样本里 **34 条** play 侧红，典型
+    `AttributeError: 'B20PlayShell' object has no attribute '_uid'` /
+    `RuntimeError: cmds_player：实现体同步驱动失败：KeyError('class_name')`；且
+    `试玩侧注册建档` 首条就红（共同起点建不出来）⇒ 7 条断言连锁红。
+
+    故**先建终态壳**；仅当宿主树里没有 `host/shell.py`（删壳前的旧树）才回落旧 Mixin 汇编。
+    两条路都要求包已物化：终态壳的存档半边经 `pkg.optional_submodule("persistence")` 取
+    （调用方传 `pkg`）。
+
+    `_static_source`（平台例外命令的静态兜底表）**故意不装**：它要宿主插件包的
+    `registration` 模块在 sys.path 上，而本 worker 只按「host_root 直接可 import」装配
+    （与该函数历史上只 import `game` 的口径一致）；对拍样本里没有平台例外命令。
+    缺省 `None` ⇒ 空静态表（引擎静态路由仍按包内声明工作）。
     """
     if not host_root or not os.path.isdir(os.path.join(host_root, "game")):
         return None
+    # ---- ① 终态宿主壳（删壳后唯一落点）----
     try:
-        from saintess_engine.session import SessionAdapter
-        _session = SessionAdapter(private_fallback="private", unknown_fallback="unknown")
-    except Exception:                     # noqa: BLE001
-        _session = None
+        from host.shell import HostShell
+    except Exception:                     # noqa: BLE001  旧树（删壳前）没有 host/shell.py
+        HostShell = None
+    if HostShell is not None:
+        try:
+            from saintess_engine.session import SessionAdapter
+            _session = SessionAdapter(private_fallback="private", unknown_fallback="unknown")
+        except Exception:                 # noqa: BLE001
+            _session = None
+        return HostShell(pkg=pkg, events=adapter.events, session=_session)
+    # ---- ② 旧树回退：`game.commands` 的 `Main` Mixin 汇编（删壳前）----
     # 插件宿主类 `Main` 的 MRO（`main.py:285`）：按声明序多继承全部命令 Mixin
     # （与插件自己的 `Main` 逐位同序；不 import `main.py`：它顶部 `from astrbot.api import star`
     #  + `AstrMain` 注册壳属平台面，试玩不需要）。
@@ -655,8 +678,11 @@ def _make_platform_shell(host_root: str, adapter, seed):
     bases = tuple(getattr(cmds, n) for n in names if hasattr(cmds, n))
     shell_cls = type("B20PlayShell", bases, {})
     shell = shell_cls()
-    if _session is not None:
-        shell._session = _session
+    try:
+        from saintess_engine.session import SessionAdapter
+        shell._session = SessionAdapter(private_fallback="private", unknown_fallback="unknown")
+    except Exception:                     # noqa: BLE001
+        pass
     return shell
 
 
@@ -775,6 +801,8 @@ def run(payload: dict) -> int:
 
     # 墙钟钉死（可选）：`B20_CLOCK=<unix ts>` / payload["clock"] —— 对拍与复现用。
     # （值已在注入面构造处解析成 `_clock_fixed`；这里把**模块级墙钟读取点**也钉死。）
+    # ★ 必须在 `host.boot()` 之前跑一次：boot 会经 `bind_host` 再注入时钟句柄，
+    #   提前冻住可保证注入面拿到的是同刻值。
     if _clock_fixed is not None:
         try:
             _freeze_clock(_clock_fixed)
@@ -793,6 +821,21 @@ def run(payload: dict) -> int:
               "traceback": traceback.format_exc()})
         return 0
 
+    # ★ 2026-09-15 修（对拍态差根因，见 out/W-CLEANUP.md ③）：**物化后再冻一次时钟**。
+    #   上面那次 `_freeze_clock` 跑在 `host.boot()` 之前，而 `load_package` **不**物化命令模块
+    #   （处理器按名惰性解析，`host.boot()`/首次派发时才 import）⇒ boot 之后才 import 的
+    #   `content.cmds_misc` 拿到的是**真** `datetime` 模块，`datetime.date.today()` = 真墙钟
+    #   （实测 2026-09-15）；而 QQ 侧（`b20_qq_ref.py`）是 **boot() 之后**才冻，`cmds_misc`
+    #   已被 patch ⇒ 拿到 1700000000 → 2023-11-15。两条签到派生列
+    #   （`signin.last_date` / `event_state.daily_fortune_<gid>_<qid>`）因此逐字节不同 ⇒
+    #   对拍里 `签到` 的 state_sha 差，`见闻录` 只是继承上一条的库状态（文本逐字节相同）。
+    #   `_freeze_clock` 幂等（只替换仍指向 stdlib 的模块属性）⇒ 再冻一次 = 与 QQ 侧同序。
+    if _clock_fixed is not None:
+        try:
+            _freeze_clock(_clock_fixed)
+        except Exception:                 # noqa: BLE001
+            pass
+
     handlers = len(host.handlers)
     declared = len(host.commands)
     try:
@@ -800,7 +843,8 @@ def run(payload: dict) -> int:
     except Exception:                     # noqa: BLE001
         total = declared
 
-    shell = _make_platform_shell(host_root, adapter, seed_val)
+    # ★ 终态装配：把**已物化的包对象**交给壳（终态壳的存档半边 = 包内 `persistence`）
+    shell = _make_platform_shell(host_root, adapter, seed_val, pkg=pkg_obj)
     if shell is None:
         shell = PlayShell(host, SessionAdapter(private_fallback="private", unknown_fallback="unknown"),
                           adapter.events)

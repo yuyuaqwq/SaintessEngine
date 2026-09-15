@@ -142,6 +142,35 @@ def _resolve_db_update():
 
 
 # ============================================================
+# ★ P5D-2 §6 缺口③ 补齐（2026-09-15，CLEANUP 线）：`db_update` 的**供体落点**
+# ------------------------------------------------------------
+# `content/facade.py::_BIND_SLOTS` 早已登记本模块要 `db_update` 这个注入键：
+#     ("content.flow.instance_battle", ("db", "db_update"))
+# 但 `facade._PKG_SURFACE`（供体表）里**一直没有 `db_update` 项** ⇒ `bind_host` 扇出时
+# `{k: payload[k] for k in keys if k in payload}` 对 `db_update` 恒不命中 ⇒ 终态树上这个键
+# **永远无人供体**（只能退到同一槽的 `db` 分支 / 再退 `_default_db_update()`）。
+# 也就是说：`_BIND_SLOTS` 那行是一句**空承诺**（接口冻结表说「句柄已在包内接上」，
+# 实际只是恰好有等价兜底，注入面并没有这号供体）。P5D-2 §6 把它记为「剩余缺口」。
+#
+# 修法：把缺省写库口暴露成一个**模块级具名供体** `db_update`（6 参契约，与
+# `_default_db_update()` 同源同实现），并让 facade 的供体表指过来。
+# 为什么不让 facade 直接指 `_default_db_update`：那是**工厂**（0 参返回 callable），
+# 而注入槽的契约是「6 参 callable 本身」，指过去会以 6 个参数调用工厂 → TypeError。
+# 与 `_resolve_db_update()` 无递归：本供体走 `_default_db_update()`，**不**回读
+# `_INJECTED["db_update"]`（否则 facade 注入它回自己 = 自环）。
+# ============================================================
+
+def db_update(group_id, key, hp, mp, max_hp, max_mp):
+    """`db_update` 注入槽的**包内供体**（6 参写库口；facade `_PKG_SURFACE` 取它）。
+
+    语义与 `_default_db_update()` / 注入槽 `db` 分支**逐字相同**
+    （`content.persistence.update_player` 的 6 参关键字包装）——
+    等价于宿主壳 `game/commands/instance_battle.py::_db_update`（已随删壳消失）。
+    """
+    return _default_db_update()(group_id, key, hp, mp, max_hp, max_mp)
+
+
+# ============================================================
 # ★ B2-C3：`script_api` 缺省自解析口
 # ------------------------------------------------------------
 # 真源宿主壳 `game/commands/instance_battle.py::_script_api()` =
