@@ -38,7 +38,8 @@
     ① 引擎根 + 插件根 + 插件 framework 根 → sys.path
     ② `GWEN_GAME_DB` → 独立库（缺省 <db_dir>/play.db；绝不碰真仓任何库）
     ③ `import game`（插件装配入口：装引擎 hook + 加载包 + 宿主替身口注入）
-    ④ `saintess_engine.host.load_package(pkg_dir)` + `install_engine()`（引擎官方包加载器）
+    ④ `saintess_engine.host.load_package(pkg_dir, inject=…)` + `install_engine()`（引擎官方包
+       加载器）—— ★ W2a：包声明了 `bind`，注入面（库路径/时钟/日志/流水 sink）从这里给
     ⑤ `PlayHost(Host)` 覆写 `build_env`：把 `env.state["shell"]` 换成 `PlayShell`
        —— 包内实现体经它做宿主取件（`_uid/_player/_strip_cmd/_page_items/_tip/_broadcast`…）
     ⑥ 逐条 `host.handle(ctx)` → 收 `say()` 段 → 打印 JSON 行
@@ -55,12 +56,38 @@ import json
 import os
 import random
 import sys
+import time
 import traceback
 
 MARKER = "__B20_PLAY__"
 FW_ROOT = os.environ.get("FW_FRAMEWORK_ROOT") or ""
 PKG_DIR = os.environ.get("FW_PKG_DIR") or ""
 HOST_ROOT = os.environ.get("B20_HOST_ROOT") or ""
+
+
+# ============================================================
+# 引擎注入面（★ W2a：包清单声明了 `bind` ⇒ load_package / Host.boot 必须给 inject）
+# ============================================================
+class _PlayLog(object):
+    """最小日志门面（包内唯一取用口 `content/obs.py` 只要 `.warning/.info/...`）。"""
+
+    def _emit(self, *a, **k):
+        return None
+
+    debug = info = warning = error = critical = exception = _emit
+
+
+class _PlayTLog(object):
+    """最小流水控制面：`enabled()=False` + `tlog()=None` = 宿主契约里的「未启用」（零行为）。"""
+
+    def enabled(self) -> bool:
+        return False
+
+    def tlog(self):
+        return None
+
+    def emit(self, kind, actor="", **fields):
+        return None
 
 
 # ============================================================
@@ -639,6 +666,21 @@ def run(payload: dict) -> int:
         return 0
     db = _setup_db(payload)
     _setup_paths(pkg_dir, host_root, engine_root)
+    # ★ W2a（2026-09-15）：包清单声明了 `bind`（`content/facade.py::bind_host`）⇒ 引擎在
+    #   import 包命令模块**之前**要拿到注入面。真·宿主能力只有四类：库路径 / 时钟 /
+    #   日志 / 流水 sink（发奖实现住在包内 `content/reward.py`，扇出里自解析）。
+    #   ① 的插件装配（`game.commands`）仍在前面：它按平台口径注入宿主替身口（首绑优先）。
+    #   ★ 时钟**必须与 B20 的「墙钟钉死」同刻**：`host.boot()` 会在 `_freeze_clock()` 之后
+    #     再跑一次 `bind_host` —— 若这里给 `time.time`，会把冻结值重新拨回真墙钟，
+    #     对拍假红（实测：`created_at` 逐秒漂移）。
+    _clock_raw = payload.get("clock") or os.environ.get("B20_CLOCK") or ""
+    try:
+        _clock_fixed = float(_clock_raw) if _clock_raw not in (None, "") else None
+    except (TypeError, ValueError):
+        _clock_fixed = None
+    inject = {"db_path": db,
+              "clock": (lambda _ts=_clock_fixed: _ts) if _clock_fixed is not None else time.time,
+              "log": _PlayLog(), "tlog": _PlayTLog()}
 
     # ---- ① 插件宿主面（宿主替身口；缺 → 包内数据链会 fail-closed）----
     # ★ 顺序铁律（实测得出的硬约束）：包内 `content/commands.py` 的命令表**只能在宿主
@@ -664,7 +706,7 @@ def run(payload: dict) -> int:
                   "traceback": "\n".join(info.get("errors") or [])})
             return 0
         from saintess_engine.host import load_package   # 包对象（审计/摘要用；与 Host.boot 同一个）
-        primary = load_package(pkg_dir)
+        primary = load_package(pkg_dir, inject=inject)
         primary.install_engine()
     except Exception:
         emit({"ok": False, "stage": "load", "message": "游戏包装配失败",
@@ -726,10 +768,10 @@ def run(payload: dict) -> int:
     random.seed(seed_val)
 
     # 墙钟钉死（可选）：`B20_CLOCK=<unix ts>` / payload["clock"] —— 对拍与复现用。
-    clock_ts = payload.get("clock") or os.environ.get("B20_CLOCK") or ""
-    if clock_ts not in (None, ""):
+    # （值已在注入面构造处解析成 `_clock_fixed`；这里把**模块级墙钟读取点**也钉死。）
+    if _clock_fixed is not None:
         try:
-            _freeze_clock(float(clock_ts))
+            _freeze_clock(_clock_fixed)
         except Exception:                 # noqa: BLE001
             pass
 
@@ -737,7 +779,7 @@ def run(payload: dict) -> int:
     group_id = str(payload.get("group_id") or "g1")
     adapter = PlayAdapter(uid, group_id, seed_val)
     host_cls = _make_host_class()
-    host = host_cls(adapter, pkg_dir, seed=seed_val, id_key="qq_id")
+    host = host_cls(adapter, pkg_dir, seed=seed_val, id_key="qq_id", inject=inject)
     try:
         pkg_obj = host.boot()
     except Exception:
