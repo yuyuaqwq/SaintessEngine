@@ -13,6 +13,36 @@
 const $ = (id) => document.getElementById(id);
 const el = (sel, root) => (root || document).querySelector(sel);
 const els = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+
+/* ── 加载中遮罩（慢操作反馈）─────────────────────────────────────────────────
+   为什么需要：切包时要走「包概览 + 域声明 + 词典 + 动作扫描 + 联想 + 渲染面」，
+   其中**首次**动作扫描是全量 AST（orlandia 实测 ~6s）⇒ 没有反馈就像卡死。
+   设计：① **计数式**（嵌套调用只有最后一个 hideBusy 真的隐藏）；
+        ② **>180ms 才显示**（快操作不闪）；③ 文案可随场景变。 */
+let _busyN = 0, _busyTimer = null;
+function showBusy(text) {
+  _busyN++;
+  const t = $('busyText');
+  if (t && text) t.textContent = text;
+  if (_busyN === 1 && !_busyTimer) {
+    _busyTimer = setTimeout(() => {
+      _busyTimer = null;
+      if (_busyN > 0) { const b = $('busy'); if (b) b.classList.remove('hidden'); }
+    }, 180);
+  }
+}
+function hideBusy() {
+  _busyN = Math.max(0, _busyN - 1);
+  if (_busyN === 0) {
+    if (_busyTimer) { clearTimeout(_busyTimer); _busyTimer = null; }
+    const b = $('busy'); if (b) b.classList.add('hidden');
+  }
+}
+/* 包一层：`await withBusy('文案', () => ...)` —— 异常也保证收起遮罩 */
+async function withBusy(text, fn) {
+  showBusy(text);
+  try { return await fn(); } finally { hideBusy(); }
+}
 const esc = (s) => String(s == null ? '' : s)
   .replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clone = (o) => JSON.parse(JSON.stringify(o == null ? null : o));
@@ -671,19 +701,23 @@ const closePkgMenu = () => { S.pkgOpen = false; $('pkgMenu').classList.add('hidd
 
 async function selectPkg(id) {
   if (!id) return;
-  S.pkgId = id;
-  const r = await api('GET', '/api/package/' + encodeURIComponent(id));
-  if (!r.ok) { toast((r.json && r.json.message) || '打开包失败', 'bad'); return; }
-  S.pkg = r.json;
-  S.dirtyKeys.clear();
-  await loadDomains(id);             // ★ 域表随包：包自带域声明（新域 / 同名覆盖）在这里合并进来
-  await loadGlossary(id);            // ★ 控件/引用表也随包（包内 relations.json 的引用 → 下拉）
-  renderPkgMenu(); renderRail(); renderSettingsForm(); updateStatusbar();
-  closeEntry();
-  await loadActions(false);          // 动作清单随包（包内可有 mech/）
-  await loadHints();                 // 联想数据随包（跨域 key + 已有取值）
-  await loadRenderInfo();            // ★ 第 3 层：渲染声明面随包（第 5 档的显隐判据）
-  await loadDomain(S.dom);
+  // ★ 切包是慢操作（包概览 + 域声明 + 词典 + 动作扫描 + 联想 + 渲染面）——首次可达数秒，
+  //   全程给「加载中」遮罩，用户不会以为卡死。
+  return withBusy('正在加载游戏包 ' + id + ' …', async () => {
+    S.pkgId = id;
+    const r = await api('GET', '/api/package/' + encodeURIComponent(id));
+    if (!r.ok) { toast((r.json && r.json.message) || '打开包失败', 'bad'); return; }
+    S.pkg = r.json;
+    S.dirtyKeys.clear();
+    await loadDomains(id);             // ★ 域表随包：包自带域声明（新域 / 同名覆盖）在这里合并进来
+    await loadGlossary(id);            // ★ 控件/引用表也随包（包内 relations.json 的引用 → 下拉）
+    renderPkgMenu(); renderRail(); renderSettingsForm(); updateStatusbar();
+    closeEntry();
+    await loadActions(false);          // 动作清单随包（包内可有 mech/）
+    await loadHints();                 // 联想数据随包（跨域 key + 已有取值）
+    await loadRenderInfo();            // ★ 第 3 层：渲染声明面随包（第 5 档的显隐判据）
+    await loadDomain(S.dom);
+  });
 }
 
 async function refreshPkg() {
@@ -1290,7 +1324,9 @@ const FIELD_HINT = {
 async function loadActions(fresh) {
   if (!S.pkgId && !fresh) return;
   const q = `?pkg=${encodeURIComponent(S.pkgId || '')}${fresh ? '&fresh=1' : ''}`;
-  const r = await api('GET', '/api/actions' + q);
+  // 冷扫是全量 AST（首次可达数秒）；热走内容戳缓存（约 20ms）⇒ 180ms 门槛下遮罩不会闪
+  const r = await withBusy(fresh ? '正在重扫机制动作…' : '正在扫描机制动作（首次载入较慢）…',
+                           () => api('GET', '/api/actions' + q));
   const j = r.json || {};
   S.actions = j.actions || [];
   S.actionByName = {};

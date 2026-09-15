@@ -1156,3 +1156,19 @@ fieldset.cat>.cat-legend{
 .rt-badge-bad{color:var(--err);border-color:var(--err-soft);background:var(--err-dim)}
 .rt-empty{padding:var(--sp4);text-align:center;font-size:12px}
 .rt-card .rt-grid{margin-top:var(--sp2)}
+
+/* ── 加载中遮罩 ─────────────────────────────────────────────────────────────
+   慢操作（切包 / 冷扫机制动作 / 首次打开大包）给可见反馈，避免被当成卡死。
+   显示门槛由 JS 控制（>180ms 才显），快操作不会闪。 */
+.busy{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+      background:rgba(10,12,18,.42);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px)}
+.busy.hidden{display:none}
+.busy-box{display:flex;align-items:center;gap:12px;padding:16px 22px;border-radius:12px;
+      background:var(--panel,#1b1f2a);border:1px solid var(--line,rgba(255,255,255,.12));
+      box-shadow:0 12px 34px rgba(0,0,0,.38);color:var(--fg,#e8eaf0)}
+.busy-spin{width:20px;height:20px;flex:0 0 auto;border-radius:50%;
+      border:2px solid rgba(255,255,255,.22);border-top-color:var(--accent,#7aa2f7);
+      animation:busy-spin .8s linear infinite}
+@keyframes busy-spin{to{transform:rotate(360deg)}}
+.busy-text{font-size:13px;letter-spacing:.02em;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){.busy-spin{animation-duration:2.4s}}

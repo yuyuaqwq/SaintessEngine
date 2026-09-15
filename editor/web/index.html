@@ -9,6 +9,15 @@
 </head>
 <body>
 <div id="wall"></div>
+
+<!-- 加载中遮罩：慢操作（切包 / 冷扫机制动作）给反馈，用户不会以为卡死。
+     >180ms 才显示，避免快操作闪一下（见 app.js 的 showBusy/hideBusy）。 -->
+<div id="busy" class="busy hidden" role="status" aria-live="polite">
+  <div class="busy-box">
+    <div class="busy-spin" aria-hidden="true"></div>
+    <div class="busy-text" id="busyText">加载中…</div>
+  </div>
+</div>
 <div class="app">
 
   <!-- ═══════════ 顶栏 ═══════════ -->
