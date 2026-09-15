@@ -26,6 +26,7 @@
     rows.where(lambda e: e["n"] > 1)   # 谓词过滤（保序）
     rows.index_of("name")          # {字段值: [id]}（**重名收全**）
     rows.into(dict)                # {id: factory(条目)}（保序保键）
+    rows.reload()                  # 显式重载（原子换引用）→ {"roster": {"before": 3, "after": 4}}
 
     bag = RecordsSet(pkg_dir, {
         "roster": {"key_type": int, "order": (1, 2, 3)},
@@ -35,6 +36,8 @@
     bag.grade.missing
     bag.missing_domains()          # 读不到的域（fail-closed 面）
     bag.unknown                    # AttributeError：未声明的域**不建空壳**
+    bag.reload_all()               # 全部表一起重载（一份失败 → 一张也不换）
+                                   # → {"roster": {"roster": {"before": 3, "after": 4}}, "grade": ...}
 
 **零知识**：引擎不认任何具体域、字段、条目含义 —— `domain` / `field` / `order` / `drop` /
 `key_type` / 谓词 / `factory` 全由内容侧给；本形状不猜字段语义、不改写字段值。
@@ -49,6 +52,18 @@
     条目被 `drop` 剥空                   → 移除该条目 + 留痕（不留空壳）
     索引时条目缺字段 / 值为 None / 不可哈希 → 不参与索引 + 留痕（查询期不抛）
 
+**显式重载**（数据热更）::
+
+    rows.reload()                  # 重新读盘 → **原子换引用**（全部读好、解析好、守卫过才换）
+    bag.reload_all()               # 本集合全部表：先全部读好，再**一起**换（一份失败 → 一张也不换）
+
+* 只由调用方触发：**不做自动 mtime 检查、不做自动失效**（热路径 stat 开销 + 阻塞 event loop +
+  半写风险）—— 什么时候重读是宿主的决定。
+* 任一步失败（读不到 / 坏 JSON / 顶层不是映射 / 顺序守卫不过）→ `RecordsReloadError`
+  （点名域与原因）；**不替换、旧数据继续可读**（fail-closed：不许静默降级）。
+* 成功返回变更摘要 `{"<域>": {"before": 旧条数, "after": 新条数}}` —— **没有变化的域也在**
+  （供宿主打日志）。
+
 **有意不做的事**
 ----------------
 * **不做写入**：资料表只读。`all()` / `index_of()` 返回**内部表本身**（引擎不为十几个读口各留
@@ -57,7 +72,8 @@
   索引，引擎不替内容侧补 `None`。
 * **不给 `factory` 传 id**：`into` 只把**条目**交给 `factory` —— `factory` 的签名只有一种，
   不靠参数嗅探分叉；需要 id 的变换自己遍历 `all()`。
-* **不做缓存失效**：`load()` 只读一次（幂等）。域文件改了要重读 = 新建一个 `Records`。
+* **不做自动失效**：`load()` 只读一次（幂等）；域文件改了要生效 = 调用方**显式** `reload()` /
+  `reload_all()`（引擎不看 mtime、不自己决定时机）。
 * **不做多域装配猜测**：`RecordsSet` 只认 `spec` 里声明过的域；没声明的域**报错**（不建空壳、
   不静默给空表）。
 """
@@ -67,13 +83,29 @@ import json
 import os
 from typing import Any, Callable, Iterable, Optional
 
-__all__ = ["Records", "RecordsSet", "RecordsOrderMismatch"]
+__all__ = ["Records", "RecordsSet", "RecordsOrderMismatch", "RecordsReloadError"]
 
 _UNSET: Any = object()
 
 
 class RecordsOrderMismatch(RuntimeError):
     """顺序声明的条数/成员与域不符时抛（**不许静默改序**）。"""
+
+
+class RecordsReloadError(RuntimeError):
+    """重载失败：点名域与原因；调用方数据保持重载前的状态（**不替换、旧数据继续可用**）。
+
+    `domain` = 出错的域；`reason` = 人读原因；`problems` = 失败前已积累的显式降级留痕（可空）。
+    """
+
+    def __init__(self, domain: str, reason: str, *, problems=None) -> None:
+        self.domain = domain
+        self.reason = reason
+        self.problems = list(problems or [])
+        msg = "%s：重载失败（%s）—— 未替换，旧数据保持可用" % (domain, reason)
+        if self.problems:
+            msg += "；留痕 %d 条：%r" % (len(self.problems), self.problems[:3])
+        super().__init__(msg)
 
 
 class Records:
@@ -99,8 +131,8 @@ class Records:
         self.default = default
         #: 显式降级留痕（空列表 = 干净）。读/建索引期的每一次「显式降级」都会写一条。
         self.problems: list = []
-        self._table: dict = {}
-        self._indices: dict = {}
+        #: `(表, 索引)` —— **一次换引用**发布整版状态（读方只看旧的整版或新的整版）。
+        self._state: tuple = ({}, {})
         self._loaded = False
 
     # ------------------------------------------------------------ 定位 / 读
@@ -108,6 +140,16 @@ class Records:
     def path(self) -> str:
         """域文件路径（`<root>/<sub>/<domain>.json`）。"""
         return os.path.join(self.root, self.sub, "%s.json" % (self.domain,))
+
+    @property
+    def _table(self) -> dict:
+        """当前表（与索引同处一份 `_state`，随它一起换）。"""
+        return self._state[0]
+
+    @property
+    def _indices(self) -> dict:
+        """当前索引缓存（随表一起换引用）。"""
+        return self._state[1]
 
     def _read(self):
         """读域文件 → `(数据, 留痕)`；读不了 → `(None, 原因)`（**不抛**）。"""
@@ -134,13 +176,15 @@ class Records:
                 out[k] = v
         return out
 
-    def _apply_drop(self, table: dict) -> dict:
+    def _apply_drop(self, table: dict, problems: Optional[list] = None) -> dict:
         """剥掉注入型字段（整键移除，**其余字段及其顺序原样**）。
 
         条目被剥空（原本非空、剥完全空）→ 移除该条目并留痕（**不留空壳**；少一条不静默）。
+        `problems` 缺省写本对象留痕；重载的预备读法传自己的局部留痕（失败不污染旧状态）。
         """
         if not self.drop:
             return table
+        log = self.problems if problems is None else problems
         dropped = frozenset(self.drop)
         out: dict = {}
         for k, ent in table.items():
@@ -149,7 +193,7 @@ class Records:
                 continue
             kept = {fk: fv for fk, fv in ent.items() if fk not in dropped}
             if ent and not kept:
-                self.problems.append(
+                log.append(
                     "%s[%r]：条目全部字段都在 drop=%r 里 → 已移除条目（不留空壳）"
                     % (self.domain, k, list(self.drop)))
                 continue
@@ -186,7 +230,7 @@ class Records:
         raw, problem = self._read()
         if problem is not None:
             self.problems.append(problem)
-            self._table = {}
+            self._state = ({}, {})
             return self
         table = self._apply_drop(self._restore_keys(raw))
         if self.order is not None and table:
@@ -194,11 +238,48 @@ class Records:
                 self._check_order(table)
             except RecordsOrderMismatch as exc:
                 self.problems.append(str(exc))
-                self._table = {}
+                self._state = ({}, {})
                 raise
             table = {k: table[k] for k in self.order}
-        self._table = table
+        self._state = (table, {})
         return self
+
+    # ------------------------------------------------------------ 重载
+    def _prepare(self) -> tuple:
+        """读 + 键还原 + 剥字段 + 顺序守卫 → `(新表, 新留痕)`；任一步失败 → `RecordsReloadError`。
+
+        **只读盘、只建新对象**：失败时本对象的表 / 索引 / 留痕 / `_loaded` 全都不动（fail-closed）。
+        """
+        raw, problem = self._read()
+        if problem is not None:
+            raise RecordsReloadError(self.domain, problem)
+        problems: list = []
+        table = self._apply_drop(self._restore_keys(raw), problems)
+        if self.order is not None and table:
+            try:
+                self._check_order(table)
+            except RecordsOrderMismatch as exc:
+                raise RecordsReloadError(self.domain, str(exc), problems=problems) from exc
+            table = {k: table[k] for k in self.order}
+        return table, problems
+
+    def _commit(self, table: dict, problems: list) -> dict:
+        """发布新表（**一次换引用**）→ 该域的变更摘要 `{"<域>": {"before": N, "after": M}}`。"""
+        before = len(self._table)
+        self._state = (table, {})
+        self.problems = problems
+        self._loaded = True
+        return {self.domain: {"before": before, "after": len(table)}}
+
+    def reload(self) -> dict:
+        """按当前声明重新读表（**原子**：全部读好、解析好、守卫过才整体换引用）。
+
+        返回 `{"<域>": {"before": 旧条数, "after": 新条数}}`（**含未变化项**：before == after 也在）。
+        任一步失败（读不到 / 坏 JSON / 顶层不是映射 / 顺序守卫不过）→ 抛 `RecordsReloadError`
+        （点名域与原因），**内部数据保持重载前的状态**（旧表、旧索引、旧留痕都继续可用）。
+        """
+        table, problems = self._prepare()
+        return self._commit(table, problems)
 
     # ------------------------------------------------------------ 表
     @property
@@ -320,6 +401,30 @@ class RecordsSet:
     def missing_domains(self) -> list:
         """声明过的域里读不到的（缺文件 / 坏 JSON / 顺序不符，即 `Records.missing`）。"""
         return sorted(d for d in self._spec if getattr(self, d).missing)
+
+    # ------------------------------------------------------------ 重载
+    def _records(self, domain) -> "Records":
+        """取（或建）域对象，**不触发 `load()`**（重载走自己的读盘路径）。"""
+        obj = object.__getattribute__(self, "__dict__")
+        tables = obj["_tables"]
+        if domain not in tables:
+            tables[domain] = Records(obj["_root"], domain, **obj["_spec"][domain])
+        return tables[domain]
+
+    def reload_all(self) -> dict:
+        """重载本集合内全部表（**全有或全无**：先全部读好、解析好，再一起换引用）。
+
+        返回 `{表名: 该表的 reload() 结果}`。任一张失败 → 抛 `RecordsReloadError`（点名该域），
+        **一张也不替换**（所有表保持重载前的状态；未读过的域也会读入）。
+        """
+        prepared = []
+        for domain in self._spec:
+            rec = self._records(domain)
+            prepared.append((rec,) + rec._prepare())       # 失败：此时还没动过任何表
+        out: dict = {}
+        for rec, table, problems in prepared:
+            out[rec.domain] = rec._commit(table, problems)
+        return out
 
     def __repr__(self) -> str:  # pragma: no cover - 调试用
         return "RecordsSet(domains=%r)" % (sorted(self._spec),)
