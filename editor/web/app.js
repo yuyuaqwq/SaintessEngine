@@ -773,7 +773,9 @@ function showEmptyPkg() {
    导入有四道闸（zip slip / zip bomb / 清单合规 / 引擎版本），细节在 editor/dist.py。 */
 async function exportPkg() {
   if (!S.pkgId) { toast('先选一个游戏包', 'warn'); return; }
-  toast('打包中…', '');
+  // ★ 打包可能较久（含 DIST_smoke 自检）——原来只弹右下角小 toast，容易被忽略；
+  //   改用**全屏加载遮罩**（转圈 + 文案），完成后照旧 toast 结果。
+  return withBusy('正在打包游戏包 ' + S.pkgId + ' …（含自检，稍候）', async () => {
   try {
     const r = await fetch(`/api/package/${encodeURIComponent(S.pkgId)}/export`);
     if (!r.ok) {
@@ -796,11 +798,13 @@ async function exportPkg() {
   } catch (e) {
     toast('导出失败：' + e.message, 'bad');
   }
+  });
 }
 
 async function importPkg(file) {
   if (!file) return;
-  toast(`导入 ${file.name}…`, '');
+  // ★ 导入同样可能较久（四道闸校验）——也用全屏遮罩（原来只有右下角 toast）
+  return withBusy('正在导入 ' + file.name + ' …（四道闸校验）', async () => {
   let buf;
   try { buf = await file.arrayBuffer(); } catch (e) { toast('读文件失败：' + e.message, 'bad'); return; }
   const post = (qs) => fetch('/api/packages/import' + (qs || ''), {
@@ -833,6 +837,7 @@ async function importPkg(file) {
   toast(`已导入 ${j.id}：${rep.domains || 0} 域 / ${rep.entries || 0} 条${warn}`, 'ok');
   await loadPackages();
   await selectPkg(j.id);
+  });
 }
 
 /* ═══════════════════════════ 域切换 ═══════════════════════════ */
