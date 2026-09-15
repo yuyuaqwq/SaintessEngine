@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/event_templates.schema.json",
+  "title": "事件模板（event_templates）—— 模板注册表的投影（模板名 → 实现函数/行号/文档）；函数体不进包",
+  "description": "一条 = 一个已注册的事件模板（表键 = 模板名，如 `loot_gold` / `shrine_bless`）。真源 = 游戏仓 `game/core/event_templates.py` 的 `TEMPLATES` 注册表（`:19` 空字典 + `:22 register()` 装饰器逐个注册；经 `scripts/export_domains/npc_story.py:derive_event_templates` 单向导出，2026-09-13 实测 19 个模板 ↔ 19 个 `tpl_*` 函数 **1:1**，无未注册函数）。**为什么它是域**：模板名是内容侧引用词汇 —— `events` 域的 `template` 字段、`commands/event_menu.py:133` 的档位统计都指向这里；没有这张表，「模板名」就是没有落点的字符串（编辑器里点不开、下拉没有候选）。**这一域不搬行为**：函数体（Python）不能进 JSON，所以导出的是**注册表投影**——函数名、定义行号、docstring（params 说明就写在 docstring 里）；引擎代码仍只在游戏侧，运行时执行走 `execute_event_template`。三个字段全部由真源算出（无人工摘要），`--check` 可逐字节复现。",
+  "x-primary": "event_template",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "模板名（内容侧词汇，如 `loot_gold` / `loot_gold_mats` / `set_state` / `random_choice`）；实测恒等于实现函数名去掉 `tpl_` 前缀"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/event_template"
+  },
+  "$defs": {
+    "event_template": {
+      "type": "object",
+      "title": "事件模板（注册表投影的一条）",
+      "required": [
+        "func",
+        "line",
+        "doc"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "func": {
+          "type": "string",
+          "pattern": "^tpl_[a-z0-9_]+$",
+          "title": "实现函数名",
+          "description": "Python 函数名（实测恒为 `\"tpl_\" + <模板名>`）。函数驻留在游戏仓 `game/core/event_templates.py`，签名 `fn(ctx) -> str`（返回展示文本）；导出器核对这个恒等式，命名漂移即拒绝导出。"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "定义行号",
+          "description": "函数在 `game/core/event_templates.py` 里的定义行（`__code__.co_firstlineno`）—— 给人回查用的证据；源文件一改行号就变（`--check` 会报不一致，这正是它要的效果）。"
+        },
+        "doc": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "函数文档",
+          "description": "函数 docstring 的归一化全文（剥公共缩进、去首尾空行）。**`params` 的键就写在里面**（如 `loot_gold` 的 `params: min/max/scale_lv/header`）—— 这是本域唯一的「参数说明」来源，不另做人工摘要。"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/enchant.schema.json",
+  "title": "附魔（enchant）—— 一条 = 一张源表（配方 / 槽位数 / 大师之作概率）",
+  "description": "本域 = 宿主 `game/data/enchant.py` 的 3 个常量（B14-3 缺口名：`ENCHANT_RECIPES` 4 处 / `ENCHANT_SLOTS` 3 / `ENCHANT_CRIT_CHANCE` 1 —— 见 `content/catalog_items.py` 的「无域可依」登记）。经 `scripts/export_domains/b14_3_gaps.py:derive_enchant` 单向导出（**值原样，零注入**）。\\n\\n**形状**：一条 = 一个源模块的常量组（表键 = 源模块名；条目 = `{源常量名: 值原样}`）—— 同 `equipment`/`factions`/`game_config`。\\n\\n**消费口径**：`ENCHANT_SLOTS[品质]` = 该品质装备的附魔槽位数（面板显示与「附魔 <装备>」判定）；`ENCHANT_CRIT_CHANCE` = 附魔「大师之作」概率（副业等级 ≥10 走 0.10，见 `content/economy_cmds.py` 消费点）；`ENCHANT_RECIPES[属性]` = 一条附魔配方。\\n\\n⚠ `ENCHANT_RECIPES[k][\\\"mats\\\"]` 是**材料名关键词**（如「魔像核心」/「爪」/「之刃」），**不是物品 id**。消费点是「装备材料名包含匹配」→ 导出**不展开、不校验闭合**（翻译成 id ＝ 在包里长出第二份物品表）。",
+  "x-primary": "enchant_group",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "外层键 = 真源模块名（本轮只有 `enchant`；与 `game_config` 的键口径一致：导出期自证「组名 == 真源文件名」）。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/enchant_group"
+  },
+  "$defs": {
+    "enchant_group": {
+      "type": "object",
+      "title": "一个源模块的常量组（`game/data/enchant.py`）—— 本域的**条目本体**",
+      "description": "逐键 = 一张源表；行齐备由导出器 `derive_enchant` 断言（少一行即 raise）。**不写 required**：同 `guild.schema.json` 登记。 逐键 = 一张源表（值**原样**：不补默认值、不改类型、不包装）。  ⚠ 这是 `validate_entry` 实际校验的那一层：域表的一条 = 本对象（与 `game_config.schema.json:$defs.config_group` 同型）；表级的 `additionalProperties` 指向本 def，逐字段类型由下面的 `properties` 管住（实测：把某个成员的类型改坏 → `domain_status` 报红）。",
+      "additionalProperties": true,
+      "minProperties": 1,
+      "properties": {
+        "ENCHANT_RECIPES": {
+          "$ref": "#/$defs/enchant_recipes_table"
+        },
+        "ENCHANT_SLOTS": {
+          "$ref": "#/$defs/enchant_slots_table"
+        },
+        "ENCHANT_CRIT_CHANCE": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "x-widget": "pct",
+          "title": "大师之作概率（`game/data/enchant.py:134`）",
+          "description": "附魔一次触发「大师之作」（额外加成）的概率（实测 0.05）。副业等级 ≥10 的消费点用 0.10，是命令层口径，不在本域。"
+        }
+      }
+    },
+    "enchant_recipes_table": {
+      "type": "object",
+      "title": "附魔配方表（`game/data/enchant.py:9 ENCHANT_RECIPES`）",
+      "description": "键 = 属性 key（实测 7：atk/matk/def/mdef/hp/spd/crit）；值 = 一条配方。",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "title": "一条附魔配方",
+        "required": [
+          "label",
+          "mats",
+          "ratio",
+          "cost"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "title": "属性显示名",
+            "description": "面板上的中文属性名（如「攻击」/「魔攻」）；「附魔 <属性名>」按它匹配。"
+          },
+          "mats": {
+            "type": "array",
+            "title": "材料名关键词",
+            "description": "**材料名**（不是 id）关键词列表，消费点做包含匹配（如 `[\\\"魔像核心\\\", \\\"爪\\\", \\\"之刃\\\"]`）。未展开。",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "ratio": {
+            "type": "number",
+            "minimum": 0,
+            "title": "加成比率",
+            "description": "每次附魔给该属性加的比率（实测 0.18）。"
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "金币成本",
+            "description": "一次附魔的金币消耗。"
+          }
+        }
+      }
+    },
+    "enchant_slots_table": {
+      "type": "object",
+      "title": "附魔槽位表（`game/data/enchant.py:3 ENCHANT_SLOTS`）",
+      "description": "键 = 品质档（实测 3：blue/purple/orange）；值 = 槽位数（int ≥ 0）。品质档名与 `equipment` 域的 `QUALITY` 同空间。",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    }
+  }
+}

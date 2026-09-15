@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/wild_king.schema.json",
+  "title": "野王（wild_king）—— 野外 Boss 看守宝箱的 8 只王：出生图 / 数值基座 / 技能 / 掉落 / 宝箱档",
+  "description": "一条 = 一只野王（表键 = 野王 id，`b_guard_*`）。真源 = 游戏仓 `game/data/wild_king_data.py:62 WILD_KINGS`（**注意**：父任务给的 `game/core/wild_king.py`（622 行）是**纯逻辑** —— 21 个函数：日期+时段哈希 `_day_hash` / 刷新 `wild_king_tick` / 击杀解锁 `wild_king_on_kill` / 宝箱认领 `open_chest`，模块级只有两个 event_state 键名常量；数据表在 data 侧这份 215 行文件里），经 `scripts/export_domains/monster_combat.py:derive_wild_king` 单向导出（条目原样、零注入），实测 **8 条**（harbor_docks 苍狼王 / silver_river 夜歌 / gold_plain 金鬃 / silverwood 林风 / frost_field 霜牙 / cinder_mountain 焰眼 / dragon_ridge 龙骨 / storm_plateau 雷霆 —— 与 `WILD_KING_MAPS` 的 8 图一一对应）。消费端：`game/core/wild_king.py:124 _build_king`（构造野王怪物）、`:224`（按图选池）、`:258` / `:476`（击杀结算与宝箱奖励）。**本域只搬运、不解释**：`skills` 是 monsters 域（怪物技能表）技能 id 引用串、`drops` 是**物品中文名**（非 id）、`map` 是 maps 域 key —— 导出期一律不展开（闭合实测见报告 §4：map 8/8、chest_tier 8/8、skills 10/12、drops 按名 15/15）。未进包（无对应域声明）：`WILD_KING_MAPS`（:130 八图）/ `WILD_KING_PERIODS`（:26 四时段 02/08/14/20）/ `WILD_KING_CHEST_TIERS`（:145 三档 low/mid/high）/ 9 个数值常量（:34-47）。",
+  "x-primary": "wild_king",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "野王 id（实测 8 个全为 `b_guard_*`：`b_guard_cang_mang` / `b_guard_ye_ge` / `b_guard_jin_sui` / `b_guard_lin_feng` / `b_guard_shuang_ya` / `b_guard_yan_yan` / `b_guard_long_gu` / `b_guard_lei_ting`）。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/wild_king"
+  },
+  "$defs": {
+    "wild_king": {
+      "type": "object",
+      "title": "野王定义（wild_king 一条）",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true,
+      "description": "实测 8/8 条都带这 10 个字段（name / icon / map / lv / hp_base / atk_mult / skills / drops / chest_tier / desc）—— 只把 `name` 设为必填（其余按内容侧口径可能扩；给 `drops` 设必填会让「不掉材料的王」判红）。",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "显示名",
+          "description": "野王名（内容侧词汇，如「苍狼王·铁鬃」）。战斗播报/广播用它。"
+        },
+        "icon": {
+          "type": "string",
+          "title": "图标",
+          "description": "展示用字形（表情符号，如 🐺）。"
+        },
+        "map": {
+          "type": "string",
+          "title": "出生图",
+          "description": "maps 域 key（实测 8/8 闭合：harbor_docks / silver_river / gold_plain / silverwood / frost_field / cinder_mountain / dragon_ridge / storm_plateau —— 与 `wild_king_data.py:130 WILD_KING_MAPS` 完全一致）。刷新哈希只从这 8 张里选。"
+        },
+        "lv": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "等级",
+          "description": "野王等级（实测 8 档：20 / 28 / 38 / 48 / 60 / 72 / 84 / 90，随所在图推进）。"
+        },
+        "hp_base": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "基础生命",
+          "description": "构造时的生命基座（`_build_king` 读它，再叠 `atk_mult` 等）；不是最终面板。实测 26000（Lv.20）~ 900000（Lv.90）。"
+        },
+        "atk_mult": {
+          "type": "number",
+          "title": "攻击乘区",
+          "description": "以同 role 公式值为基的攻击乘区（实测 8/8 条**都是 1.3** —— 王的攻击差异靠等级/技能而非这个乘区）。"
+        },
+        "skills": {
+          "type": "array",
+          "x-widget": "lines",
+          "title": "技能表",
+          "description": "monsters 域（怪物技能表 `ms_*`）技能 id 引用串 —— 实测 12 个引用里 **10 个闭合、2 个悬空**（`ms_an_ying_zhua` / `ms_han_bing_zhu_fu`，源侧空引用，导出原样保留不修）。",
+          "items": {
+            "type": "string"
+          }
+        },
+        "drops": {
+          "type": "array",
+          "x-widget": "lines",
+          "title": "掉落物（中文名）",
+          "description": "**物品中文名**（不是 item id）—— 实测 15 个字面量按 items 域 `name` 反查 15/15 命中（如「狼皮」→ `mat_lang_pi`、「野猪牙」→ `mat_ye_zhu_ya`）。按名引用，导出期不做 id 归一（同 npcs 域按名引用歧义的老问题：改名会断链，引用请用 id）。",
+          "items": {
+            "type": "string"
+          }
+        },
+        "chest_tier": {
+          "type": "string",
+          "x-widget": "select",
+          "title": "宝箱档",
+          "description": "宝箱奖励档 —— 真源 `wild_king_data.py:145 WILD_KING_CHEST_TIERS` 的 3 档（`low` / `mid` / `high`，实测 8/8 闭合，每档带 gold_range / bp_chance / gem_chance / equip_chance / rune_chance / stone_range / pages_range / mats / collect）。**该档表尚未进包**（无对应域声明）→ 本字段是**指向包外**的引用串，不枚举、不校验闭合。"
+        },
+        "desc": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "简介",
+          "description": "一句话设定/提示（实测 8/8 有，如「铁港码头的老霸主，据说它的宝箱里装着沉船上的财宝。」）。"
+        }
+      }
+    }
+  }
+}

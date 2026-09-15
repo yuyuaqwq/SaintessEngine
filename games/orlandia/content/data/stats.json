@@ -1,0 +1,402 @@
+{
+  "lv_1": {
+    "level": 1,
+    "exp_to_next": 2600
+  },
+  "lv_10": {
+    "level": 10,
+    "exp_to_next": 9409
+  },
+  "lv_100": {
+    "level": 100,
+    "exp_to_next": 1607650
+  },
+  "lv_11": {
+    "level": 11,
+    "exp_to_next": 10400
+  },
+  "lv_12": {
+    "level": 12,
+    "exp_to_next": 11400
+  },
+  "lv_13": {
+    "level": 13,
+    "exp_to_next": 12500
+  },
+  "lv_14": {
+    "level": 14,
+    "exp_to_next": 13800
+  },
+  "lv_15": {
+    "level": 15,
+    "exp_to_next": 15174
+  },
+  "lv_16": {
+    "level": 16,
+    "exp_to_next": 17300
+  },
+  "lv_17": {
+    "level": 17,
+    "exp_to_next": 19800
+  },
+  "lv_18": {
+    "level": 18,
+    "exp_to_next": 22600
+  },
+  "lv_19": {
+    "level": 19,
+    "exp_to_next": 25800
+  },
+  "lv_2": {
+    "level": 2,
+    "exp_to_next": 3000
+  },
+  "lv_20": {
+    "level": 20,
+    "exp_to_next": 29409
+  },
+  "lv_21": {
+    "level": 21,
+    "exp_to_next": 32400
+  },
+  "lv_22": {
+    "level": 22,
+    "exp_to_next": 35600
+  },
+  "lv_23": {
+    "level": 23,
+    "exp_to_next": 39200
+  },
+  "lv_24": {
+    "level": 24,
+    "exp_to_next": 43200
+  },
+  "lv_25": {
+    "level": 25,
+    "exp_to_next": 47569
+  },
+  "lv_26": {
+    "level": 26,
+    "exp_to_next": 51300
+  },
+  "lv_27": {
+    "level": 27,
+    "exp_to_next": 55300
+  },
+  "lv_28": {
+    "level": 28,
+    "exp_to_next": 59700
+  },
+  "lv_29": {
+    "level": 29,
+    "exp_to_next": 64400
+  },
+  "lv_3": {
+    "level": 3,
+    "exp_to_next": 3500
+  },
+  "lv_30": {
+    "level": 30,
+    "exp_to_next": 69422
+  },
+  "lv_31": {
+    "level": 31,
+    "exp_to_next": 74200
+  },
+  "lv_32": {
+    "level": 32,
+    "exp_to_next": 79200
+  },
+  "lv_33": {
+    "level": 33,
+    "exp_to_next": 84600
+  },
+  "lv_34": {
+    "level": 34,
+    "exp_to_next": 90400
+  },
+  "lv_35": {
+    "level": 35,
+    "exp_to_next": 96561
+  },
+  "lv_36": {
+    "level": 36,
+    "exp_to_next": 102100
+  },
+  "lv_37": {
+    "level": 37,
+    "exp_to_next": 108000
+  },
+  "lv_38": {
+    "level": 38,
+    "exp_to_next": 114200
+  },
+  "lv_39": {
+    "level": 39,
+    "exp_to_next": 120800
+  },
+  "lv_4": {
+    "level": 4,
+    "exp_to_next": 4000
+  },
+  "lv_40": {
+    "level": 40,
+    "exp_to_next": 127693
+  },
+  "lv_41": {
+    "level": 41,
+    "exp_to_next": 134800
+  },
+  "lv_42": {
+    "level": 42,
+    "exp_to_next": 142300
+  },
+  "lv_43": {
+    "level": 43,
+    "exp_to_next": 150200
+  },
+  "lv_44": {
+    "level": 44,
+    "exp_to_next": 158500
+  },
+  "lv_45": {
+    "level": 45,
+    "exp_to_next": 167354
+  },
+  "lv_46": {
+    "level": 46,
+    "exp_to_next": 175800
+  },
+  "lv_47": {
+    "level": 47,
+    "exp_to_next": 184600
+  },
+  "lv_48": {
+    "level": 48,
+    "exp_to_next": 193900
+  },
+  "lv_49": {
+    "level": 49,
+    "exp_to_next": 203700
+  },
+  "lv_5": {
+    "level": 5,
+    "exp_to_next": 4630
+  },
+  "lv_50": {
+    "level": 50,
+    "exp_to_next": 213918
+  },
+  "lv_51": {
+    "level": 51,
+    "exp_to_next": 230300
+  },
+  "lv_52": {
+    "level": 52,
+    "exp_to_next": 247900
+  },
+  "lv_53": {
+    "level": 53,
+    "exp_to_next": 266900
+  },
+  "lv_54": {
+    "level": 54,
+    "exp_to_next": 287400
+  },
+  "lv_55": {
+    "level": 55,
+    "exp_to_next": 309359
+  },
+  "lv_56": {
+    "level": 56,
+    "exp_to_next": 322700
+  },
+  "lv_57": {
+    "level": 57,
+    "exp_to_next": 336700
+  },
+  "lv_58": {
+    "level": 58,
+    "exp_to_next": 351200
+  },
+  "lv_59": {
+    "level": 59,
+    "exp_to_next": 366400
+  },
+  "lv_6": {
+    "level": 6,
+    "exp_to_next": 5300
+  },
+  "lv_60": {
+    "level": 60,
+    "exp_to_next": 382253
+  },
+  "lv_61": {
+    "level": 61,
+    "exp_to_next": 397100
+  },
+  "lv_62": {
+    "level": 62,
+    "exp_to_next": 412500
+  },
+  "lv_63": {
+    "level": 63,
+    "exp_to_next": 428600
+  },
+  "lv_64": {
+    "level": 64,
+    "exp_to_next": 445200
+  },
+  "lv_65": {
+    "level": 65,
+    "exp_to_next": 462540
+  },
+  "lv_66": {
+    "level": 66,
+    "exp_to_next": 479500
+  },
+  "lv_67": {
+    "level": 67,
+    "exp_to_next": 497100
+  },
+  "lv_68": {
+    "level": 68,
+    "exp_to_next": 515400
+  },
+  "lv_69": {
+    "level": 69,
+    "exp_to_next": 534300
+  },
+  "lv_7": {
+    "level": 7,
+    "exp_to_next": 6100
+  },
+  "lv_70": {
+    "level": 70,
+    "exp_to_next": 553894
+  },
+  "lv_71": {
+    "level": 71,
+    "exp_to_next": 591300
+  },
+  "lv_72": {
+    "level": 72,
+    "exp_to_next": 631200
+  },
+  "lv_73": {
+    "level": 73,
+    "exp_to_next": 673800
+  },
+  "lv_74": {
+    "level": 74,
+    "exp_to_next": 719300
+  },
+  "lv_75": {
+    "level": 75,
+    "exp_to_next": 767838
+  },
+  "lv_76": {
+    "level": 76,
+    "exp_to_next": 792900
+  },
+  "lv_77": {
+    "level": 77,
+    "exp_to_next": 818800
+  },
+  "lv_78": {
+    "level": 78,
+    "exp_to_next": 845500
+  },
+  "lv_79": {
+    "level": 79,
+    "exp_to_next": 873100
+  },
+  "lv_8": {
+    "level": 8,
+    "exp_to_next": 7100
+  },
+  "lv_80": {
+    "level": 80,
+    "exp_to_next": 901590
+  },
+  "lv_81": {
+    "level": 81,
+    "exp_to_next": 929800
+  },
+  "lv_82": {
+    "level": 82,
+    "exp_to_next": 958900
+  },
+  "lv_83": {
+    "level": 83,
+    "exp_to_next": 989000
+  },
+  "lv_84": {
+    "level": 84,
+    "exp_to_next": 1019900
+  },
+  "lv_85": {
+    "level": 85,
+    "exp_to_next": 1051881
+  },
+  "lv_86": {
+    "level": 86,
+    "exp_to_next": 1083400
+  },
+  "lv_87": {
+    "level": 87,
+    "exp_to_next": 1115900
+  },
+  "lv_88": {
+    "level": 88,
+    "exp_to_next": 1149400
+  },
+  "lv_89": {
+    "level": 89,
+    "exp_to_next": 1183900
+  },
+  "lv_9": {
+    "level": 9,
+    "exp_to_next": 8200
+  },
+  "lv_90": {
+    "level": 90,
+    "exp_to_next": 1219439
+  },
+  "lv_91": {
+    "level": 91,
+    "exp_to_next": 1254200
+  },
+  "lv_92": {
+    "level": 92,
+    "exp_to_next": 1289900
+  },
+  "lv_93": {
+    "level": 93,
+    "exp_to_next": 1326700
+  },
+  "lv_94": {
+    "level": 94,
+    "exp_to_next": 1364500
+  },
+  "lv_95": {
+    "level": 95,
+    "exp_to_next": 1403343
+  },
+  "lv_96": {
+    "level": 96,
+    "exp_to_next": 1442000
+  },
+  "lv_97": {
+    "level": 97,
+    "exp_to_next": 1481700
+  },
+  "lv_98": {
+    "level": 98,
+    "exp_to_next": 1522600
+  },
+  "lv_99": {
+    "level": 99,
+    "exp_to_next": 1564500
+  }
+}

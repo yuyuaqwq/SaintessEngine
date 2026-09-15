@@ -1,0 +1,438 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/skill.schema.json",
+  "title": "技能（skills）—— 框架模板，取值语义由内容侧定义",
+  "$defs": {
+    "skill": {
+      "type": "object",
+      "title": "技能条目",
+      "description": "PLAYER_SKILLS / BRANCH_SKILLS / TUTOR_SKILLS 里的一条技能定义。",
+      "required": [
+        "name",
+        "kind",
+        "lv",
+        "desc"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "desc": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+        },
+        "lv": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "mp": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cd": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "power": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cast": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "const": "None"
+            }
+          ]
+        },
+        "exprs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "formula": {
+          "type": "array",
+          "title": "结构化公式",
+          "x-widget": "rows",
+          "description": "公式行数组：**一行 = 一段计算**（乘区/取用属性/伤害类型）。与 exprs 二选一，由内容侧求值。实测 6 条技能带它，行键恒为 stat / mult / type / skill_flat（四键同行出现）。",
+          "items": {
+            "type": "object",
+            "title": "公式行",
+            "additionalProperties": true,
+            "properties": {
+              "stat": {
+                "type": "string",
+                "title": "取用属性",
+                "description": "这一行取施法者哪条面板属性（内容侧词汇；实测只用了 atk / matk 两个取值）。"
+              },
+              "mult": {
+                "type": "number",
+                "title": "倍率",
+                "description": "该段乘的系数（实测 1.0）。"
+              },
+              "type": {
+                "type": "string",
+                "title": "伤害类型",
+                "description": "该段走的伤害类型（内容侧词汇；实测只用了 phys，怪物侧同名键有 magi / phys 两档）。"
+              },
+              "skill_flat": {
+                "type": "boolean",
+                "title": "吃技能保底平铺",
+                "description": "标记该段是否叠加「技能保底平铺值」。⚠ 包内 + 引擎侧逐键搜索**未发现**读 formula[].skill_flat 的点（未核实）；真正实现的保底是 SKILL_UP 的 flat_base / flat_per_lv / flat_per_skill（saintess_engine/battle/formulas.py:138 skill_flat_value）。"
+              }
+            }
+          }
+        },
+        "heal_formula": {
+          "type": "string"
+        },
+        "mech": {
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+        },
+        "mech_val": {
+          "type": "number"
+        },
+        "mech_chance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "mech2": {
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+        },
+        "mech2_val": {
+          "type": "number"
+        },
+        "effect": {
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+        },
+        "buff_turns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hits": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "aoe": {
+          "enum": [
+            "all",
+            "front"
+          ]
+        },
+        "target": {
+          "enum": [
+            "back"
+          ]
+        },
+        "element": {
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+        },
+        "summon": {
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+        },
+        "team": {
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+        },
+        "pierce": {
+          "type": "boolean"
+        },
+        "no_mp": {
+          "type": "boolean"
+        },
+        "sleep": {
+          "type": "boolean"
+        },
+        "accuracy": {
+          "type": "boolean"
+        },
+        "crit": {
+          "type": "boolean"
+        },
+        "stance": {
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+        },
+        "auto": {
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+        },
+        "kind_override": {
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+        },
+        "hate_mult": {
+          "type": "number"
+        },
+        "hate_taunt_mult": {
+          "type": "number"
+        },
+        "hate_lock_turns": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lifesteal": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "hp_pct": {
+          "type": "number"
+        },
+        "reduce_all": {
+          "type": "number"
+        },
+        "reduce_pct": {
+          "type": "number"
+        },
+        "charge": {
+          "type": "number"
+        },
+        "res_cost": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "type": "string",
+            "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+          },
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "kill": {
+          "type": "object",
+          "title": "击杀结算",
+          "x-widget": "kv",
+          "description": "击杀时的额外结算块（自由形状，语义由内容侧解释）。实测 1 条技能（死神之箭）带它，键为 hunt_full / poison / hp_lt；键名可按需扩展。",
+          "additionalProperties": true,
+          "properties": {
+            "hunt_full": {
+              "type": "boolean",
+              "title": "猎印满层",
+              "description": "击杀结算的前置标记：目标（猎印 hunt_mark）是否需满层。⚠ 包内 + 引擎侧逐键搜索未发现读取点（未核实）—— 用前看宿主实现。"
+            },
+            "poison": {
+              "type": "integer",
+              "title": "附加毒层",
+              "description": "结算时附加的毒层数（实测 5）。⚠ 同上：未核实读取点。"
+            },
+            "hp_lt": {
+              "type": "number",
+              "title": "生命比例门槛",
+              "description": "目标生命比例低于该值才触发（实测 0.25 = 25%）。⚠ 同上：未核实读取点。"
+            }
+          }
+        },
+        "cond": {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+            },
+            "mult": {
+              "type": "number"
+            },
+            "stacks": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "mech": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
+          }
+        },
+        "passive": {
+          "type": "object",
+          "required": [
+            "proc"
+          ],
+          "additionalProperties": true,
+          "description": "proc 指向被动处理器 id；须在 saintess_engine PASSIVE_PROC 或 core/passive_procs 注册。",
+          "properties": {
+            "proc": {
+              "type": "string",
+              "minLength": 1
+            },
+            "add": {
+              "type": "number"
+            },
+            "mult": {
+              "type": "number"
+            },
+            "stacks": {
+              "type": "integer"
+            },
+            "per_layer": {
+              "type": "number"
+            },
+            "hp_pct": {
+              "type": "number"
+            },
+            "reduce": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "examples": [
+        {
+          "name": "挥砍",
+          "kind": "物理",
+          "lv": 1,
+          "mp": 6,
+          "power": 0.82,
+          "cast": 0.45,
+          "mech": "example_mech",
+          "mech_val": 1,
+          "exprs": [
+            "atk*1 + 20 + player_lv*5.0 + skill_lv*12"
+          ],
+          "desc": "示例：造成一次攻击（随等级成长），命中时叠加 1 层由内容侧声明的机制标记"
+        },
+        {
+          "name": "淬血",
+          "kind": "被动",
+          "lv": 50,
+          "mp": 0,
+          "power": 1.0,
+          "cast": "None",
+          "passive": {
+            "proc": "example_proc",
+            "per_layer": 0.015
+          },
+          "desc": "示例：每层该机制标记额外提供 1.5% 吸血（数值由内容侧声明）"
+        }
+      ]
+    },
+    "player_skills": {
+      "type": "object",
+      "title": "PLAYER_SKILLS：{职业id: {name, skills:{技能id: 技能}}}",
+      "description": "职业基础技能表。表键 = **职业 id**（内容侧词汇，与 classes 域同源，实测 7 个：cls_mu_shi / cls_shi_ren / cls_wu_seng / cls_fa_shi / cls_ci_ke / cls_zhan_shi / cls_you_xia）；内层 skills 的键 = **技能 id**（sk_* 稳定 id）。编辑器按条目渲染（条目形状见 $defs/skill）。",
+      "propertyNames": {
+        "type": "string",
+        "description": "职业 id（内容侧词汇，与 classes 域的表键同源）。"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "name",
+          "skills"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "职业显示名（内容侧词汇）。"
+          },
+          "skills": {
+            "type": "object",
+            "description": "该职业的基础技能表：{技能 id: 技能条目}。",
+            "propertyNames": {
+              "type": "string",
+              "description": "技能 id（sk_* 稳定 id，内容侧词汇）。"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "description": "技能条目 —— 形状见 $defs/skill（编辑器按 x-primary 逐条渲染）。"
+            }
+          }
+        }
+      }
+    },
+    "branch_skills": {
+      "type": "object",
+      "title": "BRANCH_SKILLS：{职业id: {name, branches:{转职阶:{线名:{技能名: 技能}}}}}（技能 key 是中文名，不是 sk_*）",
+      "description": "转职（分支）技能表，三层嵌套：职业 id → **转职阶**（数字字符串，实测 1/2/3）→ **转职线名**（中文，实测 14 个：影舞者 / 毒刃者 / 挽歌者 / 咏叹者 / 元素使 / 磐石行者 / 盾卫士 / 死灵祭司 …）→ **技能中文名**。内层 key 是中文名（实测 238/238 的 key 与条目 name 逐字相同），不是 sk_*。编辑器按条目渲染。",
+      "propertyNames": {
+        "type": "string",
+        "description": "职业 id（内容侧词汇，与 classes 域的表键同源）。"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "name",
+          "branches"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "职业显示名（内容侧词汇）。"
+          },
+          "branches": {
+            "type": "object",
+            "description": "该职业的转职树：{转职阶: {线名: {技能中文名: 技能条目}}}。",
+            "propertyNames": {
+              "pattern": "^[0-9]+$",
+              "description": "转职阶（数字字符串：1 / 2 / 3；阶数由内容侧定）。"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "description": "转职线名（内容侧词汇，中文；实测 14 个）。"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "minProperties": 1,
+                "propertyNames": {
+                  "type": "string",
+                  "description": "技能 key —— 分支技用**中文技能名**（实测与条目 name 逐字相同），不是 sk_*。"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "description": "技能条目 —— 形状见 $defs/skill（编辑器按 x-primary 逐条渲染）。"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tutor_skills": {
+      "type": "object",
+      "title": "TUTOR_SKILLS：{职业id: {技能id: 技能}}",
+      "description": "导师技能表：表键 = **职业 id**（内容侧词汇，与 classes 域同源），内层键 = **技能 id**（sk_* 稳定 id，实测 6 条）。⚠ 源表里「空表职业」（没有任何导师技）在包内域里没有对应条目 —— 键缺失 = 空表。编辑器按条目渲染。",
+      "propertyNames": {
+        "type": "string",
+        "description": "职业 id（内容侧词汇，与 classes 域的表键同源）。"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "description": "技能 id（sk_* 稳定 id，内容侧词汇）。"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "description": "技能条目 —— 形状见 $defs/skill（编辑器按 x-primary 逐条渲染）。"
+        }
+      }
+    }
+  },
+  "x-primary": "skill"
+}

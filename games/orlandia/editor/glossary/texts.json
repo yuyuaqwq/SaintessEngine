@@ -1,0 +1,52 @@
+{
+  "fields": {
+    "key": {
+      "zh": "文案标识",
+      "note": "支持点分命名（如 battle.hit）；渲染时按它取模板，未定义会计入 missing 自检。",
+      "group": "base"
+    },
+    "category": {
+      "zh": "分类",
+      "note": "编辑器分组用；取值由内容侧定义（框架不设枚举）。",
+      "group": "doc"
+    },
+    "value": {
+      "zh": "模板串",
+      "note": "模板串，用 {slot} 占位。未知槽渲染时**原样保留**（不抛），便于发现问题。多行输入 —— 面板/日志类文案常自带换行排版（实测最长 126 字、11 条含换行）。",
+      "group": "base"
+    },
+    "params": {
+      "zh": "占位符声明",
+      "note": "声明的占位符名；缺省由模板自动抽取。声明后会与模板比对（多/少都报）。",
+      "group": "slots"
+    }
+  },
+  "groups": [
+    {
+      "id": "base",
+      "label": "基础",
+      "icon": "📌",
+      "fields": [
+        "key",
+        "value"
+      ]
+    },
+    {
+      "id": "doc",
+      "label": "说明与分组",
+      "icon": "🗂",
+      "fields": [
+        "desc",
+        "category"
+      ]
+    },
+    {
+      "id": "slots",
+      "label": "占位符",
+      "icon": "🧩",
+      "fields": [
+        "params"
+      ]
+    }
+  ]
+}

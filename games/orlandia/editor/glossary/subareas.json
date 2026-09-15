@@ -1,0 +1,112 @@
+{
+  "fields": {
+    "id": {
+      "zh": "子区域 id",
+      "note": "与外层键相同；全图唯一（实测 628/628）。maps 域的 nodes[].id 引用它 —— 编辑器按 id 认节点。"
+    },
+    "name": {
+      "zh": "显示名",
+      "note": "玩家看到的房间名（如 冒险者广场）。628/628 都有。"
+    },
+    "icon": {
+      "zh": "图标",
+      "note": "展示用字形（表情符号）。628/628 都有。"
+    },
+    "type": {
+      "zh": "房间类型（角色取值）",
+      "note": "内容侧词汇，实测 6 个取值（野外 397 / 副本 102 / 城镇 96 / 城镇出口 24 / 隐藏区域 6 / 城镇街道 3）。maps 域的 nodes[].role 就是它的原文照抄 —— 改这里等于改该节点的角色。不枚举。",
+      "widget": "select"
+    },
+    "lv": {
+      "zh": "等级",
+      "note": "房间等级（怪/事件等级基准）。628/628 都有。"
+    },
+    "map": {
+      "zh": "所在地图",
+      "note": "导出器注入（源行里没有）：所在图 id = maps 域 key。实测 628/628 命中 maps 域。",
+      "ref": {
+        "domain": "maps",
+        "by": "key"
+      }
+    },
+    "desc": {
+      "zh": "房间说明",
+      "note": "场景描写整段文案（628/628 都有）。",
+      "widget": "textarea"
+    },
+    "npcs": {
+      "zh": "房间内的 NPC",
+      "note": "NPC id 引用串 → npcs 域（628/628 都有这个键，333 个 distinct id）；空数组 = 无 NPC。未展开。",
+      "widget": "lines",
+      "ref": {
+        "domain": "npcs",
+        "by": "key"
+      }
+    },
+    "monsters": {
+      "zh": "房间内的怪",
+      "note": "内联 6 元组表：[怪 id, 名, role, lv, [技能 id…], [掉落名…]]。多数为空数组（安全房间）。未展开 → 怪物名册 / skills / 材料名。"
+    },
+    "elite": {
+      "zh": "精英怪（单只）",
+      "note": "内联 6 元组或 null（实测 530 null / 98 有）。扁平单怪，不套外层数组。未展开。"
+    },
+    "boss": {
+      "zh": "区域 Boss（单只）",
+      "note": "内联 6 元组或 null（实测 599 null / 29 有）。未展开。"
+    },
+    "funcs": {
+      "zh": "房间设施/功能标签",
+      "note": "能力词汇，实测 11 个取值：quest / shop / craft / alchemy / heal / lore / auction / apprentice / explore / instance / stall。空数组 = 无设施；背后系统多未进包，不枚举。",
+      "widget": "rows"
+    },
+    "shop": {
+      "zh": "有商店",
+      "note": "是否商店房间（628/628 都有这个键，不补默认值）。"
+    },
+    "healer": {
+      "zh": "有治疗点",
+      "note": "是否治疗/休息房间（628/628 都有）。"
+    },
+    "hidden": {
+      "zh": "隐藏房间",
+      "note": "只在 198 条上出现（其余 430 条**没有这个键** —— 缺键 = 没有这个概念，不是 false）。"
+    },
+    "reveal": {
+      "zh": "揭示条件串",
+      "note": "只在 198 条上出现（其中 148 条为 null、50 条为 explore:<n>）。引用串原样保留、不解析（n 是探索次数阈值，判定在游戏侧）。"
+    }
+  },
+  "groups": [
+    {
+      "id": "identity",
+      "label": "身份与位置",
+      "icon": "🗺️",
+      "fields": ["id", "name", "icon", "type", "lv", "map"]
+    },
+    {
+      "id": "scene",
+      "label": "场景说明",
+      "icon": "📜",
+      "fields": ["desc"]
+    },
+    {
+      "id": "occupants",
+      "label": "房间里有什么",
+      "icon": "🐺",
+      "fields": ["npcs", "monsters", "elite", "boss"]
+    },
+    {
+      "id": "facility",
+      "label": "设施与功能",
+      "icon": "🏪",
+      "fields": ["funcs", "shop", "healer"]
+    },
+    {
+      "id": "secret",
+      "label": "隐藏与揭示",
+      "icon": "🔍",
+      "fields": ["hidden", "reveal"]
+    }
+  ]
+}

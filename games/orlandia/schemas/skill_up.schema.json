@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/skill_up.schema.json",
+  "title": "技能升级（skill_up）—— 一条 = 一个技能的升级成长（表键 = 技能稳定 id），无注入",
+  "description": "真源 = 游戏仓 `game/data/skill_up.py:22 SKILL_UP`（**import 之后的运行时表**，305 条；文件由 `scripts/gen_skill_up_p0bc.py` 生成，源侧注明「勿手改数值」），由 `scripts/export_domains/life_growth.py:derive_skill_up` 单向导出，条目**原样**（无注入、无默认值）。**v181 P0B-C 起键是稳定 id**（不再是技能中文名）：基础/导师技 = 现存 `sk_id`（67 条，与 `PLAYER_SKILLS` / `TUTOR_SKILLS` 键一致），分支技 = 生成的 `sk_br_*` id（238 条）—— 中文名只作 `name` 字段（显示/校验）。⚠️ **本域不声明 ref**：305 个键按 `name` 100% 命中包内 skills 域，但按 **id** 只 67/305 命中 —— 包内 skills 域的分支技用的是**显示名**做键（实测 238/238 键 == 该条目 `name`），源侧键空间分叉，归口要等 skills 域那一路（见报告 §缺口）。未进包（同一次搬运没处放）：`SKILL_FLAT_BASE=12` / `SKILL_FLAT_PER_PLAYER_LV=1` / `SKILL_FLAT_PER_SKILL_LV=2` 三个常量（引擎 `skill_flat_value` 与 numeric_lib 共用的基础值口径：`flat = BASE + 玩家等级×PER_PLAYER_LV + 技能等级×PER_SKILL_LV`）。",
+  "x-primary": "skill_up",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "技能稳定 id（实测 305 条：67 条基础/导师 `sk_*`，238 条分支 `sk_br_*`；无中文名键）"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/skill_up"
+  },
+  "$defs": {
+    "skill_up": {
+      "type": "object",
+      "title": "技能升级成长（一条）",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "技能名",
+          "description": "技能显示名（305/305 条都有）。源侧启动自检：每个 key 必须反查得到一个 live 技能（孤儿直接 ImportError）；中文名撞名不再污染配置 —— 所以引用请用这个域的表键（稳定 id），别按 name。"
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "满级",
+          "description": "该技能独立满级（v56.4「不要一刀切」）。实测取值 1（52 条）/ 3（101）/ 4（20）/ 5（132）；源侧口径：增益·嘲讽·团队技与大招=3、治疗大招与条件联动=4、主力输出/治疗核心=5。"
+        },
+        "p": {
+          "type": "integer",
+          "minimum": 0,
+          "title": "每级倍率 +%",
+          "description": "每级伤害/治疗倍率增量（百分点）。实测只有 165/305 条写它（12 共 111 / 10 共 38 / 9 共 16）；**缺省 = 该技能不吃这条成长**（不补默认值）。"
+        },
+        "c": {
+          "type": "integer",
+          "minimum": 0,
+          "title": "每级条件倍率",
+          "description": "每级条件倍率 +c（文件头声明的字段之一）。⚠️ **当前数据一条都没有**（305/305 缺省）—— schema 备位：源侧声明了而数据未用，导出期不替它补。"
+        },
+        "m": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "叠层间隔",
+          "description": "每 m 级叠层 +1（文件头声明的字段之一）。⚠️ **当前数据一条都没有** —— schema 备位。"
+        },
+        "l": {
+          "type": "integer",
+          "minimum": 0,
+          "title": "每级吸血 +%",
+          "description": "每级吸血比例 +2%（文件头声明的字段之一）。⚠️ **当前数据一条都没有** —— schema 备位。"
+        }
+      }
+    }
+  }
+}

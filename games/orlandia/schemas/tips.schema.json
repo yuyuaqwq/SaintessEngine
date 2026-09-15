@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/tips.schema.json",
+  "title": "提示（tips）—— 指令面板的随机提示池；一条 = 一个面板分类（池内按序）",
+  "description": "一条 = 一个指令面板分类的提示池（表键 = 分类名，如 `bag` / `battle` / `weekly` / 兜底 `common`）。真源 = 游戏仓 `game/data/tips.py:8 TIPS`（`{分类: [提示语, …]}`，经 `scripts/export_domains/npc_story.py:derive_tips` 单向导出，2026-09-13 实测 58 个分类 / 池内 333 条提示语）。消费点 `game/core/item_templates.py:33`：面板底部 `TIPS.get(cat) or TIPS.get(\"common\")` 里随机抽 1 条（含 💡 前缀）。**条目的 `lines` 为什么包一层**：宿主导出器要求每条都是 dict（纯列表会被拒收），所以源列表原样装进 `lines` —— 与宿主把 `PCT_STATS` 这类纯列表常量包成 `{\"stats\": [...]}` 同一手法，池内顺序与内容一个字节都没变。",
+  "x-primary": "tip",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "分类名 = 指令面板名（内容侧词汇，如 `accept` / `achievement` / `alchemy` / `common`；实测 58 个互不重复）。`common` 是模板兜底分类（面板分类缺数据时用它）。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/tip"
+  },
+  "$defs": {
+    "tip": {
+      "type": "object",
+      "title": "提示池（一条 = 一个面板分类）",
+      "required": [
+        "lines"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "x-widget": "lines",
+          "rows": 6,
+          "title": "提示语池",
+          "description": "该面板的候选提示语（源列表原样、**保序** —— 抽取是全池随机，顺序不参与判定，但保序便于逐条 diff）。源文件头声明「每条 ≤20 字（不含 💡 前缀）」：这是**文案规范而非导出条件**，导出期与 schema 都不按字数判红（超长该改文案，不该让门禁炸）。实测 58 池共 333 条，每池 3~12 条。"
+        }
+      }
+    }
+  }
+}

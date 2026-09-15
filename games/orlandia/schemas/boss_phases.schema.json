@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/boss_phases.schema.json",
+  "title": "Boss 阶段模板（boss_phases）—— 一条 = 一个四阶段通用模板（表键 = 阶段 id）",
+  "description": "真源 = 游戏仓 `game/data/boss_phases.py:26 BOSS_PHASE_TEMPLATES`（v138.1 阶段状态机，借鉴《云海猎团》03 章 M3.2「阶段状态机」；**import 之后的运行时表**，实测 4 条：normal / enrage / exhaust / rampage），由 `scripts/export_domains/b82_l5.py:derive_boss_phases` 单向导出（条目原样、零注入、不筛、不补默认值）。消费端：Boss 数据（`monster_mods` / `instances` 的 `phases[]`）用 `phase_id` 引用模板或内联覆盖；命令层导演 `game/commands/boss_script.py:193`（**B8.2 线5 已把宿主副本移出仓**，包内端口 = `content/flow/boss_script.py`）在转阶段时调 `merge_phase_config(phase_id, 内联)`（模板为底 + 逐键覆盖）取 `atk_mult` / `add_skills` / `preserve_debuffs`。包内读口 = `content/tables.py` 的 `BOSS_PHASE_TEMPLATES` + `phase_template()` / `merge_phase_config()`（逐行同义端口）。**本域只搬运、不解释**：`add_skills` 的元素是引擎侧技能 id（实测 4/4 条都是空列表，换招写在 MONSTER_MODS/INSTANCES 内联里），故本域不声明引用关系。**`null` 是合法值**（`ult_every` / `exit_turns` / `exit_dmg` / `warn_line` 的「无」，设计文档的 None=不限），不是缺省。",
+  "x-primary": "boss_phase",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "阶段 id（= `BOSS_PHASE_TEMPLATES` 的键，也 = 条目 `id` 字段；实测 4 个：`normal` / `enrage` / `exhaust` / `rampage`；`DEFAULT_PHASE_ORDER` 给出默认推进顺序，逐 Boss 可跳过/自定义，故不枚举）"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/boss_phase"
+  },
+  "$defs": {
+    "boss_phase": {
+      "type": "object",
+      "title": "阶段模板（四件套：数值变化 / 行为变化 / 退出条件 / 反制窗口）",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "name",
+        "icon",
+        "atk_mult",
+        "def_add",
+        "spd_add",
+        "dmg_taken_mult",
+        "add_skills",
+        "freq_mult",
+        "ult_every",
+        "exit_turns",
+        "exit_dmg",
+        "counter",
+        "enter_line",
+        "warn_line",
+        "preserve_debuffs"
+      ],
+      "description": "字段集实测 4/4 条完全一致（16 个键全有），所以这里 required 全列（源侧少一个键 = 引擎 `_phase_apply` 读不到该件套，拒绝静默）。引擎侧字段白名单常量 `PHASE_NUMERIC_KEYS` / `PHASE_BEHAVIOR_KEYS` / `PHASE_EXIT_KEYS` / `PHASE_SCRIPT_KEYS`（真源 :94-97）不在本域（不是条目形状）。",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "title": "阶段 id",
+          "description": "与表键相同（导出器逐条断言一致，不一致就拒绝导出 —— 引擎按 id 引用模板）。"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "阶段名",
+          "description": "展示名（实测：常态 / 激怒 / 疲态 / 狂澜）。"
+        },
+        "icon": {
+          "type": "string",
+          "title": "图标",
+          "description": "演出/预告文案前缀字形（实测：⚖️ / 🔥 / 💧 / 🌊）。"
+        },
+        "atk_mult": {
+          "type": "number",
+          "x-widget": "pct",
+          "title": "攻击倍率",
+          "description": "阶段攻击乘区（1.25 = +25%）。导演读法：`!= 1.0` 才生效（覆盖式），否则回落旧行为 1+0.2×阶段数。实测 1.00 / 1.25 / 0.80 / 1.50。"
+        },
+        "def_add": {
+          "type": "integer",
+          "title": "防御加法",
+          "description": "阶段防御加值（可为负 = 破绽期）。实测 0 / 80 / -120 / 150。"
+        },
+        "spd_add": {
+          "type": "integer",
+          "title": "速度加法",
+          "description": "阶段速度加值（可为负）。实测 0 / 20 / -10 / 30。"
+        },
+        "dmg_taken_mult": {
+          "type": "number",
+          "x-widget": "pct",
+          "title": "承伤倍率",
+          "description": "阶段承伤倍率（>1 = 更脆，核心件外露；1.40 = 疲态 H+0.40）。实测 1.0 / 1.4。"
+        },
+        "add_skills": {
+          "type": "array",
+          "x-widget": "lines",
+          "title": "换招表",
+          "description": "转阶段追加的技能（**引擎侧技能 id 串**，导演幂等 append 进 `actor.skills` + 切 `auto_act`）。实测 **4/4 条都是空列表** —— 逐 Boss 换招写在 MONSTER_MODS/INSTANCES 的 phases 内联里，不落通用模板；故本域不声明 ref。",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "freq_mult": {
+          "type": "number",
+          "x-widget": "pct",
+          "title": "行动频率倍率",
+          "description": "阶段行动频率（<1 = 降频，如疲态 0.50 = 每 2 刻一动）。实测 1.0 / 0.5。"
+        },
+        "ult_every": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "title": "全场大招间隔（刻）",
+          "description": "每 N 刻释放一次全场大招；`null` = 无此行为（**合法值，不是缺省**）。实测 null / 3。"
+        },
+        "exit_turns": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "title": "退出刻数",
+          "description": "阶段持续刻数；`null` = 不限（设计文档 None=不限）。实测 null / 8 / 5。"
+        },
+        "exit_dmg": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "title": "退出承伤阈值",
+          "description": "累计承伤达到即退出阶段；`null` = 不限。实测 4/4 条都是 null（本批没人用）。"
+        },
+        "counter": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "反制提示",
+          "description": "写入战报的解题引导（「阶段是内容单位不是血量单位——强度靠要解的题」）。"
+        },
+        "enter_line": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "进场文案",
+          "description": "进入本阶段时的演出句。"
+        },
+        "warn_line": {
+          "type": ["string", "null"],
+          "title": "预告文案",
+          "description": "接近本阶段的阈值预告；`null` = 无预告（实测常态那条是 null）。"
+        },
+        "preserve_debuffs": {
+          "type": "boolean",
+          "title": "保留异常层数",
+          "description": "阶段转换时是否保留异常层数（v138.2 律三；`false` 才触发净化）。实测 4/4 条都是 true。"
+        }
+      }
+    }
+  }
+}

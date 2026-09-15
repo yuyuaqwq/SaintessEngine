@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/achievements.schema.json",
+  "title": "成就（achievements）—— 119 条成就表；cond 是判定类型 + 参数，奖赏/称号原样",
+  "description": "一条 = 一个成就（表键 = 成就 id，实测全部 `ach_*`）。真源 = 游戏仓 `game/data/achievements.py:25 ACHIEVEMENTS`（**一张 list，全量 119 条**，无二次 update），经 `scripts/export_domains/shop_econ.py:derive_achievements` 单向导出（2026-09-13 实测 119 条）。**判定入口**：`game/core/achievements.py cond_met()` → `game/core/achievement_conds.py:22 COND_CHECKS[cond.type]`（`cond` 一个都不解释：`type` 是 `achievement_conds` 域的键空间）。**消费点**：`core/achievements.py` 的 `check_achievements` / `achievement_points`（普通 1 分 / 隐藏 2 分）/ `claim_achievement_rewards`（发 `reward`）、`commands/social.py` 成就面板。`reward.items` 的 key 是 `mat_*`/`i_*` 稳定 ID → items 域；`title` 是称号名（与 `data/titles.py TITLES` 同名不同表）。实测分布：cat 6 值（战斗 23 / 探索 22 / 副业 29 / 隐藏 19 / 社交 11 / 成长 15）；points 1（100 条）或 2（19 条）；奖励 `reward.items` 119/119、`reward.exp` 19 条；`bonus` 属性加成 25 条。",
+  "x-primary": "achievement",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^ach_[a-z0-9_]*$",
+    "description": "成就 id（内容侧词汇，实测 119/119 都是 `ach_*` 前缀）"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/achievement"
+  },
+  "$defs": {
+    "achievement": {
+      "type": "object",
+      "title": "成就（ACHIEVEMENTS 的一条）",
+      "required": [
+        "id",
+        "cat",
+        "name",
+        "desc",
+        "cond",
+        "points",
+        "reward"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "title": "成就 id",
+          "description": "与表键相同（实测 119/119 一致），便于按条目自读。"
+        },
+        "cat": {
+          "type": "string",
+          "minLength": 1,
+          "title": "分类",
+          "description": "成就分类（实测 6 值：战斗 / 成长 / 探索 / 社交 / 副业 / 隐藏）。**不枚举** —— 面板按它分组，源侧分类会扩。"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "成就名",
+          "description": "成就显示名（内容侧词汇）。"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "title": "解锁称号名",
+          "description": "达成即获得的称号名（显示在称号列表；实测 119/119 都有）。与 `game/data/titles.py TITLES` 是**两张表**（同名不同条目，条件与奖励以成就侧为准）。"
+        },
+        "desc": {
+          "type": "string",
+          "minLength": 1,
+          "title": "达成说明",
+          "description": "给玩家看的达成条件说明（内容侧文案）。"
+        },
+        "cond": {
+          "type": "object",
+          "title": "达成条件",
+          "x-widget": "kv",
+          "description": "`{type, …参数}` —— `type` 指向 `achievement_conds` 域（47 个注册类型），其余键是该类型读的参数。实测用到的键共 8 种：`type`(119) / `value`(95) / `key`(47) / `keyword`(3) / `keywords`(2) / `flag`(3) / `inst`(1) / `no_death`(1)。**未展开**：`inst` 指向 instances 域、`flag` 是内容侧 flag 名、`key`/`keywords` 是职业统计键/怪物关键词。",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "title": "条件类型",
+              "description": "判定类型 → `game/core/achievement_conds.py COND_CHECKS` 注册表（见 `achievement_conds` 域）。"
+            },
+            "value": {
+              "type": "integer",
+              "title": "阈值",
+              "description": "计数/等级阈值（实测 95 条有它）。"
+            },
+            "key": {
+              "type": "string",
+              "minLength": 1,
+              "title": "统计键",
+              "description": "副业/统计键（如 `gather_count` / `mine_count`；实测 47 条）。"
+            },
+            "keyword": {
+              "type": "string",
+              "minLength": 1,
+              "title": "怪物关键词",
+              "description": "按名筛选怪物的关键词（实测 3 条，如「史莱姆」「龙」）。"
+            },
+            "keywords": {
+              "type": "array",
+              "title": "怪物关键词组",
+              "description": "多关键词（任一命中即计；实测 2 条，如 [\"亡灵\",\"骷髅\",\"僵尸\",\"幽灵\"]）。",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "inst": {
+              "type": "string",
+              "minLength": 1,
+              "title": "副本 id",
+              "description": "指定副本 id（实测 1 条）→ instances 域，**未展开**。"
+            },
+            "flag": {
+              "type": "string",
+              "minLength": 1,
+              "title": "玩家 flag",
+              "description": "玩家对话 flag 名（内容侧词汇；实测 3 条）。"
+            },
+            "no_death": {
+              "type": "boolean",
+              "title": "无死亡要求",
+              "description": "附加开关（实测 1 条：副本无死亡通关）。"
+            }
+          }
+        },
+        "points": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "成就点数",
+          "description": "成就点（实测 1 = 普通 100 条 / 2 = 隐藏 19 条；`achievement_points` 只累加，无等级划分 —— 14 章四「成就等级体系」未实装）。"
+        },
+        "reward": {
+          "type": "object",
+          "title": "奖励",
+          "x-widget": "kv",
+          "description": "领取时由 `claim_achievement_rewards` 发放。字段实测只有 `exp`（19 条）与 `items`（119/119）；两条都可缺省（不补）。",
+          "properties": {
+            "exp": {
+              "type": "integer",
+              "minimum": 0,
+              "title": "经验",
+              "description": "经验奖励（实测 19 条有它）。"
+            },
+            "items": {
+              "type": "object",
+              "title": "物品奖励",
+              "x-widget": "kv",
+              "description": "物品 key → 数量（实测全部是 `mat_*`/`i_*` 稳定 ID，如 `mat_jing_tie` / `i_chest_silver`）→ items 域，**未展开**。发放端 `_key_to_id` 兼容中文名，但 ID 优先。",
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        "bonus": {
+          "type": "object",
+          "title": "属性加成",
+          "x-widget": "kv",
+          "description": "解锁即生效的属性加成（与 `data/titles.py TITLES` 的 `bonus` 合并消费；实测 25 条，键如 atk/def/crit/spd/matk/mdef）。",
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

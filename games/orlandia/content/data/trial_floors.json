@@ -1,0 +1,482 @@
+{
+  "1": {
+    "floor": 1,
+    "name": "磐岩试炼",
+    "guard": "磐岩守卫",
+    "lv": 71,
+    "role": "dps",
+    "skills": [
+      "ms_lian_zhan",
+      "ms_zhao_ji"
+    ],
+    "hp_mult": 1.1,
+    "atk_mult": 1.0,
+    "reward_exp": 66000,
+    "reward_gold": 8800,
+    "desc": "第一层：沉重的磐岩守卫挡住去路，它是每一位登塔者最初的磨刀石。"
+  },
+  "10": {
+    "floor": 10,
+    "name": "深渊试炼·一",
+    "guard": "深渊守望者",
+    "lv": 80,
+    "role": "healer",
+    "skills": [
+      "ms_an_ying_zhi_liao",
+      "ms_fu_ji"
+    ],
+    "hp_mult": 1.595,
+    "atk_mult": 1.27,
+    "reward_exp": 113400,
+    "reward_gold": 17590,
+    "desc": "第十层：深渊之力在此汇聚成门，守门者凝视着每一个登塔者。"
+  },
+  "11": {
+    "floor": 11,
+    "name": "深渊试炼·二",
+    "guard": "深渊回响",
+    "lv": 81,
+    "role": "dps",
+    "skills": [
+      "ms_lian_zhan",
+      "ms_zhao_ji"
+    ],
+    "hp_mult": 1.65,
+    "atk_mult": 1.3,
+    "reward_exp": 120400,
+    "reward_gold": 19000,
+    "desc": "第十一层：深渊的回响越来越重，连石壁都在低语你的名字。"
+  },
+  "12": {
+    "floor": 12,
+    "name": "深渊试炼·三",
+    "guard": "深渊魔裔",
+    "lv": 82,
+    "role": "caster",
+    "skills": [
+      "ms_an_ying_jian",
+      "ms_bao_dan"
+    ],
+    "hp_mult": 1.705,
+    "atk_mult": 1.33,
+    "reward_exp": 127900,
+    "reward_gold": 20520,
+    "desc": "第十二层：扭曲的深渊魔裔在此徘徊，它渴望吞噬新鲜的灵魂。"
+  },
+  "13": {
+    "floor": 13,
+    "name": "深渊试炼·四",
+    "guard": "深渊炎魔",
+    "lv": 83,
+    "role": "speedster",
+    "skills": [
+      "ms_ji_pao",
+      "ms_qian_xing"
+    ],
+    "hp_mult": 1.76,
+    "atk_mult": 1.36,
+    "reward_exp": 135800,
+    "reward_gold": 22160,
+    "desc": "第十三层：这里的空气带着硫磺味，深渊之火在墙角无声燃烧。"
+  },
+  "14": {
+    "floor": 14,
+    "name": "深渊试炼·五",
+    "guard": "符文守卫",
+    "lv": 84,
+    "role": "tank",
+    "skills": [
+      "ms_chong_zhuang",
+      "ms_fu_shi"
+    ],
+    "hp_mult": 1.815,
+    "atk_mult": 1.39,
+    "reward_exp": 144300,
+    "reward_gold": 23930,
+    "desc": "第十四层：深渊守卫的铠甲上刻满古老符文，每一道都在蓄势待发。"
+  },
+  "15": {
+    "floor": 15,
+    "name": "深渊试炼·六",
+    "guard": "深渊洪流",
+    "lv": 85,
+    "role": "healer",
+    "skills": [
+      "ms_an_ying_zhi_liao",
+      "ms_fu_ji"
+    ],
+    "hp_mult": 1.87,
+    "atk_mult": 1.42,
+    "reward_exp": 153200,
+    "reward_gold": 25850,
+    "desc": "第十五层：深渊洪流冲刷着台阶，你必须逆流而上。"
+  },
+  "16": {
+    "floor": 16,
+    "name": "深渊试炼·七",
+    "guard": "凝影之物",
+    "lv": 86,
+    "role": "dps",
+    "skills": [
+      "ms_lian_zhan",
+      "ms_zhao_ji"
+    ],
+    "hp_mult": 1.925,
+    "atk_mult": 1.45,
+    "reward_exp": 162700,
+    "reward_gold": 27920,
+    "desc": "第十六层：暗影在此凝成实质，连光都开始躲避这一层。"
+  },
+  "17": {
+    "floor": 17,
+    "name": "深渊试炼·八",
+    "guard": "深渊低语者",
+    "lv": 87,
+    "role": "caster",
+    "skills": [
+      "ms_an_ying_jian",
+      "ms_bao_dan"
+    ],
+    "hp_mult": 1.98,
+    "atk_mult": 1.48,
+    "reward_exp": 172800,
+    "reward_gold": 30150,
+    "desc": "第十七层：深渊的低语试图动摇你的心智，守住本心再挥剑。"
+  },
+  "18": {
+    "floor": 18,
+    "name": "深渊试炼·九",
+    "guard": "深渊猎手头目",
+    "lv": 88,
+    "role": "speedster",
+    "skills": [
+      "ms_ji_pao",
+      "ms_qian_xing"
+    ],
+    "hp_mult": 2.035,
+    "atk_mult": 1.51,
+    "reward_exp": 183500,
+    "reward_gold": 32560,
+    "desc": "第十八层：成群的深渊猎手在此巡逻，它们配合默契。"
+  },
+  "19": {
+    "floor": 19,
+    "name": "深渊试炼·十",
+    "guard": "深渊魔像",
+    "lv": 89,
+    "role": "tank",
+    "skills": [
+      "ms_chong_zhuang",
+      "ms_fu_shi"
+    ],
+    "hp_mult": 2.09,
+    "atk_mult": 1.54,
+    "reward_exp": 194900,
+    "reward_gold": 35160,
+    "desc": "第十九层：深渊魔像的每一次践踏都让塔身震颤。"
+  },
+  "2": {
+    "floor": 2,
+    "name": "奔流试炼",
+    "guard": "奔流之灵",
+    "lv": 72,
+    "role": "caster",
+    "skills": [
+      "ms_an_ying_jian",
+      "ms_bao_dan"
+    ],
+    "hp_mult": 1.155,
+    "atk_mult": 1.03,
+    "reward_exp": 70100,
+    "reward_gold": 9500,
+    "desc": "第二层：奔流的水灵在石阶上织成旋涡，踏浪而行者方可通过。"
+  },
+  "20": {
+    "floor": 20,
+    "name": "深渊试炼·极",
+    "guard": "深渊化身",
+    "lv": 90,
+    "role": "healer",
+    "skills": [
+      "ms_an_ying_zhi_liao",
+      "ms_fu_ji"
+    ],
+    "hp_mult": 2.145,
+    "atk_mult": 1.57,
+    "reward_exp": 207000,
+    "reward_gold": 37980,
+    "desc": "第二十层：深渊的极意在此显化，守关者是这一境界的化身。"
+  },
+  "21": {
+    "floor": 21,
+    "name": "暮色回廊",
+    "guard": "暮色行者",
+    "lv": 91,
+    "role": "dps",
+    "skills": [
+      "ms_lian_zhan",
+      "ms_zhao_ji"
+    ],
+    "hp_mult": 2.2,
+    "atk_mult": 1.6,
+    "reward_exp": 219800,
+    "reward_gold": 41020,
+    "desc": "第二十一层：暮色从窗外渗入，这一层开始，属于更高维度的试炼。"
+  },
+  "22": {
+    "floor": 22,
+    "name": "永夜回廊",
+    "guard": "永夜领主",
+    "lv": 92,
+    "role": "caster",
+    "skills": [
+      "ms_an_ying_jian",
+      "ms_bao_dan"
+    ],
+    "hp_mult": 2.255,
+    "atk_mult": 1.63,
+    "reward_exp": 233400,
+    "reward_gold": 44300,
+    "desc": "第二十二层：永夜笼罩着整层回廊，唯有战斗的火光能照亮前路。"
+  },
+  "23": {
+    "floor": 23,
+    "name": "烬火回廊",
+    "guard": "烬火巨灵",
+    "lv": 93,
+    "role": "speedster",
+    "skills": [
+      "ms_ji_pao",
+      "ms_qian_xing"
+    ],
+    "hp_mult": 2.31,
+    "atk_mult": 1.66,
+    "reward_exp": 247900,
+    "reward_gold": 47840,
+    "desc": "第二十三层：烬火在焦黑的墙壁上跳跃，灰烬中藏着致命的杀机。"
+  },
+  "24": {
+    "floor": 24,
+    "name": "霜语回廊",
+    "guard": "霜语女妖",
+    "lv": 94,
+    "role": "tank",
+    "skills": [
+      "ms_chong_zhuang",
+      "ms_fu_shi"
+    ],
+    "hp_mult": 2.365,
+    "atk_mult": 1.69,
+    "reward_exp": 263300,
+    "reward_gold": 51670,
+    "desc": "第二十四层：霜语者的低吟让温度骤降，冻伤比刀伤更致命。"
+  },
+  "25": {
+    "floor": 25,
+    "name": "雷鸣回廊",
+    "guard": "雷鸣巨人",
+    "lv": 95,
+    "role": "healer",
+    "skills": [
+      "ms_an_ying_zhi_liao",
+      "ms_fu_ji"
+    ],
+    "hp_mult": 2.42,
+    "atk_mult": 1.72,
+    "reward_exp": 279600,
+    "reward_gold": 55800,
+    "desc": "第二十五层：雷鸣声震耳欲聋，闪电随时会劈向你的头顶。"
+  },
+  "26": {
+    "floor": 26,
+    "name": "虚空回廊",
+    "guard": "虚空撕裂者",
+    "lv": 96,
+    "role": "dps",
+    "skills": [
+      "ms_lian_zhan",
+      "ms_zhao_ji"
+    ],
+    "hp_mult": 2.475,
+    "atk_mult": 1.75,
+    "reward_exp": 296900,
+    "reward_gold": 60270,
+    "desc": "第二十六层：虚空在这里撕开裂缝，有东西正从裂缝中窥视。"
+  },
+  "27": {
+    "floor": 27,
+    "name": "星陨回廊",
+    "guard": "星陨兽",
+    "lv": 97,
+    "role": "caster",
+    "skills": [
+      "ms_an_ying_jian",
+      "ms_bao_dan"
+    ],
+    "hp_mult": 2.53,
+    "atk_mult": 1.78,
+    "reward_exp": 315300,
+    "reward_gold": 65090,
+    "desc": "第二十七层：星陨的痕迹布满地面，这里曾坠落过天穹之物。"
+  },
+  "28": {
+    "floor": 28,
+    "name": "古龙回廊",
+    "guard": "古龙裔",
+    "lv": 98,
+    "role": "speedster",
+    "skills": [
+      "ms_ji_pao",
+      "ms_qian_xing"
+    ],
+    "hp_mult": 2.585,
+    "atk_mult": 1.81,
+    "reward_exp": 334900,
+    "reward_gold": 70290,
+    "desc": "第二十八层：古龙的气息让整层空气变得沉重，仿佛被龙威锁定。"
+  },
+  "29": {
+    "floor": 29,
+    "name": "神骸回廊",
+    "guard": "神骸守卫",
+    "lv": 99,
+    "role": "tank",
+    "skills": [
+      "ms_chong_zhuang",
+      "ms_fu_shi"
+    ],
+    "hp_mult": 2.64,
+    "atk_mult": 1.84,
+    "reward_exp": 355700,
+    "reward_gold": 75920,
+    "desc": "第二十九层：神骸的余威仍在，这具骸骨的主人曾撼动大陆。"
+  },
+  "3": {
+    "floor": 3,
+    "name": "疾风试炼",
+    "guard": "疾风之影",
+    "lv": 73,
+    "role": "speedster",
+    "skills": [
+      "ms_ji_pao",
+      "ms_qian_xing"
+    ],
+    "hp_mult": 1.21,
+    "atk_mult": 1.06,
+    "reward_exp": 74400,
+    "reward_gold": 10260,
+    "desc": "第三层：疾风之灵快如闪电，它想看看你的反应有多快。"
+  },
+  "30": {
+    "floor": 30,
+    "name": "至高之巅",
+    "guard": "至高王座之主",
+    "lv": 100,
+    "role": "healer",
+    "skills": [
+      "ms_an_ying_zhi_liao",
+      "ms_fu_ji"
+    ],
+    "hp_mult": 2.695,
+    "atk_mult": 1.87,
+    "reward_exp": 377700,
+    "reward_gold": 81990,
+    "desc": "第三十层：至高之巅——塔顶的王座之上，守关者等待着一个配得上登顶的人。"
+  },
+  "4": {
+    "floor": 4,
+    "name": "烈焰试炼",
+    "guard": "烈焰魔仆",
+    "lv": 74,
+    "role": "tank",
+    "skills": [
+      "ms_chong_zhuang",
+      "ms_fu_shi"
+    ],
+    "hp_mult": 1.265,
+    "atk_mult": 1.09,
+    "reward_exp": 79100,
+    "reward_gold": 11090,
+    "desc": "第四层：烈焰魔仆让整层走廊热浪翻涌，小心它的灼烧。"
+  },
+  "5": {
+    "floor": 5,
+    "name": "寒霜试炼",
+    "guard": "霜语巨像",
+    "lv": 75,
+    "role": "healer",
+    "skills": [
+      "ms_an_ying_zhi_liao",
+      "ms_fu_ji"
+    ],
+    "hp_mult": 1.32,
+    "atk_mult": 1.12,
+    "reward_exp": 84000,
+    "reward_gold": 11970,
+    "desc": "第五层：寒霜巨像将这里冻成冰窟，击碎它，寒意自会退去。"
+  },
+  "6": {
+    "floor": 6,
+    "name": "雷光试炼",
+    "guard": "雷光战卫",
+    "lv": 76,
+    "role": "dps",
+    "skills": [
+      "ms_lian_zhan",
+      "ms_zhao_ji"
+    ],
+    "hp_mult": 1.375,
+    "atk_mult": 1.15,
+    "reward_exp": 89200,
+    "reward_gold": 12930,
+    "desc": "第六层：雷光守卫的每一次挥击都带着电弧，别让麻痹追上你。"
+  },
+  "7": {
+    "floor": 7,
+    "name": "暗影试炼",
+    "guard": "暗影刺客",
+    "lv": 77,
+    "role": "caster",
+    "skills": [
+      "ms_an_ying_jian",
+      "ms_bao_dan"
+    ],
+    "hp_mult": 1.43,
+    "atk_mult": 1.18,
+    "reward_exp": 94700,
+    "reward_gold": 13960,
+    "desc": "第七层：暗影刺客潜伏在灯火照不到的角落，它会从背后出手。"
+  },
+  "8": {
+    "floor": 8,
+    "name": "星辰试炼",
+    "guard": "星辰之灵",
+    "lv": 78,
+    "role": "speedster",
+    "skills": [
+      "ms_ji_pao",
+      "ms_qian_xing"
+    ],
+    "hp_mult": 1.485,
+    "atk_mult": 1.21,
+    "reward_exp": 100600,
+    "reward_gold": 15080,
+    "desc": "第八层：星辰之灵周身环绕着细碎星光，美则美矣，杀机暗藏。"
+  },
+  "9": {
+    "floor": 9,
+    "name": "龙威试炼",
+    "guard": "炽鳞幼龙",
+    "lv": 79,
+    "role": "tank",
+    "skills": [
+      "ms_chong_zhuang",
+      "ms_fu_shi"
+    ],
+    "hp_mult": 1.54,
+    "atk_mult": 1.24,
+    "reward_exp": 106800,
+    "reward_gold": 16290,
+    "desc": "第九层：一头幼龙盘踞于此，龙威初显，它已把这里当作巢穴。"
+  }
+}

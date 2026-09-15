@@ -1,0 +1,102 @@
+{
+  "emerald_forest": {
+    "drops": [
+      [
+        "mat_thunder_vine",
+        8,
+        "rain"
+      ]
+    ],
+    "seq": 5
+  },
+  "misty_swamp": {
+    "drops": [
+      [
+        "mat_night_mushroom",
+        10,
+        "night"
+      ]
+    ],
+    "seq": 2
+  },
+  "permafrost_field": {
+    "drops": [
+      [
+        "mat_aurora_flower",
+        6,
+        "winter+night"
+      ],
+      [
+        "mat_bing_jing",
+        10,
+        "winter"
+      ]
+    ],
+    "seq": 4
+  },
+  "redridge_plateau": {
+    "drops": [
+      [
+        "mat_thunder_vine",
+        8,
+        "rain"
+      ]
+    ],
+    "seq": 6
+  },
+  "silverwood": {
+    "drops": [
+      [
+        "mat_night_mushroom",
+        8,
+        "night"
+      ],
+      [
+        "mat_moon_dew",
+        6,
+        "night"
+      ]
+    ],
+    "seq": 1
+  },
+  "starlight_terrace": {
+    "drops": [
+      [
+        "mat_moon_dew",
+        6,
+        "night"
+      ]
+    ],
+    "seq": 8
+  },
+  "storm_plateau": {
+    "drops": [
+      [
+        "mat_thunder_vine",
+        10,
+        "rain"
+      ]
+    ],
+    "seq": 7
+  },
+  "white_deer_forest": {
+    "drops": [
+      [
+        "mat_moon_dew",
+        8,
+        "night"
+      ],
+      [
+        "mat_ying_huo_chong_fen",
+        6,
+        "night"
+      ],
+      [
+        "mat_yue_guang_lu",
+        6,
+        "night"
+      ]
+    ],
+    "seq": 3
+  }
+}

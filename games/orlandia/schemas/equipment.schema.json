@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/equipment.schema.json",
+  "title": "装备常量（equipment）—— 一条 = 一张源表（品质 / 装备槽 / 武器手感 / 品质序）",
+  "description": "本域 = 宿主 `game/data/equipment.py` 里**包内无域**的 4 张常量表（B14-3 缺口名：`QUALITY` 67 处引用 / `EQUIP_SLOTS` 38 / `WEAPON_FLAVOR` 5 / `QUALITY_ORDER` 3 —— 见 `content/catalog_core.py` 与 `content/catalog_items.py` 的「无域可依」登记）。经 `scripts/export_domains/b14_3_gaps.py:derive_equipment` 单向导出（**值原样，零注入**）。\\n\\n**形状**：一条 = 一个源模块的常量组（表键 = 源模块名；条目 = `{源常量名: 值原样}`，与 `game_config` 同型）—— 与 `game_config`（「一条 = 一个源模块的常量组」）/`guild`/`smith_stock` 同型。为什么不并进实体域：`equipment.py` 的这 4 张表**不是「一条 = 一个实体」**（喂给哪个实体域都会逼出硬造字段或放水 required）。\\n\\n**消费口径（导出不改，只登记）**：`QUALITY[档][\\\"mult\\\"]` 是装备价/强化的品质乘区、`[\\\"color\\\"]` 是面板前缀字形；`QUALITY_ORDER` 是图鉴/统计的品质**迭代序**（顺序 = 行为）；`EQUIP_SLOTS[槽]` 是面板显示的中文槽名；`WEAPON_FLAVOR[型]` 是武器类型的手感加成（`crit`/`matk`/`spd_fix` … 各型不同，均可选）+ `desc` 文案。\\n\\n**未进本域**（同源模块的其余 12 个常量：`WEAPON_TYPES`/`WEAPON_NAME_SUFFIX`/`EQUIP_NAME_PREFIX`/`EQUIP_PREFIX_FLAVOR`/`EQUIP_NAME_SUFFIX`/`AFFIX_COUNT`/`AFFIX_FALLBACK`/`QUALITY_CN`/`WT_CN`/`WEAPON_DIST`/`ARMOR_FAMILY`/`ARMOR_FAMILY_ALIAS`）—— 它们**没有** `C.<名>` 读点（非本轮缺口），进域 = 同一个域加一行（`b14_3_gaps.py:derive_equipment` 的 `rows` 元组）。",
+  "x-primary": "equipment_group",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "外层键 = 真源模块名（本轮只有 `equipment`；与 `game_config` 的键口径一致：导出期自证「组名 == 真源文件名」）。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/equipment_group"
+  },
+  "$defs": {
+    "equip_slots_table": {
+      "type": "object",
+      "title": "装备槽表（`game/data/equipment.py:3 EQUIP_SLOTS`）",
+      "description": "键 = 槽位 id（实测 7 槽：weapon/helm/armor/legs/boots/ring/necklace）；值 = 中文槽名（面板显示）。",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "equipment_group": {
+      "type": "object",
+      "title": "一个源模块的常量组（`game/data/equipment.py`）—— 本域的**条目本体**",
+      "description": "逐键 = 一张源表。**不写 required**：本域「一条 = 一张表」，行齐备由导出器断言（`derive_equipment` 少一行即 `raise`），schema 层写 required 会让每条各自「缺另三张」而全表红（同 `guild.schema.json:$defs.guild_table` 的登记）。 逐键 = 一张源表（值**原样**：不补默认值、不改类型、不包装）。  ⚠ 这是 `validate_entry` 实际校验的那一层：域表的一条 = 本对象（与 `game_config.schema.json:$defs.config_group` 同型）；表级的 `additionalProperties` 指向本 def，逐字段类型由下面的 `properties` 管住（实测：把某个成员的类型改坏 → `domain_status` 报红）。",
+      "additionalProperties": true,
+      "minProperties": 1,
+      "properties": {
+        "QUALITY": {
+          "$ref": "#/$defs/quality_table"
+        },
+        "EQUIP_SLOTS": {
+          "$ref": "#/$defs/equip_slots_table"
+        },
+        "WEAPON_FLAVOR": {
+          "$ref": "#/$defs/weapon_flavor_table"
+        },
+        "QUALITY_ORDER": {
+          "$ref": "#/$defs/quality_order_table"
+        }
+      }
+    },
+    "quality_order_table": {
+      "type": "array",
+      "title": "品质升序（`game/data/equipment.py:41 QUALITY_ORDER`）",
+      "description": "品质档的**迭代序**（升序，实测 5 档）。⚠ 顺序 = 行为：图鉴/统计按它枚举与计数，改序 = 改显示顺序（导出按源表原样，不排序）。",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "quality_table": {
+      "type": "object",
+      "title": "品质表（`game/data/equipment.py:13 QUALITY`）",
+      "description": "键 = 品质档（内容侧词汇，实测 5 档：white/green/blue/purple/orange）；值 = `{mult, color, name}`。**本表是「品质档」的唯一定义点**（装备价、强化、词条池、宝石孔位全都按档名索引）。",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "title": "一个品质档",
+        "required": [
+          "mult",
+          "color",
+          "name"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "mult": {
+            "type": "number",
+            "minimum": 0,
+            "title": "品质乘区",
+            "description": "装备价 / 强化的品质倍率（实测 white 1.0 → orange 2.8）。不还原 = 面板价与回收价静默错值。"
+          },
+          "color": {
+            "type": "string",
+            "minLength": 1,
+            "title": "品质字形",
+            "description": "面板前缀用的展示字形（如 `⚪`/`🟢`/`🔵`），内容侧词汇。"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "品质中文名",
+            "description": "面板显示名（普通/优秀/稀有/史诗/传说）。"
+          }
+        }
+      }
+    },
+    "weapon_flavor_table": {
+      "type": "object",
+      "title": "武器手感表（`game/data/equipment.py:127 WEAPON_FLAVOR`）",
+      "description": "键 = 武器类型 id（实测 8 型：sword/staff/bow/mace/dagger/fist/spear/shield）；值 = `{desc, <加成字段>?}`。⚠ 加成字段**各型不同**（`crit` / `matk` / `spd_fix` …），故只声明 `desc` 必填、其余数值字段可选（不枚举取值 —— 不同武器种类加成维度不同）。",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "title": "一个武器类型的手感",
+        "required": [
+          "desc"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "desc": {
+            "type": "string",
+            "minLength": 1,
+            "title": "手感说明",
+            "description": "装备面板上那一行提示（如「剑类武器：攻守均衡，暴击＋2%」）。"
+          }
+        },
+        "patternProperties": {
+          "^(crit|matk|spd_fix|atk|def|mdef|spd|hp|dodge|precise)$": {
+            "type": "number",
+            "title": "加成数值",
+            "description": "该武器类型的额外加成（比率或定点值，内容侧口径）。"
+          }
+        }
+      }
+    }
+  }
+}

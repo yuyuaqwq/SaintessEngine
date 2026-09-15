@@ -1,0 +1,209 @@
+{
+  "factions": {
+    "AREA_FACTION": {
+      "oak": "kingdom",
+      "white_deer": "kingdom",
+      "emerald": "kingdom",
+      "misty": "kingdom",
+      "goblin": "kingdom",
+      "hill": "kingdom",
+      "ironharbor": "kingdom",
+      "seacave": "kingdom",
+      "silver": "kingdom",
+      "windmill": "kingdom",
+      "deerfort": "kingdom",
+      "maple": "kingdom",
+      "dawn": "kingdom",
+      "gold": "kingdom",
+      "abbey": "church",
+      "oldtomb": "kingdom",
+      "border": "kingdom",
+      "silverriver": "kingdom",
+      "crypt": "church",
+      "knight": "kingdom",
+      "kingroad": "kingdom",
+      "holytrial": "church",
+      "ironshield": "kingdom",
+      "oldbattle": "kingdom",
+      "moongate": "elves",
+      "silverwood": "elves",
+      "starlake": "elves",
+      "mooncourt": "elves",
+      "elvenruins": "elves",
+      "ancienttree": "elves",
+      "starsong": "elves",
+      "moonglade": "elves",
+      "emeraldvalley": "elves",
+      "moontemple": "elves",
+      "windvale": "elves",
+      "moonshadow": "elves",
+      "frosthorn": "north",
+      "frostfield": "north",
+      "anvilfort": "dwarves",
+      "forgevalley": "dwarves",
+      "blackforest": "north",
+      "cinder": "north",
+      "ashtemple": "north",
+      "abyssgate": "north",
+      "frostfang": "north",
+      "coldridge": "north",
+      "winterlake": "north",
+      "frostthrone": "north",
+      "aurora": "north",
+      "permafrost": "north",
+      "frostwhisper": "north",
+      "dragonpass": "dragons",
+      "dragonridge": "dragons",
+      "dragonroost": "dragons",
+      "ancientbattle": "dragons",
+      "dragontomb": "dragons",
+      "dragonkin": "dragons",
+      "bonewild": "dragons",
+      "stormcliff": "dragons",
+      "stormthrone": "dragons",
+      "redridge": "dragons",
+      "dragonsfall": "dragons",
+      "jade": "kingdom",
+      "shell": "kingdom",
+      "coral": "kingdom",
+      "sunset": "kingdom",
+      "stormstrait": "kingdom",
+      "mermaid": "kingdom",
+      "sunkenship": "kingdom",
+      "siren": "kingdom",
+      "nameless": "kingdom",
+      "pearl": "kingdom",
+      "misttrench": "kingdom",
+      "whale": "kingdom",
+      "shipwreck": "kingdom",
+      "stormsea": "kingdom",
+      "seagod": "kingdom",
+      "deepdragon": "kingdom",
+      "windcity": "dragons",
+      "cloudsea": "dragons",
+      "stormplateau": "dragons",
+      "eyeofstorm": "dragons",
+      "rainbow": "dragons",
+      "starlight": "dragons",
+      "cloudsanctum": "dragons"
+    },
+    "CHRONICLES": [
+      {
+        "title": "创世与圣光",
+        "text": "传说父神以圣光划开混沌，群山、森林、大海应声而生。他留下六个孩子看守世界的伤口——蚀夜，便是那个守在深渊裂隙旁的守夜人。"
+      },
+      {
+        "title": "三百年前的圣战(教会版本)",
+        "text": "教会记载：魔王蚀夜自北方霜原的裂口而出，率恶魔军团席卷大陆。英雄王艾德里克·晨星集结百族联军，在烬山以圣剑『黎明之光』将其封印。"
+      },
+      {
+        "title": "被掩埋的真相",
+        "text": "蚀夜并非恶魔——它是上古守护者，一直在镇压深渊裂隙。三百年前裂隙突然扩大，蚀夜拼尽全力抵抗，却被人类误认作入侵的魔王。英雄王真正做的，是加固了它的封印。"
+      },
+      {
+        "title": "圣光容器的代价",
+        "text": "封印每百年需要重新灌注圣光。历代圣女都被『献祭』以维持封印——这就是教会圣女庭的真面目：活祭培养所。现任圣女艾莉丝发现了真相，在冒险者行会帮助下出逃。"
+      },
+      {
+        "title": "圣女失踪",
+        "text": "第 37 代圣女艾莉丝不愿再当祭品，留下圣徽悄然离开王都。封印因此加速衰弱，深渊裂隙开始重新扩张——魔物蠢蠢欲动，教会高层却在隐瞒真相。"
+      },
+      {
+        "title": "英雄王的遗物",
+        "text": "传说英雄王艾德里克战死在烬山，黎明之光随他一同失落。但老冒险者说：那柄圣剑没有断——它只是被藏进了只有真正的守护者才能找到的地方。"
+      },
+      {
+        "title": "铁砧的誓言",
+        "text": "矮人铁砧会议三百年来从不过问王都内政，只守着一条铁律：封印若崩，铁砧必先焚。矮人工匠们至今还在锻造『能终结一切封印』的武器。"
+      },
+      {
+        "title": "银月之泪",
+        "text": "银月精灵相信，月神陨落时留下的月之泪拥有净化诅咒的力量。历代精灵女王以生命守护它——三百年前圣战时，它曾让濒死的英雄王多撑了七天。"
+      },
+      {
+        "title": "龙裔的守望",
+        "text": "龙裔是古龙与人的混血，世代守护龙脊山脉的古龙血脉。他们记得第一次深渊战争——族中长者说：魔王不过是个传令兵，真正的深渊意志远比远古更古老。"
+      },
+      {
+        "title": "北境的歌谣",
+        "text": "霜原的部落民谣唱着：『雪会掩埋尸体，但掩不住真相』。三百年前的圣战，烬山脚下曾有过一支没被记载的军队——他们看到的，和教会写下的，不是同一场战争。"
+      },
+      {
+        "title": "铁港城的传闻",
+        "text": "自由城邦铁港城的酒馆里，老水手们流传着一个说法：封印的裂隙不止烬山一处。深渊的触角，早已从海底、地底和云海深处悄悄蔓延。"
+      },
+      {
+        "title": "深渊的低语",
+        "text": "靠近深渊裂隙的冒险者都做过同一个梦：黑暗中有声音在问——『守夜人，你还在吗？』那是蚀夜的声音。它被困在封印里，已经三百年了。"
+      }
+    ],
+    "FACTIONS": {
+      "guild": {
+        "name": "冒险者行会",
+        "icon": "⚔️",
+        "desc": "铁牌到传奇，冒险者的家。完成任务/委托提升，解锁高级委托与隐藏任务。"
+      },
+      "kingdom": {
+        "name": "圣光王国",
+        "icon": "🏰",
+        "desc": "晨曦城的王权，人类王国的秩序。主线/支线提升，声望商店解锁王都军需。"
+      },
+      "church": {
+        "name": "圣光教会",
+        "icon": "⛪",
+        "desc": "表面圣光的守望者，暗中维持封印的真相。主线后期解锁教会专属商品。"
+      },
+      "elves": {
+        "name": "银月精灵",
+        "icon": "🌿",
+        "desc": "银月林海的古老精灵，月神的后裔。西境支线提升，精灵商店与月系图纸。"
+      },
+      "dwarves": {
+        "name": "矮人铁砧",
+        "icon": "⛏️",
+        "desc": "铁砧要塞的锻匠，大地与符文的大师。北境支线提升，声望商店解锁锻造补给。"
+      },
+      "north": {
+        "name": "北境诸部",
+        "icon": "❄️",
+        "desc": "霜原上的部落联盟，苦寒之地的人类。北境任务提升，北境商店与酒馆情报。"
+      },
+      "dragons": {
+        "name": "龙裔",
+        "icon": "🐉",
+        "desc": "龙脊山脉的半龙之民，守护古龙血脉。东境试炼提升，龙语传承图纸。"
+      }
+    },
+    "FACTION_ORDER": [
+      "guild",
+      "kingdom",
+      "church",
+      "elves",
+      "dwarves",
+      "north",
+      "dragons"
+    ],
+    "REPUTATION_TIERS": [
+      [
+        0,
+        "陌生"
+      ],
+      [
+        100,
+        "友好"
+      ],
+      [
+        300,
+        "尊敬"
+      ],
+      [
+        700,
+        "崇敬"
+      ],
+      [
+        1500,
+        "崇拜"
+      ]
+    ]
+  }
+}

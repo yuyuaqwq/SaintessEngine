@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/job_guide.schema.json",
+  "title": "职业指引（job_guide）—— 一条 = 一个职业的速查卡（表键 = 职业 id），查询别名与副资源由导出器折进来",
+  "description": "真源 = 游戏仓 `game/data/job_guide.py:133-169 _build_guide()` 的产物 `:172 JOB_GUIDE`（**import 之后的运行时表**，7 条 = 基础七职业；本轮**无隐藏职业**：`HIDDEN_ORDER` 实测为空），由 `scripts/export_domains/life_growth.py:derive_job_guide` 单向导出；另注入 `aliases`（`JOB_ALIASES`，:180-189，44 个查询名按职业反向折叠）与 `extra_resources`（`EXTRA_RESOURCES` :58 + 其展示元数据 `EXTRA_RESOURCE_GUIDE` :99 合并；实测只有牧师一条）。**单一数据源纪律（源侧测试强校验）**：`name/desc/role/rank_label/reach/tiers/hint/src_base/src_race` 逐字段来自 `classes` 域，`position` 每句都是该职业 `classes.desc` 的**子串**，核心资源 `name/max` 由 `EFFECT_RULES` 派生（本表只存 `resource_desc`）。消费者：游戏侧『职业』/『职业 <名称>』只读速查指令（`game/data/job_guide.py:192 resolve_job()` 做 id/显示名/别名/模糊子串四级解析）。**本域只搬运、不解释**：`resource_key` 是 effect_rules 域 key（6/6 命中）、`extra_resources[].key` 不在 effect_rules（歌者专属），导出期不展开。",
+  "x-primary": "guide",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "职业 id（内容侧词汇；实测 7 条全是 `cls_*` 前缀，与 classes 域键一致；`cls_novice` 见习冒险者不计入）"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/guide"
+  },
+  "$defs": {
+    "guide": {
+      "type": "object",
+      "title": "职业速查卡（一条）",
+      "required": [
+        "cls_id",
+        "name"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "cls_id": {
+          "type": "string",
+          "minLength": 1,
+          "title": "职业 id",
+          "description": "与表键相同（源侧每条的 `cls_id` 都是自己的键；导出器逐条断言一致，不一致就拒绝导出）。"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "职业名",
+          "description": "显示名（逐字段复制自 classes 域；v130.2f.2 改过名的取新名）。"
+        },
+        "icon": {
+          "type": "string",
+          "title": "图标",
+          "description": "展示用字形。"
+        },
+        "role": {
+          "type": "string",
+          "title": "定位",
+          "description": "战斗定位（实测：坦克 / 输出 / 治疗 / 辅助一类短词）。"
+        },
+        "rank_label": {
+          "type": "string",
+          "title": "站位",
+          "description": "站位标签（实测：前排 / 后排）。"
+        },
+        "reach": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "攻击距离",
+          "description": "攻击距离（实测 1~3；1 = 近战、2~3 = 远程）。"
+        },
+        "position": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "一句话定位",
+          "description": "一览/详情里的定位句（源侧测试强校验：必须是该职业 `classes.desc` 的子串 —— 改 desc 必须同步这里）。"
+        },
+        "desc": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "职业描述",
+          "description": "职业描述（逐字来自 classes 域）。"
+        },
+        "hidden": {
+          "type": "boolean",
+          "title": "隐藏职业",
+          "description": "是否隐藏线职业。实测 **7/7 条都是 false**（本轮无隐藏职业；隐藏线的档位门槛常量 `_HIDDEN_TIER_LEVELS` 40/60/90 也因此没被任何条目用上）。"
+        },
+        "tiers": {
+          "type": "object",
+          "x-widget": "kv",
+          "title": "转职分支（档位 → 分支名）",
+          "description": "`{\"1\"|\"2\"|\"3\" → [分支名…]}`（实测 7/7 条都是 3 档 × 2 分支）。⚠️ **JSON 里档位键是字符串** —— 真源是 int 键，JSON 对象键只能是字符串（宿主 json_clean 往返所致）。分支名已过 `BRANCH_KEY_DISPLAY` 展示层映射（如 武僧→淬势者）。",
+          "propertyNames": {
+            "pattern": "^[0-9]+$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "tier_levels": {
+          "type": "object",
+          "x-widget": "kv",
+          "title": "档位门槛（档位 → 等级）",
+          "description": "转职等级门槛（实测 7/7 条都是 `30/60/90`；基础职业用 `_BASE_TIER_LEVELS`，与 `core/constants.py EVOLVE_LEVELS` 同源、源侧测试断言相等）。⚠️ 键同样是**字符串化**的档位号。",
+          "propertyNames": {
+            "pattern": "^[0-9]+$"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "src_base": {
+          "type": "string",
+          "title": "来源基础职业",
+          "description": "隐藏职业由哪个基础职业转出（实测 7/7 条是空串 —— 本轮无隐藏职业）。"
+        },
+        "src_race": {
+          "type": "string",
+          "title": "来源种族 id",
+          "description": "种族限定（**races 域 key**；实测 7/7 条是空串 —— 基础七职业不限种族）。导出期不展开。"
+        },
+        "race_name": {
+          "type": "string",
+          "title": "来源种族名",
+          "description": "`src_race` 对应的显示名（源侧从 races 域取 name，取不到回落原值；实测 7/7 条是空串）。"
+        },
+        "hint": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "解锁提示",
+          "description": "查这个职业时给的提示（隐藏线的解锁线索）。实测 7/7 条是空串。"
+        },
+        "task_name": {
+          "type": "string",
+          "title": "解锁任务名",
+          "description": "从 `classes.desc` 用正则抽出来的任务名（源侧 `_task_name()`：`需完成<XX>任务链解锁`）。实测 7/7 条是空串。"
+        },
+        "resource_key": {
+          "type": "string",
+          "title": "核心资源 key",
+          "description": "职业核心资源（**effect_rules 域 key**，实测 6/7 条有：rage / element / energy / faith / cp / chi，**6/6 命中**；诗人无核心资源 → 空串）。导出期不展开。"
+        },
+        "resource_name": {
+          "type": "string",
+          "title": "核心资源名",
+          "description": "核心资源显示名（源侧从 `EFFECT_RULES[key].name` 派生，不重复存）。"
+        },
+        "resource_max": {
+          "type": "integer",
+          "minimum": 0,
+          "title": "核心资源上限",
+          "description": "核心资源上限（源侧从 `EFFECT_RULES[key].cap` 派生）。实测 0（无资源职业）/ 5 / 10 等。"
+        },
+        "resource_desc": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "核心资源机制说明",
+          "description": "该职业资源机制的玩家可见一句话（v181.M-R2c 单源化后存在本表，源侧注释：原 `data/core_resources.py` 已退役）。"
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "x-widget": "lines",
+          "title": "查询别名",
+          "description": "**由导出器注入**（源数据是另一张表 `JOB_ALIASES`）：能解析到这个职业的所有查询名（classes 域 aliases + 转职分支名（含展示名映射）+ 兼容名如「歌者」）。实测 44 个名字分到 7 个职业（4~8 个/职业），0 悬空。`resolve_job()` 的第 2 级解析靠它。"
+        },
+        "extra_resources": {
+          "type": "array",
+          "x-widget": "rows",
+          "title": "转职线副资源",
+          "description": "**由导出器注入**（`EXTRA_RESOURCES` 给出「职业 → 资源 key 列表」，`EXTRA_RESOURCE_GUIDE` 给 `{name, max, desc}` 全量元数据 —— 两张表合并成一条条挂到职业上）：实测**只有牧师**（攻线·歌者双资源 共鸣 + 回声）。⚠️ 这些 key **不在 effect_rules 域**（引擎批次 2 才启用），所以别指望 ref 候选。",
+          "items": {
+            "type": "object",
+            "required": [
+              "key",
+              "name"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "title": "资源 key",
+                "description": "副资源标识（实测 resonance / echo）。"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "title": "资源名",
+                "description": "显示名（共鸣 / 回声）。"
+              },
+              "max": {
+                "type": "integer",
+                "minimum": 0,
+                "title": "上限",
+                "description": "资源上限（实测 10 / 3）。"
+              },
+              "desc": {
+                "type": "string",
+                "x-widget": "textarea",
+                "title": "机制说明",
+                "description": "该副资源怎么攒/怎么花的说明（自退役的 core_resources.py 逐字迁移）。"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

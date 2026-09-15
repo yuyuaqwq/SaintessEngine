@@ -1,0 +1,39 @@
+{
+  "fields": {
+    "func": {
+      "zh": "宿主注册函数名",
+      "note": "游戏仓 `game/commands/talk_actions.py`（薄壳）里那个转发函数的函数名，实测 18/18 恒为 `action_<键>`。B8.2 线3 起壳只做「注册 + 一行转发」，**实现正文在内容包** `content/talk_actions.py`（见 `impl`）。"
+    },
+    "line": {
+      "zh": "宿主壳行号",
+      "note": "该 `def` 在 `game/commands/talk_actions.py` 的行号（给人回查用）。壳一改行号就变 —— `--check` 会报不一致，这正是它要的效果。"
+    },
+    "async": {
+      "zh": "异步动作",
+      "note": "`async def` 标记：消费端 `commands/world.py:3583 inspect.isawaitable` 据此 await；**同步版** `_apply_talk_action`（测试/旧调用）会跳过异步动作。实测只有 `hidden_evolve`（血脉传承，异步 generator）为 true。"
+    },
+    "doc": {
+      "zh": "规则说明",
+      "note": "该动作的规则/门槛/副作用。来源可查：① 壳内 docstring（实测 4 条）；② 否则取包内实现 `content/talk_actions.py` 的同位说明（函数 docstring，无则函数体开头/`def` 上方连续 `#` 注释块）。**允许空**（实测 5 条空：`set_flag`/`open_shop`/`hint`/`consume_item`/`unlock_prof` —— 源侧本来没写，导出期不替它编文案）。",
+      "widget": "textarea"
+    },
+    "impl": {
+      "zh": "包内实现坐标",
+      "note": "实现正文的落点 `<包内模块>.<函数名>`（实测 18/18 = `content.talk_actions.action_<键>`），由壳内 `return <别名>.<函数名>(…)` 反查得出；反查不到导出器就 raise（防「声明与实现悄悄分家」）。**函数体不进包 JSON** —— 本域是注册表投影，运行时执行走包内函数。"
+    }
+  },
+  "groups": [
+    {
+      "id": "impl",
+      "label": "实现",
+      "icon": "🧩",
+      "fields": ["func", "line", "async", "impl"]
+    },
+    {
+      "id": "doc",
+      "label": "文档",
+      "icon": "📖",
+      "fields": ["doc"]
+    }
+  ]
+}

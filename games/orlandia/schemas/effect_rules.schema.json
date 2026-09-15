@@ -1,0 +1,594 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/effect_rules.schema.json",
+  "title": "声明表（EFFECT_RULES / EFFECT_ACTIONS / MECH_CASH）—— 框架协议",
+  "x-primary": "effect_rule",
+  "$defs": {
+    "effect_rule": {
+      "type": "object",
+      "title": "效果规则（EFFECT_RULES 一条）",
+      "minProperties": 1,
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "cap": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stat_scale": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "type": "string",
+            "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "panel": {
+          "type": "object",
+          "required": [
+            "stat",
+            "op",
+            "mult"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "stat": {
+              "type": "string"
+            },
+            "op": {
+              "enum": [
+                "add",
+                "mul"
+              ]
+            },
+            "mult": {
+              "type": "number"
+            }
+          }
+        },
+        "period": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": true,
+          "properties": {
+            "dir": {
+              "enum": [
+                "damage",
+                "gain"
+              ]
+            },
+            "interval": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "pct_max_hp": {
+              "type": "number"
+            },
+            "pct_cur_hp": {
+              "type": "number"
+            },
+            "pct_boss": {
+              "type": "number"
+            },
+            "pct_cur_boss": {
+              "type": "number"
+            },
+            "amount": {
+              "type": "number"
+            },
+            "type": {
+              "type": "string"
+            },
+            "dmg_type": {
+              "type": "string"
+            },
+            "per_layer": {
+              "type": "number"
+            },
+            "turns": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "consume": {
+          "type": "object",
+          "required": [
+            "mode"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "mode": {
+              "enum": [
+                "no_skill",
+                "skip"
+              ]
+            }
+          }
+        },
+        "on": {
+          "enum": [
+            "target"
+          ]
+        },
+        "negative": {
+          "type": "boolean"
+        },
+        "cleanse": {
+          "type": "boolean"
+        },
+        "tag": {
+          "type": "string",
+          "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+        },
+        "cd_mult": {
+          "type": "number"
+        },
+        "start_full": {
+          "type": "boolean"
+        },
+        "start_classes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "取值由内容侧声明（声明表 / 注册机制）决定；框架不预设。"
+          }
+        },
+        "load_tiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "on_threshold": {
+          "type": "object",
+          "title": "满层触发（{层数: 触发载荷}）",
+          "x-widget": "kv",
+          "description": "满层触发声明：{层数: 触发载荷}。⚠ **当前无消费者**（引擎不读这张表；参考实现里唯一的条目已被删掉）—— 要「满 N 层触发」请监听 threshold 事件自己实现，这里写什么都不会生效。",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[0-9]+$",
+            "description": "键 = 层数（JSON 只有字符串键，写 \"10\" 表示满 10 层；包内读时还原成 int 键）。"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "title": "触发载荷",
+            "description": "历史形态 {form: 形态名}（参考实现旧条目是 {10: {\"form\": \"fury\"}}）；结构与键名由内容侧解释，当前写入不生效。",
+            "additionalProperties": true,
+            "properties": {
+              "form": {
+                "type": "string",
+                "title": "触发形态名",
+                "description": "满层时进入的形态名（内容侧词汇；历史用例 form=fury）。⚠ 无消费者。"
+              }
+            }
+          }
+        },
+        "channels": {
+          "type": "object",
+          "title": "攒取渠道（{时机名: 值}）",
+          "x-widget": "kv",
+          "description": "攒取渠道：{时机名: 值}，把引擎事件换成资源层数（内容侧装配器读，引擎零知识）。值两形态 —— 数值（无条件，每触发一次攒多少层）或 {gain, when, per_dt}（带条件）。值必须 > 0：写 0 / 负数会被装配器静默跳过（要减资源用 period.amount 负值）。",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "键 = 时机名（由内容侧声明 —— 参考实现的 _CHANNEL_EVENTS 是 attack_hit（普攻命中）/ skill_hit（技能命中）/ heal_cast（治疗施放）/ taken（受击）/ cast（预留，未装配用）/ tick（每刻时钟推进）；映射表在内容侧，引擎不预设）。未映射的时机名 **静默跳过**（版本漂移保护）。"
+          },
+          "additionalProperties": {
+            "title": "渠道值",
+            "description": "形态 A：数值（每触发一次攒多少层，必须 > 0）；形态 B：{gain, when, per_dt}（条件攒取）。",
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "title": "无条件攒取量",
+                "description": "形态 A：每触发一次攒多少层（必须 > 0）。"
+              },
+              {
+                "type": "object",
+                "title": "条件攒取值",
+                "description": "形态 B：多了条件门 when 与按 dt 缩放 per_dt；gain 仍必须 > 0。",
+                "additionalProperties": true,
+                "properties": {
+                  "gain": {
+                    "type": "number",
+                    "exclusiveMinimum": 0,
+                    "title": "每次攒取量",
+                    "description": "每触发一次攒多少层（必须 > 0；≤ 0 的行被装配器静默跳过）。"
+                  },
+                  "when": {
+                    "type": "array",
+                    "title": "条件门",
+                    "description": "**逐条求值，全部满足才攒**（AND）；无声明 = 恒成立（零默认值：无 when 时装配器不写这个键）。",
+                    "items": {
+                      "type": "object",
+                      "title": "渠道条件条目",
+                      "description": "形如 {judge: {kind: …}}。未知 kind → 判 False（fail-closed：宁可漏攒，不可静默攒错）。",
+                      "additionalProperties": true,
+                      "properties": {
+                        "judge": {
+                          "type": "object",
+                          "title": "条件谓词",
+                          "description": "只有两个 kind 被支持：has_effect（effects[key] 在位）/ res_ge（effects[res].stacks ≥ 阈值）。⚠ 渠道的 res_ge 阈值读**本条 when 条目**上 ge_field 同名的键（不是 params 顶层）。",
+                          "additionalProperties": true,
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "title": "谓词类型",
+                              "description": "has_effect（持有某效果）/ res_ge（资源层数 ≥ 阈值）；其余 kind 一律判 False。"
+                            },
+                            "key": {
+                              "type": "string",
+                              "title": "效果 key",
+                              "description": "has_effect 用：指向 EFFECT_RULES 的效果 key（在位即通过 —— 表达不了「层数够」，层数要用 res_ge）。"
+                            },
+                            "res": {
+                              "type": "string",
+                              "title": "资源 key",
+                              "description": "res_ge 用：资源 key（读 effects[res].stacks）。"
+                            },
+                            "ge_field": {
+                              "type": "string",
+                              "title": "阈值字段名",
+                              "description": "res_ge 用：阈值写在本条 when 条目里这个字段名的键上（与动作 judge 的 params[ge_field] 不同）。"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "per_dt": {
+                    "type": "boolean",
+                    "title": "按间隔时长缩放",
+                    "description": "true = gain 按事件的 dt 缩放（tick 渠道跨多刻时避免「跨 3 刻只攒一次」）；无声明不写这个键。"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "debuff_scale": {
+          "type": "object",
+          "description": "⚠ 当前无消费者（写了不生效）：{面板键: 每层系数}。要「每层承伤 +N%」请用 taken_calc 乘区。",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "guard_hp_pct": {
+          "type": "number"
+        },
+        "heal_pct": {
+          "type": "number"
+        },
+        "overload_heal_pct": {
+          "type": "number"
+        },
+        "wake_on_hit": {
+          "type": "boolean"
+        }
+      },
+      "examples": [
+        {
+          "name": "example_resource",
+          "cap": 10,
+          "stat_scale": {
+            "atk": 0.04
+          },
+          "on_threshold": {
+            "10": {
+              "form": "example_form"
+            }
+          }
+        },
+        {
+          "cap": 5,
+          "on": "target",
+          "period": {
+            "dir": "damage",
+            "interval": 1.0,
+            "pct_max_hp": 0.02
+          }
+        }
+      ]
+    },
+    "effect_rules_table": {
+      "type": "object",
+      "title": "EFFECT_RULES 整表：{状态key: 规则}（条目本体见 $defs/effect_rule）",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "effect_actions": {
+      "type": "object",
+      "title": "EFFECT_ACTIONS：{效果名词: [动作…]}（技能 effect 的落地动作表）",
+      "minProperties": 1,
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z][a-z0-9_]*$",
+        "description": "键 = 效果名词（内容侧声明；技能 `effect` / 机制写的就是它）。小写字母开头，只含小写字母/数字/下划线。"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "title": "动作序列",
+        "x-widget": "rows",
+        "minItems": 1,
+        "description": "按声明序执行的动作列表（一行一个动作）；空数组是坏数据（至少 1 条）。每条的动作名 action 必须是注册过的动词。",
+        "items": {
+          "type": "object",
+          "title": "动作条目",
+          "required": [
+            "action"
+          ],
+          "additionalProperties": true,
+          "properties": {
+            "action": {
+              "type": "string",
+              "title": "动作名（动词）",
+              "description": "要执行的动词（必修；行为由内容侧 @register_action 注册实现，不受名单限制）。"
+            },
+            "key": {
+              "type": "string",
+              "title": "目标效果 key",
+              "description": "动作作用的效果 key（如 apply 施加哪个状态）。"
+            },
+            "on": {
+              "type": "string",
+              "title": "作用对象",
+              "description": "作用对象（如 target；取值/消费者由动作实现解释）。"
+            },
+            "turns": {
+              "type": "number",
+              "title": "持续回合",
+              "description": "状态/增益持续的回合数（动作实现解释）。"
+            },
+            "mode": {
+              "type": "string",
+              "title": "模式",
+              "description": "动作的模式参数（取值由动作实现决定）。"
+            },
+            "op": {
+              "type": "string",
+              "title": "运算方式",
+              "description": "加减/乘除一类运算标记（取值由动作实现决定）。"
+            },
+            "hit": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "title": "命中块",
+                  "description": "命中参数块（结构与键名由内容侧解释）。",
+                  "additionalProperties": true
+                }
+              ],
+              "title": "命中参数",
+              "description": "命中相关参数：字符串（简写）或参数块。"
+            },
+            "halve": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "title": "减半",
+              "description": "减半标记/系数（布尔或数值形态）。"
+            },
+            "pct_from_mech_val": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "title": "按机制数值折算比例",
+              "description": "是否/如何用机制数值折算比例（布尔或数值形态）。"
+            }
+          }
+        }
+      },
+      "examples": [
+        {
+          "example_state_a": [
+            {
+              "action": "apply",
+              "key": "example_state",
+              "on": "target",
+              "turns": 1
+            }
+          ],
+          "example_state_b": [
+            {
+              "action": "apply",
+              "key": "example_state",
+              "on": "target",
+              "turns": 2,
+              "mode": "skip"
+            }
+          ]
+        }
+      ],
+      "x-widget": "kv",
+      "description": "技能 effect 的落地动作表：内容侧名词 → 动词动作序列（引擎按名词查表，未命中 = 空动作列表 = **静默不生效**）。想加一条：先在 effect_actions 里挂名词，再让技能/机制用这个名字。"
+    },
+    "mech_cash": {
+      "type": "object",
+      "title": "MECH_CASH：{机制兑现键: 兑现规则}",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "name",
+          "mode"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "兑现显示名",
+            "description": "展示用名（面板/日志），也是装配时写进触发器的 label 来源。"
+          },
+          "mode": {
+            "type": "string",
+            "description": "派发用：决定走哪个 `mech_cash_*` 动作（取值由内容侧声明；框架不预设）。",
+            "title": "兑现模式"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "title": "兑现对象 key",
+            "description": "指向的效果 key（单个），或 key 列表（多状态一起兑现，如三系元素印记）。"
+          },
+          "res": {
+            "type": "string",
+            "title": "资源 key",
+            "description": "兑现消耗/清空的资源 key（如狂暴进入时的血祭资源）。"
+          },
+          "label": {
+            "type": "string",
+            "title": "面板标签",
+            "description": "面板上显示的标签（内容侧文案）。"
+          },
+          "note": {
+            "type": "string",
+            "title": "备注",
+            "description": "写给自己/审计看的一句话（如「兑现走哪条技能链」）。"
+          },
+          "icon": {
+            "type": "string",
+            "title": "图标",
+            "description": "展示用字形（任意字符）。"
+          },
+          "layer_label": {
+            "type": "string",
+            "title": "层名",
+            "description": "这个资源在文案里叫什么（如「连段」「磐核」）。"
+          },
+          "unit": {
+            "type": "string",
+            "title": "单位",
+            "description": "层数的量词（如「段」「层」「枚」）。"
+          },
+          "per_layer": {
+            "type": "number",
+            "title": "每层系数",
+            "description": "每层换算的伤害乘区系数（内容侧动作解释）。"
+          },
+          "per_system": {
+            "type": "number",
+            "title": "每系系数",
+            "description": "多系统（多系印记）时每系的系数。"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "数量",
+            "description": "兑现的固定数量（如卸负回复的层数）。"
+          },
+          "crit_at": {
+            "type": "integer",
+            "title": "暴击档位",
+            "description": "达到这个层数时按暴击结算（整数档位）。"
+          },
+          "clear": {
+            "type": "boolean",
+            "title": "兑现后清空",
+            "description": "true = 兑现后清空层数（false/缺省 = 保留）。"
+          },
+          "clear_extra": {
+            "type": "array",
+            "title": "附带清理项",
+            "x-widget": "rows",
+            "description": "兑现时顺带清理的其它状态列表（一行一项）：{owner: caster|target, key: 效果 key}。",
+            "items": {
+              "type": "object",
+              "title": "附带清理项",
+              "additionalProperties": true,
+              "properties": {
+                "owner": {
+                  "type": "string",
+                  "title": "清理谁的",
+                  "description": "cleared 的状态在谁身上：caster（自己）/ target（目标）—— 取值由内容侧解释。"
+                },
+                "key": {
+                  "type": "string",
+                  "title": "效果 key",
+                  "description": "要一并清空的效果 key。"
+                }
+              }
+            }
+          },
+          "upgrade": {
+            "type": "object",
+            "title": "升级声明",
+            "description": "兑现相关的升级声明（例：{proc: 被动声明 key, per_layer_add: 每层增量}）；结构与键名由内容侧解释。",
+            "additionalProperties": true,
+            "properties": {
+              "proc": {
+                "type": "string",
+                "title": "被动声明 key",
+                "description": "指向 PASSIVE_PROC 的声明 key（升级档由那条被动给）。"
+              },
+              "per_layer_add": {
+                "type": "number",
+                "title": "每层增量",
+                "description": "每层追加的系数增量。"
+              }
+            }
+          }
+        },
+        "title": "兑现规则",
+        "description": "一个机制 key 的兑现规则（name / mode 必修；其余键按 mode 取用，结构由内容侧解释）。"
+      },
+      "examples": [
+        {
+          "example_cash": {
+            "name": "示例兑现",
+            "mode": "dmg_mult_clear",
+            "key": "example_state",
+            "per_layer": 0.1,
+            "clear": true,
+            "layer_label": "example_layer",
+            "unit": "段",
+            "icon": "🔪"
+          }
+        }
+      ],
+      "x-widget": "kv",
+      "description": "机制兑现声明表（内容侧装配器读）：{机制 key: 兑现规则}。规则被装配成 `mech_cash_*` 动作，按 mode 分派；**缺声明 = 不生效**（零默认值铁律）。"
+    }
+  }
+}

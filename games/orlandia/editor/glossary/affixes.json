@@ -1,0 +1,112 @@
+{
+  "fields": {
+    "name": {
+      "zh": "词条名",
+      "note": "显示名（内容侧词汇；玩家在装备详情/词条表看到的就是它）。",
+      "group": "identity"
+    },
+    "desc": {
+      "zh": "描述",
+      "note": "展示文案。本域 schema 要求**必填且非空**（minLength=1）—— 新建被拦最常见就是这里。",
+      "widget": "textarea",
+      "group": "identity"
+    },
+    "kind": {
+      "zh": "词条类别",
+      "note": "attack（攻击向）/ defense（防御向）。实测 76 条：attack 37 / defense 39。它决定随机池归属与显示分组（武器只出 attack 向、防具只出 defense 向）。",
+      "group": "identity"
+    },
+    "line": {
+      "zh": "归属线",
+      "note": "词条所属分组/线（内容侧语义；实测 31 条写它）。只影响展示分组，不参与结算。",
+      "group": "identity"
+    },
+    "trigger": {
+      "zh": "触发时机",
+      "note": "battle_start（开局）/ on_hit（命中）/ on_taken（受击）/ passive（常驻）/ stat（面板）/ turn_start（回合开始）。实测 76 条只用了这 6 个取值。",
+      "group": "trigger"
+    },
+    "chance": {
+      "zh": "触发概率",
+      "note": "0~1。零默认值铁律：不写 = 不触发。实测 9 条写它。",
+      "widget": "pct",
+      "group": "trigger"
+    },
+    "effect": {
+      "zh": "效果块",
+      "note": "词条生效的效果声明（**结构与键名全由内容侧解释**，框架不预设、不做引用解析）。⚠ **故意不给 properties**：实测 76 条用了 69 个不同键（res/gain/on/cond/tiers/pct… 多为 1~2 条命中），写死一份键表就是替内容侧抄词汇表。表单对自由结构走 JSON 兜底，键不会因为渲染而丢。",
+      "group": "value"
+    },
+    "qualities": {
+      "zh": "可出品质",
+      "note": "允许出现的品质集合（blue/purple/orange；实测 31 条写它）。勾选式多选，别手打 JSON。",
+      "widget": "chips",
+      "group": "quality"
+    },
+    "unique": {
+      "zh": "唯一",
+      "note": "是否唯一词条（同件装备不重复）。实测 5 条写它。",
+      "group": "quality"
+    },
+    "affix_pool_by_quality": {
+      "zh": "随机词条池（按品质档位）",
+      "note": "同域子表 AFFIX_POOL_BY_QUALITY：**键 = 随机池档位（blue/purple/orange 三档）、值 = 该档位能随机出的词条 id（一行一个）**。⚠ 档位 ≠ 装备品质全集：拿不到档位的品质走兜底档，不是「空池」。实测（宿主源表）blue 34 / purple 61 / orange 76 项，**171 项全部指向本文件的表键**（无断链）；orange 档 = 全部词条。本包**尚未把它导出成数据文件**，此处的形状就是导出后的校验口径。",
+      "widget": "kv",
+      "group": "pool"
+    },
+    "affix_kind": {
+      "zh": "词条类别名（源表）",
+      "note": "同域子表 AFFIX_KIND：`{attack: 武器, defense: 防具}` —— 类别取值 → 中文分组名，给界面分组用。键空间就是 `kind` 的两个取值（schema 用 propertyNames.enum 钉住）。",
+      "widget": "kv",
+      "group": "pool"
+    }
+  },
+  "groups": [
+    {
+      "id": "identity",
+      "label": "身份",
+      "icon": "📌",
+      "fields": [
+        "name",
+        "desc",
+        "kind",
+        "line"
+      ]
+    },
+    {
+      "id": "trigger",
+      "label": "触发",
+      "icon": "⚡",
+      "fields": [
+        "trigger",
+        "chance"
+      ]
+    },
+    {
+      "id": "value",
+      "label": "数值与效果",
+      "icon": "🔢",
+      "fields": [
+        "effect"
+      ]
+    },
+    {
+      "id": "quality",
+      "label": "品质与唯一性",
+      "icon": "💠",
+      "fields": [
+        "qualities",
+        "unique"
+      ]
+    },
+    {
+      "id": "pool",
+      "label": "同域子表（随机池 / 类别名）",
+      "icon": "🎲",
+      "fields": [
+        "affix_pool_by_quality",
+        "affix_kind"
+      ]
+    }
+  ]
+}

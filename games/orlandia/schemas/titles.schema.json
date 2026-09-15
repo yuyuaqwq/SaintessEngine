@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/titles.schema.json",
+  "title": "称号名册（titles）—— 全量 68 条（含 18 条无判定函数的副业/剧情称号）",
+  "description": "一条 = 一个称号（表键 = 称号 id）。真源 = 游戏仓 `game/data/titles.py:3 TITLES`（**list**，实测 68 条），经 `scripts/export_domains/b9_social.py:derive_titles` 单向导出，导出期为每条注入 `seq`（1 基源列表序）。⭐ **顺序是语义**：消费侧 `game/commands/economy.py:5105/5138`（成就面板已获称号行）与 `game/core/stat_bonus.py:108`（称号加成累加）都是**按下标** `C.TITLES[i]` 取 —— 丢序 = 称号错位 / 加成错人。与同键空间的 `title_conds` 域互补：那边 50 条（**有注册判定函数**），本域 68 条（名册全集，多出的 18 条 = 副业三档 + 剧情/隐藏线称号，由等级/任务奖励路径授予）。**消费点**：`commands/economy.py`（称号面板）、`core/stat_bonus.py`（`bonus` 加成）、`game/reward.py:99/101`（按 id/name 反查发奖提示）、`data/collection_book.py`（满套称号名引用）。",
+  "x-primary": "title",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "称号 id（内容侧词汇，实测全小写字母/数字/下划线，如 `novice` / `kill100` / `pro_gather10` / `res_food_king`）—— 与 `title_conds` 域、`data/titles.py TITLES` 的 id 同一套键空间"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/title"
+  },
+  "$defs": {
+    "title": {
+      "type": "object",
+      "title": "称号（TITLES 名册的一条）",
+      "required": [
+        "id",
+        "name",
+        "desc",
+        "seq"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "title": "称号 id",
+          "description": "与表键相同（= `TITLES` 条目的 id = `title_conds` 域的键）。"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "称号名",
+          "description": "显示名（实测 68/68 都有）。⚠️ 源侧有**同名不同表**的称号（如「垂钓大师」= 称号 fish10 与成就 ach_fish100、「寻宝猎人」= 称号 treasure_hunter 与 res_treasure_hunter）—— 展示/加成以成就侧为准，引用请用 id。"
+        },
+        "desc": {
+          "type": "string",
+          "minLength": 1,
+          "title": "获得说明",
+          "description": "获得条件的说明文案（实测 68/68 都有；v124.2 起无消费挂点的承诺效果已从 desc 去掉，纯收藏型会标注「纯收藏」，v140 资源向 6 条会标注「效果待消费点接线」）。"
+        },
+        "seq": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "源列表序",
+          "description": "1 基下标 = 真源 `TITLES` 的插入序（导出期注入，**不是源侧字段**）。消费侧按下标取称号，读侧必须按 `seq` 还原顺序（与 `weekly_quests` 域同法）。"
+        },
+        "bonus": {
+          "type": "object",
+          "title": "属性加成",
+          "x-widget": "kv",
+          "description": "解锁即生效的属性加成（`core/stat_bonus.py` 消费；实测 9 条，键 atk/hp/mp/spd/crit —— `crit` 是小数如 0.02）。**有就有、没有就没有**（不补 `{}`）。",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "effect": {
+          "type": "string",
+          "minLength": 1,
+          "title": "资源向效果注册名",
+          "x-widget": "select",
+          "description": "v140 波2 资源向称号的**消费点注册名**（实测 6 条：`craft_stamina-1` / `gather_quality+10%` / `treasure_find+2%` / `fish_rare+5%` / `alchemy_yield+1` / `food_effect+10%`）—— 源侧注释写明「效果待消费点接线」，本域只搬运不解释。"
+        }
+      }
+    }
+  }
+}

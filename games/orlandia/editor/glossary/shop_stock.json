@@ -1,0 +1,43 @@
+{
+  "fields": {
+    "stock": {
+      "zh": "总库存上限",
+      "note": "店内共享库存（该店所有玩家先到先得扣减；店与店独立）。实测 35/35 条都有。缺省/不写 = 不限量。",
+      "group": "limit"
+    },
+    "per_day": {
+      "zh": "每人每日限购",
+      "note": "每玩家每自然日在该店该商品的上限（跨天清零）。实测 35/35 条都有。缺省/不写 = 不限。",
+      "group": "limit"
+    },
+    "max_buy_once": {
+      "zh": "单次最大购买数",
+      "note": "超限时按 min(per_day 余量, stock 余量, max_buy_once) 钳制。源侧声明但当前 35 条未使用（不补默认值）。",
+      "group": "limit"
+    },
+    "restock_hours": {
+      "zh": "补货周期（小时）",
+      "note": "距上次补货 ≥ N 小时 → 恢复满额 stock（读时惰性判定，零后台定时器）。实测 35/35 条都有。",
+      "group": "restock"
+    },
+    "restock_at": {
+      "zh": "每日补货时刻",
+      "note": "\"HH:MM\"（如 \"04:00\" = 每天 4 点补满一次）。与 restock_hours 任一满足即补货。源侧声明但当前 35 条未使用（不补默认值）。",
+      "group": "restock"
+    }
+  },
+  "groups": [
+    {
+      "id": "limit",
+      "label": "限购",
+      "icon": "📦",
+      "fields": ["stock", "per_day", "max_buy_once"]
+    },
+    {
+      "id": "restock",
+      "label": "补货",
+      "icon": "🔄",
+      "fields": ["restock_hours", "restock_at"]
+    }
+  ]
+}

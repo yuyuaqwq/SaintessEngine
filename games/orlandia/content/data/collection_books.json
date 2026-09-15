@@ -1,0 +1,287 @@
+{
+  "book_fish": {
+    "id": "book_fish",
+    "name": "溪流鱼谱",
+    "desc": "收录奥兰迪亚各地溪流与深海的常见渔获，钓起它们，把名字记进谱里。",
+    "entries": [
+      {
+        "key": "mat_yin_lin_yu",
+        "name": "银鳞鱼",
+        "hint": "清晨的溪流边，银光一闪而过"
+      },
+      {
+        "key": "mat_jin_li",
+        "name": "金鲤",
+        "hint": "据说见到它的人会有好运"
+      },
+      {
+        "key": "mat_di_wang_gui",
+        "name": "帝王鲑",
+        "hint": "溯流而上的王者，渔夫们的骄傲"
+      },
+      {
+        "key": "mat_mang_yu",
+        "name": "盲鱼",
+        "hint": "深水洞穴里没有光，它也不需要"
+      },
+      {
+        "key": "mat_yue_guang_yu",
+        "name": "月光鱼",
+        "hint": "月夜才肯浮出水面"
+      },
+      {
+        "key": "mat_xi_zun",
+        "name": "溪鳟",
+        "hint": "溪流中最灵巧的居民"
+      },
+      {
+        "key": "mat_qing_wen_lu",
+        "name": "青纹鲈",
+        "hint": "背上的青纹是它的勋章"
+      },
+      {
+        "key": "mat_bing_lin_xun",
+        "name": "冰鳞鲟",
+        "hint": "冰湖深处的古老访客"
+      }
+    ],
+    "reward": {
+      "chest": "i_chest_wood",
+      "title": "溪流渔者",
+      "bonus": {
+        "spd": 2
+      }
+    },
+    "order": 0
+  },
+  "book_food": {
+    "id": "book_food",
+    "name": "奥兰迪亚风味",
+    "desc": "走遍大陆的旅人，最懂每一座城镇的灶火与餐桌。",
+    "entries": [
+      {
+        "key": "i_bread",
+        "name": "黑面包",
+        "hint": "旅人最忠实的伙伴"
+      },
+      {
+        "key": "i_meat_skewer",
+        "name": "烤肉串",
+        "hint": "篝火边最治愈的香气"
+      },
+      {
+        "key": "i_herb_juice",
+        "name": "草药汁",
+        "hint": "苦中带甘，是药也是汤"
+      },
+      {
+        "key": "i_bandage",
+        "name": "止血绷带",
+        "hint": "战地急救的必需品"
+      },
+      {
+        "key": "i_treat_s",
+        "name": "治疗药水(小)",
+        "hint": "红瓶，冒险者的老朋友"
+      },
+      {
+        "key": "i_mana_s",
+        "name": "魔法药水(小)",
+        "hint": "蓝瓶，法师的续命水"
+      },
+      {
+        "key": "i_ale",
+        "name": "麦酒",
+        "hint": "酒馆的招牌，麦香浓郁"
+      },
+      {
+        "key": "i_stew",
+        "name": "炖肉",
+        "hint": "慢火煨了一下午的家常味"
+      }
+    ],
+    "reward": {
+      "chest": "i_chest_iron",
+      "title": "饕客",
+      "bonus": {
+        "hp": 20
+      }
+    },
+    "order": 3
+  },
+  "book_ore": {
+    "id": "book_ore",
+    "name": "矿脉物语",
+    "desc": "从铁矿石到源质，每一锤都记录着大地深处的故事。",
+    "entries": [
+      {
+        "key": "mat_tie_kuang_shi",
+        "name": "铁矿石",
+        "hint": "大地最慷慨的馈赠"
+      },
+      {
+        "key": "mat_shi_cai",
+        "name": "石材",
+        "hint": "筑城的基座，也是冒险者的干粮"
+      },
+      {
+        "key": "mat_jing_tie",
+        "name": "精铁",
+        "hint": "铁匠炉里千锤百炼的筋骨"
+      },
+      {
+        "key": "mat_mi_yin",
+        "name": "秘银",
+        "hint": "月光般的金属，精灵也为之着迷"
+      },
+      {
+        "key": "mat_jing_jin",
+        "name": "精金",
+        "hint": "比黄金更硬的承诺"
+      },
+      {
+        "key": "mat_yuan_zhi",
+        "name": "源质",
+        "hint": "据说世界最初就是用它铸成的"
+      },
+      {
+        "key": "mat_qiang_hua_shi",
+        "name": "淬火石",
+        "hint": "一淬一炼，锋芒毕露"
+      },
+      {
+        "key": "mat_gao_ji_qiang_hua_shi",
+        "name": "高级强化石",
+        "hint": "只有最好的矿脉才孕育得出"
+      }
+    ],
+    "reward": {
+      "chest": "i_chest_iron",
+      "title": "大地的低语者",
+      "bonus": {
+        "def": 3
+      }
+    },
+    "order": 1
+  },
+  "book_relic": {
+    "id": "book_relic",
+    "name": "余烬遗物",
+    "desc": "余烬纪年之前的故事，都藏在这一次次拾起的遗物里。",
+    "entries": [
+      {
+        "key": "mat_luo_lan_de_duan_jian",
+        "name": "罗兰的断剑",
+        "hint": "英雄陨落时留下的半截剑"
+      },
+      {
+        "key": "mat_sheng_guang_bai_he",
+        "name": "圣光百合",
+        "hint": "只在大教堂的阴影里绽放"
+      },
+      {
+        "key": "mat_qi_shi_tuan_hui_ji",
+        "name": "骑士团徽记",
+        "hint": "老骑士胸前褪色的骄傲"
+      },
+      {
+        "key": "mat_gu_dai_wen_xian",
+        "name": "古代文献",
+        "hint": "羊皮纸上褪色的墨迹"
+      },
+      {
+        "key": "mat_shui_jing",
+        "name": "水晶",
+        "hint": "山腹中沉睡的晶簇"
+      },
+      {
+        "key": "mat_mo_fa_fen_chen",
+        "name": "魔法粉尘",
+        "hint": "妖精振翅时洒落的微光"
+      },
+      {
+        "key": "mat_chen_mu",
+        "name": "沉木",
+        "hint": "河底沉了百年的木头"
+      },
+      {
+        "key": "mat_an_ying_sui_pian",
+        "name": "暗影碎片",
+        "hint": "暗影消散后留下的残片"
+      }
+    ],
+    "reward": {
+      "chest": "i_chest_silver",
+      "title": "余烬拾荒者",
+      "bonus": {
+        "matk": 3
+      }
+    },
+    "order": 4
+  },
+  "book_trophy": {
+    "id": "book_trophy",
+    "name": "魔物战利品",
+    "desc": "战利品墙上挂满的，是勇气与猎运的见证。",
+    "entries": [
+      {
+        "key": "mat_tu_mao",
+        "name": "兔毛",
+        "hint": "新手猎人的第一份战利品"
+      },
+      {
+        "key": "mat_lang_pi",
+        "name": "狼皮",
+        "hint": "灰狼的皮毛，带着风的气息"
+      },
+      {
+        "key": "mat_shi_xi_lin",
+        "name": "石蜥鳞",
+        "hint": "晒得发烫的岩石下藏着它"
+      },
+      {
+        "key": "mat_shou_ren_zhan_hui",
+        "name": "兽人战徽",
+        "hint": "从兽人身上剥下的荣耀"
+      },
+      {
+        "key": "mat_bing_lang_ya",
+        "name": "冰狼牙",
+        "hint": "北境冰狼的利齿，锋利如刃"
+      },
+      {
+        "key": "mat_ju_mo_liao_ya",
+        "name": "巨魔獠牙",
+        "hint": "巨魔的獠牙，猎人的勋章"
+      },
+      {
+        "key": "mat_shi_long_lin",
+        "name": "石龙鳞",
+        "hint": "石龙的鳞片，重如磐石"
+      },
+      {
+        "key": "mat_di_di_long_lin",
+        "name": "地底龙鳞",
+        "hint": "地底深处才会遇见的鳞甲"
+      },
+      {
+        "key": "mat_gui_hun_jing_hua",
+        "name": "鬼魂精华",
+        "hint": "亡者残留的执念凝结而成"
+      },
+      {
+        "key": "mat_shen_yuan_jing_gang",
+        "name": "深渊精钢",
+        "hint": "深渊淬炼的钢铁，暗沉无光却坚硬异常"
+      }
+    ],
+    "reward": {
+      "chest": "i_chest_bronze",
+      "title": "猎王",
+      "bonus": {
+        "atk": 4
+      }
+    },
+    "order": 2
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "fields": {
+    "cond_type": {
+      "zh": "条件类型",
+      "note": "= 表键，也是成就条目 cond.type 的取值空间（实测 47 个注册类型；判定时由 cond.type 查表）。",
+      "widget": "select",
+      "group": "cond"
+    },
+    "doc": {
+      "zh": "判定说明",
+      "note": "该条件函数 docstring 的原文（实测 47/47 都有，3~297 字；源侧带版本沿革与坑位注，如 evolve 的「原判 evolve_path 导致 ach_evolve3 永不可达」）。多段注保留换行。",
+      "widget": "textarea",
+      "group": "cond"
+    },
+    "fields": {
+      "zh": "该类型读的 cond 键",
+      "note": "实测：成就数据里用这个类型的条目，其 cond 出现过的键（含 type 自己），字典序。注册了却零使用的类型 = []（实测 3 条）。",
+      "widget": "chips",
+      "group": "usage"
+    },
+    "used_by": {
+      "zh": "使用它的成就数",
+      "note": "实测：cond.type 等于它的成就条数（合计 119 = 成就总数；0 = 当前没被用，实测 hidden_class / hidden_class_lv / skill_has）。",
+      "group": "usage"
+    }
+  },
+  "groups": [
+    {
+      "id": "cond",
+      "label": "条件类型",
+      "icon": "✅",
+      "fields": ["cond_type", "doc"]
+    },
+    {
+      "id": "usage",
+      "label": "使用统计",
+      "icon": "📊",
+      "fields": ["fields", "used_by"]
+    }
+  ]
+}

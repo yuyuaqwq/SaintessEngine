@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/pois.schema.json",
+  "title": "场景交互点挂载（pois）—— 框架模板；房间地址、交互点类型与产出取值全是内容侧词汇",
+  "description": "一条 = 一个场景房间（地图 + 子区域）上挂载的交互点表。表键空间 = 「<地图id>:<子区域id>」（房间地址；与 maps 域的节点地址同源）。框架不预设交互点类型名（零枚举）、不预设产出/效果/条件块的结构、不做引用解析：「哪个房间挂几个点、每个点是什么」全部由内容侧声明。挂载点有两种写法：①**引用串**（沿用内容侧对该类型的定义挂一个点，本点不带自己的名字/产出）；②**内联定义对象**（本点自带 id/type/名字/产出 —— 副本侧的交互点就是这种写法，框架同样只当数据）。",
+  "x-primary": "poi_mount",
+  "$defs": {
+    "poi": {
+      "type": "object",
+      "title": "一个自带定义的交互点（内联形态）",
+      "required": [
+        "id",
+        "type"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "title": "交互点 id",
+          "type": "string",
+          "minLength": 1,
+          "description": "本点在本表内的唯一标识。内容侧按它记录「这点已经交互过」的状态，所以**改 id 等于丢状态**。跨表唯一与否由内容侧负责（副本侧的实际做法是 id 前缀 = 地图 + 层号，见报告 §2）。"
+        },
+        "type": {
+          "title": "交互点类型",
+          "type": "string",
+          "minLength": 1,
+          "description": "交互点类型（内容侧词汇）。类型决定「怎么触发、走哪条处理链」，由内容侧声明；框架不预设任何类型名，也不校验这里的取值是不是内容侧真的定义过。"
+        },
+        "name": {
+          "title": "名称",
+          "type": "string",
+          "description": "展示名（内容侧词汇）。可留空 —— 留空时界面按 id 显示。"
+        },
+        "hint": {
+          "title": "探索提示",
+          "type": "string",
+          "description": "展示给玩家的探索提示文案（内容侧词汇）。可留空。"
+        },
+        "loot": {
+          "title": "产出块",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": true,
+          "x-widget": "kv",
+          "description": "该点的产出（金币 / 材料 / 装备…）：**结构与键名全由内容侧解释**，框架不预设（表单对自由结构走 JSON 兜底渲染，键不会因为渲染而丢）。"
+        },
+        "effect": {
+          "title": "机制效果块",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": true,
+          "x-widget": "kv",
+          "description": "该点触发后对场景/流程的作用（开锁、开门、跳怪…）：结构与键名全由内容侧解释，框架不预设。指向别的交互点的引用写法也在内容侧。"
+        },
+        "need": {
+          "title": "交互前置块",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": true,
+          "x-widget": "kv",
+          "description": "能触发本点的前置条件（如先读过某个点）：结构与键名全由内容侧解释，框架不预设。"
+        },
+        "lore": {
+          "title": "长文本",
+          "type": "string",
+          "description": "碑文 / 铭文 / 日志类的长文本（内容侧词汇）。可留空。"
+        },
+        "desc": {
+          "title": "说明",
+          "type": "string",
+          "description": "触发后展示的说明文案（内容侧词汇）。本域**不强制非空**：只给机制型交互点写它。"
+        }
+      },
+      "examples": [
+        {
+          "id": "room_1_chest_1",
+          "type": "chest",
+          "name": "示例铁箱",
+          "hint": "示例提示：锁已经锈穿，看起来能撬开",
+          "loot": {
+            "gold": 50,
+            "materials": [
+              "mat_a"
+            ]
+          }
+        },
+        {
+          "id": "room_2_rune_1",
+          "type": "rune_stone",
+          "name": "示例石碑",
+          "hint": "示例提示：碑上刻着字，凑近能看清",
+          "lore": "示例碑文：此地长眠者，勿扰其眠。",
+          "effect": {
+            "unlock": "room_1_chest_1"
+          }
+        },
+        {
+          "id": "room_3_mech_1",
+          "type": "mechanism",
+          "name": "示例机关",
+          "hint": "示例提示：扶手处有个隐蔽的机关",
+          "need": {
+            "poi_read": "room_2_rune_1"
+          },
+          "effect": {
+            "skip_elite": true
+          },
+          "desc": "示例说明：你转动机关，地面裂开一条捷径。"
+        }
+      ]
+    },
+    "poi_ref": {
+      "title": "一个挂载的交互点（引用串 或 内联定义）",
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "description": "类型引用串（内容侧词汇）：沿用内容侧对该类型的定义挂一个点。引用解析由内容侧负责 —— 框架不做（同 drop_pools 的产出引用：引擎/框架不假装知道它是什么）。"
+        },
+        {
+          "$ref": "#/$defs/poi"
+        }
+      ]
+    },
+    "poi_mount": {
+      "type": "object",
+      "title": "一个房间的挂载（表键 = 「<地图id>:<子区域id>」）",
+      "required": [
+        "map",
+        "subarea",
+        "pois"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "map": {
+          "title": "地图",
+          "type": "string",
+          "minLength": 1,
+          "description": "房间所在地图（内容侧词汇）—— 与 maps 域的表键同源。编辑器据此可跳到地图；「两边是否一致」由审计负责，框架不在 schema 里跨表校验。"
+        },
+        "subarea": {
+          "title": "子区域",
+          "type": "string",
+          "minLength": 1,
+          "description": "房间（子区域）引用（内容侧词汇）—— 与 maps 域里该图的节点 id 同源。"
+        },
+        "pois": {
+          "title": "挂载的交互点表",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/poi_ref"
+          },
+          "description": "本房间挂载的交互点：**声明顺序即展示顺序**。不挂任何点的房间**请不要在表里出现**（键缺失 = 没有；空数组属于坏数据 —— 与「有键但空」表达不出差异这件事相比，少一个键的歧义更小）。"
+        },
+        "source": {
+          "title": "挂载来源",
+          "type": "string",
+          "description": "挂载行的来源标记（**自由串，不设枚举**）：导出器按源表填 `dungeon` / `mesh` / `world`，用来在编辑器里分组、并在合并多个同形源表后保留出处。框架只当自由串，不解释。"
+        },
+        "desc": {
+          "title": "说明",
+          "type": "string",
+          "description": "说明（编辑器/文档用；可留空）。"
+        }
+      },
+      "examples": [
+        {
+          "map": "map_a",
+          "subarea": "room_1",
+          "pois": [
+            "poi_type_a",
+            {
+              "id": "room_1_chest_1",
+              "type": "chest",
+              "name": "示例铁箱",
+              "hint": "示例提示：锁已经锈穿，看起来能撬开",
+              "loot": {
+                "gold": 50,
+                "materials": [
+                  "mat_a"
+                ]
+              }
+            }
+          ],
+          "source": "world"
+        },
+        {
+          "map": "map_b",
+          "subarea": "room_3",
+          "pois": [
+            "poi_type_b",
+            "poi_type_c"
+          ],
+          "source": "mesh",
+          "desc": "示例：只引用类型、不带本点定义"
+        }
+      ]
+    },
+    "poi_mount_table": {
+      "type": "object",
+      "title": "挂载整表：{「地图id:子区域id」: 挂载}（条目本体见 $defs/poi_mount）",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[^:\\s]+:[^:\\s]+$",
+        "description": "键 = 房间地址「地图id:子区域id」（两段、非空、不含空白）。本 pattern **只挡「不像房间地址」的形状**，不限制取值词汇（中文、点号等都由内容侧定）。为什么要有冒号：房间地址是本域与 maps 域之间唯一的对应关系 —— 键里不带它，挂载就没法对回地图。"
+      },
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  }
+}

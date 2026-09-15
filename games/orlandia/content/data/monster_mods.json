@@ -1,0 +1,2342 @@
+{
+  "b_aolan": {
+    "hp_mult": 1.0,
+    "atk_mult": 1.0,
+    "mech": "phase,stacks,phase_open",
+    "phases": [
+      {
+        "min": 50,
+        "add_skills": [
+          "ms_long_wei_ji_tui",
+          "ms_shen_shui_ya"
+        ],
+        "phase_id": "normal",
+        "script": {
+          "name": "水压积累",
+          "icon": "🌊",
+          "enter_line": "🌊 深水压强：每刻压力递增——防御/群奶轮转扛压，龙威读条打断=压力回落！"
+        },
+        "counter": "压力=全队承伤递增；龙威读条每 6 刻一次——打断=压力回落+输出窗！"
+      },
+      {
+        "min": 30,
+        "add_skills": [],
+        "phase_id": "enrage",
+        "atk_mult": 1.15,
+        "freq_mult": 0.85,
+        "script": {
+          "name": "高压深渊",
+          "icon": "🌊",
+          "warn_line": "水压叠满！龙威读条更频繁了——打断纪律是命！"
+        },
+        "counter": "层数别叠太高：每层全队承伤递增，群奶/防御轮转别断！"
+      },
+      {
+        "min": 0,
+        "add_skills": [],
+        "phase_id": "rampage",
+        "atk_mult": 1.3,
+        "script": {
+          "name": "深渊龙威",
+          "icon": "🐲",
+          "warn_line": "深渊水压碾来——必须靠打断龙威读条压压力，否则团灭！"
+        },
+        "counter": "终局：龙威读条=稳定打断点；断=压力回落+全队爆发窗！"
+      }
+    ],
+    "opening": {
+      "name": "龙威·深渊之息",
+      "effect": "mortal_wound",
+      "power": 2
+    },
+    "triggers": {
+      "player_low": {
+        "hp": 0.3,
+        "cooldown": 4
+      }
+    },
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.25,
+      "turns": 2
+    },
+    "ai": {
+      "skill_chance": 0.6,
+      "weights": {
+        "ms_shui_xi_aolan": 3,
+        "ms_long_wei_ji_tui": 3,
+        "ms_shen_shui_ya": 1
+      }
+    },
+    "desc": "深海龙王·敖澜：深水压强全场压力战——奶坦轮转与打断纪律的终极考验。"
+  },
+  "b_candle_bishop": {
+    "hp_mult": 1.1,
+    "atk_mult": 1.05,
+    "mech": "phase,phase_open,summon",
+    "phases": [
+      {
+        "min": 60,
+        "phase_id": "normal",
+        "exit_turns": 6,
+        "add_skills": [
+          "ms_xi_deng",
+          "ms_zhao_zhu_hun"
+        ],
+        "script": {
+          "name": "烛光摇曳",
+          "icon": "🕯️",
+          "enter_line": "🕯️ 大殿烛火通明——烛光态！赫尔嘉吹向烛火（熄灯读条）时立刻打断，别让大殿黑下来！"
+        },
+        "counter": "💡 看见【熄灯】读条（2 刻）立刻打断=全场继续亮着打！被拉进黑暗=清烛魂+防御拖 4 刻复燃！"
+      },
+      {
+        "min": 0,
+        "phase_id": "exhaust",
+        "dmg_taken_mult": 1.3,
+        "def_add": 60,
+        "freq_mult": 1.5,
+        "exit_turns": 4,
+        "add_skills": [
+          "ms_an_ying_qin_shi"
+        ],
+        "script": {
+          "name": "烛影幢幢",
+          "icon": "🌑",
+          "enter_line": "🌑 赫尔嘉吹熄了烛火——大殿陷入黑暗（熄灭态 4 刻）！暗影庇护生效、影子活了过来！",
+          "warn_line": "⚠️ 熄灭态：清掉烛魂（黑暗中 +50% 伤害）、全队防御/治疗拖 4 刻——烛火会自动复燃！"
+        },
+        "counter": "熄灭态别硬拼：优先清烛魂，防御+群疗拖过 4 刻等复燃；复燃瞬间=安全爆发窗！"
+      }
+    ],
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.3,
+      "turns": 1
+    },
+    "opening": {
+      "name": "烛火为祭",
+      "effect": "atk_up",
+      "power": 1
+    },
+    "ai": {
+      "skill_chance": 0.55,
+      "weights": {
+        "ms_zhu_huo_zhu": 3,
+        "ms_xi_deng": 3,
+        "ms_zhao_zhu_hun": 2,
+        "ms_an_ying_qin_shi": 2
+      }
+    },
+    "desc": "烛影主教·赫尔嘉：烛光与熄灭的场地博弈——断熄灯 = 全场亮着打，被黑 = 清烛魂拖复燃。"
+  },
+  "b_cardinal": {
+    "hp_mult": 1.3,
+    "matk_mult": 1.2,
+    "mech": "heal,phase_open",
+    "opening": {
+      "name": "神罚·重创",
+      "effect": "mortal_wound",
+      "power": 2
+    },
+    "desc": "枢机主教·奥古斯都：借用旧神之力回复自身，开场神罚重创挑战者"
+  },
+  "b_dawn_elf": {
+    "hp_mult": 1.0,
+    "atk_mult": 1.0,
+    "mech": "phase,summon,heal",
+    "phases": [
+      {
+        "min": 60,
+        "add_skills": [
+          "ms_yue_shi_jiang_lin",
+          "ms_zhao_shu_ren_dawn",
+          "ms_sheng_mu_ge_ying"
+        ],
+        "phase_id": "normal",
+        "script": {
+          "name": "月相轮转·教学轮",
+          "icon": "🌕",
+          "enter_line": "🌕盈月：它在蓄力——开减伤！🌑新月：清林断回血！🌒月蚀：打断读条！"
+        },
+        "counter": "盈月开减伤；新月 AOE 清树人（断回血+断月蚀增幅）；月蚀读条必断！"
+      },
+      {
+        "min": 30,
+        "add_skills": [
+          "ms_yue_guang_ying"
+        ],
+        "phase_id": "enrage",
+        "atk_mult": 1.15,
+        "freq_mult": 0.9,
+        "script": {
+          "name": "月辉灼烧",
+          "icon": "🌒",
+          "warn_line": "新月期的树人越召越快——清林节奏要跟上！"
+        },
+        "counter": "树人=回血+月蚀增幅双压力；月蚀读条缩到 1.5 刻，看到就抢断！"
+      },
+      {
+        "min": 0,
+        "add_skills": [],
+        "phase_id": "rampage",
+        "atk_mult": 1.3,
+        "script": {
+          "name": "月陨终局",
+          "icon": "💀",
+          "warn_line": "狂暴了！月蚀读条只剩第 1 刻可断——漏一次=3.5×团伤！"
+        },
+        "counter": "末段纪律：清林节奏 + 断唱时机双重考验！"
+      }
+    ],
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.3,
+      "turns": 2
+    },
+    "ai": {
+      "skill_chance": 0.5,
+      "weights": {
+        "ms_yue_guang_ying": 3,
+        "ms_yue_guang_xin": 1,
+        "ms_yue_hua_lian_shan": 1,
+        "ms_gen_xu_chan_rao_x": 2,
+        "ms_zhao_shu_ren_dawn": 2,
+        "ms_yue_shi_jiang_lin": 2,
+        "ms_sheng_mu_ge_ying": 2
+      }
+    },
+    "desc": "远古精灵王·晨曦：月相轮转看天象出牌——盈月龟缩、新月清林、月蚀断唱。"
+  },
+  "b_ember_lord": {
+    "hp_mult": 1.2,
+    "atk_mult": 1.1,
+    "matk_mult": 1.1,
+    "element_weak": {
+      "thunder": 1.4
+    },
+    "immune_dots": [
+      "burn"
+    ],
+    "desc": "烬火领主·伊格尼斯：烬山之心，烈焰不熄"
+  },
+  "b_eter": {
+    "hp_mult": 1.4,
+    "atk_mult": 1.25,
+    "mech": "enrage,phase_open,phase",
+    "opening": {
+      "name": "封印之核·守夜",
+      "effect": "atk_up",
+      "power": 2
+    },
+    "phases": [
+      {
+        "min": 75,
+        "add_skills": [
+          "ms_f6_an_ying_jian_yu"
+        ],
+        "script": {
+          "name": "暗影形态·箭雨轻响",
+          "icon": "🌑"
+        },
+        "counter": "当前形态: 暗影。可用净化剥壳, 圣光/神圣系对其有加成。"
+      },
+      {
+        "min": 50,
+        "add_skills": [
+          "ms_f6_fen_shen_huo_lang"
+        ],
+        "script": {
+          "name": "烈焰形态·深渊怒燃(读条可打断)",
+          "icon": "🔥"
+        },
+        "counter": "当前形态: 烈焰。换冰/水系输出, 预留打断深渊之怒。"
+      },
+      {
+        "min": 25,
+        "add_skills": [
+          "ms_f6_shen_han",
+          "ms_han_bing_tu_xi"
+        ],
+        "phase_id": null,
+        "script": {
+          "name": "寒冰形态·霜语弥漫",
+          "icon": "❄️"
+        },
+        "counter": "当前形态: 寒冰。用火系输出, 护体期先清爪牙。"
+      }
+    ],
+    "element_weak": {
+      "holy": 1.15
+    },
+    "desc": "蚀夜·真相形态：封印之核三形态轮换, 读形态换克制是全场核心题"
+  },
+  "b_fort_ghost": {
+    "phys_reduce": 0.5,
+    "mech": "phase,summon,phase_open",
+    "opening": {
+      "name": "灵体虚化——物理攻击难以伤及！",
+      "effect": "atk_up",
+      "power": 1
+    },
+    "phases": [
+      {
+        "min": 50,
+        "phase_id": "normal",
+        "name": "附身",
+        "icon": "🫀",
+        "enter_line": "幽灵附身于残垣——以半甲受击，哀嚎更痛！",
+        "warn_line": "幽灵目光锁定……要附身了！",
+        "atk_mult": 1.2,
+        "dmg_taken_mult": 1.25,
+        "freq_mult": 0.9,
+        "add_skills": [
+          "ms_you_fu_shen",
+          "ms_you_ai_hao",
+          "ms_you_sheng_guang_chu_ji"
+        ],
+        "counter": "附身状态：承伤更高但哀嚎更痛——爆发换血要谨慎",
+        "preserve_debuffs": true,
+        "script": {
+          "name": "附身·幽影缠绕",
+          "icon": "🫀"
+        }
+      },
+      {
+        "min": 30,
+        "phase_id": "normal",
+        "name": "狂暴实体化",
+        "icon": "💀",
+        "enter_line": "灵体实体化——虚化解除，攻势如潮！",
+        "warn_line": "它的身形凝实了……狂暴将至！",
+        "atk_mult": 1.35,
+        "spd_add": 30,
+        "freq_mult": 1.5,
+        "add_skills": [
+          "ms_you_kang_bao"
+        ],
+        "counter": "狂暴收尾——开爆发终结它！",
+        "preserve_debuffs": true,
+        "script": {
+          "name": "狂暴·灵体实体化",
+          "icon": "💀"
+        }
+      }
+    ],
+    "target_policy": "backline",
+    "ai": {
+      "skill_chance": 0.45,
+      "weights": {
+        "ms_you_xiang_ji": 3,
+        "ms_you_hui_hui_chang": 2,
+        "ms_chuan_shen": 2,
+        "ms_zhao_huan_ku_lou": 1
+      }
+    },
+    "dodge": 0.08,
+    "block": 0.0,
+    "desc": "要塞幽灵：灵体虚化使物理伤害减半（魔法/圣光压制），穿墙急袭点名后排，附身降防后狂暴收尾"
+  },
+  "b_frost_lord": {
+    "hp_mult": 1.0,
+    "atk_mult": 1.0,
+    "mech": "phase,phase_open",
+    "phases": [
+      {
+        "min": 50,
+        "add_skills": [
+          "ms_bing_feng_li_zhao"
+        ],
+        "phase_id": "normal",
+        "script": {
+          "name": "凛冬王座",
+          "icon": "❄️",
+          "enter_line": "❄️ 冰霜领主抬手凝霜——冰寒会越叠越高，4 层时停手清层，别贪读条！"
+        },
+        "counter": "看自己冰寒层数：冰息命中叠层，快冻僵时用净化/暖身清层！"
+      },
+      {
+        "min": 30,
+        "add_skills": [
+          "ms_ji_han_feng_bao",
+          "ms_zhao_bing_yuan_su_lord"
+        ],
+        "phase_id": "enrage",
+        "atk_mult": 1.15,
+        "freq_mult": 0.85,
+        "script": {
+          "name": "严寒",
+          "icon": "🌨️",
+          "warn_line": "极寒风暴来了——全队都有被冻僵的风险，清层节奏被迫提速！"
+        },
+        "counter": "极寒风暴=全队冻结威胁；冰元素也叠层，先 AOE 清召唤物！"
+      },
+      {
+        "min": 0,
+        "add_skills": [],
+        "phase_id": "rampage",
+        "atk_mult": 1.3,
+        "script": {
+          "name": "永冻",
+          "icon": "🧊",
+          "warn_line": "永冻领域！冰寒越叠越快，冻住=大概率团灭——极限清层时刻！"
+        },
+        "counter": "终局：4 层必清层；净化/暖身留好，防御姿态减冰伤！"
+      }
+    ],
+    "opening": {
+      "name": "凛冬咆哮",
+      "effect": "atk_up",
+      "power": 2
+    },
+    "ai": {
+      "skill_chance": 0.55,
+      "weights": {
+        "ms_bing_xi_lord": 3,
+        "ms_bing_feng_li_zhao": 2,
+        "ms_zhao_bing_yuan_su_lord": 2,
+        "ms_ji_han_feng_bao": 2
+      }
+    },
+    "element_weak": {
+      "fire": 1.5
+    },
+    "desc": "冰霜领主：冰寒叠层管理——越挨冰越接近冻僵，清层要花行动，别贪读条。"
+  },
+  "b_ghost_captain": {
+    "hp_mult": 1.0,
+    "atk_mult": 1.0,
+    "mech": "phase,summon,enrage",
+    "phases": [
+      {
+        "min": 60,
+        "phase_id": "normal",
+        "add_skills": [
+          "ms_wang_chao_zu_zhou",
+          "ms_yuan_ling_jian_xiao"
+        ],
+        "script": {
+          "name": "起雾",
+          "icon": "🌫️",
+          "enter_line": "🌊 亡潮诅咒开始叠层：层越高，幽灵咬得越痛——清层 vs 硬吃自己选！"
+        },
+        "counter": "驱散资源（CD12 刻）< 叠层速度（3 刻/层）——何时清、清几层才是题！"
+      },
+      {
+        "min": 30,
+        "phase_id": "enrage",
+        "atk_mult": 1.15,
+        "freq_mult": 0.85,
+        "add_skills": [
+          "ms_wan_dao_an_ying",
+          "ms_chen_chuan_mei_ying"
+        ],
+        "script": {
+          "name": "涨潮",
+          "icon": "🌊",
+          "warn_line": "幽灵越召越快！诅咒叠到 3 层后弯刀会补暗影、还会蓄力【沉船魅影】——清层慢了会压崩治疗！"
+        },
+        "counter": "清层优先清 T；沉船魅影读条必断/防御减半，别硬吃高诅咒加成的一刀！"
+      },
+      {
+        "min": 0,
+        "phase_id": "rampage",
+        "atk_mult": 1.25,
+        "freq_mult": 0.7,
+        "add_skills": [],
+        "script": {
+          "name": "风暴眼",
+          "icon": "⛈️",
+          "warn_line": "诅咒叠层更快了！幽灵补位也更快——DPS 快则硬吃、慢则必须清层保命！"
+        },
+        "counter": "末段=治疗资源规划+击杀节奏；沉船魅影每次读条都是你的打断点！"
+      }
+    ],
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.25,
+      "turns": 2
+    },
+    "ai": {
+      "skill_chance": 0.6,
+      "weights": {
+        "ms_wan_dao": 4,
+        "ms_zhao_huan_you_ling": 2,
+        "ms_wang_chao_zu_zhou": 3,
+        "ms_yuan_ling_jian_xiao": 2,
+        "ms_chen_chuan_mei_ying": 2
+      }
+    },
+    "desc": "幽灵船长·克罗：诅咒叠层是成长的压迫——牧师净化、硬吃爆发、针对性清层，怎么选是这道题。"
+  },
+  "b_goblin_chief": {
+    "hp_mult": 1.3,
+    "atk_mult": 1.15,
+    "mech": "enrage,phase_open,player_low,phase",
+    "opening": {
+      "name": "咕噜举起号角——掠夺号令读条！打断它！",
+      "effect": "atk_up",
+      "power": 1
+    },
+    "phases": [
+      {
+        "min": 60,
+        "add_skills": [
+          "ms_lve_jie_huan_zhua",
+          "ms_lve_er_zhang"
+        ],
+        "script": {
+          "name": "咕噜抄起酒桌！",
+          "icon": "🍺"
+        }
+      },
+      {
+        "min": 40,
+        "phase_id": "normal",
+        "name": "酒疯",
+        "icon": "🍺",
+        "enter_line": "咕噜灌下一整坛酒——防御崩了，攻击暴涨！",
+        "warn_line": "它抓起酒坛猛灌……酒疯要来了！",
+        "atk_mult": 1.7,
+        "def_add": -120,
+        "dmg_taken_mult": 1.35,
+        "freq_mult": 0.85,
+        "add_skills": [
+          "ms_lve_za_jiu_tan"
+        ],
+        "counter": "酒疯！咕噜自减防但攻击 +70%——开爆发压进斩杀线！",
+        "preserve_debuffs": true,
+        "script": {
+          "name": "酒疯·双目赤红",
+          "icon": "🍺"
+        }
+      }
+    ],
+    "triggers": {
+      "player_low": {
+        "hp": 0.3,
+        "cooldown": 3
+      }
+    },
+    "on_interrupt": {
+      "effect": "freeze_self",
+      "value": 1,
+      "turns": 1
+    },
+    "ai": {
+      "skill_chance": 0.4,
+      "weights": {
+        "ms_lve_duo_h_ling": 3,
+        "ms_lian_zhan": 2,
+        "ms_zhao_huan": 1
+      }
+    },
+    "dodge": 0.05,
+    "block": 0.05,
+    "target_policy": "hate_top",
+    "desc": "哥布林酋长·咕噜：掠夺号令读条召唤打手（打断=僵直窗口），狂饮后酒疯自减防但攻击暴涨"
+  },
+  "b_gray_lord": {
+    "hp_mult": 1.0,
+    "atk_mult": 1.0,
+    "mech": "phase,summon",
+    "phases": [
+      {
+        "min": 50,
+        "add_skills": [
+          "ms_zhao_zi_bao_kui_lei",
+          "ms_zhao_xiu_li_kui_lei",
+          "ms_zhao_ji_zhen_kui_lei"
+        ],
+        "phase_id": "normal",
+        "script": {
+          "name": "锻造台轰鸣",
+          "icon": "⛏️",
+          "enter_line": "⛏️ 锻造台吐出三种傀儡——自爆的会团灭、修理的在回血、激振的在加攻！"
+        },
+        "counter": "清除顺序：自爆傀儡>修理工>激振炉——别无脑打本体！"
+      },
+      {
+        "min": 30,
+        "add_skills": [
+          "ms_rong_lu_bao_fa"
+        ],
+        "phase_id": "enrage",
+        "atk_mult": 1.15,
+        "freq_mult": 0.85,
+        "script": {
+          "name": "锻炉过热",
+          "icon": "🔥",
+          "warn_line": "炉膛发红！傀儡越造越快，熔炉爆发烧全场——清傀儡节奏提速！"
+        },
+        "counter": "AOE 一次清多傀儡最赚；修理工不杀=石炉回血=白打！"
+      },
+      {
+        "min": 0,
+        "add_skills": [
+          "ms_zhong_chui_lian_da"
+        ],
+        "phase_id": "rampage",
+        "atk_mult": 1.3,
+        "script": {
+          "name": "狂暴锻打",
+          "icon": "🔨",
+          "warn_line": "狂暴锻打！激振炉还在给石炉加攻——先拆激振炉再输出！"
+        },
+        "counter": "终局：激振炉不拆=被秒；清完傀儡的本体暴露窗=集火爆发！"
+      }
+    ],
+    "opening": {
+      "name": "炉火重锤",
+      "effect": "atk_up",
+      "power": 2
+    },
+    "on_minion_died": {
+      "effect": "stacks_clear"
+    },
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.15,
+      "turns": 2
+    },
+    "ai": {
+      "skill_chance": 0.55,
+      "weights": {
+        "ms_zhan_chui_lord": 3,
+        "ms_zhao_zi_bao_kui_lei": 3,
+        "ms_zhao_xiu_li_kui_lei": 2,
+        "ms_zhao_ji_zhen_kui_lei": 2,
+        "ms_rong_lu_bao_fa": 2,
+        "ms_zhong_chui_lian_da": 2
+      }
+    },
+    "desc": "灰矮人领主·石炉：锻造台三傀儡挡刀——按威胁顺序清傀儡，清完=爆发窗。"
+  },
+  "b_helga": {
+    "hp_mult": 1.0,
+    "atk_mult": 1.0,
+    "mech": "phase,summon",
+    "phases": [
+      {
+        "min": 50,
+        "add_skills": [
+          "ms_hei_an_yi_shi_helga",
+          "ms_zhao_huan_e_mo_helga"
+        ],
+        "phase_id": "normal",
+        "script": {
+          "name": "黑暗祭礼",
+          "icon": "🕯️",
+          "enter_line": "🕯️ 恶魔低语环绕祭坛——赫尔加开始诵念黑暗仪式！打断它，别让她吃怪！"
+        },
+        "counter": "仪式读条必断：断=免 2.0× 暗伤 + 反噬爆发窗！"
+      },
+      {
+        "min": 30,
+        "add_skills": [
+          "ms_shen_yuan_zhi_yan"
+        ],
+        "phase_id": "enrage",
+        "atk_mult": 1.15,
+        "freq_mult": 0.85,
+        "script": {
+          "name": "暴食",
+          "icon": "😈",
+          "warn_line": "恶魔越召越快、仪式越念越急——打断窗口收紧，清怪别停！"
+        },
+        "counter": "打断技留给仪式；恶魔优先清——没饲料她就没法献祭！"
+      },
+      {
+        "min": 0,
+        "add_skills": [],
+        "phase_id": "rampage",
+        "atk_mult": 1.3,
+        "script": {
+          "name": "魔化",
+          "icon": "💀",
+          "warn_line": "魔化！她若已吃过恶魔，攻击早就叠高了——控好仪式+清怪把伤害压住！"
+        },
+        "counter": "终局：一次仪式都别放——漏一次=回血+永久增伤慢性死亡！"
+      }
+    ],
+    "opening": {
+      "name": "血祭祷言",
+      "effect": "atk_up",
+      "power": 2
+    },
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.3,
+      "turns": 2
+    },
+    "on_minion_died": {
+      "effect": "heal_pct",
+      "value": 0.06
+    },
+    "ai": {
+      "skill_chance": 0.6,
+      "weights": {
+        "ms_an_ying_dan": 3,
+        "ms_zhao_huan_e_mo_helga": 3,
+        "ms_hei_an_yi_shi_helga": 3,
+        "ms_shen_yuan_zhi_yan": 2
+      }
+    },
+    "desc": "恶魔祭司·赫尔加：献祭打断——恶魔是饲料，吃一只强一分，绝不放她吃怪！"
+  },
+  "b_jack_pirate": {
+    "mech": "phase,summon,phase_open",
+    "opening": {
+      "name": "独眼杰克装填火枪——下刻大读条！打断他！",
+      "effect": "atk_up",
+      "power": 1
+    },
+    "phases": [
+      {
+        "min": 50,
+        "phase_id": "normal",
+        "name": "贪欲沸腾",
+        "icon": "🪙",
+        "enter_line": "杰克把宝库的金币哗啦倒进怀里——贪欲沸腾！",
+        "warn_line": "他盯着你们的目光越来越贪婪……",
+        "atk_mult": 1.15,
+        "dmg_taken_mult": 1.2,
+        "freq_mult": 1.2,
+        "add_skills": [
+          "ms_ha_huan_dan"
+        ],
+        "counter": "水鬼别乱杀——杀水鬼给杰克叠贪欲（他更脆）！攒高层开爆发",
+        "preserve_debuffs": true,
+        "script": {
+          "name": "贪欲沸腾·金币轰鸣",
+          "icon": "🪙"
+        }
+      },
+      {
+        "min": 30,
+        "phase_id": "normal",
+        "name": "双管火枪",
+        "icon": "💥",
+        "enter_line": "杰克掏出双管火枪——两轮齐射读条，连续打断！",
+        "warn_line": "他装填了第二管火药……",
+        "atk_mult": 1.25,
+        "freq_mult": 1.5,
+        "add_skills": [
+          "ms_ha_er_lian",
+          "ms_ha_shuang_fa"
+        ],
+        "counter": "双管齐射——连续打断两轮读条！",
+        "preserve_debuffs": true,
+        "script": {
+          "name": "双管火枪·怒火齐发",
+          "icon": "💥"
+        }
+      }
+    ],
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.4,
+      "turns": 2
+    },
+    "on_minion_died": {
+      "effect": "atk_up",
+      "value": 2
+    },
+    "ai": {
+      "skill_chance": 0.5,
+      "weights": {
+        "ms_ha_huo_qiang_qi": 3,
+        "ms_wan_dao": 2,
+        "ms_zhao_huan_shui_gui": 1
+      }
+    },
+    "dodge": 0.05,
+    "block": 0.05,
+    "target_policy": "hate_top",
+    "desc": "海盗王·独眼杰克：火枪齐射大读条（打断=免伤+换弹虚弱承伤×1.4），杀水鬼给他叠贪欲越打越脆"
+  },
+  "b_king_odric": {
+    "hp_mult": 1.35,
+    "atk_mult": 1.15,
+    "mech": "phase,summon,enrage",
+    "dmg_taken_mult": 0.5,
+    "phases": [
+      {
+        "min": 60,
+        "phase_id": "normal",
+        "add_skills": [
+          "ms_wang_zhe_zhi_nu",
+          "ms_wang_yu_huan_hun"
+        ],
+        "script": {
+          "name": "王座之怒",
+          "icon": "👑",
+          "enter_line": "王冠之下，怒意翻涌——先拆冠，不然骷髅越打越多！"
+        },
+        "counter": "先打王冠核心——它维持着 50% 减伤与召唤加速！失冕 5 刻是唯一全伤输出窗！"
+      },
+      {
+        "min": 30,
+        "phase_id": "enrage",
+        "atk_mult": 1.25,
+        "add_skills": [],
+        "script": {
+          "name": "亡者终末",
+          "icon": "💀",
+          "warn_line": "骷髅召唤更密了！王冠必须优先处理——失冕窗口内才是安心压血的时机！"
+        },
+        "counter": "30% 以下狂暴×1.35——失冕 5 刻打桩，拆冠永远是第一优先级！"
+      }
+    ],
+    "on_minion_died": {
+      "effect": "stacks_clear",
+      "value": 1
+    },
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.2,
+      "turns": 2
+    },
+    "ai": {
+      "skill_chance": 0.6,
+      "weights": {
+        "ms_jian_ji": 4,
+        "ms_wang_wei": 2,
+        "ms_zhao_ku_lou_mi": 3,
+        "ms_wang_zhe_zhi_nu": 2
+      }
+    },
+    "desc": "古王·奥德里克：王冠不破，本体永远半伤——转火拆冠是这场仗唯一正确的打开方式。"
+  },
+  "b_lange": {
+    "hp_mult": 1.0,
+    "atk_mult": 1.0,
+    "mech": "phase,summon,heal",
+    "phases": [
+      {
+        "min": 65,
+        "add_skills": [
+          "ms_shui_ren_lange",
+          "ms_yin_chao_hui_chun",
+          "ms_chao_xi_yi_shi"
+        ],
+        "phase_id": "normal",
+        "script": {
+          "name": "潮信初至",
+          "icon": "🌊",
+          "enter_line": "🌊 潮落——祭司在引潮回春！潮起——怒浪拍打全场！⚠️ 仪式读条必断！"
+        },
+        "counter": "潮落清鲨鱼补状态；潮起咬牙扛浪；仪式读条必断！"
+      },
+      {
+        "min": 35,
+        "add_skills": [
+          "ms_lang_yong_pai_ji",
+          "ms_zhao_sha_yu_lange",
+          "ms_lang_chao_dot"
+        ],
+        "phase_id": "enrage",
+        "atk_mult": 1.1,
+        "freq_mult": 0.85,
+        "script": {
+          "name": "怒潮渐急",
+          "icon": "🌊",
+          "warn_line": "周期缩短！仪式咏唱与潮起几乎无缝——打断窗口变紧！"
+        },
+        "counter": "读条 2 刻也要抢断：断=免 2.4× 团伤 + 2 刻反噬爆发窗！"
+      },
+      {
+        "min": 0,
+        "add_skills": [],
+        "phase_id": "rampage",
+        "atk_mult": 1.3,
+        "script": {
+          "name": "海神之怒",
+          "icon": "⛈️",
+          "warn_line": "狂暴！漏断 2 次仪式=怒海化身常驻——一次都别漏！"
+        },
+        "counter": "打断奖励变薄（反噬 1.5 刻）——更吃爆发质量！"
+      }
+    ],
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.4,
+      "turns": 2
+    },
+    "ai": {
+      "skill_chance": 0.55,
+      "weights": {
+        "ms_shui_ren_lange": 2,
+        "ms_lang_yong_pai_ji": 2,
+        "ms_zhao_sha_yu_lange": 2,
+        "ms_yin_chao_hui_chun": 2,
+        "ms_chao_xi_yi_shi": 3,
+        "ms_lang_chao_dot": 2
+      }
+    },
+    "desc": "海神祭司·澜歌：潮汐两拍×仪式读条——这半场该干嘛是题眼。"
+  },
+  "b_lost_archivist": {
+    "matk_mult": 1.15,
+    "hp_mult": 1.1,
+    "desc": "守馆者·遗忘贤者：禁书库的守门人，术法渊深"
+  },
+  "b_marcus": {
+    "hp_mult": 1.0,
+    "atk_mult": 1.0,
+    "mech": "phase,enrage",
+    "chains": [
+      {
+        "seq": [
+          "ms_an_ying_dan",
+          "ms_suo_lian_ding_zui",
+          "ms_shen_pan_zhi_yan",
+          "ms_chu_xing_xuan_du"
+        ],
+        "cd": 0,
+        "break": 0.0
+      }
+    ],
+    "phases": [
+      {
+        "min": 60,
+        "phase_id": "normal",
+        "add_skills": [],
+        "script": {
+          "name": "预审",
+          "icon": "⚖️",
+          "enter_line": "锁链扬起——定罪将至！看到锁链先准备净化，处刑读条立刻打断！"
+        },
+        "counter": "防定罪 > 断处刑：净化掉束缚，处刑就永远不打折；断处刑=判决流产白嫖窗！"
+      },
+      {
+        "min": 30,
+        "phase_id": "enrage",
+        "atk_mult": 1.2,
+        "freq_mult": 0.85,
+        "add_skills": [
+          "ms_chi_re_bu_dao"
+        ],
+        "script": {
+          "name": "狂热公审",
+          "icon": "🔥",
+          "warn_line": "布道开始——自身攻击大幅提升！定罪更频繁，打断资源必须省着用！"
+        },
+        "counter": "净化/驱散优先清掉他身上的 atk_up；处刑读条只留给打断技！"
+      },
+      {
+        "min": 0,
+        "phase_id": "rampage",
+        "atk_mult": 1.3,
+        "add_skills": [],
+        "script": {
+          "name": "末日审判",
+          "icon": "⚖️",
+          "warn_line": "终审姿态：定罪+处刑连招更密！读条=唯一生机，防定罪=少挨一刀！"
+        },
+        "counter": "看见举法冠宣读判决立刻打断——判决流产的 1 刻空窗是全队最大爆发点！"
+      }
+    ],
+    "on_interrupt": {
+      "effect": "freeze_self",
+      "value": 1,
+      "turns": 1
+    },
+    "triggers": {
+      "player_low": {
+        "hp": 0.3,
+        "cooldown": 4
+      }
+    },
+    "ai": {
+      "skill_chance": 0.55,
+      "weights": {
+        "ms_an_ying_dan": 3,
+        "ms_suo_lian_ding_zui": 3,
+        "ms_shen_pan_zhi_yan": 2,
+        "ms_chi_re_bu_dao": 2
+      }
+    },
+    "desc": "审判长·马尔库斯：把战斗变成法庭程序——先定罪锁你打断资源，再处刑读条；断前奏才是最优解。"
+  },
+  "b_moon_guard": {
+    "hp_mult": 1.0,
+    "atk_mult": 1.0,
+    "mech": "phase,summon,shield,heal",
+    "phases": [
+      {
+        "min": 60,
+        "add_skills": [
+          "ms_ji_huo_guang_zhu",
+          "ms_ji_huo_jing_mian"
+        ],
+        "phase_id": "normal",
+        "script": {
+          "name": "朝圣之礼",
+          "icon": "🏛️",
+          "enter_line": "🏛️ 圣像低鸣——守卫正在激活【光柱圣像】！打断可封印它！"
+        },
+        "counter": "断>光柱>圣盾>镜面：能断就断，断一座=永久少一座机关！"
+      },
+      {
+        "min": 30,
+        "add_skills": [
+          "ms_ji_huo_sheng_dun",
+          "ms_yue_guang_cai_jue",
+          "ms_yue_zhi_qi_yuan"
+        ],
+        "phase_id": "enrage",
+        "atk_mult": 1.15,
+        "freq_mult": 0.9,
+        "script": {
+          "name": "试炼加严",
+          "icon": "⚔️",
+          "warn_line": "圣盾圣像苏醒——先破盾再断唱！机关留 2 座=共鸣审判！"
+        },
+        "counter": "圣盾在场读条免疫打断；盾碎=2 刻崩解爆发窗！"
+      },
+      {
+        "min": 0,
+        "add_skills": [],
+        "phase_id": "rampage",
+        "atk_mult": 1.3,
+        "script": {
+          "name": "神威降临",
+          "icon": "🌙",
+          "warn_line": "机关激活顺序反转为圣盾→镜面→光柱——优先级要反过来！"
+        },
+        "counter": "终局：断一个碎一个，断不干净=共鸣审判+裁决连招！"
+      }
+    ],
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.15,
+      "turns": 1
+    },
+    "ai": {
+      "skill_chance": 0.55,
+      "weights": {
+        "ms_ji_huo_guang_zhu": 2,
+        "ms_ji_huo_jing_mian": 2,
+        "ms_ji_huo_sheng_dun": 2,
+        "ms_yue_guang_cai_jue": 2,
+        "ms_yue_zhi_qi_yuan": 1
+      }
+    },
+    "desc": "月神守卫：圣像机关阵的活守卫——机关管不好就叠加成死局。"
+  },
+  "b_moro": {
+    "hp_mult": 1.25,
+    "atk_mult": 1.1,
+    "mech": "enrage,phase_open,summon,stacks,phase,heal",
+    "opening": {
+      "name": "深渊咆哮",
+      "effect": "atk_up",
+      "power": 2
+    },
+    "on_taken": {
+      "heal": {
+        "pct": 0.02,
+        "cd": 2
+      }
+    },
+    "triggers": {
+      "player_low": {
+        "hp": 0.3,
+        "cooldown": 3
+      }
+    },
+    "phases": [
+      {
+        "min": 60,
+        "add_skills": [
+          "ms_zhao_huan_e_mo",
+          "ms_f6_fu_shi_wa_di"
+        ],
+        "script": {
+          "name": "腐化领域扩张",
+          "icon": "🌑"
+        },
+        "counter": "清掉恶魔可解除其减伤; 自己净化叠满3层前的腐蚀。"
+      },
+      {
+        "min": 30,
+        "add_skills": [
+          "ms_shen_yuan_zhi_nu",
+          "ms_f6_fu_shi_wa_di",
+          "ms_f6_mo_yu_kong_xi"
+        ],
+        "script": {
+          "name": "恶魔军势·魔焰扩散",
+          "icon": "👹"
+        },
+        "counter": "恶魔越少魔焰扩散越小; 深渊之怒读条2刻稳定打断。"
+      }
+    ],
+    "on_minion_died": {
+      "effect": "heal_pct",
+      "value": 0.03
+    },
+    "desc": "深渊领主·摩罗：腐化毒圈+恶魔潮双线题, 场上无恶魔时本体零减伤。"
+  },
+  "b_ola": {
+    "mech": "phase,summon,phase_open",
+    "opening": {
+      "name": "天象轮替·预读开始",
+      "effect": "atk_up",
+      "power": 1
+    },
+    "phases": [
+      {
+        "min": 60,
+        "add_skills": [
+          "ms_f6_sheng_guang_ling_yu",
+          "ms_f6_sheng_guang_tan",
+          "ms_f6_lei_bao_tian_xiang",
+          "ms_f6_lei_ji_tian_xiang",
+          "ms_f6_sheng_yu",
+          "ms_f6_yu_wei_zhao_huan"
+        ],
+        "script": {
+          "name": "天象轮替(晴→雷→雨→云)",
+          "icon": "☁️"
+        },
+        "counter": "看预告切姿态: 晴=全防; 雷=全防接地; 雨=留奶; 云=集火云卫。"
+      },
+      {
+        "min": 30,
+        "add_skills": [
+          "ms_f6_sheng_guang_ling_yu",
+          "ms_f6_lei_bao_tian_xiang",
+          "ms_f6_sheng_yu"
+        ],
+        "phase_id": "enrage",
+        "script": {
+          "name": "天象归一·双象连演",
+          "icon": "🌟"
+        },
+        "counter": "收束题: 姿态零失误, 云卫清场后再谈输出。"
+      }
+    ],
+    "desc": "云中圣者·奥拉：四象轮替预读切换, 一场收束天空线全部机制。"
+  },
+  "b_om_shadow": {
+    "hp_mult": 1.35,
+    "atk_mult": 1.2,
+    "mech": "summon,player_low,phase,heal,reflect",
+    "triggers": {
+      "player_low": {
+        "hp": 0.3,
+        "cooldown": 3
+      }
+    },
+    "opening": {
+      "name": "龙威·重创",
+      "effect": "mortal_wound",
+      "power": 2
+    },
+    "on_minion_died": {
+      "effect": "heal_pct",
+      "value": 0.04
+    },
+    "phases": [
+      {
+        "min": 50,
+        "add_skills": [
+          "ms_f6_ling_hun_bo_li"
+        ],
+        "script": {
+          "name": "灵魂窃取·剥离开始",
+          "icon": "💀"
+        },
+        "counter": "打断/净化剥离, 把骷髅龙当第一优先级(它们=奥姆的移动血包)。"
+      },
+      {
+        "min": 40,
+        "add_skills": [
+          "ms_f6_zhao_huan_ku_long",
+          "ms_f6_chuan_cheng_he_fu_huo"
+        ],
+        "script": {
+          "name": "传承之核·亮起(减伤+定时复苏)",
+          "icon": "🔮"
+        },
+        "phase_id": "enrage",
+        "counter": "打碎传承之核可换取8刻承伤x1.4的崩裂窗口。",
+        "dmg_taken_mult": 1.0,
+        "exit_turns": null,
+        "exit_dmg": null
+      }
+    ],
+    "desc": "古龙·奥姆之影：灵魂剥离偷治疗/吸血/自回, 骷髅龙是移动血包, 传承之核是崩裂开关。"
+  },
+  "b_opera_siren": {
+    "hp_mult": 1.1,
+    "atk_mult": 1.05,
+    "mech": "phase,summon,phase_open",
+    "phases": [
+      {
+        "min": 60,
+        "phase_id": "normal",
+        "add_skills": [
+          "ms_xie_mu_qu",
+          "ms_he_sheng_zhao_huan"
+        ],
+        "script": {
+          "name": "序曲",
+          "icon": "🎭",
+          "enter_line": "🎭 歌澜开始咏唱【谢幕曲】（读条 3 刻）！打断=破音虚脱 2 刻——全队抢断！",
+          "warn_line": "⚠️ 咏唱间隙先清和声海妖——每只让谢幕曲 +20%！"
+        },
+        "counter": "咏唱读到第 1-2 刻立刻打断→虚脱 ×1.4 全队爆发→循环；整场目标=谢幕曲 0 成功！"
+      },
+      {
+        "min": 30,
+        "phase_id": "enrage",
+        "atk_mult": 1.15,
+        "freq_mult": 0.9,
+        "add_skills": [
+          "ms_di_yin_wei_mu"
+        ],
+        "script": {
+          "name": "咏叹调",
+          "icon": "🎶",
+          "warn_line": "咏唱前她会开【低音帷幕】护盾——先破盾再断唱，别把打断浪费在盾上！"
+        },
+        "counter": "和声召唤 4→3 刻！场上凑满 3 只=3.84× 核弹——AOE 清和声 > 贪本体！"
+      },
+      {
+        "min": 0,
+        "phase_id": "rampage",
+        "atk_mult": 1.3,
+        "freq_mult": 0.8,
+        "add_skills": [],
+        "script": {
+          "name": "终曲·安可",
+          "icon": "🎼",
+          "warn_line": "终幕高音！咏唱一轮接一轮——高音共鸣震晕专骗打断，断了唱就完蛋！"
+        },
+        "counter": "末段纪律：免疫控制/净化硬吃高音共鸣，打断永远留给谢幕曲；虚脱窗打满！"
+      }
+    ],
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.4,
+      "turns": 2
+    },
+    "opening": {
+      "name": "开场合唱",
+      "effect": "atk_up",
+      "power": 1
+    },
+    "triggers": {
+      "player_low": {
+        "hp": 0.3,
+        "cooldown": 4
+      }
+    },
+    "ai": {
+      "skill_chance": 0.55,
+      "weights": {
+        "ms_yong_tan_lang_yong": 3,
+        "ms_gao_yin_gong_ming": 2,
+        "ms_he_sheng_zhao_huan": 2,
+        "ms_xie_mu_qu": 3,
+        "ms_di_yin_wei_mu": 1
+      }
+    },
+    "desc": "首席海妖·歌澜：咏唱打断博弈——让她永远唱不完谢幕曲，虚脱窗就是你的主场。"
+  },
+  "b_rust_crab": {
+    "hp_mult": 1.1,
+    "atk_mult": 1.05,
+    "mech": "phase,enrage",
+    "dmg_taken_mult": 0.6,
+    "phases": [
+      {
+        "min": 60,
+        "phase_id": "normal",
+        "add_skills": [
+          "ms_qian_jia_lie_shi"
+        ],
+        "script": {
+          "name": "锈蚀外壳",
+          "icon": "🦀",
+          "enter_line": "🦀 锈钳的甲壳泛着铁锈的冷光——减伤 40%！硬打是白耗，把它打到 60% 震碎外壳！"
+        },
+        "counter": "💡 锈壳减伤 40% 别硬打——压血到 60% 触发破壳，破壳 8 刻才是爆发窗！"
+      },
+      {
+        "min": 30,
+        "phase_id": "exhaust",
+        "dmg_taken_mult": 1.4,
+        "add_skills": [
+          "ms_heng_sao_xiu"
+        ],
+        "exit_turns": 8,
+        "script": {
+          "name": "外壳破碎",
+          "icon": "💥",
+          "enter_line": "💥 蟹壳轰然震碎！破甲窗 8 刻——承伤 ×1.4，把大招全砸进去！",
+          "warn_line": "⚠️ 破壳窗剩最后几刻——它会读条【修壳】把壳补回来，打断修壳=窗口续期！"
+        },
+        "counter": "破壳窗 = 唯一爆发时间！看见【修壳】读条立刻打断——断了壳就修不好！"
+      },
+      {
+        "min": 0,
+        "phase_id": "rampage",
+        "atk_mult": 1.3,
+        "dmg_taken_mult": 0.8,
+        "freq_mult": 0.85,
+        "add_skills": [],
+        "script": {
+          "name": "锈壳再生",
+          "icon": "⚔️",
+          "warn_line": "狂暴！锈壳再生（减伤回落 20%）但钳夹更快、横扫更频——修壳读条是最后的打断点！"
+        },
+        "counter": "终局：破壳后别让它读条修壳——每次【修壳】都是白嫖输出窗！"
+      }
+    ],
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.15,
+      "turns": 2
+    },
+    "chains": [
+      {
+        "seq": [
+          "ms_zhong_qian_xiu",
+          "ms_zhong_qian_xiu",
+          "ms_qian_jia_lie_shi",
+          "ms_heng_sao_xiu",
+          "ms_zhong_qian_xiu",
+          "ms_heng_sao_xiu",
+          "ms_qian_jia_lie_shi"
+        ],
+        "cd": 0,
+        "break": 0.15
+      }
+    ],
+    "ai": {
+      "skill_chance": 0.6,
+      "weights": {
+        "ms_zhong_qian_xiu": 4,
+        "ms_heng_sao_xiu": 2,
+        "ms_qian_jia_lie_shi": 2,
+        "ms_xiu_qiao": 1
+      }
+    },
+    "desc": "巨钳蟹王·锈钳：锈壳减伤 40% 的破甲窗口题——先破壳，再爆发，修壳读条必须断！"
+  },
+  "b_siren_queen": {
+    "hp_mult": 1.0,
+    "atk_mult": 1.0,
+    "mech": "phase,summon,heal",
+    "phases": [
+      {
+        "min": 60,
+        "add_skills": [
+          "ms_chao_yong_ling_yu",
+          "ms_you_lan_hui_xiang"
+        ],
+        "phase_id": "normal",
+        "freq_mult": 0.8,
+        "dmg_taken_mult": 1.0,
+        "script": {
+          "name": "重唱·潮鸣渐起",
+          "icon": "🎶"
+        },
+        "counter": "触手满 3 只前先清触手；幽蓝回响读条出现立刻打断！"
+      },
+      {
+        "min": 30,
+        "add_skills": [],
+        "phase_id": "enrage",
+        "atk_mult": 1.3,
+        "freq_mult": 0.85,
+        "script": {
+          "name": "谢幕·葬歌",
+          "icon": "🖤"
+        },
+        "counter": "终局：看见召唤立刻清，绝不让触手与歌声同刻生效！"
+      }
+    ],
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.4,
+      "turns": 2
+    },
+    "ai": {
+      "skill_chance": 0.55,
+      "weights": {
+        "ms_mei_huo_ge_blue": 3,
+        "ms_ju_lang_blue": 2,
+        "ms_zhao_chu_shou_blue": 2,
+        "ms_you_lan_hui_xiang": 2
+      }
+    },
+    "desc": "海妖女王·蓝歌：触手铺场+群体魅惑的控制女王——清触手 > 打本体。"
+  },
+  "b_storm_king": {
+    "mech": "phase,summon",
+    "phases": [
+      {
+        "min": 60,
+        "add_skills": [
+          "ms_f6_lian_lei"
+        ],
+        "script": {
+          "name": "雷云激化",
+          "icon": "⚡"
+        },
+        "counter": "静电到2层者主动防御一次放电, 防点名; 雷鸟出现优先清。"
+      },
+      {
+        "min": 30,
+        "add_skills": [
+          "ms_f6_lian_lei",
+          "ms_f6_jing_dian_jie_dian"
+        ],
+        "script": {
+          "name": "审判风暴·天雷锁定",
+          "icon": "🌩️"
+        },
+        "phase_id": "enrage",
+        "counter": "被天雷锁定的T立刻防御接地(伤害减半+清层), 别让后排吃满。"
+      }
+    ],
+    "desc": "雷霆君主：静电叠层记账+点名排雷, 换T交棒是唯一正解。"
+  },
+  "b_storm_master": {
+    "mech": "phase,summon",
+    "chains": [
+      {
+        "seq": [
+          "ms_f6_lei_bao_feng_yan",
+          "ms_lei_bao",
+          "ms_f6_feng_bao_feng_yan"
+        ],
+        "cd": 1,
+        "break": 0.1
+      }
+    ],
+    "phases": [
+      {
+        "min": 60,
+        "add_skills": [
+          "ms_f6_lei_ting_shen_pan"
+        ],
+        "script": {
+          "name": "疾风·短条点名",
+          "icon": "🌪️"
+        },
+        "counter": "长读条队伍齐防/被打断白嫖反噬窗口; 短读条被点名者自防。"
+      },
+      {
+        "min": 30,
+        "add_skills": [
+          "ms_f6_lei_ting_shen_pan"
+        ],
+        "phase_id": "enrage",
+        "script": {
+          "name": "风暴之怒·卷走",
+          "icon": "🌀"
+        },
+        "counter": "别贪刀! 未防御吃全伤+被卷走1刻=少一次行动。"
+      }
+    ],
+    "desc": "风暴之主·云怒：全员读条节奏题, 防御=进风眼近免。"
+  },
+  "b_thunder_golem": {
+    "hp_mult": 1.1,
+    "atk_mult": 1.05,
+    "mech": "phase,stacks,summon,phase_open",
+    "phases": [
+      {
+        "min": 65,
+        "phase_id": "normal",
+        "add_skills": [
+          "ms_lei_ting_zha_lie",
+          "ms_lei_jing_ning_ju"
+        ],
+        "script": {
+          "name": "初触雷晶",
+          "icon": "⚡",
+          "enter_line": "⚡ 轰鸣的雷晶已充能 0/5 层——你打它=给它充能！碎雷晶核放能、层满断过载！",
+          "warn_line": "⚠️ 口诀：充能记账、满前泄压、溢出必断！"
+        },
+        "counter": "层数 3-4 前碎一次晶核（清层+短路 2 刻爆发窗）；满 5 又没晶核=打断过载读条！"
+      },
+      {
+        "min": 35,
+        "phase_id": "enrage",
+        "atk_mult": 1.15,
+        "freq_mult": 0.85,
+        "add_skills": [
+          "ms_lei_jing_sui_xie"
+        ],
+        "script": {
+          "name": "矿脉共振",
+          "icon": "💠",
+          "warn_line": "共振加剧：充能叠得更快、电弧溅射更凶、碎屑震晕骚扰——学会层数 3-4 必碎一次！"
+        },
+        "counter": "碎晶=泄压+2 刻承伤 ×1.3 爆发窗——爆发技永远排在碎晶之后！"
+      },
+      {
+        "min": 0,
+        "phase_id": "rampage",
+        "atk_mult": 1.3,
+        "freq_mult": 0.85,
+        "add_skills": [
+          "ms_lei_ting_jian_ta"
+        ],
+        "script": {
+          "name": "过载核心",
+          "icon": "🌩️",
+          "warn_line": "狂暴×1.3 叠加在充能之上！过载蓄力来得更快——碎晶节奏必须跑进输出循环！"
+        },
+        "counter": "终局：把碎晶当第 5 个技能排——满层失守就断【雷霆炸裂】读条保命！"
+      }
+    ],
+    "on_interrupt": {
+      "effect": "stacks_set",
+      "key": "charge",
+      "value": 3
+    },
+    "on_minion_died": {
+      "effect": "stacks_clear",
+      "value": 1
+    },
+    "opening": {
+      "name": "雷晶共鸣",
+      "effect": "atk_up",
+      "power": 1
+    },
+    "triggers": {
+      "player_low": {
+        "hp": 0.3,
+        "cooldown": 4
+      }
+    },
+    "ai": {
+      "skill_chance": 0.6,
+      "weights": {
+        "ms_lei_jing_zhong_chui": 3,
+        "ms_dian_hu_jian_she": 2,
+        "ms_lei_ting_zha_lie": 2,
+        "ms_lei_jing_ning_ju": 2,
+        "ms_lei_jing_sui_xie": 1
+      }
+    },
+    "desc": "雷晶巨像·轰鸣：你打它=给它充能——碎雷晶核强制放能，把层数永远压进 0-2 的木桩区。"
+  },
+  "b_trial_knight": {
+    "hp_mult": 1.0,
+    "atk_mult": 1.0,
+    "mech": "phase,phase_open,player_low",
+    "chains": [
+      {
+        "seq": [
+          "ms_jian_ji",
+          "ms_sheng_guang_dan",
+          "ms_dun_ji_shi_lian",
+          "ms_shi_zi_zhan"
+        ],
+        "cd": 0,
+        "break": 0.0
+      }
+    ],
+    "opening": {
+      "name": "圣光试炼·接招",
+      "effect": "atk_up",
+      "power": 1
+    },
+    "phases": [
+      {
+        "min": 70,
+        "phase_id": "normal",
+        "add_skills": [
+          "ms_shi_zi_zhan"
+        ],
+        "script": {
+          "name": "进阶考核",
+          "icon": "⚔️",
+          "enter_line": "招式开始提速——圣光弹后可能连发，防反窗口更紧！"
+        },
+        "counter": "看见【蓄力十字斩】读条就『防御』——防反成功=2 刻破绽爆发窗！"
+      },
+      {
+        "min": 35,
+        "phase_id": "enrage",
+        "atk_mult": 1.2,
+        "add_skills": [
+          "ms_sheng_guang_cai_jue",
+          "ms_sheng_guang_qi_yuan"
+        ],
+        "script": {
+          "name": "终考·骑士之誓",
+          "icon": "🏅",
+          "warn_line": "追加第 5 招【圣光裁决】！读条防御依旧是最稳的答案——别贪刀！"
+        },
+        "counter": "稳定防反=在破绽窗口内把血线压下去——这是防反打桩的正确姿势！"
+      }
+    ],
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.15,
+      "turns": 1
+    },
+    "triggers": {
+      "player_low": {
+        "hp": 0.35,
+        "cooldown": 5
+      }
+    },
+    "ai": {
+      "skill_chance": 0.5,
+      "weights": {
+        "ms_sheng_guang_dan": 2,
+        "ms_dun_ji_shi_lian": 1,
+        "ms_shi_zi_zhan": 2,
+        "ms_sheng_guang_cai_jue": 2
+      }
+    },
+    "desc": "试炼骑士长：固定四招读招循环的考官——蓄力十字斩前防御，就是整场考核的答案。"
+  },
+  "b_under_dragon": {
+    "hp_mult": 1.0,
+    "atk_mult": 1.0,
+    "mech": "phase,summon",
+    "phases": [
+      {
+        "min": 60,
+        "add_skills": [
+          "ms_suan_xi_under",
+          "ms_di_di_li_zhao"
+        ],
+        "phase_id": "normal",
+        "script": {
+          "name": "蚀骨之地",
+          "icon": "🐍",
+          "enter_line": "🐍 黑渊盘踞岩浆湖中央——看到『正在施展酸息』就打断或准备净化，别让它叠腐蚀！"
+        },
+        "counter": "腐蚀是头号压力源：3 层前净化掉；酸息读条=免费输出窗，打它！"
+      },
+      {
+        "min": 30,
+        "add_skills": [
+          "ms_fu_shi_tu_xi_heng_sao",
+          "ms_zhao_you_long_under"
+        ],
+        "phase_id": "enrage",
+        "atk_mult": 1.15,
+        "freq_mult": 0.85,
+        "script": {
+          "name": "溶骨",
+          "icon": "🧪",
+          "warn_line": "鳞甲泛起酸泡——横扫吐息来了，全队都要叠腐蚀，净化不够用了！"
+        },
+        "counter": "横扫=全队 1 层腐蚀；幼龙 AOE 清掉（第二腐蚀来源）；净化按人分配！"
+      },
+      {
+        "min": 0,
+        "add_skills": [],
+        "phase_id": "rampage",
+        "atk_mult": 1.2,
+        "script": {
+          "name": "噬骸",
+          "icon": "☠️",
+          "warn_line": "酸血沸腾——黑渊越战越凶，腐蚀层越高它打得越疼，噬骨深吞读条=必断点！"
+        },
+        "counter": "终局：层数 3+ 必清（引爆真伤）；噬骨深吞 2 刻读条，打断=虚脱爆发窗！"
+      }
+    ],
+    "opening": {
+      "name": "酸血咆哮",
+      "effect": "atk_up",
+      "power": 2
+    },
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.4,
+      "turns": 2
+    },
+    "chains": [
+      {
+        "seq": [
+          "ms_shi_gu_shen_tun"
+        ],
+        "cd": 8,
+        "break": 0
+      }
+    ],
+    "ai": {
+      "skill_chance": 0.6,
+      "weights": {
+        "ms_di_di_li_zhao": 2,
+        "ms_suan_xi_under": 3,
+        "ms_zhao_you_long_under": 1,
+        "ms_shi_lin_suan_shi": 1,
+        "ms_fu_shi_tu_xi_heng_sao": 2
+      }
+    },
+    "desc": "地底古龙·黑渊：酸蚀叠层越打越痛（净化是资源）+ 噬骨深吞读条必断（打断=爆发窗）。"
+  },
+  "b_whirl_turtle": {
+    "hp_mult": 1.1,
+    "atk_mult": 1.05,
+    "mech": "phase,enrage",
+    "phases": [
+      {
+        "min": 65,
+        "phase_id": "normal",
+        "add_skills": [
+          "ms_xuan_wo_la_che",
+          "ms_shui_dan_chong_ji",
+          "ms_luo_shi_po_qiao",
+          "ms_suo_qiao_xi"
+        ],
+        "script": {
+          "name": "潮汐涌动·教学轮",
+          "icon": "🌪️",
+          "enter_line": "🌪️ 潮汐涌动：接下来 3 刻是拉扯期（缩壳减伤+旋涡啃血）→ 3 刻破壳期（输出窗）！",
+          "warn_line": "拉扯期少输出稳血线；破壳期把大招全砸进窗口！"
+        },
+        "counter": "💡 拉扯期防御/用药/群疗；破壳期（承伤 +25%）才爆发——节奏是这道题的答案！"
+      },
+      {
+        "min": 30,
+        "phase_id": "enrage",
+        "atk_mult": 1.15,
+        "freq_mult": 0.9,
+        "exit_turns": 2,
+        "add_skills": [],
+        "script": {
+          "name": "涡流加剧",
+          "icon": "🌀",
+          "warn_line": "周期缩到 5 刻！拉扯期只剩 2 刻喘息——别被拖到中心，落石专砸被拖者！"
+        },
+        "counter": "被旋涡拖住（减速标记）→ 下个【落石破壳】×1.5 必砸你——立刻防御+让治疗预读！"
+      },
+      {
+        "min": 0,
+        "phase_id": "rampage",
+        "atk_mult": 1.3,
+        "freq_mult": 0.85,
+        "exit_turns": 4,
+        "add_skills": [],
+        "script": {
+          "name": "怒涛核心",
+          "icon": "⛈️",
+          "warn_line": "狂暴×1.35！破壳期被压到 2 刻——拉扯期挨打更久，血线管理决定生死！"
+        },
+        "counter": "终局=斩杀节奏：破壳 2 刻内打满输出，拉扯期绝不贪刀！"
+      }
+    ],
+    "on_interrupt": {
+      "effect": "vulnerable",
+      "value": 1.15,
+      "turns": 1
+    },
+    "ai": {
+      "skill_chance": 0.5,
+      "weights": {
+        "ms_ju_qian_heng_sao": 3,
+        "ms_xuan_wo_la_che": 3,
+        "ms_shui_dan_chong_ji": 2,
+        "ms_luo_shi_po_qiao": 2,
+        "ms_suo_qiao_xi": 1
+      }
+    },
+    "desc": "石壳龟·磐涡：潮汐两拍的节奏题——拉扯期龟缩挨打，破壳期 3 刻打满爆发。"
+  },
+  "e_abbey_guardian": {
+    "def_mult": 1.15,
+    "hp_mult": 1.1,
+    "desc": "圣堂武僧：金钟罩般的横练功夫"
+  },
+  "e_altar_guardian": {
+    "matk_mult": 1.15,
+    "hp_mult": 1.1,
+    "desc": "祭坛守卫·魔眼：邪眼凝视，术法诡异"
+  },
+  "e_archive_warden": {
+    "matk_mult": 1.15,
+    "hp_mult": 1.05,
+    "desc": "档案馆长·奥古斯特：禁书法术凌厉"
+  },
+  "e_ash_champion": {
+    "atk_mult": 1.15,
+    "spd_mult": 1.05,
+    "desc": "灰烬勇士：余烬不灭，战意不熄"
+  },
+  "e_ash_salamander": {
+    "matk_mult": 1.15,
+    "spd_mult": 1.1,
+    "desc": "烬火蝾螈：吐息滚烫，身形灵活"
+  },
+  "e_bandit_leader": {
+    "hp_mult": 1.3,
+    "atk_mult": 0.9,
+    "desc": "山贼头目：皮糙肉厚，比普通精英更能扛"
+  },
+  "e_battle_lord": {
+    "atk_mult": 1.15,
+    "hp_mult": 1.1,
+    "desc": "百族战将·亡影：百战余生，凶悍绝伦"
+  },
+  "e_boar_king": {
+    "hp_mult": 1.2,
+    "atk_mult": 1.1,
+    "desc": "野猪王·裂鬃：鬃毛如刺，冲撞开山"
+  },
+  "e_bone_lord": {
+    "matk_mult": 1.35,
+    "hp_mult": 0.9,
+    "desc": "骨龙领主·骸王：死灵法术比同类更凶"
+  },
+  "e_cave_troll": {
+    "hp_mult": 1.15,
+    "atk_mult": 1.1,
+    "desc": "洞穴巨魔：洞窟霸主，筋骨结实"
+  },
+  "e_cloud_lord": {
+    "matk_mult": 1.1,
+    "hp_mult": 1.15,
+    "desc": "云海领主·雾冠：云雾凝甲，术法悠长"
+  },
+  "e_cloud_serpent": {
+    "matk_mult": 1.15,
+    "spd_mult": 1.1,
+    "desc": "云龙：腾云驾雾，吐息带雷光"
+  },
+  "e_dark_leech": {
+    "matk_mult": 1.1,
+    "hp_mult": 1.15,
+    "desc": "黑暗水蛭王：吸饱暗能，身躯坚韧"
+  },
+  "e_deep_angler": {
+    "matk_mult": 1.15,
+    "hp_mult": 1.05,
+    "desc": "深海鮟鱇：幽光钓饵摄人心魄"
+  },
+  "e_demon_warrior": {
+    "atk_mult": 1.15,
+    "hp_mult": 1.1,
+    "desc": "恶魔战士：地狱火淬炼的肌肉"
+  },
+  "e_dragon_hatchling": {
+    "atk_mult": 1.15,
+    "spd_mult": 1.05,
+    "desc": "幼龙：龙威初显，爪牙锋利"
+  },
+  "e_dragon_lord_ghost": {
+    "atk_mult": 1.1,
+    "hp_mult": 1.15,
+    "desc": "龙陨战魂·暮影：执念凝躯，龙威犹在"
+  },
+  "e_dragon_roost_king": {
+    "atk_mult": 1.15,
+    "hp_mult": 1.1,
+    "desc": "龙巢王·焰翼：巢穴之主，爪牙如刃"
+  },
+  "e_elf_sentinel": {
+    "atk_mult": 1.15,
+    "spd_mult": 1.25,
+    "desc": "精灵哨兵：箭术百步穿杨"
+  },
+  "e_forest_wolf_king": {
+    "atk_mult": 1.15,
+    "spd_mult": 1.1,
+    "desc": "森林狼王：狼群之首，又快又狠"
+  },
+  "e_fortune_fox": {
+    "spd_mult": 1.15,
+    "atk_mult": 1.05,
+    "desc": "幸运灵狐：机敏迅捷，爪击带三分灵气"
+  },
+  "e_frost_bear": {
+    "hp_mult": 1.2,
+    "atk_mult": 1.05,
+    "desc": "霜原巨熊：厚毛如甲，一巴掌拍碎冰面"
+  },
+  "e_frost_mammoth": {
+    "hp_mult": 1.2,
+    "atk_mult": 1.05,
+    "desc": "冰原猛犸·雪岭：长毛如甲，踩踏如崩"
+  },
+  "e_frost_troll_lord": {
+    "hp_mult": 1.15,
+    "atk_mult": 1.1,
+    "desc": "霜巨魔王：霜巨人中的王，耐打且力大"
+  },
+  "e_fungus_king": {
+    "hp_mult": 1.15,
+    "atk_mult": 1.1,
+    "desc": "真菌之王：菌盖坚硬，孢子携带剧毒"
+  },
+  "e_fungus_lord": {
+    "hp_mult": 1.3,
+    "atk_mult": 1.1,
+    "mech": "summon",
+    "desc": "真菌领主·腐冠：吞噬生机的沼泽霸主，会呼唤腐尸助战"
+  },
+  "e_ghost_knight": {
+    "atk_mult": 1.1,
+    "def_mult": 1.15,
+    "desc": "幽灵骑士：锈甲不腐，剑刃带寒"
+  },
+  "e_glacier_wyrm": {
+    "atk_mult": 1.1,
+    "hp_mult": 1.15,
+    "desc": "冰川龙·霜牙：寒鳞如铁，牙口锋利"
+  },
+  "e_glimmer_fish": {
+    "spd_mult": 1.1,
+    "matk_mult": 1.1,
+    "desc": "荧光鱼群：游弋如光，水弹更疼"
+  },
+  "e_gold_slime": {
+    "hp_mult": 1.2,
+    "spd_mult": 0.9,
+    "desc": "黄金史莱姆：一身金壳又厚又沉，跑得略慢"
+  },
+  "e_gorge_troll": {
+    "hp_mult": 1.15,
+    "atk_mult": 1.1,
+    "desc": "峡谷巨魔：山石般的身板"
+  },
+  "e_grave_lord": {
+    "atk_mult": 1.2,
+    "def_mult": 1.2,
+    "desc": "古墓领主：攻守兼备的亡灵战将"
+  },
+  "e_graveyard_lord": {
+    "atk_mult": 1.15,
+    "def_mult": 1.05,
+    "desc": "沉船领主·溺骨：锈刃凶戾，怨气缠身"
+  },
+  "e_great_boar": {
+    "hp_mult": 1.15,
+    "atk_mult": 1.1,
+    "desc": "巨型野猪：獠牙拱地，皮厚膘肥"
+  },
+  "e_hill_wolf_king": {
+    "atk_mult": 1.1,
+    "hp_mult": 1.15,
+    "desc": "丘陵狼王·铁牙：铁牙咬碎盾牌"
+  },
+  "e_ice_fang_lord": {
+    "atk_mult": 1.1,
+    "hp_mult": 1.1,
+    "desc": "冰牙领主·霜白：冰甲覆身，獠牙如锥"
+  },
+  "e_inquisitor": {
+    "matk_mult": 1.15,
+    "hp_mult": 1.05,
+    "desc": "审判官：圣焰法术炽烈"
+  },
+  "e_iron_bull": {
+    "atk_mult": 1.1,
+    "hp_mult": 1.15,
+    "desc": "铁角蛮牛：铁角冲撞势大力沉"
+  },
+  "e_island_tiger": {
+    "atk_mult": 1.15,
+    "spd_mult": 1.1,
+    "desc": "落日岛虎·金焰：扑击迅猛，爪裂岩石"
+  },
+  "e_knight_instructor": {
+    "atk_mult": 1.1,
+    "def_mult": 1.1,
+    "desc": "骑士教官：攻守有度，招式老辣"
+  },
+  "e_lake_king": {
+    "matk_mult": 1.1,
+    "hp_mult": 1.15,
+    "desc": "星语湖王：湖灵庇佑，水术绵长"
+  },
+  "e_lake_lord": {
+    "matk_mult": 1.15,
+    "hp_mult": 1.1,
+    "element_weak": {
+      "fire": 1.4
+    },
+    "desc": "永冬湖主·冰瞳：冰术深沉，冻气逼人"
+  },
+  "e_lava_golem": {
+    "hp_mult": 1.2,
+    "atk_mult": 1.1,
+    "element_weak": {
+      "ice": 1.4
+    },
+    "immune_dots": [
+      "burn"
+    ],
+    "desc": "熔岩魔像：滚烫岩躯，重拳如锤"
+  },
+  "e_lava_lord": {
+    "hp_mult": 1.3,
+    "atk_mult": 1.15,
+    "desc": "熔岩领主：熔岩铸就的庞然巨物"
+  },
+  "e_magma_king": {
+    "hp_mult": 1.15,
+    "matk_mult": 1.1,
+    "desc": "岩浆王·烬核：岩浆之躯，法术滚烫"
+  },
+  "e_mine_troll": {
+    "hp_mult": 1.15,
+    "atk_mult": 1.1,
+    "desc": "矿洞巨魔：常年挖矿，身板结实"
+  },
+  "e_molten_lord": {
+    "matk_mult": 1.15,
+    "hp_mult": 1.1,
+    "element_weak": {
+      "ice": 1.4
+    },
+    "immune_dots": [
+      "burn"
+    ],
+    "desc": "熔火领主·烬核：岩浆在胸腔翻涌"
+  },
+  "e_moon_lord": {
+    "matk_mult": 1.15,
+    "hp_mult": 1.1,
+    "desc": "月光领主·银辉：月华护体，法术皎洁"
+  },
+  "e_moon_wolf": {
+    "spd_mult": 1.15,
+    "atk_mult": 1.1,
+    "desc": "月狼：月光下快如残影"
+  },
+  "e_moon_wolf_alpha": {
+    "atk_mult": 1.1,
+    "spd_mult": 1.15,
+    "desc": "月狼王·银鬃：月色下的闪电"
+  },
+  "e_moonshadow_lord": {
+    "atk_mult": 1.1,
+    "spd_mult": 1.15,
+    "desc": "月影领主·夜歌：影随心动，快如鬼魅"
+  },
+  "e_orc_warrior": {
+    "atk_mult": 1.35,
+    "hp_mult": 1.1,
+    "mech": "enrage",
+    "desc": "兽人战士：陷入狂怒后不管不顾"
+  },
+  "e_pirate_lieutenant": {
+    "atk_mult": 1.1,
+    "hp_mult": 1.05,
+    "desc": "海盗副官：弯刀淬毒，出手狠辣"
+  },
+  "e_plain_wolf": {
+    "atk_mult": 1.1,
+    "spd_mult": 1.1,
+    "desc": "平原狼王：草原猎手，快准狠"
+  },
+  "e_rainbow_dragon": {
+    "matk_mult": 1.1,
+    "spd_mult": 1.1,
+    "desc": "彩虹龙·霞光：七色吐息变幻莫测"
+  },
+  "e_red_dragon_lord": {
+    "matk_mult": 1.15,
+    "atk_mult": 1.05,
+    "element_weak": {
+      "thunder": 1.4
+    },
+    "desc": "赤龙领主·烬翼：龙息焚天，爪裂山岩"
+  },
+  "e_reef_king": {
+    "hp_mult": 1.15,
+    "atk_mult": 1.1,
+    "desc": "珊瑚礁主·红棘：棘甲坚硬，钳击有力"
+  },
+  "e_river_dragon_lord": {
+    "matk_mult": 1.15,
+    "hp_mult": 1.1,
+    "desc": "河龙领主：控水成术，鳞甲坚韧"
+  },
+  "e_rot_chief_guard": {
+    "hp_mult": 1.15,
+    "atk_mult": 1.1,
+    "desc": "腐牙亲卫：腐化之躯不知疼痛"
+  },
+  "e_royal_guard": {
+    "def_mult": 1.15,
+    "atk_mult": 1.05,
+    "desc": "王都禁卫：重甲在身，枪阵森严"
+  },
+  "e_rune_golem": {
+    "atk_mult": 1.2,
+    "def_mult": 1.15,
+    "desc": "符文魔像：符文之力加持的攻守均衡"
+  },
+  "e_sea_serpent": {
+    "atk_mult": 1.1,
+    "hp_mult": 1.15,
+    "desc": "海蛇：鳞甲坚韧，绞杀有力"
+  },
+  "e_shadow_stalker": {
+    "atk_mult": 1.15,
+    "spd_mult": 1.1,
+    "desc": "暗影猎手：黑暗中出手，快而致命"
+  },
+  "e_siren": {
+    "matk_mult": 1.15,
+    "hp_mult": 1.05,
+    "desc": "塞壬：歌声如刃，法术凌厉"
+  },
+  "e_siren_lord": {
+    "matk_mult": 1.15,
+    "hp_mult": 1.1,
+    "desc": "海妖领主·潮汐：潮汐之力加身"
+  },
+  "e_star_dragon": {
+    "matk_mult": 1.15,
+    "atk_mult": 1.05,
+    "desc": "星龙·辰光：星光凝息，爪带星辉"
+  },
+  "e_storm_cliff_lord": {
+    "spd_mult": 1.35,
+    "atk_mult": 1.15,
+    "desc": "风暴崖主·雷鸣：风暴之子，快攻型"
+  },
+  "e_storm_dragon": {
+    "matk_mult": 1.15,
+    "spd_mult": 1.05,
+    "desc": "风暴海龙·雷鸣：吐息裹挟雷暴"
+  },
+  "e_storm_eagle": {
+    "spd_mult": 1.2,
+    "atk_mult": 1.05,
+    "desc": "雷暴鹰：俯冲快若闪电"
+  },
+  "e_storm_leviathan": {
+    "hp_mult": 1.15,
+    "matk_mult": 1.1,
+    "desc": "风暴巨兽：雷雨淬炼的庞然巨物"
+  },
+  "e_storm_lord": {
+    "matk_mult": 1.15,
+    "hp_mult": 1.1,
+    "element_weak": {
+      "ice": 1.4
+    },
+    "desc": "雷暴领主·雷霆：雷云随身，术法轰鸣"
+  },
+  "e_swamp_croc": {
+    "atk_mult": 1.1,
+    "hp_mult": 1.15,
+    "desc": "沼泽巨鳄：皮糙肉厚，撕咬凶狠"
+  },
+  "e_swamp_king": {
+    "hp_mult": 1.15,
+    "atk_mult": 1.1,
+    "desc": "沼泽巨鳄·沼王：潜伏一击，咬合如闸"
+  },
+  "e_tree_lord": {
+    "hp_mult": 1.45,
+    "atk_mult": 0.85,
+    "spd_mult": 0.7,
+    "desc": "古树领主：皮糙肉厚行动迟缓，别跟它耗"
+  },
+  "e_trench_leviathan": {
+    "hp_mult": 1.15,
+    "atk_mult": 1.1,
+    "desc": "海沟巨兽·渊影：深渊巨口，吞天噬地"
+  },
+  "e_valley_lord": {
+    "matk_mult": 1.1,
+    "hp_mult": 1.15,
+    "desc": "翠谷领主·林语：自然之力厚重"
+  },
+  "e_valley_troll": {
+    "hp_mult": 1.15,
+    "atk_mult": 1.1,
+    "desc": "谷地巨魔：皮糙肉厚，蛮力惊人"
+  },
+  "e_whale_king": {
+    "hp_mult": 1.2,
+    "atk_mult": 1.05,
+    "desc": "龙鲸王·涛声：如山身躯，一撞碎舟"
+  },
+  "e_white_stag": {
+    "hp_mult": 1.25,
+    "spd_mult": 1.3,
+    "mech": "heal",
+    "desc": "白鹿王：森林之灵，矫健而坚韧，会汲取自然之力自愈"
+  },
+  "e_wind_king": {
+    "spd_mult": 1.15,
+    "matk_mult": 1.1,
+    "desc": "风语王·岚歌：御风而行，风刃无形"
+  },
+  "e_wolf_alpha": {
+    "hp_mult": 0.52,
+    "atk_mult": 0.6,
+    "matk_mult": 0.6,
+    "desc": "狼王·灰影：盘踞翡翠森林深处的狼王，凶名在外"
+  },
+  "m_abyss_demon": {
+    "matk_mult": 1.3,
+    "hp_mult": 0.9,
+    "desc": "深渊恶魔：阴影中的法术杀手"
+  },
+  "m_cave_bat": {
+    "spd_mult": 1.5,
+    "hp_mult": 0.7,
+    "desc": "洞穴蝙蝠：速度极快，怕光"
+  },
+  "m_dragonkin": {
+    "atk_mult": 1.2,
+    "hp_mult": 1.1,
+    "desc": "龙裔战士：血脉之力，攻高血厚"
+  },
+  "m_forest_wolf": {
+    "atk_mult": 1.15,
+    "def_mult": 0.85,
+    "desc": "森林狼：猎手本性，攻高防低"
+  },
+  "m_frost_troll": {
+    "hp_mult": 1.4,
+    "spd_mult": 0.75,
+    "desc": "冰霜巨魔：冰雪冻住了它的腿脚"
+  },
+  "m_ghost": {
+    "matk_mult": 1.3,
+    "hp_mult": 0.8,
+    "desc": "幽灵：怨念凝形，法术凶猛"
+  },
+  "m_giant_rat": {
+    "hp_mult": 0.75,
+    "spd_mult": 1.35,
+    "desc": "巨型老鼠：快而脆，成群出没"
+  },
+  "m_giant_spider": {
+    "spd_mult": 1.4,
+    "hp_mult": 0.8,
+    "desc": "巨型蜘蛛：动作极快，毒牙致命但身板脆"
+  },
+  "m_goblin_shaman": {
+    "matk_mult": 1.3,
+    "hp_mult": 0.9,
+    "desc": "哥布林萨满：黑巫术加持，法术更凶"
+  },
+  "m_goblin_warrior": {
+    "def_mult": 1.2,
+    "atk_mult": 0.95,
+    "desc": "哥布林战士：破铜烂铁堆出来的硬壳"
+  },
+  "m_ice_elemental": {
+    "matk_mult": 1.25,
+    "spd_mult": 1.2,
+    "element_weak": {
+      "fire": 1.4
+    },
+    "desc": "冰元素：御风而行，法术寒意刺骨"
+  },
+  "m_lava_elemental": {
+    "matk_mult": 1.3,
+    "def_mult": 0.8,
+    "desc": "熔岩元素：纯法术输出，遇水即弱"
+  },
+  "m_light_priest": {
+    "matk_mult": 1.3,
+    "hp_mult": 0.85,
+    "desc": "光之祭司：圣光法术炽烈，肉体凡胎"
+  },
+  "m_magma_worm": {
+    "spd_mult": 1.45,
+    "hp_mult": 0.85,
+    "desc": "熔岩蠕虫：扭曲空间穿行，快而脆"
+  },
+  "m_meteor_golem": {
+    "def_mult": 1.45,
+    "atk_mult": 0.85,
+    "spd_mult": 0.6,
+    "immune_dots": [
+      "poison"
+    ],
+    "desc": "陨星魔像：刀枪不入的重甲傀儡"
+  },
+  "m_obsidian_golem": {
+    "hp_mult": 1.45,
+    "atk_mult": 1.1,
+    "spd_mult": 0.7,
+    "immune_dots": [
+      "poison"
+    ],
+    "desc": "黑曜石魔像：虚空造物，迟钝而恐怖"
+  },
+  "m_orc_raider": {
+    "atk_mult": 1.2,
+    "hp_mult": 1.1,
+    "desc": "兽人劫掠者：力气大血也厚"
+  },
+  "m_red_wyvern": {
+    "spd_mult": 1.4,
+    "atk_mult": 1.1,
+    "desc": "赤翼飞龙：俯冲撕裂，快攻型"
+  },
+  "m_rot_orc": {
+    "atk_mult": 1.2,
+    "spd_mult": 1.15,
+    "desc": "腐牙兽人：扑咬凶狠，动作不慢"
+  },
+  "m_shadow_panther": {
+    "spd_mult": 1.5,
+    "atk_mult": 1.1,
+    "desc": "影豹：月光下快得只剩残影"
+  },
+  "m_skeleton": {
+    "def_mult": 1.35,
+    "atk_mult": 0.9,
+    "desc": "骷髅兵：白骨甲胄硬得很"
+  },
+  "m_snake": {
+    "hp_mult": 1.35,
+    "atk_mult": 0.9,
+    "desc": "毒蛇：缠住就不撒口，血厚耐打"
+  },
+  "m_steppe_wolf": {
+    "spd_mult": 1.45,
+    "atk_mult": 1.1,
+    "desc": "草原狼：兽人驯养的猎犬，快且狠"
+  },
+  "m_temple_guard": {
+    "def_mult": 1.3,
+    "hp_mult": 1.15,
+    "desc": "圣殿守卫：圣盾加护的铁壁"
+  },
+  "m_valley_eagle": {
+    "spd_mult": 1.5,
+    "atk_mult": 1.1,
+    "desc": "谷地巨鹰：俯冲快若闪电"
+  },
+  "m_valley_faerie": {
+    "matk_mult": 1.25,
+    "hp_mult": 0.85,
+    "desc": "谷地仙灵：法术暴烈，本体孱弱"
+  },
+  "m_void_hound": {
+    "atk_mult": 1.3,
+    "hp_mult": 0.9,
+    "desc": "虚空猎犬：牺牲体魄换来的极致攻击"
+  },
+  "m_wild_dog": {
+    "atk_mult": 1.2,
+    "hp_mult": 0.85,
+    "spd_mult": 1.15,
+    "desc": "野狗：牙尖嘴利攻高，但瘦弱血少"
+  },
+  "m_zombie": {
+    "hp_mult": 1.4,
+    "atk_mult": 0.9,
+    "spd_mult": 0.7,
+    "desc": "僵尸：笨重迟缓，但很难打死"
+  }
+}

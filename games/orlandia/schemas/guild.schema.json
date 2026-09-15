@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/guild.schema.json",
+  "title": "公会数据表（guild）—— 4 张表打包成 1 条：职位映射 / 可任命职位 / 公会商店 / 公会技能",
+  "description": "一条 = 公会域的一组数据表（顶层键 = 表名，实测 1 条 = `roles` + `shop_items` + `skills`）。真源 = 游戏仓 `game/data/guild.py`（`:23 GUILD_ROLES` / `:30 GUILD_APPOINTABLE` / `:35 GUILD_SHOP_ITEMS` / `:91 GUILD_SKILLS`），经 `scripts/export_domains/b9_social.py:derive_guild` 单向导出（**原样搬运**：不补默认值、不改类型）。⚠️ `GUILD_CONFIG`（14 个数值键）**不在本域** —— 数值配置归 L7 的 `*_config` 面，由宿主 `bind_host(config=…)` 注入给包内模块。**消费点**：包内 `content/social_guild.py`（公会面板成员职位图标 / 公会商店面板与购买 / 公会技能面板），命令层 `game/commands/social.py`（B9-L3 起只调包）。⚠️ 读表坑：`shop_items` 的键真源是 **int**（1..6），JSON 只有字符串键 → 包内 `guild_shop_items()` 读时还原 int；不还原 = `get(编号)` 恒 None = 「公会商店 <编号>」全部报「没有第 N 件商品」。",
+  "x-primary": "guild_table",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^(roles|shop_items|skills|config)$",
+    "description": "表名（内容侧词汇）：`roles`（职位映射 + 可任命职位）/ `shop_items`（公会商店 6 件商品）/ `skills`（公会技能 3 条）/ `config`（B14-3 新增：`GUILD_CONFIG` 公会数值配置 —— 11 个键）"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/guild_table"
+  },
+  "$defs": {
+    "guild_table": {
+      "type": "object",
+      "title": "公会数据表组（roles / shop_items / skills）",
+      "additionalProperties": true,
+      "x-required-note": "**不写 required**：本域「一条 = 一张表」（顶层键 = 表名，与 panel_rules 同型），三张表齐备由导出器 `scripts/export_domains/b9_social.py:derive_guild` 断言（任一张空表 → raise），不在 schema 层重复卡（写了 required 会让每张表各自「缺另两张」而全表红，见 verify_package_coverage 的条目级校验）。",
+      "properties": {
+        "roles": {
+          "type": "object",
+          "title": "公会职位表",
+          "description": "真源 `GUILD_ROLES`（4 档）+ `GUILD_APPOINTABLE`。成员 role 取值 = `map` 的键；`guild_members.role` 里存的就是这些 key。",
+          "properties": {
+            "map": {
+              "type": "object",
+              "x-widget": "rows",
+              "title": "职位映射",
+              "description": "{role: [职位名, 图标]} —— 真源是 tuple，JSON 只能是 list（解包语义不变：`label, icon = map[role]`）。实测 4 档：leader [会长,👑] / vice_leader [副会长,🛡️] / elite [精英,⭐] / member [成员,⚔️]。面板成员行 `_label, _icon = roles.get(role, (\"成员\", \"⚔️\"))` 有兜底。",
+              "additionalProperties": {
+                "type": "array",
+                "title": "职位名 + 图标",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "appointable": {
+              "type": "array",
+              "x-widget": "lines",
+              "title": "可任命职位",
+              "description": "会长可任命的目标 role（真源 `GUILD_APPOINTABLE`，实测 [vice_leader, elite]）。『成员』不在内（那是默认降级，走『公会免职』）。",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "shop_items": {
+          "type": "object",
+          "x-widget": "rows",
+          "title": "公会商店商品表",
+          "description": "真源 `GUILD_SHOP_ITEMS`（6 件，键 = 商品编号 1..6，落盘成字符串键 —— 读侧还原 int）。一条 = {name, cost(公会积分), min_level(公会等级门槛), daily_limit(每日限购，0 = 不限购), item_key(背包 key，稳定 `gs_*`), item_data(发包件物品 dict), msg(购买成功附言)}。`guild_members.contribute` 即『公会积分』，由『公会签到』『公会捐献』获得。",
+          "additionalProperties": {
+            "type": "object",
+            "title": "一件商品",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "title": "商品名",
+                "description": "面板与购买文案里的显示名（实测 6/6）。"
+              },
+              "cost": {
+                "type": "integer",
+                "minimum": 1,
+                "title": "积分价",
+                "description": "扣成员贡献积分（实测 30 / 50 / 80 / 120 / 160 / 200）。扣分走 `store.social.guild_spend_contribute`（事务内复核）。"
+              },
+              "min_level": {
+                "type": "integer",
+                "minimum": 1,
+                "title": "公会等级门槛",
+                "description": "低于则面板显示 🔒、购买被拒（实测 1..4）。"
+              },
+              "daily_limit": {
+                "type": "integer",
+                "minimum": 0,
+                "title": "每日限购",
+                "description": "0 = 不限购；>0 时用 `event_state` key `guild_shop:{gid}:{qq_id}:{编号}` 记当天日期（非 schema 改动）。"
+              },
+              "item_key": {
+                "type": "string",
+                "minLength": 1,
+                "title": "发包 key",
+                "description": "稳定 `gs_*` key（v116 审计修复 A0-A1：去掉随机 uuid 后缀，否则 stackable 商品永不合并堆叠）。"
+              },
+              "item_data": {
+                "type": "object",
+                "title": "发包物品",
+                "description": "直接交给 `db.add_item` 的物品 dict（实测含 name/type/stackable/price/desc，力量药剂还有 effect）。按 key 堆叠合并。"
+              },
+              "msg": {
+                "type": "string",
+                "title": "购买成功附言",
+                "description": "购买成功文案的第二行（源侧逐条手写，如「⚒️ 强化石到手！…」）。"
+              }
+            }
+          }
+        },
+        "skills": {
+          "type": "object",
+          "x-widget": "rows",
+          "title": "公会技能表",
+          "description": "真源 `GUILD_SKILLS`（3 条：atk / def / exp）。**本轮仅展示**：购买记录无处可靠持久化（`guild_members` 无通用 JSON 列），战斗加成挂接延后 —— 面板只列价目与门槛。",
+          "additionalProperties": {
+            "type": "object",
+            "title": "一条公会技能",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "title": "技能名",
+                "description": "面板显示名（实测 攻击强化 / 防御强化 / 经验强化）。"
+              },
+              "desc": {
+                "type": "string",
+                "minLength": 1,
+                "title": "每级效果说明",
+                "description": "面板正文（如「全员攻击力 +2%」）。源侧标注：**展示占位**，实际战斗 buff 未挂接。"
+              },
+              "max_level": {
+                "type": "integer",
+                "minimum": 1,
+                "title": "最高等级",
+                "description": "实测 3 条都是 5。"
+              },
+              "level_costs": {
+                "type": "array",
+                "x-widget": "lines",
+                "title": "各级积分需求",
+                "description": "`level_costs[i]` = 学到 i 级的积分（1 级起）；`[0]` 是占位。面板显示 `[1:]` 串成 ` → `。",
+                "items": {
+                  "type": "integer"
+                }
+              },
+              "level_guild_lv": {
+                "type": "array",
+                "x-widget": "lines",
+                "title": "各级公会等级门槛",
+                "description": "学第 i 级需公会等级；`[0]` 是占位。面板显示 `[1:]` 串成 `Lv.x → Lv.y`。",
+                "items": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "config": {
+          "$ref": "#/$defs/guild_config_table"
+        }
+      }
+    },
+    "guild_config_table": {
+      "type": "object",
+      "title": "公会数值配置（`game/data/guild.py:3 GUILD_CONFIG`）",
+      "description": "B14-3（2026-09-14）新增的一行。键 = 源侧常量键**原样**（11 个键，如 `create_cost`/`create_level`/`sign_exp`/`exp_bonus_per_level`/`max_bonus`…），值 = 数值/字符串**原样**（不补默认值、不改类型）。**为什么在本域**：`GUILD_CONFIG` 属于 `game/data/guild.py`，而本域是该模块**唯一**的公会域；本域 `$defs.guild_table` 不写 required ⇒ 加一行配置不会触发「每条都要有实体字段」的校验（同 `shop` 域保留键 `wild_trade`/`honor_shop` 的先例）。读口：包内 `content/social_guild.py` 的 `guild_config()`（原先由宿主 `bind_host(config=C.GUILD_CONFIG)` 注入）。",
+      "additionalProperties": true,
+      "minProperties": 1,
+      "properties": {
+        "create_cost": {
+          "type": "integer",
+          "minimum": 0,
+          "title": "建会金币",
+          "description": "创建一个公会的金币消耗。"
+        },
+        "create_level": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "建会等级门槛",
+          "description": "创建公会所需的玩家等级。"
+        }
+      }
+    }
+  }
+}

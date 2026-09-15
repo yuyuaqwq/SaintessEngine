@@ -1,0 +1,355 @@
+{
+  "fields": {
+    "name": {
+      "zh": "名称",
+      "note": "显示名（引擎日志 / 索引里用的也是它）。",
+      "group": "base"
+    },
+    "tag": {
+      "zh": "标记",
+      "note": "内容侧标记串。⚠ 引擎**不读这张表的 tag**（act_apply 读的是动作 params 的 tag，作 key 的兜底）。",
+      "group": "base"
+    },
+    "on": {
+      "zh": "默认作用对象",
+      "note": "✅ 引擎消费：target = 对敌标记类（净化时按它判方向）。",
+      "group": "base"
+    },
+    "negative": {
+      "zh": "负面标记",
+      "note": "⚠ 引擎不读；内容侧用它数「负面种数」（target_debuff_kinds 判据）。",
+      "group": "base"
+    },
+    "cleanse": {
+      "zh": "可被净化",
+      "note": "✅ 引擎消费（act_cleanse）：True = 可被净化。",
+      "group": "base"
+    },
+    "cap": {
+      "zh": "叠层上限",
+      "note": "✅ 引擎消费（effects._cap_of）。**上限的唯一收敛点**（apply / period gain / 渠道攒取都走它）。缺声明 = 999999（不设限），不是 0。",
+      "group": "stack"
+    },
+    "stat_scale": {
+      "zh": "每层面板修正",
+      "note": "✅ 引擎消费（stats._apply_effects）：面板 × (1 + 层数 × 系数)。键 = 面板属性键（框架不枚举）；特殊 stat：dmg_mult（伤害乘区）、reduce。",
+      "widget": "kv",
+      "group": "stack"
+    },
+    "debuff_scale": {
+      "zh": "每层受击增伤",
+      "note": "✅ 引擎消费（landing.deal_damage）：{面板键: 每层系数}，Σ(系数 × 层数) → 承伤 ×(1+Σ)。与 stat_scale 对称（一个改面板、一个改承伤）。",
+      "widget": "kv",
+      "group": "stack"
+    },
+    "panel": {
+      "zh": "静态面板增益",
+      "note": "✅ 引擎消费：动作参数缺省时查这张表（op=mul 乘 / add 加）。",
+      "group": "stack"
+    },
+    "panel.stat": {
+      "zh": "面板属性",
+      "note": "被修正的面板键（atk / def / spd …）。",
+      "group": "stack"
+    },
+    "panel.op": {
+      "zh": "运算方式",
+      "note": "mul（乘算）/ add（加算）。",
+      "group": "stack"
+    },
+    "panel.mult": {
+      "zh": "修正值",
+      "note": "op 对应的数值。",
+      "group": "stack"
+    },
+    "period": {
+      "zh": "周期结算（DOT / HoT）",
+      "note": "✅ 引擎消费（schedule._settle_time_effects）：每 interval 刻结算一次；首次只登记、不立即跳。",
+      "group": "period"
+    },
+    "period.dir": {
+      "zh": "周期方向",
+      "note": "✅ damage（掉血）/ heal（回血）/ mana（回魔）/ gain（加层或减层，负值走衰减）。",
+      "group": "period"
+    },
+    "period.interval": {
+      "zh": "周期间隔",
+      "note": "✅ 单位刻（存的是绝对时刻，不是「每 tick」）。必须 > 0。",
+      "group": "period"
+    },
+    "period.pct_max_hp": {
+      "zh": "每跳最大生命比例",
+      "note": "✅ damage 向：每层每跳按最大生命掉血。",
+      "group": "period"
+    },
+    "period.pct_cur_hp": {
+      "zh": "每跳当前生命比例",
+      "note": "✅ damage 向：按**当前**生命掉血。",
+      "group": "period"
+    },
+    "period.pct_boss": {
+      "zh": "Boss 档比例",
+      "note": "✅ Boss（is_boss / role==\"boss\"）覆盖 pct_max_hp。",
+      "group": "period"
+    },
+    "period.pct_cur_boss": {
+      "zh": "Boss 档当前生命比例",
+      "note": "✅ Boss 覆盖 pct_cur_hp。",
+      "group": "period"
+    },
+    "period.amount": {
+      "zh": "每跳增减量",
+      "note": "✅ 仅 gain 向：每刻加/减层（负值 = 衰减），下限 clamp 0。",
+      "group": "period"
+    },
+    "period.type": {
+      "zh": "周期类型",
+      "note": "⚠ **当前无消费者**（参考实现里 bleed 写了 \"flat\"）。",
+      "group": "period"
+    },
+    "period.dmg_type": {
+      "zh": "周期伤害类型",
+      "note": "✅ 引擎消费（DOT 结算）：透传为落地 dmg_kind；true = 真伤（物免/魔免/格挡全跳过）；空值 = 不减免。",
+      "group": "period"
+    },
+    "period.per_layer": {
+      "zh": "每层结算",
+      "note": "⚠ **当前无消费者**（参考实现里 bleed 写了 0）。",
+      "group": "period"
+    },
+    "period.turns": {
+      "zh": "限跳次数",
+      "note": "✅ 跳到次数就清层；0 = 无限。",
+      "group": "period"
+    },
+    "cd_mult": {
+      "zh": "冷却倍率",
+      "note": "✅ 引擎消费（actions.do_skill）：0.8 = 冷却 −20%；多态并存**取最小**（最速）。",
+      "group": "cooldown"
+    },
+    "start_full": {
+      "zh": "开局满额",
+      "note": "⚠ 引擎不读，内容侧装配器读（开局按上限拉满）。",
+      "group": "cooldown"
+    },
+    "start_classes": {
+      "zh": "归属职业",
+      "note": "⚠ 引擎不读，内容侧读。**空列表 = 不设限 = 谁都能装**；通用效果键（shield / melody_def）不要写它，否则会被内容侧的乘区装配跳过。",
+      "widget": "lines",
+      "group": "cooldown"
+    },
+    "load_tiers": {
+      "zh": "负载档位",
+      "note": "⚠ 引擎不读，内容侧读：[{max, heal_mult, label, overload}]（键名由内容侧解释）。",
+      "group": "cooldown"
+    },
+    "guard_hp_pct": {
+      "zh": "濒死保底比例",
+      "note": "✅ 引擎消费（landing._apply_death_guard）：触发濒死保护后保底到的最大生命比例，缺省 0.10。",
+      "widget": "pct",
+      "group": "guard"
+    },
+    "heal_pct": {
+      "zh": "濒死回复比例",
+      "note": "✅ 同上：触发时额外回复的最大生命比例。",
+      "widget": "pct",
+      "group": "guard"
+    },
+    "overload_heal_pct": {
+      "zh": "过载回复比例",
+      "note": "⚠ 引擎不读，内容侧读：过载触发的全队回复比例。",
+      "widget": "pct",
+      "group": "guard"
+    },
+    "wake_on_hit": {
+      "zh": "受击打醒",
+      "note": "✅ 引擎消费（landing.deal_damage）：承伤时遍历持有者状态，带该字段的态即被移除（引擎零内容知识）。",
+      "group": "guard"
+    },
+    "consume": {
+      "zh": "消费模式",
+      "note": "✅ 引擎消费：控制型条目对行动的影响（写进表后技能 mech 不必再带 mode 参数）。",
+      "group": "ctrl"
+    },
+    "consume.mode": {
+      "zh": "消费方式",
+      "note": "✅ skip（整跳行动，如眩晕）/ no_skill（技能转普攻）。",
+      "group": "ctrl"
+    },
+    "channels": {
+      "zh": "攒取渠道",
+      "note": "⚠ 引擎不读，**内容侧装配器读**（class_mech_proc.apply_class_channels）：{时机名: 值}，把引擎事件挂成「攒资源层数」的触发器。两种值的写法见下面两条。",
+      "wiki": ["reference/channels.md", "channels"],
+      "widget": "kv",
+      "group": "ctrl"
+    },
+    "channels.gain": {
+      "zh": "每次攒取量",
+      "note": "带条件形态的攒取量（值必须 > 0；≤ 0 会被装配器**静默跳过**）。简写形态直接写数值，等于「无条件攒这么多」。",
+      "wiki": ["reference/channels.md", "gain"],
+      "group": "ctrl"
+    },
+    "channels.when": {
+      "zh": "条件门",
+      "note": "逐条求值、**全部满足才攒**（AND）。每条形如 {judge: {kind: …}}；无 when = 恒成立（装配器不写这个键）。",
+      "wiki": ["reference/channels.md", "when"],
+      "widget": "rows",
+      "group": "ctrl"
+    },
+    "channels.when.judge": {
+      "zh": "条件谓词",
+      "note": "只支持两个 kind：has_effect（effects[key] 在位）/ res_ge（effects[res].stacks ≥ 阈值）。未知 kind 一律判 False（fail-closed）。",
+      "wiki": ["reference/judges.md", "has_effect"],
+      "group": "ctrl"
+    },
+    "channels.when.judge.kind": {
+      "zh": "谓词类型",
+      "note": "has_effect（持有某效果）/ res_ge（资源层数 ≥ 阈值）—— 其余 kind 判 False（宁可漏攒，不可静默攒错）。",
+      "wiki": ["reference/judges.md", "res_ge"],
+      "group": "ctrl"
+    },
+    "channels.when.judge.key": {
+      "zh": "效果 key",
+      "note": "has_effect 用：指向 EFFECT_RULES 的效果 key（在位即通过，表达不了「层数够」—— 层数要用 res_ge）。",
+      "group": "ctrl"
+    },
+    "channels.when.judge.res": {
+      "zh": "资源 key",
+      "note": "res_ge 用：读 effects[res].stacks 的那个资源 key。",
+      "wiki": ["reference/judges.md", "res_ge"],
+      "group": "ctrl"
+    },
+    "channels.when.judge.ge_field": {
+      "zh": "阈值字段名",
+      "note": "res_ge 用：阈值写在本条 when 条目里这个字段名的键上（⚠ 与动作 judge 的 params[ge_field] 不同）。",
+      "group": "ctrl"
+    },
+    "channels.per_dt": {
+      "zh": "按间隔时长缩放",
+      "note": "true = gain 按事件的 dt 缩放（tick 渠道跨多刻时避免「跨 3 刻只攒一次」）；无声明不写这个键。",
+      "wiki": ["reference/channels.md", "per_dt"],
+      "group": "ctrl"
+    },
+    "on_threshold": {
+      "zh": "满层触发",
+      "note": "⚠ **当前无消费者**：这张映射表没被读（参考实现里唯一的条目已删）。要满层触发请监听 threshold 事件自己实现；这里写什么都不会生效。",
+      "wiki": ["reference/effect-rules.md", "on_threshold"],
+      "widget": "kv",
+      "group": "ctrl"
+    },
+    "on_threshold.form": {
+      "zh": "触发形态名",
+      "note": "满层时进入的形态名（历史用例 form=fury）。⚠ 无消费者。",
+      "group": "ctrl"
+    },
+    "action": {
+      "zh": "动作名（动词）",
+      "note": "EFFECT_ACTIONS 动作序列里要执行的动词（**必修**）；行为由内容侧 @register_action 注册，不受名单限制。",
+      "wiki": ["reference/effect-actions.md", "register_action"],
+      "group": "ctrl"
+    },
+    "turns": {
+      "zh": "持续回合",
+      "note": "EFFECT_ACTIONS 动作里的状态/增益持续回合数（由动作实现解释）。",
+      "group": "ctrl"
+    },
+    "halve": {
+      "zh": "减半",
+      "note": "EFFECT_ACTIONS 动作里的减半标记/系数（布尔或数值形态）。",
+      "group": "ctrl"
+    },
+    "pct_from_mech_val": {
+      "zh": "按机制数值折算比例",
+      "note": "EFFECT_ACTIONS 动作里「是否/如何用机制数值折算比例」（布尔或数值形态）。",
+      "group": "ctrl"
+    },
+    "mode": {
+      "zh": "模式",
+      "note": "模式参数（取值由声明的动作 / 兑现 mode 决定，框架不预设）。",
+      "group": "ctrl"
+    },
+    "label": {
+      "zh": "面板标签",
+      "note": "面板上显示的标签（内容侧文案）。",
+      "group": "ctrl"
+    },
+    "layer_label": {
+      "zh": "层名",
+      "note": "MECH_CASH 里这个资源在文案里叫什么（如「连段」「磐核」）。",
+      "group": "ctrl"
+    },
+    "unit": {
+      "zh": "单位",
+      "note": "MECH_CASH 里层数的量词（如「段」「层」「枚」）。",
+      "group": "ctrl"
+    },
+    "per_layer": {
+      "zh": "每层系数",
+      "note": "MECH_CASH 兑现的每层换算系数（内容侧动作解释）。",
+      "wiki": ["reference/mech-cash.md", "per_layer"],
+      "group": "ctrl"
+    },
+    "per_system": {
+      "zh": "每系系数",
+      "note": "MECH_CASH 多系统（多系印记）时每系的系数。",
+      "group": "ctrl"
+    },
+    "crit_at": {
+      "zh": "暴击档位",
+      "note": "MECH_CASH：达到这个层数时按暴击结算（整数档位）。",
+      "group": "ctrl"
+    },
+    "clear": {
+      "zh": "兑现后清空",
+      "note": "MECH_CASH：true = 兑现后清空层数（false/缺省 = 保留）。",
+      "wiki": ["reference/mech-cash.md", "clear"],
+      "group": "ctrl"
+    },
+    "clear_extra": {
+      "zh": "附带清理项",
+      "note": "MECH_CASH：兑现时顺带清理的其它状态列表（一行一项）：{owner: caster|target, key: 效果 key}。",
+      "wiki": ["reference/mech-cash.md", "clear"],
+      "widget": "rows",
+      "group": "ctrl"
+    },
+    "clear_extra.owner": {
+      "zh": "清理谁的",
+      "note": "被清理的状态在谁身上：caster（自己）/ target（目标）—— 取值由内容侧解释。",
+      "group": "ctrl"
+    },
+    "clear_extra.key": {
+      "zh": "效果 key",
+      "note": "要一并清空的效果 key。",
+      "group": "ctrl"
+    },
+    "upgrade": {
+      "zh": "升级声明",
+      "note": "MECH_CASH 的升级声明（例：{proc: 被动声明 key, per_layer_add: 每层增量}）；结构与键名由内容侧解释。",
+      "group": "ctrl"
+    },
+    "upgrade.proc": {
+      "zh": "被动声明 key",
+      "note": "指向 PASSIVE_PROC 的声明 key（升级档由那条被动给）。",
+      "group": "ctrl"
+    },
+    "upgrade.per_layer_add": {
+      "zh": "每层增量",
+      "note": "每层追加的系数增量。",
+      "group": "ctrl"
+    }
+  },
+  "groups": [
+    {"id": "base", "label": "基础与归属", "icon": "📌",
+     "fields": ["name", "tag", "on", "negative", "cleanse"]},
+    {"id": "stack", "label": "叠层与面板", "icon": "🔢",
+     "fields": ["cap", "stat_scale", "debuff_scale", "panel"]},
+    {"id": "period", "label": "周期结算（DOT / HoT）", "icon": "⏳",
+     "fields": ["period"]},
+    {"id": "cooldown", "label": "冷却与开局", "icon": "🧊",
+     "fields": ["cd_mult", "start_full", "start_classes", "load_tiers"]},
+    {"id": "guard", "label": "濒死保护", "icon": "🛡",
+     "fields": ["guard_hp_pct", "heal_pct", "overload_heal_pct", "wake_on_hit"]},
+    {"id": "ctrl", "label": "控制与渠道", "icon": "🌀",
+     "fields": ["consume", "channels", "on_threshold"]}
+  ]
+}

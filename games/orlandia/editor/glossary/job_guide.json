@@ -1,0 +1,155 @@
+{
+  "fields": {
+    "cls_id": {
+      "zh": "职业 id",
+      "note": "与表键相同（导出器逐条断言一致，不一致直接拒绝导出）。"
+    },
+    "name": {
+      "zh": "职业名",
+      "note": "显示名（逐字段复制自 classes 域）。"
+    },
+    "icon": {
+      "zh": "图标",
+      "note": "展示用字形。"
+    },
+    "role": {
+      "zh": "定位",
+      "note": "战斗定位（坦克 / 输出 / 治疗 / 辅助一类短词）。"
+    },
+    "rank_label": {
+      "zh": "站位",
+      "note": "前排 / 后排。"
+    },
+    "reach": {
+      "zh": "攻击距离",
+      "note": "实测 1~3（1 = 近战，2~3 = 远程）。"
+    },
+    "position": {
+      "zh": "一句话定位",
+      "note": "源侧测试强校验：必须是该职业 classes.desc 的子串 —— 改 desc 必须同步这里。",
+      "widget": "textarea"
+    },
+    "desc": {
+      "zh": "职业描述",
+      "note": "逐字来自 classes 域（本表只复制，不另写一份）。",
+      "widget": "textarea"
+    },
+    "hidden": {
+      "zh": "隐藏职业",
+      "note": "实测 7/7 条都是 false（本轮无隐藏职业；_HIDDEN_TIER_LEVELS 40/60/90 也因此没被任何条目用上）。"
+    },
+    "tiers": {
+      "zh": "转职分支（档位 → 分支名）",
+      "note": "实测 7/7 条都是 3 档 × 2 分支。⚠️ JSON 里档位键是字符串 \"1\"/\"2\"/\"3\"（真源 int 键）；分支名已过 BRANCH_KEY_DISPLAY 展示名映射（武僧→淬势者）。",
+      "widget": "kv"
+    },
+    "tier_levels": {
+      "zh": "档位门槛（档位 → 等级）",
+      "note": "实测 7/7 条都是 30/60/90（与 core/constants.py EVOLVE_LEVELS 同源、源侧测试断言相等）。键同样是字符串化档位号。",
+      "widget": "kv"
+    },
+    "src_base": {
+      "zh": "来源基础职业",
+      "note": "隐藏职业由哪个基础职业转出；实测 7/7 条是空串（本轮无隐藏职业）。"
+    },
+    "src_race": {
+      "zh": "来源种族 id",
+      "note": "races 域 key；实测 7/7 条空串（基础七职业不限种族）。未展开。"
+    },
+    "race_name": {
+      "zh": "来源种族名",
+      "note": "src_race 的显示名（源侧从 races 域取，取不到回落原值）；实测 7/7 条空串。"
+    },
+    "hint": {
+      "zh": "解锁提示",
+      "note": "隐藏线的解锁线索；实测 7/7 条空串。",
+      "widget": "textarea"
+    },
+    "task_name": {
+      "zh": "解锁任务名",
+      "note": "源侧用正则从 classes.desc 抽「需完成<XX>任务链解锁」的任务名；实测 7/7 条空串。"
+    },
+    "resource_key": {
+      "zh": "核心资源 key",
+      "note": "effect_rules 域 key（rage/element/energy/faith/cp/chi，6/6 命中）；诗人无核心资源 → 空串。未展开。",
+      "ref": {
+        "domain": "effect_rules",
+        "by": "key"
+      }
+    },
+    "resource_name": {
+      "zh": "核心资源名",
+      "note": "源侧从 EFFECT_RULES[key].name 派生，本表不重复存。"
+    },
+    "resource_max": {
+      "zh": "核心资源上限",
+      "note": "源侧从 EFFECT_RULES[key].cap 派生（0 也合法：无资源职业）。"
+    },
+    "resource_desc": {
+      "zh": "核心资源机制说明",
+      "note": "玩家可见的机制一句话（v181.M-R2c 单源化：原 data/core_resources.py 已退役，desc 迁到本表）。",
+      "widget": "textarea"
+    },
+    "aliases": {
+      "zh": "查询别名",
+      "note": "导出器注入（真源 JOB_ALIASES）：能解析到这个职业的所有查询名（classes aliases + 分支名（含展示名映射）+ 兼容名「歌者」）。实测 44 个名字分到 7 个职业（4~8 个/职业）、0 悬空。",
+      "widget": "lines"
+    },
+    "extra_resources": {
+      "zh": "转职线副资源",
+      "note": "导出器注入（EXTRA_RESOURCES + EXTRA_RESOURCE_GUIDE 两表合并）：实测只有牧师（共鸣 + 回声）。⚠️ 这些 key 不在 effect_rules 域（引擎批次 2 才启用）。",
+      "widget": "rows"
+    },
+    "extra_resources.key": {
+      "zh": "副资源·key",
+      "note": "resonance / echo。"
+    },
+    "extra_resources.name": {
+      "zh": "副资源·名",
+      "note": "共鸣 / 回声。"
+    },
+    "extra_resources.max": {
+      "zh": "副资源·上限",
+      "note": "实测 10 / 3。"
+    },
+    "extra_resources.desc": {
+      "zh": "副资源·机制说明",
+      "note": "怎么攒/怎么花（自退役的 core_resources.py 逐字迁移）。",
+      "widget": "textarea"
+    }
+  },
+  "groups": [
+    {
+      "id": "identity",
+      "label": "身份",
+      "icon": "📖",
+      "fields": ["cls_id", "name", "icon", "role", "rank_label", "reach"]
+    },
+    {
+      "id": "text",
+      "label": "描述",
+      "icon": "💬",
+      "fields": ["position", "desc"]
+    },
+    {
+      "id": "evolve",
+      "label": "转职",
+      "icon": "🌿",
+      "fields": ["hidden", "tiers", "tier_levels", "src_base", "src_race", "race_name", "hint", "task_name"]
+    },
+    {
+      "id": "resource",
+      "label": "核心资源",
+      "icon": "🔋",
+      "fields": ["resource_key", "resource_name", "resource_max", "resource_desc",
+                 "extra_resources", "extra_resources.key", "extra_resources.name",
+                 "extra_resources.max", "extra_resources.desc"]
+    },
+    {
+      "id": "lookup",
+      "label": "查询别名",
+      "icon": "🔎",
+      "fields": ["aliases"]
+    }
+  ]
+}

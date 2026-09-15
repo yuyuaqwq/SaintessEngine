@@ -1,0 +1,59 @@
+{
+  "fields": {
+    "name": {
+      "zh": "料理名",
+      "note": "显示名（59/59 条都有）。也是 _INDEXES[\"cooking\"] 的 name_to_id 键。"
+    },
+    "desc": {
+      "zh": "说明",
+      "note": "一行说明（59/59 条都有），含恢复/持续 buff 的口径（如「每刻回复 6% 生命持续 5 刻」）。",
+      "widget": "textarea"
+    },
+    "min_lv": {
+      "zh": "需求副业等级",
+      "note": "烹饪副业等级门槛（economy.py:923 按它过滤列表）。实测 1~8。"
+    },
+    "cost": {
+      "zh": "食材（物品 id → 数量）",
+      "note": "键 = items 域 key（49 个互异值全是 mat_*，100% 命中；源侧 v48 起「成本 key 一律 mat_ ID」），值 = 数量。未展开。",
+      "widget": "kv",
+      "ref": {
+        "domain": "items",
+        "by": "key"
+      }
+    },
+    "product": {
+      "zh": "产物（物品 id → 数量）",
+      "note": "键 = items 域 key（53 个互异值 = 48 i_* + 5 it_*，100% 命中）；i_*/it_* 混用是源侧现状，原样保留。未展开。",
+      "widget": "kv",
+      "ref": {
+        "domain": "items",
+        "by": "key"
+      }
+    },
+    "blueprint": {
+      "zh": "食谱（显示名串）",
+      "note": "解锁用的食谱 —— 是显示名字符串、不是 id（只有 3 条，3/3 按名命中 items 道具）。缺省 = 直接可做。未展开。"
+    }
+  },
+  "groups": [
+    {
+      "id": "identity",
+      "label": "料理身份",
+      "icon": "🍲",
+      "fields": ["name", "desc", "min_lv"]
+    },
+    {
+      "id": "io",
+      "label": "食材与产物",
+      "icon": "🐟",
+      "fields": ["cost", "product"]
+    },
+    {
+      "id": "unlock",
+      "label": "解锁",
+      "icon": "🔓",
+      "fields": ["blueprint"]
+    }
+  ]
+}

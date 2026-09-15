@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/stats.schema.json",
+  "title": "属性（stats）—— 升级经验表：Lv.1~100 升到下一级所需经验（5 级锚点指数插值全表）",
+  "description": "一条 = 一个等级（表键 = `lv_<等级>`）。真源 = 游戏仓 `game/core/stats.py:218 _EXP_TABLE`（v169.1 成长模型，鱼鱼 2026-09-03 拍板：5 级锚点 = Lv5 4630 / 10 9409 / 15 15174 / 20 29409 / 25 47569 / 30 69422 / 35 96561 / 40 127693 / 45 167354 / 50 213918 / 55 309359 / 60 382253 / 65 462540 / 70 553894 / 75 767838 / 80 901590 / 85 1051881 / 90 1219439 / 95 1403343 / 100 1607650，中间等级 = 对数线性插值后取整百、全表写死，`:242 exp_to_next` 查表 O(1)，超出 100 级才走 `FORMULA_SKELETON[\"exp_fallback\"]` 兜底），经 `scripts/export_domains/monster_combat.py:derive_stats` 单向导出，实测 **100 条**（1..100 连续无缺口，2600 … 1607650）。**导出口径**（源里没有这两层，是导出器加的，逐字记录在派生函数 docstring 里）：键 = `lv_<n>`（JSON 对象键必须 str，且包内 `propertyNames` 是 `^[a-z][a-z0-9_]*$` → 用 `lv_` 前缀，`n` = 源表键原样）、条目 = `{level: <源表键>, exp_to_next: <源表值原样>}`（`exp_to_next` 一个字未改）。消费端：`game/content_rules/gameplay.py:83-84`（升级循环 `while level < 100 and exp >= C.exp_to_next(level)`）、`game/commands/player.py:572`、`game/commands/combat.py:739`（经验条）。⚠️ 本域**只含 stats.py 自有的这一张数据表**：stats.py 其余全是公式（`hp_stage_mult` / `monster_stats` / `equip_stats` / `monster_exp` / `monster_gold` …），其数值表在 `game/data/stat_templates.py`（HP/ATK/BOSS 段乘区）、`data/formula_skeleton.py`（公式骨架）、`data/equipment.py`（分系表）、`data/base_growth.py` —— **本批未导**（报告 §5）；`:203 _EQUIP_VALUE_WEIGHT`（2 条定价权重 `{hp:0.1, mp:0.1}`）形状与等级行不同，未混进本表（报告 §5）。",
+  "x-primary": "stat",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^lv_[0-9]+$",
+    "description": "等级行键 —— `lv_` + 源表等级（实测 1..100 连续 100 条）。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/stat"
+  },
+  "$defs": {
+    "stat": {
+      "type": "object",
+      "title": "等级成长行（stats 一条）",
+      "required": [
+        "level",
+        "exp_to_next"
+      ],
+      "additionalProperties": true,
+      "description": "两字段都由导出器写：`level` 复制自源表键（供编辑器列显示/排序），`exp_to_next` 是源表值原样。",
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "title": "等级",
+          "description": "源表键（int）原样 —— 实测 1..100 连续无缺口。玩家到该等级时，升下一级需要 `exp_to_next` 点经验。"
+        },
+        "exp_to_next": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "升级所需经验",
+          "description": "源表值原样（实测 Lv.1 = 2600 → Lv.100 = 1607650；曲线设计意图：新手期轻、成长期递增、中后期爬坡、终局放缓，中活跃度玩家约 9~10 个月满级）。`stats.py:242 exp_to_next()` 查的就是它。"
+        }
+      }
+    }
+  }
+}

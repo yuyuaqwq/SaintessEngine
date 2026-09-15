@@ -1,0 +1,2051 @@
+{
+  "set_an_ye": {
+    "quality": "purple",
+    "icon": "🏹",
+    "bonus_2": {
+      "crit": 0.06,
+      "dodge": 0.04
+    },
+    "bonus_4": {
+      "stats": {
+        "precise": 0.05,
+        "dodge": 0.05
+      },
+      "desc": "精准 +5%、闪避 +5%（暗夜潜行精准）"
+    },
+    "name": "暗夜"
+  },
+  "set_an_ye_sheng_dian": {
+    "quality": "purple",
+    "icon": "🌙",
+    "name": "暗夜圣典",
+    "line": "牧师·幽祷(召唤流)",
+    "bonus_2": {
+      "effect": "proc_lifesteal",
+      "chance": 1.0,
+      "params": {
+        "type": "proc_lifesteal",
+        "chance": 1.0,
+        "lifesteal_pct": 0.06,
+        "tag": "🌙",
+        "name": "暗夜汲取"
+      },
+      "desc": "攻击命中 100% 吸血 6% 伤害（亡者汲取）"
+    },
+    "bonus_4": {
+      "effect": "proc_flat_dmg",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_flat_dmg",
+        "chance": 0.3,
+        "stat": "matk",
+        "pct": 0.5,
+        "tag": "🌙",
+        "name": "暗夜蚀骨"
+      },
+      "desc": "攻击命中 30% 概率追加 50% 魔攻伤害（暗蚀）"
+    }
+  },
+  "set_an_ye_tao": {
+    "quality": "purple",
+    "icon": "🏹",
+    "bonus_2": {
+      "crit": 0.04,
+      "dodge": 0.03
+    },
+    "name": "暗夜套",
+    "class": "cls_you_xia",
+    "bonus_4_stats": {
+      "spd": 0.08
+    },
+    "bonus_4": {
+      "effect": "shadow_track",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_mark",
+        "chance": 0.3,
+        "max_mark": 5,
+        "mark_desc": "暗影标记",
+        "tag": "🌑",
+        "name": "暗影追踪"
+      },
+      "desc": "攻击命中 30% 概率叠 1 层暗影标记；对带标记目标每层额外 +5% 伤害"
+    }
+  },
+  "set_anvil_guard": {
+    "quality": "orange",
+    "icon": "🥋",
+    "bonus_2": {
+      "def": 0.12,
+      "hp": 0.15,
+      "block": 0.04
+    },
+    "bonus_4": {
+      "effect": "anvil_parry",
+      "chance": 0.2,
+      "params": {
+        "type": "taken_immune",
+        "chance": 0.2,
+        "per_battle": 3,
+        "tag": "🛡️",
+        "name": "铁壁格挡"
+      },
+      "desc": "受击 20% 概率完全免疫本次伤害（每场最多 3 次）"
+    },
+    "name": "铁砧拳套"
+  },
+  "set_bai_lian_tao": {
+    "quality": "purple",
+    "icon": "⚔️",
+    "bonus_2": {
+      "atk": 0.08,
+      "def": 0.08
+    },
+    "name": "百炼套",
+    "class": "cls_zhan_shi",
+    "bonus_4_stats": {
+      "def": 0.1
+    },
+    "bonus_4": {
+      "effect": "bai_lian_forge",
+      "params": {
+        "type": "proc_buff",
+        "chance": 1.0,
+        "buff_key": "bai_lian_lv",
+        "buff_mode": "stack",
+        "buff_max": 10,
+        "tag": "🔨",
+        "name": "百炼"
+      },
+      "desc": "每次攻击命中叠 1 层百炼（自身攻击 +2%，上限 10 层）"
+    }
+  },
+  "set_bai_lu_tao": {
+    "quality": "green",
+    "icon": "🦌",
+    "bonus_2": {
+      "dodge": 0.05,
+      "bonus_5": {
+        "desc": "白鹿逐迹：对林间毒物野兽伤害 +10%"
+      },
+      "bonus_5_cond": {
+        "enemy_contains": [
+          "野狗",
+          "毒蛇",
+          "马蜂",
+          "蜘蛛",
+          "野兔"
+        ],
+        "dmg_mult": 1.1,
+        "tag": "🦌白鹿逐迹"
+      }
+    },
+    "name": "白鹿套",
+    "bonus_4_stats": {
+      "spd": 0.08
+    },
+    "bonus_5": {
+      "crit": 0.03,
+      "desc": "暴击＋3%"
+    }
+  },
+  "set_bai_yin_qi_shi": {
+    "quality": "orange",
+    "icon": "👑",
+    "bonus_2": {
+      "atk": 0.2
+    },
+    "bonus_4": {
+      "effect": "silver_knight_lance",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_armor_break",
+        "chance": 0.3,
+        "break_pct": 0.15,
+        "break_turns": 2,
+        "bonus_atk_pct": 0.3,
+        "tag": "🐎",
+        "name": "白银冲锋"
+      },
+      "desc": "攻击命中 30% 概率破甲 15%（2 刻）；目标已破甲则追加 30% 攻击力冲锋"
+    },
+    "name": "白银骑士"
+  },
+  "set_bi_chui_tao": {
+    "quality": "purple",
+    "icon": "🥋",
+    "bonus_2": {
+      "def": 0.08,
+      "block": 0.06
+    },
+    "name": "壁槌套",
+    "class": "cls_wu_seng",
+    "bonus_4_stats": {
+      "hp": 0.1
+    },
+    "bonus_4": {
+      "effect": "bi_chui_wall",
+      "params": {
+        "type": "taken_block_reflect",
+        "reflect_pct": 0.3,
+        "tag": "🧱",
+        "name": "壁槌反震"
+      },
+      "desc": "格挡成功时反弹 30% 本次伤害"
+    }
+  },
+  "set_bu_yi": {
+    "quality": "blue",
+    "icon": "☀️",
+    "bonus_2": {
+      "mdef": 0.16,
+      "hp": 0.12
+    },
+    "bonus_4": {
+      "effect": "cloth_regen_battle",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_heal_hp",
+        "chance": 0.3,
+        "heal_pct": 0.08,
+        "tag": "☀️",
+        "name": "布衣愈合"
+      },
+      "desc": "攻击命中 30% 概率回复 8% 最大生命"
+    },
+    "name": "布衣"
+  },
+  "set_bu_yi_tao": {
+    "quality": "blue",
+    "icon": "☀️",
+    "bonus_2": {
+      "heal_power": 0.08,
+      "mdef": 0.05,
+      "hp": 0.05
+    },
+    "name": "布衣套",
+    "class": "cls_mu_shi",
+    "bonus_4_stats": {
+      "mdef": 0.1
+    },
+    "bonus_4": {
+      "effect": "cloth_heal_overflow",
+      "params": {
+        "heal_mult": 1.08,
+        "overflow_pct": 0.5,
+        "shield_turns": 2,
+        "tag": "☀️",
+        "name": "圣愈不浪费"
+      },
+      "desc": "治疗技能治疗量 +8%；治疗溢出时溢出量 50% 转化为护盾"
+    }
+  },
+  "set_cang_qiong": {
+    "quality": "orange",
+    "icon": "🏹",
+    "bonus_2": {
+      "spd": 0.15,
+      "crit": 0.06
+    },
+    "bonus_4": {
+      "effect": "sky_chain",
+      "chance": 0.25,
+      "params": {
+        "type": "proc_flat_dmg",
+        "chance": 0.25,
+        "stat": "atk",
+        "pct": 0.6,
+        "pct_alt": 0.75,
+        "cond_mark": true,
+        "tag": "☄️",
+        "name": "苍穹连星"
+      },
+      "desc": "攻击命中 25% 概率追加 60% 攻击力的箭雨（标记目标 75%）"
+    },
+    "name": "苍穹"
+  },
+  "set_cang_qiong_tao": {
+    "quality": "purple",
+    "icon": "☁️",
+    "bonus_2": {
+      "mdef": 0.1
+    },
+    "name": "苍穹套",
+    "bonus_4_stats": {
+      "crit": 0.08
+    },
+    "bonus_5": {
+      "desc": "雷系增伤＋10%（雷系技能）",
+      "element_dmg": {
+        "thunder": 0.1
+      }
+    }
+  },
+  "set_chen_guang_jiao_hui": {
+    "quality": "orange",
+    "icon": "⏳",
+    "bonus_2": {
+      "hp": 0.25,
+      "heal_power": 0.05
+    },
+    "bonus_4": {
+      "effect": "regen_strong",
+      "params": {
+        "heal_pct": 0.08
+      },
+      "desc": "每刻开始回复 8% 生命"
+    },
+    "name": "晨光教会"
+  },
+  "set_di_di_tao": {
+    "quality": "purple",
+    "icon": "🕳️",
+    "bonus_2": {
+      "mdef": 0.1
+    },
+    "name": "地底套",
+    "bonus_4_stats": {
+      "def": 0.08
+    },
+    "bonus_5": {
+      "desc": "深渊增伤＋10%（对深渊系敌人）"
+    },
+    "bonus_5_cond": {
+      "enemy_contains": [
+        "深渊"
+      ],
+      "dmg_mult": 1.1,
+      "tag": "🕳️深渊共鸣"
+    }
+  },
+  "set_du_kou_tao": {
+    "quality": "blue",
+    "icon": "⛵",
+    "bonus_2": {
+      "spd": 0.06
+    },
+    "name": "渡口套",
+    "bonus_3": {
+      "effect": "ferry_repel",
+      "chance": 0.25,
+      "params": {
+        "type": "taken_counter",
+        "chance": 0.25,
+        "atk_pct": 0.4,
+        "once_per_round": true,
+        "tag": "🌊",
+        "name": "渡口回潮"
+      },
+      "desc": "被攻击命中后 25% 概率反击 40% 攻击力（每刻最多 1 次）"
+    },
+    "bonus_3_stats": {
+      "mdef": 0.06
+    }
+  },
+  "set_fei_cui_tao": {
+    "quality": "blue",
+    "icon": "💎",
+    "bonus_2": {
+      "dodge": 0.08,
+      "bonus_5": {
+        "desc": "翡翠森语：对林地魔物伤害 +10%"
+      },
+      "bonus_5_cond": {
+        "enemy_contains": [
+          "树人",
+          "哥布林",
+          "古树",
+          "藤蔓",
+          "精灵兽"
+        ],
+        "dmg_mult": 1.1,
+        "tag": "💎翡翠森语"
+      }
+    },
+    "name": "翡翠套",
+    "bonus_4_stats": {
+      "spd": 0.1
+    },
+    "bonus_5": {
+      "crit": 0.05,
+      "desc": "暴击＋5%"
+    }
+  },
+  "set_feng_xing": {
+    "quality": "blue",
+    "icon": "🏹",
+    "bonus_2": {
+      "spd": 0.18,
+      "dodge": 0.03
+    },
+    "bonus_4": {
+      "effect": "gale_double",
+      "chance": 0.25,
+      "params": {
+        "type": "proc_flat_dmg",
+        "chance": 0.25,
+        "stat": "atk",
+        "pct": 0.5,
+        "tag": "🌪️",
+        "name": "风行连射"
+      },
+      "desc": "攻击命中 25% 概率追加一次 50% 攻击力的连射"
+    },
+    "name": "风行"
+  },
+  "set_feng_xing_tao": {
+    "quality": "blue",
+    "icon": "🏹",
+    "bonus_2": {
+      "spd": 0.1
+    },
+    "name": "风行套",
+    "class": "cls_you_xia",
+    "bonus_4_stats": {
+      "spd": 0.08
+    },
+    "bonus_4": {
+      "stats": {
+        "spd": 0.06,
+        "dodge": 0.04
+      },
+      "desc": "速度 +6%、闪避 +4%（风行加护）"
+    }
+  },
+  "set_fu_wen": {
+    "quality": "blue",
+    "icon": "🔮",
+    "bonus_2": {
+      "matk": 0.18,
+      "crit": 0.03
+    },
+    "bonus_4": {
+      "effect": "fu_wen_glyph_bolt",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_flat_dmg",
+        "chance": 0.3,
+        "stat": "matk",
+        "pct": 0.45,
+        "pct_alt": 0.75,
+        "cond_thunder_ge2": true,
+        "consume_thunder": true,
+        "edef": "mdef",
+        "dmg_type": "magic",
+        "tag": "📜",
+        "name": "符文雷刻"
+      },
+      "desc": "攻击命中 30% 概率追加 45% 魔攻雷击（雷印记 ≥2 消耗 1 层额外 +30%）"
+    },
+    "name": "符文"
+  },
+  "set_fu_wen_tao": {
+    "quality": "blue",
+    "icon": "🔮",
+    "bonus_2": {
+      "matk": 0.08,
+      "cdr": 0.05
+    },
+    "name": "符文套",
+    "class": "cls_fa_shi",
+    "bonus_4_stats": {
+      "matk": 0.1
+    },
+    "bonus_4": {
+      "effect": "fu_wen_annihilate",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_thunder_burst",
+        "chance": 0.3,
+        "stat": "matk",
+        "max_mark": 3,
+        "burst_pct": 0.9,
+        "edef": "mdef",
+        "tag": "📜",
+        "name": "符文爆印"
+      },
+      "desc": "攻击命中 30% 概率叠 1 层雷印记；印记 ≥3 时引爆造成 90% 魔攻雷伤并清印"
+    }
+  },
+  "set_hai_feng_tao": {
+    "quality": "blue",
+    "icon": "⚓",
+    "bonus_2": {
+      "spd": 0.1,
+      "bonus_5": {
+        "desc": "海风斩浪：对水手海盗系敌人伤害 +10%"
+      },
+      "bonus_5_cond": {
+        "enemy_contains": [
+          "水手",
+          "海盗",
+          "水鬼",
+          "溺亡"
+        ],
+        "dmg_mult": 1.1,
+        "tag": "⚓海风斩浪"
+      }
+    },
+    "name": "海风套",
+    "bonus_4_stats": {
+      "atk": 0.08
+    },
+    "bonus_5": {
+      "dodge": 0.05,
+      "desc": "闪避＋5%"
+    }
+  },
+  "set_hai_shen_tao": {
+    "quality": "purple",
+    "icon": "🌊",
+    "bonus_2": {
+      "mdef": 0.1
+    },
+    "name": "海神套",
+    "bonus_4_stats": {
+      "atk": 0.08
+    },
+    "bonus_5": {
+      "desc": "冰系增伤＋10%（月语/海神套，冰系技能）",
+      "element_dmg": {
+        "ice": 0.1
+      }
+    }
+  },
+  "set_han_shuang": {
+    "quality": "blue",
+    "icon": "❄️",
+    "bonus_2": {
+      "spd": 0.15
+    },
+    "bonus_4": {
+      "effect": "frost",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_slow",
+        "chance": 0.3,
+        "slow_pct": 0.15,
+        "slow_turns": 2,
+        "tag": "❄️",
+        "name": "寒霜之力"
+      },
+      "desc": "攻击 30% 概率使敌人减速 2 刻"
+    },
+    "name": "寒霜"
+  },
+  "set_hei_tie_yong_bing": {
+    "quality": "orange",
+    "icon": "💀",
+    "bonus_2": {
+      "crit": 0.1,
+      "atk": 0.1
+    },
+    "bonus_4": {
+      "effect": "iron_execute_rampage",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_flat_dmg",
+        "chance": 0.3,
+        "stat": "atk",
+        "pct": 0.5,
+        "cond_hp_lt": 0.4,
+        "tag": "💀",
+        "name": "黑铁斩杀"
+      },
+      "desc": "对生命低于 40% 的敌人，攻击命中 30% 概率追加一次 50% 攻击力的斩杀"
+    },
+    "name": "黑铁佣兵"
+  },
+  "set_hei_zhao": {
+    "quality": "purple",
+    "icon": "🌑",
+    "bonus_2": {
+      "atk": 0.18,
+      "pene_phys": 0.05
+    },
+    "bonus_4": {
+      "effect": "hei_zhao_erode",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_erode",
+        "chance": 0.3,
+        "max_stacks": 2,
+        "pct": 1,
+        "tag": "🌑",
+        "name": "暗蚀"
+      },
+      "desc": "攻击 30% 概率附加暗蚀（2 刻每刻 1% 敌方最大生命暗伤），伤害全额转化自身生命"
+    },
+    "name": "黑沼"
+  },
+  "set_hu_lin_tao": {
+    "quality": "white",
+    "icon": "🌳",
+    "bonus_2": {
+      "def": 0.05
+    },
+    "name": "护林套",
+    "bonus_3": {
+      "effect": "ranger_regen_wild",
+      "chance": 0.4,
+      "params": {
+        "type": "proc_heal_hp",
+        "chance": 0.4,
+        "heal_pct": 0.05,
+        "tag": "🌳",
+        "name": "护林再生"
+      },
+      "desc": "攻击命中 40% 概率回复 5% 最大生命"
+    },
+    "bonus_3_stats": {
+      "hp": 0.08
+    }
+  },
+  "set_hu_xiao": {
+    "quality": "purple",
+    "icon": "🥋",
+    "bonus_2": {
+      "hp": 0.12,
+      "mdef": 0.1
+    },
+    "bonus_4": {
+      "effect": "hu_xiao_barrier",
+      "params": {
+        "type": "turn_shield",
+        "shield_pct": 0.03,
+        "shield_turns": 1,
+        "tag": "🧱",
+        "name": "壁立千仞"
+      },
+      "desc": "每刻开始获得 3% 最大生命的护盾（1 刻）"
+    },
+    "name": "壁槌"
+  },
+  "set_huan_ying": {
+    "quality": "purple",
+    "icon": "🗡️",
+    "bonus_2": {
+      "crit": 0.06,
+      "atk": 0.12
+    },
+    "bonus_4": {
+      "effect": "phantom_echo",
+      "chance": 0.15,
+      "params": {
+        "type": "proc_flat_dmg",
+        "chance": 0.2,
+        "stat": "atk",
+        "pct": 0.6,
+        "pct_alt": 0.35,
+        "cond_crit": true,
+        "tag": "👻",
+        "name": "幻影分身"
+      },
+      "desc": "攻击命中 15% 概率追加 60% 攻击力的幻影斩（暴击时 30%）"
+    },
+    "name": "幻影"
+  },
+  "set_hui_jin_shou_wei_tao": {
+    "quality": "orange",
+    "icon": "🔥",
+    "bonus_2": {
+      "mdef": 0.1
+    },
+    "name": "灰烬守卫套",
+    "bonus_4_stats": {
+      "def": 0.08
+    },
+    "bonus_5": {
+      "desc": "灰烬祝福：生命低于 30% 时攻击＋20%"
+    },
+    "bonus_5_cond": {
+      "player_hp_below": 0.3,
+      "dmg_mult": 1.2,
+      "tag": "🔥灰烬之怒"
+    }
+  },
+  "set_jing_tie": {
+    "quality": "blue",
+    "icon": "🛡️",
+    "bonus_2": {
+      "atk": 0.18,
+      "def": 0.08
+    },
+    "bonus_4": {
+      "effect": "jing_tie_refine",
+      "chance": 0.5,
+      "params": {
+        "type": "proc_armor_stack",
+        "chance": 0.5,
+        "max_stacks": 3,
+        "break_pct": 0.05,
+        "break_turns": 2,
+        "tag": "⚒️",
+        "name": "精淬"
+      },
+      "desc": "攻击命中 50% 概率叠 1 层精淬（敌方防御 -5%/层，上限 3 层）"
+    },
+    "name": "精铁"
+  },
+  "set_jing_tie_tao": {
+    "quality": "blue",
+    "icon": "🛡️",
+    "bonus_2": {
+      "atk": 0.08,
+      "def": 0.08
+    },
+    "name": "精铁套",
+    "class": "cls_zhan_shi",
+    "bonus_4_stats": {
+      "def": 0.1
+    },
+    "bonus_4": {
+      "effect": "jing_tie_edge",
+      "chance": 0.4,
+      "params": {
+        "type": "proc_flat_dmg",
+        "chance": 0.4,
+        "stat": "atk",
+        "pct": 0.15,
+        "dmg_type": "true",
+        "tag": "⚔️",
+        "name": "精铁锋刃"
+      },
+      "desc": "攻击命中 40% 概率本次攻击无视 15% 防御"
+    }
+  },
+  "set_lei_ting": {
+    "quality": "blue",
+    "icon": "⚡",
+    "bonus_2": {
+      "crit": 0.05
+    },
+    "bonus_4": {
+      "effect": "lei_ting_chain",
+      "chance": 0.25,
+      "params": {
+        "type": "proc_flat_dmg",
+        "chance": 0.25,
+        "stat": "matk",
+        "pct": 0.5,
+        "pct_alt": 0.75,
+        "cond_thunder_mark": true,
+        "edef": "mdef",
+        "dmg_type": "magic",
+        "tag": "⚡",
+        "name": "连环雷"
+      },
+      "desc": "攻击命中 25% 概率追加 50% 魔攻雷击（带雷印记时 75%）"
+    },
+    "name": "雷霆"
+  },
+  "set_li_ming": {
+    "quality": "orange",
+    "icon": "🛡️",
+    "bonus_2": {
+      "atk": 0.18,
+      "def": 0.12
+    },
+    "bonus_4": {
+      "effect": "li_ming_dawnbreak",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_anti_heal",
+        "chance": 0.3,
+        "break_pct": 0.15,
+        "break_turns": 2,
+        "anti_heal_pct": 0.3,
+        "tag": "🌅",
+        "name": "黎明破晓"
+      },
+      "desc": "攻击命中 30% 概率破甲 15%（2 刻）；破甲期间目标受疗效果 -30%"
+    },
+    "name": "黎明"
+  },
+  "set_lie_shou": {
+    "quality": "blue",
+    "icon": "🏹",
+    "bonus_2": {
+      "spd": 0.15,
+      "pene_phys": 0.04
+    },
+    "bonus_4": {
+      "effect": "hunter_mark_bonus",
+      "chance": 0.4,
+      "params": {
+        "type": "proc_mark_or_dmg",
+        "chance": 0.4,
+        "max_mark": 5,
+        "dmg_pct": 0.15,
+        "tag": "🏹",
+        "name": "猎手印记"
+      },
+      "desc": "攻击命中 40%：标记目标伤害 +15%，否则叠 1 层标记"
+    },
+    "name": "猎手"
+  },
+  "set_lie_shou_tao": {
+    "quality": "blue",
+    "icon": "🏹",
+    "bonus_2": {
+      "spd": 0.06,
+      "crit": 0.04
+    },
+    "name": "猎手套",
+    "class": "cls_you_xia",
+    "bonus_4_stats": {
+      "spd": 0.08
+    },
+    "bonus_4": {
+      "effect": "hunt_pack",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_flat_dmg",
+        "chance": 0.3,
+        "stat": "atk",
+        "pct": 0.5,
+        "pct_alt": 0.6,
+        "cond_hp_lt": 0.5,
+        "tag": "🏹",
+        "name": "狩猎本能"
+      },
+      "desc": "攻击命中 30% 概率追加 50% 攻击力追击（对生命 <50% 敌人 +20%）"
+    }
+  },
+  "set_lie_shou_yuan_zheng_dui_hui_ji": {
+    "quality": "purple",
+    "icon": "🏹",
+    "name": "猎首远征队徽记",
+    "line": "游侠·攻线",
+    "bonus_2": {},
+    "bonus_4": {
+      "effect": "res_cost_reduce",
+      "res": "energy",
+      "value": 0.1,
+      "on": "finisher_marked",
+      "min_cost": 50,
+      "desc": "对带标记敌人释放 50/100 档终结技时 精力消耗 -10%"
+    }
+  },
+  "set_lie_yan": {
+    "quality": "blue",
+    "icon": "🔥",
+    "bonus_2": {
+      "atk": 0.12
+    },
+    "bonus_4": {
+      "effect": "burn",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_burn",
+        "chance": 0.3,
+        "burn_pct": 0.05,
+        "burn_turns": 2,
+        "max_stacks": 5,
+        "tag": "🔥",
+        "name": "烈焰之力"
+      },
+      "desc": "攻击 30% 概率灼烧敌人(2 刻每刻 5% 生命)"
+    },
+    "name": "烈焰"
+  },
+  "set_long_ji_tao": {
+    "quality": "purple",
+    "icon": "🐉",
+    "bonus_2": {
+      "mdef": 0.1
+    },
+    "name": "龙脊套",
+    "bonus_4_stats": {
+      "atk": 0.08
+    },
+    "bonus_5": {
+      "desc": "龙息增伤＋10%（对龙系敌人）"
+    },
+    "bonus_5_cond": {
+      "enemy_contains": [
+        "龙"
+      ],
+      "dmg_mult": 1.1,
+      "tag": "🐉龙息追猎"
+    }
+  },
+  "set_long_lin": {
+    "quality": "purple",
+    "icon": "🐉",
+    "bonus_2": {
+      "def": 0.2,
+      "hp": 0.1
+    },
+    "bonus_4": {
+      "effect": "reflect",
+      "params": {
+        "chance": 0.25,
+        "reflect_pct": 0.25
+      },
+      "desc": "被攻击时 25% 概率反弹 25% 伤害"
+    },
+    "name": "龙鳞"
+  },
+  "set_long_yi_tao": {
+    "quality": "purple",
+    "icon": "🐉",
+    "bonus_2": {
+      "mdef": 0.05
+    },
+    "name": "龙裔套",
+    "bonus_3": {
+      "effect": "long_yi_dread",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_mon_atk_down",
+        "chance": 0.3,
+        "atk_down_pct": 0.15,
+        "turns": 2,
+        "tag": "🐉",
+        "name": "龙威压制"
+      },
+      "desc": "攻击命中 30% 概率使敌人攻击 -15%（2 刻）"
+    },
+    "bonus_3_stats": {
+      "atk": 0.06
+    }
+  },
+  "set_lv_ren_gong_hui": {
+    "quality": "orange",
+    "icon": "🎲",
+    "bonus_2": {
+      "spd": 0.2,
+      "dodge": 0.05,
+      "cdr": 0.05
+    },
+    "bonus_4": {
+      "effect": "travel_mark",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_mark",
+        "chance": 0.3,
+        "max_mark": 5,
+        "mark_desc": "每层 +20% 伤害",
+        "tag": "🎒",
+        "name": "旅人标记"
+      },
+      "desc": "攻击命中 30% 概率给敌人挂 1 层旅人标记（每层 +20% 伤害，上限 5）"
+    },
+    "name": "旅人公会"
+  },
+  "set_mi_fa": {
+    "quality": "purple",
+    "icon": "🔮",
+    "bonus_2": {
+      "matk": 0.15,
+      "crit": 0.05
+    },
+    "bonus_4": {
+      "effect": "mi_fa_arcane_bolt",
+      "chance": 0.2,
+      "params": {
+        "type": "proc_flat_dmg",
+        "chance": 0.2,
+        "stat": "matk",
+        "pct": 0.8,
+        "edef": "mdef",
+        "dmg_type": "magic",
+        "tag": "✨",
+        "name": "秘术重雷"
+      },
+      "desc": "攻击命中 20% 概率追加 80% 魔攻秘法雷击（吃暴击）"
+    },
+    "name": "秘法"
+  },
+  "set_mi_fa_tao": {
+    "quality": "purple",
+    "icon": "✨",
+    "bonus_2": {
+      "matk": 0.08,
+      "cdr": 0.05
+    },
+    "name": "秘法套",
+    "class": "cls_fa_shi",
+    "bonus_4_stats": {
+      "matk": 0.1
+    },
+    "bonus_4": {
+      "effect": "mi_fa_condense",
+      "chance": 0.25,
+      "params": {
+        "type": "proc_mp_on_dmg",
+        "chance": 0.25,
+        "stat": "matk",
+        "pct": 0.4,
+        "mp_pct": 0.15,
+        "edef": "mdef",
+        "dmg_type": "magic",
+        "tag": "✨",
+        "name": "秘术回响"
+      },
+      "desc": "攻击命中 25% 概率追加 40% 魔攻雷击并回复该次伤害 15% 的魔力"
+    }
+  },
+  "set_mi_wu_tao": {
+    "quality": "blue",
+    "icon": "🌫️",
+    "bonus_2": {
+      "dodge": 0.08
+    },
+    "name": "迷雾套",
+    "bonus_4_stats": {
+      "mdef": 0.08
+    },
+    "bonus_5": {
+      "desc": "迷雾增伤＋10%（对沼泽/毒腐系敌人）"
+    },
+    "bonus_5_cond": {
+      "enemy_contains": [
+        "沼泽",
+        "毒",
+        "腐",
+        "瘴"
+      ],
+      "dmg_mult": 1.1,
+      "tag": "🌫️迷雾侵染"
+    }
+  },
+  "set_mi_yin": {
+    "quality": "blue",
+    "icon": "🛡️",
+    "bonus_2": {
+      "def": 0.15
+    },
+    "bonus_4": {
+      "effect": "mdef_up_set",
+      "stats": {
+        "mdef": 0.2
+      },
+      "desc": "魔防＋20%"
+    },
+    "name": "秘银"
+  },
+  "set_pan_shi": {
+    "quality": "purple",
+    "icon": "🥋",
+    "bonus_2": {
+      "def": 0.15,
+      "hp": 0.1
+    },
+    "bonus_4": {
+      "effect": "pan_shi_steady",
+      "params": {
+        "type": "taken_dmg_reduce_flat",
+        "reduce_pct": 0.05,
+        "tag": "⛰️",
+        "name": "磐石不动"
+      },
+      "desc": "受击时伤害 -5%（磐石不动）"
+    },
+    "name": "磐石"
+  },
+  "set_qi_shi": {
+    "quality": "purple",
+    "icon": "🛡️",
+    "bonus_2": {
+      "atk": 0.2,
+      "def": 0.08
+    },
+    "bonus_4": {
+      "effect": "qi_shi_charge",
+      "chance": 0.18,
+      "params": {
+        "type": "proc_flat_dmg",
+        "chance": 0.18,
+        "stat": "atk",
+        "pct": 1.0,
+        "once_per_round": true,
+        "tag": "🐎",
+        "name": "骑士冲锋"
+      },
+      "desc": "攻击命中 18% 概率追加 100% 攻击力冲锋（每刻最多 1 次）"
+    },
+    "name": "骑士"
+  },
+  "set_qing_ying": {
+    "quality": "blue",
+    "icon": "🗡️",
+    "bonus_2": {
+      "crit": 0.08,
+      "atk": 0.1
+    },
+    "bonus_4": {
+      "effect": "shadow_combo_double",
+      "chance": 0.25,
+      "params": {
+        "type": "proc_flat_dmg",
+        "chance": 0.25,
+        "stat": "atk",
+        "pct": 0.4,
+        "tag": "🗡️",
+        "name": "轻影连刺"
+      },
+      "desc": "攻击命中 25% 概率追加一次 40% 攻击力的连刺"
+    },
+    "name": "轻影"
+  },
+  "set_qing_ying_tao": {
+    "quality": "blue",
+    "icon": "🗡️",
+    "bonus_2": {
+      "crit": 0.05,
+      "atk": 0.08,
+      "spd": 0.03
+    },
+    "name": "轻影套",
+    "class": "cls_ci_ke",
+    "bonus_4_stats": {
+      "crit": 0.05
+    },
+    "bonus_4": {
+      "effect": "shadow_combo_cp",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_res_gain",
+        "chance": 0.3,
+        "res_key": "cp",
+        "amount": 1,
+        "tag": "🗡️",
+        "name": "轻影连击"
+      },
+      "desc": "攻击命中 30% 概率额外获得 1 连击点"
+    }
+  },
+  "set_shen_en": {
+    "quality": "orange",
+    "icon": "☀️",
+    "bonus_2": {
+      "mdef": 0.18,
+      "hp": 0.12,
+      "heal_power": 0.05
+    },
+    "bonus_4": {
+      "effect": "divine_grace_burst",
+      "params": {
+        "type": "turn_heal_cond",
+        "heal_pct": 0.05,
+        "low_extra_pct": 0.15,
+        "low_hp_lt": 0.3,
+        "per_battle": true,
+        "tag": "☀️",
+        "name": "神恩爆发"
+      },
+      "desc": "每刻开始回复 5% 生命；生命首次低于 30% 时额外回复 15%（每场 1 次）"
+    },
+    "name": "神恩"
+  },
+  "set_shen_pan": {
+    "quality": "purple",
+    "icon": "☀️",
+    "bonus_2": {
+      "mdef": 0.18,
+      "hp": 0.1,
+      "tenacity": 0.03
+    },
+    "bonus_4": {
+      "effect": "judge_purify_heal",
+      "chance": 0.25,
+      "params": {
+        "type": "proc_purify_heal",
+        "chance": 0.25,
+        "heal_pct": 0.04,
+        "tag": "⚖️",
+        "name": "审判净化"
+      },
+      "desc": "攻击命中 25% 概率净化自身 1 个负面效果并回复 4% 最大生命"
+    },
+    "name": "审判"
+  },
+  "set_sheng_dian_ri_mian": {
+    "quality": "purple",
+    "icon": "🌞",
+    "name": "圣典·日冕",
+    "line": "牧师·平稳/爆发流",
+    "bonus_2": {
+      "effect": "heal_team_on_miracle_t2plus",
+      "hp": 30,
+      "miracle_min": 5,
+      "desc": "施放耗 5 点以上信仰的神迹技时 全体队友额外恢复 30 体力"
+    },
+    "bonus_4": {
+      "effect": "first_hit_immune",
+      "cond": "faith_full",
+      "per_battle": 1,
+      "params": {
+        "type": "taken_immune_cond",
+        "cond": "faith_full",
+        "per_battle": 1,
+        "tag": "☀️",
+        "name": "圣典日冕"
+      },
+      "desc": "满信仰状态下 首次受击免伤 (每战 1 次)"
+    }
+  },
+  "set_sheng_guang_tao": {
+    "quality": "blue",
+    "icon": "✨",
+    "bonus_2": {
+      "heal_power": 0.1
+    },
+    "name": "圣光套",
+    "piece_heal_power": 0.1,
+    "bonus_4_stats": {
+      "def": 0.08
+    },
+    "bonus_5": {
+      "desc": "圣光增伤＋10%（对暗影/亡灵系敌人）"
+    },
+    "bonus_5_cond": {
+      "enemy_contains": [
+        "暗",
+        "影",
+        "亡",
+        "鬼",
+        "骨",
+        "骷髅"
+      ],
+      "dmg_mult": 1.1,
+      "tag": "✨圣光克暗"
+    }
+  },
+  "set_sheng_hui": {
+    "quality": "purple",
+    "icon": "☀️",
+    "bonus_2": {
+      "mdef": 0.2,
+      "hp": 0.1,
+      "abyss_res": 0.05,
+      "heal_power": 0.05
+    },
+    "bonus_4": {
+      "effect": "holy_halo_shield",
+      "params": {
+        "type": "taken_shield_convert",
+        "shield_pct": 0.1,
+        "shield_turns": 2,
+        "once_per_round": true,
+        "tag": "✨",
+        "name": "圣辉护盾"
+      },
+      "desc": "被攻击命中后将本次伤害 10% 转化为护盾（每刻最多 1 次）"
+    },
+    "name": "圣徽"
+  },
+  "set_sheng_hui_shi_yue": {
+    "quality": "blue",
+    "icon": "🛡️",
+    "name": "圣徽·誓约",
+    "line": "牧师·新手保底",
+    "bonus_2": {
+      "effect": "res_gain",
+      "res": "faith",
+      "value": 1,
+      "on": "on_taken",
+      "desc": "受击回信仰 +1"
+    },
+    "bonus_4": {
+      "effect": "res_gain",
+      "res": "faith",
+      "value": 1,
+      "on": "on_heal",
+      "desc": "治疗回信仰 +1"
+    }
+  },
+  "set_sheng_tang": {
+    "quality": "purple",
+    "icon": "☀️",
+    "bonus_2": {
+      "mdef": 0.2,
+      "hp": 0.1
+    },
+    "bonus_4": {
+      "effect": "holy_field_heal",
+      "params": {
+        "type": "turn_heal_cond",
+        "heal_low_pct": 0.06,
+        "heal_high_pct": 0.03,
+        "cond_hp_lt": 0.5,
+        "tag": "✨",
+        "name": "圣辉疗愈"
+      },
+      "desc": "每刻开始：生命低于 50% 回复 6%，否则回复 3%"
+    },
+    "name": "圣堂"
+  },
+  "set_sheng_tang_tao": {
+    "quality": "purple",
+    "icon": "⛪",
+    "bonus_2": {
+      "heal_power": 0.08,
+      "mdef": 0.08
+    },
+    "name": "圣堂套",
+    "class": "cls_mu_shi",
+    "bonus_4_stats": {
+      "mdef": 0.1
+    },
+    "bonus_4": {
+      "effect": "holy_bastion_def",
+      "params": {
+        "type": "taken_dmg_reduce_flat",
+        "reduce_pct": 0.05,
+        "tag": "⛪",
+        "name": "圣堂壁垒"
+      },
+      "desc": "受击伤害 -5%（圣堂壁垒）"
+    }
+  },
+  "set_shi_bu_ke_dang": {
+    "quality": "purple",
+    "icon": "⛰️",
+    "name": "势不可挡",
+    "line": "拳师·通用",
+    "bonus_2": {},
+    "bonus_4": {
+      "effect": "chi_skill_phys",
+      "value": 0.15,
+      "desc": "气力技(耗气) 物理伤害 +15%"
+    }
+  },
+  "set_shi_quan_tao": {
+    "quality": "blue",
+    "icon": "🥋",
+    "bonus_2": {
+      "def": 0.1,
+      "atk": 0.05
+    },
+    "name": "石拳套",
+    "class": "cls_wu_seng",
+    "bonus_4_stats": {
+      "hp": 0.1
+    },
+    "bonus_4": {
+      "effect": "shi_quan_retort",
+      "chance": 0.15,
+      "params": {
+        "type": "taken_counter",
+        "chance": 0.15,
+        "atk_pct": 0.3,
+        "tag": "🥊",
+        "name": "石拳反打"
+      },
+      "desc": "受击 15% 概率以 30% 攻击力立即反击"
+    }
+  },
+  "set_shi_zhi_ling_zhu": {
+    "quality": "orange",
+    "icon": "⏳",
+    "name": "时之领主",
+    "line": "法师·时律线",
+    "bonus_2": {
+      "effect": "cdr_set",
+      "on": "time_freeze",
+      "value": -1,
+      "desc": "时停领域 冷却时间 -1"
+    }
+  },
+  "set_shou_wang": {
+    "quality": "purple",
+    "icon": "🛡️",
+    "bonus_2": {
+      "def": 0.2,
+      "hp": 0.08
+    },
+    "bonus_4": {
+      "effect": "shou_wang_ward",
+      "chance": 0.25,
+      "desc": "受击 25% 概率本次受击伤害 -50%"
+    },
+    "name": "守望"
+  },
+  "set_shuang_lang_tao": {
+    "quality": "purple",
+    "icon": "🐺",
+    "bonus_2": {
+      "def": 0.1
+    },
+    "name": "霜狼套",
+    "bonus_4_stats": {
+      "atk": 0.08
+    },
+    "bonus_5": {
+      "desc": "抗寒：免疫减速"
+    },
+    "bonus_5_ctrl_immune": [
+      "slow"
+    ]
+  },
+  "set_shuang_lie_tao": {
+    "quality": "purple",
+    "icon": "🐺",
+    "bonus_2": {
+      "crit": 0.05,
+      "atk": 0.03
+    },
+    "name": "霜猎套",
+    "bonus_3": {
+      "effect": "frost_hunt_freeze",
+      "chance": 0.2,
+      "params": {
+        "type": "proc_freeze",
+        "chance": 0.2,
+        "freeze_turns": 1,
+        "tag": "🧊",
+        "name": "霜猎冰冻"
+      },
+      "desc": "攻击命中 20% 概率冻结敌人 1 刻（Boss 退化为减速 40%）"
+    },
+    "bonus_3_stats": {
+      "atk": 0.05
+    }
+  },
+  "set_tie_pi": {
+    "quality": "blue",
+    "icon": "🛡️",
+    "bonus_2": {
+      "def": 0.18,
+      "atk": 0.08
+    },
+    "bonus_4": {
+      "effect": "tie_pi_bulwark",
+      "chance": 0.2,
+      "params": {
+        "type": "taken_shield",
+        "chance": 0.2,
+        "shield_pct": 0.05,
+        "shield_turns": 1,
+        "shield_key": "tie_pi_bulwark",
+        "tag": "🛡️",
+        "name": "铁皮护体"
+      },
+      "desc": "受击 20% 概率获得 5% 最大生命护盾（1 刻）"
+    },
+    "name": "铁皮"
+  },
+  "set_tie_pi_tao": {
+    "quality": "blue",
+    "icon": "🛡️",
+    "bonus_2": {
+      "atk": 0.08,
+      "def": 0.08
+    },
+    "name": "铁皮套",
+    "class": "cls_zhan_shi",
+    "bonus_4_stats": {
+      "def": 0.1
+    },
+    "bonus_4": {
+      "effect": "tie_pi_harden",
+      "chance": 0.3,
+      "params": {
+        "type": "taken_def_up_stack",
+        "chance": 0.3,
+        "def_pct": 0.15,
+        "turns": 2,
+        "max_stacks": 2,
+        "tag": "🛡️",
+        "name": "铁皮厚盾"
+      },
+      "desc": "受击 30% 概率防御 +15%（2 刻，可叠 2 层）"
+    }
+  },
+  "set_tie_shou": {
+    "quality": "blue",
+    "icon": "🥋",
+    "bonus_2": {
+      "hp": 0.15,
+      "def": 0.08
+    },
+    "bonus_4": {
+      "effect": "tie_shou_blood",
+      "chance": 0.3,
+      "desc": "受击 30% 概率回复 3% 最大生命"
+    },
+    "name": "石拳"
+  },
+  "set_wu_ye": {
+    "quality": "orange",
+    "icon": "🗡️",
+    "bonus_2": {
+      "crit": 0.1,
+      "atk": 0.12
+    },
+    "bonus_4": {
+      "effect": "midnight_assassinate",
+      "chance": 0.35,
+      "params": {
+        "type": "proc_execute",
+        "chance": 0.35,
+        "stat": "atk",
+        "pct": 0.4,
+        "hp_lt": 0.3,
+        "true_dmg": true,
+        "tag": "🗡️",
+        "name": "午夜暗杀"
+      },
+      "desc": "对生命低于 30% 的敌人，攻击命中 35% 概率追加 40% 攻击力真伤处决"
+    },
+    "name": "午夜"
+  },
+  "set_xiang_mu_tao": {
+    "quality": "white",
+    "icon": "🌳",
+    "bonus_2": {
+      "atk": 0.05,
+      "bonus_5": {
+        "desc": "橡木猎牙：对野兽系敌人伤害 +10%"
+      },
+      "bonus_5_cond": {
+        "enemy_contains": [
+          "狼",
+          "猪",
+          "兔",
+          "鹿",
+          "熊",
+          "牛",
+          "羊",
+          "狐",
+          "虎",
+          "豹"
+        ],
+        "dmg_mult": 1.1,
+        "tag": "🌳橡木猎牙"
+      }
+    },
+    "name": "橡木套",
+    "bonus_4_stats": {
+      "hp": 0.1
+    },
+    "bonus_5": {
+      "crit": 0.05,
+      "desc": "暴击＋5%"
+    }
+  },
+  "set_xing_chen": {
+    "quality": "orange",
+    "icon": "🔮",
+    "bonus_2": {
+      "matk": 0.2,
+      "crit": 0.04
+    },
+    "bonus_4": {
+      "effect": "xing_chen_starstrike",
+      "chance": 0.25,
+      "params": {
+        "type": "proc_flat_dmg",
+        "chance": 0.25,
+        "stat": "matk",
+        "pct": 0.75,
+        "edef": "mdef",
+        "dmg_type": "magic",
+        "tag": "🌟",
+        "name": "星辰轰击",
+        "cond_thunder_full": true
+      },
+      "desc": "攻击命中 25% 概率追加 75% 魔攻星雷（雷印记满 3 必触发）"
+    },
+    "name": "星辰"
+  },
+  "set_xing_chen_tao": {
+    "quality": "purple",
+    "icon": "✨",
+    "bonus_2": {
+      "atk": 0.05,
+      "matk": 0.05,
+      "def": 0.05,
+      "spd": 0.05
+    },
+    "name": "星尘套",
+    "bonus_4_stats": {
+      "matk": 0.08
+    },
+    "bonus_5": {
+      "desc": "星尘祝福：夜间(19:00-06:00)每刻回蓝 5%",
+      "effect": "night_mp_regen",
+      "params": {
+        "pct": 0.05,
+        "night_hours": [
+          19,
+          6
+        ]
+      }
+    }
+  },
+  "set_xing_jie": {
+    "quality": "purple",
+    "icon": "🔮",
+    "bonus_2": {
+      "matk": 0.18,
+      "pene_magi": 0.03
+    },
+    "bonus_4": {
+      "effect": "xing_jie_starfall",
+      "chance": 0.15,
+      "params": {
+        "type": "proc_flat_dmg",
+        "chance": 0.15,
+        "stat": "matk",
+        "pct": 0.8,
+        "edef": "mdef",
+        "dmg_type": "magic",
+        "tag": "☄️",
+        "name": "星坠"
+      },
+      "desc": "攻击命中 15% 概率追加 80% 魔攻星雷并溅射全体 40% 魔攻"
+    },
+    "name": "星界"
+  },
+  "set_xing_zhe": {
+    "quality": "blue",
+    "icon": "🥋",
+    "bonus_2": {
+      "atk": 0.1,
+      "lifesteal": 0.02,
+      "hp": 0.08
+    },
+    "bonus_4": {
+      "effect": "xing_zhe_hunt",
+      "chance": 0.4,
+      "params": {
+        "type": "proc_lifesteal",
+        "chance": 0.4,
+        "lifesteal_pct": 0.12,
+        "tag": "🩸",
+        "name": "猎血"
+      },
+      "desc": "攻击 40% 概率吸血 12% 伤害"
+    },
+    "name": "行者"
+  },
+  "set_xing_zhe_tao": {
+    "quality": "blue",
+    "icon": "🥋",
+    "bonus_2": {
+      "spd": 0.1,
+      "atk": 0.05
+    },
+    "name": "行者套",
+    "class": "cls_wu_seng",
+    "bonus_4_stats": {
+      "hp": 0.1
+    },
+    "bonus_4": {
+      "effect": "xing_zhe_flow",
+      "params": {
+        "type": "proc_lifesteal",
+        "chance": 1.0,
+        "lifesteal_pct": 0.06,
+        "tag": "🩸",
+        "name": "行者游血"
+      },
+      "desc": "攻击命中 100% 吸血 6% 伤害"
+    }
+  },
+  "set_xu_shi_yong_dong": {
+    "quality": "purple",
+    "icon": "🌊",
+    "name": "蓄势涌动",
+    "line": "拳师·通用",
+    "bonus_2": {
+      "effect": "battle_start_res",
+      "res": "chi",
+      "value": 2,
+      "desc": "进入战斗时 2 气 (开局即进连段中段)"
+    }
+  },
+  "set_xue_shi_zhan_tuan": {
+    "quality": "purple",
+    "icon": "⚔️",
+    "name": "血誓战团",
+    "line": "战士·通用基础",
+    "bonus_2": {
+      "effect": "res_gain",
+      "res": "rage",
+      "value": 1,
+      "on": "on_taken",
+      "desc": "受击回怒 +1"
+    }
+  },
+  "set_xue_tu": {
+    "quality": "blue",
+    "icon": "🔮",
+    "bonus_2": {
+      "matk": 0.15,
+      "cdr": 0.05
+    },
+    "bonus_4": {
+      "effect": "xue_tu_spark",
+      "chance": 0.4,
+      "params": {
+        "type": "proc_mark",
+        "chance": 0.4,
+        "max_mark": 3,
+        "mark_key": "element_marks",
+        "tag": "⚡",
+        "name": "蓄雷"
+      },
+      "desc": "攻击命中 40% 概率叠 1 层雷印记（上限 3）"
+    },
+    "name": "学徒"
+  },
+  "set_xue_tu_tao": {
+    "quality": "blue",
+    "icon": "🔮",
+    "bonus_2": {
+      "matk": 0.08,
+      "cdr": 0.05
+    },
+    "name": "学徒套",
+    "class": "cls_fa_shi",
+    "bonus_4_stats": {
+      "matk": 0.1
+    },
+    "bonus_4": {
+      "effect": "xue_tu_surge",
+      "params": {
+        "type": "proc_buff",
+        "chance": 1.0,
+        "buff_key": "xue_tu_surge_lv",
+        "buff_mode": "stack",
+        "buff_max": 3,
+        "tag": "⚡",
+        "name": "蓄能"
+      },
+      "desc": "每次攻击命中叠 1 层蓄能（下次雷击伤害 +10%，上限 3 层）"
+    }
+  },
+  "set_xun_lin_tao": {
+    "quality": "blue",
+    "icon": "🌲",
+    "bonus_2": {
+      "spd": 0.04,
+      "dodge": 0.03
+    },
+    "name": "巡林套",
+    "bonus_3": {
+      "effect": "ranger_net",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_slow",
+        "chance": 0.3,
+        "slow_pct": 0.15,
+        "slow_turns": 2,
+        "tag": "🕸️",
+        "name": "巡林罗网"
+      },
+      "desc": "攻击命中 30% 概率使敌方速度 -15%（2 刻）"
+    },
+    "bonus_3_stats": {
+      "spd": 0.05
+    }
+  },
+  "set_xun_lin_zhang_pi_feng": {
+    "quality": "purple",
+    "icon": "🍃",
+    "name": "巡林长披风",
+    "line": "游侠·散件配套",
+    "bonus_2": {
+      "effect": "crit_on_marked",
+      "crit": 0.05,
+      "desc": "命中带标记目标时 暴击率 +5%"
+    }
+  },
+  "set_ye_mu_he_qi_ying_sha": {
+    "quality": "purple",
+    "icon": "🗡️",
+    "name": "夜幕合契·影纱",
+    "line": "刺客·轻甲/武器 5 件套",
+    "bonus_2": {
+      "effect": "battle_start_cp",
+      "value": 1,
+      "desc": "战斗开始时 +1 连击点"
+    },
+    "bonus_4": {
+      "effect": "finisher_crit",
+      "crit": 0.15,
+      "desc": "终结技暴击率 +15%"
+    },
+    "bonus_5": {
+      "effect": "combo_finisher_per_layer",
+      "per_layer": 0.08,
+      "base": 0.05,
+      "max_layers": 8,
+      "desc": "攻线连段每层终结技增伤 5% → 8% (上限 +64%)"
+    }
+  },
+  "set_ye_xing": {
+    "quality": "blue",
+    "icon": "🗡️",
+    "bonus_2": {
+      "crit": 0.1,
+      "atk": 0.08
+    },
+    "bonus_4": {
+      "effect": "night_backstab",
+      "chance": 0.2,
+      "params": {
+        "type": "proc_execute",
+        "stat": "atk",
+        "pct": 0.25,
+        "hp_full": true,
+        "chance": 0.2,
+        "pct2": 0.05,
+        "hp_pct_dmg": true,
+        "tag": "🌙",
+        "name": "夜行背刺"
+      },
+      "desc": "对满血敌人伤害 +25%；否则 20% 概率附加 5% 最大生命真伤"
+    },
+    "name": "夜行"
+  },
+  "set_ye_xing_tao": {
+    "quality": "blue",
+    "icon": "🗡️",
+    "bonus_2": {
+      "crit": 0.06,
+      "atk": 0.08
+    },
+    "name": "夜行套",
+    "class": "cls_ci_ke",
+    "bonus_4_stats": {
+      "crit": 0.05
+    },
+    "bonus_4": {
+      "effect": "night_stealth_exec",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_stealth",
+        "chance": 0.3,
+        "hp_lt": 0.3,
+        "buff_key": "stealth",
+        "tag": "🌙",
+        "name": "夜行潜行"
+      },
+      "desc": "对生命低于 30% 的敌人，攻击命中 30% 概率下一次攻击必定暴击"
+    }
+  },
+  "set_yin_ling_tao": {
+    "quality": "blue",
+    "icon": "🔔",
+    "bonus_2": {
+      "spd": 0.1,
+      "bonus_5": {
+        "desc": "银铃潮音：对水族敌人伤害 +10%"
+      },
+      "bonus_5_cond": {
+        "enemy_contains": [
+          "鲛人",
+          "湖妖",
+          "河龙",
+          "漩涡",
+          "水灵",
+          "水母"
+        ],
+        "dmg_mult": 1.1,
+        "tag": "🔔银铃潮音"
+      }
+    },
+    "name": "银铃套",
+    "bonus_4_stats": {
+      "atk": 0.08
+    },
+    "bonus_5": {
+      "dodge": 0.05,
+      "desc": "闪避＋5%"
+    }
+  },
+  "set_yin_ying": {
+    "quality": "purple",
+    "icon": "🗡️",
+    "bonus_2": {
+      "crit": 0.08,
+      "atk": 0.1,
+      "pene_phys": 0.03
+    },
+    "bonus_4": {
+      "effect": "shadow_etch_vuln",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_mark",
+        "chance": 0.3,
+        "max_mark": 5,
+        "mark_desc": "每层 +15% 受伤害",
+        "tag": "🌒",
+        "name": "阴影蚀刻"
+      },
+      "desc": "攻击命中 30% 概率叠 1 层阴影蚀刻（每层 +15% 受伤害，上限 5）"
+    },
+    "name": "阴影"
+  },
+  "set_yin_ying_tao": {
+    "quality": "purple",
+    "icon": "🗡️",
+    "bonus_2": {
+      "crit": 0.05,
+      "atk": 0.08,
+      "crit_dmg": 0.05
+    },
+    "name": "阴影套",
+    "class": "cls_ci_ke",
+    "bonus_4_stats": {
+      "crit": 0.05
+    },
+    "bonus_4": {
+      "effect": "shadow_erode_poison",
+      "chance": 0.3,
+      "params": {
+        "type": "proc_mark",
+        "chance": 0.3,
+        "max_mark": 5,
+        "mark_key": "poison",
+        "tag": "☠️",
+        "name": "阴影侵蚀"
+      },
+      "desc": "攻击命中 30% 概率叠 1 层毒（上限 5）"
+    }
+  },
+  "set_ying_yan": {
+    "quality": "purple",
+    "icon": "🏹",
+    "bonus_2": {
+      "crit": 0.07,
+      "pene_phys": 0.03
+    },
+    "bonus_4": {
+      "effect": "eagle_vision",
+      "chance": 0.35,
+      "params": {
+        "type": "proc_buff",
+        "chance": 0.35,
+        "buff_key": "eagle_vision",
+        "buff_val": true,
+        "tag": "🦅",
+        "name": "鹰眼锐视"
+      },
+      "desc": "攻击命中 35% 概率下一次攻击暴击伤害 +30%"
+    },
+    "name": "鹰眼"
+  },
+  "set_yu_jin_jun_tuan_hui_zhang": {
+    "quality": "purple",
+    "icon": "🔥",
+    "name": "余烬军团徽章",
+    "line": "战士·攻线",
+    "bonus_2": {},
+    "bonus_4": {
+      "effect": "full_rage_pursuit",
+      "power": 0.5,
+      "rage_cost_reduce": 1,
+      "params": {
+        "type": "proc_full_rage_pursuit",
+        "power": 0.5
+      },
+      "desc": "满怒时 普攻二段追击 威力 30% → 50%；满怒大招 怒气消耗 -1 (最低消耗 1)"
+    }
+  },
+  "set_yuan_su_shi_tu": {
+    "quality": "orange",
+    "icon": "✨",
+    "name": "元素使徒",
+    "line": "法师·基础/转职通用",
+    "bonus_2": {
+      "effect": "res_max",
+      "res": "element",
+      "value": 1,
+      "desc": "元素亲和充能条 上限 +1 (5 → 6)"
+    },
+    "bonus_4": {
+      "effect": "ultimate_cost_reduce",
+      "res": "element",
+      "value": 1,
+      "desc": "全耗奥义(元素湮灭) 充能消耗 -1 (-5 → -4，保留残点走轴)"
+    }
+  },
+  "set_yue_ying": {
+    "quality": "purple",
+    "icon": "✨",
+    "bonus_2": {
+      "matk": 0.18,
+      "pene_magi": 0.05
+    },
+    "bonus_4": {
+      "effect": "crit_up_set",
+      "stats": {
+        "crit": 0.08
+      },
+      "desc": "暴击率＋8%"
+    },
+    "name": "月影"
+  },
+  "set_yue_yu_tao": {
+    "quality": "purple",
+    "icon": "🌙",
+    "bonus_2": {
+      "crit": 0.08
+    },
+    "name": "月语套",
+    "bonus_4_stats": {
+      "spd": 0.1
+    },
+    "bonus_5": {
+      "desc": "冰系增伤＋10%（月语/海神套，冰系技能）",
+      "element_dmg": {
+        "ice": 0.1
+      }
+    }
+  },
+  "set_zhu_fu": {
+    "quality": "blue",
+    "icon": "☀️",
+    "bonus_2": {
+      "mdef": 0.18,
+      "hp": 0.1,
+      "heal_power": 0.03
+    },
+    "bonus_4": {
+      "effect": "bless_chant_mp",
+      "chance": 0.35,
+      "params": {
+        "type": "proc_heal_mp",
+        "chance": 0.35,
+        "heal_pct": 0.05,
+        "tag": "🎵",
+        "name": "祝福咏叹"
+      },
+      "desc": "攻击命中 35% 概率回复 5% 最大魔力"
+    },
+    "name": "祝福"
+  },
+  "set_zhu_fu_tao": {
+    "quality": "blue",
+    "icon": "☀️",
+    "bonus_2": {
+      "heal_power": 0.1,
+      "mdef": 0.05
+    },
+    "name": "祝福套",
+    "class": "cls_mu_shi",
+    "bonus_4_stats": {
+      "mdef": 0.1
+    },
+    "bonus_4": {
+      "effect": "bless_ward_shield",
+      "chance": 0.25,
+      "params": {
+        "type": "taken_shield",
+        "chance": 0.25,
+        "shield_pct": 0.08,
+        "shield_turns": 3,
+        "tag": "☀️",
+        "name": "圣徽守护"
+      },
+      "desc": "被攻击命中 25% 概率获得 8% 最大生命护盾（3 刻）"
+    }
+  }
+}

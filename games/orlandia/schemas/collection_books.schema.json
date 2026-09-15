@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/collection_books.schema.json",
+  "title": "冒险者收藏册（collection_books）—— 5 套 / 42 条目；条目 key/name/hint 原样，reward 三件套",
+  "description": "一条 = 一册（表键 = 册 id，实测 5 条：`book_fish` / `book_ore` / `book_trophy` / `book_food` / `book_relic`）。真源 = 游戏仓 `game/data/collection_book.py:20 COLLECTION_BOOKS`（**源侧是列表** `[{id, name, desc, entries, reward}]`），经 `scripts/export_domains/collection_exploration.py:derive_collection_books` 单向导出：条目**原样** + 注入 `order`（源列表下标 —— 包侧表按键落盘会丢列表序，而『收藏册』总览逐册按**源序**渲染，实测源序 ≠ 键字典序）。消费端：宿主命令 `game/commands/collection.py`（B8.2 薄壳：读表与收藏判定走包内 `content/collection.py` 的 `books()` / `book_progress()` / `entry_collected()` / `item_info()`；宿主只做 db 读（背包 / 图鉴）与拼文案）。判定口径（内容侧语义）：条目 `key` **或** `name` 命中「背包持有名集合」或「图鉴怪名集合」即算已收集。",
+  "x-primary": "collection_book",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^book_[a-z0-9_]*$",
+    "description": "册 id（内容侧词汇；实测 5/5 都是 `book_*` 前缀，且与条目 `id` 字段逐字相同 —— 导出器逐条断言一致）"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/collection_book"
+  },
+  "$defs": {
+    "collection_book": {
+      "type": "object",
+      "title": "一册收藏册（COLLECTION_BOOKS 的一条）",
+      "additionalProperties": true,
+      "required": [
+        "id",
+        "name",
+        "desc",
+        "entries",
+        "reward",
+        "order"
+      ],
+      "description": "实测 5/5 条字段集完全一致（6 个键全有）→ required 全列。`order` 是**导出期注入**的字段（源条目里没有），其余五个键原样搬自源侧。",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "title": "册 id",
+          "description": "与表键相同（导出器逐条断言；键 ≠ id 会拒绝导出）。判定与渲染都按 `name`，id 是稳定标识。"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "册名",
+          "description": "展示名（实测：溪流鱼谱 / 矿脉物语 / 魔物战利品 / 奥兰迪亚风味 / 余烬遗物）。消费端按它做『收藏册 <册名>』的匹配（`name in raw or raw in name`，故册名互为子串会撞车 —— 内容侧负责不撞）。"
+        },
+        "desc": {
+          "type": "string",
+          "minLength": 1,
+          "title": "册说明",
+          "description": "单册详情页第二行原样渲染的全部文案。"
+        },
+        "entries": {
+          "type": "array",
+          "minItems": 1,
+          "title": "收藏条目",
+          "description": "实测 42 条（8+8+10+8+8）。条目 `key` **册内唯一**且跨册 0 重复（42/42 全局唯一 —— 导出器按册内唯一拒绝导出）。",
+          "items": {
+            "$ref": "#/$defs/collection_entry"
+          }
+        },
+        "reward": {
+          "$ref": "#/$defs/book_reward",
+          "title": "满套奖励",
+          "description": "满套可『收藏册 领取』（实测 5/5 都有 chest/title/bonus 三键）。"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "title": "源列表序",
+          "description": "源 `COLLECTION_BOOKS` 的下标（0 起，导出期注入）。总览 / 领取的遍历序 = 按它升序；不注入就会退化成键字典序（实测两者不同）。"
+        }
+      }
+    },
+    "collection_entry": {
+      "type": "object",
+      "title": "收藏条目（背包 / 图鉴命中判定的一条）",
+      "additionalProperties": true,
+      "required": [
+        "key",
+        "name",
+        "hint"
+      ],
+      "description": "实测 42/42 条字段集恒为 {key, name, hint} 三个非空字符串（导出器逐条断言；多键/少键即拒绝导出）。",
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "title": "条目 key",
+          "description": "物品 / 材料 / 鱼 / 怪物的稳定 ID 或中文名（`mat_*` / `i_*` 或中文名兜底）。**不展开**、不校验闭合：判定时与『背包持有 key』『图鉴怪 key』做字符串相等。"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "条目显示名",
+          "description": "与 `key` 同为命中候选（背包名 / 图鉴怪名也参与相等比较），同时是详情页的行首名字。"
+        },
+        "hint": {
+          "type": "string",
+          "minLength": 1,
+          "title": "收集提示",
+          "description": "详情页括号里的原样文案（实测 42/42 非空）。"
+        }
+      }
+    },
+    "book_reward": {
+      "type": "object",
+      "title": "满套奖励三件套（宝箱 / 称号 / 永久属性）",
+      "additionalProperties": true,
+      "required": [
+        "chest",
+        "title",
+        "bonus"
+      ],
+      "description": "实测 5/5 都有这三键。宝箱走命令『收藏册 领取』实发（`db.add_item`）；`bonus` 由 `core/stat_bonus.py` 在集齐时动态给永久属性（读 possessed / bestiary）；`title` 目前**只展示**（5 个称号名在 titles / title_conds 域里查无 —— 内容侧数据缺口，见导出插件文件头 ①）。",
+      "properties": {
+        "chest": {
+          "type": "string",
+          "minLength": 1,
+          "title": "满套宝箱",
+          "description": "items 域（`content/data/items.json`）的键，实测 5/5 命中（`i_chest_wood` / `i_chest_iron` ×2 / `i_chest_bronze` / `i_chest_silver`）。导出器逐条断言闭合（查无即拒绝导出）；消费端读不到定义时用兜底条目入包（不静默丢弃）。"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "title": "满套称号名",
+          "description": "纯展示字符串（原样）。**不是** titles 域的键（实测 5/5 在 `TITLES` 68 条 / `title_conds` 50 条里都查无），故本 schema 不做引用约束。"
+        },
+        "bonus": {
+          "type": "object",
+          "minProperties": 1,
+          "title": "永久属性加成",
+          "description": "属性名 → 正整数（实测各 1 键：spd+2 / def+3 / atk+4 / hp+20 / matk+3）。消费端 `core/stat_bonus.py` 集齐即计入面板；本域只搬数字。",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    }
+  }
+}

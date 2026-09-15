@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/alchemy.schema.json",
+  "title": "炼金配方（alchemy）—— 一条 = 一个配方（表键 = 配方 id `al_*`），耗材与产物都是物品 id",
+  "description": "真源 = 游戏仓 `game/data/alchemy.py:3 ALCHEMY_RECIPES`（**import 之后的运行时表**，91 条；该文件 808 行的唯一顶层表），由 `scripts/export_domains/life_growth.py:derive_alchemy` 单向导出，条目**原样**（无注入、无默认值）。消费者在游戏侧：`game/data/_assembly.py:187 build_index(\"alchemy\", ALCHEMY_RECIPES, prefix=\"al_\", name_field=\"name\")`、`game/data/__init__.py:109` re-export、`game/commands/economy.py:758,804,812`（炼金列表 / 净化分支 `r.get(\"purify\") is not True` / 配方详情）、`:2097` 先查 `COOKING_RECIPES` 再查 `ALCHEMY_RECIPES`（两域共用一个配方 id 入口 → 必须同批进包）。**本域只搬运、不解释**：`cost` / `product` 的键是 items 域引用串、`blueprint` 是按显示名的图纸串，导出期不展开。",
+  "x-primary": "alchemy",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "配方 id（内容侧词汇；实测 91 条**全部** `al_*` 前缀）"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/alchemy"
+  },
+  "$defs": {
+    "alchemy": {
+      "type": "object",
+      "title": "炼金配方（一条）",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "title": "配方名",
+          "description": "显示名（91/91 条都有）。同名的商店货在源侧注释里显式对齐过（如「治疗药水(小)」与商店同款）→ 改名会连带影响炼金面板文案；也是 `_INDEXES[\"alchemy\"].name_to_id` 的键。"
+        },
+        "desc": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "说明",
+          "description": "一行说明（91/91 条都有）。源侧注释里常见「与商店同价同效」这类口径说明（#80 消歧），改文案前先看源文件注释。"
+        },
+        "min_lv": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "需求副业等级",
+          "description": "炼金副业等级门槛（v54 起）。实测 1~9；`game/commands/economy.py:758` 按玩家副业等级过滤列表。"
+        },
+        "cost": {
+          "type": "object",
+          "title": "耗材（物品 id → 数量）",
+          "x-widget": "kv",
+          "description": "键 = **items 域 key**（实测 77 个互异值 = 74 `mat_*` + 3 `i_*`，**100% 命中**），值 = 数量 int（≥1）。导出期不展开。",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "product": {
+          "type": "object",
+          "title": "产物（物品 id → 数量）",
+          "x-widget": "kv",
+          "description": "键 = **items 域 key**（实测 82 个互异值 = 74 `i_*` + 7 `mat_*` + 1 `it_*`，**100% 命中**），值 = 数量 int（≥1）。三套前缀混用是源侧现状（`i_*` 主用、`it_*` 与 `mat_*` 是历史命名）—— 导出原样保留，不替它归口。",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "purify": {
+          "type": "boolean",
+          "title": "净化配方",
+          "description": "源侧唯一布尔开关（实测只有 6 条写它，且全是 `true`）：`game/commands/economy.py:804` 用 `r.get(\"purify\") is not True` 把净化配方从常规列表里摘出去（净化入口另算）。缺省 = 常规配方。"
+        },
+        "blueprint": {
+          "type": "string",
+          "title": "图纸/配方卷（显示名串）",
+          "description": "解锁用的卷轴 —— **是显示名字符串，不是 id**（实测只有 2 条：`配方·月光安神剂` / `隐藏配方·白石圣灰药剂`，2/2 按名在 items 域命中道具）。缺省 = 直接可炼。"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,4548 @@
+{
+  "hq5_1": {
+    "id": "hq5_1",
+    "name": "雨夜的灯火",
+    "giver": "w_night_merchant",
+    "map": "harbor_docks",
+    "chain": "雨夜的来客",
+    "min_level": 20,
+    "desc": "雨夜探索铁港码头·灯塔残基，发现神秘商人鸦羽与引路灯的线索",
+    "objective": {
+      "explore": "harbor_docks"
+    },
+    "reward_exp": 10293,
+    "reward_gold": 760,
+    "story": "雨夜的灯塔残基下，一个撑伞的黑袍人正对着海面说话。他自称鸦羽，『在等一盏灯』——他的引路灯被水鬼拖进了灯塔残基下的浅滩：『没有灯，我找不到回程的路。这雨夜的路，从来不是给人走的。』他请你去吊车平台一带找找灯的踪迹。",
+    "progress_text": "你在浅滩边发现一截断缆与一行湿漉漉的脚印——脚印不属于任何活人，一路延伸到海面之下。灯，确实在「下面」。",
+    "deliver_text": "鸦羽听完你的发现，沉默片刻：『……三百年前那艘沉船，最后只有我爷爷一个人游回岸。他欠这盏灯一条命。灯在下面——那就去取吧。』",
+    "source": "side"
+  },
+  "hq5_2": {
+    "id": "hq5_2",
+    "name": "以泪点灯",
+    "giver": "w_night_merchant",
+    "map": "harbor_docks",
+    "chain": "雨夜的来客",
+    "unlock": [
+      {
+        "side": "hq5_1"
+      }
+    ],
+    "desc": "击败 3 只水鬼，取回被拖入浅滩的引路灯",
+    "objective": {
+      "kill": "水鬼",
+      "count": 3
+    },
+    "reward_exp": 10293,
+    "reward_gold": 570,
+    "reward_item": "青铜雨铃",
+    "story": "你追着脚印下到浅滩，水鬼从浪里探出头来——那盏引路灯就挂在它的颈上，青色的灯火在水下明明灭灭。",
+    "progress_text": "连番交手，三只水鬼退回深海，引路灯与几颗水鬼之泪一同落在沙滩上。鸦羽接过灯，灯芯一触即燃——青色的火光照出码头上密密麻麻的旧脚印，那是三百年前的水手在雨夜里来回奔走的痕迹。",
+    "deliver_text": "鸦羽盯着你看了很久，忽然说：『你身上有旧东西的味道……和这盏灯一样。』这是他今晚第一次认真打量一个活人。",
+    "source": "side"
+  },
+  "hq5_3": {
+    "id": "hq5_3",
+    "name": "夜雨常客",
+    "giver": "w_night_merchant",
+    "map": "harbor_docks",
+    "chain": "雨夜的来客",
+    "unlock": [
+      {
+        "side": "hq5_2"
+      }
+    ],
+    "desc": "使用青铜雨铃，铃响三声，召唤鸦羽货摊开张",
+    "objective": {
+      "use": "青铜雨铃",
+      "map": "harbor_docks"
+    },
+    "reward_exp": 10293,
+    "reward_gold": 380,
+    "reward_item": "夜行披风图纸",
+    "story": "鸦羽把一枚青铜雨铃系在你腰间：『铃响三声，我就开张。我行走雨夜，只收旧物与故事，不收金币；但冒险者可以破例——用材料换我货摊上的东西。』",
+    "progress_text": "他说起自己的来历：『三百年前那艘沉船……最后只有我爷爷一个人游回岸。他欠这盏灯一条命。』此后雨夜灯塔残基，铃响三声，货摊自现。",
+    "deliver_text": "鸦羽转身走进雨幕，声音从远处飘回来：『雨夜的路，从来不是给人走的。可你来了第二次——看来你也是走夜路的人。铃响三声，我就开张。』",
+    "source": "side"
+  },
+  "hq6_1": {
+    "id": "hq6_1",
+    "name": "无名的墓碑",
+    "giver": "npc_gravedigger",
+    "map": "white_abbey",
+    "chain": "墓园的低语",
+    "min_level": 35,
+    "desc": "探索白石墓园北角，调查新添的无名墓碑",
+    "objective": {
+      "explore": "white_abbey"
+    },
+    "reward_exp": 33796,
+    "reward_gold": 2010,
+    "story": "你第三次踏进墓园时，灰杖从碑影里走出来：『你来了三次。前两次踩了我的白花，第三次替我把歪倒的碑扶正了——我都看见了。墓园北角新添了一块无名墓碑，碑上刻着不属于这个时代的徽记。墓园里有活人的手在动，不是亡魂。我老了，看不住这片地了。』",
+    "progress_text": "你依言探索北角，在无名碑下发现一枚被雨水泡黑的圣铃——与白石修道院那些腐蚀修女身上挂着的一模一样。",
+    "deliver_text": "灰杖接过圣铃，独眼里滚出泪来：『……这是修道院的东西。三十年了，我只当自己看花了眼。孩子，入夜后，墓园的低语声比白日清晰得多——源头在东南角一座半塌的旧墓穴之下。』",
+    "source": "side"
+  },
+  "hq6_2": {
+    "id": "hq6_2",
+    "name": "地下的低语",
+    "giver": "npc_gravedigger",
+    "map": "white_abbey",
+    "chain": "墓园的低语",
+    "unlock": [
+      {
+        "side": "hq6_1"
+      }
+    ],
+    "desc": "深夜探索旧墓穴，取回老修士手稿",
+    "objective": {
+      "find": "老修士手稿",
+      "map": "white_abbey",
+      "chance": 0.15
+    },
+    "reward_exp": 27720,
+    "reward_gold": 1800,
+    "reward_item": "老修士手稿",
+    "story": "入夜后，墓园的低语声比白日清晰得多——源头在东南角一座半塌的旧墓穴之下。你深夜摸进旧墓穴，在石板下触到一扇刻满圣光符文的石门。",
+    "progress_text": "门缝里塞着一卷发黄的手稿，纸页被虫蛀了大半。手稿是三百年前一位老修士所写——他记录了自己如何藏匿一位「被追捕的圣女」，又如何被教会勒令封口。末行字迹潦草：『我把她的东西埋在第九块碑下，愿后人替我说出真相。』",
+    "deliver_text": "灰杖听完手稿的内容，沉默了很久：『第九块碑……那是我祖父的碑。他临死前跟我说，这辈子只做了一件亏心事：没敢替那位圣女说出真相。』",
+    "source": "side"
+  },
+  "hq6_3": {
+    "id": "hq6_3",
+    "name": "第九块碑",
+    "giver": "npc_gravedigger",
+    "map": "white_abbey",
+    "chain": "墓园的低语",
+    "unlock": [
+      {
+        "side": "hq6_2"
+      }
+    ],
+    "desc": "按手稿指引在第九块碑下发掘圣物匣，交回灰杖",
+    "objective": {
+      "find": "圣物匣",
+      "map": "white_abbey",
+      "chance": 0.15
+    },
+    "reward_exp": 27720,
+    "reward_gold": 1800,
+    "reward_item": "隐藏配方·白石圣灰药剂",
+    "story": "按手稿指引，你在第九块碑下挖出一只石匣。匣中是一枚银质圣徽与半页祷文，三百年的泥土没能蚀掉它们的光泽。",
+    "progress_text": "灰杖接过圣物匣，独眼里滚出泪来——他的祖父就是那位老修士。",
+    "deliver_text": "灰杖将圣物匣供回墓园正中的碑下，低语自此平息。他以白石圣灰与一份祖传配方相赠，权当『替祖父说出了那句迟到三百年的真话』。",
+    "source": "side"
+  },
+  "hq7_1": {
+    "id": "hq7_1",
+    "name": "湖心的来信",
+    "giver": "npc_letter_bird",
+    "map": "starlake",
+    "chain": "候鸟的信",
+    "min_level": 55,
+    "require_stats": {
+      "fish_count": 10
+    },
+    "desc": "展读候鸟叼来的信——三百年前英雄王艾德里克·晨星写给恋人的诀别信",
+    "objective": {
+      "find": "候鸟的信",
+      "map": "starlake",
+      "chance": 0.15,
+      "use": "候鸟的信"
+    },
+    "reward_exp": 108275,
+    "reward_gold": 3210,
+    "reward_item": "候鸟的信",
+    "story": "你第十次收竿时，一只灰羽候鸟落在竿边，颈上挂着一只旧铜管，管口露出一角油纸。它歪着头看你，像在等一个等了很久的人。展开信纸，字迹古老而端正，落款「艾德里克·晨星」，收信人「星语湖畔的薇尔莉特」。圣战前夜，英雄王写给恋人的诀别——『此去烬山赴约，若我回不来，请替我看一辈子的星语湖。』",
+    "progress_text": "你合上信纸，翎信振翅而起，绕湖三圈，落在月冠王庭的方向——它认得路，只是需要一双能走路的手。",
+    "deliver_text": "翎信落在月冠王庭的方向，发出细细的鸣叫——它在等你启程，替它把信送到。",
+    "source": "side"
+  },
+  "hq7_2": {
+    "id": "hq7_2",
+    "name": "第一站·月冠王庭",
+    "giver": "npc_elf_sage",
+    "map": "moon_court",
+    "min_level": 55,
+    "chain": "候鸟的信",
+    "unlock": [
+      {
+        "side": "hq7_1"
+      }
+    ],
+    "desc": "向贤者·伊露恩出示候鸟的信，追寻薇尔莉特的去向",
+    "objective": {
+      "use": "候鸟的信",
+      "map": "moon_court",
+      "explore": "moon_court"
+    },
+    "reward_exp": 108275,
+    "reward_gold": 3210,
+    "reward_item": "月光印记",
+    "story": "伊露恩接过信纸，指尖微微发抖：『这是英雄王的笔迹……我认得。薇尔莉特是三百年前王庭的占星师，圣战后再无人见过她；传说她独自去了人类王都，从此没有音讯。』她赠予你一枚月光印记——『王庭的门，从此为你开着』——并托你继续送信。",
+    "progress_text": "临别时，伊露恩望着星语湖的方向补了一句：『她若还在，一定在等这封信。等了整整三百年。』",
+    "deliver_text": "伊露恩：『去晨曦城吧。宫廷学者·艾伯特掌管图书馆旧档，三百年前的旅居记录，只有他能翻得出来。』",
+    "source": "side"
+  },
+  "hq7_3": {
+    "id": "hq7_3",
+    "name": "三城之路·晨曦与铁港",
+    "giver": "npc_guildmaster",
+    "map": "dawn_city",
+    "chain": "候鸟的信",
+    "unlock": [
+      {
+        "side": "hq7_2"
+      }
+    ],
+    "desc": "经晨曦城、铁港城查证，最终在星语湖·湖心亭取回薇尔莉特的回信",
+    "objective": {
+      "use": "候鸟的信",
+      "map": "dawn_city",
+      "explore": "starlake"
+    },
+    "reward_exp": 16649,
+    "reward_gold": 1030,
+    "reward_mount": "mount_fogbird",
+    "reward_pet": "pet_starswift",
+    "story": "晨曦城，宫廷学者·艾伯特在图书馆旧档中查到一条三百年前的旅居记录——有位化名「银烛」的精灵女士曾在王都登记，后迁往铁港城。铁港城，老约翰·铁砧翻出行会三百年前的旧册：「银烛」最后一次接下的委托，是去星语湖。『她一直在等那封信。』",
+    "progress_text": "你赶回星语湖，翎信已在湖心亭上空盘旋——亭中石桌上摆着另一封信，笔迹温柔，是薇尔莉特的回信。",
+    "deliver_text": "翎信衔起两封信，头也不回地飞向烬山的方向。三百年的等候，终于等来了回信的人。",
+    "source": "side"
+  },
+  "hq8_1": {
+    "id": "hq8_1",
+    "name": "铁砧上的目光",
+    "giver": "npc_dwarf_forgemaster",
+    "map": "anvil_fort",
+    "chain": "熔炉之心",
+    "min_level": 75,
+    "require_stats": {
+      "craft_count": 20
+    },
+    "desc": "探索熔炉谷，寻找先祖锻炉遗迹",
+    "objective": {
+      "explore": "forge_valley"
+    },
+    "reward_exp": 268743,
+    "reward_gold": 5940,
+    "story": "你敲响第二十锤时，一只铁手按住了锤柄。赤须红发的矮人老者盯着你：『二十锤，锤锤落在心口上。矮人管这种锤法叫「大地的心跳」。』老者自称铜炉，先祖炉的看守：『矮人先祖曾锻出一把能听见大地心跳的锤——熔炉之心，锻法随先祖葬入熔炉谷深处。锻炉还在塌方底下压着。你既然敲得响大地的鼓点——去把它挖出来。』",
+    "progress_text": "你深入熔炉谷，在塌方矿道尽头找到先祖锻炉的残骸——炉身犹温，仿佛三十年来地火从未熄灭。炉底散落着三块刻满古矮人符文的碑石碎片。",
+    "deliver_text": "符文大师·吉姆利盯着碎片沉默半晌：『……这是先祖的「地火三锻」。铜炉那老东西，当年没炸错方向，是火候差一味。』",
+    "source": "side"
+  },
+  "hq8_2": {
+    "id": "hq8_2",
+    "name": "塌方下的锻炉",
+    "giver": "npc_dwarf_forgemaster",
+    "map": "forge_valley",
+    "min_level": 66,
+    "chain": "熔炉之心",
+    "unlock": [
+      {
+        "side": "hq8_1"
+      }
+    ],
+    "desc": "探索熔炉谷·塌方矿道，取回 3 块先祖碑石碎片",
+    "objective": {
+      "find": "先祖碑石碎片",
+      "map": "forge_valley",
+      "chance": 0.15
+    },
+    "reward_exp": 167825,
+    "reward_gold": 4020,
+    "reward_item": "先祖碑石碎片",
+    "story": "你在塌方矿道尽头找到先祖锻炉的残骸——炉身犹温。炉底散落着三块刻满古矮人符文的碑石碎片。符文大师·吉姆利与铜炉是旧识，当年因炸矿道一事翻脸，古符文只有他能译。",
+    "progress_text": "你带回三块碑石碎片。吉姆利盯着碎片沉默半晌：『……这是先祖的「地火三锻」。铜炉那老东西，当年没炸错方向，是火候差一味。』",
+    "deliver_text": "碑文记载，「地火三锻」最后一味引子，是熔岩元素心口凝成的熔岩核心——大地心跳的「脉」。",
+    "source": "side"
+  },
+  "hq8_3": {
+    "id": "hq8_3",
+    "name": "地火的试炼",
+    "giver": "npc_dwarf_forgemaster",
+    "map": "forge_valley",
+    "min_level": 66,
+    "chain": "熔炉之心",
+    "unlock": [
+      {
+        "side": "hq8_2"
+      }
+    ],
+    "desc": "击败 5 只熔岩元素，取回熔岩核心×3",
+    "objective": {
+      "kill": "熔岩元素",
+      "count": 5,
+      "collect": "熔岩核心",
+      "collect_count": 3
+    },
+    "reward_exp": 167825,
+    "reward_gold": 4020,
+    "reward_item": "先祖符文锤",
+    "story": "「地火三锻」最后一味引子，是熔岩元素心口凝成的熔岩核心——大地心跳的「脉」。你深入熔炉谷，与熔岩元素连番交手，取回三颗犹带地火余温的熔岩核心。",
+    "progress_text": "交回核心时，要塞里难得一见的场面出现了——铜炉与吉姆利破天荒地站在了同一座炉前，一个添火，一个刻符。",
+    "deliver_text": "开炉之夜，铜炉把一柄锈蚀的先祖符文锤郑重放进你手里：『最后一锤，你来敲。』",
+    "source": "side"
+  },
+  "hq8_4": {
+    "id": "hq8_4",
+    "name": "熔炉之心",
+    "giver": "npc_dwarf_forgemaster",
+    "map": "anvil_fort",
+    "min_level": 65,
+    "chain": "熔炉之心",
+    "unlock": [
+      {
+        "side": "hq8_3"
+      }
+    ],
+    "desc": "使用先祖符文锤敲下开炉最后一锤，见证「地火三锻」重现",
+    "objective": {
+      "use": "先祖符文锤",
+      "map": "anvil_fort"
+    },
+    "reward_exp": 161889,
+    "reward_gold": 1980,
+    "reward_item": "熔炉之心图纸",
+    "story": "开炉之夜，你抡锤落下，炉火腾起三丈金焰——先祖的锻法在火焰里显形，「地火三锻」的完整口诀与图谱在锤声中一字一字浮现。",
+    "progress_text": "铜炉把锻法刻成的图纸交给你：『先祖的手艺，交给你了。』要塞的矮人们齐声高呼。",
+    "deliver_text": "铜炉：『锤声骗不了人。你既然敲得响大地的鼓点——先祖的锻造秘术，自此有了传人。』",
+    "source": "side"
+  },
+  "q10_1": {
+    "id": "q10_1",
+    "name": "封印之核",
+    "giver": "npc_eter",
+    "desc": "深入封印核心，击败封印守卫",
+    "objective": {
+      "kill": "封印守卫(腐蚀)",
+      "count": 1
+    },
+    "reward_exp": 479450,
+    "reward_gold": 6640,
+    "min_level": 85,
+    "next": "q10_2",
+    "story": "蚀夜(低沉的声音)：『三百年来……终于有人走到这里。凡人，你是来杀我的吗？』",
+    "ending": "被腐蚀的封印守卫倒下。你站在巨大的金色身影前——它被无数锁链钉在裂隙之上，眼中没有愤怒，只有疲惫。",
+    "source": "main"
+  },
+  "q10_2": {
+    "id": "q10_2",
+    "name": "守护者的低语",
+    "giver": "npc_eter",
+    "desc": "聆听蚀夜的讲述",
+    "objective": {
+      "talk": "npc_eter"
+    },
+    "reward_exp": 509950,
+    "reward_gold": 2650,
+    "min_level": 85,
+    "next": "q10_3",
+    "story": "蚀夜：『我是父神留下的守夜人，看守这世界的伤口。三百年前裂隙突然扩大，我用尽全力镇压——然后，你们的英雄王来了。他没有杀我，他看懂了。他用自己的生命化成了锁链，把我钉在这里，让我继续堵住裂隙。可你们教会……篡改了这一切。』",
+    "ending": "巨大的真相压得你喘不过气——被教会歌颂的英雄王，和被教会诅咒的『魔王』，其实是并肩的战友。",
+    "source": "main"
+  },
+  "q10_3": {
+    "id": "q10_3",
+    "name": "艾德里克的遗志",
+    "giver": "npc_eter",
+    "desc": "在封印核心找到英雄王艾德里克的残魂",
+    "objective": {
+      "explore": "ash_temple"
+    },
+    "reward_exp": 525940,
+    "reward_gold": 7810,
+    "min_level": 88,
+    "next": "q10_4",
+    "story": "艾德里克的残魂(温和地)：『蚀夜是守护者，不是魔王。我自愿献身封印，是希望真相终有一天大白。孩子，你来了……比我预想的更早。』",
+    "ending": "英雄王的残魂在金光中凝实——三百年前的故事，终于有了亲历者的证词。",
+    "source": "main"
+  },
+  "q10_4": {
+    "id": "q10_4",
+    "name": "献祭的选择",
+    "giver": "npc_eter",
+    "desc": "了解维持封印的代价",
+    "objective": {
+      "talk": "npc_eter"
+    },
+    "reward_exp": 557950,
+    "reward_gold": 3900,
+    "min_level": 88,
+    "next": "q10_5",
+    "story": "艾德里克：『封印需要圣光。教会的方法是用圣女的生命换取百年的安宁。我不想这样……但当时没有别的办法。现在，也许有了——你的圣光，比任何容器都纯粹。』",
+    "ending": "你终于明白教会为何要抓回圣女——他们准备再次献祭。而这一次，你要阻止他们。",
+    "source": "main"
+  },
+  "q10_5": {
+    "id": "q10_5",
+    "name": "黎明之光",
+    "giver": "npc_eter",
+    "desc": "接受艾德里克的传承(对话抉择)",
+    "objective": {
+      "talk": "npc_eter"
+    },
+    "reward_exp": 574700,
+    "reward_gold": 4280,
+    "min_level": 90,
+    "next": "q10_6",
+    "story": "艾德里克残魂将黎明之光的力量传向你：『圣光不在于血统，而在于心中是否愿意守护。你愿意……成为新的黎明吗？』",
+    "ending": "你的灵魂深处亮起金光——你继承了英雄王的意志，成为黎明之光的继承者。",
+    "endings": {
+      "chose_inheritor": "你的灵魂深处亮起金光——你继承了英雄王的意志，成为黎明之光的继承者。",
+      "chose_doubt": "你犹豫片刻，仍伸出手接过了那道圣光。艾德里克欣慰地笑了：『怀疑过，才更懂得守护的重量。』",
+      "chose_alternative": "你追问有没有别的办法。艾德里克沉默良久：『……有，但那是一条更艰难的路。』金光仍没入你的胸口——守护，从来不止一种答案。"
+    },
+    "source": "main"
+  },
+  "q10_6": {
+    "id": "q10_6",
+    "name": "最后的拥抱",
+    "giver": "npc_eter",
+    "desc": "与蚀夜告别(情感对话树)",
+    "objective": {
+      "talk": "npc_eter"
+    },
+    "reward_exp": 609719,
+    "reward_gold": 4130,
+    "reward_item": "幸运宝石",
+    "min_level": 92,
+    "next": "q11_1",
+    "story": "蚀夜：『去吧，凡人。教会的事、封印的事，都需要你去做。若我还能撑到那一天……我想亲眼看看，你守护的黎明。』",
+    "ending": "金色的守护者目送你离开封印之核。它的低语在身后回荡：『谢谢你……愿意相信真相。』",
+    "source": "main"
+  },
+  "q11_1": {
+    "id": "q11_1",
+    "name": "王都事变",
+    "giver": "npc_knight_commander",
+    "desc": "返回晨曦城，发现教会政变",
+    "objective": {
+      "explore": "dawn_city"
+    },
+    "reward_exp": 609719,
+    "reward_gold": 8270,
+    "min_level": 92,
+    "next": "q11_2",
+    "story": "城门口，圣光骑士团的旗帜被换成了审判庭的黑旗。罗兰：『奥古斯都疯了！他囚禁了教皇，宣布国王是叛教者！』",
+    "ending": "晨曦城已落入奥古斯都之手。审判庭的黑旗在风中猎猎作响——一场内战，已经点燃。",
+    "source": "main"
+  },
+  "q11_2": {
+    "id": "q11_2",
+    "name": "大圣堂之战",
+    "giver": "npc_knight_commander",
+    "desc": "攻入晨曦大圣堂，营救教皇格里高利九世",
+    "objective": {
+      "explore": "dawn_cathedral"
+    },
+    "reward_exp": 627100,
+    "reward_gold": 8270,
+    "min_level": 92,
+    "next": "q11_3",
+    "story": "教皇(虚弱但坚定)：『我错信了奥古斯都……他打着圣光的名义，做的却是魔鬼的事。孩子，圣光真正的样子，是你心中的正义。』",
+    "ending": "圣堂的门被撞开，教皇重获自由。奥古斯都的身影却出现在祭坛上：『来得正好——让你们看看真正的圣光！』",
+    "source": "main"
+  },
+  "q11_3": {
+    "id": "q11_3",
+    "name": "奥古斯都的真面目",
+    "giver": "npc_knight_commander",
+    "desc": "击败枢机主教·奥古斯都",
+    "objective": {
+      "kill": "枢机主教·奥古斯都",
+      "count": 1
+    },
+    "reward_exp": 644950,
+    "reward_gold": 10340,
+    "min_level": 92,
+    "next": "q11_4",
+    "story": "奥古斯都：『为了圣光的荣耀，牺牲是必要的。你们这些冒险者，根本不懂权力与信仰的关系！只要魔王还在传说中，人们就会永远仰望圣光——这就是我守护的东西！』",
+    "ending": "奥古斯都倒在圣堂的台阶上。他最后的声音带着疯狂：『封印……要破了……你们……也要步我后尘……』",
+    "source": "main"
+  },
+  "q11_4": {
+    "id": "q11_4",
+    "name": "最后的准备",
+    "giver": "npc_guildmaster",
+    "desc": "集结各族联军，向烬山进发",
+    "objective": {
+      "talk": "npc_guildmaster"
+    },
+    "reward_exp": 663350,
+    "reward_gold": 4130,
+    "min_level": 92,
+    "next": "q11_5",
+    "story": "老约翰：『三百年前，我跟着英雄王走过这条路。今天，我跟着你，再走一次。』",
+    "ending": "各族联军再次集结——这一次，没有教会的命令，只有共同的信念。",
+    "source": "main"
+  },
+  "q11_5": {
+    "id": "q11_5",
+    "name": "教皇的忏悔",
+    "giver": "npc_pope",
+    "desc": "与教皇格里高利深谈(多轮对话)",
+    "objective": {
+      "talk": "npc_pope"
+    },
+    "reward_exp": 682250,
+    "reward_gold": 4130,
+    "min_level": 92,
+    "next": "q11_6",
+    "story": "教皇低垂着头：『三百年来，教会用谎言维持着统治。我以为那是必要的……可奥古斯都让我明白，谎言终有反噬的一天。孩子，去纠正这一切吧，用你的方式。』",
+    "ending": "教皇将圣光祝福倾注于你：『圣光会指引你——如同它曾指引艾德里克。』",
+    "source": "main"
+  },
+  "q11_6": {
+    "id": "q11_6",
+    "name": "圣女的抉择",
+    "giver": "npc_saintess",
+    "desc": "与圣女艾莉丝谈心",
+    "objective": {
+      "talk": "npc_saintess"
+    },
+    "reward_exp": 701671,
+    "reward_gold": 4130,
+    "reward_item": "图纸残页",
+    "min_level": 92,
+    "next": "q12_1",
+    "story": "艾莉丝笑着说：『这一次，我不想当祭品了。我想和你一起，站在封印之前。』",
+    "ending": "圣女的身影与黎明之光融为一体：『走吧——去给这个故事，写一个不一样的结局。』",
+    "source": "main"
+  },
+  "q12_1": {
+    "id": "q12_1",
+    "name": "裂隙决战",
+    "giver": "npc_guildmaster",
+    "desc": "击败深渊猎犬，挡住深渊大军的先锋",
+    "objective": {
+      "kill": "深渊猎犬",
+      "count": 5
+    },
+    "reward_exp": 701671,
+    "reward_gold": 8270,
+    "min_level": 92,
+    "next": "q12_2",
+    "story": "深渊大军如潮水般涌出。各族联军并肩作战：精灵的箭雨、矮人的战锤、北境的战吼、骑士团的光盾。",
+    "ending": "先锋被击退，但裂隙还在扩大——真正的决战，才刚刚开始。",
+    "source": "main"
+  },
+  "q12_2": {
+    "id": "q12_2",
+    "name": "蚀夜的真相形态",
+    "giver": "npc_eter",
+    "desc": "击败蚀夜(真相形态)",
+    "objective": {
+      "kill": "蚀夜(真相形态)",
+      "count": 1
+    },
+    "reward_exp": 721000,
+    "reward_gold": 10780,
+    "reward_item": "蚀夜之面图纸",
+    "min_level": 95,
+    "next": "q12_3",
+    "story": "蚀夜被深渊之怒侵蚀，理智尽失仍在挣扎：『……守……守护……我……要守住……』",
+    "ending": "金色身影终于倒下。深渊的意志不甘地咆哮——但守夜者已经守到了最后一刻。",
+    "source": "main"
+  },
+  "q12_3": {
+    "id": "q12_3",
+    "name": "最后的封印",
+    "giver": "npc_eter",
+    "desc": "使用黎明之光，完成最终的封印",
+    "objective": {
+      "explore": "abyss_gate"
+    },
+    "reward_exp": 740850,
+    "reward_gold": 8620,
+    "min_level": 95,
+    "next": "q12_4",
+    "story": "你举起黎明之光，金色的光芒照亮裂隙。艾德里克的残魂、蚀夜的金光、圣女的圣光、百族联军的意志——汇聚成一道新的封印。",
+    "ending": "裂隙闭合，深渊的咆哮渐渐远去。这一次的封印，不是献祭生命，而是传承意志。",
+    "source": "main"
+  },
+  "q12_4": {
+    "id": "q12_4",
+    "name": "余烬与黎明",
+    "giver": "npc_guildmaster",
+    "desc": "回到铁港城，接受所有人的致敬",
+    "objective": {
+      "talk": "npc_guildmaster"
+    },
+    "reward_exp": 761300,
+    "reward_gold": 4760,
+    "min_level": 96,
+    "next": "q12_5",
+    "story": "老约翰把一杯麦酒递给你：『敬——黎明之后的第一杯酒。』",
+    "ending": "铁港城的钟声敲响。冒险者们举杯欢呼——你是他们之中，第一个走到黎明的人。",
+    "source": "main"
+  },
+  "q12_5": {
+    "id": "q12_5",
+    "name": "众生的告别",
+    "giver": "npc_guildmaster",
+    "desc": "与所有关键 NPC 告别(对话树集合)",
+    "objective": {
+      "talk": "npc_guildmaster"
+    },
+    "reward_exp": 782250,
+    "reward_gold": 4470,
+    "min_level": 98,
+    "next": "q12_6",
+    "story": "老约翰、艾莉丝、罗兰、各族代表——每个人都有一句专属的告别。『没有你，我们走不到今天。』",
+    "ending": "告别的人群散去。艾莉丝在码头挥手：『故事还没结束，冒险者。我等你来听下一章。』",
+    "source": "main"
+  },
+  "q12_6": {
+    "id": "q12_6",
+    "name": "黎明之后",
+    "giver": "npc_guildmaster",
+    "desc": "传奇徽章授予仪式(多轮对话结局)",
+    "objective": {
+      "talk": "npc_guildmaster"
+    },
+    "reward_exp": 803825,
+    "reward_gold": 0,
+    "reward_item": "eq:灰烬圣剑·初火",
+    "min_level": 100,
+    "next": null,
+    "story": "老约翰把一枚传奇徽章别在你胸前：『从今以后，你就是行会的一面旗。』",
+    "ending": "没有加冕为王，没有成为神——你只是冒险者行会有史以来第一个『传奇』级别的冒险者。大陆的冒险，还在继续……",
+    "source": "main"
+  },
+  "q1_1": {
+    "id": "q1_1",
+    "name": "初出茅庐",
+    "giver": "npc_mayor",
+    "desc": "击败 5 只绿史莱姆，为镇长解决麦田之患",
+    "objective": {
+      "kill": "绿史莱姆",
+      "count": 5
+    },
+    "reward_exp": 2600,
+    "reward_gold": 470,
+    "reward_pet": "pet_turtle",
+    "next": "q1_2",
+    "story": "镇长·霍布斯：『年轻人，镇上草地的史莱姆又闹起来了，把我家麦田拱得不成样子。帮老头子个忙！』",
+    "ending": "史莱姆清理干净。镇长乐呵呵地递给你一杯麦酒：『好样的！明天去行会挂个名，你就是正式的冒险者了。』",
+    "source": "main"
+  },
+  "q1_2": {
+    "id": "q1_2",
+    "name": "行会入门",
+    "giver": "npc_guild_clerks",
+    "desc": "前往橡木镇行会注册，成为铁牌冒险者",
+    "objective": {
+      "talk": "npc_guild_clerks"
+    },
+    "reward_exp": 2600,
+    "reward_gold": 160,
+    "reward_item": "铁牌徽章",
+    "next": "q1_3",
+    "story": "小艾：『欢迎加入冒险者行会！这是你的铁牌，从今天起你就是一名正式的冒险者了。要接委托吗？』",
+    "ending": "铁牌挂在胸前，小艾微笑：『从今天起，你可以在行会接委托、赚酬劳了。祝你好运，冒险者。』",
+    "source": "main"
+  },
+  "q1_3": {
+    "id": "q1_3",
+    "name": "野猪之患",
+    "giver": "npc_mayor",
+    "desc": "击败 5 只野猪，收集野猪牙",
+    "objective": {
+      "kill": "野猪",
+      "count": 5
+    },
+    "reward_exp": 2600,
+    "reward_gold": 330,
+    "next": "q1_4",
+    "story": "镇长：『野猪把麦田拱得不成样子，猎户都不敢进林子了。帮老头子料理一下？』",
+    "ending": "野猪牙堆成小山。镇长松了口气：『总算清净了……不过听说白鹿城那边更不太平。』",
+    "source": "main"
+  },
+  "q1_4": {
+    "id": "q1_4",
+    "name": "哥布林来袭",
+    "giver": "npc_mayor",
+    "desc": "前往白鹿之森·溪谷（Lv.6 区域）击败 3 只哥布林斥候，查明哥布林动向",
+    "objective": {
+      "kill": "哥布林斥候",
+      "count": 3
+    },
+    "reward_exp": 2000,
+    "reward_gold": 210,
+    "next": "q1_5",
+    "story": "一名伤兵逃回镇上：『白鹿城方向……哥布林，一大群哥布林！它们在集结！』",
+    "ending": "哥布林斥候被击退。镇长神色凝重：『哥布林向来一盘散沙，能集结起来……背后一定有东西在指挥。』",
+    "source": "main"
+  },
+  "q1_5": {
+    "id": "q1_5",
+    "name": "迷路的猫",
+    "giver": "npc_innkeeper",
+    "desc": "帮玛莎找回跑进白鹿之森的猫『麦酒』",
+    "objective": {
+      "explore": "white_deer_forest"
+    },
+    "reward_exp": 2000,
+    "reward_gold": 410,
+    "next": "q1_6",
+    "story": "玛莎：『我的猫『麦酒』跑进白鹿之森了！它从小没出过镇子，帮我找回来，我给你炖鱼汤！』",
+    "ending": "你在白鹿之森边找到了瑟瑟发抖的『麦酒』。玛莎抱着猫眼眶发红：『谢谢你！今晚鱼汤管够！』",
+    "source": "main"
+  },
+  "q1_6": {
+    "id": "q1_6",
+    "name": "第一杯麦酒",
+    "giver": "npc_mayor",
+    "desc": "与镇长喝酒，听他讲年轻时的冒险",
+    "objective": {
+      "talk": "npc_mayor"
+    },
+    "reward_exp": 2315,
+    "reward_gold": 160,
+    "reward_item": "新手武器自选礼包",
+    "title": "iron_adventurer",
+    "next": "q2_1",
+    "story": "镇长：『孩子，橡木镇太小了。我年轻时也像你一样，想去看看外面的世界……去白鹿城吧，那里有更大的舞台。』",
+    "ending": "麦酒下肚，镇长拍着你的肩：『行会的卡莉会照顾你的。去吧，孩子，橡木镇以你为荣！』",
+    "source": "main"
+  },
+  "q2_1": {
+    "id": "q2_1",
+    "name": "城里的新人",
+    "giver": "npc_baron",
+    "desc": "到白鹿城行会报到，见巴伦男爵",
+    "objective": {
+      "talk": "npc_baron"
+    },
+    "reward_exp": 2315,
+    "reward_gold": 160,
+    "next": "q2_2",
+    "story": "卡莉：『男爵大人想见见新来的冒险者。白鹿城最近不太平，翡翠森林的狼群异常凶猛。』",
+    "ending": "巴伦男爵打量着你说：『行会推荐的人，应该不差。翡翠森林的狼患就交给你了。』",
+    "source": "main"
+  },
+  "q2_2": {
+    "id": "q2_2",
+    "name": "森林的狼患",
+    "giver": "npc_baron",
+    "desc": "前往翡翠森林，击败 10 只森林狼",
+    "objective": {
+      "kill": "森林狼",
+      "count": 10
+    },
+    "reward_exp": 2650,
+    "reward_gold": 560,
+    "next": "q2_3",
+    "story": "巴伦男爵：『翡翠森林的狼群最近异常凶猛，商队都不敢走那条路了。替我清理一下。』",
+    "ending": "狼群被清退。猎户却脸色发白：『这不对劲……狼群是被赶出来的，森林深处有更凶的东西。』",
+    "source": "main"
+  },
+  "q2_3": {
+    "id": "q2_3",
+    "name": "狼王·灰影",
+    "giver": "npc_baron",
+    "desc": "前往翡翠森林·古树空地，击败精英·狼王灰影",
+    "objective": {
+      "kill": "狼王·灰影",
+      "count": 1
+    },
+    "reward_exp": 5700,
+    "reward_gold": 850,
+    "reward_item": "灰影狼牙刃图纸",
+    "suggest_lv": 12,
+    "next": "q2_4",
+    "story": "猎户：『是灰影！它咬死了我们三个猎人……白鹿城悬赏它很久了。』",
+    "ending": "狼王倒下。你从它皮毛下发现一枚刻着奇异符文的骨片——不属于任何已知势力。",
+    "source": "main"
+  },
+  "q2_4": {
+    "id": "q2_4",
+    "name": "沼泽的迷雾",
+    "giver": "npc_doctor",
+    "desc": "探索迷雾沼泽，击败 5 只大史莱姆",
+    "objective": {
+      "kill": "大史莱姆",
+      "count": 5
+    },
+    "reward_exp": 5700,
+    "reward_gold": 680,
+    "next": "q2_5",
+    "story": "医师·温蒂：『沼泽里的水最近泛着黑光，采集的药草全都枯了。帮我看看出了什么事。』",
+    "ending": "大史莱姆被清理，但沼泽深处的黑光还在扩散。温蒂摇头：『这不是自然的力量……是诅咒。』",
+    "source": "main"
+  },
+  "q2_5": {
+    "id": "q2_5",
+    "name": "圣女传闻",
+    "giver": "npc_tavern_owner",
+    "desc": "在酒馆打听『圣女失踪』的传闻",
+    "objective": {
+      "talk": "npc_tavern_owner"
+    },
+    "reward_exp": 5700,
+    "reward_gold": 340,
+    "reward_item": "寒霜符文",
+    "next": "q3_1",
+    "story": "胖托尼压低声音：『听说了吗？王都的圣女殿下……不见了。教会派了圣光骑士团到处找人，闹得可大了。』旁边的佣兵冷笑：『圣女失踪？我看是教会自己把她藏起来了。』",
+    "ending": "你直觉感到蹊跷。圣女失踪的背后，似乎藏着比表面更深的东西。白鹿城的酒馆，第一次让你意识到——这个世界没有想象中那么简单。",
+    "source": "main"
+  },
+  "q3_1": {
+    "id": "q3_1",
+    "name": "冒险者圣地",
+    "giver": "npc_guildmaster",
+    "desc": "抵达铁港城，拜访行会总部",
+    "objective": {
+      "talk": "npc_guildmaster"
+    },
+    "reward_exp": 5700,
+    "reward_gold": 340,
+    "next": "q3_2",
+    "story": "老约翰·铁砧：『年轻人，听说你在白鹿城干得不错？欢迎来铁港。这里是冒险者的圣地，也是……麻烦的中心。』",
+    "ending": "老约翰给你倒了杯酒：『铁港城不问出身，只看本事。想立足？先从码头那帮水鬼开始吧。』",
+    "source": "main"
+  },
+  "q3_2": {
+    "id": "q3_2",
+    "name": "码头的麻烦",
+    "giver": "npc_citylord",
+    "desc": "击败 5 只水鬼",
+    "objective": {
+      "kill": "水鬼",
+      "count": 5
+    },
+    "reward_exp": 8650,
+    "reward_gold": 1550,
+    "suggest_lv": 16,
+    "next": "q3_3",
+    "story": "港口管事：『最近码头总闹水鬼，海盗也盯上了我们的货。替我清一清码头。』",
+    "ending": "码头恢复了平静。但港口管事低声道：『水鬼是被赶出来的——海里有什么东西在驱赶它们。』",
+    "source": "main"
+  },
+  "q3_3": {
+    "id": "q3_3",
+    "name": "海盗王·独眼杰克",
+    "giver": "npc_citylord",
+    "desc": "通关副本·海蚀洞窟，击败海盗王·独眼杰克",
+    "objective": {
+      "kill": "海盗王·独眼杰克",
+      "count": 1
+    },
+    "reward_exp": 23784,
+    "reward_gold": 1570,
+    "reward_item": [
+      "潮汐黑铁",
+      "金钩弯刀图纸"
+    ],
+    "suggest_lv": 25,
+    "next": "q3_4",
+    "story": "克洛伊城主：『独眼杰克盘踞海蚀洞窟三年了，你若是能端掉他，铁港城记你一功。』",
+    "ending": "杰克的金钩坠地。他的宝箱里没有金银——只有一张羊皮纸，画着白石修道院的地图，和一行小字：『找到圣女手稿。』",
+    "source": "main"
+  },
+  "q3_4": {
+    "id": "q3_4",
+    "name": "圣女的委托",
+    "giver": "npc_guildmaster",
+    "desc": "护送一封信到白石修道院，面见玛格丽特院长",
+    "objective": {
+      "explore": "white_abbey"
+    },
+    "reward_exp": 23784,
+    "reward_gold": 1260,
+    "next": "q3_5",
+    "story": "老约翰神秘地交给玩家一封信：『有人托行会送封信，点名要你送。送到白石修道院，玛格丽特院长会接待你。』",
+    "ending": "你踏上前往白石修道院的路。老约翰在身后叫住你：『小子，路上小心。这封信……可能比你想的要重要。』",
+    "source": "main"
+  },
+  "q3_5": {
+    "id": "q3_5",
+    "name": "老约翰的伤疤",
+    "giver": "npc_guildmaster",
+    "desc": "与老约翰深谈，了解圣战往事",
+    "objective": {
+      "talk": "npc_guildmaster"
+    },
+    "reward_exp": 23784,
+    "reward_gold": 630,
+    "next": "q3_6",
+    "story": "老约翰摩挲着缺了半截的手指：『我年轻时参加过圣战的收尾……那些年的事，有些不能说，有些……说了也没人信。』",
+    "ending": "你注意到老约翰眼中的疲惫。『小子，记住——历史是胜利者写的，但真相不会消失，它只是……等着有人去翻开。』",
+    "source": "main"
+  },
+  "q3_6": {
+    "id": "q3_6",
+    "name": "金槌的委托",
+    "giver": "npc_auctioneer",
+    "desc": "帮拍卖师金槌鉴定一件『深海石』",
+    "objective": {
+      "talk": "npc_auctioneer"
+    },
+    "reward_exp": 23784,
+    "reward_gold": 630,
+    "reward_item": "eq:麦酒的祝福",
+    "reward_pet": "pet_fox",
+    "next": "q4_1",
+    "story": "金槌：『这东西看着像深渊的东西……但教会说深渊已经被封印三百年了。你见多识广，帮我看看？』",
+    "ending": "深海石散发着幽蓝的光。你想起沼泽里泛黑的水——它们的气息，如此相似。",
+    "source": "main"
+  },
+  "q4_1": {
+    "id": "q4_1",
+    "name": "修道院之行",
+    "giver": "npc_abbess",
+    "desc": "抵达白石修道院，面见玛格丽特院长",
+    "objective": {
+      "talk": "npc_abbess"
+    },
+    "reward_exp": 25650,
+    "reward_gold": 700,
+    "next": "q4_2",
+    "story": "玛格丽特：『你就是行会派来的信使？……好，请进吧。但有些事，我希望你听完就忘。』",
+    "ending": "修道院的气氛诡异——修女们眼神躲闪。玛格丽特欲言又止：『圣女……三个月前到访过这里。』",
+    "source": "main"
+  },
+  "q4_2": {
+    "id": "q4_2",
+    "name": "染黑的花园",
+    "giver": "npc_abbess",
+    "desc": "击败 5 只腐蚀修女",
+    "objective": {
+      "kill": "腐蚀修女",
+      "count": 5
+    },
+    "reward_exp": 29850,
+    "reward_gold": 1540,
+    "suggest_lv": 28,
+    "next": "q4_3",
+    "story": "玛格丽特：『三个月前，圣女到访后，修道院的地下就开始渗出黑气。修女们……一个接一个变了。』",
+    "ending": "腐蚀修女被净化。你在她们身上发现同样的黑光——和迷雾沼泽、深海石，如出一辙。",
+    "source": "main"
+  },
+  "q4_3": {
+    "id": "q4_3",
+    "name": "圣女的遗稿",
+    "giver": "npc_abbess",
+    "desc": "探索修道院地窖，找回圣女留下的手稿",
+    "objective": {
+      "explore": "white_abbey"
+    },
+    "reward_exp": 29850,
+    "reward_gold": 1540,
+    "next": "q4_4",
+    "story": "手稿内容：『……她们说我是圣光的容器，说我生来就是要「成为封印的一部分」。可我在教会的古卷里查到——三百年前的圣女，全都「病逝」了。她们不是病逝，是被献祭了。我不要这样的命运。』",
+    "ending": "你终于明白——圣女不是被绑架，她是自己逃走的。而教会，正在追杀她。",
+    "source": "main"
+  },
+  "q4_4": {
+    "id": "q4_4",
+    "name": "修道院守护者",
+    "giver": "npc_abbess",
+    "desc": "击败精英·修道院守护者(被污染的石魔像)",
+    "objective": {
+      "kill": "修道院守护者",
+      "count": 1
+    },
+    "reward_exp": 34711,
+    "reward_gold": 1290,
+    "suggest_lv": 30,
+    "next": "q4_5",
+    "story": "魔像挡在地窖门口：『……保护……圣女的秘密……』它被腐蚀了，但仍记得自己的职责。",
+    "ending": "魔像倒下时，掉出一枚圣徽。玛格丽特认出：『这是圣女临走前留下的。她说——如果有一天有冒险者愿意听真话，就把这个给他。去找铁港城的老约翰。』",
+    "source": "main"
+  },
+  "q4_5": {
+    "id": "q4_5",
+    "name": "修女的日记",
+    "giver": "npc_abbess",
+    "desc": "找回 3 本修女日记，拼凑圣女到访后的真相",
+    "objective": {
+      "explore": "white_abbey"
+    },
+    "reward_exp": 34711,
+    "reward_gold": 1710,
+    "reward_item": "烈焰符文",
+    "next": "q5_1",
+    "story": "玛格丽特：『修道院里有几本修女留下的日记，记录了圣女到访后的异常。帮我找回来——也许能拼出真相。』",
+    "ending": "日记拼出了完整的时间线：圣女到访 → 地下室渗出黑气 → 修女们开始异变。而这一切的起点，是教会送来的「圣物」。",
+    "source": "main"
+  },
+  "q5_1": {
+    "id": "q5_1",
+    "name": "老约翰的秘密",
+    "giver": "npc_guildmaster",
+    "desc": "回铁港城向老约翰复命",
+    "objective": {
+      "talk": "npc_guildmaster"
+    },
+    "reward_exp": 34711,
+    "reward_gold": 860,
+    "next": "q5_2",
+    "story": "老约翰盯着圣徽良久：『……果然。她终于还是跑了。小子，你知道为什么教会这么紧张吗？因为圣女不是绑架失踪——她是逃出来的。逃命。』",
+    "ending": "老约翰站起身：『三百年前的圣战……有隐情。你带着这个去晨曦城，找国王腓特烈三世。他会信你。』",
+    "source": "main"
+  },
+  "q5_2": {
+    "id": "q5_2",
+    "name": "王都之行",
+    "giver": "npc_king",
+    "desc": "前往晨曦城，觐见国王腓特烈三世",
+    "objective": {
+      "talk": "npc_king"
+    },
+    "reward_exp": 34711,
+    "reward_gold": 860,
+    "next": "q5_3",
+    "story": "腓特烈三世：『教会说魔王已死，封印稳固。可边境的烽火不会撒谎。朕需要一双信得过的手，去查清真相。你愿意吗？』",
+    "ending": "国王与你秘密结盟：『教会内部有人不希望真相被查清。你查到的每一件事，直接向我汇报。』",
+    "source": "main"
+  },
+  "q5_3": {
+    "id": "q5_3",
+    "name": "金穗平原的盗贼",
+    "giver": "npc_king",
+    "desc": "击败 5 只盗贼",
+    "objective": {
+      "kill": "盗贼",
+      "count": 5
+    },
+    "reward_exp": 34711,
+    "reward_gold": 1710,
+    "next": "q5_4",
+    "story": "国王密探：『金穗平原的盗贼团背后有人支持，装备精良得不像流寇。去查一查。』",
+    "ending": "黑鸦临死前：『呵……你们这些王都的走狗……根本不知道谁在背后养我们……』",
+    "source": "main"
+  },
+  "q5_4": {
+    "id": "q5_4",
+    "name": "审判官的追猎",
+    "giver": "npc_king",
+    "desc": "击败 5 只审判猎犬",
+    "objective": {
+      "kill": "审判猎犬",
+      "count": 5
+    },
+    "reward_exp": 37100,
+    "reward_gold": 3000,
+    "next": "q5_5",
+    "story": "国王密探：『异端审判庭在银铃河附近发现了圣女的踪迹！他们带了猎犬！』",
+    "ending": "你击退了审判庭的追兵，沿着银铃河追踪下去。",
+    "source": "main"
+  },
+  "q5_5": {
+    "id": "q5_5",
+    "name": "王后的花园",
+    "giver": "npc_king",
+    "desc": "帮王后找回被偷的圣光百合（在【晨曦大圣堂】或【白石修道院】采集获得）",
+    "objective": {
+      "collect": "圣光百合",
+      "count": 1
+    },
+    "reward_exp": 42300,
+    "reward_gold": 1110,
+    "next": "q5_6",
+    "story": "国王·腓特烈三世：『王后求朕替她寻回一朵圣光百合——那是教会送的，却带着说不清的诅咒。据说有人在修道院附近见过它。朕信不过教会，也不忍见她日夜忧心。替朕跑一趟吧。』",
+    "ending": "你找回了圣光百合，却闻到了不该有的气息——深渊的味道。教会送出的花，为何带着深渊的气息？",
+    "source": "main"
+  },
+  "q5_6": {
+    "id": "q5_6",
+    "name": "罗兰的试炼",
+    "giver": "npc_knight_commander",
+    "desc": "与圣光骑士团团长罗兰切磋",
+    "objective": {
+      "talk": "npc_knight_commander"
+    },
+    "reward_exp": 48280,
+    "reward_gold": 1160,
+    "reward_item": "eq:圣女的遗赠",
+    "next": "q6_1",
+    "story": "罗兰·圣剑：『骑士的剑只为守护而挥。但当我发现剑锋指向的是无辜者时——我会先折断它。来吧，让我看看你的本事。』",
+    "ending": "罗兰收剑入鞘：『你的剑里有信念。很好——最近我要去执行一项任务，追捕一名「叛教者」。希望我的剑，不会用错地方。』",
+    "source": "main"
+  },
+  "q6_1": {
+    "id": "q6_1",
+    "name": "圣女的信任",
+    "giver": "npc_saintess",
+    "desc": "护送圣女艾莉丝离开银铃河",
+    "objective": {
+      "talk": "npc_saintess"
+    },
+    "reward_exp": 48280,
+    "reward_gold": 1160,
+    "next": "q6_2",
+    "story": "艾莉丝浑身是伤，但眼神倔强：『我的圣光能治愈伤口，却治不了教会的谎言。谢谢你……愿意相信我。』",
+    "ending": "你护送圣女躲过追兵。她低声说：『历代圣女都是封印的活祭，三百年来已有 36 位圣女「病逝」。我……不想再当祭品了。』",
+    "source": "main"
+  },
+  "q6_2": {
+    "id": "q6_2",
+    "name": "旧王陵的秘密",
+    "giver": "npc_saintess",
+    "desc": "通关副本·旧王陵，找到古王留下的线索",
+    "objective": {
+      "kill": "古王·奥德里克",
+      "count": 1
+    },
+    "reward_exp": 63846,
+    "reward_gold": 3430,
+    "reward_item": "古王剑图纸",
+    "suggest_lv": 40,
+    "next": "q6_3",
+    "story": "古王·奥德里克的残魂：『……艾德里克……他做了正确的选择，却被世人误解……你们要找到……烬山下的真相……』",
+    "ending": "旧王陵的壁画揭示了圣战的一角：英雄王艾德里克并非斩杀魔王——他与「魔王」并肩而立，封印了某个更可怕的东西。",
+    "source": "main"
+  },
+  "q6_3": {
+    "id": "q6_3",
+    "name": "骑士团的追击",
+    "giver": "npc_saintess",
+    "desc": "击败圣光骑士团追兵",
+    "objective": {
+      "kill": "圣光骑士团追兵",
+      "count": 3
+    },
+    "reward_exp": 63846,
+    "reward_gold": 2130,
+    "min_level": 40,
+    "next": "q6_4",
+    "story": "罗兰·圣剑亲自带队拦截，剑指圣女——却在看清她脸的瞬间迟疑了：『……艾莉丝殿下？你……』",
+    "ending": "骑士团追兵被击退。罗兰没有追击，而是愣在原地：『她眼中的光……和教会说的「堕落者」不一样。』",
+    "source": "main"
+  },
+  "q6_4": {
+    "id": "q6_4",
+    "name": "罗兰的动摇",
+    "giver": "npc_saintess",
+    "desc": "在战斗中击败罗兰(留手)",
+    "objective": {
+      "kill": "罗兰·圣剑",
+      "count": 1
+    },
+    "reward_exp": 67400,
+    "reward_gold": 3770,
+    "min_level": 42,
+    "next": "q6_5",
+    "story": "罗兰：『我奉教会之命追捕你……可你眼中的光，和教会说的「堕落者」不一样。艾莉丝殿下，请告诉我真相。』",
+    "ending": "罗兰脸色惨白：『我……我为教会挥剑二十年，追捕「异端」，却不知道最大的谎言就在教会内部。』他折断自己的佩剑：『从今天起，我的剑只守护真相。』",
+    "source": "main"
+  },
+  "q6_5": {
+    "id": "q6_5",
+    "name": "圣女的童年",
+    "giver": "npc_saintess",
+    "desc": "与艾莉丝长谈，了解圣女庭的日子",
+    "objective": {
+      "talk": "npc_saintess"
+    },
+    "reward_exp": 75100,
+    "reward_gold": 1650,
+    "min_level": 45,
+    "next": "q6_6",
+    "story": "艾莉丝：『圣女庭的日子……没有童年。每天都是祈祷、学习、等待——等待成为封印的那一天。直到我在古籍里看到真相。』",
+    "ending": "你听完她的故事，沉默了很久。这个 19 岁的女孩，背负着三百年的血债。",
+    "source": "main"
+  },
+  "q6_6": {
+    "id": "q6_6",
+    "name": "断剑之誓",
+    "giver": "npc_knight_commander",
+    "desc": "护送罗兰回晨曦城，见证他折剑",
+    "objective": {
+      "talk": "npc_knight_commander"
+    },
+    "reward_exp": 83677,
+    "reward_gold": 1780,
+    "reward_item": [
+      "烈焰符文",
+      "寒霜符文",
+      "雷击符文"
+    ],
+    "min_level": 48,
+    "next": "q7_1",
+    "story": "罗兰：『从今天起，我的剑只守护真相。晨曦城那边，我会处理。你们……去西境吧，精灵的史书里，记载着完整的圣战。』",
+    "ending": "圣光骑士团团长倒戈，教会震怒。而你的冒险，才刚刚进入正题——西境的银月林海，正在等着你。",
+    "source": "main"
+  },
+  "q7_1": {
+    "id": "q7_1",
+    "name": "月冠之行",
+    "giver": "npc_elf_queen",
+    "desc": "抵达月冠王庭，面见精灵女王艾拉蕊",
+    "objective": {
+      "talk": "npc_elf_queen"
+    },
+    "reward_exp": 83677,
+    "reward_gold": 1890,
+    "min_level": 50,
+    "next": "q7_2",
+    "story": "艾拉蕊女王：『人类，你身上的气息告诉我，你正走在一条危险的道路上。但精灵不会忘记——三百年前，我们也在烬山。』",
+    "ending": "精灵女王以月华之礼接待了你：『精灵的史书与人类的不同。你想要的真相，贤者伊露恩或许能帮你。』",
+    "source": "main"
+  },
+  "q7_2": {
+    "id": "q7_2",
+    "name": "银月林的异常",
+    "giver": "npc_elf_guardian",
+    "desc": "击败 10 只月狼，调查银月林深处的污染",
+    "objective": {
+      "kill": "月狼",
+      "count": 10
+    },
+    "reward_exp": 92300,
+    "reward_gold": 7590,
+    "min_level": 52,
+    "next": "q7_3",
+    "story": "瑟兰：『月狼本是温顺的生灵，如今却狂暴易怒——森林深处有什么东西在污染它们。』",
+    "ending": "月狼群退去。瑟兰神色凝重：『污染比想象中更糟……星语湖那边，恐怕也不太平。』",
+    "source": "main"
+  },
+  "q7_3": {
+    "id": "q7_3",
+    "name": "星语湖的污染",
+    "giver": "npc_elf_sage",
+    "desc": "击败星语湖王，查明星语湖月华被抽走的真相",
+    "objective": {
+      "kill": "星语湖王",
+      "count": 1
+    },
+    "reward_exp": 96950,
+    "reward_gold": 4460,
+    "suggest_lv": 48,
+    "next": "q7_4",
+    "story": "伊露恩：『湖水的月华被抽走了。这种吸食月华的手法……我只在古籍里见过——深渊的渗透。』",
+    "ending": "星语湖王倒下，湖面重新泛起月华。伊露恩叹息：『深渊的手已经伸到了精灵的家门口。』",
+    "source": "main"
+  },
+  "q7_4": {
+    "id": "q7_4",
+    "name": "贤者的书房",
+    "giver": "npc_elf_sage",
+    "desc": "探索精灵废墟，取回古代文献",
+    "objective": {
+      "explore": "elven_ruins"
+    },
+    "reward_exp": 115150,
+    "reward_gold": 4080,
+    "min_level": 58,
+    "next": "q7_5",
+    "story": "伊露恩翻开泛黄的精灵史书：『你看，这里写着——余烬元年，人类英雄王艾德里克与守夜者蚀夜联手，加固深渊裂隙之封印。而人类的史书写的是——英雄王艾德里克击杀魔王蚀夜。同一个事件，两种记忆。』",
+    "ending": "你在精灵废墟深处找到了《月之史诗》的残卷，上面记载着三百年前圣战的另一面。",
+    "source": "main"
+  },
+  "q7_5": {
+    "id": "q7_5",
+    "name": "月下的歌谣",
+    "giver": "npc_elf_sage",
+    "desc": "听伊露恩讲守夜者的传说(多轮对话)",
+    "objective": {
+      "talk": "npc_elf_sage"
+    },
+    "reward_exp": 133450,
+    "reward_gold": 2140,
+    "min_level": 60,
+    "next": "q7_6",
+    "story": "伊露恩轻声吟唱古老的歌谣：『人类的史书把守夜者写成了魔王。可歌谣里唱的——是那个用身躯堵住深渊之口的身影。』",
+    "ending": "歌谣的旋律在月光下飘散。伊露恩郑重道：『孩子，你该去北境看看了——那里有答案，也有危险。』",
+    "source": "main"
+  },
+  "q7_6": {
+    "id": "q7_6",
+    "name": "精灵的馈赠",
+    "giver": "npc_elf_guardian",
+    "desc": "击败暗影精灵，帮瑟兰找回被偷走的月弓",
+    "objective": {
+      "kill": "暗影精灵",
+      "count": 5
+    },
+    "reward_exp": 154679,
+    "reward_gold": 4450,
+    "reward_item": "eq:月冠的守望",
+    "reward_pet": "pet_starswift",
+    "min_level": 62,
+    "next": "q8_1",
+    "story": "瑟兰握紧拳头：『这把弓……跟了我五百年。那些叛逃的暗影精灵偷走了它。帮我夺回来！』",
+    "ending": "月弓物归原主。瑟兰单膝跪地：『从今往后，月影卫士与你的情谊，就像这弓弦一样结实。』",
+    "source": "main"
+  },
+  "q8_1": {
+    "id": "q8_1",
+    "name": "北境告急",
+    "giver": "npc_north_chief",
+    "desc": "抵达霜角堡，面见大酋长海尔达",
+    "objective": {
+      "talk": "npc_north_chief"
+    },
+    "reward_exp": 154679,
+    "reward_gold": 2140,
+    "min_level": 60,
+    "next": "q8_2",
+    "story": "海尔达：『南方的老爷们终于想起北境了？来得正好，黑森林那边的腐牙兽人又发疯了。』",
+    "ending": "海尔达拍了拍你的肩：『霜原的规矩——活下来的才配叫北境人。证明给我看。』",
+    "source": "main"
+  },
+  "q8_2": {
+    "id": "q8_2",
+    "name": "霜原的试炼",
+    "giver": "npc_north_chief",
+    "desc": "击败霜巨魔王，证明北境勇士的实力",
+    "objective": {
+      "kill": "霜巨魔王",
+      "count": 1
+    },
+    "reward_exp": 175600,
+    "reward_gold": 5570,
+    "min_level": 62,
+    "next": "q8_3",
+    "story": "海尔达：『霜原的试炼没有考试——只有活下来。霜巨魔王已经祸害了三个猎队，去把它收拾了！』",
+    "ending": "霜巨魔王轰然倒地。北境勇士们举起武器向你致敬：『够格了！』",
+    "source": "main"
+  },
+  "q8_3": {
+    "id": "q8_3",
+    "name": "铁砧要塞",
+    "giver": "npc_dwarf_elder",
+    "desc": "拜访矮人铁砧会议，了解三百年前的真相",
+    "objective": {
+      "talk": "npc_dwarf_elder"
+    },
+    "reward_exp": 198550,
+    "reward_gold": 2360,
+    "min_level": 65,
+    "next": "q8_4",
+    "story": "托尔丁·铁锤：『人类小子，听说你在查三百年前的事？老矮人告诉你——我们的史书刻在石头上，不怕烧，也不怕改。』",
+    "ending": "托尔丁翻开石史书：『刻着吧——当年并肩封印深渊的，是一个人类和一个守夜者。至于他们为什么成了『魔王』……嘿嘿。』",
+    "source": "main"
+  },
+  "q8_4": {
+    "id": "q8_4",
+    "name": "腐牙兽人",
+    "giver": "npc_north_chief",
+    "desc": "击败腐牙亲卫，瓦解黑森林的腐牙兽人",
+    "objective": {
+      "kill": "腐牙亲卫",
+      "count": 1
+    },
+    "reward_exp": 222600,
+    "reward_gold": 5900,
+    "min_level": 65,
+    "next": "q8_5",
+    "story": "海尔达：『腐牙兽人不是生来如此——是深渊把他们变成了这样。去黑森林，找出他们背后的东西。』",
+    "ending": "腐牙亲卫倒下。你在破碎的战旗旁，看到一个兽人孩子蜷缩的身影——深渊的悲剧，还在继续。",
+    "source": "main"
+  },
+  "q8_5": {
+    "id": "q8_5",
+    "name": "矮人的酒",
+    "giver": "npc_dwarf_elder",
+    "desc": "帮托尔丁找回被偷的传世酒桶(对话线索)",
+    "objective": {
+      "talk": "npc_dwarf_elder"
+    },
+    "reward_exp": 248550,
+    "reward_gold": 2400,
+    "min_level": 66,
+    "next": "q8_6",
+    "story": "托尔丁气得胡子发抖：『那是三百年前英雄王喝过的酒桶！一定是那群黑铁矮人偷的——不对，等等……』",
+    "ending": "线索指向黑森林深处的灰矮人营地。托尔丁举起酒杯：『酒桶的事，等你从烬山回来，咱们再算！』",
+    "source": "main"
+  },
+  "q8_6": {
+    "id": "q8_6",
+    "name": "战歌",
+    "giver": "npc_north_chief",
+    "desc": "与大酋长海尔达夜谈，听北境的苦战史",
+    "objective": {
+      "talk": "npc_north_chief"
+    },
+    "reward_exp": 276947,
+    "reward_gold": 2480,
+    "reward_item": "破甲符文",
+    "min_level": 68,
+    "next": "q9_1",
+    "story": "篝火旁，海尔达望着远方：『南方的老爷们忘了我们。可深渊不会忘——每一年冬天，都有新的兄弟倒在黑森林里。』",
+    "ending": "战歌在篝火间回荡。海尔达郑重道：『北境记你的人情。烬山之战，算我们一份！』",
+    "source": "main"
+  },
+  "q9_1": {
+    "id": "q9_1",
+    "name": "远征烬山",
+    "giver": "npc_guildmaster",
+    "desc": "抵达烬山，安营扎寨，集结联军",
+    "objective": {
+      "explore": "cinder_mountain"
+    },
+    "reward_exp": 276947,
+    "reward_gold": 5170,
+    "min_level": 70,
+    "next": "q9_2",
+    "story": "老约翰：『三百年来，人类、精灵、矮人、北境诸部——第一次并肩作战。走吧，烬山在等我们。』",
+    "ending": "联军在烬山脚下扎营。营火绵延如山下的星河——这一次，所有人并肩而立。",
+    "source": "main"
+  },
+  "q9_2": {
+    "id": "q9_2",
+    "name": "烬山的恶魔",
+    "giver": "npc_guildmaster",
+    "desc": "击败恶魔战士，为联军扫清前进道路",
+    "objective": {
+      "kill": "恶魔战士",
+      "count": 1
+    },
+    "reward_exp": 315600,
+    "reward_gold": 5690,
+    "min_level": 75,
+    "next": "q9_3",
+    "story": "老约翰拄着剑：『三百年前我来过这里……那时候，我还能劈开恶魔的头骨。现在……只能劈开酒桶了。』",
+    "ending": "恶魔战士化为灰烬。老约翰哈哈大笑：『看吧，老兵不死！前进，去祭坛！』",
+    "source": "main"
+  },
+  "q9_3": {
+    "id": "q9_3",
+    "name": "赫尔加的仪式",
+    "giver": "npc_guildmaster",
+    "desc": "前往烬山祭坛，发现赫尔加的仪式",
+    "objective": {
+      "explore": "ash_temple"
+    },
+    "reward_exp": 383919,
+    "reward_gold": 6960,
+    "reward_item": [
+      "烬核火种",
+      "赫尔加的祭器图纸"
+    ],
+    "min_level": 78,
+    "next": "q9_4",
+    "story": "赫尔加的声音回荡：『封印松动是必然的。你们的教会用谎言维持了三百年，也该到还债的时候了。』",
+    "ending": "你在祭坛边缘看到恶魔祭司赫尔加的身影——她正在举行撕裂封印的仪式。必须阻止她！",
+    "source": "main"
+  },
+  "q9_4": {
+    "id": "q9_4",
+    "name": "封印的秘密",
+    "giver": "npc_guildmaster",
+    "desc": "击败恶魔祭司·赫尔加",
+    "objective": {
+      "kill": "恶魔祭司·赫尔加",
+      "count": 1
+    },
+    "reward_exp": 409400,
+    "reward_gold": 6340,
+    "min_level": 82,
+    "next": "q9_5",
+    "story": "赫尔加临死前狂笑：『你们以为杀了我就完了？封印已经裂了！三天之内，深渊大军就会从裂隙涌出！』",
+    "ending": "赫尔加倒下，但你的心沉了下去——她说的是真的。封印在震颤，三天，只剩三天。",
+    "source": "main"
+  },
+  "q9_5": {
+    "id": "q9_5",
+    "name": "联军的信任",
+    "giver": "npc_guildmaster",
+    "desc": "与各族联军代表对话，凝聚信任",
+    "objective": {
+      "talk": "npc_guildmaster"
+    },
+    "reward_exp": 450795,
+    "reward_gold": 2540,
+    "min_level": 82,
+    "next": "q9_6",
+    "story": "精灵的箭手、矮人的战锤、北境的战吼、骑士团的盾——四个阵营的代表聚在营火旁，等你一句话。",
+    "ending": "各族代表向你行效忠礼：『三百年后，我们再次并肩。这一次，不会让历史重演。』",
+    "source": "main"
+  },
+  "q9_6": {
+    "id": "q9_6",
+    "name": "烬山的守望者",
+    "giver": "npc_guildmaster",
+    "desc": "在烬山营地值夜，击退深渊奴仆，发现封印裂隙异常",
+    "objective": {
+      "kill": "深渊奴仆",
+      "count": 3
+    },
+    "reward_exp": 479450,
+    "reward_gold": 3980,
+    "reward_item": "eq:烬山守望者之徽",
+    "min_level": 85,
+    "next": "q10_1",
+    "story": "深夜，裂隙深处传来低语。深渊奴仆开始试探联军的防线——你握紧了武器。",
+    "ending": "击退深渊奴仆后，你看到裂隙边缘的金光——那封印之下，有什么东西在注视着你。",
+    "source": "main"
+  },
+  "s1": {
+    "id": "s1",
+    "name": "史莱姆果冻",
+    "chain": "药园与花匠",
+    "giver": "npc_innkeeper",
+    "map": "oak_town",
+    "desc": "收集 5 份史莱姆黏液，给玛莎做果冻",
+    "objective": {
+      "collect": "史莱姆黏液",
+      "count": 5
+    },
+    "reward_exp": 2600,
+    "reward_gold": 180,
+    "reward_item": "eq:誓约权杖",
+    "story": "玛莎：『史莱姆黏液做的果冻可好吃了，镇上孩子们都馋。帮我弄点来？』",
+    "source": "side"
+  },
+  "s10": {
+    "id": "s10",
+    "name": "河神的诅咒",
+    "giver": "npc_silver_fisher",
+    "map": "silver_river",
+    "desc": "击败河龙领主，取回河神祭品",
+    "objective": {
+      "kill": "河龙领主",
+      "count": 1
+    },
+    "reward_exp": 10293,
+    "reward_gold": 950,
+    "reward_item": "炖菜",
+    "story": "河边渔夫：『河神发怒了！其实……是我打渔时偷了河底的祭品……求你把祭品还回去。』",
+    "source": "side"
+  },
+  "s100": {
+    "id": "s100",
+    "name": "重逢",
+    "giver": "npc_ironheart",
+    "map": "white_deer",
+    "chain": "旧友重逢",
+    "unlock": [
+      {
+        "side": "s99"
+      }
+    ],
+    "min_level": 52,
+    "desc": "陪同铁心前往白鹿城白鹿花铺，见证相认",
+    "objective": {
+      "explore": "white_deer"
+    },
+    "reward_exp": 86765,
+    "reward_gold": 2980,
+    "reward_item": "白鹿干花",
+    "story": "白鹿花铺的门帘还是那块旧布。铁心站在门口，手在门框上举了又放，放了又举，最后被玩家轻轻推了一把。铺子里，茉莉正背对门整理干花，听到脚步声回头——门口站着一个黝黑高壮的年轻人，眉眼之间，有二十年前那个巡林人的影子。她手里的干花掉在地上。",
+    "progress_text": "铁心把信和铭牌放在柜台上，声音发紧：『我是埃德蒙的儿子。铁心。』茉莉的眼泪一下子涌出来：『像……真像。』她转身从柜底取出那个小布袋，抖着手打开——一枚鹿角银哨，哨身磨得发亮：『你爹走之前留下的。说想他了，就吹一声，风会把哨声带到北境。我吹了二十年……今天，不用吹了。物归原主。』铁心握着那枚哨子，喉咙动了半天，最后叫了一声：『……娘。』",
+    "deliver_text": "茉莉把一束晒得干透的白鹿花仔细包好，塞进你手里：『谢谢你，冒险者。这束花，是二十年前的约定开的花——如今，约定到了。』你离开白鹿城时回头，看见老妇人坐在花丛里，年轻铁匠蹲在她身边，她正指着花盆，讲二十年前的故事——讲那个买花的巡林人。",
+    "source": "side"
+  },
+  "s101": {
+    "id": "s101",
+    "name": "花圃的野猪",
+    "giver": "npc_florist_tami",
+    "map": "white_deer_forest",
+    "chain": "花匠与四季",
+    "min_level": 5,
+    "desc": "在白鹿之森击败 3 只野猪，赶走拱花圃的野猪群",
+    "objective": {
+      "kill": "野猪",
+      "count": 3
+    },
+    "reward_exp": 1620,
+    "reward_gold": 180,
+    "reward_item": "野猪牙",
+    "story": "苔米蹲在狼藉的花圃前，眼圈发红：『这圃子是我爷爷留下的。他走了三年，草都长到腰了——我好不容易收拾干净，那三头畜生一夜就给我拱回原样！……冒险者，帮我把它们赶走。赶不走，杀了也行。别让它们再进我的圃子。』",
+    "progress_text": "你在白鹿之森猎杀野猪。野猪巢附近可探索到被拱出来的旧陶罐碎片与一包发黑的种子袋（任务线索道具）。战斗结束，白鹿之森重归安静。",
+    "deliver_text": "苔米连声道谢，把花圃篱笆重新扎好。她拍拍手上的泥，忽然抬头：『圃子修好了，可我想种点特别的——白鹿城十年没人种活过它了。你明天还来吗？』",
+    "source": "side"
+  },
+  "s102": {
+    "id": "s102",
+    "name": "春风铃的种子",
+    "giver": "npc_florist_tami",
+    "map": "white_deer",
+    "chain": "花匠与四季",
+    "unlock": [
+      {
+        "side": "s101"
+      }
+    ],
+    "min_level": 10,
+    "desc": "探索枫橡村，找到老花农·苍耳，取回春风铃种子",
+    "objective": {
+      "explore": "maple_village",
+      "find": "老花农·苍耳",
+      "map": "maple_village",
+      "chance": 0.15
+    },
+    "reward_exp": 3293,
+    "reward_gold": 430,
+    "reward_item": "春风铃种子",
+    "story": "苔米捏着一张泛黄的画——画上是一串铃铛形的白花：『春风铃，只在春天开的花。我爷爷说，他年轻时见过它开，满圃子都是铃铛一样的白花。种子只有枫橡村的老花农·苍耳手里有。那老头跟我爷爷是同门师兄弟，倔得很。你替我去一趟——他要是拿话噎你，你就说，是春泥的孙女讨种子来了。』",
+    "progress_text": "村外田野的苗圃小屋前，老花农·苍耳斜眼打量你：『苔米那丫头？她爷爷春泥欠我一坛枫叶酒，死了也没还！……哼，那是我们年轻时约好的——谁先找到能种活春风铃的人，谁就赢。拿去，替那老东西还债。』他交出种子，并托话：『春风铃认土。白鹿城的土养不活它——除非用会发光的肥料。』",
+    "deliver_text": "苔米接过种子，小心地放进陶碗里，沉默了一会儿：『……原来爷爷跟苍耳伯伯打过这样的赌。他没能种活春风铃，是不是一直记着这件事。』她深吸一口气：『我要种活它。苍耳伯伯说的「会发光的肥料」，我知道是什么——白鹿之森夏夜里的萤火虫。』",
+    "source": "side"
+  },
+  "s103": {
+    "id": "s103",
+    "name": "萤火虫的礼物",
+    "giver": "npc_florist_tami",
+    "map": "white_deer",
+    "chain": "花匠与四季",
+    "unlock": [
+      {
+        "side": "s102"
+      }
+    ],
+    "min_level": 15,
+    "desc": "夜晚在白鹿之森收集 3 份萤火虫粪（夜晚探索/采集获得）",
+    "objective": {
+      "collect": "萤火虫粪",
+      "count": 3
+    },
+    "reward_exp": 5310,
+    "reward_gold": 310,
+    "reward_item": "萤火虫粪",
+    "story": "苔米把种子埋进暖棚的土里，却迟迟不敢浇水：『苍耳伯伯说的「会发光的肥料」，是萤火虫的粪粒。萤火虫吃晨露和花蜜，粪粒里凝着月辉——我爷爷说，那是花神点的灯油，催花最灵。可我怕黑……不是怕黑，是怕林子里那些大虫子。冒险者，你能替我去白鹿之森走一趟吗？春夏的夜里，萤火虫最多。』",
+    "progress_text": "夜晚进入白鹿之森，林间浮起点点萤光。你采集/探索获得「萤火虫粪」×3。途中可遇到夜行小怪与氛围事件——萤火虫群绕树飞舞，低概率触发「萤火草丛」。",
+    "deliver_text": "苔米把萤火虫粪细细拌进土里，又对着暖棚念了一串爷爷教的土话。她抬头，眼睛亮晶晶的：『春风铃要是开了，第一朵花送你。』数日后，暖棚里冒出嫩芽——以及，花圃中央一个不属于任何种子的、墨黑的鼓包。",
+    "source": "side"
+  },
+  "s104": {
+    "id": "s104",
+    "name": "不属于季节的花苞",
+    "giver": "npc_florist_tami",
+    "map": "white_deer",
+    "chain": "花匠与四季",
+    "unlock": [
+      {
+        "side": "s103"
+      }
+    ],
+    "min_level": 22,
+    "desc": "探索花圃调查黑色花苞，向胖托尼、文森特、老橡三处打听线索",
+    "objective": {
+      "explore": "white_deer",
+      "find": "黑色花苞线索",
+      "map": "white_deer",
+      "chance": 0.15
+    },
+    "reward_exp": 12460,
+    "reward_gold": 860,
+    "reward_item": "永恒花瓣（叶歌遗物）",
+    "story": "苔米：『春风铃开花了，我该高兴的。可这株黑花苞……它不是春风铃，不是圃子里任何一颗种子。我认不出它。它不开，也不谢，就这么立着，像在等什么。』她请你去城里问问见多识广的人。",
+    "progress_text": "三处打听，说法各异，拼成一条暗线——胖托尼：『黑花？坟头花吧！不过我听行商说过，圣战那会儿，联军营地中央种过一朵会发光的黑花……那时候白鹿城还没建城呢。』神父文森特：『圣堂古卷里画过一种「不凋之花」，墨瓣银蕊，说是百族盟约的信物。』村长老橡：『我爷爷的爷爷讲过，联军走的时候，把营地里最宝贝的花连根埋了，埋了三丈深。』你取来 S46 时捡到的旧陶罐与发黑的种子袋——苔米认出陶罐上的纹样与花苞根部的土是同一种。",
+    "deliver_text": "苔米看着陶罐发呆：『这些种子……是野猪拱出来的。它们在地底下睡了不知多少年，被春风铃的根须一暖，就醒了。』当夜，花圃方向飘出一缕奇异的香气，全城的猫狗都朝着城西叫。",
+    "source": "side"
+  },
+  "s105": {
+    "id": "s105",
+    "name": "永恒花之名",
+    "giver": "npc_leafwhisper",
+    "map": "white_deer",
+    "chain": "花匠与四季",
+    "unlock": [
+      {
+        "side": "s104"
+      }
+    ],
+    "min_level": 30,
+    "desc": "夜晚在白鹿之森收集 3 份月光露，将永恒花瓣埋入花苞根部",
+    "objective": {
+      "explore": "white_deer_forest",
+      "collect": "月光露",
+      "count": 3,
+      "use": "永恒花瓣（叶歌遗物）"
+    },
+    "reward_exp": 24297,
+    "reward_gold": 1330,
+    "reward_item": "永恒花瓣（叶歌遗物）",
+    "story": "叶语望着那株黑色花苞，声音很轻：『我循着香气走了三百里。三百年了……我以为它早已忘了人间。它叫永恒花——三百年前，我们的先祖与你们的先祖，曾在同一片营火旁，把它种下，那是精灵与人类盟约的见证。永恒花要开，需要月光凝成的露水。白鹿之森夜里的月光露，请你替我取三份来。』",
+    "progress_text": "夜晚在白鹿之森收集「月光露」×3。叶语随行，边走边讲：『曾祖母说，种花的人类骑士叫诺兰。他死在了圣战最后一场仗里——花埋入地下的第二天。曾祖母守了那地方三十年，直到联军解散。』收集完毕，叶语将半片花瓣埋入花苞根部，花苞轻轻一颤。",
+    "deliver_text": "叶语向你和苔米致谢，约定花开之夜再来。苔米望着她的背影：『精灵的记性真好啊……三百年的事，她记得清清楚楚。我们人类，连爷爷辈的事都快忘光了。』",
+    "source": "side"
+  },
+  "s106": {
+    "id": "s106",
+    "name": "四季花匠",
+    "giver": "npc_florist_tami",
+    "map": "white_deer",
+    "chain": "花匠与四季",
+    "unlock": [
+      {
+        "side": "s105"
+      }
+    ],
+    "min_level": 45,
+    "desc": "见证永恒花盛开，接受白鹿城授予的谢礼",
+    "objective": {
+      "explore": "white_deer"
+    },
+    "reward_exp": 58573,
+    "reward_gold": 2760,
+    "reward_item": "永恒花种子",
+    "story": "月光照进花圃的那一夜，黑色花苞缓缓绽开——墨黑的花瓣镀着银边，香气漫过整座白鹿城。居民们提着灯涌向城西，城主巴伦男爵也来了。叶语站在花前，眼里有泪光：『它开了。三百年，它替两族守住了这个约定。』",
+    "progress_text": "苔米把花圃的旧木牌换下，挂上新牌——「四季花圃」。叶语折下一枚新结的种子，递给玩家：『永恒花百年一开，花开时只结一颗种子。它认得你——从野猪拱土，到月光浇灌，是你把它带回人间的。』苔米红着脸，把一枚木刻的徽章塞进你手里：『这枚章子是我爷爷刻的——花匠的章。』",
+    "deliver_text": "白鹿城把花圃列为城景，苔米成了城里有名的花匠。苔米：『明年春天，这圃里会有四时之花：春天是春风铃，夏天是萤火兰，秋天是金桂，冬天是雪绒。你说，永恒花会记得我们吗？』叶语轻声：『花比人长情。』",
+    "source": "side"
+  },
+  "s107": {
+    "id": "s107",
+    "name": "布偶绒耳",
+    "giver": "npc_inn_tess",
+    "map": "maple_village",
+    "min_level": 7,
+    "desc": "在落石峡谷·碎石坡找到被岩鼠拖走的布偶「绒耳」",
+    "objective": {
+      "find": "布偶·绒耳",
+      "map": "rockfall_gorge",
+      "chance": 0.15
+    },
+    "reward_exp": 2135,
+    "reward_gold": 320,
+    "reward_item": "和解信",
+    "story": "苔丝：『哎呀，你来得正好！老橡家的小孙儿橡果哭了一上午——他奶奶连夜缝的布偶「绒耳」，昨夜被落石峡谷的岩鼠拖走了。那孩子抱着空枕头不肯撒手，饭也不肯吃。你行行好，替婶子去碎石坡的岩鼠窝里找找？』",
+    "progress_text": "你在碎石坡的岩鼠窝里扒开干草与碎石，一只灰布缝的小布偶正被几只岩鼠当垫子压着——耳朵上还沾着麦芽糖的痕迹，正是橡果那只。布偶完好，只是沾了土。",
+    "deliver_text": "苔丝：『找回来啦？！橡果，快看，绒耳回来了！……瞧这孩子，鼻涕泡都哭出来了，这下可算笑了。来，这是婶子给你的报酬，再捎上两块蜂蜜饼——回头我让老橡家的奶奶也给你缝点什么当谢礼。』",
+    "source": "side"
+  },
+  "s108": {
+    "id": "s108",
+    "name": "一封迟了二十年的信",
+    "giver": "npc_oak_elder",
+    "map": "maple_village",
+    "min_level": 8,
+    "desc": "在橡木镇·镇长办公处使用「和解信」，替老橡把信捎给二十年没来往的镇长·霍布斯",
+    "objective": {
+      "use": "和解信",
+      "map": "oak_town"
+    },
+    "reward_exp": 2485,
+    "reward_gold": 180,
+    "reward_item": "和解信",
+    "story": "老橡：『年轻人，坐。老头子有件事搁心里二十年了——当年收获祭上，我和橡木镇的霍布斯为了一坛麦酒赌掰手腕，我赢了他半寸，他恼了，我嘴又硬……这一恼，就是二十年。上月听说他病了一场，我这心里头，像扎了根刺。这封信，烦你捎给他。就说——枫橡村的老橡，还欠他一顿酒。』",
+    "progress_text": "橡木镇·镇长办公处。霍布斯读完信，半晌没言语，末了把信纸折好揣进怀里，瓮声瓮气地说：『那老东西……还记着那坛酒。』他转身拎出一坛陈年麦酒与一封回信，托你带回枫橡村。",
+    "deliver_text": "老橡捧着回信，手抖得厉害，读着读着忽然大笑起来，笑着笑着眼角就湿了：『二十年的倔脾气，让一坛酒给化了。好，好啊……年轻人，谢谢你替老头子走了这一趟。这坛酒，咱爷俩分了！』",
+    "source": "side"
+  },
+  "s109": {
+    "id": "s109",
+    "name": "哨塔上的秃鹫窝",
+    "giver": "npc_ironshield_mayor",
+    "map": "ironshield_town",
+    "min_level": 36,
+    "desc": "击败 5 只秃鹫（铁盾丘陵·丘陵顶·哨塔旧址），清剿秃鹫老巢",
+    "objective": {
+      "kill": "秃鹫",
+      "count": 5
+    },
+    "reward_exp": 35735,
+    "reward_gold": 2080,
+    "story": "巴托：『斥候报说，丘陵脊上那座塌了顶的旧哨塔，如今成了秃鹫的老巢。成群的大鸟专扑过路商队的驮马，铁盾镇往北的路都快断了。晨曦城的骑士老爷们指望不上，铁盾镇的事，我们自己办。冒险者，带上家伙，把那些扁毛畜生清出哨塔去！』",
+    "progress_text": "秃鹫群被逐出塔顶，扑棱着翅膀哀叫着散向天际。哨塔里散落着前哨兵的残盔与一窝被啄空的骸骨——难怪这些大鸟赖着不走。",
+    "deliver_text": "巴托：『痛快！我让白鸦派人把塔基加固，往后还能当瞭望点用。这是酬劳，收好——另外，这枚旧哨兵的铁盾徽记你也拿着，铁盾镇记你这一笔。』",
+    "source": "side"
+  },
+  "s11": {
+    "id": "s11",
+    "name": "旧王陵的回响",
+    "chain": "圣战真相",
+    "unlock": [
+      {
+        "side": "s47"
+      }
+    ],
+    "giver": "npc_king",
+    "map": "dawn_city",
+    "desc": "收集 5 块古王陵壁画拓片",
+    "objective": {
+      "explore": "old_king_tomb"
+    },
+    "reward_exp": 16649,
+    "reward_gold": 1030,
+    "story": "腓特烈三世：『旧王陵的壁画，画着三百年前圣战的另一面。朕要亲眼看看——替朕拓下来。』",
+    "source": "side"
+  },
+  "s110": {
+    "id": "s110",
+    "name": "壕沟里的磷哨",
+    "giver": "npc_ironshield_scout",
+    "map": "old_battlefield",
+    "min_level": 34,
+    "desc": "探索旧战场遗址·战壕区，调查连日夜里一起一伏的怪光真相",
+    "objective": {
+      "explore": "old_battlefield"
+    },
+    "reward_exp": 31639,
+    "reward_gold": 1940,
+    "story": "白鸦：『连着三夜了——入夜之后，旧战场遗址的战壕区方向，有幽幽的绿光一起一伏，像喘气似的。我派了两拨斥候，都没敢摸到近前。老兵铁锈说，那是百族战争时代信使的磷哨，人没了，哨子还在等它的信……我不信邪，可也说不上来那是什么。你敢不敢替我去看一趟？』",
+    "progress_text": "你在掩埋壕沟的沟底扒开浮土，一具靠坐在沟壁上的枯骨手里，果然攥着一枚铜哨——哨身涂着会发磷光的旧漆，月光一照，一亮一灭，正是斥候看见的怪光。哨上刻着一圈谁也认不出的古字。",
+    "deliver_text": "白鸦接过铜哨，在手里掂了掂，罕见地沉默了一会儿：『信使的哨子……传说那年代的信使靠磷哨在夜里传信，吹一声，亮一程。这位老信使，怕是到死都在等一声回哨。』他把铜哨供进斥候营的兵器架：『让它归队吧。报酬拿着，夜里的事，我替你记功。』",
+    "source": "side"
+  },
+  "s111": {
+    "id": "s111",
+    "name": "面包贼蓬尾",
+    "giver": "npc_innkeeper",
+    "map": "oak_town",
+    "min_level": 4,
+    "desc": "收集 3 份「被偷的面包」（白鹿之森·林间入口的藏粮树洞），交给玛莎",
+    "objective": {
+      "collect": "被偷的面包",
+      "count": 3
+    },
+    "reward_exp": 1400,
+    "reward_gold": 100,
+    "reward_item": "被偷的面包",
+    "story": "玛莎：『后厨连着三天丢白面包了！我蹲了一宿才看清——是只肥松鼠，尾巴蓬得像把掸子，把面包一块块拖进白鹿之森那边的树洞，村里人都叫它「蓬尾」。它倒是挑嘴，专偷刚出炉的。你去林间入口找找它的藏粮洞，把面包讨回来——可别伤着它，那小家伙怪机灵的，我还有点喜欢。』",
+    "progress_text": "你在树洞里翻出一座「面包山」——三块白面包码得整整齐齐，底下还垫着榛子、橡果和半块奶酪。蓬尾蹲在洞口树枝上，抱着尾巴，一脸理直气壮地看着你。",
+    "deliver_text": "玛莎看着失而复得的面包，哭笑不得：『这贼，还挑新鲜的偷。』她把面包切成片分给住店的客人，又往窗台上放了一把榛子：『吃我的榛子可以，别动客人的早饭！』转头塞给你一小袋金币：『拿着，抓贼的赏钱！』",
+    "source": "side"
+  },
+  "s112": {
+    "id": "s112",
+    "name": "烛影密信",
+    "giver": "npc_king",
+    "map": "dawn_cathedral",
+    "min_level": 30,
+    "desc": "在晨曦大圣堂找到被灰羽鸟叼走的王室密信",
+    "objective": {
+      "find": "王室密信",
+      "map": "dawn_cathedral",
+      "chance": 0.15
+    },
+    "reward_exp": 24297,
+    "reward_gold": 1330,
+    "reward_item": "王室密信",
+    "story": "腓特烈三世：『朕的书房里丢了一封盖着王室印信的信。没人敢声张——可明天就是御前会议。朕听说，有只灰羽的鸟叼着什么东西，飞向了大教堂那边。冒险者，替朕找回来，别惊动任何人。』",
+    "progress_text": "大教堂的回廊夜里常有暗影走动……那封信若落到不该看的人手里，朕与教会的棋局，就要提前掀桌了。",
+    "deliver_text": "『……原来是写给她的。朕还以为……也罢。这封信，朕会当作从未见过。冒险者，你替王宫守住了一个秘密，也替一个人守住了一条命。朕欠你一个人情。』",
+    "source": "side"
+  },
+  "s113": {
+    "id": "s113",
+    "name": "烛火不熄",
+    "giver": "npc_abbess",
+    "map": "white_abbey",
+    "min_level": 33,
+    "desc": "收集 5 份蜂蜡，为白石修道院赶制圣光节圣烛",
+    "objective": {
+      "collect": "蜂蜡",
+      "count": 5
+    },
+    "reward_exp": 29609,
+    "reward_gold": 930,
+    "reward_item": "蜂蜡",
+    "story": "玛格丽特：『圣光节就快到了，全院修女都在赶制圣烛，可蜂房里的蜡见了底——入秋后，野蜂都不肯好好酿蜜。冒险者，能帮我们凑些蜂蜡来吗？烛火若断了，这个冬天，修道院就点不起一盏灯了。』",
+    "progress_text": "蜂蜡还差一些。金穗平原的花丛里野蜂最多，当心别惊了蜂群——修女们会为你祈福的。",
+    "deliver_text": "『五份蜂蜡，够做一千支圣烛了。圣光节的烛火会记得你的善行。来，这是修道院的一点心意，愿它照亮你的前路。』",
+    "source": "side"
+  },
+  "s114": {
+    "id": "s114",
+    "name": "河神的银铃",
+    "giver": "npc_silver_fisher",
+    "map": "silver_river",
+    "min_level": 42,
+    "desc": "探索银铃河上游新发现的洞穴，寻回河神失落的银铃",
+    "objective": {
+      "explore": "silver_river"
+    },
+    "reward_exp": 49805,
+    "reward_gold": 2520,
+    "reward_item": "河神银铃",
+    "story": "河边渔夫：『银铃河上游的崖壁塌了一块，露出个黑漆漆的洞口。夜里能听见洞里传出铃铛声——老人们说，那是河神失落的银铃，谁找到它，河神就保佑谁一年的鱼汛。我腿脚不好，爬不上那道白瀑。年轻人，你敢替我去看看吗？』",
+    "progress_text": "洞口就在白瀑后面，河心洲的峭壁上。进去以后别碰水里的影子——老人家说，那是河神在看守他的宝贝。",
+    "deliver_text": "河边渔夫捧着银铃，手直抖：『真是它！我爷爷念叨了一辈子……银铃一响，鱼汛就来了。冒险者，你替整条河的人做了一件好事。这袋金币你收下，回头我请你喝河鲜汤！』",
+    "source": "side"
+  },
+  "s115": {
+    "id": "s115",
+    "name": "月光石灯笼",
+    "giver": "npc_apprentice_luna",
+    "map": "silverwood",
+    "min_level": 52,
+    "desc": "击败 3 只精灵兽，取回被见习月卫射落的月光石灯笼",
+    "objective": {
+      "kill": "精灵兽",
+      "count": 3
+    },
+    "reward_exp": 86765,
+    "reward_gold": 2240,
+    "reward_item": "旧银哨",
+    "story": "露娜红着脸，手指绞着衣角：『我、我偷偷碰了瑟兰大人的月弓……本来只想拉一下弦，谁知箭自己飞了出去，把女王花园里那盏月光石灯笼射掉了！灯笼滚进林海，落进月辉空地了……大人要是发现，我下个月的值守就全完了！求求你帮我找回来，我、我请你喝一个月的蜜露！』",
+    "progress_text": "月辉空地那边常有精灵兽出没，它们最喜欢亮闪闪的东西……千万小心，灯笼上的月光石可经不起摔！",
+    "deliver_text": "露娜抱着灯笼，眼眶红红的：『一点没碎！太好了！……我这就去跟瑟兰大人认错。谢谢你，冒险者，你救了我的见习生涯——蜜露我请定了！』",
+    "source": "side"
+  },
+  "s116": {
+    "id": "s116",
+    "name": "等了五十七年的哨声",
+    "giver": "npc_starlake_elder",
+    "map": "starlake",
+    "min_level": 58,
+    "desc": "在星语湖·湖心岛吹响旧银哨，替老人赴一场等了五十七年的约",
+    "objective": {
+      "use": "旧银哨",
+      "map": "starlake"
+    },
+    "reward_exp": 122919,
+    "reward_gold": 1710,
+    "reward_item": "旧银哨",
+    "story": "老人·罗根：『年轻人，愿意陪老头子说会儿话吗？……五十七年前，我和一个精灵姑娘约好，月亮最圆的时候，在这湖边见。我迟到了——马队在山里误了半个月。等我赶到，她留下一封信，说她得回林海深处了。她说她会等。可精灵的「等」，是以百年计的……我等不了百年，我只好每年月圆都来，等这第五十七年。』",
+    "progress_text": "『湖心岛那棵银叶树下，埋着一对银哨。她说，两支哨子一起响，风就会把话带给彼此。我走不到湖心岛了——你替我去吹响另一支吧。若风里传来回应……就回来告诉我，让我知道，她还在等。』",
+    "deliver_text": "湖心岛的哨声在月光里荡开。许久，对岸传来一声悠长的回应——像风穿过银叶，又像谁在很远很远的地方轻轻应和。罗根闭上眼，笑了：『……听到了。她还在等。那就好。老头子这一辈子，不算白等。这哨子，送给你了。愿你心里，永远有个值得等的人。』",
+    "source": "side"
+  },
+  "s117": {
+    "id": "s117",
+    "name": "暴风雪里的灯",
+    "giver": "npc_frost_blade",
+    "map": "permafrost_field",
+    "min_level": 70,
+    "desc": "在永冻冰原·冰原中找到被暴风雪困住的采冰队",
+    "objective": {
+      "find": "被困的采冰队",
+      "map": "permafrost_field",
+      "chance": 0.15
+    },
+    "reward_exp": 193862,
+    "reward_gold": 4340,
+    "story": "霜刃：『西边天幕发绿，这场暴风雪比往年都凶。采冰队的三个傻小子天亮前出镇，到现在没回来。极光镇的规矩——人不丢在冰原上。带上这条暖绳，顺着猎手营的旧路标去找他们。』",
+    "progress_text": "冰原上的风能吹透三层皮袄。找到他们时先别急着拉人——冻僵的人不能立刻烤火，用暖绳拴住腰，一步一步拖回营地。路标被雪埋了就摸冰面下的木桩，老猎人都这么认路。",
+    "deliver_text": "『三个人都活着……好，好。烧壶那儿的姜酒记我账上，你喝个痛快。极光镇欠你一条人命——往后你在这镇上的酒钱，霜刃包了。』",
+    "source": "side"
+  },
+  "s118": {
+    "id": "s118",
+    "name": "铁砧节的赌约",
+    "giver": "npc_dwarf_elder",
+    "map": "forge_valley",
+    "min_level": 66,
+    "desc": "收集 3 块熔火精铁（熔炉谷·熔岩河畔熔岩元素掉落），交予托尔丁",
+    "objective": {
+      "collect": "熔火精铁",
+      "count": 3
+    },
+    "reward_exp": 167825,
+    "reward_gold": 2010,
+    "reward_item": "龙哨",
+    "story": "托尔丁·铁锤：『铁砧节要到了，符文工坊那帮小子跟议会打赌，说他们的新配方能炼出比我祖传的还好的精铁。呸！我要用熔岩河畔的熔火精铁打一把冠军锤，让小子们开开眼。你去河畔替我取三块来，算议会欠你个人情。』",
+    "progress_text": "熔火精铁长在熔岩元素身上，像黑壳上嵌着的银纹。敲下来的时候别贪快——热铁碰冷风会裂。用我给你的这块裹布包着带回来，一块都不能少。",
+    "deliver_text": "『三块，纹路漂亮得很！这下看符文工坊的小子们还敢不敢吹牛。锤子打好了，头一锤我留给你——铁砧要塞的大门，永远给识货的朋友开着。』",
+    "source": "side"
+  },
+  "s119": {
+    "id": "s119",
+    "name": "雏龙不识归途",
+    "giver": "npc_dragon_elder",
+    "map": "dragon_ridge",
+    "min_level": 84,
+    "desc": "在龙脊山脉·山道使用「龙哨」呼唤迷路的雏龙·烬鳞归来",
+    "objective": {
+      "use": "龙哨",
+      "map": "dragon_ridge"
+    },
+    "reward_exp": 356965,
+    "reward_gold": 3410,
+    "reward_item": "龙哨",
+    "story": "奥姆之子：『聚落里最小的孩子——雏龙·烬鳞，贪玩飞过了山脊，被一场乱流卷到山道那边，回不来了。它太小，还不会循着龙脉的气味回家。这枚龙哨是它母亲蜕下的鳞片磨的——你带着它去山道，吹响三声，烬鳞会循声而来。记住，哨声朝东，风会替你传话。』",
+    "progress_text": "山道上的石龙不爱管闲事，但别惊动它们。站在风口的岩石上吹哨，三长一短——这是烬鳞从蛋壳里就听熟的调子。它胆小，听到哨声会先躲起来观察，你站着别动，等它自己飞下来。",
+    "deliver_text": "『看，它落在你肩上了——这小东西认生，肯亲近你，说明你心里没有恶意。龙裔的记性很长，烬鳞会记住你。龙脊山脉的风，也会记住你。』",
+    "source": "side"
+  },
+  "s12": {
+    "id": "s12",
+    "name": "月狼的悲鸣",
+    "giver": "npc_elf_guardian",
+    "map": "silverwood",
+    "min_level": 46,
+    "desc": "击败月狼王·银鬃，调查月狼狂暴的原因",
+    "objective": {
+      "kill": "月狼王·银鬃",
+      "count": 1
+    },
+    "reward_exp": 61529,
+    "reward_gold": 3530,
+    "reward_item": "强化石",
+    "story": "瑟兰：『月狼是月之母的孩子，本不该狂暴。查清真相——若是有人在森林里动了手脚，精灵不会善罢甘休。』",
+    "source": "side"
+  },
+  "s120": {
+    "id": "s120",
+    "name": "失踪的巡逻兵",
+    "giver": "npc_garrison",
+    "map": "abyss_gate",
+    "min_level": 90,
+    "desc": "探索深渊裂隙·入口，查明失踪巡逻兵的下落",
+    "objective": {
+      "explore": "abyss_gate"
+    },
+    "reward_exp": 426803,
+    "reward_gold": 6080,
+    "story": "艾德温：『昨天派去裂隙外围巡夜的一队兵，一个都没回来。旗子还插在警戒线外，人却没了——连脚印都干干净净。裂隙边上没有「干净」二字。你是行会挂牌的好手，替我去看看，活要见人，死要见旗。回来我如实给你记军功。』",
+    "progress_text": "裂隙入口的紫光会让人头晕，别盯着看。注意地上——若是深渊的东西拖走了人，岩缝里会留下焦黑的刮痕；若是人自己走的，靴印会朝外。不管看到什么，先回来报信，别一个人往里冲。",
+    "deliver_text": "『巡逻兵找到了……藏在裂隙边沿的岩缝里，还活着，只是吓丢了魂，说是半夜看见裂隙里伸出半截白色的手。这事我会报给酋长。你从裂隙边活着回来，还带回来一个人——霜角堡记住你了。』",
+    "source": "side"
+  },
+  "s121": {
+    "id": "s121",
+    "name": "守林人的炉火",
+    "giver": "npc_forest_keeper_moss",
+    "map": "black_forest",
+    "min_level": 74,
+    "desc": "击败 3 只骚扰守林人小屋的腐牙兽人",
+    "objective": {
+      "kill": "腐牙兽人",
+      "count": 3
+    },
+    "reward_exp": 251754,
+    "reward_gold": 4370,
+    "reward_item": "eq:松木护符",
+    "story": "苔衣：『年轻人，进屋坐，炉子上有热汤。老头子我一个人守着这片林子，倒不怕冷清……就是最近，林子边上的腐牙兽人总来扒我的柴垛、偷我的存粮。老猫都吓得不进屋了。我这把老骨头打不动了，你要是方便，替我把它们赶远些，柴垛保住了，我分你一半过冬的柴火。』",
+    "progress_text": "那些兽人天黑就来，天亮就走，在林缘的树根下刨窝。它们欺软怕硬，见着硬茬子就跑。你亮出兵器在屋前屋后走几圈，敲翻几个领头的，其余的就不敢再来了。老头子给你温着汤，等你回来喝。",
+    "deliver_text": "『真打跑了……好多年没人替老头子出头了。来，汤还热着，多喝一碗。这串松木护符是亡妻留下的，说是能挡林子的寒气——你走南闯北，比老头子更需要它。灯我给你留着，路过就来坐坐。』",
+    "source": "side"
+  },
+  "s13": {
+    "id": "s13",
+    "name": "精灵的嘱托",
+    "giver": "npc_elf_sage",
+    "map": "moon_court",
+    "min_level": 55,
+    "desc": "击败暗影精灵，取回被夺走的古籍",
+    "objective": {
+      "kill": "暗影精灵",
+      "count": 5
+    },
+    "reward_exp": 108275,
+    "reward_gold": 3210,
+    "story": "伊露恩：『那些叛逃的暗影精灵拿走了半部《月之史诗》。那是精灵的记忆，不能丢。』",
+    "source": "side"
+  },
+  "s14": {
+    "id": "s14",
+    "name": "湖心亭之约",
+    "giver": "npc_elf_poet",
+    "map": "starlake",
+    "min_level": 50,
+    "desc": "探索星语湖，找回沉入湖心的定情信物",
+    "objective": {
+      "explore": "starlake"
+    },
+    "reward_exp": 74871,
+    "reward_gold": 3160,
+    "reward_item": "白银箱",
+    "story": "精灵诗人·夜歌：『三百年前，一个人类骑士在这里向精灵姑娘求婚……戒指掉进了湖里。帮我找回来，这是他们唯一的孩子托付的。』",
+    "source": "side"
+  },
+  "s15": {
+    "id": "s15",
+    "name": "古树的情报",
+    "chain": "圣战真相",
+    "unlock": [
+      {
+        "side": "s11"
+      }
+    ],
+    "giver": "npc_druid_oakheart",
+    "map": "ancient_tree",
+    "min_level": 62,
+    "desc": "击败古树领主，获得三百年前的情报",
+    "objective": {
+      "kill": "古树领主",
+      "count": 1
+    },
+    "reward_exp": 144375,
+    "reward_gold": 4670,
+    "story": "老德鲁伊·橡心：『古树记得三百年前的一切：我看见了……人类骑士和金色的守夜者……他们一起走向烬山……』",
+    "source": "side"
+  },
+  "s16": {
+    "id": "s16",
+    "name": "霜原的酒馆",
+    "chain": "北境生存",
+    "giver": "npc_tavern_burnkettle",
+    "map": "frost_horn",
+    "min_level": 60,
+    "desc": "收集 5 份雪狼皮，给守城兄弟做皮袄",
+    "objective": {
+      "collect": "雪狼皮",
+      "count": 5
+    },
+    "reward_exp": 133788,
+    "reward_gold": 1800,
+    "reward_item": "图纸残页",
+    "story": "酒馆老板·烧壶：『北境的冬天能冻死龙。帮我弄点雪狼皮，给守城的兄弟们做皮袄。』",
+    "source": "side"
+  },
+  "s17": {
+    "id": "s17",
+    "name": "矮人的传承",
+    "chain": "北境生存",
+    "unlock": [
+      {
+        "side": "s16"
+      }
+    ],
+    "giver": "npc_rune_master",
+    "map": "anvil_fort",
+    "min_level": 65,
+    "desc": "收集 3 块熔岩核心，换取矮人符文",
+    "objective": {
+      "collect": "熔岩核心",
+      "count": 3
+    },
+    "reward_exp": 161889,
+    "reward_gold": 1980,
+    "reward_item": [
+      "烈焰符文",
+      "寒霜符文",
+      "雷击符文"
+    ],
+    "story": "吉姆利：『熔炉谷的火焰元素最近躁动，核心是最好的燃料。帮我弄几块来，我教你一个符文。』",
+    "source": "side"
+  },
+  "s18": {
+    "id": "s18",
+    "name": "猎手的救赎",
+    "chain": "北境生存",
+    "unlock": [
+      {
+        "side": "s17"
+      }
+    ],
+    "giver": "npc_north_hunter",
+    "map": "black_forest",
+    "min_level": 72,
+    "desc": "深入黑森林·腐牙营地，击败腐牙萨满·嚎骨，救回被掳的猎人白桦，交付时替他做出抉择",
+    "objective": {
+      "kill": "腐牙萨满·嚎骨",
+      "count": 1,
+      "find": "白桦"
+    },
+    "reward_exp": 220920,
+    "reward_gold": 0,
+    "story": "铁弓：『……冒险者？我叫铁弓，北境的猎户。十天前，腐牙兽人摸到我的猎屋，掳走了我弟弟白桦。我追到林缘，他们人多，我杀不进去。腐牙兽人掳人不为吃，他们喂人喝腐牙之血，把人变成他们那副模样。黑森林深处的腐牙营地里有个萨满，叫嚎骨，专干这个。你若肯帮我——把白桦带回来。他若还是他，我带他回家；他若已经……已经不是我弟弟了……先带回来再说。求你。』",
+    "progress_text": "你以铁弓的黑羽箭开路，在腐林击杀腐牙兽人，一路杀进森林深处的腐牙营地。腐牙萨满·嚎骨正围着祭桩跳舞，见有人闯营，咧嘴笑出满口黑牙：『又来了一个送肉的！』嚎骨倒下后，祭桩上的身影显露出来——白桦，被黑藤绑着，左臂上已经浮起腐牙兽人特有的黑纹。你解开黑藤，将他背出营地。回到林缘，铁弓跌跌撞撞迎上来，却在三步外停住——他看见了弟弟手臂上的黑纹。",
+    "branch": {
+      "prompt": "铁弓站在三步外，手抖得握不住弓。他看看白桦，又看看玩家，最后闭上眼：『……他喝了那血。我认得那眼神——去年我在黑森林深处见过一个被腐化的猎手，他求我杀了他，我下不去手，转身跑了。后来他成了腐牙兽人的首领，叫裂颅。冒险者，我求你两件事，你替我选一件：把他带回镇子，让布丽塔试试圣光能不能洗净他；或者……他若已经不是我弟弟了，就给他一个体面的解脱，别让他变成裂颅。我下不了手。你是外人，你的手……比我干净。』",
+      "options": [
+        {
+          "key": "1",
+          "label": "带他回家",
+          "text": "你把白桦交给铁弓：『他还认得你的箭，还叫得出「哥」。带他回家。』铁弓踉跄上前抱住弟弟，额头抵着弟弟的额头，眼泪砸在雪地上：『……好。好。回家。』白桦虚弱地：『哥，我咬住舌头了……我没咽……』铁弓回头，郑重地朝你单膝跪下——北境猎户的至高礼：『冒险者，你把我弟弟还给了我。从今天起，你是我铁弓的恩人，是白桦的恩人。这副护符，是白桦出生那年我娘用第一张雪狼皮换的——现在，传给你。』铁弓背着白桦往霜角堡走去，雪地上留下两行脚印，一行深，一行浅。远处，随军圣堂的钟声响了一下。",
+          "reward_exp": 11000,
+          "reward_gold": 5500,
+          "reward_item": "eq:白桦的护符",
+          "title": "北境的恩人",
+          "flag": "s18_branch_light"
+        },
+        {
+          "key": "2",
+          "label": "给他解脱",
+          "text": "你拔出剑，走向白桦。铁弓猛地转身，背对两人，肩膀剧烈起伏。『白桦，你哥让我送你一程。』白桦的眼神忽然清亮了一瞬，像溺水的人抓住最后一口气：『……谢谢。告诉哥……黑森林的地底下，有火在说话。腐牙兽人听的，不是嚎骨的令，是地底的声音。别让那火……烧到霜角堡。』他闭上眼睛，嘴角甚至弯了弯：『哥，下辈子还当猎户。』剑落。铁弓始终没有回头。很久，他才开口，声音像被砂纸磨过：『……他最后一句话，说了什么？』听完，他默默解下白桦颈间的旧护符，放进你手心：『这副护符……你带走吧。北境的风雪会记住你今夜做的事。』他拔出插在雪里的那排黑羽箭，一支一支折断，只留下一支，插在白桦安眠的雪堆前。入夜后，黑森林深处传来低沉的、像火又像叹息的声音。",
+          "reward_exp": 11000,
+          "reward_gold": 5500,
+          "reward_item": "白桦的余烬",
+          "title": "长夜行者",
+          "flag": "s18_branch_dark"
+        }
+      ]
+    },
+    "source": "side"
+  },
+  "s19": {
+    "id": "s19",
+    "name": "烬山的朝圣者",
+    "chain": "圣战真相",
+    "giver": "npc_pilgrim",
+    "map": "cinder_mountain",
+    "min_level": 78,
+    "desc": "护送老朝圣者到烬山祭坛外围",
+    "objective": {
+      "explore": "ash_temple"
+    },
+    "reward_exp": 295925,
+    "reward_gold": 6210,
+    "story": "老朝圣者·灰袍：『三百年前，我爷爷在这里亲眼看见英雄王走进封印。我来替他看看——看看那个他为之献身的世界，还值不值得。』",
+    "source": "side"
+  },
+  "s2": {
+    "id": "s2",
+    "name": "迷路的商人",
+    "chain": "圣战真相",
+    "giver": "npc_mayor",
+    "map": "oak_town",
+    "desc": "探索白鹿之森，找到失踪的商人",
+    "objective": {
+      "explore": "white_deer_forest"
+    },
+    "reward_exp": 2600,
+    "reward_gold": 350,
+    "story": "商人被哥布林劫持，救出后得知哥布林最近在大量囤积武器——为谁囤的？",
+    "source": "side"
+  },
+  "s20": {
+    "id": "s20",
+    "name": "铁匠的委托",
+    "chain": "深渊封印",
+    "unlock": [
+      {
+        "side": "s50"
+      }
+    ],
+    "giver": "npc_dwarf_elder",
+    "map": "anvil_fort",
+    "min_level": 65,
+    "desc": "收集 5 块深渊犬牙(深渊裂隙外围)",
+    "objective": {
+      "collect": "深渊犬牙",
+      "count": 5
+    },
+    "reward_exp": 161889,
+    "reward_gold": 1980,
+    "reward_item": "传说锻造材料",
+    "story": "托尔丁·铁锤：『深渊犬牙是最好的附魔材料。等封印结束……我要给传奇冒险者打一把真正的武器。』",
+    "source": "side"
+  },
+  "s21": {
+    "id": "s21",
+    "name": "龙裔的试炼",
+    "chain": "龙裔传承",
+    "giver": "npc_dragon_elder",
+    "map": "dragon_pass",
+    "min_level": 80,
+    "desc": "击败 5 只龙裔战士，通过龙脊试炼",
+    "objective": {
+      "kill": "龙裔战士",
+      "count": 5
+    },
+    "reward_exp": 315556,
+    "reward_gold": 6430,
+    "story": "奥姆之子：『龙裔不轻易认可外人。想听龙骨山脉的秘密？先证明你的实力。』",
+    "source": "side"
+  },
+  "s22": {
+    "id": "s22",
+    "name": "古战场的英魂",
+    "chain": "龙裔传承",
+    "unlock": [
+      {
+        "side": "s45"
+      }
+    ],
+    "giver": "npc_war_scholar",
+    "map": "ancient_battlefield",
+    "min_level": 85,
+    "desc": "收集 3 份战魂之尘，安抚古战场英魂",
+    "objective": {
+      "collect": "战魂之尘",
+      "count": 3
+    },
+    "reward_exp": 368158,
+    "reward_gold": 3460,
+    "reward_item": "历史学家笔记",
+    "story": "亡灵学者·骨语：『百族战争的亡魂还在游荡。他们不是怪物，是三百年前战死的英魂——让他们安息吧。』",
+    "source": "side"
+  },
+  "s23": {
+    "id": "s23",
+    "name": "枫橡村的麦酒",
+    "chain": "美食与美酒",
+    "giver": "npc_inn_tess",
+    "map": "maple_village",
+    "desc": "收集 3 份岩羊毛，织成冬衣给过路的商人",
+    "objective": {
+      "collect": "岩羊毛",
+      "count": 3
+    },
+    "reward_exp": 1854,
+    "reward_gold": 140,
+    "reward_item": "美食节引荐信",
+    "story": "苔丝：『过路的商人冻坏了，村里的羊毛又不够。年轻人，去落石峡谷帮我弄点岩羊毛来？』",
+    "source": "side"
+  },
+  "s24": {
+    "id": "s24",
+    "name": "裂鬃之患",
+    "giver": "npc_hunter_gray",
+    "map": "boar_ridge",
+    "desc": "击败精英·野猪王裂鬃",
+    "objective": {
+      "kill": "野猪王·裂鬃",
+      "count": 1
+    },
+    "reward_exp": 1854,
+    "reward_gold": 350,
+    "reward_item": "裂鬃獠牙图纸",
+    "story": "灰羽：『野猪岭的裂鬃已经伤了三个人了。老猎人的弓都压不住它，冒险者，看你的了。』",
+    "source": "side"
+  },
+  "s25": {
+    "id": "s25",
+    "name": "铁盾镇的狼群",
+    "giver": "npc_ironshield_mayor",
+    "map": "ironshield_town",
+    "desc": "击败 10 只丘陵狼与丘陵狼王·铁牙，为铁盾镇除害",
+    "objective": {
+      "kill": "丘陵狼",
+      "count": 10
+    },
+    "reward_exp": 24297,
+    "reward_gold": 1990,
+    "reward_item": "铁牙狼皮图纸",
+    "story": "巴托：『晨曦城的骑士老爷们不来管我们，但铁盾镇的狼我们自己打。冒险者，帮个忙，酒管够。』",
+    "source": "side"
+  },
+  "s26": {
+    "id": "s26",
+    "name": "旧战场的回声",
+    "chain": "教会的阴影",
+    "unlock": [
+      {
+        "side": "s7"
+      }
+    ],
+    "giver": "npc_ironshield_scout",
+    "map": "old_battlefield",
+    "desc": "收集 5 份幽魂尘，交给晨曦城的学者",
+    "objective": {
+      "collect": "幽魂尘",
+      "count": 5
+    },
+    "reward_exp": 27720,
+    "reward_gold": 900,
+    "reward_item": "淬火石",
+    "story": "白鸦：『旧战场遗址的亡魂越来越多……我怀疑有什么东西在唤醒它们。帮我查清楚。』",
+    "source": "side"
+  },
+  "s27": {
+    "id": "s27",
+    "name": "海神的试炼",
+    "chain": "海洋之歌",
+    "unlock": [
+      {
+        "side": "s28"
+      }
+    ],
+    "giver": "npc_harbor_master",
+    "map": "sea_god_temple",
+    "min_level": 64,
+    "desc": "击败海神祭司·澜歌，查明神殿异常",
+    "objective": {
+      "kill": "海神祭司·澜歌",
+      "count": 1
+    },
+    "reward_exp": 155820,
+    "reward_gold": 4850,
+    "reward_item": "澜歌之泪图纸",
+    "story": "老舵：『海神祭司·澜歌已经很久没有回应祈祷了。神殿里出了什么事，没人知道……你敢去看看吗？』",
+    "source": "side"
+  },
+  "s28": {
+    "id": "s28",
+    "name": "龙鲸的眼泪",
+    "chain": "海洋之歌",
+    "unlock": [
+      {
+        "side": "s29"
+      }
+    ],
+    "giver": "npc_captain_maelian",
+    "map": "whale_domain",
+    "min_level": 60,
+    "desc": "击败龙鲸王·涛声，取回鲸角",
+    "objective": {
+      "kill": "龙鲸王·涛声",
+      "count": 1
+    },
+    "reward_exp": 133788,
+    "reward_gold": 4490,
+    "story": "玛莲：『龙鲸群在迷雾中迷了路，再不引导它们离开暗礁区，整群龙鲸都会搁浅。帮我找到鲸王。』",
+    "source": "side"
+  },
+  "s29": {
+    "id": "s29",
+    "name": "沉船的金币",
+    "chain": "海洋之歌",
+    "unlock": [
+      {
+        "side": "s43"
+      }
+    ],
+    "giver": "npc_old_whale",
+    "map": "shipwreck_graveyard",
+    "min_level": 63,
+    "desc": "探索沉船墓地，取回被诅咒的船长金币",
+    "objective": {
+      "explore": "shipwreck_graveyard"
+    },
+    "reward_exp": 150010,
+    "reward_gold": 3800,
+    "reward_item": "白银箱",
+    "story": "老鲸：『那批金币是当年遇难商船的……被沉船领主诅咒了。取回来，我找教堂净化它，让亡魂安息。』",
+    "source": "side"
+  },
+  "s3": {
+    "id": "s3",
+    "name": "铁匠的传家宝",
+    "giver": "npc_blacksmith2",
+    "map": "white_deer",
+    "desc": "击败翡翠森林的森林狼，取回被叼走的铁匠锤",
+    "objective": {
+      "kill": "森林狼",
+      "count": 5
+    },
+    "reward_exp": 1620,
+    "reward_gold": 250,
+    "reward_item": "eq:汉斯的手工武器",
+    "story": "汉斯：『那把锤子是我爹留给我的，被狼叼走三年了。帮我找回来，我免费给你打件装备。』",
+    "source": "side"
+  },
+  "s30": {
+    "id": "s30",
+    "name": "风暴之心的低语",
+    "giver": "npc_pearl_lord",
+    "map": "storm_sea",
+    "min_level": 66,
+    "desc": "击败风暴海龙·雷鸣，调查风暴之海的异常",
+    "objective": {
+      "kill": "风暴海龙·雷鸣",
+      "count": 1
+    },
+    "reward_exp": 167825,
+    "reward_gold": 5020,
+    "reward_item": "雷鸣龙鳞图纸",
+    "story": "赛琳娜：『风暴之海的浪比往年凶得多……珍珠城的占星师说，海底有东西在搅动海面。去看看吧。』",
+    "source": "side"
+  },
+  "s31": {
+    "id": "s31",
+    "name": "地底的火焰",
+    "chain": "北境生存",
+    "unlock": [
+      {
+        "side": "s51"
+      }
+    ],
+    "giver": "npc_ember_camp_leader",
+    "map": "lava_bed",
+    "desc": "击败岩浆王·烬核",
+    "objective": {
+      "kill": "岩浆王·烬核",
+      "count": 1
+    },
+    "reward_exp": 379190,
+    "reward_gold": 7170,
+    "reward_item": "烬核之心图纸",
+    "min_level": 86,
+    "story": "格罗姆：『熔岩河床的岩浆兽突然暴动，矿道都要塌了。矮人不怕火，但那玩意儿太邪门，得靠你。』",
+    "source": "side"
+  },
+  "s32": {
+    "id": "s32",
+    "name": "深渊的密语",
+    "chain": "深渊封印",
+    "unlock": [
+      {
+        "side": "s20"
+      }
+    ],
+    "giver": "npc_under_guide",
+    "map": "abyss_altar",
+    "desc": "探索深渊祭坛，取回祭坛密文",
+    "objective": {
+      "explore": "abyss_altar"
+    },
+    "reward_exp": 402290,
+    "reward_gold": 5890,
+    "min_level": 88,
+    "story": "微光：『深渊祭坛的符文在发生变化……那不是我认识的任何语言。把密文带回来，我要研究它。』",
+    "source": "side"
+  },
+  "s33": {
+    "id": "s33",
+    "name": "云端的传承",
+    "chain": "龙裔传承",
+    "unlock": [
+      {
+        "side": "s35"
+      }
+    ],
+    "giver": "npc_wind_elder",
+    "map": "cloud_sanctum",
+    "desc": "击败云中圣者·奥拉，接受天空的试炼",
+    "objective": {
+      "kill": "云中圣者·奥拉",
+      "count": 1
+    },
+    "reward_exp": 477574,
+    "reward_gold": 8020,
+    "reward_item": "奥拉圣印图纸",
+    "min_level": 94,
+    "story": "大长老·云翼：『云中圣者·奥拉守护着天空的传承。三百年来，他是第一个愿意把传承交给外人的人……去接受试炼吧。』",
+    "source": "side"
+  },
+  "s34": {
+    "id": "s34",
+    "name": "极光下的誓言",
+    "giver": "npc_aurora_mayor",
+    "map": "aurora_town",
+    "min_level": 70,
+    "desc": "击败冰川龙·霜牙，取回被抢走的极光石",
+    "objective": {
+      "kill": "冰川龙·霜牙",
+      "count": 1
+    },
+    "reward_exp": 193862,
+    "reward_gold": 5420,
+    "story": "艾拉：『冰川龙偷走了镇上的极光石——那是极光镇百年传承的圣物。没有它，极光会黯淡，镇子会失去庇护。』",
+    "source": "side"
+  },
+  "s35": {
+    "id": "s35",
+    "name": "龙陨谷的守望",
+    "chain": "龙裔传承",
+    "unlock": [
+      {
+        "side": "s22"
+      }
+    ],
+    "giver": "npc_dragon_elder",
+    "map": "dragonsfall_valley",
+    "desc": "击败龙陨战魂·暮影，安抚龙之亡魂",
+    "objective": {
+      "kill": "龙陨战魂·暮影",
+      "count": 1
+    },
+    "reward_exp": 402290,
+    "reward_gold": 7370,
+    "reward_item": "暮影龙魂图纸",
+    "min_level": 88,
+    "story": "奥姆之子：『龙陨谷是古龙长眠之地。暮影是千年前陨落的龙王之魂，它还在等着一个能结束它守望的人。』",
+    "source": "side"
+  },
+  "s36": {
+    "id": "s36",
+    "name": "采药女的心愿",
+    "chain": "药园与花匠",
+    "giver": "w_forest_girl",
+    "map": "white_deer_forest",
+    "desc": "采集 10 份月光草（『采集』需先找导师拜师学『采集』副业；学会后去橡木平原/白鹿之森等新手区草丛有概率采到；不想学采集也可去橡木镇艾琳炼药铺『草药柜』/白鹿城『医师药柜』/铁港城『潮汐药柜』每日交互获取），帮采药女·小荨完成药包",
+    "objective": {
+      "collect": "月光草",
+      "count": 10
+    },
+    "reward_exp": 2600,
+    "reward_gold": 180,
+    "story": "小荨：『月光草只在夜里发光……我采不够，你帮我凑 10 份好吗？』",
+    "source": "side"
+  },
+  "s37": {
+    "id": "s37",
+    "name": "迷路骑士的归途",
+    "giver": "npc_baron",
+    "map": "emerald_forest",
+    "desc": "护送迷路的骑士回到白鹿城，向城主复命",
+    "objective": {
+      "explore": "white_deer"
+    },
+    "reward_exp": 2485,
+    "reward_gold": 350,
+    "story": "城主·巴伦男爵：『有个外乡来的骑士在翡翠森林里迷了路，看着像是晨曦城那边的人。帮我把人平安带回白鹿城，别让骑士老爷在我们地界上出事。』",
+    "source": "side"
+  },
+  "s38": {
+    "id": "s38",
+    "name": "被除名的骑士",
+    "giver": "w_paladin_exile",
+    "map": "gold_plain",
+    "desc": "去旧战场遗址调查圣骑士·奥利被除名的真相",
+    "objective": {
+      "explore": "old_battlefield"
+    },
+    "reward_exp": 24297,
+    "reward_gold": 1330,
+    "story": "奥利：『他们说我在战场上渎职……可那天夜里，我亲眼看见了不该看见的东西。』",
+    "source": "side"
+  },
+  "s39": {
+    "id": "s39",
+    "name": "鼠仔的噩梦",
+    "giver": "w_grave_digger",
+    "map": "old_battlefield",
+    "desc": "帮盗墓贼·鼠仔击败骷髅兵，取回被抢走的护身符",
+    "objective": {
+      "kill": "骷髅兵",
+      "count": 3
+    },
+    "reward_exp": 27720,
+    "reward_gold": 1350,
+    "story": "鼠仔：『骷髅兵把我祖传的护身符抢走了！帮我抢回来，分你一成！』",
+    "source": "side"
+  },
+  "s4": {
+    "id": "s4",
+    "name": "白鹿与麦酒",
+    "chain": "美食与美酒",
+    "giver": "npc_tavern_owner",
+    "map": "white_deer",
+    "desc": "收集 5 份野猪牙，酒馆特色菜原料",
+    "objective": {
+      "collect": "野猪牙",
+      "count": 5
+    },
+    "reward_exp": 1620,
+    "reward_gold": 120,
+    "reward_item": "麦酒",
+    "story": "胖托尼：『我家的野猪烤肉可是白鹿城一绝！帮我弄点野猪牙熬汤，我请你喝一杯！』",
+    "source": "side"
+  },
+  "s40": {
+    "id": "s40",
+    "name": "精灵的救赎",
+    "giver": "w_elf_wanderer",
+    "map": "silverwood",
+    "min_level": 46,
+    "desc": "击败影豹，取回被抢的月弓",
+    "objective": {
+      "kill": "影豹",
+      "count": 5
+    },
+    "reward_exp": 61529,
+    "reward_gold": 2820,
+    "story": "薇拉：『月弓被影豹拖进了林子深处……没有它，我永远回不了王庭。』",
+    "source": "side"
+  },
+  "s41": {
+    "id": "s41",
+    "name": "猎人的执念",
+    "giver": "w_trapper",
+    "map": "black_forest",
+    "min_level": 72,
+    "desc": "击败腐牙兽人，救出被掳的猎人",
+    "objective": {
+      "kill": "腐牙兽人",
+      "count": 5
+    },
+    "reward_exp": 220920,
+    "reward_gold": 5640,
+    "story": "灰狼：『腐牙兽人把我的兄弟抓进林子深处了……帮帮我！』",
+    "source": "side"
+  },
+  "s42": {
+    "id": "s42",
+    "name": "灯塔的守夜",
+    "chain": "海洋之歌",
+    "giver": "w_lighthouse_old",
+    "map": "nameless_harbor",
+    "desc": "在暴风雨中守护无名港的灯塔",
+    "objective": {
+      "explore": "nameless_harbor"
+    },
+    "reward_exp": 108275,
+    "reward_gold": 3210,
+    "reward_item": "精炼强化石",
+    "min_level": 55,
+    "story": "光柄：『灯不能灭。可这暴风雨……年轻人，你能陪我守到天亮吗？』",
+    "source": "side"
+  },
+  "s43": {
+    "id": "s43",
+    "name": "沉船的信",
+    "chain": "海洋之歌",
+    "unlock": [
+      {
+        "side": "s52"
+      }
+    ],
+    "giver": "w_shipwreck_ghost",
+    "map": "shipwreck_graveyard",
+    "min_level": 63,
+    "desc": "把船长的信送回珍珠城",
+    "objective": {
+      "explore": "pearl_city"
+    },
+    "reward_exp": 150010,
+    "reward_gold": 3800,
+    "story": "船长的亡灵：『这封信……帮我送到珍珠城，交给我女儿。拜托了。』",
+    "source": "side"
+  },
+  "s44": {
+    "id": "s44",
+    "name": "追风者",
+    "giver": "w_storm_chaser",
+    "map": "storm_cliff",
+    "desc": "收集 5 份雷晶砂，帮追风者·岚完成风暴样本",
+    "objective": {
+      "collect": "雷晶砂",
+      "count": 5
+    },
+    "reward_exp": 379190,
+    "reward_gold": 2870,
+    "reward_item": "图纸残页",
+    "min_level": 86,
+    "story": "岚：『风暴的结晶！帮我收集一些，我要研究它为什么这么美！』",
+    "source": "side"
+  },
+  "s45": {
+    "id": "s45",
+    "name": "龙语传承",
+    "chain": "龙裔传承",
+    "giver": "w_dragon_whisper",
+    "map": "dragon_ridge",
+    "desc": "前往龙脊山脉深处，通过龙语试炼",
+    "objective": {
+      "explore": "dragon_ridge"
+    },
+    "reward_exp": 335615,
+    "reward_gold": 6620,
+    "min_level": 82,
+    "story": "古尔：『龙说，只有通过试炼的人，才配听懂它们的话。你愿意试试吗？』",
+    "source": "side"
+  },
+  "s46": {
+    "id": "s46",
+    "name": "潮痕之下",
+    "giver": "npc_dock_coroner",
+    "map": "harbor_docks",
+    "chain": "教会的阴影",
+    "unlock": [
+      {
+        "side": "s5"
+      }
+    ],
+    "desc": "探索铁港码头·海堤，取回水鬼漂来的公文箱与圣女庭封蜡",
+    "objective": {
+      "explore": "harbor_docks"
+    },
+    "reward_exp": 10293,
+    "reward_gold": 760,
+    "reward_item": "圣女庭封蜡",
+    "story": "艾德娜：『又浮上来一个。你来看他胸口——圣女庭的封印记，烫进皮肉里，是替圣女庭送密件的人才挨的。圣女庭的东西不该出现在铁港城，更不该沉在码头底下。帮我个忙：去海堤那边，看看他漂来的方向还漂着什么。公文箱、蜡封、哪怕一片纸——都给我带回来。』",
+    "progress_text": "海堤的礁石缝里卡着一只沉木箱，封蜡上压着圣女庭的蔷薇纹章。你正要开箱，一个自称『收布料的商人』凑过来搭话——你说箱是空的，他脸色当场就变了。你把他按在礁石上盘问，他招了：他是圣女庭散在铁港城的眼线，奉命等一只从晨曦城来的箱子，只记得送信人的口信——『往北，封路。』",
+    "deliver_text": "艾德娜拆开箱里的密信，看了很久：『骑士团封锁白鹿城以北的官道……圣女可能北逃？这封信是从晨曦城大圣堂签发的——签发的人，就在那座城里。你既然已经看见了，就替我去晨曦城走一趟吧。骑士团驻地有个新兵，逢人便打听他团长的消息，也许他知道这封信要追的人是谁。』",
+    "source": "side"
+  },
+  "s47": {
+    "id": "s47",
+    "name": "灰斗篷的账页",
+    "giver": "npc_junk_murdoch",
+    "map": "white_deer",
+    "chain": "圣战真相",
+    "unlock": [
+      {
+        "side": "s2"
+      }
+    ],
+    "desc": "调查翡翠森林北缘废弃伐木场，查明灰斗篷买家的货物与身份",
+    "objective": {
+      "explore": "emerald_forest"
+    },
+    "reward_exp": 1620,
+    "reward_gold": 250,
+    "reward_item": "军团账页",
+    "story": "默多克：『嘘——小点声。灰斗篷、灰马、晨曦城官腔……这号人三个月前在我这儿买走了两卷三百年前的军团图册，说是什么「裱书房」。呸！哥布林囤的那批铁器，八成也是他收的。帮我跑一趟：灰斗篷的货藏在翡翠森林北缘的废弃伐木场，你去找找有没有账本之类的东西。别惊动教会的人——老头子我还想多开几年铺子。』",
+    "progress_text": "废弃伐木场的木料垛下藏着一间暗窖，里面码着成捆的长矛与刀剑。窖底的松木箱里有一本没烧完的账页：『……哥布林营地交付长矛一百二十捆，付讫。货单送往晨曦城·灰塔。』账页背面拓着一枚盾形徽记——一柄剑与一条锁链交叠，锁链尽头并肩立着两个身影。林外传来马蹄声，你只来得及把账页揣进怀里撤出。",
+    "deliver_text": "默多克对着徽记拓印端详良久，手指发抖：『……这是「晨星与锁链」，三百年前英雄王军团的旧徽。可你看这图案——剑与锁链交叠，锁链尽头站着两个身影。现在教堂里挂的军团旗，只有一把孤零零的剑。孩子，有些事，当铺里当不掉，教堂里也问不出，只能自己去地底找。』",
+    "source": "side"
+  },
+  "s48": {
+    "id": "s48",
+    "name": "雪线下的歌者之匣",
+    "giver": "npc_courier_morton",
+    "map": "cold_ridge",
+    "min_level": 68,
+    "chain": "圣战真相",
+    "unlock": [
+      {
+        "side": "s15"
+      }
+    ],
+    "desc": "在霜原北段旧驿道雪崩遗址找到随军诗人·里昂·晨歌的歌者之匣",
+    "objective": {
+      "find": "歌者之匣",
+      "map": "frost_field",
+      "chance": 0.15
+    },
+    "reward_exp": 180390,
+    "reward_gold": 4170,
+    "reward_item": "歌者之匣",
+    "story": "莫顿·寒鸦：『……四十年跑驿道，我送过嫁妆、送过王令，只送过一件东西是送到雪里去的。爷爷临终前攥着我的手说：三百年前圣战收尾那年，有个弹琴的军爷在咱们驿站留了一口木匣，说「若我回不来，请把它埋在雪线下的旧驿站，等一个读得懂诗的人来取」。那军爷再没回来，旧驿站在大雪崩里埋了。你既然问到了这个名字——那就去吧，霜原北段，顺着旧驿道的界碑走。』",
+    "progress_text": "霜原的暴雪里，你沿着半埋的旧驿道界碑一路向北，在一处塌陷的雪窝底部找到旧驿站的屋脊。你扒开冻土与碎木，在火塘灰烬下摸到一口铁皮木匣。撬开锈锁，里面是厚厚一叠羊皮手稿，最上面压着一截银色的断琴弦；手稿末页夹着一页残缺的歌谱，标题依稀可辨「黎明之诗」。",
+    "deliver_text": "莫顿·寒鸦翻着羊皮手稿，读着读着，老泪纵横：『……「烬山的火里站着两个人。守夜者的锁链缠住裂隙，英雄王的剑插进锁环。他们不是对手，是同握一柄剑的两个人。」好一个同握一柄剑。手稿你留着，琴弦我留着——这份残页歌谱，你带去铁港城吧。铁港城酒馆里唱歌的那个小姑娘莎拉，她爷爷就是当年军爷的琴友。这首歌，该回到唱歌的人手里。』",
+    "source": "side"
+  },
+  "s49": {
+    "id": "s49",
+    "name": "松动的锚点",
+    "giver": "npc_seal_jonah",
+    "map": "white_abbey",
+    "chain": "深渊封印",
+    "unlock": [
+      {
+        "side": "s6"
+      }
+    ],
+    "desc": "探索旧战场遗址·沉锚之地，找到 3 根刻有反向锚纹的封印石柱",
+    "objective": {
+      "explore": "old_battlefield",
+      "find": "反向锚纹石柱",
+      "map": "old_battlefield",
+      "chance": 0.15
+    },
+    "reward_exp": 27720,
+    "reward_gold": 1800,
+    "reward_item": "石板拓片",
+    "story": "约拿：『三百年前，英雄王把门闩插上了。可这块石板……是有人把门闩往回抽。旧战场遗址最深处埋着百族战争时立下的三根封印石柱——锚点。你去看石柱：看到柱脚长出的黑纹，别碰，记下来就好。蜡烛要是朝地弯——立刻回来。』",
+    "progress_text": "沉锚之地寸草不生，三根半埋的石柱呈三角矗立，每根柱脚都新刻了一圈陌生符文，三柱之间拉满黑色蜡油线。你依次找到三根被篡改的石柱：第一根脚下埋着半截炭笔，第二根柱脚的蜡油里裹着一片指甲，第三根柱脚的泥土在起伏——圣光蜡烛的火焰果然朝地面弯了下去。你拾到一枚黑底银纹、闭合之眼的徽记。",
+    "deliver_text": "约拿对照拓片与徽记，声音发干：『柱脚的新符文和石板同源——同一只手写的。这徽记……「闭眼之瞳」，我见过，在教会的禁书目录里，被划掉了。有人在用钥匙开锁。锁芯在这片旧战场，钥匙齿在铁港的矿洞，而锁孔——他指向北方——在烬山底下。去西境古树隘口找德鲁伊·橡心，古树根下埋着能读懂这种符文的书。』",
+    "source": "side"
+  },
+  "s5": {
+    "id": "s5",
+    "name": "码头的猫",
+    "chain": "教会的阴影",
+    "giver": "npc_citylord",
+    "map": "ironharbor",
+    "desc": "找到码头失窃的货物",
+    "objective": {
+      "kill": "水鬼",
+      "count": 3
+    },
+    "reward_exp": 3293,
+    "reward_gold": 320,
+    "reward_item": "烤肉串",
+    "story": "货物被水鬼拖进了海里——打捞时发现水鬼身上有圣光教会的印记。",
+    "source": "side"
+  },
+  "s50": {
+    "id": "s50",
+    "name": "古树下的典籍",
+    "giver": "npc_druid_oakheart",
+    "map": "ancient_tree",
+    "min_level": 62,
+    "chain": "深渊封印",
+    "unlock": [
+      {
+        "side": "s49"
+      }
+    ],
+    "desc": "使用石板拓片开启古树地宫根门，取回古书《渊语纪事》",
+    "objective": {
+      "use": "石板拓片",
+      "map": "ancient_tree",
+      "find": "渊语纪事"
+    },
+    "reward_exp": 144375,
+    "reward_gold": 3740,
+    "reward_item": "长夜灯火",
+    "story": "橡心：『古树记得这种纹路……它说这叫「锚纹」，是大地母神教给最早的石匠的锁。三千年来，它只见过一次有人带着锚纹来找它。但树说，你带来的这张拓片——是钥匙，不是锁。它指向古树根部一道几乎被苔藓吞没的缝隙：三千年来没人进去过的根洞。树说，钥匙在谁手里，门就为谁开。你敢带着它下去吗？』",
+    "progress_text": "根洞尽头是一扇根须编成的门，门心有一道凹槽——与石板拓片严丝合缝。你使用石板拓片，根须如活物般缓缓退开。门后石匣中放着一本以锚纹写成的古书《渊语纪事》，书旁坐着一具干尸，袍上绣着「闭眼之瞳」徽记，手中攥着一截炭笔。书中警告：『若有人把锚纹倒着刻，锁就变成梯子。梯子尽头，是听见低语的人。』书的末页被撕去一角，残留半个词：『祭坛』。",
+    "deliver_text": "橡心逐页翻译，越翻越慢：『石板、石柱、这本书——有人沿着三百年前的封印，把每一把锁都摸了一遍，然后倒着刻了回去。锚纹倒转是有代价的：刻它的人会先听见低语，听见的人会慢慢不再是「人」。去北境铁砧要塞吧。矮人的铁砧会敲出真相——最近他们收来的深渊犬牙上，也长出了同样的纹路。』",
+    "source": "side"
+  },
+  "s51": {
+    "id": "s51",
+    "name": "霜角堡的冬宴",
+    "giver": "npc_tavern_burnkettle",
+    "map": "frost_horn",
+    "min_level": 60,
+    "chain": "北境生存",
+    "unlock": [
+      {
+        "side": "s18"
+      }
+    ],
+    "desc": "在永冬湖冰面找到长夜灯火，回堡垒广场点燃长夜篝火",
+    "objective": {
+      "find": "长夜灯火",
+      "map": "winter_lake",
+      "chance": 0.15,
+      "use": "长夜灯火"
+    },
+    "reward_exp": 133788,
+    "reward_gold": 3590,
+    "reward_item": "eq:长夜徽记",
+    "story": "烧壶：『你可算来了！长夜节，记得不？你刚到北境那会儿，帮我凑雪狼皮缝皮袄——如今那些皮袄还穿在守备营兄弟身上，一件没破。今年的长夜宴，主宾位留给咱们的冒险者！可出了点岔子——长夜灯火，就是点篝火的那盏祖传冰灯，被永冬湖的冰封住了。你去一趟永冬湖，把灯火取回来。湖面下那些冰怪，见了灯火会退——它们怕光。』",
+    "progress_text": "永冬湖的冰面像一面巨大的白镜。湖心冰层下，那盏冰灯发出幽幽的暖光——冰怪在灯影四周游弋，果然不敢靠近。你凿开冰层，取出长夜灯火时，湖底传来一声悠长的、像叹息的震动。回到霜角堡，堡垒广场上已聚满人：守备营的士兵、裹着新皮袄的猎户、从铁砧要塞赶来的矮人。",
+    "deliver_text": "长夜灯火递到烧壶手中，广场中央的巨型篝火轰然燃起，整个霜角堡都在暖光里亮了起来。海尔达·霜鬃举碗：『今夜这碗酒，敬替我们跑遍风雪的人！』席间，一个矮人信使满身灰烬地闯进广场，把一封烧了边的信塞给吉姆利：灰烬营地告急，熔岩河床的岩浆兽暴动了——地底那团会说话的火，坐不住了。",
+    "source": "side"
+  },
+  "s52": {
+    "id": "s52",
+    "name": "珍珠城的海祭",
+    "giver": "npc_tide_reader_foam",
+    "map": "pearl_city",
+    "min_level": 62,
+    "chain": "海洋之歌",
+    "unlock": [
+      {
+        "side": "s42"
+      }
+    ],
+    "desc": "收集 5 份祭海灯油，完成珍珠城海祭筹备",
+    "objective": {
+      "collect": "祭海灯油",
+      "count": 5
+    },
+    "reward_exp": 144375,
+    "reward_gold": 1870,
+    "reward_item": "潮汐日志残页",
+    "story": "白沫：『外乡人，来得正好。海祭要用的灯油不够了，潮水不等人。帮我凑五份祭海灯油，我许你在祭台边看完整场海祭。』他望向海面，声音很轻：『海祭是办给回不了家的人看的。海上每沉一艘船，就多一群找不到岸的魂。总得有人替他们点灯。』",
+    "progress_text": "海祭当夜，渔港万人放灯，千百盏海灯顺潮水漂向深海。祭台角落，一个做海灯的女子独自放下一盏最大的海灯，灯面上写着「归帆号·父亲收」。白沫低声讲起十二年前：归帆号船长埃德蒙·归帆为救一艘快沉的客船调头冲进风暴，自己撞上暗礁，那箱被诅咒的金币也沉了海。",
+    "deliver_text": "海祭结束，白沫将一页泛黄的潮汐日志残页交给玩家：『这是我当年和埃德蒙一起记的，上面有归帆号的航线。去沉船墓地，也许用得上。那姑娘放的灯，年年最大。她等的信，也年年没到。』",
+    "source": "side"
+  },
+  "s53": {
+    "id": "s53",
+    "name": "旧金奖章",
+    "giver": "npc_tavern_owner",
+    "map": "white_deer",
+    "chain": "美食与美酒",
+    "unlock": [
+      {
+        "side": "s23"
+      },
+      {
+        "side": "s4"
+      }
+    ],
+    "desc": "使用美食节引荐信，收集 3 份野猪牙试做参赛菜",
+    "objective": {
+      "use": "美食节引荐信",
+      "map": "white_deer",
+      "collect": "野猪牙",
+      "count": 3
+    },
+    "reward_exp": 1620,
+    "reward_gold": 120,
+    "reward_item": "麦酒",
+    "story": "胖托尼：『……洛根那老小子还记得我。』他翻遍柜台底，摸出一枚积灰的金锅小奖章：『二十年前，铁港城金锅美食节，最佳野味。那是我这辈子最亮的一晚上。可这手艺……二十年没上台了，不知道还生不生。帮我弄点野猪岭的野猪牙来试菜——三天后铁港城，帮厨的，你可得来！』",
+    "progress_text": "你在野猪岭收集了野猪牙。灶火升起，肋排出炉，味道依旧是当年的味道——胖托尼咬了一口，却叹了口气：『香是香，可少了点东西。少了铁港城那股海风，和满场的吆喝声。』",
+    "deliver_text": "胖托尼把奖章挂回墙中央，转头咧嘴一笑：『帮厨的，三天后铁港城见。汤和鱼我不擅长——到时候，你可得帮我撑场面。』酒馆托付给伙计，他背起行囊，踏上去铁港城的路。",
+    "source": "side"
+  },
+  "s54": {
+    "id": "s54",
+    "name": "三道菜的请柬",
+    "giver": "npc_tavern_owner",
+    "map": "ironharbor",
+    "chain": "美食与美酒",
+    "unlock": [
+      {
+        "side": "s53"
+      }
+    ],
+    "desc": "收集银鳞鱼×2、金鲤×2（垂钓）与草药×2、浆果×2（采集），备齐报名三道菜食材",
+    "objective": {
+      "collect": "银鳞鱼",
+      "count": 2
+    },
+    "reward_exp": 3293,
+    "reward_gold": 220,
+    "reward_item": "食谱图纸·香草烤兽肉",
+    "story": "胖托尼：『报名规矩：一汤一鱼一肉，食材自备，当场盲品！坏了——我只会做肉！汤和鱼，就靠你了！去橡木溪流钓银鳞鱼和金鲤，再去橡木草地和翡翠森林采草药、浆果当香料。』",
+    "progress_text": "你提着鱼篓满载而归——银鳞鱼熬汤、金鲤做宴，草药和浆果备作香草料与莓酱。一个梳着油亮背头的男人拦在报名处前——大厨塞德里克·金勺，胖托尼二十年前决赛的对手：『哟，乡下酒馆的胖老板也来献丑？金锅奖可不是烤猪能糊弄的。』胖托尼攥紧拳头，没还嘴。",
+    "deliver_text": "三道菜上桌：银鳞鱼汤清鲜、金鲤盛宴亮眼、蜜烤野猪肋排焦香。评委盲品后，老约翰·铁砧一拍桌子：『这肋排……是二十年前那味道！』胖托尼拿到参赛资格。人群外，塞德里克的脸色铁青。",
+    "source": "side"
+  },
+  "s55": {
+    "id": "s55",
+    "name": "金锅风波",
+    "giver": "npc_tavern_owner",
+    "map": "ironharbor",
+    "chain": "美食与美酒",
+    "unlock": [
+      {
+        "side": "s54"
+      }
+    ],
+    "desc": "探索会场与码头调查腌肉失窃，收集 2 份草药补香料重腌，作为评委试吃评判",
+    "objective": {
+      "explore": "ironharbor",
+      "collect": "草药",
+      "count": 2
+    },
+    "reward_exp": 3293,
+    "reward_gold": 430,
+    "reward_item": "菜谱拓本",
+    "story": "胖托尼蹲在空桶前，半天没说话——那是他腌了三天三夜的招牌料：『腌了三天三夜的肋排，没了！脚印通向码头……有人看见塞德里克的伙计昨夜在会场附近晃悠。你从备料跟到现在，舌头最公道——帮我查清楚，这评委，你来当。』",
+    "progress_text": "你沿脚印追查（探索会场与码头），在码头货箱后逮住塞德里克的伙计，人赃并获。塞德里克却死不承认，反咬一口。城主克洛伊·鹰眼拍板：比赛照常，胖托尼可补料重做。你赶去采集草药补香料，帮胖托尼连夜重新腌制。",
+    "deliver_text": "赛场上，你作为评判逐一品评三道菜，公正记录；胖托尼重新上桌的肋排火候更胜从前。反观塞德里克，心浮气躁，招牌菜烤糊了半边。城主当众警告，塞德里克铁青着脸退场。胖托尼挺进最终对决——你手里，攥着评判席的最后一票。",
+    "source": "side"
+  },
+  "s56": {
+    "id": "s56",
+    "name": "金锅与归途",
+    "giver": "npc_guildmaster",
+    "map": "ironharbor",
+    "chain": "美食与美酒",
+    "unlock": [
+      {
+        "side": "s55"
+      }
+    ],
+    "desc": "垂钓 1 条帝王鲑作决赛压轴菜食材，将获奖菜谱拓本赠予白鹿与麦酒酒馆",
+    "objective": {
+      "collect": "帝王鲑",
+      "count": 1,
+      "use": "菜谱拓本",
+      "map": "ironharbor"
+    },
+    "reward_exp": 3293,
+    "reward_gold": 220,
+    "reward_item": "食谱图纸·金锅野猪肋排",
+    "story": "老约翰·铁砧：『最终对决，题目只有一句——「故乡的味道」。评委临时加题：压轴菜需配一道鲜鱼。胖托尼把鱼竿塞进你手里：帮厨的，最后一道，看你的了。』",
+    "progress_text": "你在铁港码头垂钓，一尾帝王鲑破水而出——绿鳞映着落日，高级烹饪鱼中的上品。决赛场上，塞德里克竟端出一模一样的蜜烤肋排，可火候差了半分。轮到胖托尼：肋排配帝王鲑鱼生，焦香裹着鲜甜。老约翰举勺细品，半晌宣布：胖托尼拿下「金锅·终身成就奖」。塞德里克当众认输，两人和解。",
+    "deliver_text": "颁奖礼后，胖托尼把一份誊好的菜谱拓本郑重放进你手心：『拿回白鹿与麦酒酒馆。让每个路过白鹿城的旅人，都能尝到家乡味。』他摩挲着金锅奖章，笑道：『金锅会生锈，但味道不会。』",
+    "source": "side"
+  },
+  "s57": {
+    "id": "s57",
+    "name": "荒废的药园",
+    "giver": "w_forest_girl",
+    "map": "white_deer_forest",
+    "chain": "药园与花匠",
+    "unlock": [
+      {
+        "side": "s36"
+      }
+    ],
+    "desc": "击败 3 只噬根藤精，清理荒废的月光药园",
+    "objective": {
+      "kill": "噬根藤精",
+      "count": 3
+    },
+    "reward_exp": 2600,
+    "reward_gold": 270,
+    "reward_item": "优良草药",
+    "story": "小荨：『我……我想好了，园子是奶奶的心血，我不能让它烂在林子里。』她带玩家穿过密林，拨开纠缠的藤蔓，一座荒废的药园现出轮廓——藤蔓间窜出三只噬根藤精，根须像鞭子一样抽打过来，护着那片最亮的月光。『小心！它们守着的那株花——别伤着花！』",
+    "progress_text": "三只藤精化作枯藤倒下后，月光倾泻而下，照见园心一株半人高的奇花：花苞紧闭，通体泛着柔和的银光，像托着一小捧月亮。小荨愣在原地：『这……这是月光兰！奶奶说过，月光兰只在守花人手里开花……原来园子里真有一株。』",
+    "deliver_text": "小荨跪在花前，小心地拔去花根边的杂草：『我奶奶年轻时是这一带最有名的采药人……我要把园子修好。这花的事，请你先别说出去。』数日后，小荨匆匆寻到你，眼眶通红：『奶奶……奶奶病重了。』",
+    "source": "side"
+  },
+  "s58": {
+    "id": "s58",
+    "name": "月光安神剂",
+    "giver": "npc_alchemist_serine",
+    "map": "white_deer",
+    "chain": "药园与花匠",
+    "unlock": [
+      {
+        "side": "s57"
+      }
+    ],
+    "desc": "收集草药×3、月光草×2、沼泽花×2、月光兰花瓣×1，交白鹿城炼金铺调药",
+    "objective": {
+      "collect": "草药",
+      "count": 3
+    },
+    "reward_exp": 1620,
+    "reward_gold": 120,
+    "reward_item": "空瓶",
+    "story": "瑟琳：『老师年轻时把毕生药方都抄给了我。』她翻到夹着干枯花瓣的一页：『「月光安神剂」——正是治忘症的方子：草药三份，月光草两份，沼泽花两份，再加一瓣月光兰。依方采集吧。』",
+    "progress_text": "你依方采集：翡翠森林的草药、白鹿之森草丛的月光草、迷雾沼泽的沼泽花。最后一片月光兰花瓣，是小荨亲手剪的——她跪在花前，剪下最外层一片老瓣，小心翼翼包进手帕：『花还活着，它还会开的……对吧？』瑟琳连夜调配，药液入瓶时竟像盛了一弯月牙。",
+    "deliver_text": "瑟琳反复端详药典残页，发现页脚一行极淡的小字：『引子：月之誓——铁港城，奥德里克。』她神情凝重：『药成了，但少一味引子，药力就醒不过来。你去铁港城找老药师奥德里克，只有他知道引子是什么。替我带句话——伊达老师的园子，花开有日。』",
+    "source": "side"
+  },
+  "s59": {
+    "id": "s59",
+    "name": "铁港城的秘方",
+    "giver": "npc_alchemist_serine",
+    "map": "ironharbor",
+    "chain": "药园与花匠",
+    "unlock": [
+      {
+        "side": "s58"
+      }
+    ],
+    "desc": "探索铁港城旧港区，寻访老药师·奥德里克，取回引子秘方",
+    "objective": {
+      "explore": "ironharbor"
+    },
+    "reward_exp": 3293,
+    "reward_gold": 430,
+    "reward_item": "月光祝祷·引子",
+    "story": "瑟琳：『药成了，可页脚写着——引子：月之誓，铁港城奥德里克。替我带句话：伊达老师的园子，花开有日。』",
+    "progress_text": "铁港城旧港区的巷子尽头，一间挂着「歇业」木牌的药房静静立着，门板缝里却漏出淡淡的药香与断断续续的哼歌声。你循声绕到后院，见一位白发老者正给一盆叶缘泛银的草浇水。他看见你怀中的月光兰花瓣，水壶『当』地落地：『月光兰？』",
+    "deliver_text": "老药师奥德里克揭晓：『月光兰不是草药。它是银月精灵的信物之花。花入药能安神复忆，可药引是「月光祝祷」：满月之夜，由真心守花之人以花为媒，念诵祷词，花为守花人而开，取花蜜为引，药力方成。花不是为药开的，是为守花人开的。她守了三十年，花知道。』他取出一只小瓶，口授祷词，一并交予你。",
+    "source": "side"
+  },
+  "s6": {
+    "id": "s6",
+    "name": "考古学家的请求",
+    "chain": "深渊封印",
+    "giver": "npc_guildmaster",
+    "map": "ironharbor",
+    "desc": "深入山丘矿洞，调查古代石板遗迹",
+    "objective": {
+      "explore": "hill_mine"
+    },
+    "reward_exp": 3293,
+    "reward_gold": 430,
+    "reward_item": "强化石",
+    "story": "行会会长·老约翰·铁砧：『老学者布鲁姆托我传个话——矿洞里挖出了些奇怪的石板，上面的符文……和古籍里记载的深渊封印有关。你去山丘矿洞取回来，报酬从行会账上出。』",
+    "source": "side"
+  },
+  "s60": {
+    "id": "s60",
+    "name": "花开之夜",
+    "giver": "w_forest_girl",
+    "map": "white_deer_forest",
+    "chain": "药园与花匠",
+    "unlock": [
+      {
+        "side": "s59"
+      }
+    ],
+    "desc": "夜晚前往月光药园，使用月光祝祷·引子，见证月光兰绽放",
+    "objective": {
+      "use": "月光祝祷·引子",
+      "map": "white_deer_forest"
+    },
+    "reward_exp": 2600,
+    "reward_gold": 180,
+    "reward_item": "配方·月光安神剂",
+    "story": "小荨：『奥德里克老爷爷说，要守花的人念祷词……可我是守花的人吗？奶奶守了它一辈子……我替她守。』",
+    "progress_text": "月圆之夜，你将月露洒在月光兰根部，小荨跪在花前，磕磕绊绊念出精灵祷词。话音落处，月光兰的花苞轻轻颤动，花瓣层层展开，银光如瀑倾泻——三十年不开的花，开了。屋内，奶奶伊达竟在花香中睁开眼睛，讲出四十年前与精灵的约定，安详地合上眼。",
+    "deliver_text": "晨光漫过药园，月光兰谢去，花心结出三滴银色的蜜露。小荨抹去眼泪，把倒了的篱笆一根根重新扎好：『我要当正式的采药人。园子、花、还有奶奶的药方——我都要守下去。谢谢你，陪我和奶奶，等到花开。』",
+    "source": "side"
+  },
+  "s61": {
+    "id": "s61",
+    "name": "老栎的旧物清单",
+    "giver": "npc_antique_oldoak",
+    "map": "white_deer",
+    "chain": "收藏家的执念",
+    "desc": "收集 3 枚狗牙、3 份史莱姆黏液，并在白鹿之森探索发现「兽骨怀表」",
+    "objective": {
+      "collect": "狗牙",
+      "count": 3,
+      "explore": "white_deer_forest"
+    },
+    "reward_exp": 1620,
+    "reward_gold": 250,
+    "reward_item": "老栎的鉴定放大镜",
+    "story": "老栎：『我这店里缺三件旧物——第一件，白鹿之森那群野狗嘴里的旧猎哨，牙料得用三枚野狗牙；第二件，史莱姆肚子里的古胶，三份黏液够我封一件标本；第三件……白鹿之森深处，传说有一只被树根缠住的旧怀表，还会走。你要是能找到，我给你个公道价。』",
+    "progress_text": "你收拾野狗凑齐狗牙，收拾史莱姆凑齐黏液；深入白鹿之森探索时，在一棵苍老栎树的树根下发现一只锈迹斑斑的怀表——表壳刻着「赠奥德里克，愿时光善待你」，指针早已停摆。",
+    "deliver_text": "老栎擦净怀表，手忽然抖了：『奥德里克……旧王陵那位古王的名字。这是三百年前的宫廷物件！』他郑重付钱，把一枚鉴定放大镜塞给你：『以后你捡到的东西，都能看看它的来历。……我这收藏柜正中央，还缺一件会唱歌的贝壳。改天来，我讲个故事给你听。』",
+    "source": "side"
+  },
+  "s62": {
+    "id": "s62",
+    "name": "会唱歌的贝壳",
+    "giver": "npc_antique_oldoak",
+    "map": "white_deer",
+    "chain": "收藏家的执念",
+    "unlock": [
+      {
+        "side": "s61"
+      }
+    ],
+    "desc": "收集 1 条月光鱼（或探索铁港码头·海堤发现搁浅的歌贝），取回歌贝",
+    "objective": {
+      "collect": "月光鱼",
+      "count": 1,
+      "explore": "harbor_docks"
+    },
+    "reward_exp": 1620,
+    "reward_gold": 250,
+    "reward_item": "歌贝挂饰",
+    "story": "老栎：『银铃河的老渔夫说，月圆之夜河面上会浮起一枚会唱歌的贝壳——那不是贝壳，是月光鱼，它把歌贝含在壳里游回深海，歌声是它在告别。我找了二十年，一无所获。铁港码头的渔夫们说，月光鱼其实常在近海出没。你替我去钓一条来。』",
+    "progress_text": "你前往铁港码头垂钓月光鱼（或探索海堤发现一只搁浅的旧贝匣，里面躺着一条干透的月光鱼，鱼腹鼓起）。",
+    "deliver_text": "老栎用银刀剖开鱼腹，取出一枚青蓝色的歌贝，对着灯火轻轻一吹——贝口发出悠长的呜鸣，像潮声，像歌。他把歌贝放进收藏柜正中央，转身把歌贝挂饰挂在你胸前：『记住，好东西值得等二十年。……接下来，我要跟你讲王冠的事了。』",
+    "source": "side"
+  },
+  "s63": {
+    "id": "s63",
+    "name": "旧王陵的信",
+    "giver": "npc_antique_oldoak",
+    "map": "white_deer",
+    "chain": "收藏家的执念",
+    "unlock": [
+      {
+        "side": "s62"
+      }
+    ],
+    "desc": "击败 5 只骷髅兵，探索旧王陵·王棺室取回「黎明王冠碎片」",
+    "objective": {
+      "kill": "骷髅兵",
+      "count": 5,
+      "collect": "黎明王冠碎片",
+      "collect_count": 1
+    },
+    "reward_exp": 1620,
+    "reward_gold": 250,
+    "reward_item": "黎明王冠",
+    "story": "老栎：『那顶王冠是我二十年前从一个老兵手里收的，他说是在旧王陵外围捡的。我信了他二十年。去旧王陵看看——不管真假，我要一个答案。』",
+    "progress_text": "你沿王陵古道一路击败游荡的骷髅兵，进入旧王陵，在古王奥德里克的王棺室探索时，发现棺底暗格中嵌着一枚锈蚀的王冠碎片——断面锋利如新，铭文是黎明纪元的古文字。",
+    "deliver_text": "老栎颤抖着把碎片嵌进赝品王冠的缺口，严丝合缝。他抚摸着铭文，眼眶发红：『二十年……我找了二十年的东西，原来一直躺在王棺底下。』（你离开后，老栎独自对着灯火反复端详碎片——断口太新了。）",
+    "source": "side"
+  },
+  "s64": {
+    "id": "s64",
+    "name": "王冠的归处",
+    "giver": "npc_antique_oldoak",
+    "map": "white_deer",
+    "min_level": 50,
+    "chain": "收藏家的执念",
+    "unlock": [
+      {
+        "side": "s63"
+      }
+    ],
+    "desc": "在星语湖·湖畔找到隐退收藏家·西尔万·苍鹭，带回黎明王冠（真品）",
+    "objective": {
+      "find": "西尔万·苍鹭",
+      "map": "starlake",
+      "chance": 0.15,
+      "collect": "黎明王冠",
+      "collect_count": 1
+    },
+    "reward_exp": 1620,
+    "reward_gold": 3160,
+    "reward_item": "湖珍珠",
+    "story": "老栎面色灰败：『假的。断口是新的，铭文是后刻的——有人故意做旧，骗了我二十年。那封信的笔迹……我想起一个人：晨曦城王家珍品库的老掌库人，人称老苍鹭，二十年前突然隐退，有人说他去了西境星语湖。』",
+    "progress_text": "星语湖湖畔，一间爬满藤蔓的木屋前，西尔万·苍鹭正在给一只苍鹭喂鱼。他一盏茶讲完五件藏品的故事，最后从柜顶取下一顶朴素的王冠：『它在我手里一百年。王冠不属于我，也不属于老栎——它属于所有记得黎明的人。听说老栎要把藏品捐给晨曦城博物馆？那就让它回家吧。』",
+    "deliver_text": "老栎捧起王冠，老泪纵横。第二天，他挂出告示：老栎古董店全部藏品，连同真假两顶王冠，一并捐给晨曦城博物馆——『假货也捐，让后人看看，别像我一样太相信自己的眼睛。』开馆那天，两个老人在展柜前相视一笑。",
+    "source": "side"
+  },
+  "s65": {
+    "id": "s65",
+    "name": "絮毛的毛团子",
+    "giver": "npc_pet_shop_xumao",
+    "map": "white_deer",
+    "min_level": 15,
+    "chain": "宠物情缘",
+    "desc": "探索白鹿之森，找到走丢的垂耳兔「毛团子」",
+    "objective": {
+      "find": "毛团子",
+      "map": "white_deer_forest",
+      "chance": 0.15
+    },
+    "reward_exp": 5310,
+    "reward_gold": 630,
+    "reward_item": "宠物口粮",
+    "story": "絮毛：『呜……三天前野狗追进店里，把笼子撞翻了，毛团子吓破了胆，一头扎进白鹿之森再没出来！就是那只雪白的垂耳兔，后腿有一撮灰毛，我叫它一声「团子」它会回头！这是它窝里的草，它认得这味儿。拜托了！』",
+    "progress_text": "你循着被啃断的灌木和一小撮灰白兔毛一路追寻，在一截倒木的树洞里找到了蜷成一团的毛团子——它吓得直发抖，却还护着身下什么东西：一只毛色银白、尾尖泛着月光的幼狐，后腿缠着旧伤，已经奄奄一息。",
+    "deliver_text": "絮毛接过毛团子哭得稀里哗啦，转头看见幼狐却愣住了——她翻出一本旧得掉渣的图鉴，手都在抖：『银白毛、月光尾……这是月尾狐啊！西境精灵的伴生兽，几百年都难得一见！它伤成这样，怕是活不过今晚……咱们一起想法子救它。』",
+    "source": "side"
+  },
+  "s66": {
+    "id": "s66",
+    "name": "月尾狐的晚餐",
+    "giver": "npc_pet_shop_xumao",
+    "map": "white_deer",
+    "min_level": 20,
+    "chain": "宠物情缘",
+    "unlock": [
+      {
+        "side": "s65"
+      }
+    ],
+    "desc": "收集月光草×1、银鳞鱼×1、兽肉×1，凑齐「月光三色餐」材料",
+    "objective": {
+      "collect": "月光草",
+      "count": 1
+    },
+    "reward_exp": 10293,
+    "reward_gold": 380,
+    "reward_item": "月尾狐食谱·月光三色餐",
+    "story": "絮毛：『找到了！月尾狐只吃「月光三色餐」——月光草、银鳞鱼、兽肉，一样都不能少，少了它就咽不下去！月光草入夜发光，银鳞鱼只在溪流清波里游，兽肉要新鲜野物的。这三样凑齐，我给它熬一锅月光羹，保准它睁眼！』",
+    "progress_text": "你按清单奔波：夜里在白鹿之森草丛采到发光的月光草；在溪边垂钓，钓起鳞片映月的银鳞鱼；又去林子里收拾了几只野狗，割下新鲜的兽肉。三样齐备，絮毛在店里支起小锅，文火慢炖——满店都是清甜的月香气。",
+    "deliver_text": "月光羹喂下去，幼狐的耳朵先动了动，随后尾尖的月光重新亮起，像一盏被点亮的灯。它睁开眼，琥珀色的瞳孔定定地望着你，忽然凑过来，把脑袋轻轻蹭在你手心里。絮毛在旁边抹眼泪：『它认人了。月尾狐认主，一辈子只认一个……它选了你啊，冒险者大人。』",
+    "source": "side"
+  },
+  "s67": {
+    "id": "s67",
+    "name": "向着银月林海的呼唤",
+    "giver": "npc_pet_shop_xumao",
+    "map": "silverwood",
+    "min_level": 28,
+    "chain": "宠物情缘",
+    "unlock": [
+      {
+        "side": "s66"
+      }
+    ],
+    "desc": "护送月尾狐前往银月林海·月桂小径，寻访呼唤的源头",
+    "objective": {
+      "explore": "silverwood"
+    },
+    "reward_exp": 20895,
+    "reward_gold": 1200,
+    "reward_item": "精灵果",
+    "story": "絮毛：『月尾狐是银月精灵的伴生兽，一族认一族的主。它每晚朝西叫，是在想家、想它的主人啊。我查过了，白鹿城往西过了龙骨山脉南麓，就是精灵的地界——银月林海。我想求你……把它送回银月林海去。』月尾狐仿佛听懂了，跳下屋顶，绕着你转了三圈，率先朝城门方向跑去。",
+    "progress_text": "你带着月尾狐一路向西，它专挑林间兽径，拐进银月林海东缘一条开满月桂花的小路（月桂小径）——沿途的野兽见了它都远远避开。走到小径尽头，一名银发尖耳的精灵巡林者张弓立在月桂树下，手里的弓缓缓放下，单膝跪地：『银尾……是银尾吗？银歌长老等了三百年的银尾……』",
+    "deliver_text": "巡林者·月露眼眶含泪：『多谢你把它送回来。银尾是长老·银歌的伴月之灵，三百年前圣战时走失，长老在星语湖等了它整整三百年。能请你再送银尾最后一程吗？长老若见到它，定有重谢。我这就给星语湖传信。』",
+    "source": "side"
+  },
+  "s68": {
+    "id": "s68",
+    "name": "星语湖的故人",
+    "giver": "npc_elven_ranger_yuelu",
+    "map": "starlake",
+    "min_level": 35,
+    "chain": "宠物情缘",
+    "unlock": [
+      {
+        "side": "s67"
+      }
+    ],
+    "desc": "带月尾狐「银尾」前往星语湖，寻访隐居的精灵长老·银歌",
+    "objective": {
+      "explore": "starlake"
+    },
+    "reward_exp": 33796,
+    "reward_gold": 2010,
+    "reward_item": "月辉信物",
+    "story": "长老·银歌抱着失而复得的伙伴，三百年的等待化作一场无声的泪：『……银尾？是你吗，银尾？三百年来，你是第一个把银尾带回来的人。孩子，留下来，听一个老精灵讲讲它的来历吧。』",
+    "progress_text": "长老在湖边点起篝火，讲起三百年前圣战之年精灵与人类第一次并肩而战，讲起人类骑士洛恩·白鬃，讲起银尾驮着两人的书信往返营地与林海，讲起圣战最后一夜银尾用月光吞下深渊的余波，从此没了踪迹。",
+    "deliver_text": "长老抱出一只毛茸茸的月尾狐幼崽，轻轻放进你怀里：『月尾狐认主，一生只认一人。这只小家伙，就当作三百年前那段友谊的谢礼——愿它陪你走遍奥兰迪亚的山河。』她又取出一枚泛着月辉的银哨：『这是月辉信物。带回去给那位宠物店老板娘看，她会懂的。』",
+    "source": "side"
+  },
+  "s69": {
+    "id": "s69",
+    "name": "毛茸茸之友",
+    "giver": "npc_pet_shop_xumao",
+    "map": "white_deer",
+    "min_level": 45,
+    "chain": "宠物情缘",
+    "unlock": [
+      {
+        "side": "s68"
+      }
+    ],
+    "desc": "使用月辉信物，向絮毛讲述月尾狐的归途，见证「月尾宠物店」分店开张",
+    "objective": {
+      "use": "月辉信物",
+      "map": "white_deer"
+    },
+    "reward_exp": 58573,
+    "reward_gold": 1380,
+    "reward_pet": "pet_moonfox",
+    "reward_item": "絮毛宠物店贵宾卡",
+    "story": "絮毛捧着月辉银哨，听你讲完银尾的故事——从树洞里的奄奄一息，到月光羹，到月桂小径的巡林者，到星语湖畔三百年的等待。她一句话没说，眼泪啪嗒啪嗒掉在银哨上。",
+    "progress_text": "絮毛抹了把脸，忽然笑起来，笑得又哭又笑：『三百年的等待……人和兽的缘分，能比人的一辈子还长。我决定了！旁边那间空铺子，我要开一家「月尾宠物店」分店！您就是我们的第一位客人，也是名誉店长！』她把一枚毛线织的徽章别在你胸前。",
+    "deliver_text": "三天后，「月尾宠物店」分店开张。絮毛郑重地朝你鞠了一躬：『从今往后，您就是白鹿城毛茸茸们的自家人。这枚徽章是我连夜织的——「毛茸茸之友」。往后您来店里，宠物口粮管够，洗澡梳毛全免单！』你怀里的月尾狐幼崽适时地「嘤」了一声，满店的人都笑了。",
+    "source": "side"
+  },
+  "s7": {
+    "id": "s7",
+    "name": "修道院的玫瑰",
+    "chain": "教会的阴影",
+    "unlock": [
+      {
+        "side": "s9"
+      }
+    ],
+    "giver": "npc_abbess",
+    "map": "white_abbey",
+    "desc": "击败 5 只腐蚀修女，收集 3 朵染黑玫瑰，查明黑玫瑰的异变",
+    "objective": {
+      "kill": "腐蚀修女",
+      "count": 5,
+      "collect": "染黑玫瑰",
+      "collect_count": 3
+    },
+    "reward_exp": 27720,
+    "reward_gold": 1800,
+    "reward_item": "图纸残页",
+    "story": "玛格丽特：『这些黑玫瑰是圣女走前留下的。她说——「如果花开了，就说明还有希望。」帮我看看。』",
+    "source": "side"
+  },
+  "s70": {
+    "id": "s70",
+    "name": "铁港商会的头一单",
+    "giver": "npc_trade_blade",
+    "map": "ironharbor",
+    "chain": "商路风云",
+    "desc": "探索银风商道，将布匹护送至白鹿城绸缎铺，击败银风道口 5 只野狗",
+    "objective": {
+      "explore": "silver_wind_road",
+      "kill": "野狗",
+      "count": 5
+    },
+    "reward_exp": 3293,
+    "reward_gold": 430,
+    "reward_item": "商会货单·银风线",
+    "story": "利刃：『伙计们嫌银风商道的野狗凶，开价一个比一个黑。你行会铁牌是新的？巧了，商会缺的正是新手的胆子。货单拿着，把这批布送到白鹿城绸缎铺。商会不问英雄出处，只问货物到不到。送到了，我请你喝一杯。』",
+    "progress_text": "你押着货车上路。银风道口的野狗群嗅到布匹味便围了上来，你护货应战，连斩五只野狗，狗群溃散。途经银风驿站歇脚时，商队领队·老赵正被另一群野狗缠得焦头烂额，见你手段利落，竖起拇指。抵达白鹿城，绸缎铺掌柜·梅婶验货、点数、盖印，一个铜板没少。",
+    "deliver_text": "利刃把货单对着光看了两遍，难得点了头：『货全，账清，狗牙还带着血——是干活的料。』他破例多付了半份路费：『商会缺你这样的手。过些日子，有趟更远的货，敢不敢接？』",
+    "source": "side"
+  },
+  "s71": {
+    "id": "s71",
+    "name": "西岭的风沙与贼影",
+    "giver": "npc_trade_blade",
+    "map": "west_ridge_wilds",
+    "chain": "商路风云",
+    "unlock": [
+      {
+        "side": "s70"
+      }
+    ],
+    "desc": "护送丝绸经西岭荒原至铁盾镇，击败荒原腹地 3 名盗贼，探明贼情",
+    "objective": {
+      "kill": "盗贼",
+      "count": 3,
+      "explore": "west_ridge_wilds"
+    },
+    "reward_exp": 25970,
+    "reward_gold": 1290,
+    "reward_item": "云纹丝巾",
+    "story": "利刃：『晨曦城赛琳夫人的丝绸要运到铁盾镇换铁器，点名要你押。晨曦城到铁盾镇要走西岭荒原——官道最近不太平，可这笔生意不能断。记住，货比命贵，人比货贵——两样都给我带回来。』",
+    "progress_text": "行至荒原腹地，三名蒙脸盗贼拦路劫货——衣甲齐整、进退有度，不像寻常剪径毛贼。你击倒三人，从为首者身上搜出一面褪色灰布小旗和半箱成色极好的丝绸。巡逻兵·科尔闻讯赶来，盯着灰旗脸色发沉：『这伙人劫的货从不散卖，全囤着。背后像是有人支使。』",
+    "deliver_text": "货到铁盾镇，镇长·巴托亲自验货，发现货箱封条被动过手脚：『有人想借贼手做局。』利刃捏着灰旗碎片看了很久：『灰旗……旧战场那边传来的记号。这事不对劲。敢不敢替商会去旧战场遗址走一趟？』",
+    "source": "side"
+  },
+  "s72": {
+    "id": "s72",
+    "name": "旧战场的账本",
+    "giver": "npc_trade_blade",
+    "map": "old_battlefield",
+    "chain": "商路风云",
+    "unlock": [
+      {
+        "side": "s71"
+      }
+    ],
+    "desc": "探索旧战场遗址，调查灰旗会藏身处，取回灰旗会密信",
+    "objective": {
+      "find": "灰旗会密信",
+      "map": "old_battlefield",
+      "chance": 0.15
+    },
+    "reward_exp": 27720,
+    "reward_gold": 1800,
+    "reward_item": "灰旗会账册",
+    "story": "利刃：『灰旗会半年间变得有组织、有军饷，背后没人撑腰办不到。替我去旧战场探一探，看看是谁在给他们递粮饷。活着回来，货单我给你留着。』",
+    "progress_text": "你绕开游荡的幽魂，摸到一座废弃军械库——灰旗会的藏身处。库房里成箱的货物堆到房梁：丝绸、盐、铁器，全是商路上「失踪」的那批货。你击退灰旗会哨兵，在库房深处的密匣里翻出一封密信，落款是一枚金穗纹火漆印——晨曦城大商行才用得起的印记。",
+    "deliver_text": "利刃剥开火漆印，脸色一寸寸冷下来：『金穗商行——晨曦城数一数二的大绸缎行，东家是埃德蒙·灰旗，圣光节上给穷人发面包的那位善人。可光凭一封信扳不倒他，要发难，得拿实账说话。还有三本账，你敢不敢陪我收齐？』",
+    "source": "side"
+  },
+  "s73": {
+    "id": "s73",
+    "name": "三本账",
+    "giver": "npc_trade_blade",
+    "map": "old_battlefield",
+    "chain": "商路风云",
+    "unlock": [
+      {
+        "side": "s72"
+      }
+    ],
+    "desc": "收集 3 份灰旗会账册（旧战场走私账 / 西岭雇凶账 / 铁盾囤货账），交予利刃",
+    "objective": {
+      "collect": "灰旗会账册",
+      "count": 3
+    },
+    "reward_exp": 27720,
+    "reward_gold": 900,
+    "reward_item": "三本账册",
+    "story": "利刃：『扳倒埃德蒙·灰旗，要三本账。第一本，旧战场军械库的走私账；第二本，西岭荒原盗贼头目身上的雇凶账；第三本，铁盾镇金穗商行分仓的囤货账。三本账凑齐，铁港商会联名告发，王都那边才有戏。你敢去，我就敢递状子。』",
+    "progress_text": "你三处奔波：旧战场军械库的账房——劫来的货「原封不动」折价卖回金穗商行，利润五五分账；西岭荒原盗贼营地——军饷、兵器、打点官道的开销，笔笔出自金穗商行账房；铁盾镇金穗分仓——囤积的丝绸、盐、铁器堆满三间仓，就等着行情涨到顶再开仓。",
+    "deliver_text": "三本账交到利刃手上。数日后消息传回——国王腓特烈三世下令彻查金穗商行，埃德蒙·灰旗垄断商路、勾结盗贼的图谋彻底败露，金穗商行查封，灰旗会树倒猢狲散。商路上那些「失踪」的货，一车一车回到了货主手里。",
+    "source": "side"
+  },
+  "s74": {
+    "id": "s74",
+    "name": "商会之友",
+    "giver": "npc_trade_blade",
+    "map": "ironharbor",
+    "chain": "商路风云",
+    "unlock": [
+      {
+        "side": "s73"
+      }
+    ],
+    "desc": "赴商会之约，使用商会股份凭证完成入股仪式",
+    "objective": {
+      "use": "商会股份凭证",
+      "map": "ironharbor"
+    },
+    "reward_exp": 3293,
+    "reward_gold": 220,
+    "reward_item": "商会股份凭证",
+    "story": "利刃：『商会没什么能谢你的，就这个实在。从今天起，你是铁港商会的股东，商路的红利，有你一份。路比剑长——你护的不是货，是这条路。路在，生意就在，人就在。』",
+    "progress_text": "入股仪式上，利刃难得话多，讲起自己年轻时在佣兵队「灰刃」当斥候的往事：一趟护商任务全队只剩他一个，是铁港商会的老会长在码头收留了他这个扛包工，给了他一口饭和一句话——「路比剑长」。",
+    "deliver_text": "宴罢，利刃把玩家送到门口，忽然压低声音：『晨曦城的国王腓特烈三世听说了你的义举，御前会议上点名夸了一句：「冒险者里，也有会做生意的料。」王宫采买那边，往后优先走铁港商会的线。从跑腿送信的小伙，到商会眼里的红人——路还长，慢慢走。』",
+    "source": "side"
+  },
+  "s75": {
+    "id": "s75",
+    "name": "博物馆的猫爪印",
+    "giver": "npc_museum_curator",
+    "map": "dawn_city",
+    "chain": "侦探与怪盗",
+    "unlock": [
+      {
+        "main": "q6_1"
+      }
+    ],
+    "min_level": 30,
+    "desc": "探索晨曦城，调查王都博物馆失窃现场，追查怪盗「影子猫」",
+    "objective": {
+      "explore": "dawn_city"
+    },
+    "reward_exp": 24297,
+    "reward_gold": 1330,
+    "reward_item": "猫爪卡片",
+    "story": "柯雷恩：『出大事了！昨夜闭馆后，名剑展的展柜被撬了——借展的那柄「霜河」古剑不翼而飞！倒不是剑值多少钱……是、是保险不赔赝品啊！现场只留下这张卡片，画着个猫爪，背面还写着——「假货，差评。真品在城主府，我去取了。——影子猫」。拜托您查清楚！』",
+    "progress_text": "你勘查王都博物馆展柜：锁眼完好、玻璃无一丝裂纹。转往晨曦大圣堂回廊，守夜修士回忆：『后半夜……是有个黑影背着长条包袱往南城门去了，步子轻得像猫，还哼着歌，唱的好像是铁港那边的船歌。』南城门门闩上挂着同样的猫爪卡片：『路过，买果冻去。——影子猫』。",
+    "deliver_text": "柯雷恩：『向南？南边是橡木镇、白鹿城……等等！白鹿城城主府也有一柄「霜河」！那是城主家的传家宝剑。您顺着南边追。这是现场的猫爪卡片，您收好，兴许用得上。』",
+    "source": "side"
+  },
+  "s76": {
+    "id": "s76",
+    "name": "三份史莱姆果冻",
+    "giver": "npc_innkeeper",
+    "map": "oak_town",
+    "chain": "侦探与怪盗",
+    "unlock": [
+      {
+        "side": "s75"
+      }
+    ],
+    "min_level": 35,
+    "desc": "探索橡木镇，持猫爪卡片向玛莎打听住店的兜帽怪客",
+    "objective": {
+      "explore": "oak_town"
+    },
+    "reward_exp": 33796,
+    "reward_gold": 2010,
+    "reward_item": "橡木桶旅店房账",
+    "story": "玛莎：『您说那兜帽客？我记性可好了！三天前半夜，一个兜帽客来住店，兜帽压得低低的，只露一双琥珀色的眼睛——他规矩得很，房钱一次付清。怪就怪在——他连着两晚都要三份史莱姆果冻，多加糖，还要一杯猫薄荷茶！我开店二十年，头回见人点猫薄荷茶的！』",
+    "progress_text": "玛莎翻出房账：客人署名「L·K」，退房时留了张画着猫爪的餐巾纸当小费，还打听过去白鹿城的路况，「说是要去取一件自家的东西」。老铁铁匠铺：那人买了一截细钢索，说是晾衣绳。镇口马厩的干草堆上发现一撮银灰色毛发——不是猫的毛色，是染的。方向明确：白鹿城。",
+    "deliver_text": "玛莎：『自家的东西？白鹿城……您说城主府那把剑？哎哟，那剑的名声我可听过——当年老城主从铁港城一个商人手里……咳，我多嘴了。您到白鹿城，去「白鹿与麦酒」找胖托尼，他消息最灵，比猫还灵！』",
+    "source": "side"
+  },
+  "s77": {
+    "id": "s77",
+    "name": "屋顶上的黑影",
+    "giver": "npc_tavern_owner",
+    "map": "white_deer",
+    "chain": "侦探与怪盗",
+    "unlock": [
+      {
+        "side": "s76"
+      }
+    ],
+    "min_level": 40,
+    "desc": "在城主府埋伏，制服翻墙的蒙面小贼（战斗目标为制服，不致死）",
+    "objective": {
+      "kill": "蒙面小贼·米洛",
+      "count": 1
+    },
+    "reward_exp": 44692,
+    "reward_gold": 1780,
+    "story": "胖托尼：『您追的影子猫？巧了！昨晚有人看见城主府屋顶上蹲着个黑影，还冲巡夜的卫兵挥手！城主府正为借展的剑被偷的事加派了人手——听说府里还锁着一柄真的「霜河」，在书房密室里。我赌那贼今晚准来！您要是抓到了，这杯麦酒算我的；抓不到，您请我喝三杯！』",
+    "progress_text": "子夜时分，一个瘦小身影翻上墙头，蹑手蹑脚摸向书房的窗——你一跃而出，黑影吓得「哇——！」一声摔下墙头，兜帽滚落，露出一张十四五岁、满脸雀斑的脸：『别、别杀我！我就是个望风的！师父说今晚只是踩点，不偷东西的——呜呜呜踩点也算偷吗？』（三刻后他抱头投降。）他抽抽搭搭全招了：『师父他只偷为富不仁者的！他说这把剑本来就是卡尔文家的，我们不是偷，是取！』",
+    "deliver_text": "胖托尼倒了一杯麦酒推过来：『得，这杯算我的。「卡尔文」？铁港城的老商号！二十年前……嘿，这事儿有蹊跷。城主府书房里存着当年的税关旧档，您要是想查，我胖托尼可以替您把书房的卫兵引开半个时辰——不多要，三杯麦酒！』",
+    "source": "side"
+  },
+  "s78": {
+    "id": "s78",
+    "name": "传家宝剑的真相",
+    "giver": "npc_apprentice_milo",
+    "map": "white_deer",
+    "chain": "侦探与怪盗",
+    "unlock": [
+      {
+        "side": "s77"
+      }
+    ],
+    "min_level": 45,
+    "desc": "潜入城主府书房，搜查二十年前的税关旧档，查明「霜河」的真实来历",
+    "objective": {
+      "find": "城主府旧档·扣押文书",
+      "map": "white_deer",
+      "chance": 0.15
+    },
+    "reward_exp": 58573,
+    "reward_gold": 0,
+    "story": "米洛：『您、您去查过了吗？书房里的旧档！师父说那文书上有他家徽的拓印，跟城主府剑鞘上的对不上！您要是查清楚了，就明白我们不是贼……至少不是那种贼！师父说今晚去「取剑」，让我在这儿等您……他说您是个明白人。』",
+    "progress_text": "胖托尼果然守信，前院一声「走水啦——！」，书房卫兵哗啦啦全跑了。你在积灰的税关卷宗最底层摸出一份二十年前的扣押文书：老城主以「夹带私货」为名，扣下铁港城商人·卡尔文整船货物与祖传宝剑「霜河」，「归还」一栏始终空白；文书夹着老卡尔文的申诉信副本，落款处画着一枚「衔剑的猫」家徽——而城主府引以为傲的传家宝剑，剑鞘上錾的正是同一只猫。真相大白：所谓传家宝剑，本就是赃物。",
+    "branch": {
+      "prompt": "回到白鹿与麦酒，屋顶传来一声轻响——影子猫现身，黑斗篷、琥珀色的眼睛，彬彬有礼地欠身：『侦探先生，查清楚了？那剑鞘上的猫，可还认得？』你面临抉择——",
+      "options": [
+        {
+          "key": "1",
+          "label": "交给卫兵（正义线）",
+          "text": "你招呼卫兵，把影子猫交给律法。卫兵闻讯围拢，影子猫不躲不闪，任由捆上绳索，只朝你微微一笑：『……我偷过十七件东西，件件物归原主，从不伤人。今日栽在您手里，不冤。剑在城西地窖里，烦您转交博物馆——那本就是我家的东西。』卫兵队长：『好样的，侦探！这案子结了，城主府必有重谢！』",
+          "reward_exp": 5000,
+          "reward_gold": 2500,
+          "reward_item": "晨曦城卫兵嘉奖令",
+          "title": "公正执法者",
+          "flag": "s78_branch_justice"
+        },
+        {
+          "key": "2",
+          "label": "放他师徒一马（义气线）",
+          "text": "你挥手让卫兵退下，放他师徒一马。影子猫怔了怔，随即笑出声来，从怀里摸出一个丝绒小包，轻轻抛到你手里：『……我爹咽气前说，剑上刻着咱家的家徽，别让它埋在别人家的祠堂里。您放我们师徒一马，这份情，猫记下了。这枚胸针是家母的遗物，权当谢礼——剑我已经让米洛送到博物馆门口了，物归原主，是我这行的规矩。』米洛眼泪汪汪地挥手：『谢谢您！等我学成手艺，第一个取您的欠条！』",
+          "reward_exp": 5000,
+          "reward_gold": 2500,
+          "reward_item": "eq:猫眼石胸针",
+          "title": "影子之友",
+          "flag": "s78_branch_mercy"
+        }
+      ]
+    },
+    "source": "side"
+  },
+  "s79": {
+    "id": "s79",
+    "name": "猫爪与晨昏",
+    "giver": "npc_museum_curator",
+    "map": "dawn_city",
+    "chain": "侦探与怪盗",
+    "unlock": [
+      {
+        "side": "s78"
+      }
+    ],
+    "min_level": 50,
+    "desc": "在王都博物馆门口找到影子猫的信，见证馆长公开道歉与宝剑归还",
+    "objective": {
+      "find": "影子猫的信",
+      "map": "dawn_city",
+      "chance": 0.15
+    },
+    "reward_exp": 74871,
+    "reward_gold": 3160,
+    "reward_item": "影子猫的信",
+    "story": "飞鸽传书，柯雷恩的字迹龙飞凤舞：『速来！那猫……那贼，留了封信！——柯』",
+    "progress_text": "王都博物馆门前石阶上端端正正放着一只牛皮纸信封，压着一枚猫爪火漆印，信封背面一行小字：『致那位明白人侦探。——影子猫 敬上』。信共五页：自述身世——二十年前父亲老卡尔文如何被扣货夺剑、申诉无门、郁郁而终；附上税关扣押文书的抄件与「衔剑的猫」家徽拓印。柯雷恩读完，老泪纵横，又气又笑：『……这贼，偷东西还附赠真相的，老夫头一回见。』",
+    "deliver_text": "次日清晨，王都博物馆门前聚满了人。柯雷恩当众宣读致歉声明：『我馆鉴宝不严，将城主府仿品当古剑展出，愧对同行，愧对市民。经查，真剑「霜河」为二十年前白鹿城税关强夺铁港城商人卡尔文之祖传物，现归还卡尔文家族后人——由铁港城商会代领，即日启程。名剑展，撤展。』他将一枚铜质荣誉徽章放进你手心：『您不是第一个抓贼的，却是第一个让贼讲出真话的。』",
+    "source": "side"
+  },
+  "s8": {
+    "id": "s8",
+    "name": "王都的棋局",
+    "giver": "npc_king",
+    "map": "dawn_city",
+    "desc": "为宫廷图书馆收集 3 份古代文献",
+    "objective": {
+      "explore": "old_king_tomb"
+    },
+    "reward_exp": 16649,
+    "reward_gold": 1030,
+    "reward_item": "双倍金币符",
+    "story": "腓特烈三世：『三百年前的宫廷档案，关键几页被「意外」烧毁了。朕不信巧合——替朕找一份别的副本回来。』",
+    "source": "side"
+  },
+  "s80": {
+    "id": "s80",
+    "name": "酒馆角落的独饮者",
+    "giver": "npc_ironmask",
+    "map": "frost_horn",
+    "chain": "老兵不死",
+    "min_level": 40,
+    "desc": "在霜角酒馆买一杯热麦酒，放到角落老兵面前，听他开口",
+    "objective": {
+      "use": "醇香麦酒",
+      "map": "frost_horn"
+    },
+    "reward_exp": 44692,
+    "reward_gold": 1190,
+    "reward_item": "金羽残片",
+    "story": "你端着一杯刚烫好的麦酒走过去，在他对面坐下，把酒轻轻放在他手边。他抬起头——一副粗糙的铁面具遮住半张脸：『……三百年了，你是第一个敢坐到我面前的人。』他把你的酒推回来，又把自己的那杯推过去：『酒我请。就当替那些没能坐下来的老兄弟，敬你一杯。』",
+    "progress_text": "此后你每次路过霜角堡，都会去角落坐一坐。他话一点点漏出来：他打过仗——三百年前的那场圣战；他有个兄弟，叫巴尔塔，吹号的人，撤退时替他挡了一刀，死的时候号还含在嘴里。『旧战场遗址最深处的旧壕里，埋着他的银哨。我想去取——可我走不到那里。』",
+    "deliver_text": "铁面从衣襟里摸出一枚残缺的金色羽毛，放在桌上：『旧战场遗址，最深处的旧壕。找到那枚哨子，带回来给我。这枚金羽你带着——幽魂认得它的光，会给你让路。……要是哨子锈得吹不响了，也带回来。它替我记着那声号响。』",
+    "source": "side"
+  },
+  "s81": {
+    "id": "s81",
+    "name": "旧壕的银哨",
+    "giver": "npc_ironmask",
+    "map": "old_battlefield",
+    "chain": "老兵不死",
+    "unlock": [
+      {
+        "side": "s80"
+      }
+    ],
+    "min_level": 45,
+    "desc": "探索旧战场遗址·遗址核心，取回战友遗物·锈蚀的银哨；击败战场幽魂×3",
+    "objective": {
+      "find": "锈蚀的银哨",
+      "map": "old_battlefield",
+      "chance": 0.15,
+      "kill": "战场幽魂",
+      "count": 3
+    },
+    "reward_exp": 58573,
+    "reward_gold": 2070,
+    "reward_item": "锈蚀的银哨",
+    "story": "你攥紧那枚金羽——它在你手心微微发烫，像在指路。你沿着锈蚀的壕壁一路向里，走向遗址最深处的旧壕。旧壕里的幽魂比想象中多，可有三只不一样——它们穿着三百年前的破甲，眼眶里烧着浑浊的火，尖啸着扑上来。你没有拔剑的犹豫：它们的嚎叫里没有恶，只有没打完的仗、没说完的话。",
+    "progress_text": "你一剑一剑送它们安息。金羽的光里，它们消散成细碎的光点。你在旧壕最深处停住——一具靠墙而坐的枯骨，怀里抱着一杆锈死的长矛，手边土里埋着半截银哨。哨身刻着一行小字：『吹响它的人，会替你记住回家的路。』",
+    "deliver_text": "你把半截银哨放在铁面面前。他捧起来凑到唇边——吹不响，锈死了。他没有失望，反而笑了一下，那笑容比哭还难看：『好。它替我记了三百年的号声，够本了。』他把银哨挂在胸前，沉默良久，忽然说：『……你坐下来。我欠你一个故事。一个关于火的故事。』",
+    "source": "side"
+  },
+  "s82": {
+    "id": "s82",
+    "name": "那晚的火",
+    "giver": "npc_ironmask",
+    "map": "frost_horn",
+    "chain": "老兵不死",
+    "unlock": [
+      {
+        "side": "s81"
+      }
+    ],
+    "min_level": 52,
+    "desc": "将银哨郑重交到铁面手中，听他说完当年真相",
+    "objective": {
+      "use": "锈蚀的银哨",
+      "map": "frost_horn"
+    },
+    "reward_exp": 86765,
+    "reward_gold": 1490,
+    "reward_item": "烬落村旧档抄本",
+    "story": "铁面把酒馆的油灯拨亮了些：『我叫加尔文·烬羽。烬落村人——北境霜原边上的一个小村子，现在已经没人记得它了。』他摘下铁面具，半张脸是烧融的旧疤：『那年圣战打到最后，恶魔军团往北撤，一路扫荡村庄。烬落村被围了。我那时……已经被火选中了。守夜者的火，会在战场上挑人。我是末席。』",
+    "progress_text": "『为了拖住恶魔，我封死了村口，点了火。火是我放的。整座村庄，包括没来得及出来的——我娘，我婆娘，我闺女。父神之火没有烧死我。它在我身上烙了这个印记，我就成了守夜者——不死不灭，伤疤永不愈合。三百年来，我每晚都听得见火声。』他重新戴上面具：『我连自己的村子都没守住。我这样的人，有什么资格替守夜者说话？』",
+    "deliver_text": "『密道里逃出去的人，有个婴儿——是我妹妹托付的。我不知道她活没活下来。三百年，我不敢打听。』他垂下头，把银哨从脖子上解下来，放在你手心：『带上它。替我去晨曦城、白鹿城问问——烬落村的遗孤，还活着吗？她要是认得这个哨子……就认得那晚的火。』",
+    "source": "side"
+  },
+  "s83": {
+    "id": "s83",
+    "name": "三百年后的黎明",
+    "giver": "npc_ironmask",
+    "map": "dawn_city",
+    "chain": "老兵不死",
+    "unlock": [
+      {
+        "side": "s82"
+      }
+    ],
+    "min_level": 60,
+    "desc": "探索晨曦城·圣光大教堂查圣战旧档，前往白鹿城·白鹿圣堂找到接生婆·罗莎琳",
+    "objective": {
+      "explore": "dawn_city",
+      "find": "罗莎琳",
+      "map": "white_deer",
+      "chance": 0.15
+    },
+    "reward_exp": 133788,
+    "reward_gold": 3590,
+    "reward_item": "罗莎琳的旧手帕",
+    "story": "晨曦城·圣光大教堂的档案馆里，守档司书翻出一卷积灰的圣战旧档。余烬元年的记录薄上，一行小字：『北境烬落村遗孤一名，女婴，名罗莎琳，由撤退队伍携至南境，安置于白鹿城圣堂抚养。』司书眯着眼打量你：『那位罗莎琳……还活着呢，就在白鹿城。全城最有名的接生婆。』",
+    "progress_text": "白鹿圣堂旁的老屋里，一位白发老妇人正在给摇篮里的婴儿哼歌。听到「烬落村」，她的手一抖，药碗摔在地上。你取出那半截银哨。老妇人盯着断口看了很久，忽然老泪纵横：『他……他还活着？那个站在村口点火的人，还活着？』她撩起衣领——胸口，一枚几乎淡得看不见的金色印记。",
+    "deliver_text": "『那年我还在襁褓里，撤退的路上发了高烧，快死了。队伍里有个守夜者，用金焰的余烬给我续了命。从此我老得很慢。我记得那晚。火里有个男人站在村口，朝密道挥手，喊「快走！」——火把他吞了。我活了三百年，接生了三千个孩子。每年长夜节，我都给他点一支烛。我一直以为……他死了。』",
+    "source": "side"
+  },
+  "s84": {
+    "id": "s84",
+    "name": "老兵的家",
+    "giver": "npc_ironmask",
+    "map": "frost_horn",
+    "chain": "老兵不死",
+    "unlock": [
+      {
+        "side": "s83"
+      }
+    ],
+    "min_level": 70,
+    "desc": "参加「老兵的家」开业夜，与铁面共饮开业第一杯",
+    "objective": {
+      "use": "醇香麦酒",
+      "map": "frost_horn"
+    },
+    "reward_exp": 193862,
+    "reward_gold": 2170,
+    "reward_item": "eq:守夜者徽章",
+    "story": "大雪封城的夜里，霜角酒馆门口挂起一块新招牌——『老兵的家』。烧壶把最好的麦酒桶搬出来：『这老东西要开酒馆？行，店还是我的，柜台分他一半！』铁面站在吧台后面，手足无措地擦一只杯子——他擦了一百年杯子，第一次觉得这杯子是自己的。",
+    "progress_text": "开业夜，酒馆里坐满了人。铁面把那半截银哨挂上吧台上方，在哨子下点亮一支烛。他端起第一杯酒，没喝，先举向门口，举向看不见的北方：『敬没能回家的老兄弟。』满屋老兵跟着举杯，没有人说话，酒馆里只听得见雪和火。",
+    "deliver_text": "他转向你，从衣襟里取出那枚完整的金羽徽章——守夜者徽章：『三百年前，父神之火把这枚徽章烙在我身上。现在我想把它交给你。不是不要它了。是有人记得，它就还在亮。』他把第一杯酒推到你面前：『老兵的家，永远有一张桌子是留给你的。』",
+    "source": "side"
+  },
+  "s85": {
+    "id": "s85",
+    "name": "第一课：史莱姆练手",
+    "giver": "npc_blacksmith",
+    "map": "oak_town",
+    "chain": "学徒之路",
+    "desc": "击败 3 只绿史莱姆（橡木平原），通过老铁的入门第一课",
+    "objective": {
+      "kill": "绿史莱姆",
+      "count": 3
+    },
+    "reward_exp": 2600,
+    "reward_gold": 270,
+    "story": "小艾：『新来的？行会规矩第一条——先找个靠谱的师父。去找老铁吧，镇上带新人最有一套的就是他。』老铁头也不抬：『小艾那丫头又给我塞人？行——小子，会挥剑吗？不会？那正好。我教你第一课：去橡木平原，砍 3 只绿史莱姆回来。记住，这玩意儿跳起来砸人，落地那一下最虚。砍一刀，退一步，别贪。』",
+    "progress_text": "橡木平原·草地边缘。你遭遇绿史莱姆。战斗引导：史莱姆鼓起身子——它要跳了！趁它落地的空当挥剑！（攻击→回避→反击的节奏）你击杀 3 只绿史莱姆，顺手捡起几团亮晶晶的史莱姆黏液。",
+    "deliver_text": "老铁接过你的剑翻来覆去地看：『架势还行，就是收剑太慢——史莱姆不会等你，野狗更不会。这把剑算你入门的贺礼，拿去用，砍钝了回来找我磨。』",
+    "source": "side"
+  },
+  "s86": {
+    "id": "s86",
+    "name": "教小灰认怪物",
+    "giver": "npc_guild_clerks",
+    "map": "oak_town",
+    "chain": "学徒之路",
+    "unlock": [
+      {
+        "side": "s85"
+      }
+    ],
+    "min_level": 3,
+    "desc": "探索橡木平原，教小灰认识怪物（绿史莱姆/野猪/野狗）",
+    "objective": {
+      "explore": "oak_plain"
+    },
+    "reward_exp": 2600,
+    "reward_gold": 160,
+    "story": "小艾：『这是小灰，镇上捡回来的孤儿，玛莎养着他，整天嚷着要当冒险者，连史莱姆长什么样都不知道。你刚打完史莱姆回来吧？带带他，教他认认怪物，省得他哪天真溜出去喂了野狗。』小灰猛地站直，学着冒险者的样子抱拳：『大哥哥（大姐姐）！教教我吧！我学得可快了！』",
+    "progress_text": "橡木平原。小灰一路小跑跟在身后，嘴就没停过。你一路讲解：『绿史莱姆，软乎乎的一团，跳起来砸人，落地是空当。野猪，会冲撞，正面硬顶是傻瓜。野狗，成群结队，专欺负落单的，看见狗群就跑，跑不掉就背靠树。』小灰掏出炭条，在随身木板上认真画了三团歪歪扭扭的怪物图。",
+    "deliver_text": "小灰把木板举到你面前：『我全记住了！圆的是史莱姆，獠牙的是野猪，呲牙的是野狗——我画得像不像？』小艾凑过来看了一眼，笑得直不起腰：『像！像三团泥巴！』小灰也不恼，把木板抱在怀里：『等我长大了，一定比它们都厉害！』",
+    "source": "side"
+  },
+  "s87": {
+    "id": "s87",
+    "name": "白鹿之森的野狗",
+    "giver": "npc_innkeeper",
+    "map": "oak_town",
+    "chain": "学徒之路",
+    "unlock": [
+      {
+        "side": "s86"
+      }
+    ],
+    "min_level": 5,
+    "desc": "击败 3 只野狗（白鹿之森·林间入口），救出偷跑去打野狗的小灰",
+    "objective": {
+      "kill": "野狗",
+      "count": 3
+    },
+    "reward_exp": 1620,
+    "reward_gold": 180,
+    "reward_item": "铁哨子",
+    "story": "玛莎急得团团转：『你来得正好！小灰那孩子不见了！早上他还问我野狗有多厉害，我说「你问这个干嘛」——他肯定去白鹿之森了！那孩子连剑都拿不稳，可别出什么事！』老铁闻讯赶到，把一把铁哨子塞进你手里：『拿着！吹响它，那小子认得这哨音。找到他——回来我收拾他！』",
+    "progress_text": "白鹿之森·林间入口。你赶到时，小灰正被 3 只野狗围在中间。他举着一根削尖的树枝且战且退，后背抵着一棵橡树，左臂的袖子被扯破，血珠顺着手臂往下滴。他咬着嘴唇，一声不吭，眼眶憋得通红也不让眼泪掉下来。看到你，他喊了一声：『我……我没事！』你击杀 3 只野狗。",
+    "deliver_text": "你给小灰包扎。他低头看着伤口：『我……我就是想证明我也可以。书上说冒险者都要打野狗。』你问疼不疼。他摇头，又点头，最后小声说：『疼。但是我不哭。』老铁赶到，黑着脸骂：『臭小子！谁让你来的！』骂完却蹲下来，笨手笨脚地替他重新上药。末了，老铁叹了口气：『想学本事？明天起，到铺子里来。』",
+    "source": "side"
+  },
+  "s88": {
+    "id": "s88",
+    "name": "冒险者手册",
+    "giver": "npc_blacksmith",
+    "map": "oak_town",
+    "chain": "学徒之路",
+    "unlock": [
+      {
+        "side": "s87"
+      }
+    ],
+    "min_level": 8,
+    "desc": "在橡木平原·废弃磨坊找到旧书《冒险者手册》",
+    "objective": {
+      "find": "冒险者手册",
+      "map": "oak_plain",
+      "chance": 0.15
+    },
+    "reward_exp": 2485,
+    "reward_gold": 350,
+    "reward_item": "《冒险者手册》",
+    "story": "老铁少见地没在打铁，坐在铁砧边擦一副旧手套：『那小子，有股韧劲。挨了野狗咬都没哭——是块料。我想收他当学徒。可我师父留给我的《冒险者手册》不见了。那书里记着收徒的规矩、打铁的入门诀窍，还有……老头子我这辈子攒下来的话。有人说在橡木平原的废弃磨坊里见过一本旧书。帮我找回来。』",
+    "progress_text": "废弃磨坊早已塌了半边。你在阁楼的干草堆下摸到一本硬邦邦的东西——一本牛皮封面的旧书，扉页上有一行字，笔迹遒劲：『赠吾徒·老铁。打铁先打人，人正铁才正。——你的师父，老铁匠·古铁。』书里夹着一片压平的橡树叶，和一张小灰画的歪歪扭扭的怪物图。",
+    "deliver_text": "老铁接过书，手指摩挲着扉页那行字，沉默了很久。半晌，他开口，声音有点哑：『师父……您看，我又要带徒弟了。』他把书收进怀里，冲你摆摆手：『书找到了，事定了。过两天，你来看这小子拜师。』",
+    "source": "side"
+  },
+  "s89": {
+    "id": "s89",
+    "name": "拜师礼",
+    "giver": "npc_blacksmith",
+    "map": "oak_town",
+    "chain": "学徒之路",
+    "unlock": [
+      {
+        "side": "s88"
+      }
+    ],
+    "min_level": 10,
+    "desc": "递交《冒险者手册》，见证小灰拜师",
+    "objective": {
+      "use": "《冒险者手册》",
+      "map": "oak_town"
+    },
+    "reward_exp": 3293,
+    "reward_gold": 220,
+    "reward_item": "小灰的木雕",
+    "story": "老铁铁匠铺门口围了一圈镇民。小灰换了一身干净衣裳，站在铁砧前紧张得直搓手指。老铁难得穿上了压箱底的皮围裙，清了清嗓子：『铁匠行当的规矩——拜师，对着铁砧敲三下。一下敬祖师，二下敬手艺，三下——敬自己往后的日子。书是你找回来的，见证人，你来。』",
+    "progress_text": "你把《冒险者手册》郑重地放到铁砧上。小灰深吸一口气，拿起小锤子，对着铁砧「当、当、当」敲了三下。第三下敲完，他抬头，眼圈红红的，但笑得露出一口白牙。老铁从怀里掏出一把磨得发亮的小铁锤，塞进他手里：『从今天起，你是我的学徒。锤子给你，手要稳，心要正。』玛莎在旁边抹眼泪：『这孩子，总算有家了。』",
+    "deliver_text": "人群散去。小灰抱着新锤子，跑到你面前，站定，仰起头，认认真真地说：『等我成了大冒险家，第一件事就是请你喝酒！』他最后塞给你一个东西——一只他偷偷刻了好几个晚上的橡木小鸟，刻得歪歪扭扭，却打磨得光光滑滑：『这是我刻的。老铁说，送人的东西要用心。』",
+    "source": "side"
+  },
+  "s9": {
+    "id": "s9",
+    "name": "骑士的誓言",
+    "chain": "教会的阴影",
+    "unlock": [
+      {
+        "side": "s46"
+      }
+    ],
+    "giver": "npc_dawn_squire",
+    "map": "dawn_city",
+    "desc": "击败 5 只审判猎犬，证明自己",
+    "objective": {
+      "kill": "审判猎犬",
+      "count": 5
+    },
+    "reward_exp": 16649,
+    "reward_gold": 1030,
+    "reward_item": "骑士团徽章",
+    "story": "骑士团新兵：『罗兰团长被教会派去追捕圣女了……我不信圣女是坏人。你能帮我调查吗？』",
+    "source": "side"
+  },
+  "s90": {
+    "id": "s90",
+    "name": "银铃河畔的老渔翁",
+    "giver": "npc_fisher_buoy",
+    "map": "silver_river",
+    "chain": "垂钓传说",
+    "min_level": 15,
+    "desc": "收集 3 条银鳞鱼（银铃河钓点），验证银铃鲤传说",
+    "objective": {
+      "collect": "银鳞鱼",
+      "count": 3
+    },
+    "reward_exp": 5310,
+    "reward_gold": 310,
+    "reward_item": "面团鱼饵",
+    "story": "浮标：『年轻人，会钓鱼吗？我在这条河边钓了五十年鱼。河神我都见过三回——鳞片在雾里发光，比月亮还亮。可我从没钓起过它。我爷爷说，那叫银铃鲤，是这条河的魂。你替我钓三条鱼上来——随便什么鱼都行。我想看看，这条河还活不活着。』",
+    "progress_text": "你在银铃河畔下竿。河水清得能看见卵石，第一竿是银鳞鱼，第二竿还是银鳞鱼，第三竿依然。这些鱼鳞片发亮，翻腾时发出细碎的响声——你忽然明白这条河为什么叫「银铃河」。",
+    "deliver_text": "浮标接过鱼，一条条翻看，指尖摩挲着银鳞鱼的鳞片，半晌没说话。最后他把鱼放回木盆，声音有些发哑：『河还活着。鱼还在。那它……也该在。』他摸出一张叠得发硬的羊皮纸——爷爷留下的旧地图，上面标了三处银铃鲤出没的地方：『白鹿之森溪流、星语湖、无名港。你替我去看看。』",
+    "source": "side"
+  },
+  "s91": {
+    "id": "s91",
+    "name": "旧地图上的三处墨点",
+    "giver": "npc_fisher_buoy",
+    "map": "starlake",
+    "chain": "垂钓传说",
+    "unlock": [
+      {
+        "side": "s90"
+      }
+    ],
+    "min_level": 25,
+    "desc": "探索星语湖，钓得 1 颗鲛人泪（星语湖钓点蓝档限定）",
+    "objective": {
+      "explore": "starlake",
+      "collect": "鲛人泪",
+      "count": 1
+    },
+    "reward_exp": 16649,
+    "reward_gold": 1030,
+    "reward_item": "萤光鱼饵",
+    "story": "浮标：『星语湖，精灵的湖。爷爷说，银铃鲤最喜欢那里的水——月光落进湖里，湖水会替星星说话。这是爷爷的线，泡过星语湖的水。你带上它。到了湖畔，下一竿——看看那湖还认不认得这根线。』",
+    "progress_text": "你穿过西岭荒原与暮岭古道，总算站到星语湖的湖畔。湖面极静，倒映着整片天空。你甩出那根旧钓线，等了一竿又一竿。终于，水面泛起奇异的光晕——收线时，钓上来一颗泪滴形的珍珠，莹蓝透亮，像凝固的月光。是鲛人泪。",
+    "deliver_text": "浮标接过鲛人泪，举到眼前看了很久：『星语湖的水还活着。鲛人泪是水之民的眼泪——有泪的地方，就有牵挂。可它不是银铃鲤。传说里说，银铃鲤只在月圆之夜现身。你再去一趟——月圆那天，守在湖畔。若它真的不在了，你就钓一条最怪的鱼回来，让老头子死心。』",
+    "source": "side"
+  },
+  "s92": {
+    "id": "s92",
+    "name": "鱼腹里的半片鳞",
+    "giver": "npc_fisher_buoy",
+    "map": "starlake",
+    "chain": "垂钓传说",
+    "unlock": [
+      {
+        "side": "s91"
+      }
+    ],
+    "min_level": 35,
+    "desc": "月圆之夜在星语湖钓得 1 条大得不寻常的月光鱼，剖腹取得半片月鳞",
+    "objective": {
+      "collect": "月光鱼",
+      "count": 1
+    },
+    "reward_exp": 33796,
+    "reward_gold": 1010,
+    "reward_item": "月鳞（半片）",
+    "story": "浮标把地图、钓线、还有一只装着萤光鱼饵的布袋一起塞给你：『月亮最圆的那一夜，星语湖的水会变成银子。你替老头子守这一夜。若钓到一条大得不正常的鱼……别急着高兴，也别急着失望。剖开看看。传说里的鱼，肚子里都藏着故事。』",
+    "progress_text": "月圆之夜，星语湖亮如白昼。后半夜，鱼线猛地绷紧——你收线，拖上来一条月光鱼。可这条月光鱼大得离谱，通体银鳞，在月光下几乎透明。你剖开鱼腹，里面只有半片鳞。鳞片银白如月，边缘带着细碎的缺口，摸上去却温润得像玉。",
+    "deliver_text": "浮标接过半片鳞，手指忽然抖了。他翻开一本发黄的手抄本——《河鱼志》，指着上面一幅褪色的画：『月鳞，精灵之信物，传说为水之民蜕下，可唤其归。这不是银铃鲤的鳞……这是月鳞。拿着它，去银月林海。精灵认得这东西。传说是不是真的，该问知道传说的人。』",
+    "source": "side"
+  },
+  "s93": {
+    "id": "s93",
+    "name": "月鳞与守湖人",
+    "giver": "npc_fisher_buoy",
+    "map": "silverwood",
+    "chain": "垂钓传说",
+    "unlock": [
+      {
+        "side": "s92"
+      }
+    ],
+    "min_level": 45,
+    "desc": "探索银月林海，月下出示半片月鳞，找到守湖人·溪语",
+    "objective": {
+      "explore": "silverwood",
+      "use": "月鳞（半片）"
+    },
+    "reward_exp": 58573,
+    "reward_gold": 2760,
+    "reward_item": "湖珍珠",
+    "story": "浮标：『我爷爷的笔记里说，银月林海有一种守湖人，世代守着一座湖，替水之民收存蜕下的鳞片。你带着月鳞去林海，找守湖人。若她还在……传说就有下半章。精灵活得长。三百年前的事，他们记得。替老头子问问——银铃鲤，到底是从哪儿来的。』",
+    "progress_text": "银月林海的主林道西侧，月光正从树冠的缝隙漏下来。你取出半片月鳞，鳞片在月光下忽然泛起一层柔和的光晕。树影深处传来一声很轻的叹息：『……三百年了。还有人带着它回来。』银发的精灵女子从树影里走出来——守湖人·溪语。",
+    "deliver_text": "溪语讲完银铃鲤的真相——它是水之守护灵，三百年前圣战烧到海上，守护灵离开星语湖去平息那片海的怨气，走前蜕下最后一片鳞，掰成两半。她把鳞片轻轻推回你手心：『去找浮标吧。他爷爷的地图上，不是还标着第三处墨点吗？无名港。海的尽头，也许是它三百年没能走完的归途。』",
+    "source": "side"
+  },
+  "s94": {
+    "id": "s94",
+    "name": "沉船墓地的怨念之网",
+    "giver": "npc_fisher_buoy",
+    "map": "shipwreck_graveyard",
+    "chain": "垂钓传说",
+    "unlock": [
+      {
+        "side": "s93"
+      }
+    ],
+    "min_level": 55,
+    "desc": "探索沉船墓地，击败 3 只船幽灵，斩断困住银铃鲤的怨念之网",
+    "objective": {
+      "explore": "shipwreck_graveyard",
+      "kill": "船幽灵",
+      "count": 3
+    },
+    "reward_exp": 108275,
+    "reward_gold": 2410,
+    "reward_item": "配方·银铃鲤饵",
+    "story": "浮标把那根擦了一辈子的钓竿往背上一甩：『走。去无名港。』他头也不回：『钓者不怕路远。它替我守了三百年的海，老头子陪它走一趟归途，算什么。』无名港的远洋码头，船长·玛莲看见旧地图，笑意收了：『沉船墓地？那儿三百年没活人敢去了……不过，老朋友的账，我认。上船。』",
+    "progress_text": "沉船墓地到了——桅杆如林，断船叠着断船。一艘最大的沉船残骸顶端，盘着一道金色的光，像一条被网住的河。那就是银铃鲤。可它周身缠绕着灰白的怨念之网，网线的尽头系在几具游荡的船幽灵身上——三百年了，这些溺亡的水手怨灵死死攥着这道光，不让它走。『孩子，把那网剪开！』",
+    "deliver_text": "你踏着残骸跃上沉船，一连击散三只船幽灵。怨念之网寸寸碎裂。金色的光挣脱束缚，绕着你游了一圈，又蹭过浮标的手，留下一片银光闪闪的鳞，转身朝大陆的方向游去。浮标捧着那片鳞，手抖得厉害，却笑出了声：『它认得我。爷爷说，银铃鲤认路——它认得回家的路。走！回银铃河！它要回家了！』",
+    "source": "side"
+  },
+  "s95": {
+    "id": "s95",
+    "name": "传说的钓竿",
+    "giver": "npc_fisher_buoy",
+    "map": "silver_river",
+    "chain": "垂钓传说",
+    "unlock": [
+      {
+        "side": "s94"
+      }
+    ],
+    "min_level": 65,
+    "desc": "探索银铃河·河心洲，见证银铃鲤重现，接过传说中的钓竿",
+    "objective": {
+      "explore": "silver_river"
+    },
+    "reward_exp": 161889,
+    "reward_gold": 3960,
+    "reward_item": "eq:传说钓竿·银铃之竿",
+    "story": "浮标连夜赶回银铃河，在渡口等了一整夜。天蒙蒙亮时，溪语也来了，手里捧着一盏灯，灯还亮着。浮标对你招招手：『走，上河心洲。它在等我们。』你们撑着小船划向河心洲——河水比往常更清，清得能看见河底每一颗卵石都泛着淡淡的金光。",
+    "progress_text": "河心洲的浅滩上，月光与晨光交汇的一刻，河面忽然亮起一道银光。银铃鲤从河心跃出，通体金鳞如熔金，划出一道完美的弧线，又没入水中——河水荡开一圈一圈的涟漪，每一圈涟漪都发出细碎的、像银铃摇动的声音。浮标看了很久很久，最后把脸埋进手里。等他再抬起头，脸上都是水：『五十年。我爷爷等了一辈子，我爹等了一辈子，我等了五十年……传说，是真的。』",
+    "deliver_text": "回到渡口，浮标把那根擦了一辈子的钓竿递到你面前：『这是爷爷传给我的，用银铃河畔三百年的老柳木做的。传说不是用来等的，是用来传的。往后这河、这传说，就交给你了。』溪语走过来，把那片完整的月鳞放在你手心：『守湖人认你。往后月圆之夜，星语湖的灯，替你留一盏。』",
+    "source": "side"
+  },
+  "s96": {
+    "id": "s96",
+    "name": "一封迟到的信",
+    "giver": "npc_postmaster",
+    "map": "dawn_city",
+    "chain": "旧友重逢",
+    "min_level": 35,
+    "desc": "在晨曦城王都邮局仓库的旧信堆中找出压箱底二十年的信",
+    "objective": {
+      "find": "迟到的信",
+      "map": "dawn_city",
+      "chance": 0.15
+    },
+    "reward_exp": 33796,
+    "reward_gold": 2010,
+    "reward_item": "迟到的信",
+    "story": "信鸽：『冒险者大人……老头子我，有件事压在心里二十年了。这封信，压在箱底二十年了，收件人是白鹿城的茉莉。当年我带着它从晨曦城往白鹿城赶，途经银铃河渡口遇了水匪，我以为信被河水冲走了，愧疚了整整二十年。直到前些日子整理仓库，才在旧邮袋夹层里发现它——信根本没丢。我老了，走不动那么远的路了。替我把这封信送到吧。』",
+    "progress_text": "你在邮局仓库的旧信堆里翻出那封被油布裹得严严实实的信，火漆上还残留着银铃河水的痕迹。信封泛黄发脆，收件人写着：白鹿城·茉莉。没有寄件人，信封背面只有一行小字：『若信到，请务必交到她本人手上。』",
+    "deliver_text": "信鸽用干净的亚麻布又裹了一层，郑重地交到你手里：『收件人写的是白鹿城·茉莉。你若寻到她，替我把信念给她听——念完你就知道，写信的人有多想她。』你走出邮局时回头，看见信鸽站在柜台后，朝着白鹿城的方向，把邮差帽摘下来，深深鞠了一躬。",
+    "source": "side"
+  },
+  "s97": {
+    "id": "s97",
+    "name": "白鹿城·茉莉",
+    "giver": "npc_molly",
+    "map": "white_deer",
+    "chain": "旧友重逢",
+    "unlock": [
+      {
+        "side": "s96"
+      }
+    ],
+    "min_level": 38,
+    "desc": "在白鹿城找到白鹿花铺，将「迟到的信」亲手交给茉莉",
+    "objective": {
+      "find": "白鹿花铺",
+      "map": "white_deer",
+      "chance": 0.15
+    },
+    "reward_exp": 39970,
+    "reward_gold": 2220,
+    "story": "白鹿城东街尽头，一间挂着干花招牌的小铺子——白鹿花铺。你找到铺子时，女主人正背对着门口给一盆白鹿花浇水。听到「晨曦城邮局」几个字时，她手里的水壶顿住了：『邮局？我二十多年没收到过那边的信了。』你把「迟到的信」递过去，她看着信封上「白鹿城·茉莉」几个字，手在围裙上擦了又擦。",
+    "progress_text": "茉莉拆开信。信纸是北境的桦皮纸，字迹刚劲，被水渍洇开了几处。信很短，她读得很慢：『茉莉，我到霜角堡了。北境的雪比白鹿城大得多，佣兵佣金也厚。攒够聘礼我就回来娶你。别等太久——等太久，我怕你会忘了我。埃德蒙。』读到最后一行时，她的肩膀开始发抖，眼泪砸在信纸上。",
+    "deliver_text": "茉莉把信仔细折好——折成当年埃德蒙教她的那种叠法——还给你：『麻烦你，替我再跑一趟北境吧。去霜角堡，打听打听一个叫埃德蒙的人。活要见人……死，也要见个坟。』她顿了顿，声音哑下去。",
+    "source": "side"
+  },
+  "s98": {
+    "id": "s98",
+    "name": "北境的回答",
+    "giver": "npc_molly",
+    "map": "frost_horn",
+    "chain": "旧友重逢",
+    "unlock": [
+      {
+        "side": "s97"
+      }
+    ],
+    "min_level": 42,
+    "desc": "探索霜角堡，多方打听佣兵「埃德蒙」的下落，在佣兵墓园找到他的墓碑与遗物",
+    "objective": {
+      "explore": "frost_horn"
+    },
+    "reward_exp": 49805,
+    "reward_gold": 2520,
+    "reward_item": "埃德蒙的佣兵铭牌",
+    "story": "霜角堡的风带着铁锈与雪的味道。酒馆老板烧壶摇头：『北境佣兵几百个，叫埃德蒙的没有十个也有八个。你要找的是哪个？』你说是二十年前从白鹿城来的南方人。烧壶眯起眼：『南方来的佣兵……那你该去守备营问问艾德温，他管着阵亡名册。』",
+    "progress_text": "守备官艾德温翻出泛黄的阵亡名册：『埃德蒙，白鹿城人，北境第三佣兵团。十六年前霜原魔物袭扰，第三团顶在最前面，折了大半……你要找的要是他，就去城郊墓园看看。』你找到那块碑：『埃德蒙·白鹿城人 · 北境第三佣兵团 · 阵亡于霜原防线』。碑前插着一把锈蚀的短剑，剑柄缠着褪色的蓝布条。你在碑前的土里拾起一枚佣兵铭牌——背面刻着一行小字：『白鹿城·茉莉』。",
+    "deliver_text": "你带着铭牌回白鹿城复命。茉莉听完，沉默了很久很久，最后只问了一句：『……他儿子，像他吗？』你点头。茉莉低头看着自己粗糙的手指，眼泪掉在围裙上，被花瓣吸干了：『那就好。那就好。』",
+    "source": "side"
+  },
+  "s99": {
+    "id": "s99",
+    "name": "父亲的名字",
+    "giver": "npc_ironheart",
+    "map": "frost_horn",
+    "chain": "旧友重逢",
+    "unlock": [
+      {
+        "side": "s98"
+      }
+    ],
+    "min_level": 48,
+    "desc": "对铁心使用「迟到的信」与「埃德蒙的佣兵铭牌」，告诉他父亲的故事",
+    "objective": {
+      "use": "迟到的信",
+      "map": "frost_horn"
+    },
+    "reward_exp": 67865,
+    "reward_gold": 1490,
+    "story": "铁心手里的锤子没停，声音却冷下来：『又是打听那个男人的？镇里都说，我爹是个抛妻弃子的南方佬，把我娘扔在北境就走了。我从小听到大。』你说：『你爹没有跑。』铁心一愣。你把「迟到的信」递过去：『他写给白鹿城一个姑娘的信。二十年没送到。』",
+    "progress_text": "铁心读完信，读得很慢——他识字不多，遇到洇开的字要反复辨认。他读了三遍，然后沉默了。信纸被他攥得发皱，又被他小心地抚平。你把铭牌放在砧台上，翻过背面：「白鹿城·茉莉」。铁心盯着那行字看了很久：『……我爹，是怎么死的？』你讲述十六年前的霜原防线。铁心低着头，半晌才说：『我娘死前跟我说，爹是个好人。我一直不信。我要去白鹿城。去看看那个……等了我爹二十年的女人。』",
+    "deliver_text": "铁心把那封信贴身收好，铭牌攥在手心。他向灰砧辞行——老铁匠从柜顶取下一件旧皮甲和一把短剑，塞进他怀里：『你爹当年在墓园里托付过我一句话……到了白鹿城，替老头子告诉那个姑娘——埃德蒙，没负她。』铁心背起行囊，在门口站了一会儿，对你说：『冒险者，路远，陪我走一趟吧。』",
+    "source": "side"
+  },
+  "s_bandit_clear": {
+    "id": "s_bandit_clear",
+    "name": "清剿盗贼",
+    "giver": "npc_border_patrol",
+    "map": "west_ridge_wilds",
+    "desc": "在西岭荒原击败 3 名盗贼，为官道除患",
+    "objective": {
+      "kill": "盗贼",
+      "count": 3
+    },
+    "reward_exp": 25970,
+    "reward_gold": 1290,
+    "story": "科尔：『晨曦城到铁盾镇这条官道，最近被一伙盗贼搅得不得安宁。商队都不敢走了。你既然敢来西岭，帮我们剿了这帮杂碎如何？』",
+    "source": "side"
+  },
+  "s_board_cat": {
+    "id": "s_board_cat",
+    "name": "寻猫·虎斑",
+    "giver": "npc_innkeeper",
+    "map": "oak_town",
+    "board": true,
+    "desc": "告示板上的寻猫启事：白鹿之森走丢的虎斑猫『虎斑』，找到它交给玛莎",
+    "objective": {
+      "find": "虎斑猫",
+      "map": "white_deer_forest",
+      "chance": 0.12
+    },
+    "reward_exp": 2600,
+    "reward_gold": 350,
+    "story": "告示板贴着一张皱巴巴的寻猫启事：『寻猫启事：我家虎斑(白猫，黄褐斑纹)在白鹿之森走丢了，它胆子小，看到人会跑。提供线索者酬谢三枚铜板！——橡木镇旅店·玛莎』",
+    "source": "side"
+  },
+  "s_caravan_escort": {
+    "id": "s_caravan_escort",
+    "name": "护送商货",
+    "giver": "npc_caravan_leader",
+    "map": "silver_wind_road",
+    "desc": "清剿银风商道上 5 只野狗或森林狼，护送商队安全抵达铁港城",
+    "objective": {
+      "kill_any": 5
+    },
+    "reward_exp": 1854,
+    "reward_gold": 280,
+    "story": "老赵：『小兄弟，搭把手！这趟货从白鹿城拉到铁港城，路上野狗和狼崽子越来越凶了。帮我把它们赶走，到了铁港城请你喝最好的麦酒！』",
+    "source": "side"
+  },
+  "s_dragon_blood": {
+    "id": "s_dragon_blood",
+    "name": "龙血试炼",
+    "giver": "npc_dragonborn_elder",
+    "map": "dragonborn_valley_trail",
+    "min_level": 81,
+    "desc": "击败冰川龙·霜牙，取回龙血证明勇气",
+    "objective": {
+      "kill": "冰川龙·霜牙",
+      "count": 1
+    },
+    "reward_exp": 346150,
+    "reward_gold": 8140,
+    "story": "烬鳞：『年轻的旅人，你身上的气息……龙神在注视你。冰川龙·霜牙盘踞在山口，它挡了所有龙裔朝圣的路。击败它，取回它的龙血，你将被龙裔视为兄弟。』",
+    "source": "side"
+  },
+  "s_dragon_bone": {
+    "id": "s_dragon_bone",
+    "name": "龙骨传说",
+    "giver": "npc_grave_keeper",
+    "map": "dragon_ridge_old_road",
+    "min_level": 67,
+    "desc": "调查龙脊崖脚的龙骨异动，击败熔岩元素与古树领主",
+    "objective": {
+      "kill": "熔岩元素",
+      "count": 3
+    },
+    "reward_exp": 180390,
+    "reward_gold": 3080,
+    "story": "孤鸦：『龙脊崖脚的龙骨在夜里会发光、会动……三百年前的龙战不该留下这样的遗响。去看看吧，查清龙骨异动的真相。』",
+    "source": "side"
+  },
+  "s_hidden_ember": {
+    "id": "s_hidden_ember",
+    "name": "烬火的余温",
+    "giver": "h_gravekeeper",
+    "map": "cinder_mountain",
+    "min_level": 78,
+    "desc": "收集 3 块烬火余烬，交给老守墓人·灰须",
+    "objective": {
+      "collect": "烬火余烬",
+      "count": 3
+    },
+    "reward_exp": 295925,
+    "reward_gold": 3110,
+    "story": "灰须：『圣战结束那天，活下来的只有我爷爷和一把烧红的剑。那剑还在烬山深处等着它的主人。替我取来烬火余烬，我带你去见它。』",
+    "reward_item": "烬火信标",
+    "source": "side"
+  },
+  "s_hidden_library": {
+    "id": "s_hidden_library",
+    "name": "失落的图书馆",
+    "giver": "h_librarian",
+    "map": "dawn_cathedral",
+    "desc": "收集 3 张泛黄书页，交给图书管理员·贝拉",
+    "objective": {
+      "collect": "泛黄书页",
+      "count": 3
+    },
+    "reward_exp": 20895,
+    "reward_gold": 600,
+    "story": "贝拉：『他们把真相锁进了地窖最深处。三百年了……我守着这些书，就是在等一个能读完它们的人。帮我找回散落的三页旧纸吧。』",
+    "reward_item": "星尘沙漏",
+    "source": "side"
+  },
+  "s_lighthouse": {
+    "id": "s_lighthouse",
+    "name": "雾中灯塔",
+    "giver": "npc_old_sailor",
+    "map": "mist_tide_passage",
+    "desc": "点亮雾潮航道深处的无名灯塔，驱散海上迷雾",
+    "min_level": 40,
+    "objective": {
+      "explore": "mist_tide_passage"
+    },
+    "reward_exp": 44692,
+    "reward_gold": 2380,
+    "story": "巴德：『哎……无名灯塔的灯火熄了三年，这片雾里多少船找不到归路。年轻人，你要是能点亮那座灯塔，雾里的幽魂也能安息了。』",
+    "source": "side"
+  },
+  "s_tide_shells": {
+    "id": "s_tide_shells",
+    "name": "潮汐的馈赠",
+    "giver": "npc_tide_priest",
+    "map": "sea_god_temple",
+    "min_level": 64,
+    "desc": "收集 3 片潮汐贝壳，换取海神的祝福·潮汐护符",
+    "objective": {
+      "collect": "潮汐贝壳",
+      "count": 3
+    },
+    "reward_exp": 155820,
+    "reward_gold": 1940,
+    "reward_item": "潮汐护符",
+    "story": "潮汐祭司：『海神注视着你。潮汐回廊的贝壳，是海神散落的鳞片——集齐 3 片，我为你祝福。』",
+    "source": "side"
+  },
+  "s_tunnel_repair": {
+    "id": "s_tunnel_repair",
+    "name": "隧道修缮",
+    "giver": "npc_dwarf_engineer",
+    "map": "dwarf_long_gallery",
+    "min_level": 65,
+    "desc": "清理矮人长廊深处塌方处的 3 只霜巨魔，恢复隧道通行",
+    "objective": {
+      "kill": "霜巨魔",
+      "count": 3
+    },
+    "reward_exp": 161889,
+    "reward_gold": 2970,
+    "story": "杜林：『隧道前头塌方了，霜巨魔钻了进来，把我们的符文灯全砸了！帮我收拾掉它们，我分你一块祖传的符文石！』",
+    "source": "side"
+  },
+  "剿灭魔裔": {
+    "name": "剿灭魔裔",
+    "desc": "击败 8 只精英怪物",
+    "objective": {
+      "kill_elite": 8
+    },
+    "reward_exp": 50000,
+    "reward_gold": 5770,
+    "min_lv": 50,
+    "source": "daily"
+  },
+  "大扫除": {
+    "name": "大扫除",
+    "desc": "击败 15 只任意怪物",
+    "objective": {
+      "kill_any": 15
+    },
+    "reward_exp": 1500,
+    "reward_gold": 400,
+    "source": "daily"
+  },
+  "屠龙令": {
+    "name": "屠龙令",
+    "desc": "击败 3 个区域 Boss",
+    "objective": {
+      "kill_boss": 3
+    },
+    "reward_exp": 200000,
+    "reward_gold": 11800,
+    "min_lv": 80,
+    "source": "daily"
+  },
+  "异界裂缝": {
+    "name": "异界裂缝",
+    "desc": "击败 2 个区域 Boss",
+    "objective": {
+      "kill_boss": 2
+    },
+    "reward_exp": 150000,
+    "reward_gold": 7870,
+    "min_lv": 80,
+    "source": "daily"
+  },
+  "护送商队": {
+    "name": "护送商队",
+    "desc": "击败 20 只任意怪物",
+    "objective": {
+      "kill_any": 20
+    },
+    "reward_exp": 7000,
+    "reward_gold": 2160,
+    "min_lv": 20,
+    "source": "daily"
+  },
+  "日常讨伐": {
+    "name": "日常讨伐",
+    "desc": "击败 10 只任意怪物",
+    "objective": {
+      "kill_any": 10
+    },
+    "reward_exp": 1200,
+    "reward_gold": 270,
+    "source": "daily"
+  },
+  "深渊勘察": {
+    "name": "深渊勘察",
+    "desc": "击败 30 只任意怪物",
+    "objective": {
+      "kill_any": 30
+    },
+    "reward_exp": 30000,
+    "reward_gold": 8650,
+    "min_lv": 50,
+    "source": "daily"
+  },
+  "深渊守望": {
+    "name": "深渊守望",
+    "desc": "击败 3 个区域 Boss",
+    "objective": {
+      "kill_boss": 3
+    },
+    "reward_exp": 60000,
+    "reward_gold": 6920,
+    "min_lv": 50,
+    "source": "daily"
+  },
+  "清剿盗匪": {
+    "name": "清剿盗匪",
+    "desc": "击败 12 只任意怪物",
+    "objective": {
+      "kill_any": 12
+    },
+    "reward_exp": 6000,
+    "reward_gold": 1290,
+    "min_lv": 20,
+    "source": "daily"
+  },
+  "清理兽患": {
+    "name": "清理兽患",
+    "desc": "击败 3 只精英怪物",
+    "objective": {
+      "kill_elite": 3
+    },
+    "reward_exp": 1800,
+    "reward_gold": 200,
+    "source": "daily"
+  },
+  "猎杀古兽": {
+    "name": "猎杀古兽",
+    "desc": "击败 6 只精英怪物",
+    "objective": {
+      "kill_elite": 6
+    },
+    "reward_exp": 42000,
+    "reward_gold": 4320,
+    "min_lv": 50,
+    "source": "daily"
+  },
+  "猎杀头目": {
+    "name": "猎杀头目",
+    "desc": "击败 3 个区域 Boss",
+    "objective": {
+      "kill_boss": 3
+    },
+    "reward_exp": 15000,
+    "reward_gold": 2590,
+    "min_lv": 20,
+    "source": "daily"
+  },
+  "猎杀领主": {
+    "name": "猎杀领主",
+    "desc": "击败 1 个区域 Boss",
+    "objective": {
+      "kill_boss": 1
+    },
+    "reward_exp": 2500,
+    "reward_gold": 210,
+    "source": "daily"
+  },
+  "行会委托": {
+    "name": "行会委托",
+    "desc": "完成 2 条支线任务",
+    "objective": {
+      "complete_side": 2
+    },
+    "reward_exp": 1500,
+    "reward_gold": 270,
+    "source": "daily"
+  },
+  "裂境镇压": {
+    "name": "裂境镇压",
+    "desc": "击败 5 个区域 Boss",
+    "objective": {
+      "kill_boss": 5
+    },
+    "reward_exp": 250000,
+    "reward_gold": 19680,
+    "min_lv": 80,
+    "source": "daily"
+  },
+  "裂界清剿": {
+    "name": "裂界清剿",
+    "desc": "击败 6 只精英怪物",
+    "objective": {
+      "kill_elite": 6
+    },
+    "reward_exp": 130000,
+    "reward_gold": 7380,
+    "min_lv": 80,
+    "source": "daily"
+  },
+  "讨伐精英": {
+    "name": "讨伐精英",
+    "desc": "击败 4 只精英怪物",
+    "objective": {
+      "kill_elite": 4
+    },
+    "reward_exp": 8000,
+    "reward_gold": 1080,
+    "min_lv": 20,
+    "source": "daily"
+  },
+  "讨伐领主": {
+    "name": "讨伐领主",
+    "desc": "击败 2 个区域 Boss",
+    "objective": {
+      "kill_boss": 2
+    },
+    "reward_exp": 52000,
+    "reward_gold": 4610,
+    "min_lv": 50,
+    "source": "daily"
+  },
+  "踏平兽巢": {
+    "name": "踏平兽巢",
+    "desc": "击败 5 只精英怪物",
+    "objective": {
+      "kill_elite": 5
+    },
+    "reward_exp": 9500,
+    "reward_gold": 1350,
+    "min_lv": 20,
+    "source": "daily"
+  },
+  "边境巡逻": {
+    "name": "边境巡逻",
+    "desc": "击败 40 只任意怪物",
+    "objective": {
+      "kill_any": 40
+    },
+    "reward_exp": 36000,
+    "reward_gold": 11540,
+    "min_lv": 50,
+    "source": "daily"
+  },
+  "邪龙残党": {
+    "name": "邪龙残党",
+    "desc": "击败 4 个区域 Boss",
+    "objective": {
+      "kill_boss": 4
+    },
+    "reward_exp": 220000,
+    "reward_gold": 15740,
+    "min_lv": 80,
+    "source": "daily"
+  },
+  "采集任务": {
+    "name": "采集任务",
+    "desc": "采集 5 份材料",
+    "objective": {
+      "collect_any": 5
+    },
+    "reward_exp": 1200,
+    "reward_gold": 210,
+    "source": "daily"
+  },
+  "铲除祸首": {
+    "name": "铲除祸首",
+    "desc": "击败 2 个区域 Boss",
+    "objective": {
+      "kill_boss": 2
+    },
+    "reward_exp": 12000,
+    "reward_gold": 1720,
+    "min_lv": 20,
+    "source": "daily"
+  },
+  "龙裔讨伐": {
+    "name": "龙裔讨伐",
+    "desc": "击败 1 个区域 Boss",
+    "objective": {
+      "kill_boss": 1
+    },
+    "reward_exp": 120000,
+    "reward_gold": 3930,
+    "min_lv": 80,
+    "source": "daily"
+  }
+}

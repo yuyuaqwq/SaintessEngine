@@ -1,0 +1,188 @@
+{
+  "equipment": {
+    "ARMOR_FAMILY": {
+      "heavy": {
+        "hp_mult": 1.6,
+        "def_mult": 1.4,
+        "mdef_mult": 0.7,
+        "spd_mult": 0.6
+      },
+      "leather": {
+        "hp_mult": 1.0,
+        "def_mult": 1.0,
+        "mdef_mult": 1.0,
+        "spd_mult": 1.3
+      },
+      "cloth": {
+        "hp_mult": 0.6,
+        "def_mult": 0.7,
+        "mdef_mult": 1.5,
+        "spd_mult": 0.9
+      }
+    },
+    "ARMOR_FAMILY_ALIAS": {
+      "str": "heavy",
+      "vit": "heavy",
+      "agi": "leather",
+      "int": "cloth"
+    },
+    "EQUIP_SLOTS": {
+      "weapon": "武器",
+      "helm": "头盔",
+      "armor": "胸甲",
+      "legs": "护腿",
+      "boots": "靴子",
+      "ring": "戒指",
+      "necklace": "项链"
+    },
+    "QUALITY": {
+      "white": {
+        "mult": 1.0,
+        "color": "⚪",
+        "name": "普通"
+      },
+      "green": {
+        "mult": 1.3,
+        "color": "🟢",
+        "name": "优秀"
+      },
+      "blue": {
+        "mult": 1.55,
+        "color": "🔵",
+        "name": "稀有"
+      },
+      "purple": {
+        "mult": 1.75,
+        "color": "🟣",
+        "name": "史诗"
+      },
+      "orange": {
+        "mult": 1.95,
+        "color": "🟠",
+        "name": "传说"
+      }
+    },
+    "QUALITY_CN": {
+      "white": "白",
+      "green": "绿",
+      "blue": "蓝",
+      "purple": "紫",
+      "orange": "橙"
+    },
+    "QUALITY_ORDER": [
+      "white",
+      "green",
+      "blue",
+      "purple",
+      "orange"
+    ],
+    "WEAPON_DIST": {
+      "sword": {
+        "atk": 1.0,
+        "matk": 0.1
+      },
+      "dagger": {
+        "atk": 1.0,
+        "matk": 0.1
+      },
+      "fist": {
+        "atk": 1.0,
+        "matk": 0.1
+      },
+      "bow": {
+        "atk": 1.0,
+        "matk": 0.1
+      },
+      "spear": {
+        "atk": 0.9,
+        "matk": 0.2
+      },
+      "staff": {
+        "atk": 0.1,
+        "matk": 1.0
+      },
+      "mace": {
+        "atk": 0.6,
+        "matk": 0.6
+      },
+      "shield": {
+        "atk": 0.3,
+        "matk": 0.3
+      }
+    },
+    "WEAPON_FLAVOR": {
+      "sword": {
+        "crit": 0.02,
+        "desc": "剑类武器：攻守均衡，暴击＋2%"
+      },
+      "staff": {
+        "matk": 0.08,
+        "desc": "法杖：魔攻额外＋8%"
+      },
+      "bow": {
+        "spd_fix": 4,
+        "crit": 0.02,
+        "desc": "长弓：速度＋4、暴击＋2%"
+      },
+      "mace": {
+        "matk": 0.08,
+        "hp_fix": 60,
+        "desc": "权杖：魔攻＋8%、生命＋60"
+      },
+      "dagger": {
+        "crit": 0.05,
+        "desc": "匕首：暴击额外＋5%"
+      },
+      "fist": {
+        "atk": 0.08,
+        "desc": "拳套：攻击额外＋8%"
+      },
+      "spear": {
+        "atk": 0.08,
+        "crit": 0.01,
+        "desc": "长枪：攻击额外＋8%、暴击＋1%"
+      },
+      "shield": {
+        "def": 0.08,
+        "hp_fix": 30,
+        "desc": "盾牌：防御额外＋8%、生命＋30"
+      }
+    },
+    "WEAPON_TYPES": {
+      "sword": [
+        "战士"
+      ],
+      "staff": [
+        "法师"
+      ],
+      "bow": [
+        "游侠"
+      ],
+      "mace": [
+        "牧师"
+      ],
+      "dagger": [
+        "刺客"
+      ],
+      "fist": [
+        "拳师"
+      ],
+      "spear": [
+        "战士"
+      ],
+      "shield": [
+        "战士"
+      ]
+    },
+    "WT_CN": {
+      "sword": "剑",
+      "staff": "法杖",
+      "bow": "弓",
+      "mace": "权杖",
+      "dagger": "匕首",
+      "fist": "拳套",
+      "spear": "枪",
+      "shield": "盾"
+    }
+  }
+}

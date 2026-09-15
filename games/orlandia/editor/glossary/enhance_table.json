@@ -1,0 +1,26 @@
+{
+  "fields": {
+    "mult": {
+      "zh": "属性乘区",
+      "note": "该强化等级对装备属性的乘数（面板 int(v * mult)，百分比域属性不取整）。**面板唯一消费字段**；缺它就是坏数据（schema.required 要求它）。",
+      "group": "panel"
+    },
+    "rate": {
+      "zh": "成功率",
+      "note": "强化到该等级的成功率（0~1 的比值 → 滑杆；由强化流程消费）。⚠ +9 极限行源表不带 rate / cost。",
+      "widget": "pct",
+      "group": "flow"
+    },
+    "cost": {
+      "zh": "花费",
+      "note": "强化到该等级的金币花费（整数；由强化流程消费）。⚠ +9 极限行源表不带 rate / cost。",
+      "group": "flow"
+    }
+  },
+  "groups": [
+    {"id": "panel", "label": "面板乘区（引擎消费）", "icon": "⚙️",
+     "fields": ["mult"]},
+    {"id": "flow", "label": "强化流程（命令层消费）", "icon": "🔨",
+     "fields": ["rate", "cost"]}
+  ]
+}

@@ -1,0 +1,659 @@
+{
+  "skills": {
+    "label": "技能",
+    "kind": "data",
+    "schema": "skill.schema.json",
+    "primary": "skill",
+    "icon": "⚔️",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "classes": {
+    "label": "职业",
+    "kind": "data",
+    "schema": null,
+    "primary": null,
+    "icon": "🧙",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "monsters": {
+    "label": "怪物",
+    "kind": "data",
+    "schema": "monster.schema.json",
+    "primary": "monster_skill",
+    "icon": "🐺",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "affixes": {
+    "label": "词条",
+    "kind": "data",
+    "schema": "affix.schema.json",
+    "primary": "affix",
+    "icon": "💠",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "items": {
+    "label": "物品",
+    "kind": "data",
+    "schema": "item.schema.json",
+    "primary": "item",
+    "icon": "🎒",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "effect_rules": {
+    "label": "声明表",
+    "kind": "rules",
+    "schema": "effect_rules.schema.json",
+    "primary": "effect_rule",
+    "icon": "📜",
+    "owner": "engine",
+    "tier": "fixed"
+  },
+  "passive_proc": {
+    "label": "被动声明",
+    "kind": "rules",
+    "schema": "passive_proc.schema.json",
+    "primary": "passive_proc",
+    "icon": "🌀",
+    "owner": "engine",
+    "tier": "fixed"
+  },
+  "commands": {
+    "label": "指令",
+    "kind": "data",
+    "schema": "command.schema.json",
+    "primary": "command",
+    "icon": "⌨️",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "texts": {
+    "label": "文案",
+    "kind": "data",
+    "schema": "text.schema.json",
+    "primary": "text_entry",
+    "icon": "💬",
+    "owner": "engine",
+    "tier": "fixed"
+  },
+  "text_specs": {
+    "label": "文案真源",
+    "kind": "data",
+    "schema": null,
+    "primary": null,
+    "icon": "💬",
+    "owner": "engine",
+    "tier": "fixed"
+  },
+  "tlogs": {
+    "label": "流水声明",
+    "kind": "data",
+    "schema": "tlog.schema.json",
+    "primary": "tlog_entry",
+    "icon": "🧾",
+    "owner": "engine",
+    "tier": "fixed"
+  },
+  "maps": {
+    "label": "地图",
+    "kind": "data",
+    "schema": "maps.schema.json",
+    "primary": "map",
+    "icon": "🗺",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "drop_pools": {
+    "label": "掉落池",
+    "kind": "data",
+    "schema": "drop_pools.schema.json",
+    "primary": "pool",
+    "icon": "🎁",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "loot_vocab": {
+    "label": "引用词汇",
+    "kind": "rules",
+    "schema": null,
+    "primary": null,
+    "icon": "🔤",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "instances": {
+    "label": "副本",
+    "kind": "data",
+    "schema": "instances.schema.json",
+    "primary": "instance",
+    "icon": "🏯",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "equip_roster": {
+    "label": "装备名册",
+    "kind": "data",
+    "schema": "equip_roster.schema.json",
+    "primary": "equip",
+    "icon": "🛡",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "pois": {
+    "label": "交互点",
+    "kind": "data",
+    "schema": "pois.schema.json",
+    "primary": "poi_mount",
+    "icon": "📍",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "legendary_effects": {
+    "label": "传说特效",
+    "kind": "data",
+    "schema": "legendary_effects.schema.json",
+    "primary": "legendary_effect",
+    "icon": "✨",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "pets": {
+    "label": "宠物",
+    "kind": "data",
+    "schema": "pets.schema.json",
+    "primary": "pet",
+    "icon": "🐾",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "monster_roster": {
+    "label": "怪物名册",
+    "kind": "data",
+    "schema": "monster_roster.schema.json",
+    "primary": "monster",
+    "icon": "🐺",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "npcs": {
+    "label": "NPC",
+    "kind": "data",
+    "schema": "npcs.schema.json",
+    "primary": "npc",
+    "icon": "🧑",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "races": {
+    "label": "种族",
+    "kind": "data",
+    "schema": "races.schema.json",
+    "primary": "race",
+    "icon": "🧬",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "sets": {
+    "label": "套装",
+    "kind": "data",
+    "schema": "sets.schema.json",
+    "primary": "set",
+    "icon": "🧥",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "enhance_table": {
+    "label": "强化表",
+    "kind": "data",
+    "schema": "enhance_table.schema.json",
+    "primary": "enhance_level",
+    "icon": "🔨",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "panel_rules": {
+    "label": "面板规则",
+    "kind": "rules",
+    "schema": "panel_rules.schema.json",
+    "primary": "panel_rule",
+    "icon": "🧮",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "dialogues": {
+    "label": "对话",
+    "kind": "data",
+    "schema": "dialogues.schema.json",
+    "primary": "dialogue",
+    "icon": "💬",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "quests": {
+    "label": "任务",
+    "kind": "data",
+    "schema": "quests.schema.json",
+    "primary": "quest",
+    "icon": "📜",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "events": {
+    "label": "事件",
+    "kind": "data",
+    "schema": "events.schema.json",
+    "primary": "event",
+    "icon": "🎲",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "event_templates": {
+    "label": "事件模板",
+    "kind": "data",
+    "schema": "event_templates.schema.json",
+    "primary": "event_template",
+    "icon": "🧩",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "tips": {
+    "label": "提示",
+    "kind": "data",
+    "schema": "tips.schema.json",
+    "primary": "tip",
+    "icon": "💡",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "subareas": {
+    "label": "子区域",
+    "kind": "data",
+    "schema": "subareas.schema.json",
+    "primary": "subarea",
+    "icon": "🗺️",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "instance_investigation": {
+    "label": "副本调查点",
+    "kind": "data",
+    "schema": "instance_investigation.schema.json",
+    "primary": "investigation",
+    "icon": "🔍",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "worlds": {
+    "label": "世界",
+    "kind": "data",
+    "schema": "worlds.schema.json",
+    "primary": "world",
+    "icon": "🌍",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "craft": {
+    "label": "配方",
+    "kind": "data",
+    "schema": "craft.schema.json",
+    "primary": "recipe",
+    "icon": "🔨",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "alchemy": {
+    "label": "炼金",
+    "kind": "data",
+    "schema": "alchemy.schema.json",
+    "primary": "alchemy",
+    "icon": "⚗️",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "cooking": {
+    "label": "烹饪",
+    "kind": "data",
+    "schema": "cooking.schema.json",
+    "primary": "recipe",
+    "icon": "🍲",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "skill_up": {
+    "label": "技能升级",
+    "kind": "data",
+    "schema": "skill_up.schema.json",
+    "primary": "skill_up",
+    "icon": "⬆️",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "job_guide": {
+    "label": "职业指引",
+    "kind": "data",
+    "schema": "job_guide.schema.json",
+    "primary": "guide",
+    "icon": "📖",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "runes": {
+    "label": "符文",
+    "kind": "data",
+    "schema": "runes.schema.json",
+    "primary": "rune",
+    "icon": "🔯",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "props": {
+    "label": "道具",
+    "kind": "data",
+    "schema": "props.schema.json",
+    "primary": "prop",
+    "icon": "🎁",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "shop": {
+    "label": "商店",
+    "kind": "data",
+    "schema": "shop.schema.json",
+    "primary": "shop",
+    "icon": "🏪",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "smith_stock": {
+    "label": "铁匠货架",
+    "kind": "data",
+    "schema": "smith_stock.schema.json",
+    "primary": "stock",
+    "icon": "⚒️",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "shop_stock": {
+    "label": "商店库存",
+    "kind": "data",
+    "schema": "shop_stock.schema.json",
+    "primary": "stock",
+    "icon": "📦",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "achievements": {
+    "label": "成就",
+    "kind": "data",
+    "schema": "achievements.schema.json",
+    "primary": "achievement",
+    "icon": "🏆",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "achievement_conds": {
+    "label": "成就条件",
+    "kind": "data",
+    "schema": "achievement_conds.schema.json",
+    "primary": "cond",
+    "icon": "✅",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "title_conds": {
+    "label": "称号条件",
+    "kind": "data",
+    "schema": "title_conds.schema.json",
+    "primary": "cond",
+    "icon": "🎖️",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "monster_mods": {
+    "label": "怪物改造",
+    "kind": "data",
+    "schema": "monster_mods.schema.json",
+    "primary": "monster_mod",
+    "icon": "🧬",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "item_templates": {
+    "label": "物品模板",
+    "kind": "data",
+    "schema": "item_templates.schema.json",
+    "primary": "item_template",
+    "icon": "📐",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "potion_effects": {
+    "label": "药水效果",
+    "kind": "data",
+    "schema": "potion_effects.schema.json",
+    "primary": "potion_effect",
+    "icon": "🧪",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "wild_king": {
+    "label": "野王",
+    "kind": "data",
+    "schema": "wild_king.schema.json",
+    "primary": "wild_king",
+    "icon": "👑",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "stats": {
+    "label": "属性",
+    "kind": "data",
+    "schema": "stats.schema.json",
+    "primary": "stat",
+    "icon": "📊",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "food_effects": {
+    "label": "食物效果",
+    "kind": "data",
+    "schema": "food_effects.schema.json",
+    "primary": "food_effect",
+    "icon": "🍱",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "weekly_quests": {
+    "label": "周常任务",
+    "kind": "data",
+    "schema": "weekly_quests.schema.json",
+    "primary": "weekly_quest",
+    "icon": "📅",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "collection_books": {
+    "label": "收藏册",
+    "kind": "data",
+    "schema": "collection_books.schema.json",
+    "primary": "collection_book",
+    "icon": "📚",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "talk_actions": {
+    "label": "对话动作",
+    "kind": "data",
+    "schema": "talk_actions.schema.json",
+    "primary": "talk_action",
+    "icon": "💬",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "boss_phases": {
+    "label": "Boss 阶段",
+    "kind": "data",
+    "schema": "boss_phases.schema.json",
+    "primary": "boss_phase",
+    "icon": "👹",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "exploration": {
+    "label": "探索",
+    "kind": "data",
+    "schema": "exploration.schema.json",
+    "primary": "explore_entry",
+    "icon": "🧭",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "trial_floors": {
+    "label": "修炼塔层",
+    "kind": "data",
+    "schema": "trial_floors.schema.json",
+    "primary": "trial_floor",
+    "icon": "🗼",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "game_config": {
+    "label": "游戏配置",
+    "kind": "rules",
+    "schema": "game_config.schema.json",
+    "primary": "config_group",
+    "icon": "⚙️",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "titles": {
+    "label": "称号",
+    "kind": "data",
+    "schema": "titles.schema.json",
+    "primary": "title",
+    "icon": "🎖",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "guild": {
+    "label": "公会",
+    "kind": "data",
+    "schema": "guild.schema.json",
+    "primary": "guild_table",
+    "icon": "🏰",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "portals": {
+    "label": "方碑",
+    "kind": "data",
+    "schema": "portals.schema.json",
+    "primary": "portal",
+    "icon": "🪧",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "fishing_spots": {
+    "label": "钓点",
+    "kind": "data",
+    "schema": "fishing_spots.schema.json",
+    "primary": "fishing_spot",
+    "icon": "🎣",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "fishing_pool": {
+    "label": "鱼种池",
+    "kind": "data",
+    "schema": "fishing_pool.schema.json",
+    "primary": "fish",
+    "icon": "🐟",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "gather_pools": {
+    "label": "采集池",
+    "kind": "data",
+    "schema": "gather_pools.schema.json",
+    "primary": "gather_pool",
+    "icon": "🌿",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "gather_cond_pools": {
+    "label": "限定采集池",
+    "kind": "data",
+    "schema": "gather_cond_pools.schema.json",
+    "primary": "gather_cond_pool",
+    "icon": "🌙",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "mining_deep_pools": {
+    "label": "深矿池",
+    "kind": "data",
+    "schema": "mining_deep_pools.schema.json",
+    "primary": "mining_deep_pool",
+    "icon": "⛏️",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "equipment": {
+    "label": "装备常量",
+    "kind": "data",
+    "schema": "equipment.schema.json",
+    "primary": "equipment_group",
+    "icon": "🛡",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "factions": {
+    "label": "阵营",
+    "kind": "data",
+    "schema": "factions.schema.json",
+    "primary": "factions_group",
+    "icon": "🏛",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "enchant": {
+    "label": "附魔",
+    "kind": "data",
+    "schema": "enchant.schema.json",
+    "primary": "enchant_group",
+    "icon": "✨",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "poi_pools": {
+    "label": "交互点池",
+    "kind": "data",
+    "schema": "poi_pools.schema.json",
+    "primary": "poi_pools_group",
+    "icon": "📍",
+    "owner": "package",
+    "tier": "portable"
+  },
+  "chapters": {
+    "label": "章节补给",
+    "kind": "data",
+    "schema": "chapters.schema.json",
+    "primary": "chapters_group",
+    "icon": "📦",
+    "owner": "package",
+    "tier": "fixed"
+  },
+  "gems": {
+    "label": "幸运宝石",
+    "kind": "data",
+    "schema": "gems.schema.json",
+    "primary": "gems_group",
+    "icon": "💎",
+    "owner": "package",
+    "tier": "fixed"
+  }
+}

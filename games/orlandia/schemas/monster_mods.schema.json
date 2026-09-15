@@ -1,0 +1,331 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/monster_mods.schema.json",
+  "title": "怪物改造（monster_mods）—— 同类同级怪物的个体特色：数值乘区 + 机制/剧本字段",
+  "description": "一条 = 一只怪的个体修正（表键 = 怪物 id）。真源 = 游戏仓 `game/data/monster_mods.py:15 MONSTER_MODS`（1824 行文件里唯一的模块级表，实测 **140 条**：`m_*` 29 / `e_*` 81 / `b_*` 30），经 `scripts/export_domains/monster_combat.py:derive_monster_mods` 单向导出（条目原样、零注入）。语义：同 role 同等级的怪原本数值完全相同（公式化），本表只写「与公式值不同」的乘区与机制，让同名怪有性格（皮糙肉厚 / 快而脆 / 攻高防低）。**消费端在游戏侧**：`game/core/drops.py:400 build_monster` 读它 —— 六维乘区 `hp/atk/def/matk/mdef/spd_mult`（:402-405）、`rank`/`reach` 站位覆盖（:420-421），以及 :447-481 的**整条白名单透传**（mech/desc/ai/on_taken/dodge/block/phys_reduce/magic_reduce/elem_res/abyss_res/element_immune/element_weak/immune_dots/dmg_taken_mult/resource_def/class_name/equipment/learned_skills/race/skill_levels/side）；`game/commands/boss_script.py:28` 拿它当 Boss 剧本基准；`game/commands/instance_battle.py:134` 读 `target_policy`；`game/commands/combat.py:503` 展示 `desc`。**本域只搬运、不解释**：`phases[].add_skills` / `chains[].seq` 里的技能 id 是 monsters 域（怪物技能表）引用串，`element_*` 是元素词汇，导出期不展开、不校验闭合（闭合实测见报告 §4：技能 90/90、条目键 140/140 均已闭）。",
+  "x-primary": "monster_mod",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "怪物 id（实测三类前缀：`m_*` 普通怪 29、`e_*` 精英 81、`b_*` Boss 30）。与 monster_roster 域同一 id 空间 —— 实测 140/140 全部能闭合到怪物名册。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/monster_mod"
+  },
+  "$defs": {
+    "monster_mod": {
+      "type": "object",
+      "title": "怪物个体改造（monster_mods 一条）",
+      "additionalProperties": true,
+      "description": "**不设 required**：本表是「只写与公式不同的字段」的覆盖表 —— 缺字段 = 用公式值，不是漏填；给一个键设必填就是把合法的覆盖表判红。文件头（`monster_mods.py:1-14`）声明的 6 个乘区字段 + `desc` 之外，其余都是各系统按需读的扩展字段（引擎读过就是能力，配了不生效的历史坑见 `docs/CLASS_MECHANICS_v153.md:1213`）。实测字段出现次数：desc 140（140/140 必有）、hp_mult 97、atk_mult 93、spd_mult 37、matk_mult 37、mech 31、phases 27、ai 21、on_interrupt 19、opening 17、def_mult 13、element_weak 9、triggers 8、on_minion_died 7、chains 5、immune_dots 5、dodge 3、block 3、target_policy 3、dmg_taken_mult 2、phys_reduce 1、on_taken 1。",
+      "properties": {
+        "desc": {
+          "type": "string",
+          "x-widget": "textarea",
+          "title": "个体特色描述",
+          "description": "图鉴/战斗展示文案（实测 140/140 条都有，如「巨型老鼠：快而脆，成群出没」）。`build_monster` 把它带进怪物实例的 `mod` 字段，`commands/combat.py:503` 展示。"
+        },
+        "hp_mult": {
+          "type": "number",
+          "title": "生命乘区",
+          "description": ">1 增强、<1 削弱（97 条，实测区间 **0.52 ~ 1.45**，如 `m_giant_rat` 0.75、`e_tree_lord` 1.45）。未配置 = 保持公式值。生效点 `drops.py:402-405`：`stats[k] = max(1, int(stats[k] * mult))`。"
+        },
+        "atk_mult": {
+          "type": "number",
+          "title": "攻击乘区",
+          "description": "同上口径（93 条，实测区间 **0.60 ~ 1.35**；`m_wild_dog` 1.20、`e_wolf_alpha` 0.60 —— 源侧注释记着 v95.16 #74 为修主线难度断层而下调）。"
+        },
+        "def_mult": {
+          "type": "number",
+          "title": "防御乘区",
+          "description": "同上口径（13 条，实测区间 **0.80 ~ 1.45**）。"
+        },
+        "spd_mult": {
+          "type": "number",
+          "title": "速度乘区",
+          "description": "同上口径（37 条，实测区间 **0.60 ~ 1.50**，如 `m_giant_rat` 1.35「快而脆」）。"
+        },
+        "matk_mult": {
+          "type": "number",
+          "title": "魔攻乘区",
+          "description": "同上口径（37 条，实测区间 **0.60 ~ 1.35**，法系怪用）。"
+        },
+        "mdef_mult": {
+          "type": "number",
+          "title": "魔防乘区",
+          "description": "同上口径（源侧现 0 条配置，但 `drops.py:403` 的六维元组里有它 —— schema 备位）。"
+        },
+        "rank": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "站位层覆盖",
+          "description": "覆盖 role 推导（caster/healer/boss → 2，其余 → 1）。`drops.py:420`。源侧现 0 条配置。"
+        },
+        "reach": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "射程覆盖",
+          "description": "覆盖默认 `reach = rank`。`drops.py:421`。源侧现 0 条配置。"
+        },
+        "mech": {
+          "type": "string",
+          "title": "机制 token 串",
+          "description": "逗号分隔的机制标签（31 条，单 token 如 `\"heal\"`，多 token 如 `\"phase,summon,phase_open\"`）。`drops.py:447` 透传；`commands/boss_script.py:46` 与副本内联 mech 做**并集去重**（非覆盖）。实测 9 个 token：phase 27 / summon 20 / phase_open 13 / enrage 9 / heal 8 / player_low 3 / stacks 3 / reflect 1 / shield 1。**不枚举**：token 集合随版本扩。"
+        },
+        "opening": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-widget": "kv",
+          "title": "开场预告",
+          "description": "17 条有；实测形状 `{name, effect, power}` —— 如咕噜「掠夺号令读条」`{effect: \"atk_up\", power: 1}`。",
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "预告名"
+            },
+            "effect": {
+              "type": "string",
+              "title": "效果名",
+              "description": "效果/动作词汇（指向 effects 域，未展开）。"
+            },
+            "power": {
+              "type": "number",
+              "title": "强度"
+            }
+          }
+        },
+        "phases": {
+          "type": "array",
+          "x-widget": "rows",
+          "title": "阶段剧本",
+          "description": "27 条有（实测每怪 2~3 个阶段：3 阶段 15 只 / 2 阶段 12 只，共 69 个阶段项）；每项 = 一个血线阶段（`min` = 触发血量百分比，可含 `phase_id`/`add_skills`/`script`/`counter`/`enter_line`/`warn_line`/`atk_mult`/`def_add`/`def_mult`/`spd_add`/`dmg_taken_mult`/`freq_mult`/`preserve_debuffs`/`exit_turns`/`exit_dmg`/`name`/`icon`）。**形状开放**（实测 69 个阶段项上 **16 种字段组合**）→ 只约束「是对象数组」；`add_skills` 是 monsters 域技能 id 引用串。",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "min": {
+                "type": "number",
+                "title": "进入阈值（血量%）"
+              },
+              "phase_id": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "title": "阶段名",
+                "description": "实测取值如 `normal` / `enrage`（内容侧词汇，不枚举）。⚠️ **可为 null**：`b_eter` 有一个阶段项显式写 `phase_id: null`（1/69）—— 类型必须放行 null，否则真源数据被判红（导出器不改写它：「没写」与「写了 null」在真源里就是两回事）。"
+              },
+              "exit_turns": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "title": "阶段·退场刻数",
+                "description": "阶段跑满 N 刻后退出（实测 5 个阶段项有；`b_om_shadow` 显式写 `null` = 不退场）。"
+              },
+              "exit_dmg": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "title": "阶段·退场伤害",
+                "description": "退场时结算的伤害系数（实测 1 个阶段项有，`b_om_shadow` 写 `null`）。"
+              },
+              "add_skills": {
+                "type": "array",
+                "x-widget": "lines",
+                "title": "本阶段加的技能",
+                "description": "monsters 域（怪物技能表）技能 id 引用串 —— 未展开、不校验闭合。",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "script": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "阶段名/图标",
+                "description": "实测 `{name, icon}`（icon 是表情符号）。"
+              },
+              "counter": {
+                "type": "string",
+                "x-widget": "textarea",
+                "title": "玩家对策提示"
+              }
+            }
+          }
+        },
+        "triggers": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-widget": "kv",
+          "title": "条件触发器",
+          "description": "8 条有；键 = 触发条件名（实测只有 `player_low`），值 = 参数对象（实测 `{hp: 0.3, cooldown: 3}`）。键集合是内容侧词汇，**不枚举**。"
+        },
+        "on_interrupt": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-widget": "kv",
+          "title": "被打断时",
+          "description": "19 条有；实测形状 `{effect, value, turns?}` / `{effect, key, value}`，如 `{effect: \"freeze_self\", value: 1, turns: 1}`（读条被打断 → 自控 1 刻）。"
+        },
+        "on_minion_died": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-widget": "kv",
+          "title": "爪牙死亡时",
+          "description": "7 条有；实测 `{effect, value}`，如 `{effect: \"heal_pct\", value: 0.03}`（`b_moro` 吃爪牙回血 3%）。"
+        },
+        "on_taken": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-widget": "kv",
+          "title": "受击钩子",
+          "description": "1 条有（`b_moro`）；实测 `{heal: {pct: 0.02, cd: 2}}`。`drops.py:459` 透传，引擎 `_deal_damage` 读。"
+        },
+        "chains": {
+          "type": "array",
+          "x-widget": "rows",
+          "title": "连招链",
+          "description": "5 条有；实测形状 `[{seq: [技能 id…], cd, break}]` —— `seq` 是 monsters 域技能 id 引用串（未展开）。",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "ai": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-widget": "kv",
+          "title": "敌方 AI 配置",
+          "description": "21 条有；实测 `{skill_chance: 0.4, weights: {技能 id: 权重}}`。`drops.py:450` 透传（缺省 = 引擎回落全局 `_enemy_turn`）。`weights` 的键是 monsters 域技能 id 引用串。",
+          "properties": {
+            "skill_chance": {
+              "type": "number",
+              "title": "放技能概率"
+            },
+            "weights": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              },
+              "title": "技能权重"
+            }
+          }
+        },
+        "target_policy": {
+          "type": "string",
+          "x-widget": "select",
+          "title": "选敌策略",
+          "description": "3 条有；实测两个取值 `hate_top`（仇恨最高）/ `backline`（打后排）。`commands/instance_battle.py:134` 读它，Boss 缺省 = hate_top。内容侧词汇，**不枚举**。"
+        },
+        "dodge": {
+          "type": "number",
+          "title": "闪避",
+          "description": "3 条有；`drops.py:453` 透传（`float(mod.get(\"dodge\", 0) or 0)`），引擎 `_target_dodge_check` 读。"
+        },
+        "block": {
+          "type": "number",
+          "title": "格挡",
+          "description": "3 条有；`drops.py:454` 透传。"
+        },
+        "phys_reduce": {
+          "type": "number",
+          "title": "物理减伤",
+          "description": "1 条有；`drops.py:455` 透传，引擎 `_enemy_mitigate` 读。"
+        },
+        "magic_reduce": {
+          "type": "number",
+          "title": "魔法减伤",
+          "description": "源侧现 0 条配置，但 `drops.py:456` 已读 → schema 备位。"
+        },
+        "elem_res": {
+          "type": "number",
+          "title": "元素抗性",
+          "description": "源侧现 0 条；`drops.py:457` 透传。"
+        },
+        "abyss_res": {
+          "type": "number",
+          "title": "深渊抗性",
+          "description": "源侧现 0 条；`drops.py:458` 透传。"
+        },
+        "dmg_taken_mult": {
+          "type": "number",
+          "title": "承伤乘区",
+          "description": "2 条有；`drops.py:471` 透传（缺省 1.0），引擎 `_boss_dmg_filter` 读。"
+        },
+        "element_weak": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "x-widget": "kv",
+          "title": "元素弱点",
+          "description": "9 条有；实测 4 个元素名（fire / holy / ice / thunder），如 `{fire: 1.4}`（元素名 → 承伤乘区）。`drops.py:466` 透传。元素名是内容侧词汇，**不枚举**。"
+        },
+        "element_immune": {
+          "type": "array",
+          "x-widget": "lines",
+          "title": "元素免疫",
+          "description": "源侧现 0 条；`drops.py:465` 透传为 list。元素名词汇（未展开）。",
+          "items": {
+            "type": "string"
+          }
+        },
+        "immune_dots": {
+          "type": "array",
+          "x-widget": "lines",
+          "title": "异常免疫名单",
+          "description": "5 条有（如 `m_meteor_golem` 免灼烧）；`drops.py:470` 透传，引擎 `effects.act_apply` 前置查询点消费 —— v181 批B 补的通道（此前「接了引擎、数据进不来」）。",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resource_def": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-widget": "kv",
+          "title": "资源位定义",
+          "description": "源侧现 0 条；`drops.py:462` 透传（v177 actor 资源 / Boss 改造）。键引用语义同 effect_rules 域的 `name`。"
+        },
+        "class_name": {
+          "type": "string",
+          "title": "扮的职业",
+          "description": "源侧现 0 条；`drops.py:476` 透传（v180-B actor 化：怪扮职业 `cls_*` → 面板走玩家全公式，吃被动/资源/装备）。职业 id 引用串（classes 域），未展开。"
+        },
+        "equipment": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-widget": "kv",
+          "title": "怪物装备",
+          "description": "源侧现 0 条；`drops.py:477` 透传为 `{}`（缺省空 dict）。"
+        },
+        "learned_skills": {
+          "type": "array",
+          "x-widget": "lines",
+          "title": "被动技能名",
+          "description": "源侧现 0 条；`drops.py:478` 透传。技能名/ id 引用串（未展开）。",
+          "items": {
+            "type": "string"
+          }
+        },
+        "race": {
+          "type": "string",
+          "title": "种族",
+          "description": "源侧现 0 条；`drops.py:479` 透传（races 域引用串，未展开）。"
+        },
+        "skill_levels": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-widget": "kv",
+          "title": "技能等级覆盖",
+          "description": "源侧现 0 条；`drops.py:480` 透传。"
+        },
+        "side": {
+          "type": "string",
+          "title": "阵营",
+          "description": "源侧现 0 条；`drops.py:481` 透传，缺省 `enemy`（玩家侧 actor 用 `player`）。"
+        }
+      }
+    }
+  }
+}

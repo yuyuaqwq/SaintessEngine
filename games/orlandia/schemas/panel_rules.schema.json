@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/panel_rules.schema.json",
+  "title": "面板规则（panel_rules）—— 职业面板公式读的 7 组常量",
+  "description": "一条 = 一组常量。真源 = 游戏仓 `game/data/battle_config.py`（`TIER_GROWTH` / `BRANCH_BONUS` / `BRANCH_BONUS_BY_CLASS`）+ `game/data/base_growth.py`（`PLAYER_BASE_GROWTH`）+ `game/core/constants.py`（`PCT_STATS` / `PCT_CAPS` / `PENE_PCT_STATS`），经 `scripts/export_game_package.py:derive_panel_rules` 单向导出。**消费点**：`content/panel.py`（`player_base_stats` 的转职档位与分支倾向、`player_stats_detail` 的百分比域 cap 判据）。⚠️ 档位键（`tier_growth` / `branch_bonus*` 的内层键）落成**字符串键**，包内 `content/tables.py` 读时还原 int；不还原 = `.get(1)` 恒 None = 转职/分支加成静默消失。",
+  "x-primary": "panel_rule",
+  "x-widget": "kv",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "键 = 规则组名（当前 7 组：tier_growth（转职成长档位）/ branch_bonus（分支倾向通用档）/ branch_bonus_by_class（职业×分支，权威）/ base_growth（成长结构）/ pct_stats（百分比域属性）/ pct_caps（百分比域上限）/ pene_pct_stats（乘算穿透属性））。一条 = 一组常量。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/panel_rule"
+  },
+  "$defs": {
+    "panel_rule": {
+      "type": "object",
+      "title": "面板规则组（panel_rules 的一条）",
+      "additionalProperties": true,
+      "properties": {
+        "tier_growth": {
+          "type": "object",
+          "title": "转职成长档位",
+          "description": "转职档位（0/1/2/3）→ 成长倍率。面板 `player_base_stats` 用它乘线性成长段（`TIER_GROWTH`）。键是字符串化整数。",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "branch_bonus": {
+          "type": "object",
+          "title": "分支属性倾向（通用回退档）",
+          "x-widget": "kv",
+          "description": "分支档位 → 属性 → 倍率（BRANCH_BONUS）。**未在 branch_bonus_by_class 里配的职业用这一档**；`crit` 这类百分比属性走加法（由 base_growth.branch_bonus_mode 声明），其余走 `int(base×倍率)`。",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[0-9]+$",
+            "description": "键 = 分支档位（JSON 只有字符串键，写 \"1\" 表示 1 转）。⚠ 包内读时还原 int —— 不还原 = `.get(1)` 恒 None = 分支加成静默消失。"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "title": "该档的属性倍率",
+            "x-widget": "kv",
+            "description": "属性名 → 倍率（该档下的属性倾向）。",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "description": "键 = 面板属性键（atk / def / matk / mdef / spd / hp / mp / crit …；框架不枚举，取值由内容侧定）。"
+            },
+            "additionalProperties": {
+              "type": "number",
+              "title": "倍率",
+              "description": "该档对该属性的倍率（1.0 = 不变；< 1 是下调）。"
+            }
+          }
+        },
+        "branch_bonus_by_class": {
+          "type": "object",
+          "title": "职业×分支差异表（权威）",
+          "x-widget": "kv",
+          "description": "职业 id → 分支档位 → 属性 → 倍率（BRANCH_BONUS_BY_CLASS，v156 起**优先于**通用档）。`crit` 这类百分比属性走加法（由 branch_bonus_mode 声明），其余走 `int(base×倍率)`。",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "description": "键 = 职业 id（内容侧词汇，如 cls_zhan_shi —— 指向哪个职业由内容侧解释，框架不枚举；实测 7 个职业）。"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "title": "该职业的分支档位表",
+            "x-widget": "kv",
+            "description": "分支档位 → 属性 → 倍率（只写与通用档不同的档；没配的职业整段回退 branch_bonus）。",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[0-9]+$",
+              "description": "键 = 分支档位（字符串化整数，写 \"1\" 表示 1 转；包内读时还原 int）。"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "title": "该档的属性倍率",
+              "x-widget": "kv",
+              "description": "属性名 → 倍率。",
+              "propertyNames": {
+                "type": "string",
+                "minLength": 1,
+                "description": "键 = 面板属性键（框架不枚举）。"
+              },
+              "additionalProperties": {
+                "type": "number",
+                "title": "倍率",
+                "description": "该职业该档对该属性的倍率。"
+              }
+            }
+          }
+        },
+        "base_growth": {
+          "type": "object",
+          "title": "成长结构声明",
+          "description": "`PLAYER_BASE_GROWTH`：`linear_stats`（吃档位倍率的属性键集，面板的成长循环只作用于它）+ `branch_bonus_mode`（每个属性的分支修正模式：`mul` = `int(base×v)` / `add` = `round(base+v, n)`）+ `alias`（`hp`/`mp` → `max_hp`/`max_mp` 的输出别名）。",
+          "required": [
+            "linear_stats",
+            "branch_bonus_mode",
+            "alias"
+          ],
+          "properties": {
+            "linear_stats": {
+              "type": "array",
+              "title": "线性成长键集",
+              "items": {
+                "type": "string"
+              }
+            },
+            "branch_bonus_mode": {
+              "type": "object",
+              "title": "分支修正模式（{属性: {mode, round}}）",
+              "x-widget": "kv",
+              "description": "每个属性的分支修正怎么算：`mul` = `int(base×v)` / `add` = `round(base+v, n)`。参考实现里 crit 走 add（加法），其余走 mul；`_default` 是兜底档（没单列的属性按它走）。",
+              "propertyNames": {
+                "type": "string",
+                "minLength": 1,
+                "description": "键 = 面板属性键，或兜底键 `_default`（实测 hp / mp / crit / _default；框架不枚举）。"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "title": "该属性的模式声明",
+                "description": "形如 {mode: mul|add, round: n}（其余键由内容侧解释）。",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "title": "模式",
+                    "description": "mul = int(base×倍率)（乘算，参考实现里 hp/mp 用它）/ add = round(base+值, n)（加算，参考实现里 crit 这类百分比属性用它）；缺省由内容侧兜底档决定。"
+                  },
+                  "round": {
+                    "type": "integer",
+                    "title": "小数位",
+                    "description": "add 模式保留的小数位（mul 模式不使用）。"
+                  }
+                }
+              }
+            },
+            "alias": {
+              "type": "object",
+              "title": "输出别名",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "pct_stats": {
+          "type": "object",
+          "title": "百分比域属性名",
+          "description": "`PCT_STATS`（22 个属性）。面板聚合时：在表内 = 小数保留 + cap（加法，穿透走乘算），不在表内 = int 取整。包一层 {\"stats\": [...]} 是因为导出器要求每条都是对象（顶层数组会被拒收）。",
+          "required": [
+            "stats"
+          ],
+          "properties": {
+            "stats": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "pct_caps": {
+          "type": "object",
+          "title": "百分比域上限",
+          "description": "`PCT_CAPS`：属性 → 上限（面板每次加法/乘算合成后 `min(...)`）。导出期断言 `pct_stats ⊆ pct_caps` —— 少一条会让该属性静默吃默认 cap。",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "pene_pct_stats": {
+          "type": "object",
+          "title": "百分比穿透属性",
+          "description": "`PENE_PCT_STATS`（`pene_phys` / `pene_magi`）：这两个属性多来源**乘算合成** `1-Π(1-pᵢ)`，不加法。",
+          "required": [
+            "stats"
+          ],
+          "properties": {
+            "stats": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

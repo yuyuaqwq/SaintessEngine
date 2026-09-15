@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/talk_actions.schema.json",
+  "title": "对话动作（talk_actions）—— 对话树选项的 action 键注册表；一条 = 一个动作键（18 条）",
+  "description": "一条 = 一个「对话动作」注册键（表键 = 对话树 option.action 里的那个键，如 `set_flag` / `quest_take` / `tutor_skill`）。真源 = 游戏仓 `game/commands/talk_actions.py` 的 `ACTIONS` 注册表（18 个 `@register(\"…\")`；**注册顺序 = 执行顺序**，条件型 `apprentice_check` 必须最先，见 `commands/world.py:3579 for key, fn in ACTIONS.items()`），经 `scripts/export_domains/b82_l3.py:derive_talk_actions` 单向导出（AST 读注册表，零副作用）。★ 本域的特殊处：注册键的**值是实现函数**（规则/数值逻辑），B8.2 线3 薄壳化后函数体已搬进内容包 `content/talk_actions.py`（逐字端口）——函数体进不了 JSON，故本域把实现投影成 `impl` 坐标 + `doc` 说明（与 `event_templates` 域投影 TEMPLATES 注册表同一手法）。**为什么它算「表」**：`dialogues` 域（B3）实测 294 个选项带 `action`，其键**恰好**是本表这 18 个键（导出器做这条闭合校验，缺一个就 raise）——动作键是内容侧的引用词汇，没有本域它在编辑器里没有落点。",
+  "x-primary": "talk_action",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*$",
+    "description": "动作键（内容侧词汇；实测 18 个互不重复，如 `apprentice_check` / `give_item` / `side_offer` / `hidden_evolve`）。**不枚举**：加一个动作 = 在 `game/commands/talk_actions.py` 加一个 `@register`。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/talk_action"
+  },
+  "$defs": {
+    "talk_action": {
+      "type": "object",
+      "title": "对话动作（一条 = 一个注册键）",
+      "required": [
+        "func",
+        "line",
+        "async",
+        "impl"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "func": {
+          "type": "string",
+          "minLength": 1,
+          "title": "宿主注册函数名",
+          "description": "壳（游戏仓 `game/commands/talk_actions.py`）里那个转发函数的函数名，实测 18/18 恒为 `action_<键>`（仍从源读出，不靠命名约定）。壳 = 只做「注册 + 一行转发」的薄壳（B8.2 线3）。"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "宿主壳行号",
+          "description": "该 `def` 在 `game/commands/talk_actions.py` 里的行号（1 基，AST 读出，便于人回查真源；改壳会使它漂移 → 重新导出即可）。"
+        },
+        "async": {
+          "type": "boolean",
+          "title": "是否异步动作",
+          "description": "`async def` 标记。消费端 `commands/world.py:3583 inspect.isawaitable` 据此 await；**同步版**（`_apply_talk_action`，测试/旧调用用）会跳过异步动作。实测只有 `hidden_evolve`（血脉传承，异步 generator）为 true。"
+        },
+        "doc": {
+          "type": "string",
+          "title": "规则说明",
+          "description": "该动作的规则/门槛/副作用说明。来源逐条可查：① 壳内 docstring（有则用，实测 4 条：`apprentice_check` / `side_take_one` / `give_prof_exp` / `hidden_evolve`）；② 否则取包内实现 `content/talk_actions.py` 的同位说明（函数 docstring，无则函数体开头 / `def` 上方的连续 `#` 注释块）。**允许空串**（实测 5 条空：`set_flag` / `open_shop` / `hint` / `consume_item` / `unlock_prof` —— 源侧本来就没写说明，导出期**不替它编文案**）。"
+        },
+        "impl": {
+          "type": "string",
+          "minLength": 1,
+          "title": "包内实现坐标",
+          "description": "实现正文的落点：`<包内模块>.<函数名>`（实测 18/18 = `content.talk_actions.action_<键>`）。由壳内 `return <别名>.<函数名>(…)` 反查别名 + 对应的 `from … import … as 别名` 得出；**反查不到就 raise**（不猜、不空着）——壳写法一改就让导出红，防「声明与实现悄悄分家」。"
+        }
+      }
+    }
+  }
+}

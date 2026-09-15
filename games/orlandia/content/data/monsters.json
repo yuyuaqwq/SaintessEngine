@@ -1,0 +1,3929 @@
+{
+  "ms_ai_hao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.3,
+        "type": "magi"
+      }
+    ],
+    "power": 1.3,
+    "desc": "哀嚎，恐惧敌人使其伤害降低",
+    "name": "哀嚎"
+  },
+  "ms_an_ying": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "暗影噬，暗影之力吞噬敌人",
+    "name": "暗影噬",
+    "element": "dark"
+  },
+  "ms_an_ying_dan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "mech": "interrupt",
+    "desc": "暗影弹，暗影能量弹攻击敌人，命中打断目标蓄力",
+    "name": "暗影弹",
+    "element": "dark"
+  },
+  "ms_an_ying_jian": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "暗影箭，暗影之箭攻击敌人",
+    "name": "暗影箭",
+    "element": "dark"
+  },
+  "ms_an_ying_qin_shi": {
+    "kind": "魔法",
+    "power": 1.2,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.2,
+        "type": "magi"
+      }
+    ],
+    "element": "dark",
+    "desc": "暗影侵蚀：黑暗凝成利爪撕扯目标（1.2× 暗影）——烛火熄灭时她的影子活了过来。",
+    "name": "暗影侵蚀"
+  },
+  "ms_an_ying_zhan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "暗影斩，暗影之刃斩击敌人",
+    "name": "暗影斩",
+    "element": "dark"
+  },
+  "ms_an_ying_zhao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "暗影爪，暗影之爪撕裂敌人",
+    "name": "暗影爪",
+    "element": "dark"
+  },
+  "ms_an_ying_zhi_liao": {
+    "kind": "治疗",
+    "effect": "heal_self",
+    "hp_pct": 0.15,
+    "desc": "暗影治疗，暗影之力治愈自身",
+    "name": "暗影治疗"
+  },
+  "ms_bao_dan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "爆弹，投掷爆弹炸伤敌人",
+    "name": "爆弹",
+    "element": "fire"
+  },
+  "ms_bao_zi_bao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "孢子爆，引爆孢子造成范围伤害",
+    "name": "孢子爆",
+    "element": "fire"
+  },
+  "ms_bao_zi_du": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "power": 1.5,
+    "desc": "孢子毒，释放毒孢子攻击敌人",
+    "name": "孢子毒"
+  },
+  "ms_bao_zi_pen_she": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "power": 1.5,
+    "desc": "孢子喷射，喷射毒孢子攻击敌人",
+    "name": "孢子喷射"
+  },
+  "ms_basic_attack": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.0,
+        "type": "phys"
+      }
+    ],
+    "power": 1.0,
+    "name": "攻击",
+    "basic": true,
+    "cast": 1.0,
+    "recovery": 0.0,
+    "desc": "普攻，基础物理攻击"
+  },
+  "ms_bing_dan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "power": 1.5,
+    "desc": "冰弹，寒冰弹攻击敌人",
+    "name": "冰弹",
+    "element": "ice",
+    "mech": "slow"
+  },
+  "ms_bing_dong": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "power": 1.4,
+    "desc": "冰冻，寒冰之力冻结敌人",
+    "name": "冰冻",
+    "element": "ice",
+    "mech": "slow"
+  },
+  "ms_bing_feng_li_zhao": {
+    "kind": "魔法",
+    "power": 1.4,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "mech": "freeze",
+    "desc": "冰封利爪：凝霜利爪挥击，冰寒叠到高位时极易被直接冻住！",
+    "name": "冰封利爪"
+  },
+  "ms_bing_hou": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "power": 1.4,
+    "desc": "冰吼，寒冰咆哮攻击敌人",
+    "name": "冰吼",
+    "element": "ice",
+    "mech": "slow"
+  },
+  "ms_bing_ji": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "power": 1.4,
+    "desc": "冰击，寒冰冲击攻击敌人",
+    "name": "冰击",
+    "element": "ice",
+    "mech": "slow"
+  },
+  "ms_bing_shuang_zhu_fu": {
+    "kind": "增益",
+    "effect": "def_up",
+    "desc": "冰霜祝福，寒冰护体提升防御",
+    "name": "冰霜祝福"
+  },
+  "ms_bing_xi": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "冰息，寒冰吐息攻击敌人",
+    "name": "冰息",
+    "element": "ice",
+    "mech": "slow"
+  },
+  "ms_bing_xi_lord": {
+    "kind": "魔法",
+    "power": 1.6,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "mech": "slow",
+    "defend_reduce": 0.8,
+    "desc": "冰息（领主）：刺骨冰息喷吐，命中减速 2 刻并叠 1 层冰寒——冻僵前快清层！",
+    "name": "冰息"
+  },
+  "ms_bing_ya": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "power": 1.4,
+    "desc": "冰牙，寒冰之牙攻击敌人",
+    "name": "冰牙",
+    "element": "ice",
+    "mech": "slow"
+  },
+  "ms_cai_guang": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "power": 1.4,
+    "desc": "彩光，彩虹光芒攻击敌人",
+    "name": "彩光"
+  },
+  "ms_cai_hong_zhan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "彩虹斩，彩虹之力斩击敌人",
+    "name": "彩虹斩"
+  },
+  "ms_cai_xi": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "彩息，彩虹吐息攻击敌人",
+    "name": "彩息"
+  },
+  "ms_cha_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "叉击，攻击敌人",
+    "name": "叉击"
+  },
+  "ms_chan_rao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.2,
+        "type": "magi"
+      }
+    ],
+    "power": 1.2,
+    "desc": "缠绕，用藤蔓缠绕攻击敌人",
+    "name": "缠绕"
+  },
+  "ms_chao_xi_yi_shi": {
+    "kind": "魔法",
+    "power": 2.4,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.4,
+        "type": "magi"
+      }
+    ],
+    "charge": 3,
+    "element": "ice",
+    "desc": "潮汐仪式：澜歌高举三叉戟咏唱 3 刻，读条完成怒潮席卷全场（2.4×；打断=潮汐反噬 2 刻）。",
+    "name": "潮汐仪式"
+  },
+  "ms_chao_yong_ling_yu": {
+    "kind": "增益",
+    "effect": "shield",
+    "desc": "潮涌领域：蓝歌周身凝聚水幕护盾（受伤减半直到破盾）。",
+    "name": "潮涌领域"
+  },
+  "ms_chen_chuan_mei_ying": {
+    "kind": "物理",
+    "power": 2.2,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 2.2,
+        "type": "phys"
+      }
+    ],
+    "charge": 1,
+    "desc": "沉船魅影：船长挥动整艘沉船的怨念蓄力 1 刻，斩出 atk×2.2——诅咒越浓越危险，读条可打断！",
+    "name": "沉船魅影"
+  },
+  "ms_chen_mo_jian_xiao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "power": 1.5,
+    "desc": "沉默尖啸，刺耳的尖啸令敌人无法施法",
+    "name": "沉默尖啸",
+    "mech": "silence"
+  },
+  "ms_chi_re_bu_dao": {
+    "kind": "增益",
+    "effect": "atk_up_strong",
+    "desc": "炽热布道：马尔库斯高声布道，圣焰灌体——自身攻击大幅提升（×1.70）！",
+    "name": "炽热布道"
+  },
+  "ms_chong_zhuang": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "冲撞，攻击敌人",
+    "name": "冲撞"
+  },
+  "ms_chu_xing_xuan_du": {
+    "kind": "魔法",
+    "power": 2.6,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.6,
+        "type": "magi"
+      }
+    ],
+    "charge": 2,
+    "element": "fire",
+    "desc": "处刑宣读：马尔库斯举起法冠宣读判决（读条 2 刻）——成功则火刑 2.6×；读条期间任何打断都让判决流产！",
+    "name": "处刑宣读"
+  },
+  "ms_chuan_shen": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "power": 1.4,
+    "desc": "穿身，穿透防御攻击敌人",
+    "name": "穿身"
+  },
+  "ms_di_di_li_zhao": {
+    "kind": "物理",
+    "power": 1.2,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.2,
+        "type": "phys"
+      }
+    ],
+    "desc": "地底利爪：覆着酸液的巨爪撕裂而来。",
+    "name": "地底利爪"
+  },
+  "ms_di_lie": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "地裂，攻击敌人",
+    "name": "地裂"
+  },
+  "ms_di_yin_wei_mu": {
+    "kind": "增益",
+    "effect": "shield",
+    "desc": "低音帷幕：歌澜周身凝出音波水幕（20% 生命护盾，受伤减半）——先破盾，再断唱！",
+    "name": "低音帷幕"
+  },
+  "ms_di_yu_huo": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.2,
+        "type": "magi"
+      }
+    ],
+    "power": 2.2,
+    "aoe": "all",
+    "desc": "地狱火，地狱烈焰灼烧敌人",
+    "name": "地狱火",
+    "element": "fire"
+  },
+  "ms_dian_hu_jian_she": {
+    "kind": "魔法",
+    "power": 1.5,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "element": "thunder",
+    "desc": "电弧溅射：轰鸣胸口雷晶爆出电弧（1.5× 雷伤），电弧顺着矿脉溅射全场——充能层数越高电弧越凶！",
+    "name": "电弧溅射"
+  },
+  "ms_ding_zhuang": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "顶撞，攻击敌人",
+    "name": "顶撞"
+  },
+  "ms_dong_jie": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "power": 1.4,
+    "desc": "冻结，凝聚寒气攻击敌人",
+    "name": "冻结"
+  },
+  "ms_du_ci": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "power": 1.4,
+    "desc": "毒刺，掷出毒刺攻击敌人",
+    "name": "毒刺"
+  },
+  "ms_du_wu": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "毒雾，攻击敌人",
+    "name": "毒雾"
+  },
+  "ms_du_ya": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "power": 1.4,
+    "desc": "毒牙，毒液侵蚀敌人",
+    "name": "毒牙"
+  },
+  "ms_duan_dao": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "短刀，攻击敌人",
+    "name": "短刀"
+  },
+  "ms_duan_jian": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "短剑，攻击敌人",
+    "name": "短剑"
+  },
+  "ms_dun_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "盾击，攻击敌人",
+    "name": "盾击"
+  },
+  "ms_dun_ji_shi_lian": {
+    "kind": "物理",
+    "power": 1.2,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.2,
+        "type": "phys"
+      }
+    ],
+    "mech": "silence",
+    "desc": "盾击·试炼：圣光盾面拍击，atk×1.2 并沉默 2 刻——被沉默就放不出打断与净化，法系需提前防御。",
+    "name": "盾击·试炼"
+  },
+  "ms_f6_an_ying_jian_yu": {
+    "kind": "魔法",
+    "power": 1.6,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "element": "dark",
+    "mech": "slow",
+    "desc": "暗影箭雨，蚀夜暗影形态的暗影箭, 命中概率减速",
+    "name": "暗影箭雨"
+  },
+  "ms_f6_chuan_cheng_he_fu_huo": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "传承之核焕发龙语生机，试图复活场上的骷髅龙",
+    "name": "传承之核·复苏"
+  },
+  "ms_f6_fen_shen_huo_lang": {
+    "kind": "魔法",
+    "power": 1.8,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "element": "fire",
+    "desc": "焚身火浪，蚀夜烈焰形态的焚身火浪",
+    "name": "焚身火浪"
+  },
+  "ms_f6_feng_bao_feng_yan": {
+    "kind": "魔法",
+    "power": 2.4,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.4,
+        "type": "magi"
+      }
+    ],
+    "element": "thunder",
+    "charge": 3,
+    "defend_reduce": 0.8,
+    "desc": "风暴之眼·风眼, 全队防御(全员站风眼)才能把团伤压低到20%",
+    "name": "风暴之眼·风眼"
+  },
+  "ms_f6_fu_shi_wa_di": {
+    "kind": "魔法",
+    "power": 0.8,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 0.8,
+        "type": "magi"
+      }
+    ],
+    "element": "abyss",
+    "pdot": {
+      "type": "corros",
+      "n": 1,
+      "mult": 1.6,
+      "atk_mult": 1.2
+    },
+    "desc": "腐蚀泥沼·沸腾，摩罗令腐化泥沼漫向全队, 每名玩家叠1层腐蚀(持续整场不消)",
+    "name": "腐蚀泥沼·沸腾"
+  },
+  "ms_f6_hun_yan_xi": {
+    "kind": "魔法",
+    "power": 1.6,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "element": "fire",
+    "desc": "魂焰龙息，附着小剂量的灵魂灼烧(治疗资源被吸血感的提前预警)",
+    "name": "魂焰龙息"
+  },
+  "ms_f6_jing_dian_jie_dian": {
+    "kind": "魔法",
+    "power": 0.8,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 0.8,
+        "type": "magi"
+      }
+    ],
+    "element": "thunder",
+    "charge": 2,
+    "desc": "天雷锁定，锁定静电层数最高的玩家, 防御姿态可减伤并清层",
+    "name": "天雷锁定"
+  },
+  "ms_f6_lei_bao_feng_yan": {
+    "kind": "魔法",
+    "power": 2.0,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "element": "thunder",
+    "charge": 2,
+    "defend_reduce": 0.8,
+    "desc": "雷暴·风眼，读条后的奔雷, 防御者站进风眼大额减免",
+    "name": "雷暴·风眼"
+  },
+  "ms_f6_lei_bao_tian_xiang": {
+    "kind": "魔法",
+    "power": 2.0,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "element": "thunder",
+    "mech": "interrupt",
+    "charge": 1,
+    "desc": "雷暴·天象, 奥拉雷象单体雷暴, 命中叠1层静电",
+    "name": "雷暴·天象"
+  },
+  "ms_f6_lei_ji_tian_xiang": {
+    "kind": "魔法",
+    "power": 1.6,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "hits": 2,
+    "element": "thunder",
+    "desc": "雷击·天象, 两连雷击叠加静电",
+    "name": "雷击·天象"
+  },
+  "ms_f6_lei_ting_shen_pan": {
+    "kind": "魔法",
+    "power": 2.6,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.6,
+        "type": "magi"
+      }
+    ],
+    "element": "thunder",
+    "charge": 1,
+    "defend_reduce": 0.8,
+    "desc": "雷霆审判，被点名者若未防御将受重击且被卷走1刻(防御=站进风眼, 伤害-80%)",
+    "name": "雷霆审判"
+  },
+  "ms_f6_lian_lei": {
+    "kind": "魔法",
+    "power": 1.6,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "element": "thunder",
+    "mech": "interrupt",
+    "charge": 1,
+    "desc": "连雷，雷霆君主二段连雷(读条1刻), 命中叠1层静电",
+    "name": "连雷"
+  },
+  "ms_f6_ling_hun_bo_li": {
+    "kind": "魔法",
+    "power": 1.7,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.7,
+        "type": "magi"
+      }
+    ],
+    "element": "dark",
+    "charge": 1,
+    "desc": "灵魂剥离，奥姆之影剥离玩家治疗并汲取其血肉(玩家治疗/吸血减半3刻+自回8%)",
+    "name": "灵魂剥离"
+  },
+  "ms_f6_mo_yu_kong_xi": {
+    "kind": "魔法",
+    "power": 0.6,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 0.6,
+        "type": "magi"
+      }
+    ],
+    "element": "abyss",
+    "desc": "魔焰扩散，摩罗每当唤起恶魔便引动魔焰毒素扩散",
+    "name": "魔焰扩散"
+  },
+  "ms_f6_ni_zhao_jia_shen": {
+    "kind": "魔法",
+    "power": 0.8,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 0.8,
+        "type": "magi"
+      }
+    ],
+    "element": "abyss",
+    "pdot": {
+      "type": "corros",
+      "n": 1,
+      "mult": 1.6,
+      "atk_mult": 1.4
+    },
+    "desc": "腐化加深，摩罗在泥沼沸腾阶段每4刻自动加深全体腐蚀",
+    "name": "腐化加深"
+  },
+  "ms_f6_shen_han": {
+    "kind": "魔法",
+    "power": 1.4,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "mech": "slow",
+    "desc": "深寒，蚀夜寒冰形态的深寒吐息, 命中概率减速",
+    "name": "深寒"
+  },
+  "ms_f6_sheng_guang_ling_yu": {
+    "kind": "魔法",
+    "power": 2.0,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "element": "fire",
+    "charge": 2,
+    "defend_reduce": 0.8,
+    "pdot": {
+      "type": "burn",
+      "n": 1,
+      "mult": 0.8,
+      "atk_mult": 1.2
+    },
+    "desc": "圣光领域, 奥拉晴象圣光AOE, 命中叠加灼光标记(层满3变灼烧dot)",
+    "name": "圣光领域"
+  },
+  "ms_f6_sheng_guang_tan": {
+    "kind": "魔法",
+    "power": 1.6,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "hits": 2,
+    "element": "fire",
+    "pdot": {
+      "type": "burn",
+      "n": 1,
+      "mult": 0.8,
+      "atk_mult": 1.2
+    },
+    "desc": "圣光弹连发, 命中持续叠加灼光",
+    "name": "圣光弹·连发"
+  },
+  "ms_f6_sheng_yu": {
+    "kind": "魔法",
+    "power": 1.2,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.2,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "pdot": {
+      "type": "burn",
+      "n": 2,
+      "mult": 1.2,
+      "atk_mult": 1.3
+    },
+    "desc": "圣雨, 奥拉雨象圣雨倾洒, 命中即挂灼烧dot",
+    "name": "圣雨"
+  },
+  "ms_f6_yan_zhi_nu_fan_pu": {
+    "kind": "魔法",
+    "power": 1.3,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.3,
+        "type": "magi"
+      }
+    ],
+    "element": "abyss",
+    "desc": "封印反噬，蚀夜切换被打断后的愤怒反扑(惩罚性加攻一段)",
+    "name": "封印反噬"
+  },
+  "ms_f6_yu_wei_zhao_huan": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "云卫呼唤, 奥拉云象静默期唤来云卫挡刀",
+    "name": "云卫呼唤"
+  },
+  "ms_f6_zhao_huan_ku_long": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "龙语招魂，奥姆之影唤醒一头骷髅龙护卫",
+    "name": "龙语招魂"
+  },
+  "ms_feng_bao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "风暴，召唤风暴攻击敌人",
+    "name": "风暴"
+  },
+  "ms_feng_bao_zhi_nu": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.2,
+        "type": "magi"
+      }
+    ],
+    "power": 2.2,
+    "desc": "风暴之怒，风暴之力爆发攻击敌人",
+    "name": "风暴之怒"
+  },
+  "ms_feng_bao_zhi_yan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.4,
+        "type": "magi"
+      }
+    ],
+    "power": 2.4,
+    "desc": "风暴之眼，风暴核心爆发攻击敌人",
+    "name": "风暴之眼"
+  },
+  "ms_feng_ren": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "风刃，风之利刃攻击敌人",
+    "name": "风刃"
+  },
+  "ms_fu_chong": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "俯冲，攻击敌人",
+    "name": "俯冲"
+  },
+  "ms_fu_hua": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "power": 1.5,
+    "desc": "腐化，腐败之力侵蚀敌人",
+    "name": "腐化",
+    "element": "dark"
+  },
+  "ms_fu_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "斧击，攻击敌人",
+    "name": "斧击"
+  },
+  "ms_fu_shi": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "power": 1.5,
+    "desc": "腐蚀，腐蚀敌人护甲",
+    "name": "腐蚀",
+    "element": "dark"
+  },
+  "ms_fu_shi_ling_yu": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "power": 2.0,
+    "desc": "腐蚀领域，腐蚀周围一切",
+    "name": "腐蚀领域",
+    "element": "dark"
+  },
+  "ms_fu_shi_shu": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "power": 1.5,
+    "desc": "腐蚀术，释放腐蚀能量攻击敌人",
+    "name": "腐蚀术",
+    "element": "dark"
+  },
+  "ms_fu_shi_tu_xi_heng_sao": {
+    "kind": "魔法",
+    "power": 1.8,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "element": "dark",
+    "pdot": {
+      "type": "corros",
+      "n": 1,
+      "atk_mult": 0.3
+    },
+    "desc": "腐蚀吐息横扫：酸液龙息横扫全场，全队都被腐蚀侵蚀！",
+    "name": "腐蚀吐息横扫"
+  },
+  "ms_fu_wen_chong_ji": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "符文冲击，符文之力冲击敌人",
+    "name": "符文冲击"
+  },
+  "ms_gan_ran": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.3,
+        "type": "magi"
+      }
+    ],
+    "power": 1.3,
+    "desc": "感染，释放感染能量攻击敌人",
+    "name": "感染"
+  },
+  "ms_gao_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "镐击，攻击敌人",
+    "name": "镐击"
+  },
+  "ms_gao_yin_gong_ming": {
+    "kind": "魔法",
+    "power": 1.8,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "mech": "stun",
+    "mech_val": 2,
+    "desc": "高音共鸣：海妖拔高音阶震得人耳膜发颤（1.8× 水伤，50% 概率震晕 1 刻）——别为它浪费打断！",
+    "name": "高音共鸣"
+  },
+  "ms_gen_xu": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "根须，攻击敌人",
+    "name": "根须"
+  },
+  "ms_gen_xu_chan_rao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.2,
+        "type": "magi"
+      }
+    ],
+    "power": 1.2,
+    "desc": "根须缠绕，用根须攻击敌人",
+    "name": "根须缠绕"
+  },
+  "ms_gen_xu_chan_rao_x": {
+    "kind": "魔法",
+    "power": 1.2,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.2,
+        "type": "magi"
+      }
+    ],
+    "element": "nature",
+    "mech": "slow",
+    "desc": "根须缠绕·新月：古藤自林间抽出，绊住敌人双脚（减速 2 刻）。",
+    "name": "根须缠绕"
+  },
+  "ms_gu_long_wei_ya": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "power": 2.0,
+    "desc": "古龙威压，远古龙威震慑敌人",
+    "name": "古龙威压"
+  },
+  "ms_gu_xi": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "骨息，亡灵吐息攻击敌人",
+    "name": "骨息",
+    "element": "dark"
+  },
+  "ms_ha_er_lian": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.0,
+        "type": "phys"
+      }
+    ],
+    "power": 1.0,
+    "multi": 2,
+    "desc": "弯刀二连斩",
+    "name": "弯刀二连"
+  },
+  "ms_ha_huan_dan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "power": 1.5,
+    "pdot": {
+      "type": "burn",
+      "n": 1
+    },
+    "desc": "掷出燃烧酒瓶——命中灼烧敌人",
+    "name": "燃烧酒瓶"
+  },
+  "ms_ha_huo_qiang_qi": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 2.2,
+        "type": "phys"
+      }
+    ],
+    "power": 2.2,
+    "charge": 2,
+    "desc": "装填火枪！蓄力 2 刻后造成巨大伤害——快打断他！",
+    "name": "火枪齐射"
+  },
+  "ms_ha_shuang_fa": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 2.2,
+        "type": "phys"
+      }
+    ],
+    "power": 2.2,
+    "charge": 2,
+    "desc": "装填双管火枪！连续两轮齐射——连续打断！",
+    "name": "双管齐射"
+  },
+  "ms_hai_chao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "海潮，召唤巨浪冲击敌人",
+    "name": "海潮",
+    "element": "ice",
+    "mech": "slow"
+  },
+  "ms_hai_chao_zhu_fu": {
+    "kind": "治疗",
+    "effect": "heal_self",
+    "hp_pct": 0.15,
+    "desc": "海潮祝福，潮水治愈自身",
+    "name": "海潮祝福"
+  },
+  "ms_hai_yao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "海妖之歌，摄魂歌声攻击敌人",
+    "name": "海妖之歌",
+    "element": "ice"
+  },
+  "ms_han_bing_tu_xi": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.7,
+        "type": "magi"
+      }
+    ],
+    "power": 1.7,
+    "desc": "寒冰吐息，龙息冰封敌人的行动",
+    "name": "寒冰吐息",
+    "element": "ice",
+    "mech": "freeze"
+  },
+  "ms_hao_jiao": {
+    "kind": "增益",
+    "effect": "atk_up",
+    "desc": "嚎叫，提升自身攻击",
+    "name": "嚎叫"
+  },
+  "ms_he_sheng_zhao_huan": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "和声召唤：溺亡的合唱团再次浮出水面（再添 1 只和声海妖）——和声越多，谢幕曲越致命！",
+    "name": "和声召唤"
+  },
+  "ms_hei_an_qi_dao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "power": 2.0,
+    "desc": "黑暗祈祷，攻击敌人",
+    "name": "黑暗祈祷",
+    "element": "dark"
+  },
+  "ms_hei_an_yi_shi": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "power": 2.0,
+    "desc": "黑暗仪式，攻击敌人",
+    "name": "黑暗仪式",
+    "element": "dark"
+  },
+  "ms_hei_an_yi_shi_helga": {
+    "kind": "魔法",
+    "power": 2.0,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "element": "dark",
+    "charge": 2,
+    "desc": "黑暗仪式：赫尔加诵念禁忌祷文 2 刻——打断它！读条完成将吞噬恶魔、回血并永久变强！",
+    "name": "黑暗仪式"
+  },
+  "ms_hei_an_zhi_liao": {
+    "kind": "治疗",
+    "effect": "heal_self",
+    "hp_pct": 0.15,
+    "desc": "黑暗治疗，暗影之力治愈自身",
+    "name": "黑暗治疗"
+  },
+  "ms_heng_sao_xiu": {
+    "kind": "物理",
+    "power": 1.2,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.2,
+        "type": "phys"
+      }
+    ],
+    "desc": "横扫·锈潮：锈钳蟹王原地旋身横扫，锈水与甲片溅射全场（atk×1.2 重击前排）！",
+    "name": "横扫·锈潮"
+  },
+  "ms_hu_zai": {
+    "kind": "治疗",
+    "effect": "heal_self",
+    "hp_pct": 0.15,
+    "desc": "护崽，保护幼崽恢复自身生命",
+    "name": "护崽"
+  },
+  "ms_huo_dan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "power": 1.5,
+    "desc": "火弹，火焰弹攻击敌人",
+    "name": "火弹",
+    "element": "fire"
+  },
+  "ms_huo_pao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "aoe": "all",
+    "desc": "火炮，轰击敌人",
+    "name": "火炮",
+    "element": "fire"
+  },
+  "ms_huo_qiang": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.6,
+        "type": "phys"
+      }
+    ],
+    "power": 1.6,
+    "desc": "火枪，射击敌人",
+    "name": "火枪"
+  },
+  "ms_huo_yan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "aoe": "all",
+    "desc": "火焰，烈焰灼烧敌人",
+    "name": "火焰",
+    "element": "fire"
+  },
+  "ms_ji_chi": {
+    "kind": "增益",
+    "effect": "spd_up",
+    "desc": "疾驰，提升自身速度",
+    "name": "疾驰"
+  },
+  "ms_ji_guang_shan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "power": 1.4,
+    "desc": "极光闪，极光闪耀攻击敌人",
+    "name": "极光闪"
+  },
+  "ms_ji_han_feng_bao": {
+    "kind": "魔法",
+    "power": 1.6,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "mech": "freeze",
+    "mech_val": 2,
+    "desc": "极寒风暴：凛冬之息席卷全场，所有人都有被冻僵的风险！",
+    "name": "极寒风暴"
+  },
+  "ms_ji_huo_guang_zhu": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "charge": 1,
+    "desc": "激活·光柱圣像：读条 1 刻，光柱圣像苏醒（打断可封印它！）。",
+    "name": "激活机关·光柱"
+  },
+  "ms_ji_huo_jing_mian": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "charge": 1,
+    "desc": "激活·镜面圣像：读条 1 刻，镜面圣像苏醒——受击反弹 25% 圣光（打断可封印它！）。",
+    "name": "激活机关·镜面"
+  },
+  "ms_ji_huo_sheng_dun": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "charge": 1,
+    "desc": "激活·圣盾圣像：读条 1 刻，圣盾圣像苏醒——守卫获得 30% maxHP 护盾（打断可封印它！）。",
+    "name": "激活机关·圣盾"
+  },
+  "ms_ji_pao": {
+    "kind": "增益",
+    "effect": "spd_up",
+    "desc": "疾跑，提升自身速度",
+    "name": "疾跑"
+  },
+  "ms_jia_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "甲击，攻击敌人",
+    "name": "甲击"
+  },
+  "ms_jian_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "剑击，攻击敌人",
+    "name": "剑击"
+  },
+  "ms_jian_ta": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "charge": 1,
+    "desc": "践踏，蓄力 1 刻后猛然踏地，命中结算(蓄力期间受击会被打断)",
+    "name": "践踏"
+  },
+  "ms_jian_xiao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.3,
+        "type": "magi"
+      }
+    ],
+    "power": 1.3,
+    "desc": "尖啸，震慑敌人使其速度降低",
+    "name": "尖啸"
+  },
+  "ms_jiao_sha": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.6,
+        "type": "phys"
+      }
+    ],
+    "power": 1.6,
+    "desc": "绞杀，缠绕绞杀敌人",
+    "name": "绞杀"
+  },
+  "ms_jing_hua_zhi_chao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "净化之潮，神圣潮水净化敌人",
+    "name": "净化之潮"
+  },
+  "ms_jing_ji_chan_rao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.3,
+        "type": "magi"
+      }
+    ],
+    "power": 1.3,
+    "desc": "荆棘缠绕，用荆棘攻击敌人",
+    "name": "荆棘缠绕"
+  },
+  "ms_jing_ling_jian_shu": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.8,
+        "type": "phys"
+      }
+    ],
+    "power": 1.8,
+    "desc": "精灵剑术，精灵秘传剑法攻击敌人",
+    "name": "精灵剑术"
+  },
+  "ms_ju_lang": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "巨浪，掀起巨浪冲击敌人",
+    "name": "巨浪",
+    "element": "ice",
+    "mech": "slow"
+  },
+  "ms_ju_lang_blue": {
+    "kind": "魔法",
+    "power": 1.8,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "mech": "slow",
+    "desc": "巨浪（蓝歌）：掀起巨浪冲击敌人，浪潮压得人脚步迟缓。",
+    "name": "巨浪"
+  },
+  "ms_ju_qian_heng_sao": {
+    "kind": "物理",
+    "power": 1.6,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.6,
+        "type": "phys"
+      }
+    ],
+    "desc": "巨钳横扫：磐涡探出龟首挥出巨钳横扫（atk×1.6）——破壳期的它终于肯认真出招了！",
+    "name": "巨钳横扫"
+  },
+  "ms_ken_yao": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "啃咬，攻击敌人",
+    "name": "啃咬"
+  },
+  "ms_kuang_bao": {
+    "kind": "增益",
+    "effect": "atk_up",
+    "desc": "狂暴，陷入狂暴提升自身攻击",
+    "name": "狂暴"
+  },
+  "ms_lang_chao_dot": {
+    "kind": "魔法",
+    "power": 0.9,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 0.9,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "pdot": {
+      "type": "corros",
+      "n": 1,
+      "mult": 0.5
+    },
+    "desc": "浪潮侵袭：潮起怒浪裹挟深水腐蚀扑打（浪潮 dot 近似，可防御减半）。",
+    "name": "浪潮侵袭"
+  },
+  "ms_lang_yong_pai_ji": {
+    "kind": "魔法",
+    "power": 1.7,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.7,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "mech": "slow",
+    "desc": "浪涌拍击：怒浪随潮而起，拍得人脚步迟缓（1.7× + 减速）。",
+    "name": "浪涌拍击"
+  },
+  "ms_lei_bao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "power": 2.0,
+    "desc": "雷暴，召唤雷暴攻击敌人",
+    "name": "雷暴",
+    "element": "thunder"
+  },
+  "ms_lei_ji": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "雷击，雷电轰击敌人",
+    "name": "雷击",
+    "element": "thunder"
+  },
+  "ms_lei_jian": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "雷剑，雷电之剑斩击敌人",
+    "name": "雷剑",
+    "element": "thunder"
+  },
+  "ms_lei_jing_ning_ju": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "雷晶重凝：被击碎的雷晶核在矿脉共鸣中重新凝聚（场上再添 1 颗可碎目标）——留一颗应急！",
+    "name": "雷晶重凝"
+  },
+  "ms_lei_jing_sui_xie": {
+    "kind": "魔法",
+    "power": 1.0,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.0,
+        "type": "magi"
+      }
+    ],
+    "element": "thunder",
+    "mech": "stun",
+    "mech_val": 1,
+    "desc": "雷晶碎屑：电弧过载震落雷晶碎屑（1.0× 雷伤，约 35% 概率震晕 1 刻）——充能越高碎屑越密！",
+    "name": "雷晶碎屑"
+  },
+  "ms_lei_jing_zhong_chui": {
+    "kind": "物理",
+    "power": 1.3,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.3,
+        "type": "phys"
+      }
+    ],
+    "element": "thunder",
+    "desc": "雷晶重锤：轰鸣抡起雷晶包裹的巨锤砸下（atk×1.3 雷系）——重锤本身不会给它充能。",
+    "name": "雷晶重锤"
+  },
+  "ms_lei_ting_jian_ta": {
+    "kind": "物理",
+    "power": 1.2,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.2,
+        "type": "phys"
+      }
+    ],
+    "element": "thunder",
+    "desc": "雷霆践踏：轰鸣抬脚重重跺下，震落矿道顶部落石砸向你们（atk×1.2 雷系）！",
+    "name": "雷霆践踏"
+  },
+  "ms_lei_ting_zha_lie": {
+    "kind": "魔法",
+    "power": 1.8,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "element": "thunder",
+    "charge": 2,
+    "desc": "雷霆炸裂：轰鸣过载蓄力 2 刻，雷晶核迸出毁灭白光——炸裂席卷全场（1.8× 雷伤 + 眩晕）！打断它=充能散逸回 3 层！",
+    "name": "雷霆炸裂"
+  },
+  "ms_lei_yu": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "雷羽，雷电羽毛攻击敌人",
+    "name": "雷羽",
+    "element": "thunder"
+  },
+  "ms_lian_zhan": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "连斩，攻击敌人",
+    "name": "连斩"
+  },
+  "ms_lie_yan_zhao": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "烈焰爪，攻击敌人",
+    "name": "烈焰爪"
+  },
+  "ms_lin_fen": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.2,
+        "type": "magi"
+      }
+    ],
+    "power": 1.2,
+    "desc": "磷粉，洒出磷粉使敌人致盲",
+    "name": "磷粉"
+  },
+  "ms_long_jian_shu": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 2.2,
+        "type": "phys"
+      }
+    ],
+    "power": 2.2,
+    "desc": "龙剑术，攻击敌人",
+    "name": "龙剑术"
+  },
+  "ms_long_lin_chong_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 2.2,
+        "type": "phys"
+      }
+    ],
+    "power": 2.2,
+    "desc": "龙鳞冲击，攻击敌人",
+    "name": "龙鳞冲击"
+  },
+  "ms_long_wei": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "龙威，龙之威压震慑敌人",
+    "name": "龙威"
+  },
+  "ms_long_wei_190": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 2.2,
+        "type": "phys"
+      }
+    ],
+    "power": 2.2,
+    "desc": "龙尾，攻击敌人",
+    "name": "龙尾"
+  },
+  "ms_long_wei_ji_tui": {
+    "kind": "魔法",
+    "power": 2.0,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "charge": 2,
+    "element": "ice",
+    "desc": "龙威·击退：敖澜深吸海水蓄力 2 刻，吐息裹挟万钧水压席卷全场（打断=压力回落）。",
+    "name": "龙威·击退"
+  },
+  "ms_long_xi": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "power": 2.0,
+    "desc": "龙息，龙焰吐息攻击敌人",
+    "name": "龙息",
+    "element": "fire"
+  },
+  "ms_long_yu_ai_hao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.4,
+        "type": "magi"
+      }
+    ],
+    "power": 2.4,
+    "desc": "龙语哀嚎，攻击敌人",
+    "name": "龙语哀嚎"
+  },
+  "ms_long_zhao": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 2.2,
+        "type": "phys"
+      }
+    ],
+    "power": 2.2,
+    "desc": "龙爪，攻击敌人",
+    "name": "龙爪"
+  },
+  "ms_luo_shi_po_qiao": {
+    "kind": "物理",
+    "power": 2.0,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 2.0,
+        "type": "phys"
+      }
+    ],
+    "charge": 1,
+    "desc": "落石破壳：磐涡高高昂首蓄力 1 刻，砸下石破天惊的重击（atk×2.0）——被旋涡拖进中心的会被砸得更狠！可打断！",
+    "name": "落石破壳"
+  },
+  "ms_lve_duo_h_ling": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "charge": 1,
+    "desc": "咕噜举起号角吹响掠夺号令！蓄力 1 刻召来打手并提升攻击——蓄力可被打断！",
+    "name": "掠夺号令"
+  },
+  "ms_lve_er_zhang": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.0,
+        "type": "phys"
+      }
+    ],
+    "power": 1.0,
+    "multi": 2,
+    "desc": "酋长二连斩",
+    "name": "酋长二连斩"
+  },
+  "ms_lve_h_ling_cheng": {
+    "kind": "增益",
+    "effect": "atk_up",
+    "desc": "掠夺号令成功，咕噜战意高昂攻击提升",
+    "name": "掠夺号令·成功"
+  },
+  "ms_lve_jie_huan_zhua": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.2,
+        "type": "phys"
+      }
+    ],
+    "power": 1.2,
+    "mech": "slow",
+    "desc": "酒桌砸击，把酒桌砸向敌人",
+    "name": "酒桌砸击"
+  },
+  "ms_lve_za_jiu_tan": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.5,
+        "type": "phys"
+      }
+    ],
+    "power": 1.5,
+    "pdot": {
+      "type": "burn",
+      "n": 2
+    },
+    "desc": "砸碎酒坛酒火四溅——造成伤害并灼烧敌人",
+    "name": "砸酒坛"
+  },
+  "ms_mei_huo": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.2,
+        "type": "magi"
+      }
+    ],
+    "power": 1.2,
+    "desc": "魅惑，迷惑敌人使其攻击偏离",
+    "name": "魅惑"
+  },
+  "ms_mei_huo_ge_blue": {
+    "kind": "魔法",
+    "power": 1.2,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.2,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "mech": "slow",
+    "desc": "魅惑之歌（蓝歌）：单体低伤 + 减速 2 刻，被歌声迷住的队伍更慢躲开触手。",
+    "name": "魅惑之歌"
+  },
+  "ms_mei_huo_zhi_ge": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.2,
+        "type": "magi"
+      }
+    ],
+    "power": 1.2,
+    "desc": "魅惑之歌，迷惑敌人使其伤害降低",
+    "name": "魅惑之歌"
+  },
+  "ms_mo_zhi": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.2,
+        "type": "magi"
+      }
+    ],
+    "power": 1.2,
+    "desc": "墨汁，喷出墨汁降低敌人命中",
+    "name": "墨汁"
+  },
+  "ms_ni_jiang": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.2,
+        "type": "magi"
+      }
+    ],
+    "power": 1.2,
+    "desc": "泥浆，泼洒泥浆攻击敌人",
+    "name": "泥浆"
+  },
+  "ms_nian_ye": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.2,
+        "type": "magi"
+      }
+    ],
+    "power": 1.2,
+    "desc": "黏液，喷吐黏液攻击敌人",
+    "name": "黏液"
+  },
+  "ms_nu_chao": {
+    "kind": "魔法",
+    "power": 2.4,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.4,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "desc": "怒潮：仪式完成，怒浪化作毁灭性的潮啸拍打全场。",
+    "name": "怒潮"
+  },
+  "ms_nu_hou": {
+    "kind": "增益",
+    "effect": "atk_up",
+    "desc": "怒吼，提升自身攻击",
+    "name": "怒吼"
+  },
+  "ms_pai_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "拍击，攻击敌人",
+    "name": "拍击"
+  },
+  "ms_peng_zhang": {
+    "kind": "增益",
+    "effect": "atk_up",
+    "desc": "膨胀，鼓起身体提升防御",
+    "name": "膨胀"
+  },
+  "ms_pi_kan": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "劈砍，攻击敌人",
+    "name": "劈砍"
+  },
+  "ms_piao_fu": {
+    "kind": "增益",
+    "effect": "def_up",
+    "desc": "飘浮，漂浮在空中躲避攻击",
+    "name": "飘浮"
+  },
+  "ms_pu_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "扑击，攻击敌人",
+    "name": "扑击"
+  },
+  "ms_qian_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "钳击，攻击敌人",
+    "name": "钳击"
+  },
+  "ms_qian_jia_lie_shi": {
+    "kind": "物理",
+    "power": 1.0,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.0,
+        "type": "phys"
+      }
+    ],
+    "charge": 1,
+    "mech": "stun",
+    "desc": "钳夹猎食：双钳猛然合拢夹住当前目标（读条 1 刻可打断）——被夹住 1 刻无法动弹！打断它就能救下队友！",
+    "name": "钳夹猎食"
+  },
+  "ms_qian_xing": {
+    "kind": "增益",
+    "effect": "atk_up",
+    "desc": "潜行，隐藏身形提升下一次攻击",
+    "name": "潜行"
+  },
+  "ms_rong_lu_bao_fa": {
+    "kind": "魔法",
+    "power": 1.6,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "element": "fire",
+    "desc": "熔炉爆发：石炉炉膛炸开，灼热铁水泼向全场！",
+    "name": "熔炉爆发"
+  },
+  "ms_rong_yan_dan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "熔岩弹，熔岩弹攻击敌人",
+    "name": "熔岩弹",
+    "element": "fire"
+  },
+  "ms_san_cha_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "三叉戟，攻击敌人",
+    "name": "三叉戟"
+  },
+  "ms_shan_dian_lian": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "闪电链，连锁闪电攻击敌人",
+    "name": "闪电链",
+    "element": "thunder"
+  },
+  "ms_shan_hu_hu_dun": {
+    "kind": "增益",
+    "effect": "shield",
+    "desc": "珊瑚护盾，凝聚珊瑚护甲",
+    "name": "珊瑚护盾"
+  },
+  "ms_shan_shuo": {
+    "kind": "增益",
+    "effect": "spd_up",
+    "desc": "闪烁，瞬间移动提升闪避",
+    "name": "闪烁"
+  },
+  "ms_shen_pan_zhi_yan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.2,
+        "type": "magi"
+      }
+    ],
+    "power": 2.2,
+    "desc": "审判之炎，圣火审判攻击敌人",
+    "name": "审判之炎",
+    "element": "fire"
+  },
+  "ms_shen_shui_ya": {
+    "kind": "魔法",
+    "power": 0.0,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 0.0,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "desc": "深水压强：深海之水挤压着你们的躯体，压力每刻递增（随层数增伤）。",
+    "name": "深水压强"
+  },
+  "ms_shen_yuan_zhi_nu": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.4,
+        "type": "magi"
+      }
+    ],
+    "power": 2.4,
+    "desc": "深渊之怒，深渊之力爆发攻击敌人",
+    "name": "深渊之怒",
+    "element": "dark"
+  },
+  "ms_shen_yuan_zhi_yan": {
+    "kind": "魔法",
+    "power": 1.8,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "element": "dark",
+    "desc": "深渊之炎：祭坛黑焰腾起，化作火雨焚遍全场！",
+    "name": "深渊之炎"
+  },
+  "ms_sheng_guang": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "power": 2.0,
+    "desc": "圣光，神圣光芒灼烧敌人",
+    "name": "圣光"
+  },
+  "ms_sheng_guang_cai_jue": {
+    "kind": "魔法",
+    "power": 2.4,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.4,
+        "type": "magi"
+      }
+    ],
+    "charge": 1,
+    "desc": "圣光裁决：终考的最后一课——蓄力 1 刻降下圣光裁决（matk×2.4），圣光笼罩全场！",
+    "name": "圣光裁决"
+  },
+  "ms_sheng_guang_dan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "圣光弹，发射圣光弹攻击敌人",
+    "name": "圣光弹"
+  },
+  "ms_sheng_guang_fan_shi": {
+    "kind": "增益",
+    "effect": "atk_up_strong",
+    "desc": "圣光反噬：赫尔嘉将圣光之力倒灌自身（攻击大幅提升 ×1.70）——光明在她手里成了亵渎的燃料！",
+    "name": "圣光反噬"
+  },
+  "ms_sheng_guang_jian_zhen": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "罗兰的圣光剑阵，攻击敌人",
+    "name": "圣光剑阵"
+  },
+  "ms_sheng_guang_qi_yuan": {
+    "kind": "增益",
+    "effect": "shield",
+    "desc": "圣光祈愿：骑士长摇头叹息——圣光凝成护盾护住自身（20% 生命护盾，受伤减半）。",
+    "name": "圣光祈愿"
+  },
+  "ms_sheng_guang_zhan_bei_wu_ran": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "被污染的圣光斩，暗影与圣光交织",
+    "name": "圣光斩(被污染)"
+  },
+  "ms_sheng_guang_zhui_bing": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.6,
+        "type": "phys"
+      }
+    ],
+    "power": 1.6,
+    "desc": "圣光骑士团的追击剑术，攻击敌人",
+    "name": "追猎剑术"
+  },
+  "ms_sheng_mu_ge_ying": {
+    "kind": "治疗",
+    "effect": "heal_self",
+    "hp_pct": 0.15,
+    "desc": "圣木歌咏：生命古树吸根回春，晨曦获得自然治愈。",
+    "name": "圣木歌咏"
+  },
+  "ms_shi_gu_shen_tun": {
+    "kind": "物理",
+    "power": 2.2,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 2.2,
+        "type": "phys"
+      }
+    ],
+    "charge": 2,
+    "desc": "噬骨深吞：黑渊张开血盆大口读条 2 刻——【意图】被吞者 2 刻内打它任意一下可救出！",
+    "name": "噬骨深吞"
+  },
+  "ms_shi_gu_si_yao": {
+    "kind": "物理",
+    "power": 1.6,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.6,
+        "type": "phys"
+      }
+    ],
+    "mech": "freeze",
+    "desc": "噬骨撕咬：黑渊一口咬住猎物甩入腹中，被吞者无法行动（净化可解）！",
+    "name": "噬骨撕咬"
+  },
+  "ms_shi_lin_suan_shi": {
+    "kind": "增益",
+    "effect": "atk_up",
+    "desc": "蚀鳞酸蚀：鳞片上的酸液越积越亮，黑渊的攻击随之攀升（腐蚀越深它越凶）。",
+    "name": "蚀鳞酸蚀"
+  },
+  "ms_shi_xi": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "石息，岩石吐息攻击敌人",
+    "name": "石息"
+  },
+  "ms_shi_zi_zhan": {
+    "kind": "物理",
+    "power": 2.0,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 2.0,
+        "type": "phys"
+      }
+    ],
+    "charge": 1,
+    "defend_reduce": 0.8,
+    "desc": "蓄力十字斩：蓄力 1 刻的圣光十字重斩（atk×2.0）——防御格挡 80% 伤害，读条被打断则露出失衡破绽！",
+    "name": "蓄力十字斩"
+  },
+  "ms_shuai_wei": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "甩尾，攻击敌人",
+    "name": "甩尾"
+  },
+  "ms_shui_dan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "power": 1.5,
+    "desc": "水弹，水之弹攻击敌人",
+    "name": "水弹",
+    "element": "ice",
+    "mech": "slow"
+  },
+  "ms_shui_dan_chong_ji": {
+    "kind": "魔法",
+    "power": 1.5,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "desc": "水弹冲击：退潮前磐涡喷出一颗高压水弹（1.5× 水伤）——拉扯期收尾的迎头一击！",
+    "name": "水弹冲击"
+  },
+  "ms_shui_ren_lange": {
+    "kind": "魔法",
+    "power": 1.4,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "desc": "水刃：潮落时澜歌挥出的低威胁水刃（1.4×）。",
+    "name": "水刃"
+  },
+  "ms_shui_xi": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "水息，水柱吐息攻击敌人",
+    "name": "水息",
+    "element": "ice",
+    "mech": "slow"
+  },
+  "ms_shui_xi_aolan": {
+    "kind": "魔法",
+    "power": 1.6,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "mech": "slow",
+    "desc": "水息（敖澜）：高压水柱吐息，水压黏住脚步（1.6× + 减速）。",
+    "name": "水息"
+  },
+  "ms_si_yao": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "撕咬，攻击敌人",
+    "name": "撕咬"
+  },
+  "ms_suan_xi": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "酸息，酸性吐息腐蚀敌人",
+    "name": "酸息"
+  },
+  "ms_suan_xi_under": {
+    "kind": "魔法",
+    "power": 1.6,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "element": "dark",
+    "charge": 1,
+    "pdot": {
+      "type": "corros",
+      "n": 1,
+      "atk_mult": 0.3
+    },
+    "desc": "酸息（黑渊）：黑渊深吸一口气酝酿酸液——读条命中叠 1 层腐蚀，快打断或备净化！",
+    "name": "酸息"
+  },
+  "ms_suo_lian": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "锁链，攻击敌人",
+    "name": "锁链"
+  },
+  "ms_suo_lian_ding_zui": {
+    "kind": "物理",
+    "power": 1.4,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "element": "dark",
+    "mech": "freeze",
+    "mech_val": 2,
+    "desc": "锁链·定罪：审判锁链甩出（atk×1.4），55% 概率将你束缚 1 刻——被定罪的刻无法出手，打断资源被吃掉！",
+    "name": "锁链·定罪"
+  },
+  "ms_suo_qiao_xi": {
+    "kind": "治疗",
+    "effect": "heal_self",
+    "hp_pct": 0.15,
+    "desc": "缩壳·潮息：磐涡缩头入壳，潮水裹着龟甲缓缓愈合它的伤口（自愈）——壳态减伤 40% 是硬打的墙！",
+    "name": "缩壳·潮息"
+  },
+  "ms_teng_bian": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "藤鞭，攻击敌人",
+    "name": "藤鞭"
+  },
+  "ms_tie_bi": {
+    "kind": "增益",
+    "effect": "shield",
+    "desc": "铁壁，为自己套上护盾",
+    "name": "铁壁"
+  },
+  "ms_tie_pi": {
+    "kind": "增益",
+    "effect": "def_up",
+    "desc": "铁皮，提升自身防御",
+    "name": "铁皮"
+  },
+  "ms_tou_qie": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.0,
+        "type": "magi"
+      }
+    ],
+    "power": 1.0,
+    "desc": "偷窃，窃取敌人财物(少量金币)",
+    "name": "偷窃"
+  },
+  "ms_tou_shi": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "投石，攻击敌人",
+    "name": "投石"
+  },
+  "ms_tun_shi": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.8,
+        "type": "phys"
+      }
+    ],
+    "power": 1.8,
+    "desc": "吞噬，吞没敌人造成伤害",
+    "name": "吞噬"
+  },
+  "ms_wan_dao": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "弯刀，攻击敌人",
+    "name": "弯刀"
+  },
+  "ms_wan_dao_an_ying": {
+    "kind": "魔法",
+    "power": 0.6,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 0.6,
+        "type": "magi"
+      }
+    ],
+    "element": "dark",
+    "desc": "弯刀·暗潮尾刀：亡潮诅咒浓时，弯刀挥出暗影水刃补刀（0.6×atk 暗影，吃 abyss_res）。",
+    "name": "弯刀·暗影补刀"
+  },
+  "ms_wang_chao_zu_zhou": {
+    "kind": "魔法",
+    "power": 0.9,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 0.9,
+        "type": "magi"
+      }
+    ],
+    "element": "dark",
+    "desc": "亡潮诅咒：潮水般的暗影诅咒涌向全队（叠 1 层；层越高幽灵爪牙越凶，可被净化清除）。",
+    "name": "亡潮诅咒"
+  },
+  "ms_wang_wei": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "王威，王者之威震慑敌人",
+    "name": "王威"
+  },
+  "ms_wang_yu_huan_hun": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "亡语唤魂：王冠之力牵引亡骨，战场上的骷髅残骸再次立起（再添 1 只骷髅卫兵）。",
+    "name": "亡语唤魂"
+  },
+  "ms_wang_zhe_zhi_nu": {
+    "kind": "物理",
+    "power": 2.0,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 2.0,
+        "type": "phys"
+      }
+    ],
+    "charge": 1,
+    "desc": "王者之怒：奥德里克高举王剑蓄力 1 刻，劈下 atk×2.0 的重击——读条可见可打断，防御可大幅减免！",
+    "name": "王者之怒"
+  },
+  "ms_wei_feng_zhu_fu": {
+    "kind": "治疗",
+    "effect": "heal_self",
+    "hp_pct": 0.15,
+    "desc": "微风祝福，微风治愈自身",
+    "name": "微风祝福"
+  },
+  "ms_wei_ya": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "power": 1.5,
+    "desc": "威压，以气势压制敌人使其伤害降低",
+    "name": "威压"
+  },
+  "ms_xi_deng": {
+    "kind": "魔法",
+    "power": 0.8,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 0.8,
+        "type": "magi"
+      }
+    ],
+    "element": "dark",
+    "charge": 2,
+    "desc": "熄灯：赫尔嘉转身吹向大殿烛火（读条 2 刻）——读条成功全场陷入黑暗（暗影庇护）！打断她=烛火反噬 1 刻爆发窗！",
+    "name": "熄灯"
+  },
+  "ms_xi_xue": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.5,
+        "type": "phys"
+      }
+    ],
+    "power": 1.5,
+    "desc": "吸血，吸取敌人生命恢复自身",
+    "name": "吸血"
+  },
+  "ms_xie_mu_qu": {
+    "kind": "魔法",
+    "power": 2.4,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.4,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "charge": 3,
+    "desc": "谢幕曲：歌澜闭目咏唱 3 刻（读条）——完成时音浪席卷全场（2.4× 水伤，场上每只和声海妖 +20%）！读条可打断：断唱=破音虚脱 2 刻爆发窗！",
+    "name": "谢幕曲"
+  },
+  "ms_xing_hui_dan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "星辉弹，星光之力攻击敌人",
+    "name": "星辉弹"
+  },
+  "ms_xing_hui_zhan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "星辉斩，星光之刃斩击敌人",
+    "name": "星辉斩"
+  },
+  "ms_xing_xi": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "星息，星辰吐息攻击敌人",
+    "name": "星息"
+  },
+  "ms_xiong_zhang": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "熊掌，攻击敌人",
+    "name": "熊掌"
+  },
+  "ms_xiu_jian": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "锈剑，攻击敌人",
+    "name": "锈剑"
+  },
+  "ms_xiu_li": {
+    "kind": "治疗",
+    "effect": "heal_self",
+    "hp_pct": 0.15,
+    "desc": "修理，修复自身机械结构恢复生命",
+    "name": "修理"
+  },
+  "ms_xiu_qiao": {
+    "kind": "增益",
+    "effect": "def_up",
+    "charge": 1,
+    "desc": "修壳：蟹王吐出海沫修补锈壳（读条 1 刻）——读完甲壳重新硬化（减伤恢复）！读条可打断，打断=破甲窗更久！",
+    "name": "修壳"
+  },
+  "ms_xu_kong": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "power": 2.0,
+    "desc": "虚空裂隙，撕裂空间攻击敌人",
+    "name": "虚空裂隙",
+    "element": "dark"
+  },
+  "ms_xuan_wo": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "漩涡，制造漩涡吞噬敌人",
+    "name": "漩涡",
+    "element": "ice",
+    "mech": "slow"
+  },
+  "ms_xuan_wo_la_che": {
+    "kind": "魔法",
+    "power": 0.8,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 0.8,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "mech": "slow",
+    "pdot": {
+      "type": "corros",
+      "n": 1,
+      "mult": 0.6
+    },
+    "desc": "旋涡拉扯：场地旋涡把你们拖向中心（0.8× 水伤 + 减速）——拉扯期的每刻都在被潮水啃噬！",
+    "name": "旋涡拉扯"
+  },
+  "ms_xuan_yun_zhong_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.8,
+        "type": "phys"
+      }
+    ],
+    "power": 1.8,
+    "desc": "眩晕重击，重击敌人头部使其眩晕",
+    "name": "眩晕重击",
+    "mech": "stun"
+  },
+  "ms_yan_wu": {
+    "kind": "增益",
+    "effect": "def_up",
+    "desc": "烟雾，释放烟雾掩护自己",
+    "name": "烟雾"
+  },
+  "ms_yao_sui": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "咬碎，攻击敌人",
+    "name": "咬碎"
+  },
+  "ms_yin_chao_hui_chun": {
+    "kind": "治疗",
+    "effect": "heal_self",
+    "hp_pct": 0.15,
+    "desc": "引潮回春：退潮的海水带走澜歌的伤势（自愈）。",
+    "name": "引潮回春"
+  },
+  "ms_ying_guang_shan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "power": 1.4,
+    "desc": "荧光闪，荧光爆发攻击敌人",
+    "name": "荧光闪"
+  },
+  "ms_ying_hua": {
+    "kind": "增益",
+    "effect": "def_up",
+    "desc": "硬化，提升自身防御",
+    "name": "硬化"
+  },
+  "ms_yong_tan_lang_yong": {
+    "kind": "魔法",
+    "power": 1.5,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "element": "ice",
+    "desc": "咏叹·浪涌：歌澜低音咏叹，音浪裹着海水扑向敌人（1.5× 水伤）——高音前的开嗓。",
+    "name": "咏叹·浪涌"
+  },
+  "ms_you_ai_hao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.2,
+        "type": "magi"
+      }
+    ],
+    "power": 2.2,
+    "desc": "附身哀嚎，穿透灵魂的嚎叫",
+    "name": "附身哀嚎"
+  },
+  "ms_you_fu_shen": {
+    "kind": "增益",
+    "effect": "atk_up",
+    "desc": "附身缠绕，攻击提升",
+    "name": "附身"
+  },
+  "ms_you_hui_hui_chang": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "power": 2.0,
+    "desc": "刺耳哀嚎，造成大量魔法伤害",
+    "name": "哀嚎·灵啸"
+  },
+  "ms_you_jun_qi": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "幽灵军旗复现，唤来骷髅兵",
+    "name": "军旗复现"
+  },
+  "ms_you_kang_bao": {
+    "kind": "增益",
+    "effect": "atk_up_strong",
+    "desc": "狂暴，灵体剧烈翻涌攻击大涨",
+    "name": "狂暴·灵体"
+  },
+  "ms_you_lan_hui_xiang": {
+    "kind": "魔法",
+    "power": 1.0,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.0,
+        "type": "magi"
+      }
+    ],
+    "charge": 2,
+    "element": "ice",
+    "desc": "幽蓝回响：蓝歌咏唱 2 刻的群体魅惑曲，歌声夺走咒语。读条可被打断——打断即呼吸点！",
+    "name": "幽蓝回响"
+  },
+  "ms_you_ling": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "幽灵之触，幽魂之力侵蚀敌人",
+    "name": "幽灵之触",
+    "element": "dark"
+  },
+  "ms_you_sheng_guang_chu_ji": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "圣光惩戒，圣洁之火灼烧敌人",
+    "name": "圣光惩戒"
+  },
+  "ms_you_xiang_ji": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "power": 1.4,
+    "reach": 3,
+    "desc": "瞬移穿墙直袭后排敌人",
+    "name": "穿墙急袭"
+  },
+  "ms_yuan_ling_jian_xiao": {
+    "kind": "魔法",
+    "power": 1.5,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "element": "dark",
+    "mech": "slow",
+    "desc": "怨灵尖啸：溺亡者的尖啸穿过甲板，matk×1.5 并减速 2 刻。",
+    "name": "怨灵尖啸"
+  },
+  "ms_yue_guang_cai_jue": {
+    "kind": "魔法",
+    "power": 2.2,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.2,
+        "type": "magi"
+      }
+    ],
+    "charge": 1,
+    "desc": "月光裁决：守卫蓄势 1 刻降下圣光裁决（2.2×，可打断）。",
+    "name": "月光裁决"
+  },
+  "ms_yue_guang_xin": {
+    "kind": "魔法",
+    "power": 1.4,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.4,
+        "type": "magi"
+      }
+    ],
+    "element": "nature",
+    "desc": "月光斩·新月：月华熄灭，斩击疲软（1.4×）。",
+    "name": "月光斩"
+  },
+  "ms_yue_guang_ying": {
+    "kind": "魔法",
+    "power": 2.2,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.2,
+        "type": "magi"
+      }
+    ],
+    "element": "nature",
+    "desc": "月光斩·盈月：盈月当空，月华之力鼎盛（2.2×）。",
+    "name": "月光斩"
+  },
+  "ms_yue_guang_zhan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.8,
+        "type": "magi"
+      }
+    ],
+    "power": 1.8,
+    "desc": "月光斩，月华之刃斩击敌人",
+    "name": "月光斩"
+  },
+  "ms_yue_hua_lian_shan": {
+    "kind": "魔法",
+    "power": 0.9,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 0.9,
+        "type": "magi"
+      }
+    ],
+    "element": "nature",
+    "desc": "月华连闪：盈月下月华如影，追加一次 0.9× 追打。",
+    "name": "月华连闪"
+  },
+  "ms_yue_shi_jiang_lin": {
+    "kind": "魔法",
+    "power": 2.0,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.0,
+        "type": "magi"
+      }
+    ],
+    "charge": 2,
+    "element": "nature",
+    "desc": "月蚀降临：晨曦高举权杖读条 2 刻，月蚀之光倾泻全场（读条可打断；打断=月亏力竭 2 刻）。",
+    "name": "月蚀降临"
+  },
+  "ms_yue_zhi_qi_yuan": {
+    "kind": "治疗",
+    "effect": "heal_self",
+    "hp_pct": 0.15,
+    "desc": "月之祈愿：圣像庇护的回春余韵，守卫恢复生命。",
+    "name": "月之祈愿"
+  },
+  "ms_yun_dan": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.6,
+        "type": "magi"
+      }
+    ],
+    "power": 1.6,
+    "desc": "云弹，云雾弹攻击敌人",
+    "name": "云弹"
+  },
+  "ms_yun_dun": {
+    "kind": "增益",
+    "effect": "shield",
+    "desc": "云盾，凝聚云雾形成护盾",
+    "name": "云盾"
+  },
+  "ms_yun_shi": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 2.2,
+        "type": "magi"
+      }
+    ],
+    "power": 2.2,
+    "desc": "陨石，召唤陨石轰击敌人",
+    "name": "陨石",
+    "element": "fire"
+  },
+  "ms_zai_sheng": {
+    "kind": "治疗",
+    "effect": "heal_self",
+    "hp_pct": 0.15,
+    "desc": "再生，恢复自身生命",
+    "name": "再生"
+  },
+  "ms_zhan_chui": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "战锤，攻击敌人",
+    "name": "战锤"
+  },
+  "ms_zhan_chui_lord": {
+    "kind": "物理",
+    "power": 1.4,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "desc": "战锤（石炉）：燃烧着炉火的巨锤抡下，震得人手臂发麻。",
+    "name": "战锤"
+  },
+  "ms_zhan_hou": {
+    "kind": "增益",
+    "effect": "atk_up",
+    "desc": "战吼，提升自身攻击",
+    "name": "战吼"
+  },
+  "ms_zhang_jian": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "长剑，攻击敌人",
+    "name": "长剑"
+  },
+  "ms_zhao_bing_yuan_su_lord": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤冰元素（领主）：冰晶凝结成元素卫士——它吐出的寒气同样叠冰寒！",
+    "name": "召唤冰元素"
+  },
+  "ms_zhao_chu_shou_blue": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤触手（蓝歌）：珊瑚深处伸出新的海妖触手，挡在女王身前。",
+    "name": "召唤触手"
+  },
+  "ms_zhao_huan": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤，召唤援军",
+    "name": "召唤"
+  },
+  "ms_zhao_huan_chu_shou": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤触手，召唤援军",
+    "name": "召唤触手"
+  },
+  "ms_zhao_huan_e_mo": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤恶魔，召唤援军",
+    "name": "召唤恶魔"
+  },
+  "ms_zhao_huan_e_mo_helga": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤恶魔（赫尔加）：黑焰漩涡中爬出狰狞恶魔——它们是献祭仪式的祭品！",
+    "name": "召唤恶魔"
+  },
+  "ms_zhao_huan_feng_yu_jing_ling": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤风语精灵，召唤援军",
+    "name": "召唤风语精灵"
+  },
+  "ms_zhao_huan_gong_cheng_shou": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤工程兽，召唤援军",
+    "name": "召唤工程兽"
+  },
+  "ms_zhao_huan_gu_chong": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤骨虫，召唤援军",
+    "name": "召唤骨虫"
+  },
+  "ms_zhao_huan_gu_long": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤骨龙，召唤援军",
+    "name": "召唤骨龙"
+  },
+  "ms_zhao_huan_hai_shou": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤海兽，召唤援军",
+    "name": "召唤海兽"
+  },
+  "ms_zhao_huan_ku_lou": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤骷髅，召唤援军",
+    "name": "召唤骷髅"
+  },
+  "ms_zhao_huan_lei_niao": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤雷鸟，召唤援军",
+    "name": "召唤雷鸟"
+  },
+  "ms_zhao_huan_lie_quan": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤猎犬，召唤援军",
+    "name": "召唤猎犬"
+  },
+  "ms_zhao_huan_lie_ying": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤猎鹰，召唤援军",
+    "name": "召唤猎鹰"
+  },
+  "ms_zhao_huan_long_zai": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤龙崽，召唤援军",
+    "name": "召唤龙崽"
+  },
+  "ms_zhao_huan_ru_chong": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤蠕虫，召唤援军",
+    "name": "召唤蠕虫"
+  },
+  "ms_zhao_huan_sha_yu": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤鲨鱼，召唤援军",
+    "name": "召唤鲨鱼"
+  },
+  "ms_zhao_huan_shen_yuan": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤深渊，召唤援军",
+    "name": "召唤深渊"
+  },
+  "ms_zhao_huan_shu_ren": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤树人，召唤援军",
+    "name": "召唤树人"
+  },
+  "ms_zhao_huan_shui_gui": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤水鬼，召唤援军",
+    "name": "召唤水鬼"
+  },
+  "ms_zhao_huan_shui_jing_ling": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤水精灵，召唤援军",
+    "name": "召唤水精灵"
+  },
+  "ms_zhao_huan_shui_ling": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤水灵，召唤援军",
+    "name": "召唤水灵"
+  },
+  "ms_zhao_huan_shui_mu": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤水母，召唤援军",
+    "name": "召唤水母"
+  },
+  "ms_zhao_huan_shui_shou": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤水手，召唤援军",
+    "name": "召唤水手"
+  },
+  "ms_zhao_huan_xian_ling": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤仙灵，召唤援军",
+    "name": "召唤仙灵"
+  },
+  "ms_zhao_huan_xing_ling": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤星灵，召唤援军",
+    "name": "召唤星灵"
+  },
+  "ms_zhao_huan_xue_lang": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤雪狼，召唤援军",
+    "name": "召唤雪狼"
+  },
+  "ms_zhao_huan_ying_bao": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤影豹，召唤援军",
+    "name": "召唤影豹"
+  },
+  "ms_zhao_huan_you_hun": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤幽魂，召唤援军",
+    "name": "召唤幽魂"
+  },
+  "ms_zhao_huan_you_jing": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤幼鲸，召唤援军",
+    "name": "召唤幼鲸"
+  },
+  "ms_zhao_huan_you_ling": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤幽灵，召唤援军",
+    "name": "召唤幽灵"
+  },
+  "ms_zhao_huan_you_long": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤幼龙，召唤援军",
+    "name": "召唤幼龙"
+  },
+  "ms_zhao_huan_yue_lu": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤月鹿，召唤援军",
+    "name": "召唤月鹿"
+  },
+  "ms_zhao_huan_yun_wei": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤云卫，召唤援军",
+    "name": "召唤云卫"
+  },
+  "ms_zhao_huan_zhen_jun_shou": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤真菌兽，召唤援军",
+    "name": "召唤真菌兽"
+  },
+  "ms_zhao_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "爪击，攻击敌人",
+    "name": "爪击"
+  },
+  "ms_zhao_ji_zhen_kui_lei": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤·激振炉傀儡：嗡嗡作响的激振装置立起，石炉的锤子抡得更猛了！",
+    "name": "召唤激振炉"
+  },
+  "ms_zhao_ku_lou_mi": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤骷髅（王冠驱动）：王冠之力沸腾，骸骨卫士接连立起（每 3 刻 1 只，场上限 3）。",
+    "name": "召唤骷髅"
+  },
+  "ms_zhao_sha_yu_lange": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤鲨鱼（澜歌）：潮水涌来，鲨鱼群随潮而至。",
+    "name": "召唤鲨鱼"
+  },
+  "ms_zhao_shu_ren_dawn": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤树人（晨曦）：银月林海的古树化作树人应召而来。",
+    "name": "召唤树人"
+  },
+  "ms_zhao_xiu_li_kui_lei": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤·修理傀儡：背着扳手的维修傀儡爬向熔炉，开始抢修石炉！",
+    "name": "召唤修理傀儡"
+  },
+  "ms_zhao_you_long_under": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤幼龙（黑渊）：龙巢深处的幼龙应召而出——它们也会喷酸息叠腐蚀！",
+    "name": "召唤幼龙"
+  },
+  "ms_zhao_zhu_hun": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤烛魂：烛台的幽火离台而起，化作烛魂飘向你们（黑暗中它的火焰格外凶戾！）。",
+    "name": "召唤烛魂"
+  },
+  "ms_zhao_zi_bao_kui_lei": {
+    "kind": "增益",
+    "effect": "summon",
+    "summon": 1,
+    "desc": "召唤·自爆傀儡：一台吱嘎作响的炸药傀儡踉跄向前——接近就会自爆！",
+    "name": "召唤自爆傀儡"
+  },
+  "ms_zhen_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.6,
+        "type": "phys"
+      }
+    ],
+    "power": 1.6,
+    "charge": 1,
+    "desc": "震击，蓄力 1 刻后重拳震荡攻击敌人(蓄力期间受击会被打断)",
+    "name": "震击"
+  },
+  "ms_zhi_hui": {
+    "kind": "增益",
+    "effect": "atk_up",
+    "desc": "指挥，统率部众提升攻击",
+    "name": "指挥"
+  },
+  "ms_zhi_liao": {
+    "kind": "治疗",
+    "effect": "heal_self",
+    "hp_pct": 0.15,
+    "desc": "治疗，治疗自身恢复生命",
+    "name": "治疗"
+  },
+  "ms_zhi_mang": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.2,
+        "type": "magi"
+      }
+    ],
+    "power": 1.2,
+    "desc": "致盲，使敌人攻击落空",
+    "name": "致盲"
+  },
+  "ms_zhi_wang": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.2,
+        "type": "magi"
+      }
+    ],
+    "power": 1.2,
+    "desc": "织网，吐出蛛网攻击敌人",
+    "name": "织网"
+  },
+  "ms_zhi_yu": {
+    "kind": "治疗",
+    "effect": "heal_self",
+    "hp_pct": 0.15,
+    "desc": "治愈，治愈自身恢复生命",
+    "name": "治愈"
+  },
+  "ms_zhong_chui_lian_da": {
+    "kind": "物理",
+    "power": 1.8,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.8,
+        "type": "phys"
+      }
+    ],
+    "desc": "重锤连打：石炉抡起巨锤一通暴风连打，砸得地面龟裂！",
+    "name": "重锤连打"
+  },
+  "ms_zhong_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "重击，攻击敌人",
+    "name": "重击"
+  },
+  "ms_zhong_qian_xiu": {
+    "kind": "物理",
+    "power": 1.6,
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.6,
+        "type": "phys"
+      }
+    ],
+    "desc": "重钳·锈蚀：锈钳蟹王抡起挂满船牌的双钳砸下（atk×1.6）——被打中的位置锈迹斑斑，甲壳越来越脆。",
+    "name": "重钳·锈蚀"
+  },
+  "ms_zhu_fu": {
+    "kind": "增益",
+    "effect": "atk_up",
+    "desc": "祝福，祝福自身提升攻击",
+    "name": "祝福"
+  },
+  "ms_zhu_huo_zhu": {
+    "kind": "魔法",
+    "power": 1.5,
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "element": "fire",
+    "desc": "烛火术：赫尔嘉指尖捻起一团烛火弹向敌人（1.5× 火焰）——烛光越亮，火苗越炽。",
+    "name": "烛火术"
+  },
+  "ms_zhuang_ji": {
+    "kind": "物理",
+    "formula": [
+      {
+        "stat": "atk",
+        "mult": 1.4,
+        "type": "phys"
+      }
+    ],
+    "power": 1.4,
+    "desc": "撞击，攻击敌人",
+    "name": "撞击"
+  },
+  "ms_zhuo_shao": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.5,
+        "type": "magi"
+      }
+    ],
+    "power": 1.5,
+    "desc": "灼烧，烈焰灼烧敌人",
+    "name": "灼烧",
+    "element": "fire"
+  },
+  "ms_zu_zhou": {
+    "kind": "魔法",
+    "formula": [
+      {
+        "stat": "matk",
+        "mult": 1.3,
+        "type": "magi"
+      }
+    ],
+    "power": 1.3,
+    "desc": "诅咒，降低敌人攻击",
+    "name": "诅咒"
+  },
+  "ms_zuan_di": {
+    "kind": "增益",
+    "effect": "def_up",
+    "desc": "钻地，遁入地下躲避攻击",
+    "name": "钻地"
+  }
+}

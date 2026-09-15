@@ -1,0 +1,181 @@
+{
+  "base_growth": {
+    "linear_stats": [
+      "hp",
+      "mp",
+      "atk",
+      "def",
+      "matk",
+      "mdef",
+      "spd"
+    ],
+    "branch_bonus_mode": {
+      "hp": {
+        "mode": "mul"
+      },
+      "mp": {
+        "mode": "mul"
+      },
+      "crit": {
+        "mode": "add",
+        "round": 3
+      },
+      "_default": {
+        "mode": "mul"
+      }
+    },
+    "alias": {
+      "hp": "max_hp",
+      "mp": "max_mp"
+    }
+  },
+  "branch_bonus": {
+    "1": {
+      "atk": 1.06,
+      "spd": 1.04
+    },
+    "2": {
+      "def": 1.08,
+      "hp": 1.06
+    }
+  },
+  "branch_bonus_by_class": {
+    "cls_zhan_shi": {
+      "1": {
+        "atk": 1.1,
+        "spd": 1.04,
+        "hp": 0.95
+      },
+      "2": {
+        "def": 1.14,
+        "hp": 1.1,
+        "atk": 0.95
+      }
+    },
+    "cls_fa_shi": {
+      "1": {
+        "matk": 1.12,
+        "hp": 0.92
+      },
+      "2": {
+        "matk": 1.08,
+        "mp": 1.1
+      }
+    },
+    "cls_you_xia": {
+      "1": {
+        "atk": 1.1,
+        "spd": 1.06
+      },
+      "2": {
+        "spd": 1.12,
+        "atk": 1.06
+      }
+    },
+    "cls_mu_shi": {
+      "1": {
+        "matk": 1.12,
+        "hp": 0.95
+      },
+      "2": {
+        "matk": 1.06,
+        "mdef": 1.1
+      }
+    },
+    "cls_ci_ke": {
+      "1": {
+        "atk": 1.12,
+        "crit": 0.04
+      },
+      "2": {
+        "atk": 1.08,
+        "hp": 1.04
+      }
+    },
+    "cls_wu_seng": {
+      "1": {
+        "atk": 1.1,
+        "spd": 1.04
+      },
+      "2": {
+        "def": 1.12,
+        "hp": 1.1,
+        "atk": 0.95
+      }
+    },
+    "cls_shi_ren": {
+      "1": {
+        "matk": 1.08,
+        "mp": 1.1
+      },
+      "2": {
+        "matk": 1.08,
+        "hp": 1.06
+      }
+    }
+  },
+  "pct_caps": {
+    "crit": 0.5,
+    "dodge": 0.4,
+    "precise": 0.6,
+    "pene_phys": 0.6,
+    "pene_magi": 0.6,
+    "tenacity": 0.5,
+    "luck": 0.5,
+    "cdr": 0.4,
+    "elem_res": 0.5,
+    "abyss_res": 0.5,
+    "exp_bonus": 0.5,
+    "gold_bonus": 0.5,
+    "heal_power": 0.5,
+    "shield_power": 0.5,
+    "lifesteal": 0.3,
+    "crit_dmg": 1.0,
+    "block": 0.4,
+    "thorns": 0.5,
+    "phys_reduce": 0.4,
+    "magic_reduce": 0.4,
+    "lifesteal_phys": 0.3,
+    "lifesteal_magi": 0.3,
+    "summon_power": 0.5
+  },
+  "pct_stats": {
+    "stats": [
+      "crit",
+      "dodge",
+      "precise",
+      "pene_phys",
+      "pene_magi",
+      "tenacity",
+      "luck",
+      "cdr",
+      "elem_res",
+      "abyss_res",
+      "exp_bonus",
+      "gold_bonus",
+      "heal_power",
+      "shield_power",
+      "lifesteal",
+      "crit_dmg",
+      "block",
+      "thorns",
+      "phys_reduce",
+      "magic_reduce",
+      "lifesteal_phys",
+      "lifesteal_magi",
+      "summon_power"
+    ]
+  },
+  "pene_pct_stats": {
+    "stats": [
+      "pene_phys",
+      "pene_magi"
+    ]
+  },
+  "tier_growth": {
+    "0": 1.0,
+    "1": 1.15,
+    "2": 1.3,
+    "3": 1.5
+  }
+}

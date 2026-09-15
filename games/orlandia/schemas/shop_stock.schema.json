@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://saintessengine.local/schema/shop_stock.schema.json",
+  "title": "商店库存（shop_stock）—— 每商品的限购/共享库存配置（表键 = 商品 key）",
+  "description": "一条 = 一个商品的限购配置（表键 = 商品 key，形如 `item:i_stone_upgrade` / `mat:mat_jing_tie` / `equip:eq_pi_jia`）。真源 = 游戏仓**数据层** `game/data/shop_limit.py:39 SHOP_LIMIT`（v166 鱼鱼拍板的两层限购：① 店内共享总库存 `stock`，② 每玩家每日限购 `per_day`；缺省不在表里 = 不限购），经 `scripts/export_domains/shop_econ.py:derive_shop_stock` 单向导出（2026-09-13 实测 35 条）。**`game/core/shop_stock.py`（228 行）是纯消费/状态机**（`check_and_consume():150` / `limit_label():213` / `stock_state():85`，惰性补货 + `event_state` 读改写，模块内零静态数据）→ 本域导的是它读的那张配置表。**消费点**：`game/commands/economy.py:25 as _sshop`（买前 `check_and_consume`、面板 `limit_label`）。⚠️ 源侧 `_validate():90` 在 import 期已自检（前缀 / 类型 / `HH:MM` 格式），导出器只再核「前缀合法 + 非空 dict」两道。",
+  "x-primary": "stock",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z]+:[A-Za-z0-9_]+$",
+    "description": "商品 key = `<来源前缀>:<id>`。四个前缀（`data/shop_limit.py:12-16`）：`item:` = SHOP_SUBAREA_ITEMS 消耗品/杂物（实测 18 条）、`mat:` = SHOP_SMITH_MATERIALS 锻造材料（实测 5 条）、`equip:` = SHOP_EQUIP 名册装备（实测 12 条）、`weapon:` = SHOP_WEAPONS 武器（按名；**当前数据 0 条**，源侧声明未用）。前缀后的 id 指向 items / equip_roster 域，**未展开**。"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/stock"
+  },
+  "$defs": {
+    "stock": {
+      "type": "object",
+      "title": "商品限购配置（SHOP_LIMIT 的一条）",
+      "additionalProperties": true,
+      "properties": {
+        "stock": {
+          "type": "integer",
+          "minimum": 0,
+          "title": "总库存上限",
+          "description": "店内共享库存（该店所有玩家先到先得扣减；店与店独立）。实测 35/35 条都有。缺省/不写 = 不限量。"
+        },
+        "per_day": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "每人每日限购",
+          "description": "每玩家每自然日在该店该商品的上限（跨天清零）。实测 35/35 条都有。缺省/不写 = 不限。"
+        },
+        "restock_hours": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "title": "补货周期（小时）",
+          "description": "距上次补货 ≥ N 小时 → 恢复满额 `stock`（读时惰性判定，零后台定时器）。实测 35/35 条都有。"
+        },
+        "restock_at": {
+          "type": "string",
+          "pattern": "^[0-2][0-9]:[0-5][0-9]$",
+          "title": "每日补货时刻",
+          "description": "`\"HH:MM\"`（如 `\"04:00\"` = 每天 4 点补满一次）。与 `restock_hours` 任一满足即补货。**源侧声明但当前 35 条未使用**（不补默认值）。"
+        },
+        "max_buy_once": {
+          "type": "integer",
+          "minimum": 1,
+          "title": "单次最大购买数",
+          "description": "超限时按 `min(per_day 余量, stock 余量, max_buy_once)` 钳制。**源侧声明但当前 35 条未使用**（不补默认值）。"
+        }
+      }
+    }
+  }
+}

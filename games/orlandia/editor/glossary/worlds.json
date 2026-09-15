@@ -1,0 +1,173 @@
+{
+  "fields": {
+    "id": {
+      "zh": "图 id",
+      "note": "与外层键相同；= maps 域 key。跨域引用（NPC 的 map、POI 的 map、调查点的 instance 等）按它认图。"
+    },
+    "name": {
+      "zh": "图名",
+      "note": "地图显示名（如 橡木镇 / 哥布林营地）。121/121 都有；编辑器列表/面板标题读它。"
+    },
+    "type": {
+      "zh": "地图类型",
+      "note": "地图级类型（与 subareas 域的房间级 type 是两个层次）：野外 68 / 副本 27 / 城镇区域 24 / 隐藏区域 2。不枚举。",
+      "widget": "select"
+    },
+    "lv": {
+      "zh": "推荐等级",
+      "note": "地图等级（怪/事件等级基准）。121/121 都有。"
+    },
+    "region": {
+      "zh": "境（世界/大陆）",
+      "note": "世界分层第一级，内容侧词汇，实测 10 个取值（南境·绿野 21 / 中域·圣光之心 18 / 北境·霜原 17 / 东境·龙脊 13 / 西境·银月林海 12 / 翡翠海群岛 11 / 幽暗地域 11 / 无尽海 9 / 风翼群岛 8 / 北境·烬原 1）。按它分组即得「世界（大陆）视图」。不枚举。",
+      "widget": "select"
+    },
+    "chapter": {
+      "zh": "章节",
+      "note": "主线章节号（实测 1–12）。世界分层第二级。"
+    },
+    "area": {
+      "zh": "区域 key",
+      "note": "区域标识（内容侧词汇，实测 111 个取值，如 oak / goblin）；同一区域可含多张图（如 oak 3 张）。"
+    },
+    "area_name": {
+      "zh": "区域名",
+      "note": "区域显示名（如 橡木镇）。"
+    },
+    "desc": {
+      "zh": "地图说明",
+      "note": "整段说明文案（121/121 都有；副本图里还嵌了玩法提示，如「输入『副本 …』开启挑战」）。",
+      "widget": "textarea"
+    },
+    "shop": {
+      "zh": "有商店设施",
+      "note": "地图级「有商店」标记（实测 24/121 true）。"
+    },
+    "healer": {
+      "zh": "有治疗设施",
+      "note": "地图级「有治疗点」标记（实测 23/121 true）。"
+    },
+    "hidden": {
+      "zh": "隐藏地图",
+      "note": "是否隐藏地图（实测 2/121 true）。准入条件另有 HIDDEN_MAP_UNLOCK（未进包）。"
+    },
+    "monsters": {
+      "zh": "地图级怪（实测全空）",
+      "note": "内联 6 元组表 —— 实测 121/121 为空数组（内容已下沉到 subareas 域）。保留形状，别当成「漏导」。"
+    },
+    "elite": {
+      "zh": "地图级精英怪（实测全 null）",
+      "note": "内联 6 元组或 null —— 实测 121/121 为 null。保留形状。"
+    },
+    "boss": {
+      "zh": "地图级 Boss（实测全 null）",
+      "note": "内联 6 元组或 null —— 实测 121/121 为 null（副本 Boss 落 instances 域）。保留形状。"
+    },
+    "npcs": {
+      "zh": "地图级 NPC（实测全空）",
+      "note": "NPC id 引用串 —— 实测 121/121 为空数组（NPC 挂在子区域上，见 subareas 域）。保留形状。",
+      "widget": "lines"
+    },
+    "dungeon": {
+      "zh": "副本开图配置",
+      "note": "**只在 27 张副本图上**（其余 94 张没有这个键 —— 不补默认值）。地图侧开图配置，与 instances 域的副本内容（boss/waves/stages）不同层。",
+      "widget": "kv"
+    },
+    "dungeon.no_exit": {
+      "zh": "禁出图",
+      "note": "战斗/探索中禁止直接离图（实测 27/27 true）。"
+    },
+    "dungeon.discovery_agro": {
+      "zh": "发现仇恨概率",
+      "note": "探索时被怪发现的概率（实测 27/27 = 0.85）。",
+      "widget": "pct"
+    },
+    "dungeon.boss_room": {
+      "zh": "Boss 房",
+      "note": "Boss 所在子区域 id → subareas 域（如 goblin_camp_3）。引用不展开。",
+      "ref": {
+        "domain": "subareas",
+        "by": "key"
+      }
+    },
+    "dungeon.on_clear": {
+      "zh": "通关动作",
+      "note": "通关（Boss 死亡）时的动作词（实测 27/27 = victory）。内容侧词汇，不枚举。",
+      "widget": "select"
+    },
+    "no_exit": {
+      "zh": "禁出图",
+      "note": "副本开图配置（只在 27 张副本图上，键恒 4 个）：该图为 true 时禁止出图。"
+    },
+    "discovery_agro": {
+      "zh": "发现仇恨半径",
+      "note": "副本开图配置：发现怪之后拉仇恨的半径。"
+    },
+    "boss_room": {
+      "zh": "Boss 房区域",
+      "note": "副本开图配置：Boss 房所在区域 id（引用 subareas 域）。"
+    },
+    "on_clear": {
+      "zh": "通关动作",
+      "note": "副本开图配置：清图后要执行的动作。"
+    }
+  },
+  "groups": [
+    {
+      "id": "identity",
+      "label": "身份与类型",
+      "icon": "🌍",
+      "fields": [
+        "id",
+        "name",
+        "type",
+        "lv"
+      ]
+    },
+    {
+      "id": "world",
+      "label": "世界分层与说明",
+      "icon": "🧭",
+      "fields": [
+        "region",
+        "chapter",
+        "area",
+        "area_name",
+        "desc"
+      ]
+    },
+    {
+      "id": "facility",
+      "label": "设施与隐藏",
+      "icon": "🏪",
+      "fields": [
+        "shop",
+        "healer",
+        "hidden"
+      ]
+    },
+    {
+      "id": "entities",
+      "label": "地图级实体（实测全空）",
+      "icon": "🐺",
+      "fields": [
+        "monsters",
+        "elite",
+        "boss",
+        "npcs"
+      ]
+    },
+    {
+      "id": "dungeon",
+      "label": "副本开图配置（27 张副本图）",
+      "icon": "🏰",
+      "fields": [
+        "dungeon",
+        "dungeon.no_exit",
+        "dungeon.discovery_agro",
+        "dungeon.boss_room",
+        "dungeon.on_clear"
+      ]
+    }
+  ]
+}
