@@ -112,6 +112,7 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
 | | [guides/add-an-affix.md](guides/add-an-affix.md) | 加词条 / 装备特效 |
 | | [guides/serialize-and-resume.md](guides/serialize-and-resume.md) | 存档与续战、旧档迁移约束 |
 | | [guides/testing.md](guides/testing.md) | 给自己的内容写断言 |
+| | [guides/use-engine-shapes.md](guides/use-engine-shapes.md) | **用引擎形状做包**（5 个常踩的坑 + 可照抄骨架） |
 | **参考** | [reference/api.md](reference/api.md) | 公开 API 逐项（`Battle` 方法 + 各模块函数） |
 | | [reference/events.md](reference/events.md) | 26 事件全集：时机 / ctx 字段 / 是否引擎自然点位 |
 | | [reference/effect-rules.md](reference/effect-rules.md) | `EFFECT_RULES` 字段 schema |
