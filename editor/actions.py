@@ -25,6 +25,35 @@ FW_ROOT = os.path.dirname(HERE)
 _cache: dict = {}
 
 
+def _src_stamp(pkg_dir: str | None):
+    """被扫源码树的**内容戳** =（`.py` 文件数, 最新 mtime）。
+
+    ★ 为什么按戳缓存（2026-09-15 实测优化）：原实现「带包一律不缓存」，理由是
+    「包内动作是用户正在写的代码，缓存会看到过期清单（曾踩：服务先起、后写的 mech 扫不出来）」。
+    代价是**每次切换包都全扫**（orlandia 155 个包文件 + 引擎 → `/api/actions?pkg=orlandia` **6.0s**，
+    其余接口均 0.01–0.07s）。
+    改用内容戳后：**改了文件 ⇒ 戳变 ⇒ 重扫**（原意保留，编辑即刻可见）；**没改 ⇒ 复用缓存**
+    （切包从 6s 降到毫秒级）。`use_cache=False`（`?fresh=1`）仍强制重扫。
+    """
+    n = 0
+    newest = 0.0
+    roots = [r for r in (pkg_dir, os.path.join(FW_ROOT, "saintess_engine")) if r and os.path.isdir(r)]
+    for root_dir in roots:
+        for dirpath, dirnames, filenames in os.walk(root_dir):
+            dirnames[:] = [d for d in dirnames if d not in ("__pycache__", ".git", "node_modules")]
+            for fn in filenames:
+                if not fn.endswith(".py"):
+                    continue
+                n += 1
+                try:
+                    mt = os.path.getmtime(os.path.join(dirpath, fn))
+                except OSError:
+                    continue
+                if mt > newest:
+                    newest = mt
+    return (n, round(newest, 3))
+
+
 def _load_tool():
     """按路径加载 `tools/export_actions.py`（工具目录不是包，不能直接 import）。"""
     path = os.path.join(FW_ROOT, "tools", "export_actions.py")
@@ -41,14 +70,13 @@ def _load_tool():
 def inventory(pkg_dir: str | None = None, *, use_cache: bool = True) -> dict:
     """动作清单。`pkg_dir` 给游戏包目录（额外扫它的 mech/）。
 
-    **缓存策略**：只缓存「无包」（纯引擎内置 —— 跟框架版本走，很少变）。
-    带包时**每次都重扫**：包内动作是用户正在写的代码，缓存会让人看到过期的动作清单
-    （实测踩过：服务先启动、之后才写的 mech/actions.py 扫不出来，排查半天）。
-    `use_cache=False` 可强制连引擎那份也重扫。
+    **缓存策略（2026-09-15 改）**：按**内容戳**缓存（见 `_src_stamp`）——
+    戳 =（`.py` 文件数, 最新 mtime），改文件即失效 ⇒「正在写的代码立刻可见」的原意保留，
+    同时切包不再每次全扫（实测 orlandia 6.0s → 毫秒级）。`use_cache=False`（`?fresh=1`）强制重扫。
     """
-    key = pkg_dir or ""
-    cacheable = (not pkg_dir) and use_cache          # 只有纯引擎清单可缓存
-    if cacheable and key in _cache:
+    stamp = _src_stamp(pkg_dir) if use_cache else None
+    key = (pkg_dir or "", stamp)
+    if use_cache and stamp is not None and key in _cache:
         return _cache[key]
     tool = _load_tool()
     if tool is None:
@@ -58,8 +86,11 @@ def inventory(pkg_dir: str | None = None, *, use_cache: bool = True) -> dict:
     except Exception as e:                                  # noqa: BLE001
         return {"ok": False, "message": f"动作扫描失败：{e}", "actions": [], "count": {}}
     rep["ok"] = True
-    if cacheable:
+    if use_cache and stamp is not None:
         _cache[key] = rep
+        if len(_cache) > 8:                                 # 防无限增长（切换多个包/多轮编辑）
+            for k in list(_cache)[:-4]:
+                _cache.pop(k, None)
     return rep
 
 
