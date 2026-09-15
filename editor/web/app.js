@@ -43,6 +43,24 @@ async function withBusy(text, fn) {
   showBusy(text);
   try { return await fn(); } finally { hideBusy(); }
 }
+
+/* ── 计时探针（诊断「切包慢」用）───────────────────────────────────────────────
+   用户反馈「每次来回切都等半天、但网络面板没有下载流量」⇒ 慢在**浏览器解析/渲染**，
+   服务端计时看不出来。这里把每步耗时回传 `/api/_perf`（→ 编辑器日志），
+   让诊断者读到**真实浏览器**的数字。定位完可整体删除（连同 server.py 的 `_perf` 路由）。 */
+function perfMark(label, ms, total) {
+  try {
+    const img = new Image();
+    img.src = '/api/_perf?l=' + encodeURIComponent(label) + '&ms=' + Math.round(ms)
+            + (total != null ? '&t=' + Math.round(total) : '');
+  } catch (e) { /* 探针失败绝不影响功能 */ }
+  try { console.debug('[perf]', label, Math.round(ms) + 'ms'); } catch (e) {}
+}
+async function withPerf(label, fn) {
+  const t0 = performance.now();
+  try { return await fn(); }
+  finally { perfMark(label, performance.now() - t0); }
+}
 const esc = (s) => String(s == null ? '' : s)
   .replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clone = (o) => JSON.parse(JSON.stringify(o == null ? null : o));
@@ -704,19 +722,22 @@ async function selectPkg(id) {
   // ★ 切包是慢操作（包概览 + 域声明 + 词典 + 动作扫描 + 联想 + 渲染面）——首次可达数秒，
   //   全程给「加载中」遮罩，用户不会以为卡死。
   return withBusy('正在加载游戏包 ' + id + ' …', async () => {
+    const _t0 = performance.now();                      // ← 计时探针（诊断用，见 withPerf）
     S.pkgId = id;
-    const r = await api('GET', '/api/package/' + encodeURIComponent(id));
+    const r = await withPerf('1-包概览', () => api('GET', '/api/package/' + encodeURIComponent(id)));
     if (!r.ok) { toast((r.json && r.json.message) || '打开包失败', 'bad'); return; }
     S.pkg = r.json;
     S.dirtyKeys.clear();
-    await loadDomains(id);             // ★ 域表随包：包自带域声明（新域 / 同名覆盖）在这里合并进来
-    await loadGlossary(id);            // ★ 控件/引用表也随包（包内 relations.json 的引用 → 下拉）
-    renderPkgMenu(); renderRail(); renderSettingsForm(); updateStatusbar();
-    closeEntry();
+    await withPerf('2-域表', () => loadDomains(id));     // ★ 域表随包：包自带域声明在这里合并
+    await withPerf('3-词典', () => loadGlossary(id));    // ★ 控件/引用表（包内 relations.json → 下拉）
+    await withPerf('4-渲染界面', async () => {
+      renderPkgMenu(); renderRail(); renderSettingsForm(); updateStatusbar(); closeEntry();
+    });
     loadActionsOnce();                 // ★ 动作清单**后台预热**（不再阻塞切包；冷扫可达数秒）
-    await loadHints();                 // 联想数据随包（跨域 key + 已有取值）
-    await loadRenderInfo();            // ★ 第 3 层：渲染声明面随包（第 5 档的显隐判据）
-    await loadDomain(S.dom);
+    await withPerf('6-联想', () => loadHints());           // 联想数据随包（跨域 key + 已有取值）
+    await withPerf('7-渲染面', () => loadRenderInfo());    // ★ 第 3 层：渲染声明面随包
+    await withPerf('8-域内容', () => loadDomain(S.dom));
+    perfMark('TOTAL-切包', performance.now() - _t0, performance.now() - _t0);
   });
 }
 

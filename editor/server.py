@@ -68,8 +68,11 @@ from editor import actions as AC     # noqa: E402
 from editor import dist as DIST      # noqa: E402
 from editor import glossary as GL    # noqa: E402
 
-#: `/api/glossary` 响应缓存（内容戳 → payload）。只留最近一档，见路由处注释。
+#: `/api/glossary` 响应缓存（内容戳 → payload）。
+#  ★ 必须是**多档**：实测（2026-09-15）用户来回切 orlandia ↔ my_game 时，若只留最近一档，
+#    每次都被对方顶掉 ⇒ 每次都在冷重建（glossary 冷态 2.9–4.1s）。留 8 档即可常驻热态。
 _GLOSSARY_CACHE: dict = {}
+_GLOSSARY_CACHE_MAX = 8
 
 
 def _glossary_stamp(pkg_dir):
@@ -320,14 +323,31 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, fmt, *a):
         sys.stderr.write("  · " + (fmt % a) + "\n")
 
+    #: 压缩门槛：>1KB 且客户端声明支持 gzip 才压（小响应压了没意义，反多一层开销）
+    GZIP_MIN = 1024
+
     def _send(self, code: int, body, ctype="application/json; charset=utf-8", headers=None):
         if not isinstance(body, (bytes, bytearray)):
             body = json.dumps(body, ensure_ascii=False).encode("utf-8")
+        # ★ gzip（2026-09-15 实测优化）：切包要过 `/api/package/<id>/hints` **1.46 MB**、
+        #   `/api/glossary` 527 KB、`app.js` 142 KB …——服务端只要 20–60ms，慢在浏览器
+        #   「下载 + JSON.parse + 建索引」。开 gzip 后实测降到约 1/8～1/10（见提交说明的对照表）。
+        extra = {}
+        try:
+            if len(body) >= self.GZIP_MIN and "gzip" in (self.headers.get("Accept-Encoding") or "").lower():
+                import gzip as _gzip
+                body = _gzip.compress(bytes(body), 6)
+                extra["Content-Encoding"] = "gzip"
+                extra["Vary"] = "Accept-Encoding"
+        except Exception:                                       # noqa: BLE001
+            pass                                                # 压不了就按原样发，不影响功能
         try:
             self.send_response(code)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Cache-Control", "no-store")
+            for k, v in extra.items():
+                self.send_header(k, v)
             for k, v in (headers or {}).items():
                 self.send_header(k, v)
             self.end_headers()
@@ -528,6 +548,17 @@ class H(BaseHTTPRequestHandler):
             fresh = (q.get("fresh") or ["0"])[0] not in ("", "0", "false")
             pkg_dir = PK.resolve_package(pkg_id, GAMES_DIR) if pkg_id else None
             return self._send(200, AC.inventory(pkg_dir, use_cache=not fresh))
+        if parts == ["_perf"]:
+            # 前端计时探针回传（诊断「切包慢」用，见 web/app.js 的 withPerf）。
+            # 只写一行到服务端 stderr（= 编辑器日志），返回 204 —— 目的就是让诊断者能读到
+            # **真实浏览器**里每步的耗时，而不是靠猜服务端。定位完即可移除。
+            q = parse_qs(getattr(self, "_query", ""))
+            label = (q.get("l") or [""])[0]
+            ms = (q.get("ms") or [""])[0]
+            total = (q.get("t") or [""])[0]
+            sys.stderr.write("  [perf] %-22s %8s ms%s\n" % (
+                label, ms, ("   (总 %s ms)" % total) if total else ""))
+            return self._send(204, b"")
         if parts == ["glossary"]:
             # `?pkg=<id>` → **包声明优先**的控件/引用/词汇表（第 2 层：包内 `editor/relations.json`
             # 改「哪个字段引用哪个域」；包自带词汇表 `editor/glossary/<域>.json` 改
@@ -547,17 +578,11 @@ class H(BaseHTTPRequestHandler):
             hit = _GLOSSARY_CACHE.get(gkey)
             if hit is not None:
                 return self._send(200, hit)
-            payload = {"ok": True, "domains": GL.all_entries(pkg_dir),
-                       "groups": GL.all_groups(pkg_dir),
-                       "widgets": GL.all_widgets(pkg_dir),
-                       "relations": REL.package_relations(pkg_dir) if pkg_dir else {},
-                       "views": REL.package_views(pkg_dir) if pkg_dir else {},
-                       "warnings": (REL.all_warnings(pkg_dir) if pkg_dir else [])
-                                   + GL.glossary_warnings(pkg_dir)
-                                   + (RENDER.render_warnings(pkg_dir) if pkg_dir else []),
-                       "panel_keys": GL.PANEL_KEYS}
-            _GLOSSARY_CACHE.clear()
+            payload = _build_glossary_payload(pkg_dir)
             _GLOSSARY_CACHE[gkey] = payload
+            if len(_GLOSSARY_CACHE) > _GLOSSARY_CACHE_MAX:
+                for k in list(_GLOSSARY_CACHE)[:-_GLOSSARY_CACHE_MAX // 2]:
+                    _GLOSSARY_CACHE.pop(k, None)
             return self._send(200, payload)
         if len(parts) >= 2 and parts[0] == "wiki":
             q = parse_qs(getattr(self, "_query", ""))
@@ -985,6 +1010,51 @@ def _run_view(pkg_dir, dom: str, name: str, data: dict, key: str,
     return {"ok": False, "error": f"未知视图：{name}", "warnings": []}
 
 
+def _warm_caches():
+    """启动后**后台预热**：把每个包的「包概览 + 词典 + 动作清单」缓存先建好。
+
+    ★ 由来（2026-09-15 实测，用户反馈「切包要等半天」）：这三条**冷态**各 ~3s
+      （`/api/package/orlandia` 2.89s · `/api/glossary?pkg=orlandia` 3.18s · `/api/actions` 6.0s），
+      热态都是 0.02s 级。冷态只出现在**服务刚启动后的第一次**切包 —— 后台预热把它挪到
+      启动时（用户看不见的地方）。失败静默：预热不成功只是第一次仍旧慢，不影响功能。
+    """
+    try:
+        for p in PK.list_packages(GAMES_DIR):
+            pid_ = p.get("id") if isinstance(p, dict) else p
+            d = PK.resolve_package(pid_, GAMES_DIR) if pid_ else None
+            if not d:
+                continue
+            try:
+                _package_overview(d)
+            except Exception:                                   # noqa: BLE001
+                pass
+            try:
+                gkey = (pid_, _glossary_stamp(d))
+                if gkey not in _GLOSSARY_CACHE:
+                    _GLOSSARY_CACHE[gkey] = _build_glossary_payload(d)
+            except Exception:                                   # noqa: BLE001
+                pass
+            try:
+                AC.inventory(d)                                     # 动作清单（自带内容戳缓存）
+            except Exception:                                   # noqa: BLE001
+                pass
+    except Exception:                                           # noqa: BLE001
+        pass
+
+
+def _build_glossary_payload(pkg_dir):
+    """`/api/glossary` 的响应体（路由与启动预热共用一份，避免两处漂移）。"""
+    return {"ok": True, "domains": GL.all_entries(pkg_dir),
+            "groups": GL.all_groups(pkg_dir),
+            "widgets": GL.all_widgets(pkg_dir),
+            "relations": REL.package_relations(pkg_dir) if pkg_dir else {},
+            "views": REL.package_views(pkg_dir) if pkg_dir else {},
+            "warnings": (REL.all_warnings(pkg_dir) if pkg_dir else [])
+                        + GL.glossary_warnings(pkg_dir)
+                        + (RENDER.render_warnings(pkg_dir) if pkg_dir else []),
+            "panel_keys": GL.PANEL_KEYS}
+
+
 def main(argv=None):
     global GAMES_DIR
     ap = argparse.ArgumentParser(description="框架编辑器（造游戏包）")
@@ -1010,6 +1080,13 @@ def main(argv=None):
     print("  Ctrl+C 停止")
     print("=" * 68)
     srv = ThreadingHTTPServer((args.host, args.port), H)
+    # ★ 启动后**后台预热**（不阻塞起服务）：把各包的「包概览 / 词典 / 动作清单」缓存先建好，
+    #   免得用户第一次切包撞上 ~6s 的冷态（实测：冷 2.9s+3.2s+6.0s，热 0.02s 级）。
+    try:
+        import threading as _th
+        _th.Thread(target=_warm_caches, name="warm-caches", daemon=True).start()
+    except Exception:                                           # noqa: BLE001
+        pass
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
