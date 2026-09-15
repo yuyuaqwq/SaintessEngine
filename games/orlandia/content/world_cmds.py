@@ -3,19 +3,21 @@
 
 真源：游戏仓 `game/commands/world.py`（4452 行）的 `class WorldCmds`。本模块 = 那个类的
 **实现本体**（103 个方法逐字搬成模块级函数，只去 4 空格缩进）。宿主 `game/commands/world.py`
-现在只剩：命令注册（@declared 装饰器）+ 取玩家 + 一行转发调包 + 渲染（`quest_view` 与
-`_instance_gate_block` 因两条**宿主源码级门禁**留在那边，见下）。
+现在只剩：命令注册（@declared 装饰器）+ 取玩家 + 一行转发调包 + 渲染（`quest_view` 因一条
+**宿主源码级门禁**留在那边，见下；`_instance_gate_block` 已随 P5E「壳去逻辑」批搬回本模块）。
 
 搬的边界
 --------
-* **搬**：除下面两个之外的全部方法（共 3869 行）。
+* **搬**：除下面一个之外的全部方法（共 3869 行）。
 * **不搬（留宿主，理由 = 宿主源码级门禁，不是偷懒）**：
   - `quest_view` —— `tests/test_texts_table.py:81 WIRED` 对「声明 ↔ 调用点」做 **AST 扫描**，
     每日任务域 `daily.*` 7 条文案的调用点必须在宿主 world.py 里；连带宿主模块级依赖
     `T` / `_OBJ_PROGRESS_LINES` / `_kill_prog_count` / `DAILY_LIMIT` / `_DAILY_META_KEYS` /
     `daily_need` 也留宿主。
-  - `_instance_gate_block` —— `tests/test_v185_instance_admission.py:1129`（t7_wiring）要求宿主
-    world.py 源码里出现字符串 `instance_gate.walk_admission`。
+* **P5E「壳去逻辑」批搬回（2026-09-15）**：`_instance_gate_block`（副本图门禁：取数 + 组装
+  `ctx` → `walk_admission`）与 `_HURRY_ALIAS`（赶路别名表，原宿主类属性）从宿主 `host/shell.py`
+  搬回本模块。`tests/test_v185_instance_admission.py`（t7_wiring）要的
+  `instance_gate.walk_admission` 调用点现在是本模块里的**真调用**（不再靠注释凑字符串）。
 
 正文改动面（**只有两类**，差异面自检见 `overnight/b9_l2_check.py`）
 ----------------------------------------------------------------
@@ -73,6 +75,7 @@ from . import catalog_b143 as _cat_b143
 from .catalog_rules import (FACTION_SHOP, FACTION_CAMPS, FACTION_CAMP_OPEN_LV, FACTION_CAMP_SWITCH_COOLDOWN,
                             FACTION_CAMP_DAILY_TASKS, FACTION_CAMP_DAILY_LIMIT, FACTION_CAMP_SHOP)
 from . import wild as _wild
+from .flow import instance_gate      # 副本图门禁准入链（`_instance_gate_block` 的判定本体）
 from .flow import instance_run as IR
 from .panel import player_final_stats
 from .skills import skill_info
@@ -165,6 +168,7 @@ from . import index as _idx              # resolve / display
 from . import maps as _maps              # subarea_links / map_entry_subarea / map_exit_subarea / map_center / map_route
 from . import pois as _pois              # subarea_pois / subarea_props / prop_entry
 from . import portals as _portals        # portal_cost
+from . import texts as _texts           # 文案表（`_instance_gate_block` 给准入链换表）
 from . import timed_events as _timed     # list_timed / get_timed
 from . import time_weather as _tw        # current_period / time_weather_summary
 from . import worlds as _worlds          # get_instance_world
@@ -1085,12 +1089,21 @@ async def location_view(self, event: AstrMessageEvent, group_id, qq_id, player):
     yield event.plain_result("\n".join(lines))
 
 
+#: 赶路别名表（原宿主 `game/commands/world.py` 类属性 `_HURRY_ALIAS`；P5E「壳去逻辑」批搬回包内）。
+#: 玩家输入词（中文/英文）→ 赶路类型域（`npc` / `monster` / `scene` / `facility`）。
+_HURRY_ALIAS = {
+    "npc": "npc", "怪物": "monster", "monster": "monster",
+    "场景": "scene", "scene": "scene", "景物": "scene",
+    "设施": "facility", "facility": "facility", "商店": "facility",
+}
+
+
 def _hurry_type(self, raw: str):
     """『赶路』可选参数归一：""=全量, None=无效；npc/monster/scene/facility=类型过滤。"""
     k = (raw or "").strip().lower()
     if k in ("", "全部", "全", "all"):
         return ""
-    return self._HURRY_ALIAS.get(k)
+    return _HURRY_ALIAS.get(k)
 
 
 def _hurry_section(self, player: dict, cur_map: dict, cur_sa: str,
@@ -1316,6 +1329,51 @@ async def ask_way(self, event: AstrMessageEvent, group_id, qq_id, player):
         f"🧭 【{target['name']}】寻路结果（{len(route) - 1} 段）：\n"
         f"{' → '.join(_path_n)}\n"
         f"💡 沿路『前往 <下一站>』逐段移动；方碑已激活的地区可用『传送 <名称>』直达～")
+
+
+def _instance_gate_block(shell, player, group_id, qq_id, target):
+    """副本图门禁：徒步『前往/移动』不得直接进副本图（玩法规则，P5E「壳去逻辑」批搬回包内）。
+
+    原实现住在宿主壳 `host/shell.py::_instance_gate_block`（原 `game/commands/world.py` 同名方法）。
+    这里只做「取数 + 组装 `ctx`」；判定本体 = `content/flow/instance_gate.py::walk_admission`
+    （三档任一满足即放行：任务放行 / 持钥匙 / 已通关），渲染走包内文案表。
+    调用方 = 本模块 `move`（`self._instance_gate_block(...)`，宿主壳按名解析到本函数）。
+    """
+    if target.get("type") != _cat_core.MAP_TYPE_INSTANCE:
+        return ""
+    if hasattr(instance_gate, "set_text_table"):
+        instance_gate.set_text_table(_texts.table())
+    kid = target.get("id", "")
+    mid = "inst_%s" % kid
+    inst = (_cat_space.INSTANCES or {}).get(mid)
+    quests = db.get_quests(group_id, qq_id)
+    quest_open = False
+    if quests.get("main_status") == "active":
+        mq = next((q for q in _cat_quests.MAIN_QUESTS
+                   if q["id"] == quests.get("main_quest")), None)
+        if mq and mq["objective"].get("explore") == kid:
+            quest_open = True
+    if not quest_open:
+        side = quests.get("side") or {}
+        quest_open = any(
+            sq.get("status") == "active"
+            and next((q for q in _cat_quests.SIDE_QUESTS if q["id"] == sid), {}).get(
+                "objective", {}).get("explore") == kid
+            for sid, sq in side.items())
+    key_item = (inst or {}).get("key_item")
+    ctx = {
+        "inst_name": (inst or {}).get("name")
+                     or (_cat_space.MAP_BY_ID.get(kid) or {}).get("name", "副本"),
+        "tip": shell._tip("instance"),
+        "quest_open": quest_open,
+        "key_held": bool(key_item) and instance_gate.find_instance_key_item(
+            db.get_inventory(group_id, qq_id) or [], key_item,
+            items=(_cat_items.ITEMS or {})) is not None,
+        "cleared": instance_gate.instance_cleared(
+            db.get_achievements(group_id, qq_id) or [], mid),
+    }
+    verdict = instance_gate.walk_admission(ctx).check(ctx)
+    return "" if verdict.ok else verdict.reason
 
 
 async def move(self, event: AstrMessageEvent, group_id, qq_id):

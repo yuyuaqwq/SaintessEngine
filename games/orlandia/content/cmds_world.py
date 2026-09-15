@@ -21,11 +21,12 @@ async generator（`yield event.plain_result(...)`）；本模块提供**过渡�
              真挂起（I/O await）→ `RuntimeError`（fail-closed，不静默吞）。
     _drain   同步取空 async generator → 产出（已渲染行）列表。
 
-⚠️ 一个**不在本模块**的宿主侧真相源（宿主源码级门禁钉住，非遗漏）
-  * `_instance_gate_block` —— 留宿主：`tests/test_v185_instance_admission.py:1131` 要求
-    宿主 world.py 源码出现 `instance_gate.walk_admission`（徒步进图三档判定）。
-    （`quest_view` 已搬入本模块 —— `daily.*` 渲染点随之进包，`tests/test_texts_table.py`
-    的 WIRED 表按「周常」先例补上包内文件。）
+⚠️ 两条与**宿主/包内落点**有关的登记（不是本模块的活）
+  * `_instance_gate_block` 已在 `content/world_cmds.py`（P5E「壳去逻辑」批从宿主壳
+    `host/shell.py` 搬回）—— `tests/test_v185_instance_admission.py`（t7_wiring）要的
+    `instance_gate.walk_admission` 调用点是那边的**真调用**（不再靠注释凑字符串）。
+  * `quest_view` 在本模块 —— `daily.*` 渲染点随之进包，`tests/test_texts_table.py`
+    的 WIRED 表按「周常」先例补上包内文件。
 
 包内不 import 宿主（I2）：宿主壳对象经 `env.state["shell"]` 取（桥接层透传），
 `content/world_cmds.py` 侧既有的「宿主替身口」（`_host_attr` / `_HostMod` / `C` / `db`）一字未动。

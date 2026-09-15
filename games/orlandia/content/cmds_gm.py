@@ -25,19 +25,26 @@ v104.1 M24 语义，含两条逐字提示语）。本模块把它接到**守卫*
 与桥接层 `_save_player` 同源）；`display` / `player_final_stats` 取**包内门面**
 （`content/tables.display` · `content/panel.player_final_stats`，B14-2/D3 已端口，等价性已实测）。
 
-**没搬（宿主侧保留，逐条给理由 —— 均属 B18_DESIGN §7 明确列出的「不适合本形状」类）**
-  * `gm_play` —— 转发任意游戏指令，走宿主注册表（`_find_handler` / `_run_shortcut`，async
-    generator）：§7.1「多消息」+ §7.2「依赖 AstrBot 注册表」；终态形状（同步 handler → 单条
-    plain_result）装不下，且包内没有注册表。
-  * `gm_spy` + `_chunk_text` / `_spy_to_role_cards` —— 调试/运维管道：读 playtest 实录 md、
-    拼 NapCat 合并转发节点、`await context.send_message` 多卡投递（含 `await asyncio.sleep`）、
-    写 `.spy_forward_state.json` —— §7.1「多消息/富文本」+ 平台 I/O。
+**平台例外两条（`gm_play` / `gm_spy`）—— P5E「壳去逻辑」批（2026-09-15）**
+  原判定「不适合本形状 ⇒ 留宿主」被本批推翻：实现已**搬回本模块**（`gm_play` / `gm_spy` +
+  `_spy_to_role_cards` / `_chunk_text`），宿主壳 `host/shell.py` 只留 1–3 行转发。
+  两条**仍然不进引擎声明路由**（宿主适配器 `PLATFORM_ROUTES` 按 key 派发到宿主壳），故本模块
+  对它们**不 `@register`** —— 包内处理器表照旧没有这两条，注册面 194 == 194 不变。
+  平台件（进程内实录目录 / 合并转发类型 / 投递前端 / 宿主日志 / 身份映射）经宿主壳能力口取
+  （`shell._guard_hook` · `shell._strip_cmd` · `shell._run_shortcut` · `shell._spy_ops` ·
+  `shell._identity_ops`），包内不 import 宿主（I2 口径）。
 
-行为逐字节不变；证据 = `overnight/W-B18-L4.md` 的 358 项三分支快照（sha256 改前 = 改后）。
+  行为逐字节不变（含玩家可见文案与 GM 提示）；证据 = `out/e2e_before.txt` 对照
+  `out/e2e_after.txt`（改前/改后同一驱动脚本、逐字 diff 为空）。
 """
 from __future__ import annotations
 
 import asyncio
+import glob
+import json
+import os
+import re
+import time
 
 from . import gm as _G
 from .commands import register
@@ -269,3 +276,188 @@ def gm_identity_table(env) -> list:
         oid = r.get("openid", "")
         lines.append(f"{oid[:8]}…{oid[-6:]} → QQ {r.get('qq_id')} ({r.get('platform')})")
     return lines
+
+
+# ============================================================
+# 平台例外两条（`gm_play` / `gm_spy`）—— P5E「壳去逻辑」批：实现回包，壳侧只转发
+# ------------------------------------------------------------
+# 见模块头注；两条**不 `@register`**（注册面 194 == 194 不变，宿主适配器按
+# `PLATFORM_ROUTES` 把命中声明的消息派到宿主壳，宿主壳再转发到下面两个函数）。
+# ============================================================
+
+def _chunk_text(text: str, size: int = 3800):
+    """按段落分片（QQ 消息安全长度），超长段落内部硬切。返回 str 列表。"""
+    chunks = []
+    cur = ""
+    for para in text.split("\n\n"):
+        if len(para) > size:
+            if cur:
+                chunks.append(cur)
+                cur = ""
+            for i in range(0, len(para), size):
+                chunks.append(para[i:i + size])
+            continue
+        if cur and len(cur) + len(para) + 2 > size:
+            chunks.append(cur)
+            cur = para
+        else:
+            cur = (cur + "\n\n" + para) if cur else para
+    if cur:
+        chunks.append(cur)
+    return chunks
+
+
+def _spy_to_role_cards(md_text: str, label: str, bot_qq: str, ops: dict) -> list:
+    """把实录 md 按角色拆成多组合并转发节点（每子 agent 一张完整卡）。
+
+    返回 `[(角色名, [Node...]), ...]`；单节点 ≤300 字、每卡 ≤13500 字节（NapCat ARK 上限）。
+    `ops` = 宿主壳平台面（`Node` / `Plain` 类型，见 `shell._spy_ops()`）。
+    """
+    Node, Plain = ops["Node"], ops["Plain"]
+
+    m = re.match(r"^#\s+(.+?)\s*$", md_text, flags=re.M)
+    title = m.group(1).strip() if m else label
+    cards = []
+    for sec in re.split(r"^## ", md_text, flags=re.M):
+        sec = sec.strip()
+        if not sec or sec.startswith("# "):
+            continue
+        parts = sec.split("\n", 1)
+        role = parts[0].strip()
+        body = parts[1].strip() if len(parts) > 1 else ""
+        if not body:
+            continue
+        name = re.sub(r"^[^\w\u4e00-\u9fff]+", "", role)
+        name = re.sub(r"\s*\(.*?\)\s*$", "", name).strip() or role
+        nodes = [
+            Node(
+                uin=bot_qq,
+                name=name,
+                content=[Plain("📡 {} · {}（本轮完整战况，点开查看）".format(name, title))],
+            )
+        ]
+        segs = re.split(r"(?=▶)", body)
+        segs = [s.strip() for s in segs if s.strip()]
+        total_bytes = 0
+        for seg in segs:
+            for chunk in _chunk_text(seg, 300):
+                total_bytes += len(chunk.encode("utf-8"))
+                if total_bytes > 13500:
+                    nodes.append(Node(uin=bot_qq, name=name, content=[
+                        Plain("…(后续交互见插件目录 scripts/{})".format(label))]))
+                    break
+                nodes.append(Node(uin=bot_qq, name=name, content=[Plain(chunk)]))
+            else:
+                continue
+            break
+        cards.append((name, nodes))
+    return cards
+
+
+async def gm_play(shell, event, group_id, qq_id):
+    """『gm_play <指令>』（平台例外）：权限判定 + 走引擎静态路由转发（`shell._run_shortcut`）。
+
+    原实现住在宿主壳 `host/shell.py::gm_play`；P5E「壳去逻辑」批把实现搬回包内。
+    """
+    blocked = shell._guard_hook("gm", uid=qq_id, group_id=group_id,
+                               text=event.get_message_str() or "")
+    if blocked:
+        yield event.plain_result(blocked)
+        return
+    raw = shell._strip_cmd(event, "gm_play").strip()
+    if not raw:
+        yield event.plain_result("🎮 用法：gm_play <指令>")
+        return
+    if raw.startswith("gm_"):
+        yield event.plain_result("⛔ 不能转发 GM 指令至自身（防递归）～")
+        return
+    async for r in shell._run_shortcut(event, raw):
+        yield r
+
+
+async def gm_spy(shell, event, group_id, qq_id):
+    """『gm_窥探』（平台例外）：playtest 实录 → NapCat 合并转发卡私聊投递。
+
+    原实现住在宿主壳 `host/shell.py::gm_spy`（迁自 `game/commands/gm.py`）；P5E「壳去逻辑」批
+    把实现搬回包内，壳侧只留转发。权限判定仍走包内 `hook:gm`（与旧壳同源同文案）；
+    平台面（实录目录 / 合并转发类型 / 投递目标 / 宿主日志）经 `shell._spy_ops()` 取。
+    """
+    ops = shell._spy_ops()
+    log = ops["log"]
+    blocked = shell._guard_hook("gm", uid=qq_id, group_id=group_id,
+                               text=event.get_message_str() or "")
+    if blocked:
+        yield event.plain_result(blocked)
+        return
+    raw = shell._strip_cmd(event, "gm_窥探").strip()
+    files = sorted(
+        glob.glob(os.path.join(ops["dir"], "playtest_spy_round*.md")),
+        # 字符串排序在轮次≥100 失效（"round100" < "round99"），必须按轮次数字排
+        key=lambda p: int(re.search(r"round(\d+)\.md$", p).group(1)),
+    )
+    if not files:
+        yield event.plain_result("📡 暂无 playtest 交互实录（playtest_spy_round*.md 不存在）～")
+        return
+    to_group = "群" in raw
+    round_raw = raw.replace("群", "").strip()
+    if round_raw.isdigit():
+        want = os.path.join(ops["dir"], "playtest_spy_round{}.md".format(round_raw))
+        if want not in files:
+            yield event.plain_result(
+                "❌ 没有第 {} 轮实录～（现有：最新 {}）".format(
+                    round_raw, os.path.basename(files[-1])))
+            return
+        path = want
+    else:
+        path = files[-1]
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            md_text = f.read().strip()
+    except OSError as e:
+        yield event.plain_result("❌ 读取 {} 失败: {}".format(os.path.basename(path), e))
+        return
+    if not md_text:
+        yield event.plain_result("📡 实录文件是空的～")
+        return
+    cards = _spy_to_role_cards(md_text, os.path.basename(path), event.get_self_id(), ops)
+    # 只发私聊（鱼鱼要求"群聊别发了"）；`--群` 变体发到游戏群（私聊被拦截时的 fallback）
+    if to_group:
+        target = "{}:GroupMessage:{}".format(ops["prefix"], ops["owner_group"])
+    else:
+        owner_openid = _cap(shell, "_identity_ops")().qq_to_openid(ops["owner_qq"])
+        if owner_openid:
+            target = "{}:FriendMessage:{}".format(ops["prefix"], owner_openid)
+        else:
+            target = "{}:FriendMessage:{}".format(ops["prefix"], ops["owner_qq"])
+    sent_ok, sent_fail = 0, 0
+    for _name, _nodes in cards:
+        try:
+            log.info("[dragonfall] gm_窥探 角色卡 %s（%d 节点）→ %s", _name, len(_nodes), target)
+            _ret = await shell.context.send_message(
+                target, ops["MessageChain"]([ops["Nodes"](_nodes)]))
+            if _ret is False:
+                sent_fail += 1
+            else:
+                sent_ok += 1
+        except Exception as _e:                              # noqa: BLE001
+            log.warning("[dragonfall] gm_窥探 角色卡 %s 投递失败: %s", _name, _e)
+            sent_fail += 1
+        await asyncio.sleep(1.2)  # 连续多卡间隔，防 QQ 频率风控
+    if sent_ok > 0:
+        try:
+            _m = re.search(r"playtest_spy_round(\d+)\.md$", path)
+            if _m:
+                with open(os.path.join(ops["dir"], ".spy_forward_state.json"), "w",
+                          encoding="utf-8") as _f:
+                    json.dump({"last_sent_round": int(_m.group(1)),
+                               "sent_at": int(time.time())}, _f, ensure_ascii=False)
+        except Exception as _e:                              # noqa: BLE001
+            log.warning("[dragonfall] gm_窥探 state 同步失败: %s", _e)
+    if sent_ok == 0:
+        yield event.plain_result(
+            "❌ {} 张角色卡全部投递失败，详见 AstrBot 日志～".format(len(cards)))
+        return
+    yield event.plain_result(
+        "✅ 已把 {} 拆成 {} 张角色卡合并转发（成功 {} / 失败 {}）{}～".format(
+            os.path.basename(path), len(cards), sent_ok, sent_fail,
+            "投递到游戏群 1095961596" if to_group else "私聊投递到鱼鱼 QQ"))
