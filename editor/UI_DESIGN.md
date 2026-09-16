@@ -215,7 +215,7 @@ tests/test_editor_api.py               45 断言（新增：hints 接口）
 
 框架路线图 #6「地图形状 → 引擎」的编辑器侧验收项是 **「配 `maps` 域 → 编辑器能画地图」**。
 引擎侧（`saintess_engine.space`）与内容侧（参考实现的 `core/maps.py`）同批完成，见
-`docs/engine-wiki/reference/space.md` 与游戏仓 `docs/REFACTOR_v183_space_shape.md`。
+`docs/engine-wiki/reference/space.md` 与游戏仓 `docs/archive/REFACTOR_v183_space_shape.md`。
 
 ### 10.1 数据形态：一条 = 一张图
 

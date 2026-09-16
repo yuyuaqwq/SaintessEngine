@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """v181.P4 saintess_engine 引擎——序列化（serialize.py）。
 
-按 docs/REFACTOR_v181P4_FULL_PLAN.md Part 4.2：
+按 docs/archive/REFACTOR_v181P4_FULL_PLAN.md Part 4.2：
 - to_state 输出 sides-only JSON 结构（battle_state.state 存）
 - from_state 重建 Battle + sides + actors
 - actor 全字段可 JSON 化（state/buffs/ext 等）；无循环引用（召唤物 owner 存 uid）

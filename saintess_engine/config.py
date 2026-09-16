@@ -8,7 +8,7 @@
 引擎内部所有"查表"都走 config 提供的接口，自身不认识表内容。
 换一套配置 = 换挂载的表 = 新游戏（引擎代码零改动）。
 
-S1 断链（docs/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 / §7）：
+S1 断链（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 / §7）：
 本包历史上直接 import `game.engine` / `game.content` / `game.data`（15 条
 「引擎 → 内容」反向边）。现全部改走本模块的注入面 —— 方向反过来：
 **内容侧（game/bootstrap.py）把公式/面板/技能查询/kind 常量 mount 进来**，

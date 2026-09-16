@@ -11,7 +11,7 @@
 ## 为什么必须这样
 
 旧引擎的反向依赖问题被量化过：`saintess_engine/` 里 **4 个文件（`actions`/`battle`/`stats`/`config`）
-持有 15 条指向内容层的 import 边**（**游戏仓侧** `docs/ENGINE_CONTENT_SPLIT_PLAN.md` §3.2）。
+持有 15 条指向内容层的 import 边**（**游戏仓侧** `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §3.2）。
 后果：
 
 - 想把这个引擎做成可分发工具包 → 带不走，因为它 import 你的游戏表

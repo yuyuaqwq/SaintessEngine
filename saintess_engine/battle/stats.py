@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """v181.P4 saintess_engine 引擎——面板计算（薄封装旧 engine.py 数值函数，不重写公式）。
 
-按 docs/REFACTOR_v181P4_FULL_PLAN.md 7.3 stats.py：
+按 docs/archive/REFACTOR_v181P4_FULL_PLAN.md 7.3 stats.py：
 - actor 有 class_name → E.player_final_stats（玩家职业公式：装备/等级/转职全算）
 - 纯怪（无 class_name）→ 直接读 actor 字段 + 简单 buff 修正（对齐旧 _enemy_stats）
 - 战斗内聚合面板 = 基础 + buffs 修正（buffs 键 → 属性加成）

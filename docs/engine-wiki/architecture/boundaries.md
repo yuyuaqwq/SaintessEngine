@@ -2,7 +2,7 @@
 
 本页是**框架仓与游戏仓的边界现状快照**。引擎已物理分离为独立仓 `framework-engine`
 （引擎包 `saintess_engine/`），游戏仓（奥兰迪亚）以 `git submodule framework/` 引用它；
-方案与迁移细节引用游戏仓内部文档 `docs/ENGINE_CONTENT_SPLIT_PLAN.md`
+方案与迁移细节引用游戏仓内部文档 `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md`
 （该文档不进本 wiki 的门面）。
 
 ## 边界在哪：一张图
@@ -122,7 +122,7 @@
 
 ## 历史上的 15 条反向依赖边（为什么要建这道门）
 
-来源：游戏仓内部文档 `docs/ENGINE_CONTENT_SPLIT_PLAN.md` §3.2（逐条 R1–R15）。
+来源：游戏仓内部文档 `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §3.2（逐条 R1–R15）。
 
 | 边 | 位置（快照） | 性质 |
 |---|---|---|
@@ -173,7 +173,7 @@ B1/B2/B6/B7 属于拆仓时一并带进框架仓的残留，需要在「彻底�
 
 ## 物理拆仓的历程（拆仓前为什么不能直接拆 —— 现已完成）
 
-游戏仓内部文档 `docs/ENGINE_CONTENT_SPLIT_PLAN.md` §9 **在拆仓前**给出的结论（逐字要点，保留为历史判据）：
+游戏仓内部文档 `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §9 **在拆仓前**给出的结论（逐字要点，保留为历史判据）：
 
 > **现在不能直接拆。** 引擎自身纯度已经很高（13 个模块里 9 个零出边、0 处 `cls_*`、
 > 0 处 `PLAYER_SKILLS`/`INSTANCES`），但 4 个文件持有 15 条指向内容层的 import 边，

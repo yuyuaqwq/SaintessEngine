@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""引擎侧通用数值公式（S5：自 `game/engine.py` 拆出，docs/ENGINE_CONTENT_SPLIT_PLAN.md §6.4）。
+"""引擎侧通用数值公式（S5：自 `game/engine.py` 拆出，docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §6.4）。
 
 本模块**零游戏知识**（门禁 tests/test_engine_no_content.py）：不含任何游戏表名/职业名，
 也不 import `game.data` / `game.content` / `game.core`。

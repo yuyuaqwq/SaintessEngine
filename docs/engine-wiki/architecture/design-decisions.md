@@ -150,7 +150,7 @@ actor 的 `triggers = {事件名: [效果声明]}` 决定响应什么。
 ## ADR-8：注入面（`config`）而不是反向 import
 
 **背景**：引擎曾有 15 条「引擎 → 内容」import 边（4 个文件：`actions`/`battle`/`stats`/`config`），
-量化记录见游戏仓内部文档 `docs/ENGINE_CONTENT_SPLIT_PLAN.md` §3.2（含 R1–R15 逐条）。
+量化记录见游戏仓内部文档 `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §3.2（含 R1–R15 逐条）。
 
 **选择**：方向反过来 —— 内容侧把公式 / 面板 / 技能查询 / kind 常量 mount 进引擎
 （13 个 hook）；引擎只调接口，不认识表内容。机器门禁：`tests/test_engine_purity.py`

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """v181.P4 saintess_engine 引擎——行动结算链（actions.py）。
 
-按 docs/REFACTOR_v181P4_FULL_PLAN.md Part 2.2：
+按 docs/archive/REFACTOR_v181P4_FULL_PLAN.md Part 2.2：
 - 全部结算显式 ctx/caster/target，不摸隐式全局目标
 - 数值公式复用旧 engine.py（resolve_formula/calc_damage/skill_*），不重写
 
@@ -17,7 +17,7 @@ from .. import config as _cfg
 from . import stats as S
 from .actors import actor_alive
 
-# S1 断链（docs/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 R1/R2/R14/R15）：
+# S1 断链（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 R1/R2/R14/R15）：
 # 引擎不得 import game.engine / game.core.constants —— 原 `E.*` 数值公式调用与
 # 中文 kind 字面量全部改走 config 注入面（内容侧 game/bootstrap.py 装配）。
 
@@ -152,7 +152,7 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
     2026-09-11 ★冷却强制补装（N10 重写丢失的消费点）：
     - 症状：do_skill 写 actor["cooldown"]，但全仓库只有 AI 的 cd_ok 谓词读它 →
       玩家侧零拦截，242/305 个带 cd 的技能可无限连放（tools/probe_cooldown_enforcement.py）。
-    - 依据：设计 docs/REFACTOR_v181P4_N5B_monster_ai_design.md:129「冷却消费点若不存在
+    - 依据：设计 docs/archive/REFACTOR_v181P4_N5B_monster_ai_design.md:129「冷却消费点若不存在
       → P1 盘点后决定补」；旧引擎已实现（_skill_on_cd 拦截，tests/_retired_old_engine/
       test_stage5_cooldown.py「再施放被 CD 拦截」）；数值模型 scripts/numeric_lib/player.py:385-387
       按「CD 未结束只能普攻」折算 —— 缺此检查则实机 DPS 比数值模型高 3~5 倍。

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """v181.P4 saintess_engine 引擎——CTB 时间轴调度（schedule.py）。
 
-按 docs/REFACTOR_v181P4_FULL_PLAN.md Part 7 schedule.py + 旧引擎 v154 语义：
+按 docs/archive/REFACTOR_v181P4_FULL_PLAN.md Part 7 schedule.py + 旧引擎 v154 语义：
 
 - 行动耗时 = 基准耗时 × sqrt(SPD_REF / spd)（CAST_* 基准 @spd=50）
 - actor.ct = 下次能行动的时刻（绝对时刻）；谁 ct 小谁先动

@@ -235,7 +235,7 @@ return False
 >      「全队」技能在多人副本/PVP 下与 desc 不符（内容侧用 `team_apply` 面幅解决，引擎零改动）；
 >   ② `landing`/`actions` 里 3 处 `.get("mult", 1.0) or 1.0` —— `0.0` 是 falsy 被吞成 `1.0`，
 >      **0 乘区永远失效**（格挡/无敌帧类效果做不出来），已改为「仅 `None` 回落 1.0」。
-> - 详见游戏仓 `docs/REFACTOR_v181_team_effects_plan.md` §七（落地记录 + 口径 + 验收 47/47）。
+> - 详见游戏仓 `docs/archive/REFACTOR_v181_team_effects_plan.md` §七（落地记录 + 口径 + 验收 47/47）。
 
 `game/data/skills.py`（玩家技能表）里出现但这些名词**既不在 `EFFECT_ACTIONS`
 也不是引擎动词** → `resolve_actions` 返回 `[]` → `apply_effects` 静默跳过：

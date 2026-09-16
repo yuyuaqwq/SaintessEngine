@@ -17,7 +17,7 @@
 
 | 项 | 处置 |
 |---|---|
-| `gauge.charge_*`（6 函数 + 蓄力三律整节） | **已删**。它是《云海猎团》弓手/时咒的**职业机制**残留（内容侧从未有技能声明电荷配置），与「引擎零内容知识」冲突。设计口径留档游戏仓 `docs/REFACTOR_v181_CLASS_MECH_ASSEMBLY.md『v139 形态层设计留档』` + git 历史 |
+| `gauge.charge_*`（6 函数 + 蓄力三律整节） | **已删**。它是《云海猎团》弓手/时咒的**职业机制**残留（内容侧从未有技能声明电荷配置），与「引擎零内容知识」冲突。设计口径留档游戏仓 `docs/archive/REFACTOR_v181_CLASS_MECH_ASSEMBLY.md『v139 形态层设计留档』` + git 历史 |
 | `Battle.dmg_mult` / `pet` / `st`（构造参数 + 字段） | **已删**。⚠️ 其中 `dmg_mult` 不是「遗留待删」而是「传了不读」的**活功能** → 见 §0.4 |
 | `Battle._cast_ctx` / `_target_ctx` / `_events` | **已删**（只初始化、零读） |
 | `DEFAULT_CT_WAIT` | **已删**（常量零消费） |
@@ -40,7 +40,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | Q4 | 引擎独立 CHANGELOG / 版本号 | `saintess_engine/version.py` 已有版本常量（编辑器/模拟器 fail-closed 校验）；CHANGELOG 未建 |
 | Q5 | `Battle.dmg_mult` / `pet` / `st` 是遗留还是预留 | ⚠️ **都不是** —— `dmg_mult`/`pet` 是**调用方在用、引擎没读**（静默失效的活功能）。见 §0.4 |
 | Q6 | `charge_*` 是将来接入还是已废弃 | **已废弃** → 已删（§0.1） |
-| Q8 | 20 个未映射 `effect=` 是「待实现」还是「废弃数据」 | **待实现**（玩家可见的静默 no-op）→ 游戏仓 `docs/REFACTOR_v181_team_effects_plan.md` |
+| Q8 | 20 个未映射 `effect=` 是「待实现」还是「废弃数据」 | **待实现**（玩家可见的静默 no-op）→ 游戏仓 `docs/archive/REFACTOR_v181_team_effects_plan.md` |
 | Q9 | `bleed` 的 `type` / `per_layer` 是否曾被消费 | 无历史消费痕迹；与 `period.dmg_type` 同批处置 |
 | Q10 | 行号漂移 | 已有门禁 `tests/test_wiki_refs.py`（drift 必须 0）+ 工具 `tools/remap_wiki_refs.py`（内容锚定位移） |
 | — | §4 的 B1-B6「引擎里的内容知识」 | **定案为引擎公开词汇表契约** → [../engine-vocabulary-contract.md](../engine-vocabulary-contract.md) |
@@ -74,7 +74,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 本轮修法（**零引擎改动**）：内容侧 `game/services/battle_worldboss_procs.py` 走
 `taken_calc` 承伤乘区挂到 Boss actor；测试 `tests/test_v181_worldboss_gm_dmg.py` **13/13**。
 同一条判定还救了 `pet=`：宠物传了但引擎不读 → 归「随从 actor 工厂」线
-（游戏仓 `docs/REFACTOR_v181_companion_line.md`）。
+（游戏仓 `docs/archive/REFACTOR_v181_companion_line.md`）。
 
 ---
 
@@ -193,7 +193,7 @@ B6 值得单列说明：这些字段**没有消费者**，但它们**存在与�
   （`feat(engine): 单一装配入口 apply_game_content（S7）+ S6' 内容层重组快照`）
 - 写文档时 `git status` 显示工作树**除本 `docs/engine-wiki/` 外无改动**，
   即本文所有行号对应的是那次 HEAD 的**已提交状态**
-- ⚠️ **行号会漂移**：`docs/ENGINE_CONTENT_SPLIT_PLAN.md` 自己记录过，
+- ⚠️ **行号会漂移**：`docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` 自己记录过，
   侦察期检测到并行 agent 正在改 `game/data/battle_rules.py` 与
   `game/services/class_mech_proc.py`，行号已漂移（`apply_class_mech` L2041→L2201）。
   本次写文档期间，`git log` 又前进了 4 个 commit（S5'/S6'/S7 落地）。
@@ -211,7 +211,7 @@ B6 值得单列说明：这些字段**没有消费者**，但它们**存在与�
 | Q7 | `_archive_unused/` 目录里的东西是否与引擎相关 | **未检查**（不在本次只读范围内） |
 | Q8 | `game/data/skills.py` 的 20 个未映射 `effect=` 是「待实现」还是「已废弃数据」 | 只能证明「当前静默无效」，无法证明意图 |
 | Q9 | `EFFECT_RULES` 里 `bleed` 的 `"type": "flat", "per_layer": 0` 是否曾被某版消费 | 当前无消费方；历史未知 |
-| Q10 | 本 wiki 的行号在并发改动下会漂移多少 | `docs/ENGINE_CONTENT_SPLIT_PLAN.md` 自己记录过：侦察期检测到并行 agent 在改
+| Q10 | 本 wiki 的行号在并发改动下会漂移多少 | `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` 自己记录过：侦察期检测到并行 agent 在改
 `battle_rules.py` 与 `class_mech_proc.py`，行号已漂移。**引擎侧（`saintess_engine/*`）锚点当时未变**，但本 wiki 写作期间这两个内容侧文件仍在被改 |
 
 ### 未取证的写作（明确标注）

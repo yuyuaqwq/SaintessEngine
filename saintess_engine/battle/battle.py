@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """v181.P4 saintess_engine 引擎——Battle 主类（battle.py）。
 
-按 docs/REFACTOR_v181P4_FULL_PLAN.md Part 2：
+按 docs/archive/REFACTOR_v181P4_FULL_PLAN.md Part 2：
 - 构造：sides = {side名: [actor, ...]}（唯一入口，无 player/enemy 参数）
 - 行动入口：act(ctx) / human_act(...) / actor_auto(...)
 - 玩家只是 sides["player"] 里 human_controlled=True 的 actor
@@ -115,7 +115,7 @@ class Battle:
     def _index_one_actor(self, actor: dict) -> None:
         """单 actor 技能索引（构造期与运行期 add_actor 共用）。
 
-        S1 断链（docs/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 R9/R10）：原先 import
+        S1 断链（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 R9/R10）：原先 import
         game.engine / game.content 直读技能表——现走 config 注入面
         （skill_lookup / monster_skill_fn，内容侧装配）。技能 key 可能是
         中文名或 sk_xxx——内容侧查询函数负责解析。索引失败不阻断（N1 政策：

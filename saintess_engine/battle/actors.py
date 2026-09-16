@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """v181.P4 saintess_engine 引擎——actor 模型层（纯数据，无逻辑）。
 
-按 docs/REFACTOR_v181P4_FULL_PLAN.md Part 1/2 实现：
+按 docs/archive/REFACTOR_v181P4_FULL_PLAN.md Part 1/2 实现：
 - actor = 全同构 dict（无身份逻辑；class_name 只选面板公式，side 只分组）
 - sides = {side名: [actor, ...]}（唯一容器）
 - ActCtx = 每次行动上下文（显式 caster/target/scope，消灭隐式全局目标）

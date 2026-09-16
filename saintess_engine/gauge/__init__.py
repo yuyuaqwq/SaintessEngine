@@ -13,7 +13,7 @@
 它是《云海猎团》弓手·时咒的职业机制，随 v151/v153 职业体系重做与
 core_resources.py（v181.M-R2c）退役，**全仓零消费方**（内容侧从未有技能声明
 电荷配置字段）。设计口径与数值留档
-docs/REFACTOR_v181_CLASS_MECH_ASSEMBLY.md『v139 形态层设计留档』章
+docs/archive/REFACTOR_v181_CLASS_MECH_ASSEMBLY.md『v139 形态层设计留档』章
 + git 历史；要恢复请按「内容动作 + 引擎 config 查表」的插件形态重写，别复活本段。
 
 时间制（v181 改造）：
@@ -33,7 +33,7 @@ docs/REFACTOR_v181_CLASS_MECH_ASSEMBLY.md『v139 形态层设计留档』章
 避开 effects 容器的四种自动化（到期清理 / 周期跳 / 面板折算 / 控制消费），
 见 tests/test_numeric_bar_decay.py 容器安全断言。
 
-S3 通用件归位（docs/ENGINE_CONTENT_SPLIT_PLAN.md §6.5 / §7-S3）：
+S3 通用件归位（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §6.5 / §7-S3）：
 本体自 game/core/battle_bars.py 迁入引擎（saintess_engine/），**读点改 config
 注入面**——`config.mech_cfg(name)` / `config.bar_prefix()` 由内容侧装配
 （game/bootstrap.py）注入，引擎零 game.data import（门禁 test_engine_no_content.py）。

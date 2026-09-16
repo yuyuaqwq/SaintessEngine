@@ -99,7 +99,7 @@
 1. **引擎侧与内容侧分开发版本**。插件版本 `0.105.0` 仍同时覆盖两者（那是**游戏仓**
    的 `metadata.yaml`），导致「引擎改了但内容没跟上」和「内容改了」无法区分 ——
    拆仓只完成了**物理**分离，版本面还没分开。
-2. **保留 `docs/ENGINE_CONTENT_SPLIT_PLAN.md` 的 S1–S3 门禁作为回归锚**
+2. **保留 `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` 的 S1–S3 门禁作为回归锚**
    （它每步都有机器可验断言；该文档在**游戏仓**）。拆仓时门禁已一起搬走：
    从 `tests/test_engine_no_content.py` 加强为框架仓的 `tests/test_engine_purity.py`
    —— 它是分发包的**自证文件**。

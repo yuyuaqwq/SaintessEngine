@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """v181.P4 saintess_engine 引擎——事件总线（effect_triggers.py，N8）。
 
-按 docs/DESIGN_effect_system_v2.md Part 3.3/4：
+按 docs/archive/DESIGN_effect_system_v2.md Part 3.3/4：
 - 效果系统 v2 提供统一触发总线：所有"事件匹配触发"型效果声明何时触发，
   引擎在固定点 fire(event, ctx)，不再为某个具体效果手写 if 分支。
 - 效果源 = actor["triggers"] = {事件名: [效果名词 dict, ...]}：
@@ -21,7 +21,7 @@ ctx 语义（插桩点统一约定）：
 执行语义：对每个存活 actor，查自身 triggers[event] → 以 ctx.caster/ctx.target
 为默认施放方/目标执行（effect dict 可带 on 覆盖作用对象）。
 
-# 事件全集（V181 实证：26 个 = DESIGN_effect_system_v2.md §3.3 的 19 时机
+# 事件全集（V181 实证：26 个 = docs/archive/DESIGN_effect_system_v2.md §3.3 的 19 时机
 #   + N9.13 dmg_calc/taken_calc/heal_calc + act_done + N9 追加 dot_calc/interrupt
 #   + 上层驱动 phase/player_low/pv_broken/time_advance）：
 #    battle_start 开战（词条/套装/仪式）   turn_start actor 回合开始

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """saintess_engine 通用怪 AI 决策器（条件优先级表 / 极简 utility）。
 
-设计 docs/REFACTOR_v181P4_N5B_monster_ai_design.md：
+设计 docs/archive/REFACTOR_v181P4_N5B_monster_ai_design.md：
 - actor.ai 纯数据（select/fallback/moves[{when, then, weight}]），引擎零名词——
   谓词只做数字比较 + 冷却表查 key，then 动作只出引擎 ActCtx 词汇。
 - 选择器：priority（条件表第一个命中）/ weighted（命中 moves 按权重随机 +

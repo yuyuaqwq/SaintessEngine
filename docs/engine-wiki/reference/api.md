@@ -6,7 +6,7 @@
 
 ## 1. 包门面：`saintess_engine/__init__.py`
 
-S2 固化（`docs/ENGINE_CONTENT_SPLIT_PLAN.md` §5）：把内容层**实际消费的 26 个符号**
+S2 固化（`docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §5）：把内容层**实际消费的 26 个符号**
 全量 re-export，并保留模块级 `config` / `effects` / `stats`
 （`saintess_engine/__init__.py:36-53`）。
 
@@ -370,7 +370,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 （`charge_def` / `charge_state` / `charge_start` / `charge_tick` / `charge_on_hit` /
 `charge_release_power` / `charge_clear` **已于 2026-09-11 全部删除**——「蓄力三律」是
 《云海猎团》弓手/时咒的职业机制，全仓零消费方，与「引擎零内容知识」冲突。
-设计口径留档游戏仓 `docs/REFACTOR_v181_CLASS_MECH_ASSEMBLY.md`。）
+设计口径留档游戏仓 `docs/archive/REFACTOR_v181_CLASS_MECH_ASSEMBLY.md`。）
 
 条状态存在 `actor.effects[config.bar_prefix() + key]`，
 所以它随存档序列化、并能被 `EFFECT_RULES` 声明折算。
