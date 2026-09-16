@@ -31,6 +31,7 @@ from __future__ import annotations
 
 from .mount import draw_slots
 from .pick import pick_index, pick_many, pick_weighted, roll_range, total_weight, weigh
+from .pity import pity_advance, pity_force
 from .pool import (STRATEGIES, LootTable, SimpleCtx, get_strategy, register_strategy,
                    strategy_names, strategy_spec)
 from .tier import TierTable, count_for
@@ -43,4 +44,6 @@ __all__ = [
     "strategy_spec", "STRATEGIES",
     # 档位 / 挂载
     "TierTable", "count_for", "draw_slots",
+    # 计数保底
+    "pity_force", "pity_advance",
 ]

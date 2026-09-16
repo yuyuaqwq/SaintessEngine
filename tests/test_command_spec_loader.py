@@ -89,7 +89,7 @@ def t1_derivation():
             if c:
                 ref[str(k)] = c
         diff = [k for k in set(mine) | set(ref) if mine.get(k) != ref.get(k)]
-        check(f"195 条真声明逐条对拍独立实现（{len(ref)} 条）", diff == [], diff[:3])
+        check(f"{len(ref)} 条真声明逐条对拍独立实现", diff == [], diff[:3])
         check("真声明派生条数 = 声明条数", len(mine) == len(data), f"{len(mine)} vs {len(data)}")
     else:
         check("包内 commands.json 存在（真数据对拍）", False, PKG_CMD)
