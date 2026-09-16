@@ -79,6 +79,7 @@ MODULE_ATTRS = [
     ("store", "store"), ("command", "command"), ("events", "events"),
     ("clock", "clock"), ("log", "log"), ("tlog", "tlog"), ("space", "space"), ("loot", "loot"),
     ("run", "run"), ("container", "container"), ("session", "session"),
+    ("dialogue", "dialogue"), ("presence", "presence"),
 ]
 
 passed = failed = 0

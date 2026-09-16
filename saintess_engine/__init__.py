@@ -22,6 +22,8 @@
             container/   容量受限格子容器
             session/     宿主会话适配
             run/         运行形状（准入链 / 进度 / 名单）
+            dialogue/    对话树形状（节点 / 选项 / 条件槽 / 会话游标）
+            presence/    在场形状（清单判定 / 当天派生 / 保底冷却）
             host/        宿主运行时（包加载 / 会话循环 / 命令通道 / 战斗驱动）
                          ★ 平台三函数（recv/load_player+save_player/say）与可选钩子由**适配器**给；
                            本模块零平台知识、零游戏知识 —— 换包 = 换 package_dir（一个进程一个包）
@@ -53,7 +55,7 @@ from .battle import (  # noqa: F401
     landing, schedule, serialize, state_effects, stats,
 )
 from . import (  # noqa: F401
-    clock, command, container, events, expr, formation, gauge, log, loot, run, session,
+    clock, command, container, dialogue, events, expr, formation, gauge, log, loot, presence, run, session,
     space, store, text, tlog,
 )
 from . import host  # noqa: F401  （宿主运行时：放在最后 import，避免与上面各模块的加载顺序打架）
@@ -69,6 +71,8 @@ from .space import Space  # noqa: F401
 from .loot import LootTable, TierTable  # noqa: F401
 # 运行形状（准入链 + 进度 + 名单）
 from .run import Admission, Progress, Roster, Rule, Verdict  # noqa: F401
+# 对话树形状（节点 / 选项 / 条件槽 / 会话游标）
+from .dialogue import Cursor, Dialogue  # noqa: F401
 
 __all__ = [
     # 版本
@@ -97,10 +101,12 @@ __all__ = [
     "battle", "actions", "actors", "ai", "effect_triggers", "effects", "formulas",
     "landing", "schedule", "serialize", "state_effects",
     "expr", "gauge", "formation",
-    "store", "command", "events", "clock", "log", "tlog", "space", "loot", "container", "session",
+    "store", "command", "events", "clock", "log", "tlog", "space", "loot", "dialogue", "presence", "container", "session",
     "text",
     # 运行形状（准入链 / 进度 / 名单）
     "run", "Admission", "Rule", "Verdict", "Progress", "Roster",
+    # 对话树形状（节点 / 选项 / 条件槽 / 会话游标）
+    "Dialogue", "Cursor",
     # 声明驱动（指令 / 文案 / 流水）
     "CommandRegistry", "CommandSpec", "TextTable", "TextSpec", "safe_format",
     "TLog", "Record", "KindTable",
