@@ -57,6 +57,14 @@
     rows.reload()                  # 重新读盘 → **原子换引用**（全部读好、解析好、守卫过才换）
     bag.reload_all()               # 本集合全部表：先全部读好，再**一起**换（一份失败 → 一张也不换）
 
+**跨集合重载（注册表）**::
+
+    sets()                         # 已登记的 RecordsSet（**构建序**；返回副本）
+    reload_all_sets()              # 全部已登记集合：先全部读好，再一起换（一张失败 → 一张也不换）
+                                   # → {"RecordsSet#0[roster]": {"roster": {"before": 3, "after": 4}}}
+
+* **自动登记**：`RecordsSet.__init__` 里弱引用登记 —— 调用方不用写任何登记代码；集合被回收，
+  登记随之消失（**不强引用，不泄漏**）。
 * 只由调用方触发：**不做自动 mtime 检查、不做自动失效**（热路径 stat 开销 + 阻塞 event loop +
   半写风险）—— 什么时候重读是宿主的决定。
 * 任一步失败（读不到 / 坏 JSON / 顶层不是映射 / 顺序守卫不过）→ `RecordsReloadError`
@@ -81,11 +89,73 @@ from __future__ import annotations
 
 import json
 import os
+import weakref
 from typing import Any, Callable, Iterable, Optional
 
-__all__ = ["Records", "RecordsSet", "RecordsOrderMismatch", "RecordsReloadError"]
+__all__ = ["Records", "RecordsSet", "RecordsOrderMismatch", "RecordsReloadError",
+           "sets", "reload_all_sets"]
 
 _UNSET: Any = object()
+
+#: 已登记集合的**弱**引用（构建序）—— 集合被回收，登记随之消失（不强引用、不泄漏）。
+_REGISTRY: list = []
+
+
+def _register(rs: "RecordsSet") -> None:
+    """自动登记一个集合（`RecordsSet.__init__` 调用；包作者不用写登记代码）。"""
+    _REGISTRY.append(weakref.ref(rs))
+
+
+def sets() -> list:
+    """已登记的 `RecordsSet`（**构建序**；返回副本，不是内部容器）。
+
+    已回收的登记顺手清掉（弱引用语义：集合没了，登记就不该留着）。
+    """
+    live = []
+    for ref in list(_REGISTRY):
+        rs = ref()
+        if rs is not None:
+            live.append(rs)
+    if len(live) != len(_REGISTRY):
+        _REGISTRY[:] = [ref for ref in _REGISTRY if ref() is not None]
+    return live
+
+
+def _label(index: int, rs: "RecordsSet") -> str:
+    """集合在结果里的标识：注册序 + 声明域（集合没有名字，这两个够唯一且可读）。"""
+    return "RecordsSet#%d[%s]" % (index, ",".join(rs._spec))
+
+
+def reload_all_sets() -> dict:
+    """重载**全部已登记集合**的全部表（**跨集合全有或全无**）。
+
+    先把所有集合的所有表 `_prepare()` 好，再一起 `_commit()`：任一张失败 → 抛
+    `RecordsReloadError`（点名域与原因），**一张也不替换**（所有集合保持重载前状态）。
+    返回 `{集合标识: {域: {"before": 旧条数, "after": 新条数}}}`；**零集合 → `{}`**（不是报错）。
+    """
+    live = sets()
+    if not live:
+        return {}
+    # 预热：先把各集合**当前**的表读起来，让下面 `_prepare()` 记的 `before` 是「进程此刻真正在用的条数」。
+    # 不预热 ⇒ 没读过的集合 `before` 恒为 0，报告里会出现「0 → N」的**假变化**（GM 据此看不出到底变没变）。
+    # `Records.load()` 幂等（只读一次），故这里对已读过的集合是零成本。
+    for rs in live:
+        for domain in rs._spec:
+            rs._records(domain).load()
+    prepared = []
+    for index, rs in enumerate(live):
+        rows = []
+        for domain in rs._spec:
+            rec = rs._records(domain)
+            rows.append((rec,) + rec._prepare())        # 失败：此时还没动过任何表
+        prepared.append((_label(index, rs), rows))
+    out: dict = {}
+    for label, rows in prepared:
+        per: dict = {}
+        for rec, table, problems in rows:
+            per.update(rec._commit(table, problems))
+        out[label] = per
+    return out
 
 
 class RecordsOrderMismatch(RuntimeError):
@@ -383,6 +453,7 @@ class RecordsSet:
         self._root = root
         self._spec = {str(d): dict(cfg or {}) for d, cfg in dict(spec or {}).items()}
         self._tables: dict = {}
+        _register(self)
 
     def __getattr__(self, domain):
         if domain.startswith("_"):

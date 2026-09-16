@@ -9,7 +9,7 @@
 A. **编辑器主进程零 import 引擎**：`import editor.play` 之后 `sys.modules` 里不许出现
    `saintess_engine*`（硬断言，不是「代码里搜字符串」）。子进程侧（`play_worker.py`）
    才是唯一允许 import 引擎的地方。
-B. **全量命令覆盖（194/194）**：包内 `content/data/commands.json` 的每一条 key
+B. **全量命令覆盖（195/195）**：包内 `content/data/commands.json` 的每一条 key
    ① 在声明表里；② 在 `play` 的清单里；③ 子进程审计里逐条给出「有处理器 / 可解析」；
    ④ 每一条都能构造一次调用（有处理器的真跑，缺处理器的按引擎口径**回显声明**，不静默）。
 C. **逐字节对拍（≥20 条）**：同 seed + 同命令序列 + 同固定墙钟下，
@@ -151,14 +151,14 @@ def test_zero_engine_import() -> None:
 
 
 # ============================================================
-# B. 全量命令覆盖 194/194
+# B. 全量命令覆盖 195/195
 # ============================================================
 def test_full_command_coverage() -> dict:
-    print("\n=== B. 全量命令覆盖（194 条 key）===")
+    print("\n=== B. 全量命令覆盖（195 条 key）===")
     from editor import play as PLAY
     decl = json.load(open(os.path.join(PKG, "content", "data", "commands.json"), encoding="utf-8"))
     keys = sorted(decl)
-    check("包内声明表 key 数 == 194", len(keys) == 194, "实际 %d" % len(keys))
+    check("包内声明表 key 数 == 195", len(keys) == 195, "实际 %d" % len(keys))
 
     listing = PLAY.list_commands(PKG)
     check("play.list_commands() 列出全部 key",
@@ -170,7 +170,7 @@ def test_full_command_coverage() -> dict:
     audit = PLAY.audit(PKG, db=os.path.join(DB_DIR, "audit.db"))
     check("子进程审计 stage=audit", audit.get("stage") == "audit", str(audit)[:200])
     akeys = sorted(r["key"] for r in (audit.get("rows") or []))
-    check("审计覆盖全部 194 条（_maint_gate 在内）", akeys == keys,
+    check("审计覆盖全部 195 条（_maint_gate 在内）", akeys == keys,
           "缺=%s" % sorted(set(keys) - set(akeys)))
     resolved = [r["key"] for r in (audit.get("rows") or []) if r["resolved"]]
     missing = sorted(set(keys) - set(resolved))
@@ -449,7 +449,7 @@ def test_routes_fragment() -> None:
                              "PYTHONPATH": HOST_ROOT,
                              "B20_HOST_ROOT": HOST_ROOT})
     out = (pr.stdout or "") + (pr.stderr or "")
-    check("GET …/play/commands → 200 + 194 条", "LIST 200 194 True" in out, out[-400:])
+    check("GET …/play/commands → 200 + 195 条", "LIST 200 195 True" in out, out[-400:])
     check("POST …/play → 200 + stage=done + 2 条 + 有文本段", "RUN 200 done 2 True" in out, out[-400:])
     check("不存在的包 → 404", "MISS 404 False" in out, out[-400:])
     check("空 commands → 400", "EMPTY 400 False" in out, out[-400:])
@@ -488,7 +488,7 @@ def main() -> int:
         print("  ❌ %s" % f)
     if FAIL:
         return 1
-    print("✅ 试玩门禁全绿：零 import 引擎 / 全量 194 覆盖 / 逐字节对拍 / 子进程健壮")
+    print("✅ 试玩门禁全绿：零 import 引擎 / 全量 195 覆盖 / 逐字节对拍 / 子进程健壮")
     return 0
 
 

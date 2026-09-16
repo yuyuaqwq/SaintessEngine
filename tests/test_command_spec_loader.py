@@ -6,7 +6,7 @@
 退出码：0 = 全绿；1 = 有失败。
 
 四处专门钉住的地方（都是「改了就静默变行为」的）：
-  ① **派生语义**：单正则逐字、多条 → `(?:a)|(?:b)`；用**独立实现**逐条对拍 194 条真声明
+  ① **派生语义**：单正则逐字、多条 → `(?:a)|(?:b)`；用**独立实现**逐条对拍 195 条真声明
   ② **单一来源**：有效表必须与注册表同源（`pattern_map() == {k: spec.combined()}`）
   ③ **fail-closed**：缺文件/空表/坏 JSON/key 重复/正则非法 → 抛错（反证：**不是**返回空表）
   ④ **薄表场景**：`pattern_map_from_table()` 纯函数（不读盘、不 import 平台）
@@ -89,7 +89,7 @@ def t1_derivation():
             if c:
                 ref[str(k)] = c
         diff = [k for k in set(mine) | set(ref) if mine.get(k) != ref.get(k)]
-        check(f"194 条真声明逐条对拍独立实现（{len(ref)} 条）", diff == [], diff[:3])
+        check(f"195 条真声明逐条对拍独立实现（{len(ref)} 条）", diff == [], diff[:3])
         check("真声明派生条数 = 声明条数", len(mine) == len(data), f"{len(mine)} vs {len(data)}")
     else:
         check("包内 commands.json 存在（真数据对拍）", False, PKG_CMD)
