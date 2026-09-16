@@ -82,6 +82,16 @@
 * 成功返回变更摘要 `{"<域>": {"before": 旧条数, "after": 新条数}}` —— **没有变化的域也在**
   （供宿主打日志）。
 
+**内容侧派生重建（视图注册表，`records/views.py`）**::
+
+    register_view(fn, order=0)     # 内容侧各模块 import 期登记自己的重建函数
+    views()                        # 已登记函数副本（`(order, 登记序)` 升序）
+    rebuild_views(module_prefix=…) # 依次调用；返回成功个数。容器就地更新；非容器由引擎按
+                                   # 身份在 `module_prefix` 前缀的已加载模块里做**别名回填**。
+                                   # 任一失败 → `ViewsRebuildError`（点名函数与原因，不吞）
+
+* 引擎**零领域知识**：什么模块、重建什么、依赖谁，全由调用方声明；引擎只认 `order` 与对象身份。
+
 **有意不做的事**
 ----------------
 * **不做写入**：资料表只读。`all()` / `index_of()` 返回**内部表本身**（引擎不为十几个读口各留
@@ -106,7 +116,15 @@ __all__ = ["Records", "RecordsSet", "RecordsOrderMismatch", "RecordsReloadError"
            "sets", "reload_all_sets",
            "RecordsDeclarationError", "read_domain_decl", "domain_sub",
            "resolve_domain", "records_from_domain", "set_from_domains", "orders_of",
-           "DEFAULT_DECL", "DEFAULT_KIND_DIRS"]
+           "DEFAULT_DECL", "DEFAULT_KIND_DIRS",
+           # 通用视图注册表（`records/views.py`；见该模块头注「两条口径」）
+           "register_view", "views", "rebuild_views", "ViewsRebuildError",
+           "update_in_place", "apply_replacements", "placeholder"]
+
+# 通用视图注册表（派生重建）：引擎只按 `(order, 登记序)` 调函数 + 按身份做别名回填，
+# 不认识任何具体派生名字（零领域知识）。实现与文档在 `records/views.py`。
+from .views import (ViewsRebuildError, apply_replacements, placeholder,   # noqa: E402
+                    rebuild_views, register_view, update_in_place, views)
 
 _UNSET: Any = object()
 
