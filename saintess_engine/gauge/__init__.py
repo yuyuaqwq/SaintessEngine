@@ -237,3 +237,14 @@ def bar_preserve(enemy: dict, bar_key: str, pct: float | None = None) -> None:
     bs = bar_state(enemy, bar_key)
     p = float(pct if pct is not None else bd.get("phase_preserve_pct", 0.5) or 0.5)
     bs["val"] = float(int(float(bs.get("val", 0.0) or 0.0) * p))
+
+
+# ============================================================
+# 二、敌身条族通用动词（事件时机 → 上面这些机制 API 的转发端）
+# ============================================================
+# 放在**文件末** import：`actions` 模块级只依赖 `..battle.effects`（不反向读本包），
+# 且本文件此前定义的名字（_state_prefix / bar_def / ...）必须在它被调用前就绪。
+# import 即注册：`@register_action("bar_gain"/"bar_time_settle"/"bar_phase_preserve"/
+# "passive_reflect_bar")` 写进引擎 ACTION_HANDLERS ⇒ `import saintess_engine` 即完成注册，
+# 内容侧无需（也不得）再注册同名动词。
+from . import actions  # noqa: E402,F401  （动词注册：见 gauge/actions.py 模块 docstring）
