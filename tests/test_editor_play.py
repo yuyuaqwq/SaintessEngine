@@ -192,8 +192,23 @@ def test_full_command_coverage() -> dict:
 # C. 逐字节对拍（≥20 条）
 # ============================================================
 def _registry_keys() -> dict:
-    """`{消息原文: 声明 key}` —— 用宿主测试的**同一份**正则扫描实现复算（不另抄一份）。"""
-    sys.path.insert(0, os.path.join(HOST_ROOT, "tests"))
+    """`{消息原文: 声明 key}` —— 用**同一份**正则扫描实现复算（不另抄一份）。
+
+    ★ T8（测试单源化）：`_cmd_registry` 是**内容侧**夹具，真源已唯一在包仓 tests
+      （部署面 `<plugin>/framework/games/*/tests`）；宿主侧同名副本已删除。
+      故**先从部署面取**，再回落 `<plugin>/tests`（宿主自留件面）。
+    """
+    tests_cands = []
+    games = os.path.join(HOST_ROOT, "framework", "games")
+    if os.path.isdir(games):
+        for n in sorted(os.listdir(games)):
+            t = os.path.join(games, n, "tests")
+            if os.path.isdir(t):
+                tests_cands.append(t)
+    tests_cands.append(os.path.join(HOST_ROOT, "tests"))
+    for t in reversed(tests_cands):          # insert(0) ⇒ 靠后者排前 ⇒ 部署面最前
+        if t not in sys.path:
+            sys.path.insert(0, t)
     sys.path.insert(0, os.path.join(HOST_ROOT, "framework"))
     import _cmd_registry as CR
     pool = {name: (pat, prio) for name, (pat, prio, _f) in CR.patterns_with_meta().items()}
