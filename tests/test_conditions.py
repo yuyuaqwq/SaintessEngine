@@ -497,6 +497,108 @@ def t10_shape():
     check("Ctx repr 可读", "owner" in repr(Ctx(owner="a")))
 
 
+# ---------------------------------------------------------------- 11 声明式装配
+def t11_declarative():
+    print("\n[11] 声明式装配：数据形状 → 判定；装载期 fail-closed；多参签名不丢")
+    from saintess_engine.conditions import declarative as D
+
+    def C(v):
+        return {"const": v}
+
+    def F(*steps):
+        return {"field": list(steps)}
+
+    def S(key, **kw):
+        if "or_" in kw:                      # `or` 是 Python 关键字，测试里用 or_ 传入
+            kw["or"] = kw.pop("or_")
+        return dict(key=key, **kw)
+
+    # -- 取值与比较 --
+    spec = {"op": "ge", "left": F(S("stats"), S("kills", default=0)), "right": C(10)}
+    fn = D.compile_spec(spec)
+    ctx = {"stats": {"kills": 9}}
+    check("field 步链 + ge：9 >= 10 → False", fn(ctx) is False)
+    check("field 步链 + ge：10 >= 10 → True", fn({"stats": {"kills": 10}}) is True)
+    check("缺键走 default（0 >= 10 → False）", fn({"stats": {}}) is False)
+    check("值存在且为 None → 原样参与比较（抛 TypeError，不悄悄换成 default）",
+          raises(TypeError, fn, {"stats": {"kills": None}})[0])
+    check("步链 `or` 兜底（None → []）",
+          D.compile_spec(F(S("xs", default=None, or_=[])))({"xs": None}) == [])
+    check("第一步走属性（非映射上下文）",
+          D.compile_spec(F(S("stats"), S("kills", default=0)))(Ctx(stats={"kills": 3})) == 3)
+    check("步链严格：中途 None → 与 `.get` 链同类型异常",
+          raises(AttributeError, D.compile_spec(
+              F(S("a"), S("b", default=0))), {"a": None})[0])
+
+    # -- 布尔：原生语义（短路 + 返回原操作数，不做 bool 归一）--
+    orv = D.compile_spec({"op": "or", "args": [F(S("a", default=None)), C("fallback")]})
+    check("or：falsy → 返回兜底操作数本身", orv({}) == "fallback")
+    check("or：真值 → 返回原操作数本身（不归一成 True）", orv({"a": "x"}) == "x")
+    andv = D.compile_spec({"op": "and", "args": [F(S("a", default=None)), F(S("b", default=None))]})
+    check("and：首个 falsy 原样返回", andv({"a": 0}) == 0)
+    check("and：全真 → 返回最后一个操作数（不归一成 True）", andv({"a": 1, "b": 7}) == 7)
+    check("not / truthy 按 bool 归一",
+          D.compile_spec({"op": "not", "arg": F(S("a", default=None))})({}) is True
+          and D.compile_spec({"op": "truthy", "arg": F(S("a", default=None))})({"a": 1}) is True)
+
+    # -- 尺寸 / 成员 / 取整 --
+    check("len 原样（None → TypeError）",
+          D.compile_spec({"op": "len", "arg": F(S("xs", default=[]))})({}) == 0
+          and raises(TypeError, D.compile_spec({"op": "len", "arg": F(S("xs", default=None))}),
+                     {"xs": None})[0])
+    check("int 取 `v or 0`",
+          D.compile_spec({"op": "int", "arg": F(S("n", default=None))})({}) == 0)
+    check("contains 原样 in（seq 为 None → TypeError，不悄悄当空集）",
+          D.compile_spec({"op": "contains", "elem": C("a"), "seq": F(S("xs", default=[]))})({}) is False
+          and raises(TypeError, D.compile_spec(
+              {"op": "contains", "elem": C("a"), "seq": F(S("xs", default=None))}),
+              {"xs": None})[0])
+
+    # -- 装载期 fail-closed：不认识就炸（绝不静默当永假 / 恒真）--
+    check("★ 不认识的算子 → SpecError（装载期）",
+          raises(D.SpecError, D.compile_spec, {"op": "frobnicate", "arg": C(1)})[0])
+    check("节点不是字典 → SpecError", raises(D.SpecError, D.compile_spec, 42)[0])
+    check("空节点 / 无 const·field·op → SpecError",
+          raises(D.SpecError, D.compile_spec, {})[0])
+    check("节点多带不认识的键 → SpecError",
+          raises(D.SpecError, D.compile_spec, {"const": 1, "op": "eq"})[0])
+    check("field 步链为空 → SpecError",
+          raises(D.SpecError, D.compile_spec, {"field": []})[0])
+    check("步缺 key → SpecError",
+          raises(D.SpecError, D.compile_spec, {"field": [{"default": 1}]})[0])
+    check("args 空 → SpecError",
+          raises(D.SpecError, D.compile_spec, {"op": "and", "args": []})[0])
+    check("比较节点缺 right → SpecError",
+          raises(D.SpecError, D.compile_spec, {"op": "eq", "left": C(1)})[0])
+    hit, exc = raises(D.SpecError, D.compile_spec, {"op": "nope"})
+    check("错误信息点名算子", hit and "nope" in str(exc), f"{exc}")
+
+    # -- 多参旧签名 --
+    multi = D.compile_specs(
+        {"m": {"op": "ge", "left": F(S("a"), S("v", default=0)), "right": C(2)}},
+        names=("a", "b", "c"))
+    check("names 多参：按位置绑成映射", multi["m"]({"v": 1}, None, None) is False
+          and multi["m"]({"v": 5}, None, None) is True)
+    check("names 多参：实参个数不符 → TypeError",
+          raises(TypeError, multi["m"], {"v": 1})[0])
+    single = D.compile_specs({"s": F(S("v", default=0))}, names=("only",))
+    check("names 单名：仍是单参（直接吃上下文对象）", single["s"]({"v": 3}) == 3)
+
+    # -- 登记进 Conditions：与既有查表口径同源 --
+    reg = Conditions()
+    table = {"k_ok": {"op": "eq", "left": F(S("v", default=0)), "right": C(1)},
+             "k_bad": {"op": "nope"}}
+    hit, _ = raises(D.SpecError, D.register_specs, reg.register, table)
+    check("★ 整表编译：有一条坏 → 一条都不登记", hit and reg.keys() == [])
+    good = {"k_ok": table["k_ok"]}
+    D.register_specs(reg.register, good)
+    check("登记后 evaluate 走同一套查表", reg.evaluate("k_ok", Ctx(v=1)) is True)
+    check("★ 未登记的键仍抛 UnknownCondition（点名，不静默 False）",
+          raises(UnknownCondition, reg.evaluate, "k_missing", Ctx())[0])
+    check("register_specs 的 register_fn 不可调用 → SpecError",
+          raises(D.SpecError, D.register_specs, 123, {"k": C(1)})[0])
+
+
 def main():
     print("== conditions 门禁：条件注册表（Conditions / Ctx）==")
     t1_register_paths()
@@ -509,6 +611,7 @@ def main():
     t8_zero_knowledge()
     t9_mutation()
     t10_shape()
+    t11_declarative()
     print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
     if DETAIL:
         print("失败清单：")
