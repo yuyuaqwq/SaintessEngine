@@ -666,14 +666,28 @@ function renderRail() {
       <span class="ri-count ${bad ? 'bad' : ''}">${bad ? '!' : (st.count || 0)}</span>
     </button>`;
   }).join('');
-  $('rail').innerHTML = items
-    + '<div class="rail-sep"></div>'
+  // 换域 / 切包会重建本栏 ⇒ 记住滚动位置，重建后还原（否则点一下选项卡就弹回顶部）
+  const box = $('rail');
+  const prevScroll = box.querySelector('.rail-scroll');
+  const keepTop = prevScroll ? prevScroll.scrollTop : 0;
+  // 域列表进可滚区；试玩 / 文档 / 设置**固定在栏底**（不随域列表滚动）
+  box.innerHTML =
+    `<div class="rail-scroll">${items}</div>`
+    + '<div class="rail-foot">'
     + `<button class="rail-item ${playOpen() ? 'on' : ''}" data-nav="play" title="试玩（脱离平台插件；子进程跑引擎 host + 本游戏包）">
          <span class="ri-icon">🎮</span><span class="ri-label">试玩</span></button>`
     + `<button class="rail-item ${isWiki() ? 'on' : ''}" data-nav="wiki" title="引擎文档（wiki）">
          <span class="ri-icon">📖</span><span class="ri-label">文档</span></button>`
     + `<button class="rail-item ${isSettings() ? 'on' : ''}" data-nav="settings" title="包设置">
-         <span class="ri-icon">⚙</span><span class="ri-label">设置</span></button>`;
+         <span class="ri-icon">⚙</span><span class="ri-label">设置</span></button>`
+    + '</div>';
+  const sc = box.querySelector('.rail-scroll');
+  if (sc) {
+    sc.scrollTop = keepTop;
+    // 当前项若在可视区外，只滚最小距离让它露出来（看得见就不动 —— 不抢用户的滚动位置）
+    const on = sc.querySelector('.rail-item.on');
+    if (on) on.scrollIntoView({ block: 'nearest' });
+  }
   els('#rail .rail-item').forEach((b) => {
     b.onclick = () => {
       if (b.dataset.nav === 'settings') return openSettings();
@@ -1998,7 +2012,7 @@ function openSettings() {
   $('editorEmpty').classList.add('hidden');
   $('wiki').classList.add('hidden');
   $('play').classList.add('hidden');
-  $('listPane').classList.remove('hidden');
+  $('listPane').classList.add('hidden');      // 设置页不需要条目列表（与试玩一致：切回域时 switchDomain 会恢复）
   $('settings').classList.remove('hidden');
   renderSettingsForm();
   renderRail();
@@ -2309,7 +2323,7 @@ async function openWiki(path, findTerm) {
   $('editorEmpty').classList.add('hidden');
   $('settings').classList.add('hidden');
   $('play').classList.add('hidden');
-  $('listPane').classList.remove('hidden');
+  $('listPane').classList.add('hidden');      // 文档页自带 nav/toc（wikiNav/wikiToc）→ 不收左栏会把上一个域的条目列表留在原地
   $('wiki').classList.remove('hidden');
   $('wikiTitle').textContent = j.title;
   $('wikiPath').textContent = j.path;

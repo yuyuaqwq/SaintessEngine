@@ -190,18 +190,26 @@ input[type=checkbox]{width:15px;height:15px;height:auto;padding:0;accent-color:v
 .topbar-actions .btn .kbd{opacity:.6}
 
 .workbench{flex:1 1 auto;display:flex;min-height:0;min-width:0}
+.list-pane.hidden + .splitter{display:none}
 .splitter{flex:0 0 3px;cursor:col-resize;background:transparent;transition:background var(--t)}
 .splitter:hover,.splitter.dragging{background:var(--accent)}
 
 /* ─────────────── 4. 域栏 ─────────────── */
 .rail{
   flex:0 0 var(--rail-w);width:var(--rail-w);
-  display:flex;flex-direction:column;gap:2px;padding:var(--sp3) var(--sp2);
-  background:var(--bg-1);border-right:1px solid var(--line);overflow-y:auto;
+  display:flex;flex-direction:column;padding:var(--sp3) var(--sp2);
+  background:var(--bg-1);border-right:1px solid var(--line);min-height:0;
+}
+/* 域列表：可滚区（试玩 / 文档 / 设置固定在栏底 —— 见 .rail-foot） */
+.rail-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+/* 栏底固定区：不随域列表滚动 */
+.rail-foot{
+  flex:0 0 auto;display:flex;flex-direction:column;gap:2px;
+  margin-top:var(--sp2);padding-top:var(--sp2);border-top:1px solid var(--line);
 }
 .rail-item{
   position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:2px;height:52px;padding:0;background:transparent;border:none;border-radius:var(--r);
+  gap:2px;height:52px;flex:0 0 auto;padding:0;background:transparent;border:none;border-radius:var(--r);
   color:var(--fg-2);cursor:pointer;transition:background var(--t),color var(--t);
 }
 .rail-item:hover{background:var(--bg-2);color:var(--fg-0)}
@@ -219,7 +227,6 @@ input[type=checkbox]{width:15px;height:15px;height:auto;padding:0;accent-color:v
 }
 .rail-item.on .ri-count{background:var(--bg-4);color:var(--fg-1)}
 .rail-item .ri-count.bad{background:var(--err);color:var(--on-err);font-weight:700}
-.rail-sep{height:1px;background:var(--line);margin:var(--sp2) var(--sp3)}
 
 /* ─────────────── 5. 条目列表 ─────────────── */
 .list-pane{
@@ -1076,6 +1083,8 @@ fieldset.cat>.cat-legend{
 .play{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 .play-body{display:flex;gap:var(--sp5);align-items:stretch;overflow:hidden}
 .play-left{flex:0 0 42%;min-width:280px;display:flex;flex-direction:column;gap:var(--sp4);min-height:0}
+/* 可滚容器里的子块不许被压扁（同 .rail-item 的坑：装不下要滚，不是挤） */
+.play-right > *{flex:0 0 auto}
 .play-right{flex:1 1 auto;min-width:0;overflow-y:auto;display:flex;flex-direction:column;gap:var(--sp3);
   border-left:1px solid var(--line);padding-left:var(--sp5)}
 .play-hint{font-size:12px;line-height:1.6}
