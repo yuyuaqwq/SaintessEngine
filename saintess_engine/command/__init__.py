@@ -5,6 +5,10 @@
 （见 `base.CommandBase` 的「钩子」一节，以及 `router` 的宿主探测函数）。
 """
 from .base import CommandBase  # noqa: F401
+from .binding import (  # noqa: F401
+    ARG_TOKENS, CALL_MODES, BindError, BindSpec, TextSink, bind_handler,
+    collect_messages, drive_generator, resolve_handler,
+)
 from .guards import require_battle, require_player  # noqa: F401
 from .paging import page_items, parse_page  # noqa: F401
 from .registry import (  # noqa: F401
@@ -25,6 +29,9 @@ __all__ = [
     "CommandRegistry", "CommandSpec", "CommandBinding", "HandlerMissing", "combine_patterns",
     # 指令声明表装载形状（表在哪由宿主给；派生/校验/fail-closed 收在引擎）
     "CommandSpecSource", "load_table", "build_registry", "pattern_map_from_table", "catalog_of",
+    # 指令**声明式绑定**（声明条目上的 `bind`：实现体 + 调用模式 + 取参槽位）
+    "BindSpec", "BindError", "TextSink", "bind_handler", "resolve_handler",
+    "collect_messages", "drive_generator", "CALL_MODES", "ARG_TOKENS",
     "require_player", "require_battle",
     "strip_at_prefix", "strip_command",
     "pick_tip",

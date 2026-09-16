@@ -38,10 +38,17 @@ def _find_host_root() -> str:
 
     本仓（引擎仓）通常**不含宿主**；没有宿主时本门禁整体跳过（见 main 开头），
     提供方式：`B20_HOST_ROOT=<插件目录>` 或下列候选之一命中。
+
+    ★ 候选顺序里**部署布局优先**：插件目录 = 本引擎仓的上一级（`<plugin>/framework` +
+    `<plugin>/game` 是拆仓后的标准形状）。不认它时，本仓被放在某份工作副本里跑（如
+    `<ws>/host/framework/tests`）会直接落到下面那条**写死路径**（= 另一份仓）——
+    于是「本仓的包 + 别的仓的引擎」混装（实测：包侧要引擎新 API 时当场 ImportError，
+    而报告指向的是包，根因却在宿主根发现顺序）。
     """
     cands = [os.environ.get(k) for k in
              ("B20_HOST_ROOT", "SAINTESS_HOST_ROOT", "GWEN_HOST_ROOT")]
     cands += [
+        os.path.dirname(os.path.abspath(ROOT)),          # 部署布局：插件目录 = framework 的上一级
         os.path.join(os.path.dirname(ROOT), "qqbot", "data", "plugins", "dragonfall"),
         os.path.join(ROOT, "host", "dragonfall"),
         r"C:/Users/yuyu/qqbot/data/plugins/dragonfall",

@@ -47,6 +47,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Optional, Sequence
 
+from .binding import BindSpec
+
 __all__ = ["CommandSpec", "CommandRegistry", "CommandBinding", "HandlerMissing",
            "combine_patterns"]
 
@@ -81,6 +83,9 @@ class CommandSpec:
     * `priority`  —— **命中优先级**（大在前；同值按注册序）。与 `order` 各管一头：
                      `order` 只排帮助/目录（`visible()`），`priority` 只排命中
                      （`hits()` / `hit()`），互不参与对方的排序
+    * `bind`      —— **声明式绑定**（`BindSpec`；可选）：点名实现体 + 调用模式 + 取参槽位，
+                     由 `binding.bind_handler()` 在装载期解析成处理器。字段解析**fail-closed**
+                     （未知 `call` / 未知 `args` 槽位 / 未知键当场抛），不在运行期降级。
     * `extra`     —— 使用方自定义附加数据（框架不解释、原样带回）
     """
     key: str
@@ -93,6 +98,7 @@ class CommandSpec:
     visible: bool = True
     order: int = 0
     priority: int = 0
+    bind: Optional[BindSpec] = None
     extra: dict = field(default_factory=dict)
 
     # ---------- 构造 ----------
@@ -121,6 +127,9 @@ class CommandSpec:
             priority = int(data.get("priority") or 0)   # "50" / 50 两种写法都认
         except (TypeError, ValueError):
             priority = 0
+        raw_bind = data.get("bind")
+        bind = None if raw_bind is None else BindSpec.from_data(
+            raw_bind, key=str(key or ""), where="指令声明")
         return cls(
             key=str(key or ""),
             patterns=pats,
@@ -132,6 +141,7 @@ class CommandSpec:
             visible=bool(data.get("visible", True)),
             order=order,
             priority=priority,
+            bind=bind,
             extra=dict(data.get("extra") or {}),
         )
 
@@ -152,6 +162,8 @@ class CommandSpec:
             out["order"] = self.order
         if self.priority:
             out["priority"] = self.priority
+        if self.bind is not None:
+            out["bind"] = self.bind.to_data()
         if self.extra:
             out["extra"] = dict(self.extra)
         return out
