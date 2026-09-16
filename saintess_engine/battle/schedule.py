@@ -3,43 +3,76 @@
 
 按 docs/archive/REFACTOR_v181P4_FULL_PLAN.md Part 7 schedule.py + 旧引擎 v154 语义：
 
-- 行动耗时 = 基准耗时 × sqrt(SPD_REF / spd)（CAST_* 基准 @spd=50）
-- actor.ct = 下次能行动的时刻（绝对时刻）；谁 ct 小谁先动
+- **机制（归引擎）**：actor.ct = 下次能行动的时刻（绝对时刻）；谁 ct 小谁先动；
+  行动后 `ct = now + 本次行动耗时`；1 刻 = 1 时刻 = 1 游戏秒（ACT_TICK=1）。
+- **一次行动耗时多少（归内容侧）**：引擎**不内置**任何时间公式形状与基准耗时数值，
+  一律向注入面取 —— 见下方 `_time_model_fn()` / `action_time()` / `action_base_of()`。
 - 命令层驱动：玩家出手 → advance() 推进到下一个决策点（途中自动 actor 自动行动）
-- 1 刻 = 1 时刻 = 1 游戏秒（ACT_TICK=1）
 
-引擎只有"时刻/速度/行动耗时"，不认识阵营/职业。
+注入面（内容侧装配；与 `battle/formulas.py` 同款 `saintess_engine.config` hook 面）：
+
+    time_model_fn   hook 名，值 = `fn(spd, base) -> float`（一次行动耗时，单位 = 游戏秒）
+    action_base_fn  hook 名，值 = `fn(action) -> float`（行动类别 → 基准耗时；
+                    未声明的类别由引擎回落到内容侧基准表的 `DEFAULT_ACTION` 项）
+
+**未装配 → fail-closed**：直接抛 `config.EngineNotConfigured`（点名 hook 名）。
+引擎不提供任何"中性/默认公式"——那是编出来的数，本仓口径禁止静默降级。
+
+引擎只有"时刻/速度/行动耗时/行动类别"，不认识阵营/职业/游戏名。
 """
 from __future__ import annotations
 
-import math
 from typing import Optional
 
+from .. import config as _cfg
 from .actors import ActCtx, actor_alive
 from .effects import _cap_of as _stack_cap_of
 
-# 行动基准耗时（与 core.constants 对齐，引擎固有刻度常量）
-CAST_ATK = 1.0
-CAST_SKILL = 1.6
-CAST_DEFEND = 0.6
-SPD_REF = 50.0
+#: 内容侧「行动类别 → 基准耗时」表里，未知/未声明类别回落到哪个类别（通用键名，非游戏词）
+DEFAULT_ACTION = "attack"
 
 
-def action_time(spd: int, base: float = CAST_ATK) -> float:
-    """一次行动耗时 = 基准耗时 × sqrt(SPD_REF/spd)（速度 50 = 基准值）。"""
-    try:
-        eff = max(float(spd or 0), 1.0)
-    except Exception:
-        eff = 1.0
-    return float(base) * math.sqrt(SPD_REF / eff)
+def _time_model_fn():
+    """内容侧时间模型（一次行动耗时）——未装配即抛 `EngineNotConfigured`（fail-closed）。"""
+    fn = _cfg.get_hook("time_model_fn")
+    if fn is None:
+        raise _cfg.EngineNotConfigured(
+            "时间模型未装配：引擎不内置行动耗时公式（形状与参数归内容侧）。"
+            "内容侧应把 `time_model_fn` 挂进 saintess_engine.config"
+            "（见 content/mech/time_model.py + content/apply.py::install_engine）"
+        )
+    return fn
 
 
-def initial_ct(spd: int, base: float = CAST_ATK) -> float:
+def _base_fn():
+    """内容侧「行动类别 → 基准耗时」表——未装配即抛 `EngineNotConfigured`（fail-closed）。"""
+    fn = _cfg.get_hook("action_base_fn")
+    if fn is None:
+        raise _cfg.EngineNotConfigured(
+            "行动基准耗时表未装配：引擎不内置动作基准数值。"
+            "内容侧应把 `action_base_fn` 挂进 saintess_engine.config"
+            "（见 content/mech/time_model.py + content/apply.py::install_engine）"
+        )
+    return fn
+
+
+def action_time(spd: int, base: Optional[float] = None) -> float:
+    """一次行动耗时（游戏秒）= 内容侧时间模型 `fn(spd, base)`。
+
+    `base=None` → 取内容侧「默认行动类别」（`DEFAULT_ACTION`）的基准耗时。
+    公式形状与参数（开方/线性/平推、基准速度、速度截断…）全部由内容侧装配。
+    """
+    if base is None:
+        base = action_base_of(DEFAULT_ACTION)
+    return float(_time_model_fn()(spd, base))
+
+
+def initial_ct(spd: int, base: Optional[float] = None) -> float:
     """单位初始行动等待（战斗开始第一动也按速度排）。"""
     return action_time(spd, base)
 
 
-def next_ct(battle, actor: dict, base: float = CAST_ATK) -> float:
+def next_ct(battle, actor: dict, base: Optional[float] = None) -> float:
     """actor 行动后推进的 ct（绝对时刻）。"""
     spd = int((actor.get("stats_spd") or 0) or actor.get("spd", 0) or 0)
     # 用聚合面板速度（buffs 修正）
@@ -52,12 +85,12 @@ def next_ct(battle, actor: dict, base: float = CAST_ATK) -> float:
 
 
 def action_base_of(action: str) -> float:
-    """行动类型 → 基准耗时。"""
-    if action == "defend":
-        return CAST_DEFEND
-    if action == "skill":
-        return CAST_SKILL
-    return CAST_ATK
+    """行动类别 → 基准耗时（内容侧基准表的查表转发）。
+
+    引擎只认「动作类别」这个通用键；类别名集合与对应数值都在内容侧基准表里
+    （未声明的类别 → 回落到 `DEFAULT_ACTION` 项；表里连它都没有 → KeyError 现形）。
+    """
+    return float(_base_fn()(action or DEFAULT_ACTION))
 
 
 # ============================================================

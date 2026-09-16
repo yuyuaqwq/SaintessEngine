@@ -10,6 +10,10 @@
 
 另外两张「公式参数表」是本游戏给引擎 formulas 模块的参数（S5 注入面）：
 FORMULA_SKELETON / SKILL_FLAT。数值全是本示例自己编的，与任何游戏包无关。
+
+CTB 时间轴（行动耗时）也是引擎的注入面（`time_model_fn` / `action_base_fn`）：
+本示例用**线性**形状（`base × spd_ref/spd`）而不是参考实现的 sqrt —— 这正是
+「换一款游戏 = 换一套节奏，引擎一行不改」的演示。见下方 `TIME_MODEL`。
 """
 from __future__ import annotations
 
@@ -111,4 +115,18 @@ SKILL_FLAT = {
     "SKILL_FLAT_BASE": 8,
     "SKILL_FLAT_PER_PLAYER_LV": 1,
     "SKILL_FLAT_PER_SKILL_LV": 2,
+}
+
+# ============================================================
+# CTB 时间模型（喂给引擎 schedule 的注入面：time_model_fn / action_base_fn）
+# ============================================================
+# 引擎只留机制（谁 ct 小谁先动、行动后 ct = now + 本次耗时），形状与数值由本游戏给。
+# 本游戏选 **linear**：一次行动耗时 = base × (spd_ref / max(spd, 1))；spd_cap=None 不截断。
+# `cast` 的键就是引擎的动作类别通用键（attack/skill/defend/item…）；
+# 引擎对未声明类别回落 `schedule.DEFAULT_ACTION`（= "attack"）。
+TIME_MODEL = {
+    "shape": "linear",
+    "spd_ref": 50.0,
+    "cast": {"attack": 1.0, "skill": 1.6, "defend": 0.6, "item": 1.0},
+    "spd_cap": None,
 }

@@ -8,7 +8,7 @@ saintess_engine = Battle.from_state(state)   # ← 重建 Battle / sides / actor
 ```
 
 入口：`serialize.to_state`（`serialize.py:36`）/ `serialize.from_state`（`serialize.py:59`），
-包门面也 re-export 了模块级 `to_state` / `from_state`（`saintess_engine/__init__.py:37`），
+包门面也 re-export 了模块级 `to_state` / `from_state`（`saintess_engine/__init__.py:39`），
 `Battle.to_state` / `Battle.from_state` 是类方法包装（`battle.py:578/532`）。
 **两条路等价**，内容层两种都在用（游戏仓侧拆仓前的迁移计划 `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §5 记了
 `B2.from_state` 与 `Battle.from_state` 两种形态）。
@@ -66,8 +66,8 @@ _STRIP_KEYS = {"_skill_index"}      # serialize.py:33 —— 运行时索引，�
 | 字段 | 来源 | 说明 |
 |---|---|---|
 | `_content_applied` | 内容侧 `apply_game_content` 的幂等标记（`game/content_rules/apply.py:81`） | 会落盘（原文自记：游戏仓侧拆仓计划的收口步 S9 若要清掉需改引擎 `serialize.py`） |
-| `dot_next` / `dot_jumps` | 引擎周期结算辅助（`schedule.py:224-225`） | 落盘是**续战能对上**的原因，别手删 |
-| `_dmg_taken_mult` | 上层直写（例 `commands/boss_script.py:684`） | 承伤乘区（`landing.py:86-91` 读） |
+| `dot_next` / `dot_jumps` | 引擎周期结算辅助（`schedule.py:257-258`） | 落盘是**续战能对上**的原因，别手删 |
+| `_dmg_taken_mult` | 上层直写（例 `commands/boss_script.py:684`） | 承伤乘区（`landing.py:88-93` 读） |
 | `act_count` | `actor_auto` 每动 +1（`battle.py:403`） | AI `round_mod` 谓词读它 |
 | `reduce_left` | `effects.act_apply`（`effects.py:453`） | ⚠️ 无消费者 |
 

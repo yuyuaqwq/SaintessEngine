@@ -522,7 +522,8 @@ def act_shield(battle, caster, target, params, logs):
     - 同源（同 key）：value 累加（叠厚）+ expire_at 取 max（对齐旧 _add_shield）
     - 异源并存各计各的时长
     - turns=0/缺省 → 3 刻；turns>=999 → 永久（expire_at=None，不到期删）
-    value/halve/turns 由数据给。
+    value/halve/turns 由数据给；value 与 pct 都没有时兜底比例读内容侧骨架表
+    （V4 下沉：`formulas.shield_default_pct()`，未装配 → 0.0 = 不产盾）。
     """
     from .battle import _now_of
     holder = caster if params.get("on", "caster") == "caster" else (target or caster)
@@ -535,7 +536,9 @@ def act_shield(battle, caster, target, params, logs):
     if value <= 0 and pct > 0:
         value = int(holder.get("max_hp", 1) * pct)
     if value <= 0:
-        value = int(holder.get("max_hp", 1) * 0.20)
+        # V4：兜底比例从内容侧骨架表读（原写死 0.20；未装配 → 0.0 = 不产盾不崩）
+        from . import formulas as _F
+        value = int(holder.get("max_hp", 1) * _F.shield_default_pct())
     turns = int(params.get("turns", 0) or 0) or 3
     halve = bool(params.get("halve", False))
     now = _now_of(battle)

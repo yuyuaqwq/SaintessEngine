@@ -8,7 +8,7 @@
 
 S2 固化（`docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §5）：把内容层**实际消费的 26 个符号**
 全量 re-export，并保留模块级 `config` / `effects` / `stats`
-（`saintess_engine/__init__.py:36-53`）。
+（`saintess_engine/__init__.py:38-55`）。
 
 ```python
 # Actor / 战斗主体
@@ -31,7 +31,7 @@ heal_amount · skill_pay_of
 from_state · to_state
 ```
 
-`__all__` 就是上面这份（`saintess_engine/__init__.py:49-72`）。门禁
+`__all__` 就是上面这份（`saintess_engine/__init__.py:51-74`）。门禁
 `tests/test_engine_purity.py` 会逐个断言这些符号存在，并断言 **5 个私有符号
 已升公开且旧下划线名是同一对象别名**：
 
@@ -58,7 +58,7 @@ Battle(btype="monster", sides=None, title_bonus=None, dmg_mult=1.0, pet=None,
 
 | 参数 | 语义 | 引擎内消费者 |
 |---|---|---|
-| `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:217`） |
+| `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:219`） |
 | `sides` | `{阵营名: [actor]}`，**唯一入口** | 全引擎 |
 | `title_bonus` | 面板增幅 dict（整场一份） | `stats._player_base_stats`：`actor.bonus.panel or battle.title_bonus or {}`（`stats.py:96-97`） |
 | `hostile_map` | `{side: [敌对 side]}` | `actors.hostile_sides`（`actors.py:200-202`）；缺省 = 除自己外全部阵营 |
@@ -130,7 +130,7 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 | `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:98/117/151` | 仅引擎内 |
 | `_do_defend` / `_do_flee` | `battle.py:505/458` | 仅引擎内 |
 | `_ensure_battle_started` | `battle.py:518` | 仅引擎内 |
-| `_on_actor_dead(actor, logs=None)` | `battle.py:533` | `landing._apply_damage` 调（`landing.py:371`） |
+| `_on_actor_dead(actor, logs=None)` | `battle.py:533` | `landing._apply_damage` 调（`landing.py:376`） |
 | `_check_side_end` | `battle.py:551` | 仅引擎内 |
 
 ### 序列化
@@ -179,9 +179,9 @@ Battle.from_state(st) -> Battle       # battle.py:584（classmethod）→ serial
 
 ```python
 deal_damage(battle, source, target, amount, logs, dmg_kind="", defend_reduce=None, element="") -> int
-# landing.py:23
+# landing.py:25
 heal_actor(battle, target, amount, logs, source=None, label="") -> int
-# landing.py:390
+# landing.py:395
 ```
 
 两个都是**落地唯一收口**。内部子函数（无外部引用）：`_lv_pressure`（`:146`）、
@@ -192,17 +192,20 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 
 | 符号 | 位置 | 语义 |
 |---|---|---|
-| `action_time(spd, base=1.0) -> float` | `:32` | `base × sqrt(50/spd)` |
-| `initial_ct(spd, base=1.0) -> float` | `:41` | 开局第一动等待 = `action_time` |
-| `next_ct(battle, actor, base=1.0) -> float` | `:46` | ⚠️ **无调用方**（实际推进走 `_after_act`） |
-| `action_base_of(action) -> float` | `:58` | defend→0.6 / skill→1.6 / 其他→1.0 |
-| `advance(battle, logs, max_steps=200) -> ("player", actor) \| ("over", None)` | `:71` | 推进到下一个决策点 |
-| `_after_act(battle, actor, action)` | `:143` | 行动后推 ct |
-| `_advance_time(battle, dt, logs)` | `:156` | 加时钟 → 结算 → 广播 `time_advance` |
-| `_settle_time_effects(battle, logs)` | `:175` | effects 到期 / shields 到期 / 周期跳 |
+| `action_time(spd, base=None) -> float` | `:59` | **转发内容侧时间模型**（`time_model_fn`）；`base=None` → 默认行动类别的基准耗时 |
+| `initial_ct(spd, base=None) -> float` | `:70` | 开局第一动等待 = `action_time` |
+| `next_ct(battle, actor, base=None) -> float` | `:75` | ⚠️ **无调用方**（实际推进走 `_after_act`） |
+| `action_base_of(action) -> float` | `:87` | **转发内容侧基准表**（`action_base_fn`）；未知类别回落 `DEFAULT_ACTION` |
+| `advance(battle, logs, max_steps=200) -> ("player", actor) \| ("over", None)` | `:100` | 推进到下一个决策点 |
+| `_after_act(battle, actor, action)` | `:172` | 行动后推 ct |
+| `_advance_time(battle, dt, logs)` | `:185` | 加时钟 → 结算 → 广播 `time_advance` |
+| `_settle_time_effects(battle, logs)` | `:204` | effects 到期 / shields 到期 / 周期跳 |
 
-常量：`CAST_ATK=1.0` · `CAST_SKILL=1.6` · `CAST_DEFEND=0.6` · `SPD_REF=50.0`
-（`CAST_ITEM` / `HOT_INTERVAL` 已删——零消费，2026-09-11）。
+常量：`DEFAULT_ACTION = "attack"`（`:32`，通用类别键：未知动作类别回落到它那一项）。
+**引擎侧已无** `CAST_ATK` / `CAST_SKILL` / `CAST_DEFEND` / `SPD_REF` 等时间/基准常量 ——
+公式形状与基准数值归内容侧（装配面见 [../concepts/ctb-schedule.md](../concepts/ctb-schedule.md) §公式）。
+未装配 `time_model_fn` / `action_base_fn` → `action_time` / `action_base_of` 抛
+`config.EngineNotConfigured`（fail-closed，无默认公式）。
 
 ### `stats.py`
 
@@ -218,7 +221,7 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 
 ### `config.py`
 
-见 [../concepts/config-injection.md](../concepts/config-injection.md) 的 13 hook 表。
+见 [../concepts/config-injection.md](../concepts/config-injection.md) 的 15 hook 表。
 公开函数：`EngineNotConfigured`（`:20`）· `set_config`（`:83`）· `load_game_rules`（`:89`）·
 `register_defaults_loader`（`:95`）· `register_hook_provider`（`:101`）·
 `load_game_defaults`（`:107`，兼容 shim）· `get_effect_actions`（`:119`）·
@@ -349,7 +352,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 已整体下沉到**内容侧**（游戏仓 `game/data/kinds.py`；奥兰迪亚内容包 `content/mech/kinds.py`
 是同内容同源的副本）。原实现里的中文枚举值（`PHYS = "物理"` … `TAUNT = "嘲讽"`）随之离开引擎。
 
-引擎主路径一律经 `config.kind_of(name)` 注入（`config.py:235`）读 kind 值 —— 第三方内容
+引擎主路径一律经 `config.kind_of(name)` 注入（`config.py:240`）读 kind 值 —— 第三方内容
 自带词表即可，不受任何语言限制。
 （历史上该模块是 S3「通用件归位」时从 `game/core/` 搬进引擎的；P4 实测引擎内部**零消费者**，
 故按「机制归引擎、词表归内容」的边界原则迁回内容侧 —— 见
@@ -397,11 +400,11 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 |---|---|---|
 | `schedule.next_ct` | `schedule.py:42` | 有定义、无调用方 |
 | `state_effects.stat_scale_of` | `state_effects.py:18` | 仅测试引用 |
-| `formation.reachable_units` | `formation/__init__.py:34` | 零外部引用 |
-| `expr.expr_or` | `expr/__init__.py:214` | 零外部引用 |
+| `formation.reachable_units` | `formation/__init__.py:28` | 零外部引用 |
+| `expr.expr_or` | `expr/__init__.py:236` | 零外部引用 |
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
 | ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 本引擎不实现） |
-| `config.set_hook` | `config.py:123` | 零外部引用（都走 `mount`） |
+| `config.set_hook` | `config.py:128` | 零外部引用（都走 `mount`） |
 | `effects.resolve_actions` | `effects.py:135` | 零外部引用（引擎内部调用） |
 | `ai.eval_when` | `ai.py:152` | 零外部引用（`resolve_ai_move` 内部调） |
 | ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |

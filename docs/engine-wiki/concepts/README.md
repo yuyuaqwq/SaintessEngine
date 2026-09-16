@@ -38,8 +38,8 @@ flowchart TD
 | [event-bus.md](event-bus.md) | `fire()` 的匹配/过滤/注入语义，ctx 约定 | 你写的东西「该在什么时候触发」 |
 | [declaration-tables.md](declaration-tables.md) | 为什么不写代码而写声明（四条表各自解决什么） | 你准备写 `if 职业 == ...` 之前 |
 | [effects.md](effects.md) | `effects[key] = {...}` 的条目形态与「声明决定行为」 | 你要让引擎"认识"一个新状态 |
-| [ctb-schedule.md](ctb-schedule.md) | 绝对时刻制、行动耗时公式、周期结算 | 你要做速度/加速/减速/持续伤害 |
-| [config-injection.md](config-injection.md) | 13 个 hook、`strict` 两档、未装配的三种后果 | 你第一次接引擎 / 排查"没生效" |
+| [ctb-schedule.md](ctb-schedule.md) | 绝对时刻制、行动耗时（**公式归内容侧装配**）、周期结算 | 你要做速度/加速/减速/持续伤害 |
+| [config-injection.md](config-injection.md) | 15 个 hook、`strict` 两档、未装配的三种后果 | 你第一次接引擎 / 排查"没生效" |
 
 ## 三条贯穿全书的设计公理
 

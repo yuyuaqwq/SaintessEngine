@@ -23,15 +23,15 @@
        │    ├─ fire("act_done")                                 battle.py:494   ⚡
        │    └─ _check_side_end()                                battle.py:551
        └─ 若未结束且 action ∈ {attack, skill, defend} 或 override 被消费：
-            ├─ schedule._after_act(battle, caster, action)      schedule.py:139  推 ct
+            ├─ schedule._after_act(battle, caster, action)      schedule.py:172  推 ct
             └─ Battle.advance(logs)                             battle.py:305
-                 └─ schedule.advance（推时钟 + 自动 actor 行动）  schedule.py:67
+                 └─ schedule.advance（推时钟 + 自动 actor 行动）  schedule.py:100
 ```
 
 ## 展开 1：`advance` 的循环
 
 ```
-schedule.advance(battle, logs, max_steps=200)                     schedule.py:67
+schedule.advance(battle, logs, max_steps=200)                     schedule.py:100
   while battle.result is None and guard < 200:
     fp   = _next_player_due(battle)     # ct 最小的 human_controlled 存活者   :113
     auto = _next_auto_due(battle)       # ct 最小的自动 actor                :128
@@ -45,23 +45,23 @@ schedule.advance(battle, logs, max_steps=200)                     schedule.py:67
         battle.actor_auto(actor)                                       battle.py:330
 ```
 
-`_advance_time(battle, dt, logs)`（`schedule.py:152`）内部：
+`_advance_time(battle, dt, logs)`（`schedule.py:185`）内部：
 
 ```
 battle._now += dt
-_settle_time_effects(battle, logs)                                  schedule.py:171
+_settle_time_effects(battle, logs)                                  schedule.py:197
    ├─ for 每个存活 actor:
-   │    ├─ effects 到期 → pop + ⚡ buff_expire                        schedule.py:198-208
-   │    ├─ shields 到期（expire_at <= now）→ pop                      schedule.py:211-221
+   │    ├─ effects 到期 → pop + ⚡ buff_expire                        schedule.py:231-200
+   │    ├─ shields 到期（expire_at <= now）→ pop                      schedule.py:244-254
    │    └─ 周期跳（period）:
-   │         首次 → dot_next[key] = now + interval（不跳）             schedule.py:254-257
+   │         首次 → dot_next[key] = now + interval（不跳）             schedule.py:287-290
    │         到点 → while now >= dot_next（最多 20 跳）:
    │             dir=damage → ⚡ dot_calc → landing.deal_damage → ⚡ dot_tick   :285/:292/:297
    │             dir=heal   → landing.heal_actor（+ mana_pct）        :301-320
    │             dir=mana   → 直接加 mp                                :321-330
    │             dir=gain   → effects[key].stacks ±= amount（clamp，静默） :331-350
    │             限时（turns）→ 跳够清层                                :351-359
-fire("time_advance", {"dt": dt, "now": battle._now})                schedule.py:166 ⚡
+fire("time_advance", {"dt": dt, "now": battle._now})                schedule.py:199 ⚡
 ```
 
 ## 展开 2：`do_attack` → `do_skill` → 伤害管线
@@ -119,7 +119,7 @@ actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:
   8. ⚡ fire("dmg_calc", {actor, target, dmg, is_crit, info, mult:1.0})  actions.py:416-422
        └─ 读回 battle._fire_ctx["mult"] → total *= mult
   9. _deal_hit(battle, actor, target, total, defend_reduce, element)   actions.py:565
-       └─ landing.deal_damage(...)                                  landing.py:23
+       └─ landing.deal_damage(...)                                  landing.py:25
  10. _settle_lifesteal(...)（非 AOE）                               actions.py:602
        └─ rate = min(lifesteal 类面板, 0.30)，真伤不吸，mortal_wound ×0.5
           → landing.heal_actor → on_heal ⚡
@@ -134,29 +134,29 @@ actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:
 landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduce, element)
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ 1. amount <= 0 → 0                                                       │
-│ 2. _lv_pressure(battle, source, target, dmg)          landing.py:208     │
+│ 2. _lv_pressure(battle, source, target, dmg)          landing.py:210     │
 │      btype == "pvp" → 不压；任一方无 level → 不压                          │
 │      低打高：前 3 级 ×0.95，之后 ×0.90，封顶 ×0.30                         │
 │      高打低：每级 ×1.02 连乘（封顶 50 级）                                 │
-│ 3. 元素免疫 / 弱点 / 元素抗性（仅 element 非空）        landing.py:77-99     │
+│ 3. 元素免疫 / 弱点 / 元素抗性（仅 element 非空）        landing.py:79-101     │
 │      element_immune 含该元素 → 直接 return 0                              │
 │      element_weak[el] > 1 → ×倍率                                        │
 │      elem_res / abyss_res（dark 吃 abyss_res）cap 0.5 → 减伤              │
-│ 4. ⚡ fire("taken_calc", {actor: target, dmg, mult: 1.0})   landing.py:75-84 │
+│ 4. ⚡ fire("taken_calc", {actor: target, dmg, mult: 1.0})   landing.py:77-86 │
 │      → 读回 mult → dmg *= mult                                            │
-│ 5. target["_dmg_taken_mult"] > 1 → dmg *= 它           landing.py:86-91    │
-│ 6. _roll_dodge(battle, target, logs)                   landing.py:240     │
+│ 5. target["_dmg_taken_mult"] > 1 → dmg *= 它           landing.py:88-93    │
+│ 6. _roll_dodge(battle, target, logs)                   landing.py:242     │
 │      dodge 面板 cap 0.40 → 命中则 return 0（整个伤害免掉）                 │
-│ 7. defending → dmg *= (1 - defend_reduce or 0.5)       landing.py:153-159  │
-│ 8. _apply_taken_reductions(dmg_kind)                   landing.py:264     │
+│ 7. defending → dmg *= (1 - defend_reduce or 0.5)       landing.py:155-161  │
+│ 8. _apply_taken_reductions(dmg_kind)                   landing.py:266     │
 │      phys → phys_reduce cap 0.40；magi → magic_reduce cap 0.40            │
 │      block 概率 cap 0.40 → 减半                                          │
-│ 9. effects 里带 wake_on_hit 的态 → pop（打醒）+ 日志    landing.py:167-179  │
-│10. charging 有 skill → 清 + ⚡ fire("interrupt")        landing.py:183-121  │
-│11. _apply_damage(battle, target, dmg, logs, source)    landing.py:332     │
+│ 9. effects 里带 wake_on_hit 的态 → pop（打醒）+ 日志    landing.py:169-181  │
+│10. charging 有 skill → 清 + ⚡ fire("interrupt")        landing.py:185-123  │
+│11. _apply_damage(battle, target, dmg, logs, source)    landing.py:337     │
 │      ├─ 护盾吸收（遍历 shields，按 value 扣减，耗尽即 pop）                 │
 │      ├─ hp 扣减                                                          │
-│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:299     │
+│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:304     │
 │      │     effects["death_guard"].stacks > 0 → hp 拉回 guard_hp_pct      │
 │      │     （+heal_pct 额外治疗，走 heal_actor）→ 层 -1                    │
 │      ├─ 仍 <= 0 → Battle._on_actor_dead(...)           battle.py:533       │
@@ -164,13 +164,13 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 │      │     ⚡ fire("on_death", {actor, target})                            │
 │      │     source 非 None → ⚡ fire("on_kill", {actor: source, ...})       │
 │      └─ 否则：日志「受到 N 点伤害」                                        │
-│12. 未死 → ⚡ fire("on_taken", {actor, target, source, dmg})   landing.py:201 │
+│12. 未死 → ⚡ fire("on_taken", {actor, target, source, dmg})   landing.py:203 │
 └──────────────────────────────────────────────────────────────────────────┘
 返回 real（实际扣血）
 ```
 
 ⚠️ 第 6 步（闪避）的位置有注释明确说明：**「位置在 defending 前（对齐旧顺序：
-闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）」**（`landing.py:145`）。
+闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）」**（`landing.py:147`）。
 改顺序会改变「闪避是否省下防御姿态/是否打断读条」这类语义。
 
 ## 展开 4：事件在链上的位置（一次普攻）

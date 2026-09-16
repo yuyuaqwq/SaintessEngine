@@ -16,7 +16,7 @@ if pct <= 0:
     return
 ```
 
-理由（`formulas.py:129-132` 的真实教训）：`skill_power_mult` 曾默认「每级 +10%」，
+理由（`formulas.py:243-246` 的真实教训）：`skill_power_mult` 曾默认「每级 +10%」，
 结果「误伤无 SKILL_UP 配置的怪物技能：按折算等级白吃成长 ×1.4」。
 
 变体约定：
@@ -52,7 +52,7 @@ if pct <= 0:
 ## 3. 落地只能走 `landing`
 
 **任何模块自己扣 `hp` 都是 bug。** 引擎自己的 DOT 也走 `landing.deal_damage`
-（`schedule.py:351`）。自己的动词也必须走：
+（`schedule.py:384`）。自己的动词也必须走：
 
 ```python
 from saintess_engine.landing import deal_damage, heal_actor
@@ -104,7 +104,7 @@ from saintess_engine.landing import deal_damage, heal_actor
 # v181.M-R2：dir=gain（资源自然回）不依赖现有层数——0 层也要回
 # （游侠 energy 耗到 0 若被 n<=0 拦截将永远回不了，卡死）
 ```
-（`schedule.py:243-244`）
+（`schedule.py:276-277`）
 
 ```python
 # 事件主体过滤（N9 修正）：ctx.actor = 该事件的主体 actor——只处理主体 actor

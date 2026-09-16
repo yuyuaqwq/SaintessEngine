@@ -18,7 +18,7 @@ register_action       config.set_config           actor["triggers"]
 
 - `battle` 是战斗实例；`logs` 是 list，直接 `append` 就是玩家看到的日志
 - **不要自己扣血/加血** —— 落地必须走 `landing.heal_actor` / `landing.deal_damage`
-  （`landing.py:390` / `:23`）。绕过落地会丢掉护盾、死亡判定、濒死保护、`on_heal` 事件
+  （`landing.py:395` / `:23`）。绕过落地会丢掉护盾、死亡判定、濒死保护、`on_heal` 事件
 - 抛异常会被 `apply_effects` 吞掉并跳过该动作（`effects.py:172-176`），不会中断战斗
 
 ```python
@@ -44,7 +44,7 @@ def pact_heal(battle, caster, target, params, logs):
 
 游戏数据/技能表里写的是**名词**（`"blood_pact"`），引擎靠 `EFFECT_ACTIONS`
 把它翻译成**动词动作列表**。用 `config.set_config("effect_actions", {...})` 挂表
-（`config.py:82`）。
+（`config.py:87`）。
 
 ```python
 from saintess_engine import config

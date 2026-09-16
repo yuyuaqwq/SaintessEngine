@@ -155,9 +155,11 @@ sys.path.insert(0, FW_ROOT)
 from saintess_engine import Battle, make_actor, config
 from saintess_engine import formulas as F
 
-# 最小装配（否则伤害恒 0 —— 见 getting-started/first-battle.md）
+# 最小装配（否则伤害恒 0 / 战斗起不来 —— 见 getting-started/first-battle.md）
 config.mount(formulas=F, kinds={...}, basic_fallback={...},
-             skill_flat_fn=lambda: {...}, formula_skeleton_fn=lambda: {...})
+             skill_flat_fn=lambda: {...}, formula_skeleton_fn=lambda: {...},
+             time_model_fn=lambda spd, base: base * math.sqrt(50.0 / max(float(spd or 0), 1.0)),
+             action_base_fn=lambda action: {"defend": 0.6, "skill": 1.6}.get(action, 1.0))
 
 random.seed(1234)      # 伤害有 ±15% 波动，精确断言必须定种子
 ```

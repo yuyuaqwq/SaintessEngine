@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import Optional
 
+from . import formulas as _F
+
 # ============================================================
 # 伤害落地
 # ============================================================
@@ -266,7 +268,9 @@ def _apply_taken_reductions(battle, target: dict, dmg: int, dmg_kind: str,
     """N10-B6：承伤侧百分比免伤 + 格挡（对齐旧 _damage_actor 物免/魔免段 + block 段）。
 
     按 dmg_kind 消费（phys 段吃物免 / magi 段吃魔免；各 cap 40%），随后 block 格挡
-    概率减免一半（cap 40%）。真伤/空 kind 不减免。引擎零知识：减免率是面板数值。
+    概率减免一半（cap 40%）。真伤/空 kind 不减免。引擎零知识：减免率是面板数值；
+    格挡的两个常量（概率上限 cap / 命中减免比例 reduce）读内容侧骨架表（V4 下沉，
+    `formulas.block_cap()/block_reduce()`；未装配 → 0.0 = 不格挡）。
     """
     try:
         from . import stats as S
@@ -286,9 +290,10 @@ def _apply_taken_reductions(battle, target: dict, dmg: int, dmg_kind: str,
                 logs.append(f"🛡️ 魔法抗性，减免 {red} 点魔法伤害！")
         if dmg > 0 and "true" not in kd:
             import random
-            bc = min(float(st.get("block", 0) or 0), 0.40)
+            # V4：0.40（上限）/ 0.5（命中减免）从内容侧骨架表读（原写死字面量）
+            bc = min(float(st.get("block", 0) or 0), _F.block_cap())
             if bc > 0 and random.random() < bc:
-                red = max(1, int(dmg * 0.5))
+                red = max(1, int(dmg * _F.block_reduce()))
                 dmg = max(1, dmg - red)
                 logs.append(f"🛡️ 格挡！减免 {red} 点伤害！")
     except Exception:
@@ -462,20 +467,20 @@ def _apply_heal_mods(target: dict, amount: int, logs: list) -> int:
                 else float(amp_entry.get("stacks", 0) or 0)
             if amp_pct > 0:
                 heal = int(round(heal * (1 + min(amp_pct, 1.0))))
-        # 禁疗（heal_down 层×10% cap50%——effects 条目 stacks；声明表 cap）
+        # 禁疗（heal_down 层×每层比例 cap 上限——effects 条目 stacks；V4 两数读内容侧骨架表）
         hd_entry = ef.get("heal_down")
         if isinstance(hd_entry, dict):
             ehd = int(hd_entry.get("stacks", 0) or 0)
             if ehd > 0:
-                cut = min(ehd * 0.10, 0.50)
+                cut = max(0.0, min(ehd * _F.heal_down_per_stack(), _F.heal_down_cap()))
                 heal = max(0, int(heal * (1 - cut)))
                 logs.append(f"🩸 禁疗：治疗量 -{int(cut * 100)}%！")
-        # 重伤（_anti_heal_pct cap80%；effects 条目 value 内嵌）
+        # 重伤（_anti_heal_pct cap 上限；effects 条目 value 内嵌；V4 上限读内容侧骨架表）
         ah_entry = ef.get("_anti_heal_pct")
         if isinstance(ah_entry, dict):
             aheal = float((ah_entry.get("value") or {}).get("pct", 0) or 0)
             if aheal > 0:
-                cut2 = min(aheal, 0.80)
+                cut2 = max(0.0, min(aheal, _F.anti_heal_cap()))
                 heal = max(0, int(heal * (1 - cut2)))
                 logs.append(f"🩸 重伤：治疗量 -{int(cut2 * 100)}%！")
     except Exception:

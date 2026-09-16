@@ -21,7 +21,7 @@
 **痕迹**：
 - `actors.py:1-9` 的模块 docstring 原文：「引擎逻辑只用字段值，不按字段猜身份」
 - `Battle.focus()`：只认 `human_controlled`（`battle.py:203-212`）
-- `schedule._next_player_due` / `_next_auto_due`：按同一个 bool 分流（`schedule.py:109/128`）
+- `schedule._next_player_due` / `_next_auto_due`：按同一个 bool 分流（`schedule.py:142/128`）
 - `Battle.add_actor` 注释：「不认识随从/召唤/亡灵/援军，只做注册 + 索引 + 排程」（`battle.py:239`）
 - `Battle.find_actor(uid)`：承伤/治疗转移的查找口（只读，不猜身份）（`battle.py:182`）
 
@@ -76,7 +76,7 @@
 **背景**：兜底默认值（「没有配置就按每级 +10%」）会让**写错的配置看起来正常工作**。
 引擎里有一处历史教训被写进注释：`formulas.skill_power_mult` 删掉了「默认每级 +10%」，
 原因是「曾误伤无 SKILL_UP 配置的怪物技能：按折算等级白吃成长 ×1.4」
-（`formulas.py:129-132`）。
+（`formulas.py:243-246`）。
 
 **选择**：缺字段 = 不做事。所有扩展动作都是 `params.get(...)` + 判 `<= 0` 就 `return`。
 `config.strict=True` 时未装配的 hook 直接抛 `EngineNotConfigured`。
@@ -88,8 +88,8 @@
   （`stats.py:122`），而 `make_actor` 播种的是 0.0（`actors.py:98`）
 
 **痕迹**：
-- `config.py:66-70` 的 R8 说明：「静默降级」两档语义
-- `formulas.py:72` 原文：「『零默认值』：无挂载 → 空 dict = 无成长配置」
+- `config.py:71-75` 的 R8 说明：「静默降级」两档语义
+- `formulas.py:95` 原文：「『零默认值』：无挂载 → 空 dict = 无成长配置」
 - 内容侧 `_merge_agg_entry` 的注释：「缺字段 = 无此行为（零默认值铁律）」
 
 ---
@@ -108,7 +108,7 @@
 （`taken_calc` 的 `mult`）。
 
 **痕迹**：`landing.py:8-13` 原文（「为什么必须统一收口」）；
-`effects.act_damage` 也只做「读参数 → 调 `landing.deal_damage`」（`effects.py:654-681`）。
+`effects.act_damage` 也只做「读参数 → 调 `landing.deal_damage`」（`effects.py:657-684`）。
 
 ---
 
@@ -153,7 +153,7 @@ actor 的 `triggers = {事件名: [效果声明]}` 决定响应什么。
 量化记录见游戏仓内部文档 `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §3.2（含 R1–R15 逐条）。
 
 **选择**：方向反过来 —— 内容侧把公式 / 面板 / 技能查询 / kind 常量 mount 进引擎
-（13 个 hook）；引擎只调接口，不认识表内容。机器门禁：`tests/test_engine_purity.py`
+（15 个 hook）；引擎只调接口，不认识表内容。机器门禁：`tests/test_engine_purity.py`
 （AST 断言「绝对 import 全是标准库」+ 零动态 import 穿透）。
 
 **代价**：
@@ -163,7 +163,7 @@ actor 的 `triggers = {事件名: [效果声明]}` 决定响应什么。
   `data.plugins.dragonfall.game.*` **两套模块树**（同一份文件的两个模块对象），
   每棵树各自 hold 自己的 `config` 实例 —— 这也是 `config` 需要
   `register_hook_provider` 惰性装配的原因（游戏仓 `game/bootstrap.py:196-201`、
-  引擎 `config.py:73-78`）。要做真正的多内容隔离，靠进程或模块树，不要靠全局单例
+  引擎 `config.py:78-83`）。要做真正的多内容隔离，靠进程或模块树，不要靠全局单例
 - 惰性装配器会在首次读 hook 时把整份内容拉进来（[../getting-started/installation.md](../getting-started/installation.md)）
 
 **痕迹**：`config.py:11-15` 原文（「本包历史上直接 import `game.engine` / `game.content` /

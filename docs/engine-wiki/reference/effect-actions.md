@@ -36,11 +36,11 @@ EFFECT_ACTIONS = {
 | `apply` | `effects.py:326` | 五形态按参数分流：`mode`→控制 / `op=add\|set`+无 `stat`→叠层 / `value`\|`pct_from_mech_val`→值型 / `stat`+`mult`→面板快照 / `hit`→出手消费 / 无→纯状态 |
 | `consume` | `effects.py:490` | `key` + `amount`（不足则**不扣**并写提示，`effects.py:500-502`） |
 | `shield` | `effects.py:517` | `key`（缺省 `"buff"`）/ `value` \| `pct` \| 缺省 20% max_hp / `turns`（缺省 3；`>=999` 或 `forever` = 永久）/ `halve` |
-| `cleanse` | `effects.py:563` | 遍历目标 `effects`，按 `EFFECT_RULES[key]` 的 `period` \| `on=="target"` \| `cleanse` 三判据清 |
-| `cleanse_all` | `effects.py:591` | 同上，`target or caster` |
-| `heal` | `effects.py:599` | `pct`（max_hp 比例）/ `missing_pct`（已损比例）/ `value`；`info.hp_pct` 兜底 |
-| `interrupt` | `effects.py:636` | 清 `target["charging"]`，fire `interrupt` |
-| `damage` | `effects.py:654` | `value` / `pct`（`pct_max_hp` 别名）/ `kind`；`on=target`（缺省）或 `on=caster`（自伤/反伤） |
+| `cleanse` | `effects.py:566` | 遍历目标 `effects`，按 `EFFECT_RULES[key]` 的 `period` \| `on=="target"` \| `cleanse` 三判据清 |
+| `cleanse_all` | `effects.py:594` | 同上，`target or caster` |
+| `heal` | `effects.py:602` | `pct`（max_hp 比例）/ `missing_pct`（已损比例）/ `value`；`info.hp_pct` 兜底 |
+| `interrupt` | `effects.py:639` | 清 `target["charging"]`，fire `interrupt` |
+| `damage` | `effects.py:657` | `value` / `pct`（`pct_max_hp` 别名）/ `kind`；`on=target`（缺省）或 `on=caster`（自伤/反伤） |
 
 已删除的旧动词（V4 收敛）：`control` / `buff` / `state_add` / `state_spend` / `state_set`
 → 并入 `apply` / `consume`。**表里再出现这些名字 = 静默 no-op**（原文警告见 `effects.py:17-18`）。
@@ -165,7 +165,7 @@ grep -rho 'register_action("[^"]*")' game/services/*.py | sort -u | wc -l
 ```
 
 ⚠️ **参数故意缺省**：`stacks_set` 没给 `key`（靠调用方 `mech`/`tag` 兜底，
-`effects.py:344`）；`heal_self` 没给 `pct`（靠 `info.hp_pct`，`effects.py:620`）；
+`effects.py:344`）；`heal_self` 没给 `pct`（靠 `info.hp_pct`，`effects.py:623`）；
 `shield` 没给 `value`（缺省取 `max_hp × 20%`，`effects.py:538`）。
 这些是「零默认值 + 调用方优先」的取舍：**能省的都省，但缺了就是无行为**。
 

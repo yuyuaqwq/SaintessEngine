@@ -26,6 +26,8 @@ docs/archive/REFACTOR_v181_CLASS_MECH_ASSEMBLY.md『v139 形态层设计留档�
 数据驱动铁律：
 - 不写任何职业特判（不出现 class_name 字符串比较）
 - 所有数值从 battle_config ENEMY_BAR_CFG 读（或调用方传入）
+- 条 `max` **缺省上限**（ENEMY_BAR_CFG 没声明 max 时）读内容侧公式骨架表
+  `FORMULA_SKELETON["gauge"]["default_max"]`（V4 下沉；未装配 → 0 → 回落历史兜底 100）
 - 无配置 = 默认不启用
 - 状态存 actor.effects 命名空间键（随战斗序列化）
 
@@ -138,6 +140,18 @@ def bar_settle(enemy: dict, bar_key: str, now: float, logs: list | None = None) 
     return bs
 
 
+def _default_bar_max() -> float:
+    """条 `max` 缺省上限（V4 下沉：内容侧骨架表 `FORMULA_SKELETON["gauge"]["default_max"]`）。
+
+    未装配 → 0.0 → 调用处回落历史兜底 100（`saintess_engine.gauge` 的旧字面量口径）。
+    """
+    try:
+        from ..battle import formulas as _F
+        return float(_F.gauge_default_max() or 0.0)
+    except Exception:                                        # noqa: BLE001
+        return 0.0
+
+
 def bar_gain(enemy: dict, bar_key: str, amount: float, logs: list | None = None,
              now: float | None = None) -> float:
     """积蓄注入：val += amount（封顶 max），返回新值。
@@ -156,7 +170,15 @@ def bar_gain(enemy: dict, bar_key: str, amount: float, logs: list | None = None,
             return float(bs.get("val", 0.0) or 0.0)
         if bs.get("_no_inject_at") == now:
             return float(bs.get("val", 0.0) or 0.0)
-    mx = float(bd.get("max", 100) or 100)
+    # V4：`max` 缺省上限从内容侧骨架表读（原写死 100；未装配 → 0 → 回落历史兜底 100）。
+    # 口径与旧式 `float(bd.get("max", 100) or 100)` 一致：缺键 / 值 0 都视为「未声明」。
+    _mx = bd.get("max")
+    try:
+        mx = float(_mx) if _mx else 0.0
+    except Exception:                                        # noqa: BLE001
+        mx = 0.0
+    if mx <= 0:
+        mx = _default_bar_max() or 100.0
     try:
         add = float(amount or 0)
     except Exception:

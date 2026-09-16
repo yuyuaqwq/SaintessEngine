@@ -14,7 +14,7 @@
 > 它是本框架的**参考实现 + 压力测试**，不是本框架的一部分。
 > 下方未显式标注「游戏仓」的路径，均指**框架仓**。
 
-- 引擎目录：`saintess_engine/`（**27** 个子包 + **3** 个顶层模块；共 **88** 个 `.py` / **17 719** 行）
+- 引擎目录：`saintess_engine/`（**27** 个子包 + **3** 个顶层模块；共 **88** 个 `.py` / **17 907** 行）
   —— 数字由 `tests/test_editor_wiki.py` 逐项对照磁盘锁定，改模块结构必同步（否则门禁红）
 - 路线图（待建形状 / 待搬骨架 / `log`·`tlog` 设计）：[reference/roadmap.md](reference/roadmap.md)
 - 已建成的形状（**可拔插**，不配 = 不存在）：[reference/log.md](reference/log.md)（日志门面）·
@@ -37,11 +37,12 @@
 [reference/api.md](reference/api.md) 的「未装配行为」节。
 
 ```python
+import math
 import saintess_engine
 from saintess_engine import Battle, make_actor, config
 from saintess_engine import formulas as F          # 引擎自带的纯数值公式模块
 
-# ① 挂最小配置（引擎不内置任何数值/名词；这三样是"能打出伤害"的下界）
+# ① 挂最小配置（引擎不内置任何数值/名词；这几样是"能起战斗并打出伤害"的下界）
 config.mount(
     formulas=F,
     kinds={"phys": "phys", "magi": "magi", "true": "true", "heal": "heal", "buff": "buff"},
@@ -53,6 +54,9 @@ config.mount(
         "cond_default": 0.05, "mech_default_div": 2,
         "lifesteal_default": 0.2, "lifesteal_per_lv_divisor": 100},
         "skill_learn_cost": {"divisor": 6, "base": 2}},
+    # CTB 时间模型：一次行动耗时（形状/参数你定；不装 → Battle(...) 直接抛 EngineNotConfigured）
+    time_model_fn=lambda spd, base: base * math.sqrt(50.0 / max(float(spd or 0), 1.0)),
+    action_base_fn=lambda action: {"defend": 0.6, "skill": 1.6}.get(action, 1.0),
 )
 
 # ② 造两个 actor（同构 dict：玩家与怪没有类型差异）
@@ -85,10 +89,10 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
 | **事件总线** | 26 个引擎事件名（`EVENTS`）+ `fire()`；效果声明挂 `actor.triggers` | `effect_triggers.py:52/57` |
 | **声明表驱动** | 效果行为查 `EFFECT_RULES`；名词→动词查 `EFFECT_ACTIONS` | `game/data/battle_rules.py`（游戏仓侧） |
 | **动词注册制** | 8 个引擎动词 + `register_action` 任意扩展（内容侧已扩到 70+） | `effects.py:95` |
-| **CTB 绝对时刻制** | `ct` = 下次可行动时刻；耗时 = 基准 × `sqrt(50/spd)` | `schedule.py:28` |
-| **零默认值** | 未声明即无行为（`strict=False` 静默 / `strict=True` 抛错两档） | `config.py:71` |
+| **CTB 绝对时刻制** | `ct` = 下次可行动时刻；耗时多少由**内容侧装配**（引擎零公式） | `schedule.py:59` + `time_model_fn` |
+| **零默认值** | 未声明即无行为（`strict=False` 静默 / `strict=True` 抛错两档） | `config.py:76` |
 | **存档/续战** | sides-only JSON，`to_state` / `from_state`，旧档字段迁移 | `serialize.py:36/59` |
-| **注入式边界** | 引擎不 import 游戏；游戏把公式/面板/技能表 mount 进来 | `config.py:129` |
+| **注入式边界** | 引擎不 import 游戏；游戏把公式/面板/技能表 mount 进来 | `config.py:134` |
 
 ---
 

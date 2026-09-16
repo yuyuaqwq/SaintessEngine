@@ -42,6 +42,26 @@ def _lazy_mount():
     install_engine()
 
 
+def _time_model(spd, base):
+    """内容侧时间模型（`time_model_fn` 供体）：一次行动耗时（游戏秒）。
+
+    形状 = **linear**（`base × spd_ref/spd`），参数读本游戏 `R.TIME_MODEL`。
+    引擎不内置任何公式 —— 第三方照这个签名给函数即可换一套节奏。
+    """
+    cfg = R.TIME_MODEL
+    _spd = max(float(spd or 0), 1.0)
+    _cap = cfg.get("spd_cap")
+    if _cap:
+        _spd = min(_spd, float(_cap))
+    return float(base) * (float(cfg["spd_ref"]) / _spd)
+
+
+def _action_base(action):
+    """内容侧「行动类别 → 基准耗时」表（`action_base_fn` 供体）。"""
+    _cast = R.TIME_MODEL["cast"]
+    return float(_cast.get(action) or _cast["attack"])
+
+
 def install_engine() -> None:
     """把本游戏配置挂进引擎（幂等）。"""
     global _MOUNTED
@@ -66,6 +86,8 @@ def install_engine() -> None:
         skill_flat_fn=lambda: R.SKILL_FLAT,
         skill_up_fn=lambda info: {},                        # 本游戏不做技能等级成长
         skill_level_of_fn=lambda player, skill_name: 1,
+        time_model_fn=_time_model,                          # CTB 时间模型（本游戏 = linear）
+        action_base_fn=_action_base,                        # 行动类别 → 基准耗时
     )
     config.load_game_rules(R)   # EFFECT_ACTIONS / EFFECT_RULES
     _MOUNTED = True

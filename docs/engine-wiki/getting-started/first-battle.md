@@ -6,9 +6,11 @@
 
 ## 0. 准备：挂最小配置
 
-引擎零游戏知识，所以第一件事是告诉它「数值怎么算」。最小可伤害装配集是 5 项：
+引擎零游戏知识，所以第一件事是告诉它「数值怎么算」。最小可伤害装配集是 6 项
+（第 ⑥ 项是 CTB 时间模型：**没有它连 `Battle(...)` 都构造不出来**，见 `_seed_ct_one`）：
 
 ```python
+import math
 import saintess_engine
 from saintess_engine import Battle, make_actor, config
 from saintess_engine import formulas as F
@@ -25,24 +27,29 @@ config.mount(
         "cond_default": 0.05, "mech_default_div": 2,
         "lifesteal_default": 0.2, "lifesteal_per_lv_divisor": 100},
         "skill_learn_cost": {"divisor": 6, "base": 2}},
+    # ⑥ CTB 时间模型：一次行动耗时（形状 + 参数由你定；引擎零公式，缺了直接抛错）
+    time_model_fn=lambda spd, base: base * math.sqrt(50.0 / max(float(spd or 0), 1.0)),
+    action_base_fn=lambda action: {"defend": 0.6, "skill": 1.6}.get(action, 1.0),
 )
 ```
 
-**为什么至少这 5 项**（框架仓实测，逐项摘除）：
+**为什么至少这几项**（框架仓实测，逐项摘除）：
 
 | 装配集 | 结果 |
 |---|---|
-| 零装配 | `human_act` 返回 `[]`，目标 hp 不变 —— **静默 0 伤害**（R8 语义） |
+| 零装配 | `Battle(...)` 构造期抛 `EngineNotConfigured`（播种 ct 要 `time_model_fn`，**fail-closed**） |
 | 仅 `formulas` | `TypeError: float() argument must be ... NoneType`（`skill_flat_value`） |
 | + `basic_fallback` | 同上 |
 | + `skill_flat_fn` | `KeyError: 'skill_growth'`（`skill_power_mult` 读骨架表） |
-| + `formula_skeleton_fn` | ✅ `💥 野狼 受到 34 点伤害！` |
+| + `formula_skeleton_fn` | 起得了战斗，但 `human_act` 返回 `[]`、目标 hp 不变 —— **静默 0 伤害**（R8 语义） |
+| + `time_model_fn` / `action_base_fn` | ✅ `💥 野狼 受到 34 点伤害！` |
 
-> ⚠️ **坑（建议改进）**：`config.mount(**hooks)`（`config.py:129`）只认 `_HOOKS`
-> （`config.py:33-64`）名单里的 13 个名字，**未知名会被静默忽略**（`set_hook` 里
+> ⚠️ **坑（建议改进）**：`config.mount(**hooks)`（`config.py:134`）只认 `_HOOKS`
+> （`config.py:33-69`）名单里的 15 个名字，**未知名会被静默忽略**（`set_hook` 里
 > `if name in _HOOKS` 没有 else 分支）。写错 hook 名不会报错，只是不生效。
-> 开发期建议打开 `config.strict = True`（`config.py:71`）——未装配的 hook 会抛
+> 开发期建议打开 `config.strict = True`（`config.py:76`）——未装配的 hook 会抛
 > `EngineNotConfigured` 而不是让链深处抛 `TypeError`/`KeyError`。
+> （`time_model_fn` / `action_base_fn` 是**唯一**两条不吃 `strict` 的：它们无论如何都抛。）
 
 ## 1. 造 actor
 
@@ -107,7 +114,7 @@ print("\n".join(logs))
 
 `who` 是这套引擎对「多人同时在场」的答案：`human_act` 内部先 `act()`，
 再 `_after_act` 推 caster 的 `ct`，然后 `advance()` 一路推进自动 actor，
-直到撞上**下一个 ct 最小的人控 actor**（`schedule.advance`，`schedule.py:67`）。
+直到撞上**下一个 ct 最小的人控 actor**（`schedule.advance`，`schedule.py:100`）。
 单玩家场景 `who` 通常仍是自己。
 
 内部调用链（详见 [../architecture/data-flow.md](../architecture/data-flow.md)）：

@@ -17,13 +17,20 @@
 （{} / 1 级兜底），与 `config._NullFormulas` 的「零效应」语义一致（plan §8-R8）。
 
 公式结构（分支/截断序/随机）逐字自原 `game/engine.py` 搬运，**行为零变化**。
+
+V4（2026-09-16）—— 最后 7 处「写死在引擎的游戏数值」下沉到内容侧同一注入面
+----------------------------------------------------------------------------
+`shield_default_pct` / `block`（cap·reduce）/ `heal_down`（per_stack·cap）/
+`anti_heal`（cap）/ `reduce`（default_pct·cap）/ `gauge`（default_max）/ `skill_max_level`
+—— 数值全部进内容侧 `FORMULA_SKELETON`，**不新开第二张表/第二套注入面**。
+读点 = 本模块的具名 getter（`shield_default_pct()` / `block_cap()` / … ），下游
+`battle/effects.py` / `battle/landing.py` / `battle/actions.py` / `gauge/__init__.py` 只调它们；
+未装配 → `_NEUTRAL_SKELETON` 的同语义中性值（零效应，不崩）。装配后内容侧声明值 = 原写死值
+⇒ 玩家可见行为一字不变（正证与极端值反证见 `out/LANDING.md`）。
 """
 import random
 
 from .. import config as _cfg
-
-# 技能等级上限（v27；内容侧 SKILL_UP 条目的 max 字段优先，见 skill_max_level）
-SKILL_MAX_LEVEL = 5
 
 
 # 未装配时的中性骨架参数（与 _NullFormulas 同语义：零效应，不产生额外数值）。
@@ -33,6 +40,14 @@ SKILL_MAX_LEVEL = 5
 # 与 config.get_hook 的关系：strict=True 时 get_hook 先抛 EngineNotConfigured（配置错误
 # 可被严格模式捕获），strict=False（默认）下落到此中性表 —— 两级语义互补。
 # 生产路径（游戏侧 game/bootstrap.py 已挂 formula_skeleton_fn/skill_flat_fn）取值完全不变。
+#
+# V4（2026-09-16）：最后 7 处「写死在引擎的游戏数值」下沉到内容侧骨架表（同一注入面，
+# 不新开第二张表）。这里给出**同语义中性值** —— 未装配时各分支「不产生数值」：
+#   护盾兜底 0.0（不产盾）/ 格挡 cap 0.0（不格挡）/ 禁疗 per_stack+cap 0.0（不减疗）/
+#   重伤 cap 0.0（不减疗）/ 减伤 default 0.0 + cap 0.0（不减伤）/ 条 max 0 → 调用处回落
+#   100.0（历史兜底值，见 gauge）/ 技能满级 5（= 原 SKILL_MAX_LEVEL，技能等级兜底语义
+#   不变：growth 的零效应另由 skill_growth 的 divisor=1 + 级 1 兜底保证）。
+# ⚠️ 与**已装配**路径的区别：装配后内容侧声明值 = 老写死值 ⇒ 玩家可见行为零变化。
 _NEUTRAL_SKELETON = {
     "skill_growth": {
         "power_per_lv_divisor": 1,      # p 缺省 0 → 0/1 = 0 → 倍率恒 1.0（无成长）
@@ -44,6 +59,14 @@ _NEUTRAL_SKELETON = {
         "lifesteal_per_lv_divisor": 1,  # 兼防除零（l 缺省 0 → 无成长）
     },
     "skill_learn_cost": {"divisor": 1, "base": 0},
+    # ---- V4 中性段（零效应；语义见上）----
+    "shield_default_pct": 0.0,
+    "block": {"cap": 0.0, "reduce": 0.0},
+    "heal_down": {"per_stack": 0.0, "cap": 0.0},
+    "anti_heal": {"cap": 0.0},
+    "reduce": {"default_pct": 0.0, "cap": 0.0},
+    "gauge": {"default_max": 0},
+    "skill_max_level": 5,
 }
 
 
@@ -75,6 +98,96 @@ def _skill_up(info: dict | None) -> dict:
     if fn is None:
         return {}
     return fn(info) or {}
+
+
+# ============================================================
+# 战斗落地常量读取（V4：原写死在引擎的字面量 → 内容侧骨架表同一注入面）
+#
+# 为什么集中在本模块：`_skeleton()` 是骨架表的**唯一**读口（内容侧 `formula_skeleton_fn`），
+# 本批不新开第二张表/第二套注入面。下游（effects / landing / actions / gauge）只调这里
+# 的具名 getter；未装配 → 各自返回 `_NEUTRAL_SKELETON` 的同语义中性值（零效应，不崩）。
+# 取数纪律：`float(...)`/`int(...)` + `or 默认` 兜脏值（NaN/None/字符串坏配置不炸）。
+# ============================================================
+
+def _skel_num(key: str, default: float) -> float:
+    """骨架表**顶层**数值读取（缺键/坏值 → default）。"""
+    try:
+        return float(_skeleton().get(key, default))
+    except Exception:                                        # noqa: BLE001
+        return float(default)
+
+
+def _skel_sub_num(group: str, key: str, default: float) -> float:
+    """骨架表**子组**数值读取（组/键缺、坏值 → default）。"""
+    try:
+        grp = _skeleton().get(group) or {}
+        return float(grp.get(key, default))
+    except Exception:                                        # noqa: BLE001
+        return float(default)
+
+
+def shield_default_pct() -> float:
+    """护盾兜底比例（无 value / 无 pct 的 shield 动作 → int(max_hp×pct)）。
+
+    内容侧 `FORMULA_SKELETON["shield_default_pct"]`；未装配 → 0.0（不产盾）。
+    两个读点同键：effects.py `act_shield` 的兜底 / actions.py `_do_buff` 的 `shield_pct` 缺省。
+    """
+    return _skel_num("shield_default_pct", 0.0)
+
+
+def block_cap() -> float:
+    """格挡**概率上限**（承伤侧 `bc = min(block, cap)`）。未装配 → 0.0（不格挡）。"""
+    return _skel_sub_num("block", "cap", 0.0)
+
+
+def block_reduce() -> float:
+    """格挡**命中后减免比例**（`red = max(1, int(dmg × reduce))`）。未装配 → 0.0。"""
+    return _skel_sub_num("block", "reduce", 0.0)
+
+
+def heal_down_per_stack() -> float:
+    """禁疗**每层**比例（`cut = min(stacks × per_stack, cap)`）。未装配 → 0.0。"""
+    return _skel_sub_num("heal_down", "per_stack", 0.0)
+
+
+def heal_down_cap() -> float:
+    """禁疗**上限**。未装配 → 0.0（不减疗）。"""
+    return _skel_sub_num("heal_down", "cap", 0.0)
+
+
+def anti_heal_cap() -> float:
+    """重伤（_anti_heal_pct）**上限**。未装配 → 0.0（不减疗）。"""
+    return _skel_sub_num("anti_heal", "cap", 0.0)
+
+
+def reduce_default_pct() -> float:
+    """减伤兜底比例（技能未配 reduce_pct / mech_val 时）。未装配 → 0.0（不减伤）。"""
+    return _skel_sub_num("reduce", "default_pct", 0.0)
+
+
+def reduce_cap() -> float:
+    """减伤 clamp **上限**。未装配 → 0.0（clamp 到 0 = 不减伤，不崩）。"""
+    return _skel_sub_num("reduce", "cap", 0.0)
+
+
+def gauge_default_max() -> float:
+    """敌身条 `max` 缺省上限（gauge `bar_gain` 的封顶兜底）。
+
+    未装配 → 0.0；调用方按「<=0 → 历史兜底 100」处理（见 `saintess_engine.gauge`）。
+    """
+    return _skel_sub_num("gauge", "default_max", 0.0)
+
+
+def skill_max_level_default() -> int:
+    """技能满级默认值（内容侧 `FORMULA_SKELETON["skill_max_level"]`；未装配 → 5）。
+
+    未装配的 5 是**既有中性语义**（原 `SKILL_MAX_LEVEL = 5`）：技能满级 = 5 是引擎的
+    「等级兜底」而非「游戏数值」，故中性表保留 5；成长本身由 skill_growth 的零效应关掉。
+    """
+    try:
+        return int(_skel_num("skill_max_level", 5))
+    except Exception:                                        # noqa: BLE001
+        return 5
 
 
 # ============================================================
@@ -120,10 +233,11 @@ def skill_formula_expr_for_seg(seg: dict | None, level: int = 1):
 
 
 def skill_max_level(info: dict | None = None) -> int:
-    """技能独立满级(v56.4)：SKILL_UP 配了 max 用配置，否则默认 5"""
+    """技能独立满级(v56.4)：SKILL_UP 配了 max 用配置，否则默认读骨架表（V4 前 = 常量 5）"""
+    default_max = skill_max_level_default()
     if not info:
-        return SKILL_MAX_LEVEL
-    return int(_skill_up(info).get("max", SKILL_MAX_LEVEL))
+        return default_max
+    return int(_skill_up(info).get("max", default_max))
 
 
 def skill_power_mult(level: int, info: dict | None = None) -> float:

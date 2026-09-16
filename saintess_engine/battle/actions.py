@@ -800,12 +800,15 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
             "reduce_pct": info.get("reduce_pct"),
         }
         # 减伤 reduce：value 由 mech_val/reduce_pct 折算（同旧 _sb_reduce）
+        # V4：兜底 0.20 与 clamp 上限 0.9 从内容侧骨架表读（原写死字面量；
+        #     未装配 → 兜底 0.0 / 上限 0.0 = 不减伤不崩）
         if eff == "reduce":
             rp = float(info.get("reduce_pct") or 0)
             if rp <= 0:
                 mv = float(info.get("mech_val") or 0)
-                rp = (mv / 100.0) if mv > 1 else (mv if 0 < mv <= 1 else 0.20)
-            _eff_params["value"] = min(max(rp, 0.0), 0.9)
+                rp = (mv / 100.0) if mv > 1 else (mv if 0 < mv <= 1
+                                                  else _cfg.formulas().reduce_default_pct())
+            _eff_params["value"] = min(max(rp, 0.0), _cfg.formulas().reduce_cap())
         # 护盾类：shield_self 盾值 = mech_val/effect_val（skill_mech_val 折算后传 value）
         if eff in ("shield_self", "shield_all", "shield") and "shield" in str(eff):
             if eff == "shield_self":
@@ -813,7 +816,10 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
                 _eff_params["value"] = mval
                 _eff_params["halve"] = False
             else:
-                pct = float(info.get("shield_pct", 0.20) or 0.20)
+                # V4：`shield_pct` 缺省从内容侧骨架表读（同 shield_default_pct 键；
+                #     未装配 → 0.0 → 下游走 shield 动作兜底，同样读骨架表）
+                _sp = float(_cfg.formulas().shield_default_pct())
+                pct = float(info.get("shield_pct", _sp) or _sp)
                 _eff_params["pct"] = pct
                 _eff_params["halve"] = True
         apply_effects(battle, actor, actor, [_eff_params], logs)

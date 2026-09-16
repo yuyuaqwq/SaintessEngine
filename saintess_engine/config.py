@@ -61,6 +61,11 @@ _HOOKS = {
     "skill_up_fn": None,
     # 技能等级查询 fn(player, skill_name) -> int（内容侧 content_rules.skills.skill_level_of）
     "skill_level_of_fn": None,
+    # ---- CTB 时间模型注入面：`battle/schedule.py` 的读点（引擎零公式/零数值）----
+    # 时间模型 fn(spd, base) -> float（一次行动耗时，游戏秒；形状与参数全在内容侧）
+    "time_model_fn": None,
+    # 行动类别 → 基准耗时 fn(action) -> float（内容侧基准表；未声明类别引擎回落 DEFAULT_ACTION）
+    "action_base_fn": None,
 }
 
 # R8：无挂载静默降级开关。

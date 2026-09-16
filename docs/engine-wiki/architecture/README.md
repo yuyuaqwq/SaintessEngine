@@ -15,7 +15,7 @@ flowchart TD
     end
     subgraph L1["基础层（纯数据 / 无结算）"]
         ACTORS["actors.py<br/>actor 模型 / make_actor / ActCtx / Sides"]
-        CFG["config.py<br/>注入面：13 hook + 2 规则表"]
+        CFG["config.py<br/>注入面：15 hook + 2 规则表"]
         SE["state_effects.py<br/>state_def 查表门面"]
         SUP["support/<br/>formula_expr · formation · skill_kinds · battle_bars"]
     end
@@ -75,7 +75,7 @@ flowchart TD
 | 模块 | 它不知道什么 | 它知道什么 |
 |---|---|---|
 | `actors.py` | 任何人都一样（无类型分派） | dict 字段名、`ct` 是绝对时刻 |
-| `config.py` | 表里有什么 | 表叫什么名字（13 个 hook 名 + 2 个表名） |
+| `config.py` | 表里有什么 | 表叫什么名字（15 个 hook 名 + 2 个表名） |
 | `state_effects.py` | 规则语义 | 「去哪查规则」 |
 | `support/` | 你的游戏 | 站位/射程数学、表达式求值、条的算术 |
 
@@ -132,7 +132,7 @@ flowchart TD
 ## 分层带来的三条硬规则
 
 1. **落地只能走 `landing`**。任何模块自己扣 `hp` 都会绕过护盾/死亡/事件。
-   （例：`schedule` 的 DOT 结算也调 `landing.deal_damage`，`schedule.py:351`）
+   （例：`schedule` 的 DOT 结算也调 `landing.deal_damage`，`schedule.py:384`）
 2. **状态只能写 `effects`**（护盾/冷却除外，它们各有独立容器与消费点）。
    写别的地方 = `stats`/`schedule`/`cleanse` 都看不见它。
 3. **引擎不 import 内容**。需要数值就读 hook、需要行为就读声明。

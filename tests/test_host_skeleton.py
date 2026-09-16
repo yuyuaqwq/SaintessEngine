@@ -282,6 +282,10 @@ def test_minimal_adapter() -> None:
           "pkg=%s" % getattr(pkg, "id", "?"))
     check(bool(host.handlers) and len(host.handlers) == len(pkg.command_handlers()),
           "boot() 装出包内命令处理器表（非空且同源）", "handlers=%d" % len(host.handlers))
+    # ★ V3（2026-09-16）：CTB 时间模型（行动耗时公式形状 + 基准值）已下沉到内容侧，
+    #   引擎 `schedule.py` 不再内置任何默认 ⇒ 未装配即 fail-closed（EngineNotConfigured）。
+    #   故与 D 段一致：跑战斗前由宿主侧触发包的 `install_engine()`（内容侧挂 hook 的装配点）。
+    pkg.install_engine()
     out = host.run_battle(dict(scen.player), scen.enemies, event_state=scen.event_state, seed=SEED)
     src = open(os.path.abspath(_fake_adapter_class.__code__.co_filename), encoding="utf-8").read()
     body = src[src.index("def _fake_adapter_class"):src.index("def test_minimal_adapter")]

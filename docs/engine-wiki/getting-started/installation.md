@@ -64,13 +64,15 @@ json · math · random · re
 ## 目录之外还依赖什么？
 
 引擎**本身不依赖**任何东西，但「能打出伤害」还需要你的项目提供数值公式与常量。
-两个必需 hook：
+五条必需 hook：
 
 | hook | 作用 | 不装的后果（实测） |
 |---|---|---|
 | `formulas` | 提供 `calc_damage` / `resolve_formula` / `skill_*` 等函数对象 | 落地为「零效应」兜底（`_NullFormulas`，伤害恒 0，**静默**） |
 | `formula_skeleton_fn` | 公式骨架参数表（`{"skill_growth": {...}}`） | 伤害链内部抛 `KeyError: 'skill_growth'`（**硬崩**） |
 | `skill_flat_fn` | 技能基础值常量表（`SKILL_FLAT_BASE` 等） | 伤害链内部抛 `TypeError: float() argument ... NoneType`（**硬崩**） |
+| `time_model_fn` | CTB 一次行动耗时 `fn(spd, base) -> float`（形状 + 参数你定） | **`Battle(...)` 构造期**抛 `EngineNotConfigured`（播种 ct 要它；**fail-closed**，无默认公式） |
+| `action_base_fn` | 行动类别 → 基准耗时 `fn(action) -> float` | 同上（`EngineNotConfigured`，点名 hook） |
 
 完整清单与取值见 [concepts/config-injection.md](../concepts/config-injection.md) 与
 [reference/api.md](../reference/api.md)。可跑的最小装配集见
