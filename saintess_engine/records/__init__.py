@@ -39,6 +39,16 @@
     bag.reload_all()               # 全部表一起重载（一份失败 → 一张也不换）
                                    # → {"roster": {"roster": {"before": 3, "after": 4}}, "grade": ...}
 
+**包内域声明派生**（包布局的元数据只有一个源：`<pkg>/editor/domains.json`）::
+
+    from saintess_engine.records import set_from_domains, orders_of
+
+    bag = set_from_domains(pkg_dir, ("roster", "grade"),
+                           overrides={"roster": {"key_type": int, "order": (1, 2, 3)}})
+    # 落点 sub 由声明的 kind 派生（data→content/data，rules→content/rules）；
+    # 声明缺项 / 文件缺 / 声明与磁盘不符 → RecordsDeclarationError（点名域与实际路径）。
+    keys = orders_of(pkg_dir, "roster_first", domain="key_order")   # 命名序声明（可多段拼接）
+
 **零知识**：引擎不认任何具体域、字段、条目含义 —— `domain` / `field` / `order` / `drop` /
 `key_type` / 谓词 / `factory` 全由内容侧给；本形状不猜字段语义、不改写字段值。
 
@@ -93,7 +103,10 @@ import weakref
 from typing import Any, Callable, Iterable, Optional
 
 __all__ = ["Records", "RecordsSet", "RecordsOrderMismatch", "RecordsReloadError",
-           "sets", "reload_all_sets"]
+           "sets", "reload_all_sets",
+           "RecordsDeclarationError", "read_domain_decl", "domain_sub",
+           "resolve_domain", "records_from_domain", "set_from_domains", "orders_of",
+           "DEFAULT_DECL", "DEFAULT_KIND_DIRS"]
 
 _UNSET: Any = object()
 
@@ -499,3 +512,166 @@ class RecordsSet:
 
     def __repr__(self) -> str:  # pragma: no cover - 调试用
         return "RecordsSet(domains=%r)" % (sorted(self._spec),)
+
+
+# ============================================================
+# 包内域声明派生（`<pkg>/editor/domains.json` = 域元数据的**唯一源**）
+# ============================================================
+# 为什么有它：包内十几个模块各自抄一遍「域 id + 落点 + kind + 文件名」的元数据 ——
+# 同一张域在两处写法不一致时，装载期**看不出来**（两边都读得到文件），直到行为漂移。
+# 本段把「域 id → 落点子目录」的推导收成一处：调用方只声明**我要哪些域**，
+# 落点由包内域声明的 `kind` 派生，且**声明缺项 / 文件缺 / 声明与磁盘不符一律报错**。
+
+#: 包内域声明的默认相对路径（内容侧约定；引擎只读调用方给的那一份，不猜别处）。
+DEFAULT_DECL = "editor/domains.json"
+#: `kind` → 落点子目录（内容侧布局约定，调用方可覆盖；引擎不写死某个包的布局）。
+DEFAULT_KIND_DIRS = {"data": "content/data", "rules": "content/rules"}
+
+
+class RecordsDeclarationError(RuntimeError):
+    """包内域声明 / 磁盘落点与声明不符时抛（fail-closed：不静默给空表、不猜路径）。"""
+
+
+def _kind_dirs(kind_dirs=None) -> dict:
+    dirs = dict(DEFAULT_KIND_DIRS)
+    if kind_dirs:
+        dirs.update(kind_dirs)
+    return dirs
+
+
+def read_domain_decl(pkg_root, *, decl: str = DEFAULT_DECL) -> dict:
+    """读包内域声明（`<pkg>/<decl>`，默认 `editor/domains.json`）→ `{域: 声明 dict}`。
+
+    缺文件 / 坏 JSON / 顶层不是非空映射 → `RecordsDeclarationError`（**不静默空表**）。
+    """
+    path = os.path.join(pkg_root, decl)
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        raise RecordsDeclarationError("包内域声明文件不存在：%s" % (path,))
+    except Exception as exc:                                  # noqa: BLE001
+        raise RecordsDeclarationError(
+            "包内域声明读不了 / 坏 JSON：%s（%s: %s）" % (path, type(exc).__name__, exc))
+    if not isinstance(data, dict) or not data:
+        raise RecordsDeclarationError(
+            "包内域声明顶层不是非空映射：%s（是 %s）" % (path, type(data).__name__))
+    return data
+
+
+def domain_sub(entry, domain: str, *, kind_dirs=None) -> str:
+    """一条域声明的 `kind` → 落点子目录（缺 kind / 未知 kind → `RecordsDeclarationError`）。"""
+    dirs = _kind_dirs(kind_dirs)
+    kind = entry.get("kind") if isinstance(entry, dict) else None
+    if not isinstance(kind, str) or not kind:
+        raise RecordsDeclarationError("域 %r 的声明缺 kind（无法派生落点）" % (domain,))
+    if kind not in dirs:
+        raise RecordsDeclarationError(
+            "域 %r 的 kind=%r 没有对应落点（已知 kind → %r）" % (domain, kind, sorted(dirs)))
+    return dirs[kind]
+
+
+def resolve_domain(pkg_root, domain: str, *, decl: str = DEFAULT_DECL,
+                   kind_dirs=None, declaration: Optional[dict] = None) -> str:
+    """**声明 → 磁盘**的单域校验：返回落点子目录；任一不满足即 `RecordsDeclarationError`。
+
+    ① 域在声明里（声明缺项 → 报错，不静默）；
+    ② 声明带 `kind` 且 kind 有落点；
+    ③ `<pkg>/<落点>/<域>.json` 在盘上（缺文件 → 报错，**不静默给空表**）；
+    ④ 声明与磁盘不符（同名文件落在**别的** kind 目录）→ 单独点名「表名与域不符」。
+    """
+    decl_table = read_domain_decl(pkg_root, decl=decl) if declaration is None else declaration
+    if domain not in decl_table:
+        raise RecordsDeclarationError(
+            "域 %r 不在包内域声明里（%s）—— 声明缺项，拒绝装载（不静默给空表）"
+            % (domain, os.path.join(pkg_root, decl)))
+    sub = domain_sub(decl_table[domain], domain, kind_dirs=kind_dirs)
+    path = os.path.join(pkg_root, sub, "%s.json" % (domain,))
+    if not os.path.isfile(path):
+        elsewhere = sorted(
+            d for d in set(_kind_dirs(kind_dirs).values())
+            if d != sub and os.path.isfile(os.path.join(pkg_root, d, "%s.json" % (domain,))))
+        if elsewhere:
+            raise RecordsDeclarationError(
+                "域 %r 的落点与声明不符：声明 kind=%r ⇒ %s，同名文件却在 %r —— "
+                "表名与域不符（改声明或搬文件，不静默）"
+                % (domain, decl_table[domain].get("kind"), path, elsewhere))
+        raise RecordsDeclarationError(
+            "域 %r 声明的文件不在盘上：%s —— 缺表即报错，不许静默给空表" % (domain, path))
+    return sub
+
+
+def records_from_domain(pkg_root, domain: str, *, decl: str = DEFAULT_DECL, kind_dirs=None,
+                        **cfg) -> "Records":
+    """单个域 → `Records`（同 `set_from_domains` 的 fail-closed 校验；**不登记集合**）。
+
+    `cfg` 是调用方自己的派生参数（`order` / `drop` / `key_type` / `default`）；
+    `sub` 不许给：落点由声明的 `kind` 派生。
+    """
+    if "sub" in cfg:
+        raise RecordsDeclarationError(
+            "域 %r 的 cfg 里给了 sub —— 落点由声明的 kind 派生，不许手抄" % (domain,))
+    sub = resolve_domain(pkg_root, domain, decl=decl, kind_dirs=kind_dirs)
+    return Records(pkg_root, domain, sub=sub, **cfg)
+
+
+def set_from_domains(pkg_root, domains, *, decl: str = DEFAULT_DECL, kind_dirs=None,
+                     overrides: Optional[dict] = None) -> "RecordsSet":
+    """包内域声明 + 磁盘 → `RecordsSet`（通用、零游戏知识、fail-closed）。
+
+    * `domains`：本模块**要哪些域**（域 id 序列，如 `("items", "game_config")`）。
+    * `overrides`：`{域: {order/drop/key_type/default}}` —— **本模块自己的派生参数**
+      （内容侧声明的一部分，不是域元数据）。`sub` **不许在这里给**：落点一律由声明的
+      `kind` 派生（手抄 `sub` = 又一处会漂的元数据）。
+    * `decl` / `kind_dirs`：包布局约定，package 侧可覆盖（引擎不写死某个包）。
+
+    每条域都过 `resolve_domain` 的四道校验（见其文档）；任一不满足即
+    `RecordsDeclarationError`（点名域与实际路径）。
+    """
+    declaration = read_domain_decl(pkg_root, decl=decl)
+    overrides = dict(overrides or {})
+    spec: dict = {}
+    for name in domains:
+        sub = resolve_domain(pkg_root, name, decl=decl, kind_dirs=kind_dirs,
+                             declaration=declaration)
+        cfg = dict(overrides.pop(name, None) or {})
+        if "sub" in cfg:
+            raise RecordsDeclarationError(
+                "域 %r 的 overrides 里给了 sub —— 落点由声明的 kind 派生，不许手抄" % (name,))
+        cfg["sub"] = sub
+        spec[name] = cfg
+    if overrides:
+        raise RecordsDeclarationError(
+            "overrides 里有**没有请求**的域：%r（不静默忽略）" % (sorted(overrides),))
+    return RecordsSet(pkg_root, spec)
+
+
+def orders_of(pkg_root, *names, domain: str, decl: str = DEFAULT_DECL,
+              kind_dirs=None) -> list:
+    """按名读包内**序声明**：`<pkg>/<domain 落点>/<domain>.json[名]["keys"]`（可多段拼接）。
+
+    序声明是内容（「这张表的源迭代序」），不是引擎概念：域 id / 条目名都由调用方给，
+    引擎只负责「按声明的落点读、按名取、形状不对就炸」。
+
+    fail-closed（任一不满足即 `RecordsDeclarationError`，点名声与路径）：
+    声明域不在域声明里 / 落点文件不在盘上 / 文件读不到 / 条目缺 / 形状不是 `{keys: [...]}`。
+    """
+    if not names:
+        raise RecordsDeclarationError("orders_of 至少要一个序声明名")
+    sub = resolve_domain(pkg_root, domain, decl=decl, kind_dirs=kind_dirs)
+    path = os.path.join(pkg_root, sub, "%s.json" % (domain,))
+    rec = Records(pkg_root, domain, sub=sub)
+    table = rec.all()
+    if rec.missing:
+        raise RecordsDeclarationError(
+            "序声明域 %r 读不到内容：%s（留痕：%r）" % (domain, path, rec.problems[:3]))
+    out: list = []
+    for name in names:
+        ent = table.get(name)
+        keys = ent.get("keys") if isinstance(ent, dict) else None
+        if not isinstance(keys, list) or not keys:
+            raise RecordsDeclarationError(
+                "序声明 %r 缺条目 / 形状不是 {keys: [...]}（域 %r，%s）—— "
+                "序读不到不许静默空表" % (name, domain, path))
+        out.extend(keys)
+    return out
