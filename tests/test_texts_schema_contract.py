@@ -172,7 +172,9 @@ def t2_positive(body, tpat):
     #   ⚠ 本门禁锚点**共三处**：①本行条数 ②「含中文的 key 数」（见 t3，当前 165） ③对应标签字。
     #   ★ 2026-09-18 C 档 13（B-2 第一片：economy 面板尾货 物品详情 59 + 类目表 25 键）⇒ 1006 → 1090。
     #     ②中文键数锚点**不变**（本片新增键名全 ASCII：`item_cat.*` / 物品详情键），③标签字未动。
-    check("包内文案条数锚点 == 1090（条数变了就同步更新本门禁的锚点）", len(body) == 1090, len(body))
+    #   ★ 2026-09-18 C 档 14（B-2 第 2 片：player 散落/尾巴 14 函数 93 新键）⇒ 1090 → 1183。
+    #     ②中文键数锚点仍不变（键名全 ASCII），③标签字未动。
+    check("包内文案条数锚点 == 1183（条数变了就同步更新本门禁的锚点）", len(body) == 1183, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
