@@ -24,8 +24,8 @@
 | `panel` | `{"stat","op","mult"}` | ✅ `effects.act_apply` 快照分支（`effects.py:459-471`） | 静态面板增益的默认值（动作参数缺省时查表）。`op`：`mul`（乘）/ `add`（加）；`op="reduce"` 特殊（见 `stats.py:76-77`） |
 | `consume` | `{"mode": ...}` | ✅ `effects.act_apply`（`effects.py:350-353`）+ `Battle.act`（`battle.py:435-458`） | 控制型条目的消费模式：`"skip"`（整跳行动）/ `"no_skill"`（技能转普攻） |
 | `period` | dict | ✅ `schedule._settle_time_effects`（`schedule.py:268-276`） | 周期结算声明（见下） |
-| `cleanse` | bool | ✅ `effects.act_cleanse`（`effects.py:585`） | `True` = 可被净化 |
-| `on` | `"caster"` \| `"target"` | ✅ `effects.act_cleanse`（`effects.py:585`，`on=="target"` 也清）；内容侧 `_mech_to_effect` 判 `on_target`（`effects.py:247`） | 效果的默认作用对象。`"target"` = 对敌标记类 |
+| `cleanse` | bool | ✅ `effects.act_cleanse`（`effects.py:590`） | `True` = 可被净化 |
+| `on` | `"caster"` \| `"target"` | ✅ `effects.act_cleanse`（`effects.py:590`，`on=="target"` 也清）；内容侧 `_mech_to_effect` 判 `on_target`（`effects.py:247`） | 效果的默认作用对象。`"target"` = 对敌标记类 |
 | `negative` | bool | ⚠️ 引擎不读 | 「负面」标记。内容侧用它数「负面种数」（`class_mech_proc.py:767`，`target_debuff_kinds` judge） |
 | `tag` | str | ⚠️ 引擎不读 | 旧 CLEANSE_TAGS 时代的标记。`act_apply` 读的是 **params** 的 `tag`（作为 `key` 的兜底，`effects.py:344`），不是 `cfg["tag"]` |
 | `cd_mult` | float | ✅ `actions.do_skill`（`actions.py:89-97`） | 冷却倍率（`0.8` = CD −20%）。多态并存时**取最小**（最速） |
@@ -51,13 +51,13 @@
 ## `period` 子字段
 
 `period = {"dir": ..., "interval": ..., 数值字段...}`。引擎读点在
-`schedule._settle_time_effects`（`schedule.py:259-395`）。
+`schedule._settle_time_effects`（`schedule.py:259-399`）。
 
 | 子字段 | 类型 | 默认 | 消费者/语义 |
 |---|---|---|---|
 | `dir` | str | `"damage"` | ✅ `:246`。四向：`damage` / `heal` / `mana` / `gain` |
 | `interval` | float | `1.0` | ✅ `:251`。间隔刻数（**绝对时刻**，非「每 tick」） |
-| `turns` | int | `0` | ✅ `:252`。限跳次数，跳到就清层（`0` = 无限）。计数器 `actor["dot_jumps"]`，`schedule.py:445-451` |
+| `turns` | int | `0` | ✅ `:252`。限跳次数，跳到就清层（`0` = 无限）。计数器 `actor["dot_jumps"]`，`schedule.py:449-455` |
 | `cap` | int | 0 → 回落 `_cap_of` | ✅ `:341`（仅 `gain` 向）。**可覆盖** `EFFECT_RULES.cap` |
 | `amount` | float | 0 | ✅ `:340`（仅 `gain` 向）。每刻加/减量，**负值也走**（衰减），clamp 下限 0 |
 | `pct_max_hp` | float | 0 | ✅ `:283`（`damage` 向）。每层每跳的最大生命比例 |
@@ -75,7 +75,7 @@
 | `mana_pct` | float | 0 | ✅ `:311/323`（`heal` 与 `mana` 向）。每跳回复最大魔力比例 |
 | `type` | str | — | ⚠️ **无消费者**（参考实现里 `bleed` 写了 `"type": "flat"`） |
 | `per_layer` | int | — | ⚠️ **无消费者**（参考实现里 `bleed` 写了 `"per_layer": 0`） |
-| `dmg_type` | str | — | ✅ **引擎消费**（2026-09-11）：DOT 结算透传为落地 `dmg_kind`（`schedule.py:384`）。`"true"` = 真伤（物免/魔免/格挡全跳过，`landing` 内 `"true" not in kd` 守卫）；空/缺省 = 不减免（与接线前一致） |
+| `dmg_type` | str | — | ✅ **引擎消费**（2026-09-11）：DOT 结算透传为落地 `dmg_kind`（`schedule.py:388`）。`"true"` = 真伤（物免/魔免/格挡全跳过，`landing` 内 `"true" not in kd` 守卫）；空/缺省 = 不减免（与接线前一致） |
 
 **`damage` 向的兜底**：两个 pct 都 <= 0 且**未声明 atk/matk 系数**时 `dmg = max(1, n)`（层数当伤害，`schedule.py:324`）；声明了系数（系数型 DOT，如 poison=atk×0.8）则基线为 0，伤害全部来自系数段。
 所以一个只声明 `dir/interval` 的 DOT 每跳掉「层数」点血。

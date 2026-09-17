@@ -460,6 +460,17 @@ def write_json(path: str, obj) -> None:
     os.replace(tmp, path)
 
 
+def sort_table_keys(table: dict) -> dict:
+    """域表**外层键重排为升序**（落盘规范：外层键升序）—— **只重排外层**。
+
+    条目内层键序**原样保留**：真源插入序由条目内 `seq` 字段承载（内容侧按它还原），
+    编辑器保存不许动内层。新建 / 改名条目不重排的话，新键会追加到尾部 →
+    包仓冻结门禁 `tests/test_export_package_sync.py`【6】「外层键非升序」转红
+    （改造前实测：`put_entry('boss_phases','aaa_first_alpha')` → 键序尾部追加）。
+    """
+    return {k: table[k] for k in sorted(table)}                    # 升序 = sorted() 的码位序，与冻结门禁同一判据
+
+
 def load_manifest(pkg_dir: str) -> dict:
     m = read_json(manifest_path(pkg_dir), None)
     if not isinstance(m, dict):
@@ -695,7 +706,9 @@ def put_entry(pkg_dir: str, dom: str, key: str, data: dict) -> None:
     if not isinstance(table, dict):
         table = {}
     table[key] = data
-    write_json(domain_path(pkg_dir, dom), table)
+    # 落盘前仅把**外层键**重排为升序（新建 / 改名的新键不许追加到尾部）——
+    # 条目内层键序不动（真源插入序在条目内 `seq`；见 sort_table_keys 注）。
+    write_json(domain_path(pkg_dir, dom), sort_table_keys(table))
 
 
 def delete_entry(pkg_dir: str, dom: str, key: str) -> bool:
@@ -703,7 +716,8 @@ def delete_entry(pkg_dir: str, dom: str, key: str) -> bool:
     if not isinstance(table, dict) or key not in table:
         return False
     table.pop(key)
-    write_json(domain_path(pkg_dir, dom), table)
+    # 同 put_entry：删除本身不会破坏升序，但顺带归一化（救历史版本追加到尾部的旧文件）
+    write_json(domain_path(pkg_dir, dom), sort_table_keys(table))
     return True
 
 

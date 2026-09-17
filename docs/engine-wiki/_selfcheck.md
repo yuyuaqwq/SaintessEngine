@@ -99,7 +99,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 |---|---|
 | `type` | **无消费方**（参考实现 `bleed` 写了 `"type": "flat"`） |
 | `per_layer` | **无消费方**（同上 `"per_layer": 0`） |
-| `dmg_type` | **2026-09-11 已接线**：DOT 落地改传 `dmg_kind=period.get("dmg_type")`（`schedule.py:384`） | ✅ **已消费**。`corros` 的「真伤 DOT」声明现成立（真伤 → 物免/魔免/格挡全跳过）；非真伤 DOT 仍空 kind，行为与接线前一致 |
+| `dmg_type` | **2026-09-11 已接线**：DOT 落地改传 `dmg_kind=period.get("dmg_type")`（`schedule.py:388`） | ✅ **已消费**。`corros` 的「真伤 DOT」声明现成立（真伤 → 物免/魔免/格挡全跳过）；非真伤 DOT 仍空 kind，行为与接线前一致 |
 
 ### 1.3 引擎 API / 常量
 

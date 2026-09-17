@@ -71,8 +71,11 @@ def satisfies(requirement: str, version: str | None = None) -> bool:
             raise ValueError(f"无法解析版本需求片段：{raw!r}（示例：'>=0.1' 或 '>=0.1,<0.2'）")
         op, num = m.group(1) or "==", m.group(2)
         c = _cmp(cur, parse(num))
-        if not {"": True, ">=": c >= 0, "<=": c <= 0, "==": c == 0, "!=": c != 0,
-                ">": c > 0, "<": c < 0}[op]:
+        # ⚠️ fail-closed（2026-09-18 修）：本表不得留「未知写法 → 放行」的口子——原表含
+        #   `"": True`（未识别运算符被吞成恒真），与模块约定「不满足要显式报错、不静默
+        #   降级」相悖。删掉并改用 .get(op, False)：未识别运算符一律不满足（绝不静默放行）。
+        if not {">=": c >= 0, "<=": c <= 0, "==": c == 0, "!=": c != 0,
+                ">": c > 0, "<": c < 0}.get(op, False):
             return False
     return True
 

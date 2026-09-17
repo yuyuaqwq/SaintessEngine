@@ -172,7 +172,15 @@ def reload_all_sets() -> dict:
     # `Records.load()` 幂等（只读一次），故这里对已读过的集合是零成本。
     for rs in live:
         for domain in rs._spec:
-            rs._records(domain).load()
+            rec = rs._records(domain)
+            try:
+                rec.load()
+            except RecordsOrderMismatch as exc:
+                # 2026-09-18 修：首读即顺序不符时 load() 会抛（表不发布）——这是预热这一步
+                # 的失败，按文档口径包成 RecordsReloadError（本函数承诺「任一步失败 →
+                # ReloadError」；RecordsOrderMismatch 不得从这里漏出）。
+                raise RecordsReloadError(domain, str(exc),
+                                         problems=list(rec.problems)) from exc
     prepared = []
     for index, rs in enumerate(live):
         rows = []
@@ -386,7 +394,12 @@ class Records:
     @property
     def missing(self) -> bool:
         """空表（供 fail-closed 用）：域读不到 / 坏 JSON / 顺序不符 → True。"""
-        self.load()
+        try:
+            self.load()
+        except RecordsOrderMismatch:
+            # 2026-09-18 修：首读即顺序不符时 load() 会抛（表不发布）；本属性按文档
+            # 承诺**不抛、返回 True**（load 已把状态置空 + 留痕，直接读空即为真）。
+            pass
         return not self._table
 
     def all(self) -> dict:
@@ -502,7 +515,10 @@ class RecordsSet:
 
     def missing_domains(self) -> list:
         """声明过的域里读不到的（缺文件 / 坏 JSON / 顺序不符，即 `Records.missing`）。"""
-        return sorted(d for d in self._spec if getattr(self, d).missing)
+        # 2026-09-18 修：走 `_records().missing`（绕开 `__getattr__` 的 load()）——旧写法
+        # `getattr(self, d).missing` 在「首读即顺序不符」时先由 `__getattr__` 抛出，
+        # 本方法自己炸、列不出坏域（与文档承诺矛盾）。
+        return sorted(d for d in self._spec if self._records(d).missing)
 
     # ------------------------------------------------------------ 重载
     def _records(self, domain) -> "Records":

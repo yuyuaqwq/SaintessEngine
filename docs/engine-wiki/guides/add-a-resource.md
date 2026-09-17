@@ -163,8 +163,8 @@ info["consume_all"] = {"key": "arcane"}    # actions.py:214-217：直接 ef.pop
 "period": {"dir": "gain", "interval": 1.0, "amount": -0.7}  # 每刻 -0.7（允许负值）
 ```
 
-- 引擎侧消费者：`schedule._settle_time_effects` 的 `gain` 分支（`schedule.py:424-443`）
-- **静默**（不刷日志，`schedule.py:431-432` 注释）
+- 引擎侧消费者：`schedule._settle_time_effects` 的 `gain` 分支（`schedule.py:428-447`）
+- **静默**（不刷日志，`schedule.py:435-436` 注释）
 - clamp 到 `[0, cap]`，cap 取 `period.cap` 或 `_cap_of`（表声明 + `bonus.cap`）
 - 负数也走（信仰清醒档衰减），但**下限 0**，不会归负
 - `dir="gain"` **不要求 `stacks > 0`** —— 0 层也要能回（`schedule.py:280-283`）

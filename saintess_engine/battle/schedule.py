@@ -368,8 +368,12 @@ def _settle_time_effects(battle, logs: list):
                                 _dc = {"target": a, "dot_key": key, "dmg": dmg,
                                        "mult": 1.0}
                                 _fire(battle, "dot_calc", _dc, logs)
-                                _m = float((getattr(battle, "_fire_ctx", {}) or {})
-                                           .get("mult", 1.0) or 1.0)
+                                # ⚠️ 不可写 `... or 1.0`（2026-09-18 修）：乘区值 **0.0 是合法值**，
+                                #   而 `0.0 or 1.0` 会被吞成 1.0 → 0 乘区失效（完全免伤类无效）。
+                                #   读**本次事件的 ctx 对象**（不依赖共享 `battle._fire_ctx`）——
+                                #   与 actions/landing 三处读取点口径一致（四胞胎唯一漏改处）。
+                                _raw_m = _dc.get("mult")
+                                _m = 1.0 if _raw_m is None else float(_raw_m)
                                 if _m != 1.0:
                                     dmg = max(1, int(dmg * _m))
                             except Exception:

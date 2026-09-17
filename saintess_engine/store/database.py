@@ -27,7 +27,7 @@ class Database:
 
     参数
     ----
-    path:      数据库文件路径（`:memory:` 亦可）。使用方负责决定它放哪。
+    path:      数据库文件路径（`:memory:` 亦可——同一实例的连接共享同一个内存库）。
     timeout:   SQLite 连接超时（秒）—— 等锁时长。
     row_factory: 行工厂，默认 `sqlite3.Row`（按列名取值，`dict(row)` 即字典）。
     """
@@ -40,6 +40,15 @@ class Database:
         self._lock = threading.RLock()
         self._schemas: list[tuple[str, str]] = []
         self._migrations: list[Callable[[sqlite3.Connection], None]] = []
+        # `:memory:` 支持（2026-09-18 修）：此前每次 connect() 都是**独立空库** ——
+        # init()（建表）的连接一关，表就没了（declare / 会话全断，与文档承诺矛盾）。
+        # 现在：所有连接走同一条共享缓存 URI（同一内存库）+ 保活连接 —— 内存库在
+        # 最后一条连接关闭时销毁，没有 keeper，init() 一返回库就没了。
+        self._mem_uri: Optional[str] = None
+        self._keeper: Optional[sqlite3.Connection] = None
+        if str(path) == ":memory:":
+            self._mem_uri = "file:saintess_mem_%x?mode=memory&cache=shared" % id(self)
+            self._keeper = sqlite3.connect(self._mem_uri, uri=True, timeout=timeout)
 
     # ---------------------------------------------------------------- 连接
     @property
@@ -49,7 +58,10 @@ class Database:
 
     def connect(self) -> sqlite3.Connection:
         """开一条新连接（调用方负责关闭；一般用 session()/readonly()/atomic()）。"""
-        conn = sqlite3.connect(self.path, timeout=self.timeout)
+        if self._mem_uri is not None:                 # `:memory:`：同一共享内存库
+            conn = sqlite3.connect(self._mem_uri, uri=True, timeout=self.timeout)
+        else:
+            conn = sqlite3.connect(self.path, timeout=self.timeout)
         if self.row_factory is not None:
             conn.row_factory = self.row_factory
         return conn

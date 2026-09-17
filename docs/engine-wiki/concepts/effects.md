@@ -24,7 +24,7 @@ actor["effects"] = {
 合并成一个容器后（`actors.py:46-48` 的原文：`V 系列统一：四容器 → 单 effects 容器`）：
 
 - 到期只有一处（`schedule._settle_time_effects`，`schedule.py:225-242`）
-- 净化只有一处（`effects.act_cleanse`，`effects.py:583-587`）
+- 净化只有一处（`effects.act_cleanse`，`effects.py:583-592`）
 - 面板折算只有一处（`stats._apply_effects`，`stats.py:40`）
 - 序列化天然覆盖（`serialize._serialize_actor` 全字段带走，`serialize.py:53`）
 - 「这个效果属于哪一类」不再需要回答——**行为由声明给，不由容器给**
@@ -75,7 +75,7 @@ actor["effects"] = {
 
 **为什么需要 float**：资源可以有非整数速率（信仰每刻 −0.7、磐核每刻 +0.4）。
 `apply` 的叠层分支读 `float()`（`effects.py:410`）、`consume` 读 `float()`
-（`effects.py:502`）、`schedule` 的 gain 分支 `round(..., 6)`（`schedule.py:439`）。
+（`effects.py:502`）、`schedule` 的 gain 分支 `round(..., 6)`（`schedule.py:443`）。
 读侧全用 `float()` 保真，写侧统一过 `norm_stack` 保持「int 资源看起来还是 int」。
 
 ## cap 的唯一收敛点
@@ -96,19 +96,19 @@ def _cap_of(actor, key):                       # effects.py:58，S2 公开别名
 - `bonus` 为负数时按 0 处理（`max(0, bonus)`）——**只增不减**
 
 读它的地方（都是叠层 clamp）：`act_apply` 叠层分支（`effects.py:411`）、
-`schedule` 周期 gain 分支（`schedule.py:436`，且**表声明可被 `period.cap` 覆盖**）。
+`schedule` 周期 gain 分支（`schedule.py:440`，且**表声明可被 `period.cap` 覆盖**）。
 内容侧的渠道攒取也走它（`class_mech_proc.py` 的 `class_res_channel_gain`）。
 
 ## 周期结算（`period`）
 
 `period` 是「按刻重复发生」的声明，形态见 [../reference/effect-rules.md](../reference/effect-rules.md)。
-引擎的实现要点（`schedule._settle_time_effects`，`schedule.py:259-395`）：
+引擎的实现要点（`schedule._settle_time_effects`，`schedule.py:259-399`）：
 
 1. **首次挂不给跳**：第一次看到某 key 时只登记 `dot_next[key] = now + interval`
    （`schedule.py:287-290`，对齐旧引擎的「首跳延迟」）
 2. **到点补跳**：`while now >= dot_next[key]`，一次最多补 20 跳（`guard < 20`）防死循环
 3. **`dir` 四向**：`damage`（掉血）/ `heal`（回血 + 可选 mana_pct）/ `mana`（回蓝）/ `gain`（给自身叠层加/减，**静默**、clamp `[0, cap]`）
-4. **`turns` 限跳**：跳够 `turns` 次就清层（计数器 `dot_jumps`，`schedule.py:445-451`）
+4. **`turns` 限跳**：跳够 `turns` 次就清层（计数器 `dot_jumps`，`schedule.py:449-455`）
 5. **`dir="gain"` 不需要 `stacks > 0`**：0 层也要回（游侠精力耗到 0 若被拦将永远回不了，
    `schedule.py:280-283` 注释）
 6. **boss 档**：`is_boss` 或 `role == "boss"` 时读 `pct_boss` / `pct_cur_boss`

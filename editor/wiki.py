@@ -84,8 +84,16 @@ def _roots(pkg_dir=None) -> list:
 
 def _safe_page(root: str, rel) -> str:
     """root 下的页面绝对路径；越界（`../`）或文件不存在 → ""（路径逃逸防护）。"""
-    p = os.path.normpath(os.path.join(root, *str(rel).split("/")))
-    if not p.startswith(os.path.normpath(root)) or not os.path.isfile(p):
+    root_n = os.path.normpath(root)
+    p = os.path.normpath(os.path.join(root_n, *str(rel).split("/")))
+    # 2026-09-18 修：改用 commonpath 判「同一子树」（裸 startswith 没有分隔符边界，
+    #   `../engine-wiki-old/x.md` 这类与 root 同前缀的兄弟目录会被放行 = 路径逃逸）。
+    #   commonpath 异常（跨盘等）→ 视为越界（fail-closed，不读）。
+    try:
+        _inside = os.path.commonpath([root_n, p]) == root_n
+    except ValueError:
+        _inside = False
+    if not _inside or not os.path.isfile(p):
         return ""
     return p
 

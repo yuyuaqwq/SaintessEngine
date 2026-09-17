@@ -568,7 +568,7 @@ def act_cleanse(battle, caster, target, params, logs):
     """净化：移除目标身上的 DOT/标记/控制（V5④ 全查表，无 CLEANSE_TAGS 白名单）。
 
     遍历 effects 条目，查 EFFECT_RULES[key]：
-    - period（周期 DOT/负面）→ 清
+    - period（周期 DOT/负面）→ 清；**`dir="gain"` 的资源回除外**（不是减益，2026-09-18）
     - on == target（对敌标记）→ 清
     - cleanse == True（显式可净化声明：控制键/减伤——原 CLEANSE_TAGS 成员表化）→ 清
     - 其余（无负面/不可净化声明）不清
@@ -582,7 +582,12 @@ def act_cleanse(battle, caster, target, params, logs):
     state_table = all_state_effects()
     for k in list(ef.keys()):
         cfg = state_table.get(k) or {}
-        if cfg.get("period") or cfg.get("on") == "target" or cfg.get("cleanse"):
+        _per = cfg.get("period")
+        # 2026-09-18 修：周期声明按方向过滤——`dir="gain"`（资源自然回/衰减）不是减益，
+        #   净化不得清（旧判据「有 period 即清」会把职业资源条目吞掉 → 资源整场停回、
+        #   依赖它的技能白放）。其余方向与畸形声明保持旧口径（有 period 即视为可净化）。
+        _gain = isinstance(_per, dict) and str(_per.get("dir", "damage") or "damage") == "gain"
+        if (_per and not _gain) or cfg.get("on") == "target" or cfg.get("cleanse"):
             rem.append(k)
             ef.pop(k, None)
     if rem:
