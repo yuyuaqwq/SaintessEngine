@@ -166,7 +166,8 @@ def t2_positive(body, tpat):
     # ★ 2026-09-17 三次同步（B 批 B 档首批）：属性名 10 + 团队特效名 9 ⇒ 492 → 511。
     #   四次同步（B 档：条件文案 44）⇒ 511 → 555；五次（宠物技能描述 8）⇒ 555 → 563；六次（帮助面板 11）⇒ 574；
     #   七次（B 档末批：副业图标 8）⇒ 582 —— **B 档收口**。
-    check("包内文案条数锚点 == 582（条数变了就同步更新本门禁的锚点）", len(body) == 582, len(body))
+    #   八次（C 档打样：冒险手册总览 8）⇒ 590。
+    check("包内文案条数锚点 == 590（条数变了就同步更新本门禁的锚点）", len(body) == 590, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
