@@ -158,7 +158,9 @@ def t1_contract_shape():
 # ---------------------------------------------------------------- 2 正证
 def t2_positive(body, tpat):
     print("\n[2] 正证：包内真数据「整表口径 + 单条口径」全过")
-    check("包内文案条数锚点 == 233（条数变了就同步更新本门禁的锚点）", len(body) == 233, len(body))
+    # ★ 2026-09-17 锚点同步：D 批「数据进表」（D2）把 `WEAPON_EFFECT_DATA` 里内联的 51 条战斗文案
+    #   并进包内文案真源 ⇒ 包内文案条数 233 → 284（有意变更，非漂移；判据只换数字，口径不动）。
+    check("包内文案条数锚点 == 284（条数变了就同步更新本门禁的锚点）", len(body) == 284, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
@@ -176,7 +178,7 @@ def t2_positive(body, tpat):
     # 每条都能被新 pattern 接受（把「整表过」拆到 key 粒度，红的时候能指到具体 key）
     rx = re.compile(tpat)
     miss = [k for k in body if not rx.search(str(k))]
-    check("逐 key 复核：233 个 key 全部匹配新 pattern", not miss, miss[:5])
+    check("逐 key 复核：284 个 key 全部匹配新 pattern", not miss, miss[:5])
 
 
 # ---------------------------------------------------------------- 3 反证 A
