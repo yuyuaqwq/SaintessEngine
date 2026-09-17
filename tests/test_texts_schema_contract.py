@@ -174,7 +174,9 @@ def t2_positive(body, tpat):
     #     ②中文键数锚点**不变**（本片新增键名全 ASCII：`item_cat.*` / 物品详情键），③标签字未动。
     #   ★ 2026-09-18 C 档 14（B-2 第 2 片：player 散落/尾巴 14 函数 93 新键）⇒ 1090 → 1183。
     #     ②中文键数锚点仍不变（键名全 ASCII），③标签字未动。
-    check("包内文案条数锚点 == 1183（条数变了就同步更新本门禁的锚点）", len(body) == 1183, len(body))
+    #   ★ 2026-09-18 C 档 15（B-2 第 6 片：item_templates 道具模板文案族 105 新键）⇒ 1183 → 1288。
+    #     ②中文键数锚点仍不变，③标签字未动。
+    check("包内文案条数锚点 == 1288（条数变了就同步更新本门禁的锚点）", len(body) == 1288, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
