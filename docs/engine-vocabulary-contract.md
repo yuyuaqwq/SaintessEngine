@@ -46,6 +46,9 @@
 | **B7** | `actor["cc_immune"]` | `effects.act_apply` 控制分支 | **免疫控制**：控制类效果（`mode != None`）落地前，持有者带未过期的该态 → 本次控制不施加（不消耗、不叠层） | 内容侧写（带刻数，引擎按 `expire` 自动清理）；引擎读 |
 | **B8** | `actor["guard_uid"]` | `landing.deal_damage` 最前 | **挡刀**：承伤转移——该字段指向保护者 uid，伤害改由保护者承受（递归深度 1）。是否真的转移由 `battle.redirect_hook(battle, victim, guard, amount, dmg_kind)` 决定（未设 hook = 默认转移） | 内容侧写（`team_guard`，到期清）；引擎读 |
 | **B9** | `actor["heal_share_uid"]` | `landing.heal_actor` 最前 | **治疗分担**（faith_share）：治疗改由该 uid 承受；`battle.heal_redirect_hook` 决定是否转移 | 内容侧写；引擎读 |
+| **B10** | `saintess_engine/dialogue/__init__.py`（新，2026-09-14） | **结构字段名（契约词汇，引擎硬编码读取）**：`start` / `nodes` / `text` / `texts` / `text_from` / `options` / `need` / `next` / `fail_next` / `side_menu`；**注入面（取值，引擎零默认值）**：`end_marker`（结束哨兵）/ `fallback_text`（兜底文案）/ `conditions`（`get(key)->callable` 查表口，鸭子类型，不 import 内容侧）/ `unknown`（未注册键策略，真=放行、可抛）/ `text_sources`（`text_from` 取值 → `fn(node, ctx) -> str | None` 的表）。会话游标 `Cursor` 只持有 `subject` / `node` 两个**不透明串**，**存储键名由调用方注入**（`subject_key` / `node_key`），引擎不拼键、不落盘 | 「对话树」（节点 + 显式选项边 + 条件槽 + 路由 + 游标值）是通用交互形状，与 `command` / `text` 同级；结束哨兵 / 兜底文案 / 条件名 / 动作载荷 / 存档键**全是内容取值** | 引擎只读字段名 + 调注入回调；第三方换一套取值 = 换注入面，本模块零改动。落盘 schema 归内容侧 `persistence`（游标只**值**进引擎、**存储**不进） |
+| **B11** | `saintess_engine/presence/__init__.py`（新，2026-09-14） | 对外符号：`day_slot` / `day_hit` / `minutes_left` / `guarded_roll` / `cooldown_ok` / `merge_tables` / `Lookup` / `Presence`。**注入面**：`seed`（调用方给的**整数日序数** —— 引擎不认识日历）、`salt`（内容侧盐）、`rate` / `chance` / `guarantee` / `window`（数值）、`rng`（随机源，必填，引擎不 import `random`）、`keep(row_id, row) -> bool`（在场判据）、`place_of(row_id, row, day)`（当天定位）、`tables`（有序多表序列）。引擎**不读任何业务行的字段名** | 「谁在这里 / 当天在哪 / 保底与冷却的算术 / 清单编号」是通用在场形状；时段 / 季节 / 天气 / 等级 / 任务 / flag / 道具 / 星期 / `unlock` 前缀全是内容取值与协议 | `Lookup.first` 是**真值链**（空 mapping 穿透，与手写 `a.get(k) or b.get(k)` 同口径）；`Presence.rows/here/slots/slot_at/overlay` 只给**顺序与短路**，判据与定位由调用方注入（引擎零字段知识） |
+| **B12** | `saintess_engine/quest/__init__.py`（新，2026-09-17） | **结构字段名（引擎硬编码读取）**：`id` / `objective` / `next` / `states` / `fields`（角色键由调用方注入）；**注入面（取值，引擎零默认值）**：`objective_key` / `next_key`（必填，作用域内字段名）、`id_key`（默认 `"id"`）、`need` 口径（多 parts 目标）、文本行渲染回调（`lines` 只出槽位）。`QuestLog` 只做账本算术（accept / bump / deliver / abandon / set_status / snapshot / restore），状态迁移返回**新对象**、不改原 raw | 「任务账本 + 目标进度」是通用形状（与 `run.Progress` 口径不同，见模块 docstring）；任务 id / 目标类型 / 奖励 / 文案全是内容取值 | 引擎只读结构键 + 调注入面；`satisfied` 的 int 口径与多 part 目标的边界由内容侧声明决定（内容侧每日任务恒单键） |
 
 > B7-B9 都是「引擎只读**字段名** + 调**内容侧回调**」的形态：引擎不认识「哪个技能给的免疫/谁在挡刀」，
 > 只做通用的落地决策。与既有的 `target_picker` / `on_event` / `script_hook` / `redirect_hook`
@@ -54,6 +57,10 @@
 > ⚠️ 配套的真 bug 修复（同批）：`landing` / `actions` 里 3 处 `float(...get("mult", 1.0) or 1.0)`
 > —— `0.0` 是 falsy，被 `or 1.0` 吞成 1.0 → **0 乘区永远失效**（格挡/无敌帧类效果做不出来）。
 > 已改为「仅 `None` 回落 1.0」。
+>
+> B10–B12 是同一形态的延伸（**结构字段名进引擎、取值与策略留内容侧注入面**）：`dialogue`（对话树 + 游标值）·
+> `presence`（在场判定 + 清单编号）· `quest`（任务账本 + 目标进度）。三者都**零游戏词汇、零默认取值**，
+> 换一套内容取值 = 换注入面，引擎模块零改动。
 
 ---
 
