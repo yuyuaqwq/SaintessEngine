@@ -14,7 +14,7 @@
 > 它是本框架的**参考实现 + 压力测试**，不是本框架的一部分。
 > 下方未显式标注「游戏仓」的路径，均指**框架仓**。
 
-- 引擎目录：`saintess_engine/`（**31** 个子包 + **3** 个顶层模块；共 **95** 个 `.py` / **19 800** 行）
+- 引擎目录：`saintess_engine/`（**32** 个子包 + **3** 个顶层模块；共 **98** 个 `.py` / **20 770** 行）
   —— 数字由 `tests/test_editor_wiki.py` 逐项对照磁盘锁定，改模块结构必同步（否则门禁红）
 - 路线图（待建形状 / 待搬骨架 / `log`·`tlog` 设计）：[reference/roadmap.md](reference/roadmap.md)
 - 已建成的形状（**可拔插**，不配 = 不存在）：[reference/log.md](reference/log.md)（日志门面）·
@@ -24,7 +24,8 @@
   [reference/clock-wall.md](reference/clock-wall.md)（挂钟：可注入墙上时间 + 时区）·
   [reference/command-spec.md](reference/command-spec.md)（指令声明表装载：单源派生 + fail-closed）·
   [reference/dialogue.md](reference/dialogue.md)（对话树：节点 / 选项 / 条件槽 / 会话游标）·
-  [reference/presence.md](reference/presence.md)（在场形状：清单判定 / 当天派生 / 保底冷却）
+  [reference/presence.md](reference/presence.md)（在场形状：清单判定 / 当天派生 / 保底冷却）·
+  [reference/quest.md](reference/quest.md)（任务形状：目标账本 / 进度提升 / 状态迁移 / 多 parts）
 - 纯度门禁：`tests/test_engine_purity.py`（AST 静态断言：引擎零「引擎→内容」import 边）
 - 参考实现（**游戏仓 `dragonfall` 侧**）：《奥兰迪亚》内容侧（`game/data/battle_rules.py` + `game/services/`）
   —— 本 wiki **不**把它当规范，只当「可粘贴的真实声明样例」的来源
