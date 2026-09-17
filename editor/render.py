@@ -696,7 +696,18 @@ def _build_block(blk: dict, ctx) -> dict | None:
         field = src.get("field")
         if kind == "kv":
             rows = _rows_from(field, ctx["data"], ctx["decl"], ctx["gloss"], ctx["warn"], True)
-            out["rows"] = rows or []
+            rows = rows if isinstance(rows, list) else []
+            # 2026-09-18 修：kv 块同样受 `max_rows` 约束 —— 原实现在此**提前 return**，
+            #   走不到下面的 limit 计算 ⇒ 声明了 max_rows 也被静默忽略（数据多时整块全量下发）。
+            #   契约把 `max_rows` 定义为**块级**键（render_decl 对所有 kind 归一化，
+            #   默认 MAX_ROWS_DEFAULT / 上限 MAX_ROWS），故此处补齐截断 + 告警，口径与 list/table 一致。
+            _kv_limit = int(blk.get("max_rows") or RD.MAX_ROWS_DEFAULT)
+            if len(rows) > _kv_limit:
+                ctx["warn"](f"块 {blk['id']}：数据 {len(rows)} 项超过上限 {_kv_limit} —— "
+                            f"已截断到前 {_kv_limit} 项")
+                rows = rows[:_kv_limit]
+                out["truncated"] = True
+            out["rows"] = rows
             if not out["rows"]:
                 out["empty"] = blk.get("empty") or "（空）"
             return out
