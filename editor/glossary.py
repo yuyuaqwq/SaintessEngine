@@ -898,11 +898,6 @@ def pkg_glossary_dir(pkg_dir: str) -> str:
     return os.path.join(pkg_dir, *PKG_GLOSSARY_REL)
 
 
-def pkg_glossary_path(pkg_dir: str, dom: str) -> str:
-    """该域的词汇表文件路径（**不做存在性检查**；缺文件 = 该域没声明）。"""
-    return os.path.join(pkg_glossary_dir(pkg_dir), f"{dom}.json")
-
-
 def _pkg_dir_sig(d: str):
     """目录签名 = (目录, ((文件名, mtime_ns, size), …))。目录不在 → None（= 没声明）。"""
     try:

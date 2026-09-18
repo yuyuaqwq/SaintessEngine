@@ -99,10 +99,6 @@ def decl_dir(pkg_dir: str) -> str:
     return os.path.join(pkg_dir, RENDER_DIR_REL)
 
 
-def decl_file(pkg_dir: str, dom: str) -> str:
-    return os.path.join(decl_dir(pkg_dir), f"{dom}.json")
-
-
 def legacy_file(pkg_dir: str) -> str:
     return os.path.join(pkg_dir, LEGACY_REL)
 

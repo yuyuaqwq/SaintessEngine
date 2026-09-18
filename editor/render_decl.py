@@ -222,10 +222,6 @@ def template_paths(text) -> list:
     return out
 
 
-def interp_count(text) -> int:
-    return len(template_paths(text))
-
-
 # ═══════════════════════════════ 四、条件（when） ═══════════════════════════════
 def _norm_cond(obj, where: str, warns: list, depth: int = 1):
     """条件对象 → 规范化条件 | None（坏形状 → 丢弃该项 + 告警）。"""

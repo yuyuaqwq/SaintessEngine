@@ -98,16 +98,6 @@ def _flush_sinks(sinks: Sequence[Any]) -> None:
             _sink_error(s, logging.LogRecord("", 0, "", 0, "", (), None), exc)
 
 
-def _close_sinks(sinks: Sequence[Any]) -> None:
-    for s in sinks:
-        try:
-            fn = getattr(s, "close", None)
-            if callable(fn):
-                fn()
-        except Exception as exc:                                  # noqa: BLE001
-            _sink_error(s, logging.LogRecord("", 0, "", 0, "", (), None), exc)
-
-
 # ---------------------------------------------------------------- 出口实现
 class StreamSink:
     """写到文本流（默认 `sys.stderr` —— 与标准库 lastResort 去向一致）。

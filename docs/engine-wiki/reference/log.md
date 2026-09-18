@@ -70,10 +70,10 @@ bind(log, actor="p1", command="攻击").info("结算完成")   # actor/command �
 
 | 出口 | 位置 | 特点 |
 |---|---|---|
-| `StreamSink(stream=None, fmt=…)` | `saintess_engine/log/sinks.py:112` | 默认 stderr（与标准库 lastResort 同去向）；每行即 flush |
-| `FileSink(path, rotate=…)` | `saintess_engine/log/sinks.py:149` | 追加写；`rotate="size"`（或直接给字节数）按大小轮转 `path.1 … path.N`；父目录自动建 |
-| `MemorySink(limit=None)` | `saintess_engine/log/sinks.py:239` | 收进内存；`limit` 保留最近 N 条；`messages()` / `find(level, contains)` |
-| `SinkHandler(sinks)` | `saintess_engine/log/sinks.py:283` | 桥接件：把标准库 record 交给 sink；宿主也可自己 `addHandler` |
+| `StreamSink(stream=None, fmt=…)` | `saintess_engine/log/sinks.py:102` | 默认 stderr（与标准库 lastResort 同去向）；每行即 flush |
+| `FileSink(path, rotate=…)` | `saintess_engine/log/sinks.py:139` | 追加写；`rotate="size"`（或直接给字节数）按大小轮转 `path.1 … path.N`；父目录自动建 |
+| `MemorySink(limit=None)` | `saintess_engine/log/sinks.py:229` | 收进内存；`limit` 保留最近 N 条；`messages()` / `find(level, contains)` |
+| `SinkHandler(sinks)` | `saintess_engine/log/sinks.py:273` | 桥接件：把标准库 record 交给 sink；宿主也可自己 `addHandler` |
 
 `configure(fmt=…)` 通过鸭子类型调用 sink 的 `set_format()` —— 不认识 `fmt` 的 sink（如 `MemorySink`）
 自动跳过，不会报错。

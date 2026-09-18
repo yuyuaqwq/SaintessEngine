@@ -155,12 +155,3 @@ def suggest_keys(action: dict | None) -> list:
     if not action:
         return []
     return [p["key"] for p in (action.get("params") or []) if p.get("required")]
-
-
-def default_value(p: dict):
-    """参数的推荐初始值（按推断类型给零值）。"""
-    t = (p or {}).get("type")
-    if (p or {}).get("default") is not None:
-        return p["default"]
-    return {"number": 0, "int": 0, "float": 0.0, "string": "", "bool": False,
-            "array": [], "object": {}}.get(t, "")
