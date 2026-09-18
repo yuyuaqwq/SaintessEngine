@@ -34,6 +34,12 @@ _TOKEN_RE = re.compile(r"""
 _PREC = {"+": 1, "-": 1, "*": 2, "/": 2}
 _UNARY = {"-": 3}  # 一元负号优先级最高
 
+#: 编译缓存：表达式串 → 操作数栈。串来自数据表（技能/装备/食物公式），取值集合有限
+#: 且稳定；预编译产物是**纯数据**（eval_expr 只读遍历，不改写）⇒ 同串复用同一份。
+_COMPILE_CACHE: dict = {}
+#: 缓存上界：防内容侧动态拼串把内存顶爆（超界整体清空，不做 LRU 记账）。
+_COMPILE_CACHE_MAX = 8192
+
 
 class ExprError(ValueError):
     """表达式语法错误。"""
@@ -47,13 +53,17 @@ def compile_expr(expr: str):
       ("var", str)            变量名（求值时从 vars 取）
       ("op", str)             二元操作符 + - * /
       ("neg",)                一元负号（作用于栈顶）
-    预编译一次，战斗时 eval_expr 反复求值（无字符串解析）。
+    预编译一次，战斗时 eval_expr 反复求值（无字符串解析）；同串命中 _COMPILE_CACHE，不重复解析。
     """
     if expr is None:
         return None
     expr = str(expr).strip()
     if not expr:
         return None
+
+    cached = _COMPILE_CACHE.get(expr)
+    if cached is not None:
+        return cached
 
     tokens = []
     pos = 0
@@ -129,6 +139,9 @@ def compile_expr(expr: str):
         if ops[-1][0] == "lparen":
             raise ExprError(f"括号不匹配 '{expr}'")
         out.append(ops.pop())
+    if len(_COMPILE_CACHE) >= _COMPILE_CACHE_MAX:
+        _COMPILE_CACHE.clear()
+    _COMPILE_CACHE[expr] = out
     return out
 
 

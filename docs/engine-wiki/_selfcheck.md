@@ -117,7 +117,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | `state_effects.stat_scale_of` | `state_effects.py:18` | 仅测试引用 |
 | `actions._aoe_falloff_apply` | `actions.py:524` | **占位实现**（原样返回 logs）。`info["aoe_falloff"]` 在 `actions.py:361` 被读取但随后被丢弃 → AOE falloff 实际未生效 |
 | `formation.reachable_units` | `formation/__init__.py:28` | 零外部引用 |
-| `expr.expr_or` | `expr/__init__.py:236` | 零外部引用 |
+| `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |
 | `gauge.charge_*`（6 个） | `gauge/__init__.py:244-321` | **全部零外部引用** —— 蓄力三律无消费者 |
 | `support.battle_bars.bar_should_trigger` / `bar_preserve` | `:164` / `:204` | 仅内部/单点引用（`bar_preserve` 被命令层 Boss 脚本用 1 处） |
 | `effects.effects_from_skill(..., caster_side_is_player=True)` | `effects.py:216` | **第三个参数在函数体里从未使用** |
