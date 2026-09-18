@@ -14,12 +14,52 @@
 """
 from __future__ import annotations
 
+import os
 import sqlite3
 import threading
 from contextlib import contextmanager
 from typing import Callable, Iterator, Optional
 
 __all__ = ["Database"]
+
+
+def _tune_file_conn(conn: sqlite3.Connection, timeout: float) -> None:
+    """文件库连接调优：只做**语义无关**的性能设置。
+
+    ★ 2026-09-18（实测驱动）：包内持久化层是「每次操作开连接 → commit → 关连接」
+    的写法（如 `content/persistence/inventory.py`），在 SQLite 默认
+    `journal_mode=DELETE` + `synchronous=FULL` 下**每次 commit 都要 fsync 落盘**：
+    单文件门禁实测 18610 次 commit 耗 128.5s（6.9ms/次，占该测试总耗时 66%），
+    25998 次 connect 又占 14.9s。
+
+    `WAL` 让写事务顺序追加到 `-wal` 文件（checkpoint 时才回写主库）⇒ commit 不再
+    逐次 fsync。语义仍是 ACID（崩溃后可恢复），只换日志模式；对「短连接、读多写少」
+    的既有用法没有可观察行为差异（`-wal`/`-shm` 是 SQLite 自管文件）。
+
+    `journal_mode` 是**持久属性**（写进库文件头，后续连接自动继承），重复设置无害。
+    只读挂载 / 网络盘等不支持 WAL 的场合静默回退默认行为，不阻断初始化。
+    """
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=%d" % max(0, int(timeout * 1000)))
+        # ★ 2026-09-18 二次调优（实测驱动）：6 个门禁并发时 **CPU 只占 19%、
+        #   磁盘队列 1~6（饱和）** ⇒ 瓶颈在磁盘 IO 而非 CPU。三条都不动耐久性：
+        #   · wal_autocheckpoint 1000 → 4000 页（≈4MB → 16MB）：checkpoint 要回写主库
+        #     并 fsync，降低频率直接砍掉一块磁盘压力（留有限值，不像 0 那样让 WAL 无限涨）。
+        #   · temp_store=MEMORY：临时表 / 排序不进磁盘。
+        #   · cache_size=-8000（8MB）：减少重复页读。
+        conn.execute("PRAGMA wal_autocheckpoint=4000")
+        conn.execute("PRAGMA temp_store=MEMORY")
+        conn.execute("PRAGMA cache_size=-8000")
+        # ★ 同步模式开关（**默认不动 = FULL**，耐久性最高）。
+        #   测试跑器可设 `GWEN_SQLITE_SYNC=NORMAL`：WAL 下只在 checkpoint 时 fsync，
+        #   commit 不再逐次落盘 —— 崩溃极端情况下可能丢最近若干事务（库不会损坏），
+        #   对一次性的测试库零风险；真实运行默认保持 FULL。
+        _sync = os.environ.get("GWEN_SQLITE_SYNC", "").strip().upper()
+        if _sync in ("FULL", "NORMAL", "OFF"):
+            conn.execute("PRAGMA synchronous=%s" % _sync)
+    except sqlite3.Error:
+        pass
 
 
 class Database:
@@ -62,6 +102,7 @@ class Database:
             conn = sqlite3.connect(self._mem_uri, uri=True, timeout=self.timeout)
         else:
             conn = sqlite3.connect(self.path, timeout=self.timeout)
+            _tune_file_conn(conn, self.timeout)      # ★ 文件库：WAL（见下）
         if self.row_factory is not None:
             conn.row_factory = self.row_factory
         return conn
