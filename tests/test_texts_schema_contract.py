@@ -207,7 +207,9 @@ def t2_positive(body, tpat):
     #   ★ 2026-09-19 C 档 19f（B-2 第 5 片第 7 小片：combat 散尾 9 新键）⇒ 1930 → 1939。
     #     ②中文键数锚点仍不变（pet_battle.* / res_stack.* / poi.* / explore.find_found /
     #     ex.hidden_turn / hn.ok_item —— 全 ASCII），③标签字未动。
-    check("包内文案条数锚点 == 1939（条数变了就同步更新本门禁的锚点）", len(body) == 1939, len(body))
+    #   ★ 2026-09-19 C 档 20a（B-2 第 6 片第 1 小片：社交「市场·摊位」57 新键）⇒ 1939 → 1996。
+    #     ②中文键数锚点仍不变（键名全 ASCII），③标签字未动。
+    check("包内文案条数锚点 == 1996（条数变了就同步更新本门禁的锚点）", len(body) == 1996, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
