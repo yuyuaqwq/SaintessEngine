@@ -180,7 +180,9 @@ def t2_positive(body, tpat):
     #     ②中文键数锚点仍不变（键名全 ASCII），③标签字未动。
     #   ★ 2026-09-18 C 档 17a（B-2 第 3 片第 2 小片：economy 散落「锻造族」71 新键）⇒ 1363 → 1434。
     #     ②中文键数锚点仍不变（键名全 ASCII），③标签字未动。
-    check("包内文案条数锚点 == 1434（条数变了就同步更新本门禁的锚点）", len(body) == 1434, len(body))
+    #   ★ 2026-09-18 C 档 17b（B-2 第 3 片第 3 小片：economy 散落「强化·宝石·符文·重锻·炼成·附魔」115 新键）⇒ 1434 → 1549。
+    #     ②中文键数锚点仍不变（键名全 ASCII），③标签字未动。
+    check("包内文案条数锚点 == 1549（条数变了就同步更新本门禁的锚点）", len(body) == 1549, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
