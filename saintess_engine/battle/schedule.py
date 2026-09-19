@@ -25,7 +25,7 @@ from __future__ import annotations
 from typing import Optional
 
 from .. import config as _cfg
-from .actors import ActCtx, actor_alive
+from .actors import actor_alive
 from .effects import _cap_of as _stack_cap_of
 
 #: 内容侧「行动类别 → 基准耗时」表里，未知/未声明类别回落到哪个类别（通用键名，非游戏词）

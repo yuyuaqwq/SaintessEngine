@@ -13,7 +13,7 @@
 
 - 一个机制动作对玩家和怪同时生效，不需要「怪也能用」的额外适配
 - `add_actor()` 加援军/召唤物时不需要给调度器注册新类型（`battle.py:229`）
-- 序列化不需要按类型分派（`serialize._serialize_actor` 对任何 actor 一视同仁，`serialize.py:53`）
+- 序列化不需要按类型分派（`serialize._serialize_actor` 对任何 actor 一视同仁，`serialize.py:51`）
 
 代价：**身份信息全靠字段**。要表达「这是 Boss」就写 `is_boss=True` 或 `role="boss"`
 （引擎真读这两个的地方：控制时长减半 `effects.py:370`、DOT 的 `pct_boss` / `boss_pct_mult` 档 `schedule.py:300`、
@@ -38,12 +38,12 @@
 `hp` / `max_hp` / `mp` / `max_mp` / `atk` / `matk` / `def` / `mdef` / `spd` /
 `crit` / `dodge` / `crit_dmg` / `luck` / `tenacity` / `block` / `pene` / `race`
 
-⚠️ 这些是**裸值**。战斗内的「有效面板」要经 `stats.actor_stats()`（`stats.py:19`）
+⚠️ 这些是**裸值**。战斗内的「有效面板」要经 `stats.actor_stats()`（`stats.py:18`）
 聚合：有 `class_name` → 调 `panel_fn` hook 重算职业面板；无 → 直读字段；
 然后叠加 `effects` 里的面板修正。**伤害/速度/暴击都读聚合面板，不读裸字段**
 （例：`schedule._after_act` 用 `stats.actor_spd`，`schedule.py:172`）。
 
-> 唯一的数值兜底：`stats._monster_base_stats` 里 `crit` 缺省取 **0.05**（`stats.py:122`），
+> 唯一的数值兜底：`stats._monster_base_stats` 里 `crit` 缺省取 **0.05**（`stats.py:121`），
 > 而 `make_actor` 播种的是 0.0（`actors.py:98`）。这两处不一致，见
 > [_selfcheck.md](../_selfcheck.md)。
 
@@ -78,7 +78,7 @@
 | `learned_skills` | 已学技能列表（**引擎不读**，是给你的装配器扫的，如《奥兰迪亚》的 `_learned_mech_skills`） |
 | `auto_act` | 自动行动配置（`actor_auto` 读它，`battle.py:358`） |
 | `ai` | 通用怪 AI 决策数据（`ai.normalize_ai` / `resolve_ai_move` 读） |
-| `_skill_index` | 技能名/index → 技能 dict。**不进存档**（`serialize._STRIP_KEYS`，`serialize.py:33`） |
+| `_skill_index` | 技能名/index → 技能 dict。**不进存档**（`serialize._STRIP_KEYS`，`serialize.py:31`） |
 
 ### ⑤ 三个扩展区（引擎绝不读）
 
@@ -96,7 +96,7 @@
 
 | 子域 | 消费者 | 语义 |
 |---|---|---|
-| `bonus.panel` | `stats._player_base_stats`（`stats.py:96`） | 面板增幅 dict，透传给 `panel_fn` |
+| `bonus.panel` | `stats._player_base_stats`（`stats.py:95`） | 面板增幅 dict，透传给 `panel_fn` |
 | `bonus.cap` | `effects._cap_of`（`effects.py:71`） | `{资源key: 上限增量}`，纯 flat int 加在 `EFFECT_RULES[key].cap` 上 |
 | `bonus.cost` | `actions._bonus_cost_of`（`actions.py:237`） | 技能消耗折扣（`mp_pct`/`mp_flat`/`res` + `when` 判据） |
 

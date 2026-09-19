@@ -22,9 +22,7 @@ state = {
 from __future__ import annotations
 
 import json
-from typing import Optional
 
-from .actors import ActCtx, make_actor
 from .battle import Battle
 
 

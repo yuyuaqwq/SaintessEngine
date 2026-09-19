@@ -16,7 +16,6 @@ handler 并转发**（临时替换消息文本让它正确解析参数）。
 """
 from __future__ import annotations
 
-import functools
 import inspect
 import logging
 import re

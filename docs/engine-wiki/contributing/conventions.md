@@ -42,9 +42,9 @@ if pct <= 0:
 
 不允许：把旧逻辑复制一份留在原地、在引擎读源路径上做「旧字段也读一下」的回落。
 存档迁移是唯一例外，而且**只允许一处**（`serialize._deserialize_actor`，
-迁完立刻 `pop` 旧键，`serialize.py:99-108`）。
+迁完立刻 `pop` 旧键，`serialize.py:97-106`）。
 
-原文（`serialize.py:90-92`）：
+原文（`serialize.py:88-90`）：
 
 > 存档数据迁移，非引擎读源回落——引擎读源一律 `bonus` 分域 get 兜底；
 > 新档 actor 已带 bonus 容器则原样。

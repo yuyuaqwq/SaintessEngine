@@ -154,12 +154,12 @@ print(b.result, b.winner_side)       # victory / player
 ## 6. 存 / 取
 
 ```python
-state = b.to_state()          # serialize.py:36 —— 纯 JSON 可序列化 dict
-b2 = Battle.from_state(state) # serialize.py:59 —— 重建 sides/actors/时刻/胜负
+state = b.to_state()          # serialize.py:34 —— 纯 JSON 可序列化 dict
+b2 = Battle.from_state(state) # serialize.py:57 —— 重建 sides/actors/时刻/胜负
 ```
 
-注意 `from_state` 会 `seed_ct=False`（`serialize.py:68`）——**不重播初始 ct**，
-且 `_started=True`（`serialize.py:75`）——**不重复 fire `battle_start`**。
+注意 `from_state` 会 `seed_ct=False`（`serialize.py:66`）——**不重播初始 ct**，
+且 `_started=True`（`serialize.py:73`）——**不重复 fire `battle_start`**。
 这两条是续战正确性的关键，详见 [../guides/serialize-and-resume.md](../guides/serialize-and-resume.md)。
 
 ## 7. 加人（召唤 / 援军 / 变身）

@@ -106,7 +106,7 @@ actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:
   1. _consume_hit_buffs(battle, actor, logs)                        actions.py:470
        └─ 遍历 effects 里带 "hit" 子键的条目 → 累积 dmg_mult/guaranteed_crit/bonus_atk_pct
           → ⚡ on_hit_consume → pop 条目
-  2. st  = stats.actor_stats(battle, actor)                          stats.py:19
+  2. st  = stats.actor_stats(battle, actor)                          stats.py:18
      est = stats.actor_stats(battle, target)
   3. _st_mult = st["_state_dmg_mult"]（来自 stat_scale.dmg_mult）
   4. is_crit = hit_buffs.guaranteed_crit or random() < st["crit"]

@@ -7,7 +7,7 @@ state = battle.to_state()            # → 纯 JSON 可序列化 dict（sides-on
 saintess_engine = Battle.from_state(state)   # ← 重建 Battle / sides / actors / 时刻 / 胜负
 ```
 
-入口：`serialize.to_state`（`serialize.py:36`）/ `serialize.from_state`（`serialize.py:59`），
+入口：`serialize.to_state`（`serialize.py:34`）/ `serialize.from_state`（`serialize.py:57`），
 包门面也 re-export 了模块级 `to_state` / `from_state`（`saintess_engine/__init__.py:39`），
 `Battle.to_state` / `Battle.from_state` 是类方法包装（`battle.py:578/532`）。
 **两条路等价**，内容层两种都在用（游戏仓侧拆仓前的迁移计划 `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §5 记了
@@ -31,7 +31,7 @@ saintess_engine = Battle.from_state(state)   # ← 重建 Battle / sides / actor
 ```
 
 ⚠️ **恢复的构造参数不完整**：`from_state` 只回传 `btype` / `sides` / `title_bonus` /
-`hostile_map` / `seed_ct=False`（`serialize.py:61-69`）——
+`hostile_map` / `seed_ct=False`（`serialize.py:59-67`）——
 其余构造参数**全部丢失**：`pet` / `dmg_mult` / `target_picker` / `on_event` /
 `action_override` / `script_hook`。这些钩子需要在恢复后**自己重新挂**：
 
@@ -41,15 +41,15 @@ b2.target_picker = my_picker        # 恢复后手动补
 b2.script_hook = my_director
 ```
 
-另：`flags` 字段写入恒为 `{}`（`serialize.py:49`），**不落盘任何战斗级一次性标记**。
+另：`flags` 字段写入恒为 `{}`（`serialize.py:47`），**不落盘任何战斗级一次性标记**。
 如果你需要「本场只触发一次」的状态，得放在 actor 上（`effects` / `ext`）。
 
 ## actor 序列化：几乎全字段带走
 
-`_serialize_actor`（`serialize.py:53`）只**剥一个键**：
+`_serialize_actor`（`serialize.py:51`）只**剥一个键**：
 
 ```python
-_STRIP_KEYS = {"_skill_index"}      # serialize.py:33 —— 运行时索引，恢复时重建
+_STRIP_KEYS = {"_skill_index"}      # serialize.py:31 —— 运行时索引，恢复时重建
 ```
 
 **其它一切原样落盘**，包括 `effects` / `shields` / `cooldown` / `triggers` / `ext` /
@@ -58,7 +58,7 @@ _STRIP_KEYS = {"_skill_index"}      # serialize.py:33 —— 运行时索引，�
 
 - 好处：你的自定义状态（放 `ext`）**自动**持久化，不需要写序列化代码
 - 风险：**不可 JSON 化的东西会让存档炸**。`state_to_json` 有 `default=str` 兜底
-  （`serialize.py:118`），会把奇怪对象静默变成字符串 —— 恢复后类型就变了。
+  （`serialize.py:116`），会把奇怪对象静默变成字符串 —— 恢复后类型就变了。
   所以 `ext` 里只放基本类型 / dict / list
 
 **实际会出现在存档里的「非内容字段」清单**（知道有这些，排查时才不会以为中邪）：
@@ -80,14 +80,14 @@ def from_state(st):
     b._started = True                   # ② 不再 fire battle_start
     ...
 ```
-（`serialize.py:59-75`）
+（`serialize.py:57-73`）
 
 ### ① `seed_ct=False`
 
 构造 Battle 时默认会**播种每个 actor 的初始 ct**（`Battle.__init__:91-94`）。
 恢复路径必须关闭它：存档里的 `ct` 是战斗进行到一半的真实值，
 重播会把它按速度重算成「刚开局」——续战起手顺序直接错乱。
-（原注释：`actors.py` 的 ct 已随存档反序列化，不重播，`serialize.py:67-68`）
+（原注释：`actors.py` 的 ct 已随存档反序列化，不重播，`serialize.py:65-66`）
 
 ### ② `_started=True`
 
@@ -104,17 +104,17 @@ for uid in (st.get("killed") or []):
             if a.get("uid") == uid:
                 b.killed_actors.append(a)
 ```
-（`serialize.py:78-83`）
+（`serialize.py:76-81`）
 
 ⚠️ 用的是**对象引用**重建：从 squad 里找 `uid` 相同的 actor。注释说
-「找不到跳过——已从 sides 移除的阵亡单位」（`serialize.py:76`）。
+「找不到跳过——已从 sides 移除的阵亡单位」（`serialize.py:74`）。
 但**引擎其实从不把阵亡 actor 从 `sides` 移除**（`_on_actor_dead` 只 append 进
 `killed_actors`，`battle.py:533-549`；`_check_side_end` 也不删）。
 所以正常情况下找得到；「找不到」只在外部手工删过 sides 时才发生。
 
 ## 旧档迁移：`_deserialize_actor`
 
-`_deserialize_actor`（`serialize.py:87`）对新档是几乎透明的（只补空容器），
+`_deserialize_actor`（`serialize.py:85`）对新档是几乎透明的（只补空容器），
 但它包含**唯一一处存档迁移代码**：
 
 ```python
@@ -129,12 +129,12 @@ if not isinstance(_bns, dict) or "panel" not in _bns:
     actor.pop("cap_bonus", None)
     actor.pop("title_bonus", None)
 ```
-（`serialize.py:99-108`）
+（`serialize.py:97-106`）
 
 历史：`bonus` 容器统一之前，面板增幅散在 `stat_bonus` / `cap_bonus` / `title_bonus`
 三个旧键上。这段代码把旧档**一次性**迁进 `bonus` 分域并**清掉旧键**。
 设计原则写在 docstring：**「存档数据迁移，非引擎读源回落 —— 引擎读源一律 `bonus` 分域
-get 兜底；新档 actor 已带 bonus 容器则原样」**（`serialize.py:90-92`）。
+get 兜底；新档 actor 已带 bonus 容器则原样」**（`serialize.py:88-90`）。
 
 ### 给你的迁移约定
 
@@ -161,9 +161,9 @@ get 兜底；新档 actor 已带 bonus 容器则原样」**（`serialize.py:90-9
 ```python
 from saintess_engine.serialize import state_to_json, json_to_state
 
-raw = state_to_json(battle.to_state())      # serialize.py:117
+raw = state_to_json(battle.to_state())      # serialize.py:115
 ...
-battle = Battle.from_state(json_to_state(raw))   # serialize.py:121
+battle = Battle.from_state(json_to_state(raw))   # serialize.py:119
 ```
 
 ## 续战正确性 checklist

@@ -29,7 +29,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Iterable, Optional
+from typing import Callable, Iterable
 
 __all__ = ["Roster"]
 

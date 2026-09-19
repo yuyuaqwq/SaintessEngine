@@ -22,7 +22,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))

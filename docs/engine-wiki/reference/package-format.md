@@ -361,7 +361,7 @@ effective_domains(pkg) = 包 editor/domains.json  ∪（可选）框架内置默
 
 - **给某个游戏加/改域** → 只改那个包（§10.1 那三个文件）。框架那份默认集**不用动**。
 - **改内置默认集** → 只有当你要换掉「所有没声明的包的兜底域集」时才动它；那是**所有包**的口径变更，
-  不是给某个游戏加域的手段（`editor/packages.py:49`）。
+  不是给某个游戏加域的手段（`editor/packages.py:48`）。
 - 尚未搬进包的框架侧扩展面：字段词典 `editor/glossary.py`、取值提示 `editor/hints.py`、
   专属视图分派 `editor/{loot,instance,space}_view.py`（第 2/3 层扩展面，见设计稿）。
 

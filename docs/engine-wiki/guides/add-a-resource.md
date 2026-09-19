@@ -41,7 +41,7 @@
 | `cap: 5` | 叠层上限 | `effects._cap_of`（`effects.py:58`）；`apply op=add` 与 `schedule` gain 都 clamp |
 | `name` | 日志/UI 标签 | **引擎不读**；内容侧读（`class_mech_proc.py:1895`） |
 | `start_classes` | 归属过滤（只有该职业装配） | **引擎不读**；内容侧装配器读（`class_mech_proc.py:1892`）。⚠️ 不声明 = 不装配 |
-| `stat_scale.reduce: 0.03` | 每核减伤 | `stats._apply_effects`（`stats.py:61-66`）→ 写 `st["reduce"]` ⚠️ 但 `st["reduce"]` 无伤害路径消费者 → 真正生效另有通道（见下「注①」） |
+| `stat_scale.reduce: 0.03` | 每核减伤 | `stats._apply_effects`（`stats.py:60-65`）→ 写 `st["reduce"]` ⚠️ 但 `st["reduce"]` 无伤害路径消费者 → 真正生效另有通道（见下「注①」） |
 | `channels` | 攒取渠道 | **引擎不读**；内容侧 `apply_class_channels`（`class_mech_proc.py:1871`）翻译成 `actor.triggers` |
 
 注释里的 **注①** 是这套引擎最典型的一类坑，原文见 `game/data/battle_rules.py:218-224`：

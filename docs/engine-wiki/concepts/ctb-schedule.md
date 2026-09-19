@@ -62,7 +62,7 @@ def action_time(spd, base=None):                     # schedule.py:59
 即可换一套节奏，引擎一行不改。逐 shape 公式与数值验证见包内
 `games/orlandia/content/mech/time_model.py` 的模块 docstring。
 
-**速度口径**：始终读**聚合面板** `stats.actor_spd(battle, actor)`（`stats.py:140`），
+**速度口径**：始终读**聚合面板** `stats.actor_spd(battle, actor)`（`stats.py:139`），
 不是裸 `actor["spd"]`。播种（`battle._seed_ct_one`，`battle.py:98`）、
 行动后推进（`schedule._after_act`，`schedule.py:205`）、`next_ct`（`schedule.py:108`）
 三处一致。原因：玩家 actor 的裸 `spd` 可能是 0（面板要从职业/装备算），
@@ -187,8 +187,8 @@ fire(battle, "time_advance", {"dt": dt, "now": battle._now}, logs)   # ③ 广�
 
 ## 序列化与时钟
 
-`to_state` 存 `now`（`serialize.py:40`）、actor 的 `ct` 随 actor 字段一起存。
-`from_state` 恢复 `_now` 且 **`seed_ct=False`**（`serialize.py:68/70`）——
+`to_state` 存 `now`（`serialize.py:38`）、actor 的 `ct` 随 actor 字段一起存。
+`from_state` 恢复 `_now` 且 **`seed_ct=False`**（`serialize.py:66/70`）——
 不重播初始 ct，因为存档里已经有每个 actor 的真实 ct。改这条会让续战起手错位。
 
 ## 相关

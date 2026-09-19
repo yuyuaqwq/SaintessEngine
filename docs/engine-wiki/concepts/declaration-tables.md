@@ -101,7 +101,7 @@ hit（dict）                           →  {stacks:1, expire, hit}      出手
 | 字段 | 谁读它 |
 |---|---|
 | `cap` | `effects._cap_of`（`effects.py:58`）← 叠层 clamp 的**唯一收敛点** |
-| `stat_scale` | `stats._apply_effects`（`stats.py:61`）面板折算 |
+| `stat_scale` | `stats._apply_effects`（`stats.py:60`）面板折算 |
 | `debuff_scale` | ✅ **引擎消费**（`landing.deal_damage`，2026-09-11 接线）：Σ(每层系数 × stacks) → 承伤 ×(1+Σ)，与 `stat_scale` 对称。`hunt_mark`/`soul_mark`/`curse` 的「每层承伤 +N%」现生效；`target["_dmg_taken_mult"]`（`landing.py`）仍是无状态来源的固定乘区 |
 | `panel` | `effects.act_apply` 快照分支（`effects.py:459-471`） |
 | `consume.mode` | `effects.act_apply` 控制分支（`effects.py:350-353`）+ `Battle.act` 的控制消费（`battle.py:435-458`） |

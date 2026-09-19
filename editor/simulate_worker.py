@@ -67,7 +67,6 @@ def main() -> int:
     # ---- 引擎 ----
     try:
         from saintess_engine import Battle, make_actor
-        from saintess_engine import config as CFG
         from saintess_engine import version as _V
     except Exception:
         return _emit({"ok": False, "stage": "engine", "message": "引擎 import 失败",

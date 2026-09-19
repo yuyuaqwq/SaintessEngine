@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Iterable, Optional
+from typing import Iterable
 
 __all__ = ["strip_at_prefix", "strip_command", "AT_PREFIX_PATTERNS"]
 

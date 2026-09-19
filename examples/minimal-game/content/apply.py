@@ -17,7 +17,6 @@ from __future__ import annotations
 from saintess_engine import config
 
 from .data import classes as C
-from .data import monsters as M
 from .data import rules as R
 from .data import skills as S
 from .mech import actions as _actions  # noqa: F401  import 即注册本游戏的动词

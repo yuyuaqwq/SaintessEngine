@@ -25,8 +25,8 @@ actor["effects"] = {
 
 - 到期只有一处（`schedule._settle_time_effects`，`schedule.py:225-242`）
 - 净化只有一处（`effects.act_cleanse`，`effects.py:583-592`）
-- 面板折算只有一处（`stats._apply_effects`，`stats.py:40`）
-- 序列化天然覆盖（`serialize._serialize_actor` 全字段带走，`serialize.py:53`）
+- 面板折算只有一处（`stats._apply_effects`，`stats.py:39`）
+- 序列化天然覆盖（`serialize._serialize_actor` 全字段带走，`serialize.py:51`）
 - 「这个效果属于哪一类」不再需要回答——**行为由声明给，不由容器给**
 
 **唯一例外**：`shields`（承伤资源）与 `cooldown`（调度）**故意留在 containers 之外**
@@ -36,7 +36,7 @@ actor["effects"] = {
 ## 条目字段全谱
 
 条目是 **dict**（引擎只读 dict 形态条目，非 dict 会被跳过 ——
-例 `schedule.py:229`、`stats.py:55`、`effects.py:459`）。
+例 `schedule.py:229`、`stats.py:54`、`effects.py:459`）。
 
 | 字段 | 谁写 | 谁读 | 含义 |
 |---|---|---|---|
@@ -44,7 +44,7 @@ actor["effects"] = {
 | `expire` | `act_apply` | `schedule._settle_time_effects`（`schedule.py:231-235`）、`Battle.act` 控制过期兜底（`battle.py:452-454`）、`actions._consume_hit_buffs` | **绝对时刻**；`None` = 永不到期 |
 | `mode` | `act_apply` 控制分支 | `Battle.act` 控制消费（`battle.py:435-458`） | `"skip"` = 整跳行动 / `"no_skill"` = 技能转普攻 |
 | `v` | `act_apply` value 型 | **无引擎消费者**（☞ 见下） | 值型数值（如减伤 0.45） |
-| `stat` / `op` / `mult` | `act_apply` 快照分支 | `stats._apply_effects`（`stats.py:70-81`） | 面板增益快照 |
+| `stat` / `op` / `mult` | `act_apply` 快照分支 | `stats._apply_effects`（`stats.py:69-80`） | 面板增益快照 |
 | `hit` | `act_apply` hit 子键 | `actions._consume_hit_buffs`（`actions.py:470`） | 出手消费型（`dmg_mult` / `guaranteed_crit` / `bonus_atk_pct`） |
 | `period` | **内容侧**直接写入 | `schedule._settle_time_effects`（`schedule.py:268-276`） | 动态周期声明（条目自带优先，回落表声明） |
 | `value` | 内容侧（`heal_amp_pct` 等） | `landing._apply_heal_mods`（`landing.py:465`） | 附加数值袋（形态自定，消费方自己解释） |
@@ -60,7 +60,7 @@ actor["effects"] = {
 也就是说 `EFFECT_ACTIONS["reduce"]`（`game/data/battle_rules.py:488`）走完会
 **写一个不会被读的值**。真正生效的减伤是 `stat_scale: {"reduce": ...}` 经
 `stats` 写 `st["reduce"]`……而 `st["reduce"]` 同样不被伤害路径消费
-（`stats.py:66` 只写 → [_selfcheck.md](../_selfcheck.md)）。
+（`stats.py:65` 只写 → [_selfcheck.md](../_selfcheck.md)）。
 **当前唯一生效的「受击减伤」通道是 `taken_calc` 事件的 `ctx["mult"]` 乘区**
 （`landing.py:77-86`）。
 

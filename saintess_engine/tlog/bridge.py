@@ -16,7 +16,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping, Optional
+from typing import Iterable, Mapping, Optional
 
 from .core import TLog
 

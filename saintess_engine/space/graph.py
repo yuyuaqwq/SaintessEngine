@@ -36,7 +36,7 @@
 """
 from __future__ import annotations
 
-from .topology import MESH, TOPOLOGIES, get_topology, topology_names
+from .topology import MESH, get_topology, topology_names
 
 
 class Space:

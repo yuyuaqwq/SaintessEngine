@@ -26,9 +26,9 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from string import Formatter
-from typing import Any, Callable, Iterable, Mapping, Optional, Sequence
+from typing import Callable, Iterable, Mapping, Optional
 
 __all__ = ["TextSpec", "TextTable", "safe_format", "extract_params"]
 
