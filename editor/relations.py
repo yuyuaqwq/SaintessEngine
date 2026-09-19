@@ -91,7 +91,6 @@ BUILTIN_DEFAULT_VIEWS = {
 # 全局（对所有域生效）联动键；兼容设计稿里写的 "any"
 _GLOBAL_KEYS = ("*", "any")
 _REF_BYS = ("key", "name")
-_RULE_KEYS = ("ref", "when", "show", "readonly")
 
 _CACHE: dict = {}                  # 包目录 -> (rel_sig, views_sig, ...归一化结果)
 _CACHE_MAX = 500

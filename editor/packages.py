@@ -155,7 +155,6 @@ _OVER_FIELDS = ("label", "kind", "schema", "primary", "icon")
 #: 不赋默认 —— 没写的域输出里就没有这两个键（保证「包声明 == 生效域表」逐字段可比）。
 DOMAIN_OWNERS = ("package", "engine")
 DOMAIN_TIERS = ("portable", "fixed")
-_OPTIONAL_FIELDS = ("owner", "tier")
 
 _DOMAINS_CACHE: dict = {}          # 包目录 -> (声明文件签名, {域: meta}, [warning])
 _CACHE_MAX = 500

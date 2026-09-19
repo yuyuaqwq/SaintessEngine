@@ -23,8 +23,6 @@ FW_ROOT = os.environ.get("FW_FRAMEWORK_ROOT") or os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))
 PKG_DIR = os.environ.get("FW_PKG_DIR") or ""
 
-_PANEL_KEYS = ("max_hp", "max_mp", "atk", "def", "matk", "mdef", "spd", "crit", "dodge")
-
 
 def _emit(obj: dict) -> None:
     sys.stdout.write(MARKER + json.dumps(obj, ensure_ascii=False) + "\n")

@@ -1416,18 +1416,6 @@ def wiki_path(page: str, pkg_dir=None) -> str:
 
 
 # ───────────────────────────────────────────────────────── 报错 → 中文（带字段名）
-_MSG_RULES = [
-    (r"should be non-empty", "不能为空（schema 要求长度 ≥ 1）"),
-    (r"is a required property|必填字段缺失", "必填字段缺失"),
-    (r"is not of type '(string|integer|number|boolean|array|object)'", None),
-    (r"is not one of \[(.+)\]", None),
-    (r"is less than the minimum of ([\d.]+)", None),
-    (r"is greater than the maximum of ([\d.]+)", None),
-    (r"is not valid under any of the given schemas", "取值不满足任一允许形态（见字段注脚）"),
-    (r"Additional properties are not allowed", "存在 schema 未声明的字段"),
-    (r"is too short", "长度不足"),
-]
-
 
 def _zh_msg(msg: str) -> str:
     if "should be non-empty" in msg:

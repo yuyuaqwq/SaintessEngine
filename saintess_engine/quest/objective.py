@@ -70,7 +70,6 @@ __all__ = ["Objective", "Objectives", "parse_needs"]
 
 # ── 契约角色键（**字段名**不是取值；引擎只按这些名字读调用方的结构）──────────────
 _F_NEED = "need"
-_F_MODS = "mods"
 _F_PROGRESS = "progress"
 
 
