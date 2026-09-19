@@ -265,7 +265,10 @@ def t2_positive(body, tpat):
     #   ★ C 档 33b（B-2 第 22 片）：`content/cmds_job.py`「职业速查」+ `content/cmds_collection.py`
     #     「收藏册」36 处替换 / 36 新键（新分类 职业速查 / 收藏册）⇒ 2625 → 2661。
     #     ②中文键数锚点仍不变（job.* / collect.* 键名全 ASCII），③标签字已同步。
-    check("包内文案条数锚点 == 2661（条数变了就同步更新本门禁的锚点）", len(body) == 2661, len(body))
+    #   ★ C 档 33c（B-2 第 23 片）：`content/wild_king.py`「野王 / 野王宝箱」+
+    #     `content/travel.py`「出行提示」33 处替换 / 33 新键（三新分类）⇒ 2661 → 2694。
+    #     ②中文键数锚点仍不变（wk.* / tv.* 键名全 ASCII），③标签字已同步。
+    check("包内文案条数锚点 == 2694（条数变了就同步更新本门禁的锚点）", len(body) == 2694, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
