@@ -269,7 +269,7 @@ def t2_positive(body, tpat):
     #     「奖励发放」39 处替换 / 37 新键（两新分类）⇒ 2737 → 2774。
     # ★ C 档 34c（B-2 第 26 片）：`content/misc_cmds.py` + `content/achievements.py`
     #     19 处替换 / 18 新键（两新分类）⇒ 2774 → 2792。
-    check("包内文案条数锚点 == 2996（条数变了就同步更新本门禁的锚点）", len(body) == 2996, len(body))
+    check("包内文案条数锚点 == 3041（条数变了就同步更新本门禁的锚点）", len(body) == 3041, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
