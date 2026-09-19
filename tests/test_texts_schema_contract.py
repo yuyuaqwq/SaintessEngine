@@ -282,7 +282,8 @@ def t2_positive(body, tpat):
     #   （10 处 / 10 新键，分类 锻造）⇒ 3126 → 3136。
     #   ★ C 档 37a（B-2 第 31 片 · C 档收口片：economy 货架行/孤品行/体力恢复 hook + combat 荣誉行/双形态可用行 + pets 宠物蛋 desc + instance_gate 人数措辞；10 处替换 / 10 新键，零同值复用）⇒ 3136 → 3146
     # ★ C 档 42a（2026-09-19）：怪物命名 3 键（键名全 ASCII ⇒ ②中文键数锚点不变，③标签字未动）
-    check("包内文案条数锚点 == 3197（条数变了就同步更新本门禁的锚点）", len(body) == 3197, len(body))
+    # ★ C 档 44（2026-09-19）：模块级 dict 盲区 6 键（we.dot_* 4 + we.affix_*_hit 2；键名全 ASCII）
+    check("包内文案条数锚点 == 3203（条数变了就同步更新本门禁的锚点）", len(body) == 3203, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
