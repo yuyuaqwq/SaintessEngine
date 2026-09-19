@@ -98,7 +98,7 @@ class Battle:
                 for _a in _acts:
                     self._seed_ct_one(_a)
 
-    def _t(self, key: str, default: str, **slots) -> str:
+    def _t(self, key: str, default: str, /, **slots) -> str:
         """战斗日志文案口：注入表有该 key 就用表，否则用调用点兜底模板。
 
         `default` 是**兜底模板**（`{slot}` 占位）—— 未注入时与旧内联 f-string 逐字同款；

@@ -30,6 +30,7 @@
 from __future__ import annotations
 
 from ..battle.effects import register_action
+from ..text import render_via, text_of
 
 
 def _now_of(battle) -> float:
@@ -78,7 +79,7 @@ def _settle(battle, host: dict, key: str, logs: list) -> bool:
     now = _now_of(battle)
     if not host or not key or not bar_should_trigger(host, key, now):
         return False
-    if not bar_trigger(host, key, logs, now):
+    if not bar_trigger(host, key, logs, now, text=text_of(battle)):
         return False
     bd = bar_def(key) or {}
     if (bd.get("trigger_effect") or "") == "skip_turn":
@@ -86,7 +87,9 @@ def _settle(battle, host: dict, key: str, logs: list) -> bool:
         # expire=None = 无墙钟到期 → 由「下一动」消费
         host.setdefault("effects", {})[f"bar_skip:{key}"] = {
             "mode": "skip", "expire": None}
-        logs.append(f"💢 【{host.get('name', '目标')}】被{bd.get('name', key)}震慑，无法行动！")
+        logs.append(render_via(
+            battle, "battle.gauge.shaken", "💢 【{name}】被{bar}震慑，无法行动！",
+            name=host.get('name', '目标'), bar=bd.get('name', key)))
     return True
 
 
@@ -124,7 +127,7 @@ def bar_gain_act(battle, caster, target, params, logs):
     if amount <= 0:
         return
     from . import bar_gain
-    bar_gain(host, key, amount, logs, now=_now_of(battle))
+    bar_gain(host, key, amount, logs, now=_now_of(battle), text=text_of(battle))
     _ensure_tick(host)
     _settle(battle, host, key, logs)
 
@@ -161,8 +164,11 @@ def bar_phase_preserve_act(battle, caster, target, params, logs):
         after = float((bar_state(host, key) or {}).get("val", 0.0) or 0.0)
         bd = bar_def(key) or {}
         pct = int(round(float(bd.get("phase_preserve_pct", 0.5) or 0.5) * 100))
-        logs.append(f"💢【{host.get('name', '目标')}】阶段更迭："
-                    f"{bd.get('name', key)}积蓄保留 {pct}%（{int(before)} → {int(after)}）")
+        logs.append(render_via(
+            battle, "battle.gauge.phase_preserve",
+            "💢【{name}】阶段更迭：{bar}积蓄保留 {pct}%（{before} → {after}）",
+            name=host.get('name', '目标'), bar=bd.get('name', key),
+            pct=pct, before=int(before), after=int(after)))
 
 
 @register_action("passive_reflect_bar")
@@ -189,11 +195,12 @@ def passive_reflect_bar_act(battle, caster, target, params, logs):
         rd = max(1, int(int(ctx.get("dmg", 0) or 0) * pct))
         from ..battle.landing import deal_damage
         deal_damage(battle, deflector, attacker, rd, logs)
-        logs.append(f"🪨 反震：反弹 {rd} 点伤害！")
+        logs.append(render_via(battle, "battle.gauge.reflect",
+                               "🪨 反震：反弹 {dmg} 点伤害！", dmg=rd))
     key = params.get("key")
     gain = int(params.get("gain", 0) or 0)
     if key and gain > 0:
         now = _now_of(battle)
-        bar_gain(attacker, key, gain, logs, now=now)
+        bar_gain(attacker, key, gain, logs, now=now, text=text_of(battle))
         _ensure_tick(attacker)
         _settle(battle, attacker, key, logs)

@@ -484,8 +484,11 @@ class _TextHolder:
 
 
 def _apply_heal_mods(target: dict, amount: int, logs: list, text=None) -> int:
-    _HOLDER.text = text
-    """受疗/禁疗修正（target 自身效果）。返回修正后治疗量（未 clamp）。"""
+    """受疗/禁疗修正（target 自身效果）。返回修正后治疗量（未 clamp）。
+
+    本函数拿不到 `battle` ⇒ 用只读持有者 `_TextHolder(text)` 过文案口（零全局态）。
+    """
+    holder = _TextHolder(text)
     heal = amount
     try:
         ef = target.get("effects") or {}
@@ -505,7 +508,7 @@ def _apply_heal_mods(target: dict, amount: int, logs: list, text=None) -> int:
             if ehd > 0:
                 cut = max(0.0, min(ehd * _F.heal_down_per_stack(), _F.heal_down_cap()))
                 heal = max(0, int(heal * (1 - cut)))
-                logs.append(render_via(_HOLDER, "battle.landing.heal_forbid", "🩸 禁疗：治疗量 -{pct}%！",
+                logs.append(render_via(holder, "battle.landing.heal_forbid", "🩸 禁疗：治疗量 -{pct}%！",
                                     pct=int(cut * 100)))
         # 重伤（_anti_heal_pct cap 上限；effects 条目 value 内嵌；V4 上限读内容侧骨架表）
         ah_entry = ef.get("_anti_heal_pct")
@@ -514,7 +517,7 @@ def _apply_heal_mods(target: dict, amount: int, logs: list, text=None) -> int:
             if aheal > 0:
                 cut2 = max(0.0, min(aheal, _F.anti_heal_cap()))
                 heal = max(0, int(heal * (1 - cut2)))
-                logs.append(render_via(_HOLDER, "battle.landing.heal_wound", "🩸 重伤：治疗量 -{pct}%！",
+                logs.append(render_via(holder, "battle.landing.heal_wound", "🩸 重伤：治疗量 -{pct}%！",
                                     pct=int(cut2 * 100)))
     except Exception:
         pass

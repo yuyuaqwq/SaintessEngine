@@ -4,16 +4,18 @@
 
 为什么需要它（台账 T2）
 ----------------------
-引擎原先有 56 处玩家可见中文内联在 f-string 里（landing / effects / actions /
-schedule / battle），与「文案唯一真源在内容包的表」相左。迁移做法 = **构造注入**
-（A 案）：`Battle(..., text=<文案表>)` 可选，调用点只给「key + 兜底模板 + 槽位」。
+引擎原先有 61 处玩家可见中文内联在 f-string 里（landing / effects / actions /
+schedule / battle + gauge），与「文案唯一真源在内容包的表」相左。迁移做法 = **构造注入**
+（A 案）：`Battle(..., text=<文案表>)` 可选，调用点只给「key + 兜底模板 + 槽位」；
+模块级结算函数（`gauge.bar_gain` / `gauge.bar_trigger`）拿不到 `Battle`，由动作侧
+经 `text_of(battle)` 把表下传（`text=` 关键字）。
 
 四条不变量：
   1. **注入生效（反证）**：给了表 → 输出**随表变**（证明注入不是死代码）。
   2. **未注入 = 兜底模板**：不传 `text` → 输出**逐字节等于历史内联串**（零回归）。
   3. **表缺 key 回落**：表里只声明一条 → 其余仍走兜底（渐进迁移语义）。
-  4. **残留扫描**：`saintess_engine/battle/*.py` 的日志实参**零中文**
-     （`gauge/` 两文件待 T2 第 2 轮迁，见台账；届时纳入本扫描）。
+  4. **残留扫描**：`saintess_engine/battle/*.py` + `gauge/*.py` 的日志实参**零中文**
+     （措辞全走「key + 兜底模板 + 槽位」；T2 第 2 轮已把 `gauge/` 两文件纳入本扫描）。
 
 跑法：python tests/test_battle_text_inject.py（exit=0 全绿）
 """
@@ -33,7 +35,8 @@ if FW_ROOT not in sys.path:
 from saintess_engine import Battle                                   # noqa: E402
 from saintess_engine.battle import landing                           # noqa: E402
 from saintess_engine.battle.actors import ActCtx, make_actor          # noqa: E402
-from saintess_engine.text import render_via                          # noqa: E402
+from saintess_engine import gauge as G                                 # noqa: E402
+from saintess_engine.text import TextTable, render_or, render_via, text_of  # noqa: E402
 
 passed = failed = 0
 
@@ -44,6 +47,7 @@ check = bind_check(globals(), "passed", "failed")
 
 CJK = re.compile(r"[\u4e00-\u9fff]")
 BATTLE_DIR = os.path.join(FW_ROOT, "saintess_engine", "battle")
+GAUGE_DIR = os.path.join(FW_ROOT, "saintess_engine", "gauge")
 
 
 class _Stub:
@@ -53,7 +57,7 @@ class _Stub:
         self.mapping = dict(mapping or {})
         self.asked = []
 
-    def render_or(self, key, default, **slots):
+    def render_or(self, key, default, /, **slots):   # 位置专属：与真表同形状
         self.asked.append(key)
         if key in self.mapping:
             return self.mapping[key]
@@ -103,6 +107,24 @@ check("逃跑行逐字", b3._do_flee(ActCtx(caster=pa3, action="flee")) == ["�
 check("终局行逐字（human_act 已结束）",
       b3.human_act("defend", None) == (["战斗已结束！"], True, None))
 check("显式 text=None 与不给参数同款", _setup(text=None)[0].text is None)
+# heal 路径：私有助手 `_apply_heal_mods` 拿不到 battle ⇒ 用只读持有者 `_TextHolder` 过文案口。
+# （T2 第 1 轮此处漏了持有者定义 ⇒ 真 NameError，被包侧 heal/吸血用例抓到；本段钉死不再回归）
+_h1 = make_actor("h1", "木桩", "enemy", kind="monster", hp=50, max_hp=100)
+check("治疗落地返回真实回血（不再 NameError）", landing.heal_actor(b3, _h1, 30, []) == 30)
+check("治疗量 clamp 到 max_hp（50+999 → 100，实回 20）",
+      landing.heal_actor(b3, _h1, 999, []) == 20)
+_h2 = make_actor("h2", "木桩", "enemy", kind="monster", hp=50, max_hp=100)
+_h2.setdefault("effects", {})["heal_down"] = {"stacks": 1}
+_lg = []
+landing.heal_actor(b3, _h2, 30, _lg)
+check("未注入 → 禁疗行 == 兜底模板（历史文案形状）",
+      len(_lg) == 1 and _lg[0].startswith("🩸 禁疗：治疗量 -") and _lg[0].endswith("%！"), _lg)
+b5, _p5, _e5 = _setup(text=_Stub({"battle.landing.heal_forbid": "F"}))
+_h3 = make_actor("h3", "木桩", "enemy", kind="monster", hp=50, max_hp=100)
+_h3.setdefault("effects", {})["heal_down"] = {"stacks": 1}
+_lg2 = []
+landing.heal_actor(b5, _h3, 30, _lg2)
+check("★ 注入表 → 禁疗行取自表（heal 私有助手的文案口也通）", _lg2 == ["F"], _lg2)
 
 # ---------------------------------------------------------------- 3. 表缺 key 回落
 print("\n【3. 表缺 key → 回落兜底模板（渐进迁移语义）】")
@@ -117,7 +139,7 @@ check("未声明的 key 走兜底（无异常、无空串）",
       logs6 == ["[缺]battle.landing.down"], logs6)
 
 # ---------------------------------------------------------------- 4. 残留扫描
-print("\n【4. 残留扫描：battle/*.py 的日志实参零中文】")
+print("\n【4. 残留扫描：battle/ + gauge/ 的日志实参零中文】")
 _TEXTCALLS = ("_t", "render_via", "render_or")
 
 
@@ -160,10 +182,12 @@ def _cjk_log_lits(path):
 
 
 left = []
-for _f in sorted(os.listdir(BATTLE_DIR)):
-    if _f.endswith(".py"):
-        left.extend(("%s:%d" % (_f, ln), v) for ln, v in _cjk_log_lits(os.path.join(BATTLE_DIR, _f)))
-check("★ battle/ 日志实参零中文（措辞全走 key + 兜底模板）", not left, left[:4])
+for _label, _dir in (("battle", BATTLE_DIR), ("gauge", GAUGE_DIR)):
+    for _f in sorted(os.listdir(_dir)):
+        if _f.endswith(".py"):
+            left.extend(("%s/%s:%d" % (_label, _f, ln), v)
+                        for ln, v in _cjk_log_lits(os.path.join(_dir, _f)))
+check("★ battle/ + gauge/ 日志实参零中文（措辞全走 key + 兜底模板）", not left, left[:4])
 
 print("\n【5. 渲染口本体】")
 check("render_via(None, …) = 兜底模板", render_via(None, "k", "x {y}", y=1) == "x 1")
@@ -178,6 +202,66 @@ class _Holder:
 
 check("render_via 转发到表的 render_or（key/default/slots 原样）",
       render_via(_Holder(_Stub({"k": "T"})), "k", "D {y}", y=2) == "T")
+
+
+# ---------------------------------------------------------------- 6. gauge 文案口
+print()
+print("【5'. 文案口形参位置专属（槽位名可与 key / default / text 同名，不炸）】")
+import inspect as _insp                                                    # noqa: E402
+
+_pv = _insp.signature(render_via).parameters
+check("render_via 前 3 形参位置专属（holder / key / default）",
+      all(_pv[_n].kind is _insp.Parameter.POSITIONAL_ONLY for _n in ("holder", "key", "default")),
+      str({_n: str(_pv[_n].kind) for _n in _pv}))
+_p2 = _insp.signature(render_or).parameters
+check("render_or 前 3 形参位置专属（text / key / default）",
+      all(_p2[_n].kind is _insp.Parameter.POSITIONAL_ONLY for _n in ("text", "key", "default")),
+      str({_n: str(_p2[_n].kind) for _n in _p2}))
+check("★ 槽位名叫 key 也能渲染（未注入路径）",
+      render_via(None, "k", "X {key} {name}", key="A", name="B") == "X A B")
+check("★ 槽位名叫 key 也能渲染（注入表路径：不炸 + 取自表）",
+      render_via(_Holder(_Stub({"k": "T"})), "k", "D", key="A") == "T")
+check("★ 真 TextTable 同款（key 同名槽位）",
+      TextTable({"k": "T {key}"}).render_or("k", "D", key="A") == "T A")
+
+print()
+print("【6. gauge 文案口：模块级 bar_gain / bar_trigger 收注入表（text=）】")
+_saved_bar = (G.bar_def, G.bar_should_trigger, G.bar_trigger)
+G.bar_def = lambda k: {"name": "破绽", "max": 100, "threshold_base": 10,
+                       "trigger_effect": "skip_turn"}
+_tbl = TextTable({"battle.gauge.gain": "／表：{bar} +{add}（{val}/{maxcap}）"})
+_e1 = {"effects": {}}
+_lg = []
+G.bar_gain(_e1, "shaken", 5, _lg, now=0.0, text=_tbl)
+check("★ 注入表 → 积蓄行取自表（gauge 的 text= 链通）",
+      _lg == ["／表：shaken +5（5/100）"], _lg)
+_e2 = {"effects": {}}
+_lg = []
+G.bar_gain(_e2, "shaken", 15, _lg, now=0.0, text=_tbl)
+G.bar_trigger(_e2, "shaken", _lg, now=0.0, text=_tbl)
+check("★ 表只声明一条 → 未声明的 key 回落兜底模板逐字",
+      _lg[-1] == "💢 【破绽】触发！(第 1 次)", _lg)
+_e3 = {"effects": {}}
+_lg = []
+G.bar_gain(_e3, "shaken", 5, _lg, now=0.0)
+check("未注入 → 积蓄行逐字 == 搬运前文案",
+      _lg == ["💥 shaken 积蓄 +5（5/100）"], _lg)
+G.bar_def, G.bar_should_trigger, G.bar_trigger = _saved_bar
+
+
+class _Holder1:
+    """只带 `text` 一个字段的持有者（= Battle 的注入面形状）。"""
+
+    def __init__(self, text):
+        self.text = text
+
+
+check("text_of 与 render_via 同源：读同一处 `.text`",
+      text_of(_Holder1(_tbl)) is _tbl
+      and render_via(_Holder1(_tbl), "battle.gauge.gain", "D", bar="b", add=1, val=2, maxcap=3)
+      == "／表：b +1（2/3）")
+check("text_of(None) / 无 text 替身 → None（未注入）",
+      text_of(None) is None and text_of(object()) is None)
 
 print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
 sys.exit(1 if failed else 0)

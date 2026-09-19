@@ -31,7 +31,7 @@ from string import Formatter
 from typing import Callable, Iterable, Mapping, Optional
 
 __all__ = ["TextSpec", "TextTable", "safe_format", "extract_params",
-           "render_or", "render_via"]
+           "render_or", "render_via", "text_of"]
 
 
 class _KeepUnknown(dict):
@@ -59,7 +59,7 @@ def safe_format(template: str, slots: Optional[Mapping] = None) -> str:
         return tpl
 
 
-def render_or(text, key: str, default: str, **slots) -> str:
+def render_or(text, key: str, default: str, /, **slots) -> str:
     """渲染口（渐进迁移用）：表里有 `key` 按表渲染，否则用调用方现给的 `default` 模板。
 
     * `text` = 注入的文案表（鸭子类型，需有 `render_or(key, default, **slots)`）；
@@ -72,14 +72,24 @@ def render_or(text, key: str, default: str, **slots) -> str:
     return text.render_or(key, default, **slots)
 
 
-def render_via(holder, key: str, default: str, **slots) -> str:
+def text_of(holder):
+    """从**持有注入表**的对象取表本身（读 `holder.text`）。
+
+    `None` / 没有 `text` 属性 / 值为 None 一律 = 未注入（`render_or` 收到 None 即兜底）。
+    模块级结算函数（如 `gauge.bar_gain`）拿不到持有者，只能拿到「表」本身 ⇒ 取表口径
+    与 `render_via` 同源一份，调用方不必各写一遍 `getattr(holder, "text", None)`。
+    """
+    return getattr(holder, "text", None)
+
+
+def render_via(holder, key: str, default: str, /, **slots) -> str:
     """从**持有注入表**的对象取表渲染（读 `holder.text`）。
 
     `holder` 可以是 `Battle`，也可以是测试替身；没有 `text` 属性（或值为 None）
     一律按「未注入」处理 ⇒ 兜底模板。引擎零文案真源：措辞归注入表，调用点只给
     key + 兜底模板 + 槽位。
     """
-    return render_or(getattr(holder, "text", None), key, default, **slots)
+    return render_or(text_of(holder), key, default, **slots)
 
 
 def extract_params(template: str) -> tuple:
@@ -227,7 +237,7 @@ class TextTable:
         return {k: tuple(v) for k, v in out.items()}
 
     # ============================================================ 渲染
-    def render(self, key: str, **slots) -> str:
+    def render(self, key: str, /, **slots) -> str:
         """渲染一条文案。
 
         命中 → 按模板插槽渲染（未知槽**原样保留**）。
@@ -254,7 +264,7 @@ class TextTable:
             return safe_format(self.fallback, slots)
         return key
 
-    def render_or(self, key: str, default: str, **slots) -> str:
+    def render_or(self, key: str, default: str, /, **slots) -> str:
         """未定义时用调用方现给的 `default` 模板（渐进迁移：新文案走表、旧的先内联）。"""
         if key in self._specs:
             return self.render(key, **slots)

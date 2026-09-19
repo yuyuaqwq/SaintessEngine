@@ -9,22 +9,33 @@
    ① `sha256(冻结片段文本)` —— 钉住测试里的冻结副本（谁偷改冻结副本 = 红）；
    ② `sha256(inspect.getsource(新实现))` —— 钉住引擎里的活实现（函数体被偷改 = 红）。
    **只钉片段会漏「函数体被偷改」**；只钉活实现会漏「冻结副本被改成一致」。
-3. **逐字相等**（唯一允许改写 = import 相对层级 + 1 条日志显示名转发，见 `_FROZEN_DIVERGENCE`）。
+3. **逐字相等**（唯一允许改写 = import 相对层级 + 登记在册的若干条改写，见 `_FROZEN_DIVERGENCE`）。
    双 sha 是「同一性」断言；等值断言才能定位「哪一行不同」，且能挡住「两边一起改坏」。
 4. **注册名逐名相等**：本模块注册的 4 个动词名 == 冻结清单，差集点名。
 5. **有牙反证**：临时猴补破坏 3 件事（改 1 条 `logs.append` 文案 / 改 1 个临界判断 /
    从注册表摘掉 1 个动词），断言门禁**必须变红**；跑完**不写盘**还原（源码经 linecache 在
    内存里喂给 `inspect`，仓库文件一个字节都不动）。
 
-日志显示名的那 1 条改写（为什么行为不变）
-----------------------------------------
-旧：`...被破绽震慑，无法行动！`（硬编码游戏名词）→ 新：`...被{bd.get('name', key)}震慑，无法行动！`
-原因：作业书 §4 硬禁令 + 引擎中立性门禁 `tests/test_no_game_vocabulary.py`（扫
-`saintess_engine/**`，词表含该名词）⇒ 引擎源码不得出现它。
-`bd = bar_def(key)` 来自内容侧 config（游戏侧 `MECH_CFG["enemy_bar"]["shaken"]["name"]` 即该名词）
-⇒ **渲染结果逐字节相同**；且该分支只在 `bd["trigger_effect"]=="skip_turn"` 时可达（config 必在位，
-不存在「未装配 → 打印 bar key」的可达场景）。`test_log_render_equivalence()` 用真实现 +
-猴补 config 断言这一点。
+改写登记（4 个函数 / 6 处；为什么行为不变）
+------------------------------------------
+逐条都只做「内联 f-string → key + 兜底模板 + 槽位」（`render_via`，或把注入表
+`text=` 下传给模块级 `bar_gain`/`bar_trigger`）：
+
+* **`_settle`（2 处）**
+  ① 触发转发多带 `text=text_of(battle)`；
+  ② `...被破绽震慑，无法行动！`（硬编码游戏名词）→ `...被{bar}震慑，无法行动！`，
+     条显示名由 `bd.get('name', key)` 供给。该条另有独立理由：作业书 §4 硬禁令 +
+     引擎中立性门禁 `tests/test_no_game_vocabulary.py`（扫 `saintess_engine/**`，词表含该名词）
+     ⇒ 引擎源码不得出现它。`bd` 来自内容侧 config（游戏侧
+     `MECH_CFG["enemy_bar"]["shaken"]["name"]` 即该名词）⇒ 渲染逐字节相同；且该分支只在
+     `bd["trigger_effect"]=="skip_turn"` 时可达（config 必在位，不存在「未装配 → 打印 bar key」）。
+* **`bar_gain_act` / `passive_reflect_bar_act`**：调 `bar_gain(...)` 时多带 `text=text_of(battle)`。
+* **`bar_phase_preserve_act` / `passive_reflect_bar_act`**：两条日志改走 `render_via`。
+
+**零回归的根据**：`render_or(text, key, default, **slots)` 在 `text is None`（未注入）时走
+`safe_format(default, slots)` —— 兜底模板就是搬运前那条 f-string 的「占位化」原文，槽位只做
+「原表达式求值后传入」⇒ 输出逐字节不变。`test_log_render_equivalence()` 对 **5 条日志**逐行钉死
+这一点（真实现 + 猴补 config），并逐条反证「换表 ⇒ 该行必变」。
 
 跑法：python tests/test_gauge_actions_frozen.py（exit=0 全绿）
 """
@@ -218,8 +229,37 @@ _REL_MAP = (
     ("from saintess_engine.battle.actors import ", "from ..battle.actors import "),
     ("from saintess_engine.battle.landing import ", "from ..battle.landing import "),
 )
+# 登记（有意差异）：名 → 若干 (冻结片段, 引擎侧应有) 替换对；顺序即应用顺序。
+# T2 第 1 轮 = 日志条显示名转发；T2 第 2 轮 = 文案口（key + 兜底模板 + 槽位）+ 注入表下传。
 _FROZEN_DIVERGENCE = {
-    "_settle": ("被破绽震慑", "被{bd.get('name', key)}震慑"),
+    "_settle": (
+        (r'''    if not bar_trigger(host, key, logs, now):''',
+         r'''    if not bar_trigger(host, key, logs, now, text=text_of(battle)):'''),
+        (r'''        logs.append(f"💢 【{host.get('name', '目标')}】被破绽震慑，无法行动！")''',
+         r'''        logs.append(render_via(
+            battle, "battle.gauge.shaken", "💢 【{name}】被{bar}震慑，无法行动！",
+            name=host.get('name', '目标'), bar=bd.get('name', key)))'''),
+    ),
+    "bar_gain_act": (
+        (r'''    bar_gain(host, key, amount, logs, now=_now_of(battle))''',
+         r'''    bar_gain(host, key, amount, logs, now=_now_of(battle), text=text_of(battle))'''),
+    ),
+    "bar_phase_preserve_act": (
+        (r'''        logs.append(f"💢【{host.get('name', '目标')}】阶段更迭："
+                    f"{bd.get('name', key)}积蓄保留 {pct}%（{int(before)} → {int(after)}）")''',
+         r'''        logs.append(render_via(
+            battle, "battle.gauge.phase_preserve",
+            "💢【{name}】阶段更迭：{bar}积蓄保留 {pct}%（{before} → {after}）",
+            name=host.get('name', '目标'), bar=bd.get('name', key),
+            pct=pct, before=int(before), after=int(after)))'''),
+    ),
+    "passive_reflect_bar_act": (
+        (r'''        logs.append(f"🪨 反震：反弹 {rd} 点伤害！")''',
+         r'''        logs.append(render_via(battle, "battle.gauge.reflect",
+                               "🪨 反震：反弹 {dmg} 点伤害！", dmg=rd))'''),
+        (r'''        bar_gain(attacker, key, gain, logs, now=now)''',
+         r'''        bar_gain(attacker, key, gain, logs, now=now, text=text_of(battle))'''),
+    ),
 }
 
 # 冻结清单：注册名 ↔ 函数名
@@ -243,15 +283,17 @@ PIN_FROZEN = {'__all__': '0e397a00d82be46025c0ed606213fbc551035e3efe34f32966a93e
  'bar_phase_preserve_act': '7fac35f4c7e6b40096694bbc8527eabe26ae187de32dcb1040e768b608cd1be3',
  'bar_time_settle_act': '7dadc6b94cf9f507c2440129000c0c11b277e63946580f1accc426557fbf7b3a',
  'passive_reflect_bar_act': '289ee737989be603dd74f881549d0a64e34d6476dcc5cf61d83536b1a954d137'}
-PIN_NEW = {'_bar_keys_of': '5a6315ed7c275acb89ce37d760d002fa1d9ec238300e588642caca9596f6b54b',
- '_ensure_tick': '40e7e0530939dbca3df5ff01224128f1ba292215c0106abb7729b7de69f6c752',
- '_host_of': 'c7ed3a30e827d53b8293edc5400fc3a4cec4fa5192b2b3c25df7c4415146aba2',
- '_now_of': '8216c6a8826b3c3872289f88ac9d3572acc0865eb1d1f17a348d1f4b471801b2',
- '_settle': 'a951c89dfda963c8966d5eba44798967397c9fa015034fc970ee51b3fd2586fd',
- 'bar_gain_act': '6eb2da5bdd26c849b59e24d1effb01beeb4ac823bb334e6d7c2d651210c5c462',
- 'bar_phase_preserve_act': 'f33c247b58e284dd82eeb1b52f95f703d5aeeee460dacbcd13e11ba3b4a891f8',
- 'bar_time_settle_act': 'bc9bf48679b0fc8aef3a1e29ec9d7574a511d8b98f91559b6b7c67a3eab390d6',
- 'passive_reflect_bar_act': '5d23b969b4e2eaf63ce5162eaec3c10cd19391f1996dd0935271b4d6b9eed887'}
+PIN_NEW = {
+    '_bar_keys_of': '5a6315ed7c275acb89ce37d760d002fa1d9ec238300e588642caca9596f6b54b',
+    '_ensure_tick': '40e7e0530939dbca3df5ff01224128f1ba292215c0106abb7729b7de69f6c752',
+    '_host_of': 'c7ed3a30e827d53b8293edc5400fc3a4cec4fa5192b2b3c25df7c4415146aba2',
+    '_now_of': '8216c6a8826b3c3872289f88ac9d3572acc0865eb1d1f17a348d1f4b471801b2',
+    '_settle': '4b0f93cb7efe1ad4a8be024bc5ea4bd53442b57dc35391728934d00f9a6fc74c',
+    'bar_gain_act': 'b1726cc6845c0e8f71678c03de55389842976d632c11981a617b5284d37111f5',
+    'bar_phase_preserve_act': 'a41f410ab6546f2b5cb3afcadd75948e56ba12d1e220001542cbfca0f1333054',
+    'bar_time_settle_act': 'bc9bf48679b0fc8aef3a1e29ec9d7574a511d8b98f91559b6b7c67a3eab390d6',
+    'passive_reflect_bar_act': 'b1f2358b59ea33112520ee0050427c94c250dc4ce7e04031cda89e185df2c64f',
+}
 PIN_REG_NAMES = ['bar_gain', 'bar_phase_preserve', 'bar_time_settle', 'passive_reflect_bar']
 
 PASS = 0
@@ -290,15 +332,14 @@ _FROZEN_FUNCS = _frozen_funcs()
 
 
 def expected_source(name):
-    """冻结源码 → 引擎侧应有源码（只做白名单内的 2 类改写）。"""
+    """冻结源码 → 引擎侧应有源码（只做白名单内登记过的改写）。"""
     src = _FROZEN_FUNCS[name]
     for a, b in _REL_MAP:
         src = src.replace(a, b)
-    if name in _FROZEN_DIVERGENCE:
-        a, b = _FROZEN_DIVERGENCE[name]
+    for a, b in _FROZEN_DIVERGENCE.get(name, ()):
         if a not in src:
             return src + "\n# <<冻结副本里找不到待改写片段 %r>>" % a
-        src = src.replace(a, b)
+        src = src.replace(a, b, 1)
     return src
 
 
@@ -400,21 +441,106 @@ def test_frozen_contract():
               for n in FROZEN_NAMES))
 
 
+class _StubText:
+    """假文案表（只实现 `render_or`）：key 在册 → 返回标记；否则标记缺 key。"""
+
+    def __init__(self, mapping=None):
+        self.mapping = dict(mapping or {})
+
+    def render_or(self, key, default, **slots):
+        return self.mapping.get(key, "[缺]%s" % key)
+
+
+class _Holder:
+    """只带 `text`（+ 可选 `_fire_ctx`）的 Battle 替身（= 注入面形状）。"""
+
+    def __init__(self, text=None, fire_ctx=None):
+        self.text = text
+        if fire_ctx is not None:
+            self._fire_ctx = fire_ctx
+
+
 def test_log_render_equivalence():
-    print("【日志显示名转发后渲染 == 历史文案（逐字节；证明唯一改写在游戏配置下无行为差）】")
+    print("【gauge 5 条日志：未注入逐字 == 搬运前文案；注入 = 表说了算】")
     import saintess_engine.gauge as G
-    saved = (G.bar_def, G.bar_should_trigger, G.bar_trigger)
-    G.bar_def = lambda k: {"trigger_effect": "skip_turn", "name": "破绽"}
-    G.bar_should_trigger = lambda h, k, now: True
-    G.bar_trigger = lambda h, k, logs, now: True
+    from saintess_engine.battle import landing as L
+    saved = (G.bar_def, G.bar_should_trigger, G.bar_trigger, L.deal_damage)
+    G.bar_def = lambda k: {"trigger_effect": "skip_turn", "name": "破绽",
+                           "max": 100, "threshold_base": 10}
     try:
+        # ① _settle：skip_turn 控制跳过（未注入 / 注入）
+        G.bar_should_trigger = lambda h, k, now: True
+        G.bar_trigger = lambda h, k, logs, now, text=None: True
+        host0 = {"name": "目标", "effects": {}}
         logs = []
-        ok = A._settle(None, {"name": "目标", "effects": {}}, "shaken", logs)
+        ok = A._settle(None, host0, "shaken", logs)
+        check("① skip_turn 日志逐字节 == 搬运前文案",
+              bool(ok) and logs == ["💢 【目标】被破绽震慑，无法行动！"], repr(logs))
+        check("skip 落地条目仍在（mode=skip / expire=None）",
+              host0["effects"].get("bar_skip:shaken") == {"mode": "skip", "expire": None},
+              repr(host0["effects"]))
+        logs = []
+        A._settle(_Holder(_StubText({"battle.gauge.shaken": "X"})), host0, "shaken", logs)
+        check("①' 注入表换串 → 该行输出变（注入非死代码）", logs == ["X"], repr(logs))
+
+        # ② bar_gain / ③ bar_trigger：模块级函数（text= 由动作侧 text_of(battle) 传下来）
+        G.bar_should_trigger = saved[1]
+        G.bar_trigger = saved[2]
+        e = {"effects": {}}
+        logs = []
+        G.bar_gain(e, "shaken", 5, logs, now=0.0)
+        check("② 积蓄行逐字节 == 搬运前文案",
+              logs == ["💥 shaken 积蓄 +5（5/100）"], repr(logs))
+        logs = []
+        G.bar_gain(e, "shaken", 5, logs, now=0.0,
+                   text=_StubText({"battle.gauge.gain": "Y"}))
+        check("②' 注入表换串 → 该行输出变", logs == ["Y"], repr(logs))
+        e2 = {"effects": {}}
+        logs = []
+        G.bar_gain(e2, "shaken", 15, logs, now=0.0)
+        G.bar_trigger(e2, "shaken", logs, now=0.0)
+        check("③ 触发行逐字节 == 搬运前文案",
+              logs[-1] == "💢 【破绽】触发！(第 1 次)", repr(logs))
+        e3 = {"effects": {}}
+        logs = []
+        G.bar_gain(e3, "shaken", 15, logs, now=0.0,
+                   text=_StubText({"battle.gauge.gain": "Y"}))
+        G.bar_trigger(e3, "shaken", logs, now=0.0,
+                      text=_StubText({"battle.gauge.trigger": "Z"}))
+        check("③' 注入表换串 → 触发行输出变", logs[-1] == "Z", repr(logs))
+
+        # ④ 阶段更迭（未注入 / 注入）
+        host = {"name": "目标", "effects": {"bar:shaken": {"val": 40.0}}}
+        logs = []
+        A.bar_phase_preserve_act(None, None, None, {"_owner": host}, logs)
+        check("④ 阶段更迭行逐字节 == 搬运前文案",
+              logs == ["💢【目标】阶段更迭：破绽积蓄保留 50%（40 → 20）"], repr(logs))
+        host2 = {"name": "目标", "effects": {"bar:shaken": {"val": 40.0}}}
+        logs = []
+        A.bar_phase_preserve_act(_Holder(_StubText({"battle.gauge.phase_preserve": "P"})),
+                                 None, None, {"_owner": host2}, logs)
+        check("④' 注入表换串 → 该行输出变", logs == ["P"], repr(logs))
+
+        # ⑤ 反震（未注入 / 注入）；deal_damage 猴补 no-op，隔离它自己的日志
+        L.deal_damage = lambda *a, **kw: None
+        atk = {"name": "甲", "hp": 100, "max_hp": 100}
+        dfd = {"name": "乙", "hp": 100, "max_hp": 100}
+        logs = []
+        A.passive_reflect_bar_act(
+            _Holder(None, fire_ctx={"source": atk, "dmg": 30}), None, dfd,
+            {"_owner": dfd, "reflect_pct": 0.5, "key": "shaken", "gain": 3}, logs)
+        check("⑤ 反震行（+ 反推条积蓄行）逐字节 == 搬运前文案",
+              logs == ["🪨 反震：反弹 15 点伤害！", "💥 shaken 积蓄 +3（3/100）"], repr(logs))
+        atk2 = {"name": "甲", "hp": 100, "max_hp": 100}
+        dfd2 = {"name": "乙", "hp": 100, "max_hp": 100}
+        stub = _StubText({"battle.gauge.reflect": "R", "battle.gauge.gain": "G"})
+        logs = []
+        A.passive_reflect_bar_act(
+            _Holder(stub, fire_ctx={"source": atk2, "dmg": 30}), None, dfd2,
+            {"_owner": dfd2, "reflect_pct": 0.5, "key": "shaken", "gain": 3}, logs)
+        check("⑤' 注入表换串 → 两行都取自表", logs == ["R", "G"], repr(logs))
     finally:
-        G.bar_def, G.bar_should_trigger, G.bar_trigger = saved
-    check("skip_turn 日志逐字节 == 搬运前文案",
-          bool(ok) and logs == ["💢 【目标】被破绽震慑，无法行动！"], repr(logs))
-    check("skip 落地条目仍在（mode=skip / expire=None）", True)
+        G.bar_def, G.bar_should_trigger, G.bar_trigger, L.deal_damage = saved
 
 
 def _tamper(name, old, new):
