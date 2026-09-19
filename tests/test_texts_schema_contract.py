@@ -269,7 +269,11 @@ def t2_positive(body, tpat):
     #     「奖励发放」39 处替换 / 37 新键（两新分类）⇒ 2737 → 2774。
     # ★ C 档 34c（B-2 第 26 片）：`content/misc_cmds.py` + `content/achievements.py`
     #     19 处替换 / 18 新键（两新分类）⇒ 2774 → 2792。
-    check("包内文案条数锚点 == 3041（条数变了就同步更新本门禁的锚点）", len(body) == 3041, len(body))
+    # ★ C 档 35a（B-2 第 27 片）：tower_progress / weekly_progress / gameplay_rules /
+    #   auction / cmds_explore 五文件 20 处替换 / 20 新键（新分类 升级提示 / 探索进度；
+    #   修炼塔 / 周常 / 社交拍卖 三域扩为文件列表）⇒ 3041 → 3061。
+    #   ②中文键数锚点仍不变（tower.* / weekly.* / lvl.* / auc.* / xpl.* 键名全 ASCII），③标签字已同步。
+    check("包内文案条数锚点 == 3061（条数变了就同步更新本门禁的锚点）", len(body) == 3061, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
