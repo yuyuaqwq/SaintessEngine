@@ -365,14 +365,14 @@ class PlayShell:
 # 宿主（引擎 Host 的试玩覆写：只加「注入宿主壳」一件事）
 # ============================================================
 def _make_host_class():
-    """运行期派生引擎 `Host`（覆写点两个：`build_env` 塞 `state["shell"]`、`invoke` 支持
-    `async def` handler）。
+    """运行期派生引擎 `Host`（**覆写点只剩一个**：`build_env` 塞 `state["shell"]`）。
 
-    `async` 覆写为什么必要：包内 45 条经济命令 + 战斗族 + 副本族的 handler 是
-    `async def fn(env) -> list[str]`（`content/cmds_*.py::_declare` 登记），而引擎
-    `Host.invoke` 是同步的（W-B18-L3c §「未做」已登记该缺口）。宿主桥
-    （`game/commands/_host_bridge.py::run_async`）自己 `await`，本 worker 同法补齐 ——
-    **不改引擎**，在子进程侧派生覆写。
+    ★ W-B18-L3c（2026-09-19 收口）：`async def` handler 的分支**已在引擎**
+    （`saintess_engine/host/runtime.py::Host._resolve_async` / `_run_async`）——awaitable 与
+    async generator 都在引擎侧跑完再收段，且在「已在事件循环里」时另起线程（不炸
+    `loop already running`）、认宿主给的 `async_runner`。原先本处那份「逐字抄一遍
+    `invoke` 再补 `asyncio.run`」的覆写已删：三处派生 Host 各抄一份 invoke 正是该缺口
+    的成因，缺口既然在引擎里补上了，抄的那份就是纯重复。
     """
     from saintess_engine.host import Host as EngineHost
 
@@ -385,32 +385,6 @@ def _make_host_class():
                 env.state = dict(env.state or {})
                 env.state["shell"] = self.shell
             return env
-
-        def invoke(self, spec, ctx, player, *, raw=None):
-            """与引擎 `Host.invoke` 同序（见 runtime.py:227-248），只在**调用处理器**那一步
-            补 async 分支（`async def handler` → 跑完事件循环再收段）。"""
-            key = str(getattr(spec, "key", "") or "")
-            entry = self.handlers.get(key) if self.pkg else None
-            if not entry:
-                return self.declared_echo(spec)
-            fn = self.pkg.resolve_handler(entry.get("handler")) if self.pkg else None
-            if fn is None:
-                return ["【%s】包内处理器未解析：%r（检查 content/commands.py 的 handler 引用）"
-                        % (key, entry.get("handler"))]
-            env = self.build_env(key, spec, ctx, player, raw=raw)
-            guards = entry.get("guards")
-            if guards is None:
-                guards = list(getattr(spec, "guards", ()) or ())
-            from saintess_engine.host import run_guards
-            blocked = run_guards(guards, env, builtin=self.builtin_guards(),
-                                 hooks=(self.pkg.guard_hooks() if self.pkg else {}))
-            if blocked:
-                return [blocked]
-            out = fn(env)
-            if hasattr(out, "__await__"):
-                import asyncio
-                out = asyncio.run(out)
-            return self._as_replies(out)
 
     return _PlayHost
 

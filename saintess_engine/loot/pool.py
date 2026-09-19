@@ -417,9 +417,10 @@ class LootTable:
         if verdict is False or (strict and verdict is None):
             issues.append(("断链", pool_key, f"引用无法解析: {ref}"))
 
-    def audit_pretty(self, **kw) -> str:
+    def audit_pretty(self, header: str = "掉落池审计", **kw) -> str:
+        """人类可读审计报告。`header` 由调用方给（引擎不认识具体池名/文件名的说法）。"""
         rep = self.audit(**kw)
-        lines = [f"掉落池审计: {rep['pool_count']} 池 / {rep['entry_count']} 条目"]
+        lines = [f"{header}: {rep['pool_count']} 池 / {rep['entry_count']} 条目"]
         if not rep["issues"]:
             lines.append("✅ 0 问题")
         else:
