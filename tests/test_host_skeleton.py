@@ -37,6 +37,8 @@ import subprocess
 import sys
 import tempfile
 import time
+from _check import bind_check
+
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -52,11 +54,9 @@ FAILS: list = []
 NOTES: list = []
 
 
-def check(ok: bool, label: str, detail: str = "") -> bool:
-    print("%s %s%s" % ("✅" if ok else "❌", label, ("  " + detail) if detail else ""))
-    if not ok:
-        FAILS.append(label)
-    return ok
+# ★ 审计 P0-1 单源化：断言助手唯一实现 = tests/_check.py
+#   （原先本文件手抄一份 def check；差异项已作为 bind_check 参数写出）
+check = bind_check(globals(), failures="FAILS")
 
 
 def note(text: str) -> None:
@@ -165,8 +165,8 @@ def test_import_whitelist() -> None:
                 bad_hosts.append("%s: %s" % (os.path.basename(path), word))
         if re.search(r"(?<![A-Za-z0-9_.])(?:from|import)\s+game\b", src):
             bad_hosts.append("%s: import game" % os.path.basename(path))
-    check(not bad_roots, "import 根只许 引擎/标准库/骨架兄弟", "越界=%s" % sorted(bad_roots) if bad_roots else "")
-    check(not bad_hosts, "无宿主/平台词（%d 个词表）" % (len(HOST_WORDS) + 1), "命中=%s" % bad_hosts if bad_hosts else "")
+    check("import 根只许 引擎/标准库/骨架兄弟", not bad_roots, "越界=%s" % sorted(bad_roots) if bad_roots else "")
+    check("无宿主/平台词（%d 个词表）" % (len(HOST_WORDS) + 1), not bad_hosts, "命中=%s" % bad_hosts if bad_hosts else "")
 
 
 # ============================================================
@@ -199,7 +199,7 @@ def test_zero_game_vocabulary() -> None:
                 if pat.search(line):
                     bad.append("%s:%d [%s] %s" % (os.path.relpath(path, ROOT).replace("\\", "/"),
                                                   i, term, line.strip()[:60]))
-    check(not bad, "骨架 %d 个文件零游戏词汇" % len(files), "命中 %d 处：%s" % (len(bad), bad[:5]) if bad else "")
+    check("骨架 %d 个文件零游戏词汇" % len(files), not bad, "命中 %d 处：%s" % (len(bad), bad[:5]) if bad else "")
 
 
 # ============================================================
@@ -277,11 +277,11 @@ def test_minimal_adapter() -> None:
     #   原来的「boot 失败 → 手工 load_package + install_engine」兜底已删（包不再硬依赖宿主树）。
     host = skel.Host(adapter, PKG, scenario=scen, seed=SEED, inject=_pkg_inject())
     pkg = host.boot()
-    check(getattr(pkg, "id", "") == "orlandia",
-          "假适配器 boot() 成功（三函数 + 四类注入接满即可跑）",
+    check("假适配器 boot() 成功（三函数 + 四类注入接满即可跑）",
+          getattr(pkg, "id", "") == "orlandia",
           "pkg=%s" % getattr(pkg, "id", "?"))
-    check(bool(host.handlers) and len(host.handlers) == len(pkg.command_handlers()),
-          "boot() 装出包内命令处理器表（非空且同源）", "handlers=%d" % len(host.handlers))
+    check("boot() 装出包内命令处理器表（非空且同源）",
+          bool(host.handlers) and len(host.handlers) == len(pkg.command_handlers()), "handlers=%d" % len(host.handlers))
     # ★ V3（2026-09-16）：CTB 时间模型（行动耗时公式形状 + 基准值）已下沉到内容侧，
     #   引擎 `schedule.py` 不再内置任何默认 ⇒ 未装配即 fail-closed（EngineNotConfigured）。
     #   故与 D 段一致：跑战斗前由宿主侧触发包的 `install_engine()`（内容侧挂 hook 的装配点）。
@@ -293,10 +293,10 @@ def test_minimal_adapter() -> None:
     global FAKE_ADAPTER_LINES
     FAKE_ADAPTER_LINES = lines
     note("假适配器 %d 行（含 class 外壳）；包 %s，域 %d" % (lines, pkg.id, len(pkg.domains)))
-    check(out.damage > 0, "假适配器接入 → 真跑一场 damage > 0", "damage=%d" % out.damage)
-    check("battle_start" in out.events and "act_done" in out.events, "事件序列含 battle_start→act_done")
+    check("假适配器接入 → 真跑一场 damage > 0", out.damage > 0, "damage=%d" % out.damage)
+    check("事件序列含 battle_start→act_done", "battle_start" in out.events and "act_done" in out.events)
     host.save_player("u-1", dict(scen.player, hp=7))
-    check(store.get("u-1", {}).get("hp") == 7, "假适配器存档可回读（uid → dict）")
+    check("假适配器存档可回读（uid → dict）", store.get("u-1", {}).get("hp") == 7)
 
 
 # ============================================================
@@ -349,11 +349,11 @@ def test_two_host_parity() -> None:
          % (skeleton["damage"], len(skeleton["hits"]), len(skeleton["events"]), skeleton["log_len"]))
     note("直连：damage=%d hits=%d events=%d log=%d"
          % (direct["damage"], len(direct["hits"]), len(direct["events"]), direct["log_len"]))
-    check(skeleton["damage"] == direct["damage"] and skeleton["damage"] > 0,
-          "伤害数字一致（逐条 + 合计）", "%d vs %d" % (skeleton["damage"], direct["damage"]))
-    check(skeleton["hits"] == direct["hits"], "每次命中伤害逐条一致", "n=%d" % len(direct["hits"]))
-    check(skeleton["events"] == direct["events"], "事件序列一致", "n=%d" % len(direct["events"]))
-    check(skeleton["result"] == direct["result"] == "victory", "胜负一致", direct["result"])
+    check("伤害数字一致（逐条 + 合计）",
+          skeleton["damage"] == direct["damage"] and skeleton["damage"] > 0, "%d vs %d" % (skeleton["damage"], direct["damage"]))
+    check("每次命中伤害逐条一致", skeleton["hits"] == direct["hits"], "n=%d" % len(direct["hits"]))
+    check("事件序列一致", skeleton["events"] == direct["events"], "n=%d" % len(direct["events"]))
+    check("胜负一致", skeleton["result"] == direct["result"] == "victory", direct["result"])
 
 
 # ============================================================
@@ -370,21 +370,21 @@ def test_inject_contract() -> None:
     # ① 不给 inject → PackageError（引擎拒绝静默空跑；骨架不替宿主兜底）
     try:
         skel.demo_bind_package(root)
-        check(False, "合成包声明 bind 却不给 inject → PackageError", "居然没报错")
+        check("合成包声明 bind 却不给 inject → PackageError", False, "居然没报错")
     except skel.PackageError as exc:
-        check("bind" in str(exc), "合成包声明 bind 却不给 inject → PackageError（含 bind 字样）",
+        check("合成包声明 bind 却不给 inject → PackageError（含 bind 字样）", "bind" in str(exc),
               str(exc)[:100])
     except Exception as exc:                                    # noqa: BLE001
-        check(False, "合成包声明 bind 却不给 inject → PackageError",
+        check("合成包声明 bind 却不给 inject → PackageError", False,
               "抛的是 %s: %s" % (type(exc).__name__, exc))
 
     # ② 给了 inject → 加载期 bind 被调 → 命令表解析成功 → 处理器跑出回话
     out = skel.demo_bind_package(root, inject={"who": "宿主注入对象"})
-    check(out["handlers"] == [skel.DEMO_COMMAND], "给了 inject → 命令表解析成功",
+    check("给了 inject → 命令表解析成功", out["handlers"] == [skel.DEMO_COMMAND],
           "handlers=%s" % out["handlers"])
-    check(bool(out["said"]) and "宿主注入对象" in out["said"][0],
-          "处理器跑出回话（加载期注入 + Env.state 都在）", repr(out["said"]))
-    check("demo-1" in out["saved"], "新玩家建档落库（引擎落一次）", str(out["saved"]))
+    check("处理器跑出回话（加载期注入 + Env.state 都在）",
+          bool(out["said"]) and "宿主注入对象" in out["said"][0], repr(out["said"]))
+    check("新玩家建档落库（引擎落一次）", "demo-1" in out["saved"], str(out["saved"]))
 
     # ③ 零注入那半：不声明 bind 的包（examples/minimal-game）在**子进程**里跑，
     #    既钉住演示入口，又避免它的 import 期注册与上面的合成包串味。
@@ -394,8 +394,8 @@ def test_inject_contract() -> None:
                                        "PYTHONUTF8": "1"})
     blob = (pr.stdout or "") + (pr.stderr or "")
     last = next((ln for ln in reversed(blob.strip().splitlines()) if ln.strip()), "")
-    check(pr.returncode == 0 and "零注入" in blob and "PackageError" in blob and "全链路" in blob,
-          "main.py --demo-inject 自带演示全通（零注入 / 反证 / 全链路）",
+    check("main.py --demo-inject 自带演示全通（零注入 / 反证 / 全链路）",
+          pr.returncode == 0 and "零注入" in blob and "PackageError" in blob and "全链路" in blob,
           "exit=%s；%s" % (pr.returncode, last[:100]))
     note("注入演示：合成包 bind_decl=%s handlers=%s" % (out["bind"], out["handlers"]))
 

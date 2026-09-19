@@ -23,19 +23,16 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from saintess_engine.host import Host, PackageError, load_package   # noqa: E402
+from _check import bind_check
+
 
 FAILS: list = []
 PASSED = 0
 
 
-def check(ok: bool, label: str, detail: str = "") -> bool:
-    global PASSED
-    print("%s %s%s" % ("✅" if ok else "❌", label, ("  " + detail) if detail else ""))
-    if ok:
-        PASSED += 1
-    else:
-        FAILS.append("%s %s" % (label, detail))
-    return bool(ok)
+# ★ 审计 P0-1 单源化：断言助手唯一实现 = tests/_check.py
+#   （原先本文件手抄一份 def check；差异项已作为 bind_check 参数写出）
+check = bind_check(globals(), "PASSED", failures="FAILS")
 
 
 def _index_src(boom: bool = False) -> str:
@@ -178,23 +175,23 @@ def main() -> int:
     try:
         pkg = _fresh(pkg_a, inject={"db": "DB-OBJ"})
         handlers = pkg.command_handlers()
-        check(len(handlers) == 3, "注入后命令表解析出 3 条（不再静默空表）", "得到 %d 条" % len(handlers))
+        check("注入后命令表解析出 3 条（不再静默空表）", len(handlers) == 3, "得到 %d 条" % len(handlers))
         idx = sys.modules.get("content.index")
-        check(getattr(idx, "BOUND_ORDER", []) == ["bind"],
-              "bind 在命令模块 import 之前就被调用过一次", str(getattr(idx, "BOUND_ORDER", None)))
-        check(len(pkg.command_declarations()) == 3, "声明表也读到了（routes 可用）",
+        check("bind 在命令模块 import 之前就被调用过一次",
+              getattr(idx, "BOUND_ORDER", []) == ["bind"], str(getattr(idx, "BOUND_ORDER", None)))
+        check("声明表也读到了（routes 可用）", len(pkg.command_declarations()) == 3,
               str(sorted(pkg.command_declarations()))[:70])
     except Exception as exc:                                    # noqa: BLE001
-        check(False, "注入后能加载包", "%s: %s" % (type(exc).__name__, exc))
+        check("注入后能加载包", False, "%s: %s" % (type(exc).__name__, exc))
 
     print("\n=== 2. 声明未满足 → PackageError（不是静默空表）===")
     try:
         _fresh(pkg_b)                                           # 不给 inject
-        check(False, "声明了 bind 但没注入 → 报错", "居然没报错")
+        check("声明了 bind 但没注入 → 报错", False, "居然没报错")
     except PackageError as exc:
-        check("bind" in str(exc), "声明了 bind 但没注入 → PackageError（含 bind 字样）", str(exc)[:80])
+        check("声明了 bind 但没注入 → PackageError（含 bind 字样）", "bind" in str(exc), str(exc)[:80])
     except Exception as exc:                                    # noqa: BLE001
-        check(False, "声明了 bind 但没注入 → PackageError", "抛的是 %s" % type(exc).__name__)
+        check("声明了 bind 但没注入 → PackageError", False, "抛的是 %s" % type(exc).__name__)
 
     print("\n=== 3. 注入面进 Env.state ===")
     _fresh(pkg_a, inject={"db": "DB-OBJ"})
@@ -203,19 +200,19 @@ def main() -> int:
     host.boot()
     env = host.build_env("look", host.commands.get("look"), {"uid": "u1", "text": "看"},
                          ad.load_player("u1"))
-    check(env.state.get("db") == "DB-OBJ", "注入键进入 Env.state", str(sorted(env.state))[:80])
-    check("spec" in env.state and "package" in env.state, "引擎自有键仍在（spec/package）")
-    check(env.state.get("prefix") == "INJECTED-PREFIX", "同名以注入为准（prefix 被覆盖）",
+    check("注入键进入 Env.state", env.state.get("db") == "DB-OBJ", str(sorted(env.state))[:80])
+    check("引擎自有键仍在（spec/package）", "spec" in env.state and "package" in env.state)
+    check("同名以注入为准（prefix 被覆盖）", env.state.get("prefix") == "INJECTED-PREFIX",
           "prefix=%s" % env.state.get("prefix"))
 
     print("\n=== 4. 反证：bind 抛错 → 引擎原样抛出（不被吞）===")
     try:
         _fresh(pkg_c, inject={"db": "DB-OBJ"})
-        check(False, "bind 抛错 → 引擎原样抛出", "居然没抛")
+        check("bind 抛错 → 引擎原样抛出", False, "居然没抛")
     except RuntimeError as exc:
-        check("bind boom" in str(exc), "bind 抛错 → RuntimeError 原样透出（不静默）", str(exc)[:60])
+        check("bind 抛错 → RuntimeError 原样透出（不静默）", "bind boom" in str(exc), str(exc)[:60])
     except Exception as exc:                                    # noqa: BLE001
-        check(False, "bind 抛错 → RuntimeError 原样透出", "抛的是 %s" % type(exc).__name__)
+        check("bind 抛错 → RuntimeError 原样透出", False, "抛的是 %s" % type(exc).__name__)
 
     print("\n=== 5. 存档：引擎不代劳 + 路由确实命中 ===")
     _fresh(pkg_a, inject={"db": "DB-OBJ"})
@@ -223,14 +220,14 @@ def main() -> int:
     host2 = Host(ad2, pkg_a, inject={"db": "DB-OBJ"})
     host2.boot()
     host2.handle({"uid": "u1", "group_id": "g1", "text": "看"})       # look：不调 env.save()
-    check(ad2.said and "db=DB-OBJ" in ad2.said[-1][1], "路由命中 look（回话含注入对象）",
+    check("路由命中 look（回话含注入对象）", ad2.said and "db=DB-OBJ" in ad2.said[-1][1],
           str(ad2.said[-1][1])[:60] if ad2.said else "无回话")
-    check(len(ad2.saves) == 0, "处理器不调 env.save() → 适配器 save_player 不被调",
+    check("处理器不调 env.save() → 适配器 save_player 不被调", len(ad2.saves) == 0,
           "被调 %d 次" % len(ad2.saves))
     host2.handle({"uid": "u1", "group_id": "g1", "text": "敲"})       # bump：调了 env.save()
-    check(len(ad2.saves) == 1, "处理器调了 env.save() → 恰好一次",
+    check("处理器调了 env.save() → 恰好一次", len(ad2.saves) == 1,
           "被调 %d 次；回话=%s" % (len(ad2.saves), ad2.said[-1][1] if ad2.said else "-"))
-    check(ad2.players["u1"].get("n") == 1, "落档内容来自处理器改后的档",
+    check("落档内容来自处理器改后的档", ad2.players["u1"].get("n") == 1,
           str(ad2.players.get("u1")))
 
     print("\n" + "=" * 60)

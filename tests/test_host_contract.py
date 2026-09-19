@@ -38,19 +38,16 @@ if ROOT not in sys.path:
 
 import saintess_engine as engine                                    # noqa: E402
 from saintess_engine.host import Env, Host, load_package, run_guards  # noqa: E402
+from _check import bind_check
+
 
 FAILS: list = []
 PASSED = 0
 
 
-def check(ok: bool, label: str, detail: str = "") -> bool:
-    global PASSED
-    print("%s %s%s" % ("✅" if ok else "❌", label, ("  " + detail) if detail else ""))
-    if ok:
-        PASSED += 1
-    else:
-        FAILS.append("%s %s" % (label, detail))
-    return bool(ok)
+# ★ 审计 P0-1 单源化：断言助手唯一实现 = tests/_check.py
+#   （原先本文件手抄一份 def check；差异项已作为 bind_check 参数写出）
+check = bind_check(globals(), "PASSED", failures="FAILS")
 
 
 # ============================================================
@@ -233,9 +230,9 @@ def main() -> int:
     adapter = FakeAdapter(store)
     host = Host(adapter, pkg_dir, register_hint="⚠️ 还没有档", battle_hint="⚠️ 不在战斗中")
     pkg = host.boot()
-    check(pkg.id == "contract-demo", "包加载（id 来自 game.json）", pkg.id)
-    check(len(host.commands) == 10, "声明装载（10 条）", str(len(host.commands)))
-    check(len(host.handlers) == 10, "包内命令表装载（10 条）", str(len(host.handlers)))
+    check("包加载（id 来自 game.json）", pkg.id == "contract-demo", pkg.id)
+    check("声明装载（10 条）", len(host.commands) == 10, str(len(host.commands)))
+    check("包内命令表装载（10 条）", len(host.handlers) == 10, str(len(host.handlers)))
 
     def run(text: str, uid: str = "u-1"):
         adapter.said.clear()
@@ -246,81 +243,81 @@ def main() -> int:
     print("\n【1】包内处理器（声明 → 命中 → Env → 输出）")
     store["u-1"] = {"uid": "u-1", "counter": 0}
     out = run("测试")
-    check(len(out) == 2 and out[0] == "pong uid=u-1", "多段输出（list[str]）", repr(out))
-    check(out[1] == "counter=0", "处理器读到玩家档", repr(out[1]))
+    check("多段输出（list[str]）", len(out) == 2 and out[0] == "pong uid=u-1", repr(out))
+    check("处理器读到玩家档", out[1] == "counter=0", repr(out[1]))
 
     # 【2】新玩家自动造档 + 「包要求先注册」时空档拦截
     print("\n【2】新玩家自动造档 / 空档 → player 守卫拦截")
     out = run("测试", uid="u-new")
-    check(bool(out) and out[0] == "pong uid=u-new", "新玩家 → 包 initial_save 造档 → 处理器照跑", repr(out))
-    check(store.get("u-new", {}).get("counter") == 0, "新档已落库", repr(store.get("u-new")))
+    check("新玩家 → 包 initial_save 造档 → 处理器照跑", bool(out) and out[0] == "pong uid=u-new", repr(out))
+    check("新档已落库", store.get("u-new", {}).get("counter") == 0, repr(store.get("u-new")))
     _orig_entry_fn = host.pkg.entry_fn
     host.pkg.entry_fn = lambda name: ((lambda uid, ctx=None: None) if name == "initial_save" else None)
-    check(host.pkg.initial_save("u-x") == {}, "包显式返回 None → 空档（= 本包要求先注册）")
+    check("包显式返回 None → 空档（= 本包要求先注册）", host.pkg.initial_save("u-x") == {})
     env_empty = Env(uid="u-x", player={}, text="测试")
-    check(run_guards(["player"], env_empty, builtin=host.builtin_guards()) == "⚠️ 还没有档",
-          "空档 → player 守卫拦截（文案来自调用方）")
+    check("空档 → player 守卫拦截（文案来自调用方）",
+          run_guards(["player"], env_empty, builtin=host.builtin_guards()) == "⚠️ 还没有档")
     host.pkg.entry_fn = _orig_entry_fn
 
     # 【3】包侧守卫 hook:
     print("\n【3】包侧守卫（guards: [\"hook:block\"] → content/guards.py::GUARDS）")
     out = run("守卫 口令")
-    check(out and out[0].startswith("⛔ 包侧守卫拦下了"), "包侧守卫拦截（文案由包给）", repr(out))
+    check("包侧守卫拦截（文案由包给）", out and out[0].startswith("⛔ 包侧守卫拦下了"), repr(out))
     out = run("守卫 放我过去")
-    check(out and out[0].startswith("pong"), "包侧守卫放行 → 处理器照跑", repr(out))
+    check("包侧守卫放行 → 处理器照跑", out and out[0].startswith("pong"), repr(out))
 
     # 【4】Env 字段契约
     print("\n【4】Env 字段契约")
     out = run("字段")
-    check(out == ["fields=ok save_callable=True clock=True rng=True"], "字段齐 + save/clock/rng 可用", repr(out))
+    check("字段齐 + save/clock/rng 可用", out == ["fields=ok save_callable=True clock=True rng=True"], repr(out))
 
     # 【5】返回值规整
     print("\n【5】处理器返回值规整（str / list / 生成器 / None）")
     out = run("生成")
-    check(out == ["g0", "g1", "g2"], "生成器被消费成文本段", repr(out))
+    check("生成器被消费成文本段", out == ["g0", "g1", "g2"], repr(out))
     out = run("静默")
-    check(out == [], "None → 空回话（不投递）", repr(out))
+    check("None → 空回话（不投递）", out == [], repr(out))
 
     # 【6】改完必存
     print("\n【6】env.save() → 宿主落档")
     adapter.saved.clear()
     out = run("计数")
-    check(out == ["counter=1"], "返回最新值", repr(out))
-    check(store["u-1"]["counter"] == 1, "档已落库（counter=1）", repr(store["u-1"]))
-    check("u-1" in adapter.saved, "宿主 save_player 被调用", repr(adapter.saved))
+    check("返回最新值", out == ["counter=1"], repr(out))
+    check("档已落库（counter=1）", store["u-1"]["counter"] == 1, repr(store["u-1"]))
+    check("宿主 save_player 被调用", "u-1" in adapter.saved, repr(adapter.saved))
     run("计数")
-    check(store["u-1"]["counter"] == 2, "连续两条各存一次", repr(store["u-1"]))
+    check("连续两条各存一次", store["u-1"]["counter"] == 2, repr(store["u-1"]))
 
     # 【7】坏引用 → 明确回话
     print("\n【7】处理器引用坏掉 → 明确回话（不静默）")
     out = run("坏引用")
-    check(bool(out) and "处理器未解析" in out[0], "明确报出未解析", repr(out))
+    check("明确报出未解析", bool(out) and "处理器未解析" in out[0], repr(out))
 
     # 【8】便捷方法接到引擎原语
     print("\n【8】arg_text / page / page_items（引擎既有原语）")
     out = run("参数 2")
-    check(out and "page=2" in out[0] and "items=[4, 5, 6]" in out[0], "页码解析 + 分页切片", repr(out))
+    check("页码解析 + 分页切片", out and "page=2" in out[0] and "items=[4, 5, 6]" in out[0], repr(out))
 
     # 【9】纯数据包（无处理器）→ 回显声明
     print("\n【9】纯声明无处理器 → 回显（降级说明）")
     out = run("纯声明")
-    check(len(out) >= 2 and out[0].startswith("【dataonly】"), "回显声明", repr(out)[:120])
+    check("回显声明", len(out) >= 2 and out[0].startswith("【dataonly】"), repr(out)[:120])
 
     # 【10】流水出口
     print("\n【10】流水出口（适配器 on_tlog）")
     out = run("流水")
-    check(out == ["tlogged"] and adapter.tlogs and adapter.tlogs[0].get("kind") == "demo_event",
-          "流水经适配器出口", repr(adapter.tlogs[:1]))
+    check("流水经适配器出口",
+          out == ["tlogged"] and adapter.tlogs and adapter.tlogs[0].get("kind") == "demo_event", repr(adapter.tlogs[:1]))
 
     # 【11】守卫调度直测（独立于路由）
     print("\n【11】run_guards 直测（内置 + 包侧 + 未知名跳过）")
     env = Env(uid="u-1", player={"uid": "u-1"}, text="x")
-    check(run_guards(["player"], env, builtin=host.builtin_guards()) is None, "有档 → 过")
+    check("有档 → 过", run_guards(["player"], env, builtin=host.builtin_guards()) is None)
     env2 = Env(uid="u-9", player={}, text="x")
-    check(run_guards(["player"], env2, builtin=host.builtin_guards()) == "⚠️ 还没有档", "无档 → 拦")
-    check(run_guards(["unknown_guard"], env, builtin=host.builtin_guards()) is None, "未知名 → 跳过（不炸）")
-    check(run_guards(["battle"], env, builtin=host.builtin_guards()) is None,
-          "battle 守卫没给 battle_check → 不拦")
+    check("无档 → 拦", run_guards(["player"], env2, builtin=host.builtin_guards()) == "⚠️ 还没有档")
+    check("未知名 → 跳过（不炸）", run_guards(["unknown_guard"], env, builtin=host.builtin_guards()) is None)
+    check("battle 守卫没给 battle_check → 不拦",
+          run_guards(["battle"], env, builtin=host.builtin_guards()) is None)
 
     print("\n" + "=" * 56)
     if FAILS:
