@@ -84,11 +84,11 @@ def map_event(old_ev):
 （`game/services/battle_equip_proc.py:47-51`）
 
 **为什么 `hit` 要展开成两个事件**：引擎把「普攻命中」(`attack_hit`) 与「技能命中」
-(`skill_hit`) 分成两个事件（`actions.py:459` 按 `info["_basic"]` 选）。
+(`skill_hit`) 分成两个事件（`actions.py:467` 按 `info["_basic"]` 选）。
 你的数据表只写「命中」时，得同时挂两个。
 
 **为什么 `enemy_act` 映射到 `act_done`**：`act_done` 是**不带 subject 的广播事件**
-（`ctx["acted"]` 才是行动者，`battle.py:489-494`），所以「敌方行动后我叠减速」
+（`ctx["acted"]` 才是行动者，`battle.py:510-515`），所以「敌方行动后我叠减速」
 这类特效要在动作里**自己判敌我**（例：`we_act_done_slow`）。
 
 ## 词条的三种数值通道
@@ -99,8 +99,8 @@ def map_event(old_ev):
 |---|---|---|---|
 | `triggers` 参数 | `{"type": "we_xxx", "pct": 0.2}` | 你自己的族动作 | 一次性/有条件的效果 |
 | `actor["bonus"]["panel"]` | 面板增幅 dict | `stats._player_base_stats` 把它传给 `panel_fn`（`stats.py:95-109`） | 常驻面板增幅 |
-| `actor["bonus"]["cap"]` | `{资源key: +N}` | `effects._cap_of`（`effects.py:71`） | 资源上限词条 |
-| `actor["bonus"]["cost"]` | `{mp_pct, mp_flat, res, when}` | `actions._skill_pay_of`（`actions.py:266`） | 消耗折扣词条 |
+| `actor["bonus"]["cap"]` | `{资源key: +N}` | `effects._cap_of`（`effects.py:72`） | 资源上限词条 |
+| `actor["bonus"]["cost"]` | `{mp_pct, mp_flat, res, when}` | `actions._skill_pay_of`（`actions.py:272`） | 消耗折扣词条 |
 
 `bonus.panel` 的形态由**你的** `panel_fn` 决定（引擎只是把它当不透明 dict 透传）。
 `bonus.cap` / `bonus.cost` 的形态是引擎定的，有确切读取点。
@@ -117,7 +117,7 @@ actor["bonus"]["cost"] = {
 }
 ```
 
-读取与折算在 `_skill_pay_of`（`actions.py:266-301`），两条硬规则（`actions.py:228-234` 注释）：
+读取与折算在 `_skill_pay_of`（`actions.py:272-307`），两条硬规则（`actions.py:234-240` 注释）：
 
 ```
 pay = max(1, floor(声明 × (1 - Σpct)) - Σflat)
@@ -126,7 +126,7 @@ pay = max(1, floor(声明 × (1 - Σpct)) - Σflat)
 - **折扣只减不增**；声明消耗 >0 的技能**保底扣 1**（不许白嫖）
 - `floor` 向下取整（玩家受益方向）；无折扣 → 返回值与声明完全一致（行为零变化）
 
-`when` 的判据由 `_cost_judge_hit`（`actions.py:246`）实现，支持三个谓词：
+`when` 的判据由 `_cost_judge_hit`（`actions.py:252`）实现，支持三个谓词：
 `element`（技能有元素）、`mech_prefix`（技能 mech 前缀）、
 `name_contains`（技能显示名含子串）。多个谓词是 **OR**；空 judge = 恒命中。
 
@@ -159,7 +159,7 @@ def equip_affix_bleed(actor):
         {"type": "affix_bleed_hit"})
 ```
 
-`chance: 0.2` 由 `apply_effects` 的通用 roll 消费（`effects.py:183-189`），
+`chance: 0.2` 由 `apply_effects` 的通用 roll 消费（`effects.py:184-190`），
 不需要你写 roll 代码。`op="add"` + `key` 走叠层，cap 由规则表的 `cap: 3` 管。
 
 ## 面板词条（常驻增幅）

@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import Optional
 
 from . import formulas as _F
+from ..text import render_via
 
 # ============================================================
 # 伤害落地
@@ -63,8 +64,9 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
                     except Exception:
                         _ok = False
                 if _ok:
-                    logs.append(f"🛡️ 【{_guard.get('name', '守护者')}】替"
-                                f"【{target.get('name', '目标')}】挡下了这一击！")
+                    logs.append(render_via(battle, "battle.landing.guard_cover", "🛡️ 【{guard}】替【{target}】挡下了这一击！",
+                                        guard=_guard.get('name', '守护者'),
+                                        target=target.get('name', '目标')))
                     return deal_damage(battle, source, _guard, amount, logs,
                                        dmg_kind=dmg_kind, defend_reduce=defend_reduce,
                                        element=element, _no_redirect=True)
@@ -80,14 +82,18 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
         try:
             _imm = target.get("element_immune") or []
             if isinstance(_imm, (list, tuple)) and element in _imm:
-                logs.append(f"💠 免疫！【{target.get('name', '敌人')}】免疫{element}伤害！")
+                logs.append(render_via(battle, "battle.landing.element_immune", "💠 免疫！【{name}】免疫{element}伤害！",
+                                    name=target.get('name', '敌人'),
+                                    element=element))
                 return 0
             _wk = target.get("element_weak") or {}
             if isinstance(_wk, dict):
                 _wm = float(_wk.get(element, 1.0) or 1.0)
                 if _wm > 1.0:
                     dmg = max(1, int(dmg * _wm))
-                    logs.append(f"⚡ 弱点！【{target.get('name', '敌人')}】弱{element}，受到额外伤害！")
+                    logs.append(render_via(battle, "battle.landing.element_weak", "⚡ 弱点！【{name}】弱{element}，受到额外伤害！",
+                                        name=target.get('name', '敌人'),
+                                        element=element))
             # 元素抗性减免（承伤方视角；怪打玩家吃玩家词条抗，玩家打怪怪无键=0 无感）
             from . import stats as _S
             _st_t = _S.actor_stats(battle, target)
@@ -96,7 +102,8 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             if _ar > 0 and dmg > 0:
                 red = max(1, int(dmg * _ar))
                 dmg = max(1, dmg - red)
-                logs.append(f"🛡️ 元素抗性减免 {red} 点伤害！")
+                logs.append(render_via(battle, "battle.landing.resist_reduce", "🛡️ 元素抗性减免 {red} 点伤害！",
+                                    red=red))
         except Exception:
             pass  # 免疫/弱点/抗性异常不阻断落地
     # N9.13 数值修正钩子：taken_calc（承伤者视角减伤乘区）——装配层乘区扩展动作
@@ -158,7 +165,8 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             _dr = float(defend_reduce)
         # int 截断对齐旧 landing 默认 0.5 行为（coverage 87 断言口径）
         dmg = max(1, int(dmg * (1.0 - _dr)))
-        logs.append(f"(格挡后 {dmg} 点伤害)")
+        logs.append(render_via(battle, "battle.landing.blocked_amount", "(格挡后 {dmg} 点伤害)",
+                            dmg=dmg))
     # N10-B6 百分比免伤 + 格挡（actor 承伤侧，按 dmg_kind 减免；对齐旧 _damage_actor：
     # 物免/魔免按伤害类型 cap40% → block 格挡减免一半 cap40%）
     if dmg_kind and dmg > 0:
@@ -178,13 +186,14 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             for _wk in list(_ef_wake.keys()):
                 if isinstance(_ef_wake.get(_wk), dict) and (_sdef_w(_wk) or {}).get("wake_on_hit"):
                     _ef_wake.pop(_wk, None)
-                    logs.append("💥 目标被攻击惊醒！")
+                    logs.append(render_via(battle, "battle.landing.woken", "💥 目标被攻击惊醒！"))
     except Exception:
         pass  # 打醒异常不阻断落地
     # 蓄力打断（主动伤害打断读条；DOT wake_sleep=False 不打）
     if target.get("charging") and target["charging"].get("skill"):
         target["charging"] = None
-        logs.append(f"🔨 {target.get('name', '目标')} 的蓄力被打破了！")
+        logs.append(render_via(battle, "battle.landing.charge_broken", "🔨 {name} 的蓄力被打破了！",
+                            name=target.get('name', '目标')))
         # N5B5c P5：打断事件（on_interrupt 剧本联动：读条被断 → 反噬/易伤）
         try:
             from .effect_triggers import fire as _fire
@@ -256,7 +265,8 @@ def _roll_dodge(battle, target: dict, logs: list) -> bool:
             return False
         import random
         if random.random() < dodge:
-            logs.append(f"💨 {target.get('name', '目标')} 闪避了攻击！")
+            logs.append(render_via(battle, "battle.landing.dodged", "💨 {name} 闪避了攻击！",
+                                name=target.get('name', '目标')))
             return True
     except Exception:
         pass
@@ -281,13 +291,15 @@ def _apply_taken_reductions(battle, target: dict, dmg: int, dmg_kind: str,
             if pr > 0:
                 red = max(1, int(dmg * pr))
                 dmg = max(1, dmg - red)
-                logs.append(f"🪨 物理免伤，减免 {red} 点物理伤害！")
+                logs.append(render_via(battle, "battle.landing.phys_immune", "🪨 物理免伤，减免 {red} 点物理伤害！",
+                                    red=red))
         if "magi" in kd and "true" not in kd:
             mr = min(float(st.get("magic_reduce", 0) or 0), 0.4)
             if mr > 0:
                 red = max(1, int(dmg * mr))
                 dmg = max(1, dmg - red)
-                logs.append(f"🛡️ 魔法抗性，减免 {red} 点魔法伤害！")
+                logs.append(render_via(battle, "battle.landing.magic_resist", "🛡️ 魔法抗性，减免 {red} 点魔法伤害！",
+                                    red=red))
         if dmg > 0 and "true" not in kd:
             import random
             # V4：0.40（上限）/ 0.5（命中减免）从内容侧骨架表读（原写死字面量）
@@ -295,7 +307,8 @@ def _apply_taken_reductions(battle, target: dict, dmg: int, dmg_kind: str,
             if bc > 0 and random.random() < bc:
                 red = max(1, int(dmg * _F.block_reduce()))
                 dmg = max(1, dmg - red)
-                logs.append(f"🛡️ 格挡！减免 {red} 点伤害！")
+                logs.append(render_via(battle, "battle.landing.block_reduce", "🛡️ 格挡！减免 {red} 点伤害！",
+                                    red=red))
     except Exception:
         pass
     return max(1, dmg)
@@ -328,7 +341,8 @@ def _apply_death_guard(battle, target: dict, logs: list) -> bool:
         heal_pct = float(cfg.get("heal_pct") or 0.0)
         if heal_pct > 0 and target.get("hp", 0) < mhp:
             heal_actor(battle, target, int(mhp * heal_pct), logs)
-        logs.append(f"✨ {target.get('name', '目标')} 濒死意志触发，保住了性命！")
+        logs.append(render_via(battle, "battle.landing.death_guard", "✨ {name} 濒死意志触发，保住了性命！",
+                            name=target.get('name', '目标')))
         return True
     except Exception:
         return False
@@ -352,7 +366,9 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
             absorb = min(sv, remaining)
             sh["value"] = sv - absorb
             remaining -= absorb
-            logs.append(f"🛡️ {target.get('name', '目标')} 的护盾吸收了 {absorb} 点伤害！")
+            logs.append(render_via(battle, "battle.landing.shield_absorb", "🛡️ {name} 的护盾吸收了 {absorb} 点伤害！",
+                                name=target.get('name', '目标'),
+                                absorb=absorb))
             if sh["value"] <= 0:
                 shields.pop(sk, None)
             if remaining <= 0:
@@ -372,7 +388,9 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
             new = int(target.get("hp", 0) or 0)
             _real = old - new
     if new <= 0:
-        logs.append(f"💥 {target.get('name', '目标')} 受到 {_real} 点伤害，倒下了！")
+        logs.append(render_via(battle, "battle.landing.down", "💥 {name} 受到 {dmg} 点伤害，倒下了！",
+                            name=target.get('name', '目标'),
+                            dmg=_real))
         if hasattr(battle, "_on_actor_dead"):
             battle._on_actor_dead(target, logs)
         # N8 事件：击杀（主体=击杀者；DOT/环境杀无 on_kill）
@@ -384,7 +402,9 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
             except Exception:
                 pass  # 事件源异常不阻断落地
     else:
-        logs.append(f"💥 {target.get('name', '目标')} 受到 {_real} 点伤害！")
+        logs.append(render_via(battle, "battle.landing.damage", "💥 {name} 受到 {dmg} 点伤害！",
+                            name=target.get('name', '目标'),
+                            dmg=_real))
     return _real
 
 
@@ -423,14 +443,15 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
                     except Exception:
                         _ok = False
                 if _ok:
-                    logs.append(f"✨ 治疗由【{_share.get('name', '分担者')}】分担")
+                    logs.append(render_via(battle, "battle.landing.heal_shared", "✨ 治疗由【{name}】分担",
+                                        name=_share.get('name', '分担者')))
                     return heal_actor(battle, _share, amount, logs, source=source,
                                       label=label, _no_redirect=True)
     heal = max(0, int(amount))
     if heal <= 0:
         return 0
     # 禁疗/重伤修正（target 自身状态）
-    heal = _apply_heal_mods(target, heal, logs)
+    heal = _apply_heal_mods(target, heal, logs, battle.text)
     if heal <= 0:
         return 0
     _mx = target.get("max_hp", target.get("hp", 1)) or 1
@@ -453,7 +474,17 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
     return _real
 
 
-def _apply_heal_mods(target: dict, amount: int, logs: list) -> int:
+class _TextHolder:
+    """只带 `text` 一个字段的持有者：给「拿不到 battle 对象」的私有助手用（零全局态）。"""
+
+    __slots__ = ("text",)
+
+    def __init__(self, text=None):
+        self.text = text
+
+
+def _apply_heal_mods(target: dict, amount: int, logs: list, text=None) -> int:
+    _HOLDER.text = text
     """受疗/禁疗修正（target 自身效果）。返回修正后治疗量（未 clamp）。"""
     heal = amount
     try:
@@ -474,7 +505,8 @@ def _apply_heal_mods(target: dict, amount: int, logs: list) -> int:
             if ehd > 0:
                 cut = max(0.0, min(ehd * _F.heal_down_per_stack(), _F.heal_down_cap()))
                 heal = max(0, int(heal * (1 - cut)))
-                logs.append(f"🩸 禁疗：治疗量 -{int(cut * 100)}%！")
+                logs.append(render_via(_HOLDER, "battle.landing.heal_forbid", "🩸 禁疗：治疗量 -{pct}%！",
+                                    pct=int(cut * 100)))
         # 重伤（_anti_heal_pct cap 上限；effects 条目 value 内嵌；V4 上限读内容侧骨架表）
         ah_entry = ef.get("_anti_heal_pct")
         if isinstance(ah_entry, dict):
@@ -482,7 +514,8 @@ def _apply_heal_mods(target: dict, amount: int, logs: list) -> int:
             if aheal > 0:
                 cut2 = max(0.0, min(aheal, _F.anti_heal_cap()))
                 heal = max(0, int(heal * (1 - cut2)))
-                logs.append(f"🩸 重伤：治疗量 -{int(cut2 * 100)}%！")
+                logs.append(render_via(_HOLDER, "battle.landing.heal_wound", "🩸 重伤：治疗量 -{pct}%！",
+                                    pct=int(cut2 * 100)))
     except Exception:
         pass
     return max(0, heal)

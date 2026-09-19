@@ -30,7 +30,8 @@ from dataclasses import dataclass
 from string import Formatter
 from typing import Callable, Iterable, Mapping, Optional
 
-__all__ = ["TextSpec", "TextTable", "safe_format", "extract_params"]
+__all__ = ["TextSpec", "TextTable", "safe_format", "extract_params",
+           "render_or", "render_via"]
 
 
 class _KeepUnknown(dict):
@@ -56,6 +57,29 @@ def safe_format(template: str, slots: Optional[Mapping] = None) -> str:
         return tpl.format(**dict(slots))
     except Exception:
         return tpl
+
+
+def render_or(text, key: str, default: str, **slots) -> str:
+    """渲染口（渐进迁移用）：表里有 `key` 按表渲染，否则用调用方现给的 `default` 模板。
+
+    * `text` = 注入的文案表（鸭子类型，需有 `render_or(key, default, **slots)`）；
+      `None` = **未注入** ⇒ 只用 `default` 渲染（= 调用点内联文案的原样输出）。
+    * 两条路径都走 `safe_format`（未知槽原样保留），所以「表缺 key」与「未注入」
+      的输出逐字节相同 —— 这是「不装载 = 现状」的根据。
+    """
+    if text is None:
+        return safe_format(default, slots)
+    return text.render_or(key, default, **slots)
+
+
+def render_via(holder, key: str, default: str, **slots) -> str:
+    """从**持有注入表**的对象取表渲染（读 `holder.text`）。
+
+    `holder` 可以是 `Battle`，也可以是测试替身；没有 `text` 属性（或值为 None）
+    一律按「未注入」处理 ⇒ 兜底模板。引擎零文案真源：措辞归注入表，调用点只给
+    key + 兜底模板 + 槽位。
+    """
+    return render_or(getattr(holder, "text", None), key, default, **slots)
 
 
 def extract_params(template: str) -> tuple:

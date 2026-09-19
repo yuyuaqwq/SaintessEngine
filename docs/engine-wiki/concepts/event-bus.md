@@ -64,7 +64,7 @@ for acts in battle.sides.values():
 - **主体死亡也执行**：`on_death` 的死者自己的声明照样跑（死亡遗言类效果）。
   判据是 `a is subject` 那一支。
 - **有些事件故意不带 `actor`**：`act_done` 只放 `ctx["acted"]`，让效果侧自己判敌我
-  （`battle.py:489-491` 注释：`randuin`/`ice_vein` 靠它监听「敌对 actor 行动」叠减速）。
+  （`battle.py:510-512` 注释：`randuin`/`ice_vein` 靠它监听「敌对 actor 行动」叠减速）。
 
 ### 4. `_owner` 注入
 
@@ -95,8 +95,8 @@ _m = float((getattr(battle, "_fire_ctx", {}) or {}).get("mult", 1.0) or 1.0)
 if _m != 1.0:
     total = max(1, int(total * _m))
 ```
-（`actions.py:416-422`，同款出现在 `landing.py:77-86` 的 `taken_calc`、
-`actions.py:641-704` 的 `heal_calc`、`schedule.py:370-384` 的 `dot_calc`）
+（`actions.py:422-428`，同款出现在 `landing.py:79-90` 的 `taken_calc`、
+`actions.py:649-713` 的 `heal_calc`、`schedule.py:372-386` 的 `dot_calc`）
 
 ⚠️ **它是单槽、覆盖式、不落盘**（`effect_triggers.py:83-84` 注释）：
 单线程同步 fire 所以成立；**别在异步/多线程里依赖它**。`dot_calc` 广播后
@@ -156,10 +156,10 @@ actor["triggers"][event]
    → ACTIONS_HANDLERS[动词](battle, caster, target, params, logs)
 ```
 
-`apply_effects`（`effects.py:165`）里的两条通用规则：
+`apply_effects`（`effects.py:166`）里的两条通用规则：
 
-1. **概率 roll**：`eff["chance"]` 存在时 `random() >= chance` 就跳过（`effects.py:183-189`）
-2. **参数合并**：`_merge_params` 让调用方参数优先于映射默认（`effects.py:153-162`）
+1. **概率 roll**：`eff["chance"]` 存在时 `random() >= chance` 就跳过（`effects.py:184-190`）
+2. **参数合并**：`_merge_params` 让调用方参数优先于映射默认（`effects.py:154-163`）
 
 ## 引擎自然点位速查（26 个事件里哪些引擎会自己喊）
 
@@ -168,7 +168,7 @@ actor["triggers"][event]
 | **引擎有 fire 点位（23）** | `battle_start` `turn_start` `act_begin` `act_cast` `skill_hit`※ `attack_hit`※ `crit` `on_taken` `on_heal` `on_kill` `on_death` `dot_tick` `dot_calc` `on_act_consume` `on_hit_consume` `buff_expire` `threshold` `dmg_calc` `taken_calc` `heal_calc` `act_done` `interrupt` `time_advance` |
 | **⚠️ 引擎无点位（3，必须上层驱动）** | `phase` `player_low` `pv_broken` |
 
-※ `skill_hit` / `attack_hit` 的 fire 点位用变量选事件名（`actions.py:459`：
+※ `skill_hit` / `attack_hit` 的 fire 点位用变量选事件名（`actions.py:467`：
 `ev = "attack_hit" if info.get("_basic") else "skill_hit"`），静态 grep 不到字面量。
 
 精确点位（`文件:行号`）与每个事件的 ctx 字段见 [../reference/events.md](../reference/events.md)。

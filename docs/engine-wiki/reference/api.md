@@ -43,9 +43,9 @@ from_state · to_state
 | `actions` | `heal_amount` | `_heal_amount` |
 | `actions` | `skill_pay_of` | `_skill_pay_of` |
 
-（别名赋值处：`effects.py:80-81`、`battle.py:28`、`actions.py:305`、`actions.py:765`）
+（别名赋值处：`effects.py:81-82`、`battle.py:29`、`actions.py:311`、`actions.py:765`）
 
-## 2. `Battle`（`battle.py:31`）
+## 2. `Battle`（`battle.py:32`）
 
 ### 构造
 
@@ -54,22 +54,22 @@ Battle(btype="monster", sides=None, title_bonus=None, dmg_mult=1.0, pet=None,
        st=None, hostile_map=None, target_picker=None, on_event=None,
        action_override=None, script_hook=None, seed_ct=True, **kwargs)
 ```
-（`battle.py:32-36`）
+（`battle.py:33-37`）
 
 | 参数 | 语义 | 引擎内消费者 |
 |---|---|---|
-| `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:219`） |
+| `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:228`） |
 | `sides` | `{阵营名: [actor]}`，**唯一入口** | 全引擎 |
 | `title_bonus` | 面板增幅 dict（整场一份） | `stats._player_base_stats`：`actor.bonus.panel or battle.title_bonus or {}`（`stats.py:95-96`） |
 | `hostile_map` | `{side: [敌对 side]}` | `actors.hostile_sides`（`actors.py:200-202`）；缺省 = 除自己外全部阵营 |
-| `dmg_mult` | 全局伤害倍率 | ⚠️ **仅赋值，无消费方**（`battle.py:68`） |
-| `pet` | 宠物数据 | ⚠️ **仅赋值，无消费方**（`battle.py:69`） |
+| `dmg_mult` | 全局伤害倍率 | ⚠️ **仅赋值，无消费方**（`battle.py:75`） |
+| `pet` | 宠物数据 | ⚠️ **仅赋值，无消费方**（`battle.py:76`） |
 | `st` | （旧参数） | ⚠️ **仅存在于签名，函数体从未引用** |
-| `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:390-394`） |
+| `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:405-409`） |
 | `on_event` | `callable(battle, event, ctx, logs)`，事件总线尾部观察者 | `effect_triggers.fire`（`effect_triggers.py:116-121`） |
-| `action_override` | `callable(battle, action, actor, skill_name, target) -> (logs, cast)`；接管非内置行动 | `Battle.act`（`battle.py:477-484`） |
-| `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:345-352`） |
-| `seed_ct` | `True` = 播种初始 ct；`from_state` 传 `False` | `battle.py:89-92` |
+| `action_override` | `callable(battle, action, actor, skill_name, target) -> (logs, cast)`；接管非内置行动 | `Battle.act`（`battle.py:496-503`） |
+| `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:360-367`） |
+| `seed_ct` | `True` = 播种初始 ct；`from_state` 传 `False` | `battle.py:96-99` |
 | `**kwargs` | **静默吞掉未知参数** | — |
 
 构造期做三件事：拷贝 sides（`:66-69`）→ 建技能索引（`_index_skills`，`:151`）→
@@ -85,30 +85,30 @@ Battle(btype="monster", sides=None, title_bonus=None, dmg_mult=1.0, pet=None,
 
 | 方法 | 位置 | 返回 |
 |---|---|---|
-| `sides_of(side)` | `battle.py:196` | 该阵营 actor 列表（**拷贝**，改它不影响战斗） |
-| `hostile_of(side)` | `battle.py:199` | `actors.hostile_actors` 的结果（敌对存活 actor） |
-| `focus()` | `battle.py:203` | `sides["player"]` 里第一个 `human_controlled` 存活 actor；兜底找 `kind == "player"` 的存活者；无则 `None` |
-| `alive_actors()` | `battle.py:214` | 全阵营存活 actor |
-| `alive_sides()` | `battle.py:220` | 有存活 actor 的阵营名列表 |
+| `sides_of(side)` | `battle.py:211` | 该阵营 actor 列表（**拷贝**，改它不影响战斗） |
+| `hostile_of(side)` | `battle.py:214` | `actors.hostile_actors` 的结果（敌对存活 actor） |
+| `focus()` | `battle.py:218` | `sides["player"]` 里第一个 `human_controlled` 存活 actor；兜底找 `kind == "player"` 的存活者；无则 `None` |
+| `alive_actors()` | `battle.py:229` | 全阵营存活 actor |
+| `alive_sides()` | `battle.py:235` | 有存活 actor 的阵营名列表 |
 
 ### 运行期注册
 
 ```python
-add_actor(actor: dict, side: str, front: bool = False) -> dict      # battle.py:229
+add_actor(actor: dict, side: str, front: bool = False) -> dict      # battle.py:244
 ```
 入 sides（`front=True` 插队首）→ 建技能索引 → 播种 ct → 返回 actor。
 用于召唤 / 援军 / 变身。原文强调「引擎零游戏知识：不认识随从/召唤/亡灵/援军，
-只做注册 + 索引 + 排程」（`battle.py:239`）。
+只做注册 + 索引 + 排程」（`battle.py:254`）。
 
 ### 行动入口
 
 ```python
 human_act(action, skill_name, actor=None, target=None, target_side=None)
-    -> (logs: list, ended: bool, who: dict | None)                   # battle.py:256
-advance(logs: list) -> dict | None                                   # battle.py:305
-auto_run(logs: list, max_steps: int = 500) -> None                    # battle.py:314
-actor_auto(actor: dict, ctx_target=None) -> (logs, ended)             # battle.py:330
-act(ctx: ActCtx) -> (logs, ended)                                     # battle.py:410
+    -> (logs: list, ended: bool, who: dict | None)                   # battle.py:271
+advance(logs: list) -> dict | None                                   # battle.py:320
+auto_run(logs: list, max_steps: int = 500) -> None                    # battle.py:329
+actor_auto(actor: dict, ctx_target=None) -> (logs, ended)             # battle.py:345
+act(ctx: ActCtx) -> (logs, ended)                                     # battle.py:425
 ```
 
 - `human_act`：命令层唯一入口。`actor` 缺省用 `focus()`。战斗已结束 → `(["战斗已结束！"], True, None)`。
@@ -127,17 +127,17 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 
 | 方法 | 位置 | 内容层引用数（全仓 grep） |
 |---|---|---|
-| `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:98/117/151` | 仅引擎内 |
-| `_do_defend` / `_do_flee` | `battle.py:505/458` | 仅引擎内 |
-| `_ensure_battle_started` | `battle.py:518` | 仅引擎内 |
-| `_on_actor_dead(actor, logs=None)` | `battle.py:533` | `landing._apply_damage` 调（`landing.py:376`） |
-| `_check_side_end` | `battle.py:551` | 仅引擎内 |
+| `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:113/117/151` | 仅引擎内 |
+| `_do_defend` / `_do_flee` | `battle.py:526/458` | 仅引擎内 |
+| `_ensure_battle_started` | `battle.py:542` | 仅引擎内 |
+| `_on_actor_dead(actor, logs=None)` | `battle.py:557` | `landing._apply_damage` 调（`landing.py:394`） |
+| `_check_side_end` | `battle.py:575` | 仅引擎内 |
 
 ### 序列化
 
 ```python
-to_state() -> dict                    # battle.py:578 → serialize.to_state
-Battle.from_state(st) -> Battle       # battle.py:584（classmethod）→ serialize.from_state
+to_state() -> dict                    # battle.py:602 → serialize.to_state
+Battle.from_state(st) -> Battle       # battle.py:608（classmethod）→ serialize.from_state
 ```
 
 ## 3. 模块级公开函数
@@ -179,9 +179,9 @@ Battle.from_state(st) -> Battle       # battle.py:584（classmethod）→ serial
 
 ```python
 deal_damage(battle, source, target, amount, logs, dmg_kind="", defend_reduce=None, element="") -> int
-# landing.py:25
+# landing.py:26
 heal_actor(battle, target, amount, logs, source=None, label="") -> int
-# landing.py:395
+# landing.py:415
 ```
 
 两个都是**落地唯一收口**。内部子函数（无外部引用）：`_lv_pressure`（`:146`）、
@@ -339,7 +339,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 | `front_rank(units)` | `:20` |
 | `reachable_units(attacker, units)` | `:28`（⚠️ 无外部引用） |
 | `select_target(attacker, units, threat=None, exclude_uid=None, threat_mode="front")` | `:34` |
-| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一引擎消费者：`actions._deal_aoe`，`actions.py:356`） |
+| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一引擎消费者：`actions._deal_aoe`，`actions.py:362`） |
 | `pick_by_policy(policy, units, threat=None, fallback=None)` | `:122` |
 | `compact(units)` | `:161` |
 | `numbered_units(units)` | `:191` |
@@ -405,7 +405,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
 | ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 本引擎不实现） |
 | `config.set_hook` | `config.py:128` | 零外部引用（都走 `mount`） |
-| `effects.resolve_actions` | `effects.py:135` | 零外部引用（引擎内部调用） |
+| `effects.resolve_actions` | `effects.py:136` | 零外部引用（引擎内部调用） |
 | `ai.eval_when` | `ai.py:152` | 零外部引用（`resolve_ai_move` 内部调） |
 | ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |
 | ~~`Battle.DEFAULT_CT_WAIT`~~ | — | **已删**（2026-09-11） |

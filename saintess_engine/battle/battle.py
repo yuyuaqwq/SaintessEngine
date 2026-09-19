@@ -17,6 +17,7 @@ from typing import Optional
 from .actors import ActCtx, actor_alive, actor_dead
 from . import actions
 from .. import config as _cfg
+from ..text import render_or as _render_or
 
 
 def _now_of(battle) -> float:
@@ -34,7 +35,7 @@ class Battle:
                  hostile_map: Optional[dict] = None,
                  target_picker=None, on_event=None, action_override=None,
                  script_hook=None, redirect_hook=None, seed_ct: bool = True,
-                 **kwargs):
+                 text=None, **kwargs):
         """构造战斗。
 
         sides: dict[str, list[actor]] —— 唯一入口。sides["player"] 第一个
@@ -52,6 +53,10 @@ class Battle:
           内容侧「这次是否真的由他替你挡」（概率/次数/反伤由内容侧决定）；返回 True 则
           本次伤害改由保护者承受（递归深度 1，不链式）。引擎零游戏知识：只读字段 +
           调回调。治疗侧同款见 `heal_redirect_hook`（faith_share 用）。
+        text: （v186 文案注入）文案表（鸭子类型：`render_or(key, default, **slots)`）。
+          None = 未注入 ⇒ 所有战斗日志用调用点的兜底模板（= 内联文案的原样输出）。
+          引擎零文案真源：措辞归内容侧的表，引擎只给 key + 兜底模板 + 槽位；
+          未注入与「表缺该 key」两条路径输出**逐字节相同**。
         script_hook: （N5B5c P1 剧本导演钩子）callable(battle, actor, logs) -> bool。
           自动 actor（actor_auto）行动前调用——命令层 Boss 剧本导演在此检查血量阈值/
           刻计数 → 触发剧本动作（转阶段演出/换招/召唤等）。返回 True = 拦截本刻行动
@@ -65,6 +70,8 @@ class Battle:
         self.script_hook = script_hook
         self.redirect_hook = redirect_hook
         self.heal_redirect_hook = None
+        # 文案表注入（可选；构造注入，无模块级全局态）
+        self.text = text
         # 阵营容器（唯一）
         self.sides: dict = {}
         for sn, acts in (sides or {}).items():
@@ -90,6 +97,14 @@ class Battle:
             for _acts in self.sides.values():
                 for _a in _acts:
                     self._seed_ct_one(_a)
+
+    def _t(self, key: str, default: str, **slots) -> str:
+        """战斗日志文案口：注入表有该 key 就用表，否则用调用点兜底模板。
+
+        `default` 是**兜底模板**（`{slot}` 占位）—— 未注入时与旧内联 f-string 逐字同款；
+        模块级函数（landing / effects / actions / schedule / gauge）走 `render_via(battle, …)`。
+        """
+        return _render_or(self.text, key, default, **slots)
 
     # ============================================================
     # 构造辅助
@@ -265,9 +280,9 @@ class Battle:
         """
         caster = actor or self.focus()
         if caster is None:
-            return ["没有可行动的玩家！"], False, None
+            return [self._t("battle.core.no_actor", "没有可行动的玩家！")], False, None
         if self.result:
-            return ["战斗已结束！"], True, None
+            return [self._t("battle.core.finished", "战斗已结束！")], True, None
         # 决策前刷新技能索引（运行期换招/获得技能后索引可能落后于 actor.skills；
         # 必须在 ActCtx 构造前——ActCtx.__post_init__ 是技能 dict 的唯一解析时机）
         self.refresh_skill_index(caster)
@@ -444,12 +459,16 @@ class Battle:
                 ef.pop(tag, None)
                 continue
             if mode == "no_skill" and ctx.action == "skill":
-                logs.append(f"🤐 {actor.get('name', '目标')} 被沉默，无法使用技能！(只能普攻/防御)")
+                logs.append(self._t("battle.core.silenced",
+                                    "🤐 {name} 被沉默，无法使用技能！(只能普攻/防御)",
+                                    name=actor.get('name', '目标')))
                 ctx.action = "attack"
                 ctx.skill_name = None
                 continue
             if mode == "skip":
-                logs.append(f"💫 {actor.get('name', '目标')} 被【{tag}】控制，无法行动！")
+                logs.append(self._t("battle.core.controlled",
+                                    "💫 {name} 被【{tag}】控制，无法行动！",
+                                    name=actor.get('name', '目标'), tag=tag))
                 ef.pop(tag, None)
                 # N8 事件：行动级消费点（控制跳过）
                 _fire(self, "on_act_consume", {"actor": actor, "tag": tag}, logs)
@@ -483,9 +502,11 @@ class Battle:
                         ctx._override_cast = _ov_cast  # str("defend"/"skill"/"attack") 或数字秒或 None
                         ctx._override_consumed = True
                 except Exception:
-                    logs = [f"未知行动类型：{action}"]
+                    logs = [self._t("battle.core.unknown_action",
+                                    "未知行动类型：{action}", action=action)]
             if not getattr(ctx, "_override_consumed", False):
-                logs = [f"未知行动类型：{action}"]
+                logs = [self._t("battle.core.unknown_action",
+                                "未知行动类型：{action}", action=action)]
         # N9A-2 事件：行动完成（全员广播——不带 actor 键避免主体过滤拦截旁观者；
         # 刚行动的 actor 放 ctx["acted"]，效果侧自己 if 敌我判断，如按敌我自判的效果
         # 监听敌对 actor 行动叠减速）。被控跳过（skip）早退 return 不触发。
@@ -505,11 +526,14 @@ class Battle:
     def _do_defend(self, ctx: ActCtx) -> list:
         actor = ctx.caster
         actor["defending"] = True
-        return [f"🛡 {actor.get('name', '')} 摆出防御姿态，受到的伤害减半！"]
+        return [self._t("battle.core.defend",
+                        "🛡 {name} 摆出防御姿态，受到的伤害减半！",
+                        name=actor.get('name', ''))]
 
     def _do_flee(self, ctx: ActCtx) -> list:
         self.result = "fled"
-        return [f"💨 {ctx.caster.get('name', '')} 逃跑了！"]
+        return [self._t("battle.core.fled", "💨 {name} 逃跑了！",
+                        name=ctx.caster.get('name', ''))]
 
     # ============================================================
     # 死亡/胜负

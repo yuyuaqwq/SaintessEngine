@@ -159,7 +159,7 @@ def _has_effect_ok(actor, judge):          # class_mech_proc.py:2120
 |---|---|---|---|---|
 | 动作 `judge` | 声明表 + 动作 | `{"kind": ..., 参数}` | 各动作内联 / `_res_ge_ok` / `_has_effect_ok` | `params["judge"]` |
 | 渠道 `when` | `EFFECT_RULES[key].channels.*` | `[{"judge": {...}}, ...]` | `_when_ok`（`class_mech_proc.py:2134`） | `params["when"]` |
-| 成本 `when` | `actor.bonus.cost` | `[{"mp_pct":..., "judge": {...}}]` | `_cost_judge_hit`（`actions.py:246`） | 技能的 `info` |
+| 成本 `when` | `actor.bonus.cost` | `[{"mp_pct":..., "judge": {...}}]` | `_cost_judge_hit`（`actions.py:252`） | 技能的 `info` |
 
 ⚠️ 渠道 `when` 的 `res_ge` 阈值在 **when 条目自身**；
 其余 `res_ge` 阈值都在 **params**（技能 passive dict）。这是最容易写错的一处。

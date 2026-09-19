@@ -27,6 +27,7 @@ from typing import Optional
 from .. import config as _cfg
 from .actors import actor_alive
 from .effects import _cap_of as _stack_cap_of
+from ..text import render_via
 
 #: 内容侧「行动类别 → 基准耗时」表里，未知/未声明类别回落到哪个类别（通用键名，非游戏词）
 DEFAULT_ACTION = "attack"
@@ -131,7 +132,8 @@ def advance(battle, logs: list, max_steps: int = 200) -> tuple:
         if battle.result:
             return ("over", None)
         if actor_alive(actor) and not actor.get("human_controlled"):
-            logs.append(f"—— {actor.get('name', '敌人')} 行动 ——")
+            logs.append(render_via(battle, "battle.schedule.actor_turn", "—— {name} 行动 ——",
+                                name=actor.get('name', '敌人')))
             sub_logs, ended = battle.actor_auto(actor)
             logs.extend(sub_logs)
             if ended or battle.result:
@@ -387,7 +389,11 @@ def _settle_time_effects(battle, logs: list):
                             if dmg > 0:
                                 deal_damage(battle, None, a, dmg, logs,
                                             dmg_kind=str(period.get("dmg_type") or ""))
-                                logs.append(f"🔥 {a.get('name', '目标')} 受 {key} {n} 层影响，损失 {dmg} 生命")
+                                logs.append(render_via(battle, "battle.schedule.dot_tick", "🔥 {name} 受 {key} {n} 层影响，损失 {dmg} 生命",
+                                                    name=a.get('name', '目标'),
+                                                    key=key,
+                                                    n=n,
+                                                    dmg=dmg))
                             # N8 事件：DOT 每跳
                             try:
                                 from .effect_triggers import fire as _fire
@@ -403,7 +409,9 @@ def _settle_time_effects(battle, logs: list):
                                 _gain = max(1, int(_mx_hp * _hpct))
                                 _real = _heal_actor(battle, a, _gain, logs)
                                 if _real > 0:
-                                    logs.append(f"🍲 {a.get('name', '目标')} 持续恢复，恢复 {_real} 点生命！")
+                                    logs.append(render_via(battle, "battle.schedule.regen_hp", "🍲 {name} 持续恢复，恢复 {heal} 点生命！",
+                                                        name=a.get('name', '目标'),
+                                                        heal=_real))
                             # 持续恢复双资源：dir=heal 同时处理 mana_pct（食物 hot 回血回蓝同刻）
                             _mpct = float(period.get("mana_pct", entry.get("mana", 0)) or 0)
                             if _mpct > 0:
@@ -414,7 +422,9 @@ def _settle_time_effects(battle, logs: list):
                                     a["mp"] = min(_mx_mp, _before + _gain)
                                     _real = int(a["mp"]) - _before
                                     if _real > 0:
-                                        logs.append(f"🍲 {a.get('name', '目标')} 持续恢复，恢复 {_real} 点魔力！")
+                                        logs.append(render_via(battle, "battle.schedule.regen_mp", "🍲 {name} 持续恢复，恢复 {heal} 点魔力！",
+                                                            name=a.get('name', '目标'),
+                                                            heal=_real))
                         elif direction == "mana":
                             _mx_mp = a.get("max_mp", a.get("mp", 1)) or 1
                             _mpct = float(period.get("mana_pct", entry.get("mana", 0)) or 0)
@@ -424,7 +434,9 @@ def _settle_time_effects(battle, logs: list):
                                 a["mp"] = min(_mx_mp, _before + _gain)
                                 _real = int(a["mp"]) - _before
                                 if _real > 0:
-                                    logs.append(f"🍲 {a.get('name', '目标')} 持续恢复，恢复 {_real} 点魔力！")
+                                    logs.append(render_via(battle, "battle.schedule.regen_mp", "🍲 {name} 持续恢复，恢复 {heal} 点魔力！",
+                                                        name=a.get('name', '目标'),
+                                                        heal=_real))
                         elif direction == "gain":
                             # v181.M-R2e：资源自然回/衰减（声明级，引擎零职业知识）——
                             # 给自身 effects[key] 加/减层 clamp [0, cap]（游侠 energy 每刻

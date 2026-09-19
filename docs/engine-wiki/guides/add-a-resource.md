@@ -38,7 +38,7 @@
 
 | 字段 | 作用 | 引擎侧消费者 |
 |---|---|---|
-| `cap: 5` | 叠层上限 | `effects._cap_of`（`effects.py:58`）；`apply op=add` 与 `schedule` gain 都 clamp |
+| `cap: 5` | 叠层上限 | `effects._cap_of`（`effects.py:59`）；`apply op=add` 与 `schedule` gain 都 clamp |
 | `name` | 日志/UI 标签 | **引擎不读**；内容侧读（`class_mech_proc.py:1895`） |
 | `start_classes` | 归属过滤（只有该职业装配） | **引擎不读**；内容侧装配器读（`class_mech_proc.py:1892`）。⚠️ 不声明 = 不装配 |
 | `stat_scale.reduce: 0.03` | 每核减伤 | `stats._apply_effects`（`stats.py:60-65`）→ 写 `st["reduce"]` ⚠️ 但 `st["reduce"]` 无伤害路径消费者 → 真正生效另有通道（见下「注①」） |
@@ -126,12 +126,12 @@ info["res_cost"] = {"guard_core": 3}     # 施放时扣 3 层
 
 引擎原生消费（**这是引擎唯一直接认的资源字段**）：
 
-- 预检：`_skill_usable`（`actions.py:141`）——条目存在且 `stacks < 需求` → 拦截 + 写日志
+- 预检：`_skill_usable`（`actions.py:142`）——条目存在且 `stacks < 需求` → 拦截 + 写日志
   「⚡ 核心资源不足：需要 X key，当前 Y！」
-- 扣费：`_spend_skill_cost`（`actions.py:189`）——`stacks = norm_stack(max(0, cur - rv))`
+- 扣费：`_spend_skill_cost`（`actions.py:195`）——`stacks = norm_stack(max(0, cur - rv))`
 
 ⚠️ **一个重要的历史行为**：`res_cost` 只在 `actor.effects` **已经有该 key 条目**时才拦截
-（`actions.py:176-179` 的 `continue`）。没条目 = 不拦（保持历史行为）。
+（`actions.py:179-182` 的 `continue`）。没条目 = 不拦（保持历史行为）。
 所以「资源渠道没接通」时技能是**免费**的，不是被拦。原型期友善，生产期是漏洞。
 
 ### ② `MECH_CASH` 兑现（层数换伤害 + 清层）
@@ -153,7 +153,7 @@ mode 全谱 → [../reference/mech-cash.md](../reference/mech-cash.md)。
 ### ③ `consume_all`（清零）
 
 ```python
-info["consume_all"] = {"key": "arcane"}    # actions.py:214-217：直接 ef.pop
+info["consume_all"] = {"key": "arcane"}    # actions.py:220-223：直接 ef.pop
 ```
 
 ## 自然回复 / 衰减
@@ -163,11 +163,11 @@ info["consume_all"] = {"key": "arcane"}    # actions.py:214-217：直接 ef.pop
 "period": {"dir": "gain", "interval": 1.0, "amount": -0.7}  # 每刻 -0.7（允许负值）
 ```
 
-- 引擎侧消费者：`schedule._settle_time_effects` 的 `gain` 分支（`schedule.py:428-447`）
-- **静默**（不刷日志，`schedule.py:435-436` 注释）
+- 引擎侧消费者：`schedule._settle_time_effects` 的 `gain` 分支（`schedule.py:440-459`）
+- **静默**（不刷日志，`schedule.py:447-448` 注释）
 - clamp 到 `[0, cap]`，cap 取 `period.cap` 或 `_cap_of`（表声明 + `bonus.cap`）
 - 负数也走（信仰清醒档衰减），但**下限 0**，不会归负
-- `dir="gain"` **不要求 `stacks > 0`** —— 0 层也要能回（`schedule.py:280-283`）
+- `dir="gain"` **不要求 `stacks > 0`** —— 0 层也要能回（`schedule.py:282-285`）
 
 ## 开局满额
 

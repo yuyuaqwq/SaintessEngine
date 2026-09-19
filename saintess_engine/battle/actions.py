@@ -16,6 +16,7 @@ from typing import Optional
 from .. import config as _cfg
 from . import stats as S
 from .actors import actor_alive
+from ..text import render_via
 
 # S1 断链（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 R1/R2/R14/R15）：
 # 引擎不得 import game.engine / game.core.constants —— 原 `E.*` 数值公式调用与
@@ -112,7 +113,7 @@ def do_skill(battle, ctx) -> list:
     # ---- 攻击类：目标解析 + 伤害管线 ----
     target = ctx.target if ctx.target is not None else _default_target(battle, actor)
     if target is None:
-        return ["但没有可攻击的目标！"]
+        return [render_via(battle, "battle.actions.no_target", "但没有可攻击的目标！")]
     lv = _cfg.formulas().skill_level_of(actor, info.get("name", "")) if actor.get("class_name") else 0
     logs.extend(_attack_damage_pipeline(battle, actor, target, info, lv))
     return logs
@@ -162,7 +163,9 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
     left = _cd_left_of(battle, actor, info)
     if left > 0:
         if logs is not None:
-            logs.append(f"⏳ 【{info.get('name') or '技能'}】冷却中：还需 {left:.1f} 刻！")
+            logs.append(render_via(battle, "battle.actions.skill_cd", "⏳ 【{name}】冷却中：还需 {left::.1f} 刻！",
+                                name=info.get('name') or '技能',
+                                left=left))
         return False
     # ---- 2. 核心资源（仅职业 actor 参与核心资源体系；怪无 res_cost）----
     if not actor.get("class_name"):
@@ -181,7 +184,10 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
         cur = float(entry.get("stacks", 0) or 0)
         if cur < float(rv or 0):
             if logs is not None:
-                logs.append(f"⚡ 核心资源不足：需要 {rv:g} {rk}，当前 {cur:g}！")
+                logs.append(render_via(battle, "battle.actions.resource_lack", "⚡ 核心资源不足：需要 {rv::g} {rk}，当前 {cur::g}！",
+                                    rv=rv,
+                                    rk=rk,
+                                    cur=cur))
             return False
     return True
 
@@ -448,7 +454,9 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
         _bns_dmg = max(1, int((_bst.get("atk", 0) or 0) * bns))
         if _bns_dmg > 0 and actor_alive(target):
             logs.extend(_deal_hit(battle, actor, target, _bns_dmg))
-            logs.append(f"{hit_buffs.get('bonus_tag') or '⚡'} 附魔追击，追加 {_bns_dmg} 点伤害！")
+            logs.append(render_via(battle, "battle.actions.enchant_followup", "{tag} 附魔追击，追加 {dmg} 点伤害！",
+                                tag=hit_buffs.get('bonus_tag') or '⚡',
+                                dmg=_bns_dmg))
     # 命中后 mech/effect 效果（N3：mech → effects 兼容层）
     _apply_hit_effects(battle, actor, target, info, lv, logs)
     # N8 事件：命中后——普攻 attack_hit / 技能 skill_hit；暴击 crit（子集）。
@@ -501,7 +509,7 @@ def _consume_hit_buffs(battle, actor: dict, logs: list) -> dict:
         if bns > 0:
             out["bonus_atk_pct"] += bns
             out["bonus_tag"] = hit.get("bonus_tag") or "⚡"
-        logs.append(f"✨ {key} 生效！")
+        logs.append(render_via(battle, "battle.actions.effect_on", "✨ {key} 生效！", key=key))
         # N8 事件：出手消费点（一次性 buff 被消费；主体=出手者）
         try:
             from .effect_triggers import fire as _fire
@@ -648,7 +656,8 @@ def _settle_lifesteal(battle, actor: dict, dmg_total: int, kind: str, logs: list
             heal = max(1, int(heal * _mw))
         from .landing import heal_actor
         heal_actor(battle, actor, heal, logs)
-        logs.append(f"🩸 吸血：回复 {heal} 点生命！")
+        logs.append(render_via(battle, "battle.actions.lifesteal", "🩸 吸血：回复 {heal} 点生命！",
+                            heal=heal))
     except Exception:
         pass  # 吸血异常不阻断战斗（伤害已落地）
 
@@ -706,9 +715,14 @@ def _do_heal(battle, ctx, actor, info, logs) -> list:
     # 落地（统一收口 landing.heal_actor：禁疗修正 + clamp max_hp）
     from .landing import heal_actor
     _real = heal_actor(battle, target, heal, logs)
-    logs.append(f"你施展【{info.get('name', ctx.skill_name or '技能')}】，圣光治愈了你 {heal} 点生命！"
+    _sk = info.get('name', ctx.skill_name or '技能')
+    logs.append(render_via(battle, "battle.actions.skill_heal_full",
+                           "你施展【{name}】，圣光治愈了你 {heal} 点生命！",
+                           name=_sk, heal=heal)
                 if _real >= heal else
-                f"你施展【{info.get('name', ctx.skill_name or '技能')}】，治愈了 {_real} 点生命！")
+                render_via(battle, "battle.actions.skill_heal",
+                           "你施展【{name}】，治愈了 {heal} 点生命！",
+                           name=_sk, heal=_real))
     return logs
 
 
@@ -841,5 +855,6 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
             _ae(battle, actor, tgt, _efs(info, lv), logs)
         except Exception:
             pass  # mech 落地异常不阻断增益
-    logs.append(f"你施展【{info.get('name', ctx.skill_name or '技能')}】！")
+    logs.append(render_via(battle, "battle.actions.skill_cast", "你施展【{name}】！",
+                        name=info.get('name', ctx.skill_name or '技能')))
     return logs
