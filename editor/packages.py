@@ -318,11 +318,6 @@ def package_domains(pkg_dir) -> dict:
     return {k: dict(v) for k, v in decls.items()}
 
 
-def package_domain_warnings(pkg_dir) -> list:
-    """读该包域声明时的告警（可读中文串；空 = 没声明或声明没问题）。"""
-    return _package_domains_cached(pkg_dir)[1]
-
-
 def package_uses_builtin_defaults(pkg_dir) -> bool:
     """该包要不要**内置默认集**兜底（缺省 True；声明里写 `"$builtin": false` → False）。"""
     return _package_domains_cached(pkg_dir)[2]
