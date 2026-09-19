@@ -101,7 +101,7 @@ bind(log, target="e9").info("连击")   # 链式叠加（后写覆盖先写；�
 引擎自己的 4 处历史写法（各自 `getLogger("saintess_engine.xxx")`）已全部改为走门面 ——
 名字只此**一个来源**：
 
-`events/bus.py:23` · `command/router.py:28` · `command/base.py:97` · `clock/timer.py:37`
+`events/bus.py:24` · `command/router.py:28` · `command/base.py:97` · `clock/timer.py:38`
 
 `CommandBase.logger_name` 为空 = 用门面默认名（`<prefix>.command`）；宿主显式给名字
 （如 `"astrbot"`）则**原样直通**，不套 prefix —— 这是「宿主已经有一套日志体系」时的让路。

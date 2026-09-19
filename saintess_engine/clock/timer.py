@@ -31,13 +31,15 @@ import time
 from typing import Any, Callable, Optional
 
 from ..log import get_logger
+from ..log.warn import WarnMixin
 
 __all__ = ["LazyTimers"]
 
 _LOG = get_logger("clock")
 
 
-class LazyTimers:
+class LazyTimers(WarnMixin):
+    _warn_logger = _LOG                    # 未注入 logger 时的兜底（见 log.warn）
     """主体维度的懒计时器。
 
     参数
@@ -190,8 +192,3 @@ class LazyTimers:
         except Exception:
             self._warn("on_expire 回调失败（type=%r）", ev.get("type"))
 
-    def _warn(self, msg: str, *args) -> None:
-        if self._logger is not None:
-            self._logger.warning(msg, *args)
-            return
-        _LOG.warning(msg, *args)

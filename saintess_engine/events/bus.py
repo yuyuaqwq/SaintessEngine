@@ -17,13 +17,15 @@ from __future__ import annotations
 from typing import Callable, Iterable, Optional, Sequence
 
 from ..log import get_logger
+from ..log.warn import WarnMixin
 
 __all__ = ["EventBus"]
 
 _LOG = get_logger("events")
 
 
-class EventBus:
+class EventBus(WarnMixin):
+    _warn_logger = _LOG                    # 未注入 logger 时的兜底（见 log.warn）
     """注册制领域事件总线。
 
     参数
@@ -157,8 +159,3 @@ class EventBus:
         return lines
 
     # ------------------------------------------------------------ 内部
-    def _warn(self, msg: str, *args) -> None:
-        if self._logger is not None:
-            self._logger.warning(msg, *args)
-            return
-        _LOG.warning(msg, *args)

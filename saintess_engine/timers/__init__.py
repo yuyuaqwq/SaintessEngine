@@ -67,6 +67,7 @@ from collections.abc import Mapping, MutableMapping
 from typing import Any, Callable, Optional
 
 from ..log import get_logger
+from ..log.warn import WarnMixin
 
 __all__ = ["TimerStorageError", "Timers"]
 
@@ -140,7 +141,8 @@ def _view(ev: Mapping, at: int, *, key: Optional[str] = None) -> dict:
     return out
 
 
-class Timers:
+class Timers(WarnMixin):
+    _warn_logger = _LOG                    # 未注入 logger 时的兜底（见 log.warn）
     """主体维度的倒计时事件表：类型注册 + 挂载刷新 + 懒过期 + 过期回调。
 
     * `store` —— 内容侧的存储面（`MutableMapping`）。引擎只做 `get / __setitem__ /
@@ -366,8 +368,3 @@ class Timers:
             self._warn("过期回调失败（type=%r key=%r owner=%r）：%s",
                        ev["type"], key, owner, exc)
 
-    def _warn(self, msg: str, *args) -> None:
-        if self._logger is not None:
-            self._logger.warning(msg, *args)
-            return
-        _LOG.warning(msg, *args)
