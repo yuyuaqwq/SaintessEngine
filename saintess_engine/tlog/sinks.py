@@ -20,12 +20,11 @@
 from __future__ import annotations
 
 import json
-import logging
 import os
-import sys
 import threading
 from typing import Any, Iterable, Iterator, Optional, Protocol, Sequence
 
+from .._sinkbase import FileSinkBase, sink_error
 from .record import Record
 
 __all__ = ["Sink", "ReadableSink", "JSONLSink", "MemorySink", "dispatch"]
@@ -48,18 +47,6 @@ class ReadableSink(Protocol):
         ...
 
 
-def _sink_error(sink: Any, exc: BaseException, what: str = "写入") -> None:
-    """sink 自身出错时的报告口径（与 `log.sinks` 同纪律：直接写 stderr，不经日志系统）。"""
-    if not logging.raiseExceptions:
-        return
-    try:
-        sys.stderr.write(f"--- 流水 sink {what}失败 {sink!r} ---\n")
-        import traceback
-        traceback.print_exception(type(exc), exc, exc.__traceback__, file=sys.stderr)
-    except Exception:                                             # pragma: no cover
-        pass
-
-
 def dispatch(sinks: Sequence[Any], records: Iterable[Record]) -> int:
     """把一批记录逐个发给 sink，返回**成功数**（异常隔离）。空 sinks → 0 且不做事。"""
     batch = list(records)
@@ -71,12 +58,12 @@ def dispatch(sinks: Sequence[Any], records: Iterable[Record]) -> int:
             s.write(batch)
             ok += 1
         except Exception as exc:                                  # noqa: BLE001
-            _sink_error(s, exc)
+            sink_error(s, exc, what="写入")
     return ok
 
 
 # ---------------------------------------------------------------- 出口实现
-class JSONLSink:
+class JSONLSink(FileSinkBase):
     """行式 JSON 落盘（一行一条记录）—— 可直读、可 grep、可被外部工具吃。
 
     * `path`：目标文件（父目录自动建）；`append=True`（默认）追加，False 截断重写
@@ -89,18 +76,18 @@ class JSONLSink:
         self.append = bool(append)
         self.encoding = encoding
         self.bad_lines: list = []
-        self._fh = None
-        self._lock = threading.RLock()
+        super().__init__()
 
     # -------------------------------------------------- 内部
+    _newline = "\n"                     # 行式文件：换行不做平台翻译
+
+    def _open_mode(self) -> str:
+        return "a" if self.append else "w"
+
     def _open(self):
         if self._fh is None or self._fh.closed:
-            parent = os.path.dirname(os.path.abspath(self.path))
-            if parent:
-                os.makedirs(parent, exist_ok=True)
-            self._fh = open(self.path, "a" if self.append else "w",
-                            encoding=self.encoding, newline="\n")
-            self.append = True          # 只截断一次
+            super()._open()
+            self.append = True          # 只截断一次（口径同原实现）
         return self._fh
 
     # -------------------------------------------------- 写
@@ -112,17 +99,6 @@ class JSONLSink:
             fh = self._open()
             fh.write("\n".join(lines) + "\n")
             fh.flush()
-
-    def flush(self) -> None:
-        with self._lock:
-            if self._fh is not None and not self._fh.closed:
-                self._fh.flush()
-
-    def close(self) -> None:
-        with self._lock:
-            if self._fh is not None and not self._fh.closed:
-                self._fh.flush()
-                self._fh.close()
 
     # -------------------------------------------------- 读
     def read_records(self) -> Iterator[Record]:

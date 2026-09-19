@@ -64,15 +64,19 @@ tl.replay(kind="battle.").anonymize()      # 脱敏后的序列（交给分析�
 | `Record` | `saintess_engine/tlog/record.py:32` | 一条流水 |
 | `KindSpec` / `KindTable` | `tlog/record.py:76` / `:115` | 「哪个 kind 有哪些字段」的声明表 |
 | `KindTable.check_record` / `audit` | `tlog/record.py:203` / `:218` | 记录↔声明差异；声明未发过 / 发过未声明 |
-| `Sink` 协议 | `tlog/sinks.py:34` | `write(records)` + 可选 `flush()`/`close()` |
-| `dispatch` | `tlog/sinks.py:63` | 逐个分发 + 异常隔离（返回成功数） |
-| `JSONLSink` | `tlog/sinks.py:79` | 行式 JSON 落盘；`read_records()` 读回（坏行跳过记 `bad_lines`） |
-| `MemorySink` | `tlog/sinks.py:145` | 内存快照；`limit` / `kinds()` / `of_kind()` |
+| `Sink` 协议 | `tlog/sinks.py:33` | `write(records)` + 可选 `flush()`/`close()` |
+| `dispatch` | `tlog/sinks.py:50` | 逐个分发 + 异常隔离（返回成功数） |
+| `JSONLSink` | `tlog/sinks.py:66` | 行式 JSON 落盘；`read_records()` 读回（坏行跳过记 `bad_lines`） |
+| `MemorySink` | `tlog/sinks.py:121` | 内存快照；`limit` / `kinds()` / `of_kind()` |
 | `TLog` / `emit` | `tlog/core.py:41` / `:68` | 门面 / 记一条 |
 | `TLog.reader` / `audit` | `tlog/core.py:113` / `:127` | 开读口 / 自检汇总 |
 | `Reader.iter_records` | `tlog/reader.py:51` | 读口（过滤口径见下） |
 | `Replay` / `anonymize` | `tlog/reader.py:89` / `:139` | 按序重放 / 脱敏 |
 | `EventLogBridge` / `attach` | `tlog/bridge.py:26` / `:80` | 事件总线 → 流水（映射表内容侧给） |
+
+> **与 `log` 的关系（2026-09-19）**：`JSONLSink` 的文件生命周期与 sink 报错口径与 `log` 的出口
+> **共用同一份代码** —— `saintess_engine/_sinkbase.py`（`FileSinkBase` / `sink_error()`）；
+> 两侧各自只保留协议与分发形状（`write(records)` vs `emit(record)`）。
 
 ## Reader：一套筛选口径
 

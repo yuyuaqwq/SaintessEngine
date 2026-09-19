@@ -63,20 +63,25 @@ bind(log, actor="p1", command="攻击").info("结算完成")   # actor/command �
 | `remove_sinks(prefix=None)` | `saintess_engine/log/facade.py:127` | 摘掉本门面装的出口（返回摘掉几个） |
 | `bind(logger, **ctx)` | `saintess_engine/log/facade.py:172` | 结构化上下文（见下） |
 | `ContextAdapter` | `saintess_engine/log/facade.py:144` | `bind` 的返回类型；可链式 `.bind()` |
-| `Sink` 协议 | `saintess_engine/log/sinks.py:38` | `emit(record)` 必须，`flush()` / `close()` 可选 |
-| `dispatch(sinks, record)` | `saintess_engine/log/sinks.py:76` | 逐个分发 + 异常隔离（返回成功数） |
+| `Sink` 协议 | `saintess_engine/log/sinks.py:40` | `emit(record)` 必须，`flush()` / `close()` 可选 |
+| `dispatch(sinks, record)` | `saintess_engine/log/sinks.py:61` | 逐个分发 + 异常隔离（返回成功数） |
 
 ## 三个随包出口
 
 | 出口 | 位置 | 特点 |
 |---|---|---|
-| `StreamSink(stream=None, fmt=…)` | `saintess_engine/log/sinks.py:102` | 默认 stderr（与标准库 lastResort 同去向）；每行即 flush |
-| `FileSink(path, rotate=…)` | `saintess_engine/log/sinks.py:139` | 追加写；`rotate="size"`（或直接给字节数）按大小轮转 `path.1 … path.N`；父目录自动建 |
-| `MemorySink(limit=None)` | `saintess_engine/log/sinks.py:229` | 收进内存；`limit` 保留最近 N 条；`messages()` / `find(level, contains)` |
-| `SinkHandler(sinks)` | `saintess_engine/log/sinks.py:273` | 桥接件：把标准库 record 交给 sink；宿主也可自己 `addHandler` |
+| `StreamSink(stream=None, fmt=…)` | `saintess_engine/log/sinks.py:88` | 默认 stderr（与标准库 lastResort 同去向）；每行即 flush |
+| `FileSink(path, rotate=…)` | `saintess_engine/log/sinks.py:125` | 追加写；`rotate="size"`（或直接给字节数）按大小轮转 `path.1 … path.N`；父目录自动建 |
+| `MemorySink(limit=None)` | `saintess_engine/log/sinks.py:195` | 收进内存；`limit` 保留最近 N 条；`messages()` / `find(level, contains)` |
+| `SinkHandler(sinks)` | `saintess_engine/log/sinks.py:239` | 桥接件：把标准库 record 交给 sink；宿主也可自己 `addHandler` |
 
 `configure(fmt=…)` 通过鸭子类型调用 sink 的 `set_format()` —— 不认识 `fmt` 的 sink（如 `MemorySink`）
 自动跳过，不会报错。
+
+> **与 `tlog` 的关系（2026-09-19）**：`FileSink` 的文件生命周期（懒开 / 刷 / 关）与「sink 自身出错」
+> 的报告口径，和 `tlog` 的出口**是同一份代码** —— `saintess_engine/_sinkbase.py`
+> （`FileSinkBase` / `sink_error()`）。协议层（`Sink` / `dispatch`）仍各自定义：
+> 日志是 `emit(record)` 单条，流水是 `write(records)` 整批。
 
 ## 结构化上下文：`bind`
 

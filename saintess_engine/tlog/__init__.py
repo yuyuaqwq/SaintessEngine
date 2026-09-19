@@ -11,7 +11,8 @@
 模块分工：
 
   record.py  `Record`（一条流水）+ `KindTable`（「哪个 kind 有哪些字段」的声明表）
-  sinks.py   `Sink` 协议 + `JSONLSink` / `MemorySink`（分发纪律与 log 同一套）
+  sinks.py   `Sink` 协议 + `JSONLSink` / `MemorySink`（分发纪律与 log 同一套；
+             报错口径与文件出口生命周期共用 `saintess_engine/_sinkbase.py`）
   core.py    `TLog` 门面（emit / reader / audit / 生命周期）
   reader.py  `Reader`（筛选读口）+ `Replay`（按序重放 / 脱敏）
   bridge.py  `EventLogBridge`（事件总线 → 流水；映射表由内容侧给）

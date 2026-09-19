@@ -7,6 +7,8 @@
     from saintess_engine.log import get_logger, configure, FileSink, bind
 
 `Sink` 协议与分发纪律在 `sinks` —— 后续的结构化流水（`tlog`）复用同一形状。
+其中**报错口径**与**文件出口生命周期**是同一份代码（`saintess_engine/_sinkbase.py`），
+两侧不再各抄一份。
 """
 from .facade import (  # noqa: F401
     DEFAULT_FMT, DEFAULT_PREFIX, RESERVED_KEYS,

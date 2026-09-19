@@ -26,6 +26,8 @@ import sys
 import threading
 from typing import Any, Optional, Protocol, Sequence
 
+from .._sinkbase import FileSinkBase, sink_error
+
 __all__ = [
     "Sink", "SinkHandler", "StreamSink", "FileSink", "MemorySink",
     "DEFAULT_FMT", "format_record", "dispatch",
@@ -56,23 +58,6 @@ def format_record(record: logging.LogRecord, fmt: str = DEFAULT_FMT) -> str:
     return logging.Formatter(fmt).format(record)
 
 
-def _sink_error(sink: Any, record: logging.LogRecord, exc: BaseException) -> None:
-    """sink 自身出错时的报告口径 —— 与标准库 `Handler.handleError` 同一纪律。
-
-    直接写 stderr，**不经过 logging**（否则 sink 坏了会递归触发自己）。
-    `logging.raiseExceptions = False` 时静默（生产环境的常规选择）。
-    """
-    if not logging.raiseExceptions:
-        return
-    try:
-        sys.stderr.write(f"--- 日志 sink 处理失败 {sink!r}（record.levelname="
-                         f"{getattr(record, 'levelname', '?')}）---\n")
-        import traceback
-        traceback.print_exception(type(exc), exc, exc.__traceback__, file=sys.stderr)
-    except Exception:                                             # pragma: no cover
-        pass
-
-
 def dispatch(sinks: Sequence[Any], record: logging.LogRecord) -> int:
     """把 record 逐个发给 sink，返回**成功数**（异常被隔离，纪律 1）。
 
@@ -84,7 +69,8 @@ def dispatch(sinks: Sequence[Any], record: logging.LogRecord) -> int:
             s.emit(record)
             ok += 1
         except Exception as exc:                                  # noqa: BLE001
-            _sink_error(s, record, exc)
+            sink_error(s, exc, what="日志处理",
+                       detail=f"（record.levelname={getattr(record, 'levelname', '?')}）")
     return ok
 
 
@@ -95,7 +81,7 @@ def _flush_sinks(sinks: Sequence[Any]) -> None:
             if callable(fn):
                 fn()
         except Exception as exc:                                  # noqa: BLE001
-            _sink_error(s, logging.LogRecord("", 0, "", 0, "", (), None), exc)
+            sink_error(s, exc, what="日志 flush")
 
 
 # ---------------------------------------------------------------- 出口实现
@@ -136,7 +122,7 @@ class StreamSink:
                 pass
 
 
-class FileSink:
+class FileSink(FileSinkBase):
     """追加写文件；`rotate` 给定时按大小轮转（`path` → `path.1` → `path.2` …）。
 
     参数
@@ -168,22 +154,13 @@ class FileSink:
             self.rotate_mode = "size"
         else:
             raise ValueError(f"未知的 rotate 取值：{rotate!r}（只支持 None / 'size' / 字节数）")
-        self._fh = None
-        self._lock = threading.RLock()
+        super().__init__()
 
     def set_format(self, fmt: str) -> "FileSink":
         self.fmt = fmt
         return self
 
     # ------------------------------------------------------------ 内部
-    def _open(self):
-        if self._fh is None or self._fh.closed:
-            parent = os.path.dirname(os.path.abspath(self.path))
-            if parent:
-                os.makedirs(parent, exist_ok=True)
-            self._fh = open(self.path, "a", encoding=self.encoding)
-        return self._fh
-
     def _rotate_files(self) -> None:
         if self._fh is not None and not self._fh.closed:
             self._fh.close()
@@ -213,17 +190,6 @@ class FileSink:
                     fh = self._open()
             fh.write(line)
             fh.flush()
-
-    def flush(self) -> None:
-        with self._lock:
-            if self._fh is not None and not self._fh.closed:
-                self._fh.flush()
-
-    def close(self) -> None:
-        with self._lock:
-            if self._fh is not None and not self._fh.closed:
-                self._fh.flush()
-                self._fh.close()
 
 
 class MemorySink:
