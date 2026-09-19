@@ -276,7 +276,11 @@ def t2_positive(body, tpat):
     # ★ C 档 35b（B-2 第 28 片）：`content/persistence/social.py` 市场交易回执 7 处替换 /
     #   2 新键（5 条同值幂等复用既有 stall.* 键；既有分类 社交市场 扩为文件列表）⇒ 3061 → 3063。
     #   ②中文键数锚点仍不变（stall.* 键名全 ASCII），③标签字已同步。
-    check("包内文案条数锚点 == 3126（条数变了就同步更新本门禁的锚点）", len(body) == 3126, len(body))
+    # ★ C 档 36a（B-2 第 29 片）：`content/cmds_world.py::quest_view` 句壳入表
+    #   （27 处 / 23 新键，新分类 任务面板）⇒ 3103 → 3126。
+    # ★ C 档 36b（B-2 第 30 片）：`content/economy_cmds.py::bp_craft` 图纸合成族
+    #   （10 处 / 10 新键，分类 锻造）⇒ 3126 → 3136。
+    check("包内文案条数锚点 == 3136（条数变了就同步更新本门禁的锚点）", len(body) == 3136, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
