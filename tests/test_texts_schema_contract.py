@@ -262,7 +262,10 @@ def t2_positive(body, tpat):
     #     垂钓惊喜 / 采集结算 / 挖掘结算）⇒ 2586 → 2625。
     #     ②中文键数锚点仍不变（prof.* / fish.* / gather.* / mining.* 键名全 ASCII），
     #     ③标签字已同步。
-    check("包内文案条数锚点 == 2625（条数变了就同步更新本门禁的锚点）", len(body) == 2625, len(body))
+    #   ★ C 档 33b（B-2 第 22 片）：`content/cmds_job.py`「职业速查」+ `content/cmds_collection.py`
+    #     「收藏册」36 处替换 / 36 新键（新分类 职业速查 / 收藏册）⇒ 2625 → 2661。
+    #     ②中文键数锚点仍不变（job.* / collect.* 键名全 ASCII），③标签字已同步。
+    check("包内文案条数锚点 == 2661（条数变了就同步更新本门禁的锚点）", len(body) == 2661, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
