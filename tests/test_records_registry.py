@@ -40,15 +40,9 @@ TMP = tempfile.mkdtemp(prefix="records_registry_")
 atexit.register(shutil.rmtree, TMP, ignore_errors=True)
 
 
-def check(name, cond, detail=""):
-    global PASS, FAIL
-    if cond:
-        PASS += 1
-        print("  ✅ %s" % name)
-    else:
-        FAIL += 1
-        print("  ❌ %s %s" % (name, detail))
-    return bool(cond)
+from _check import bind_check  # noqa: E402  P0-1 断言助手单源：tests/_check.py
+
+check = bind_check(globals(), "PASS", "FAIL")
 
 
 def _write(root, sub, domain, table):

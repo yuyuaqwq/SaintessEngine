@@ -35,14 +35,9 @@ PASS = 0
 FAIL = 0
 
 
-def check(name, cond, detail=""):
-    global PASS, FAIL
-    if cond:
-        PASS += 1
-        print(f"  ✅ {name}")
-    else:
-        FAIL += 1
-        print(f"  ❌ {name} {detail}")
+from _check import bind_check  # noqa: E402  P0-1 断言助手单源：tests/_check.py
+
+check = bind_check(globals(), "PASS", "FAIL")
 
 
 def req(base, method, path, body=None):

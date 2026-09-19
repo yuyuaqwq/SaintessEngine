@@ -38,15 +38,9 @@ FAILURES = []
 _HOOK_NAMES = ("formula_skeleton_fn", "skill_flat_fn", "skill_up_fn", "skill_level_of_fn")
 
 
-def check(name, cond, detail=""):
-    global PASS, FAIL
-    if cond:
-        PASS += 1
-        print(f"  ✅ {name}")
-    else:
-        FAIL += 1
-        FAILURES.append(f"{name}: {detail}")
-        print(f"  ❌ {name} {detail}")
+from _check import bind_check  # noqa: E402  P0-1 断言助手单源：tests/_check.py
+
+check = bind_check(globals(), "PASS", "FAIL", "FAILURES")
 
 
 class Unmounted:

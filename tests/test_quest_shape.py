@@ -40,15 +40,9 @@ passed = failed = 0
 DETAIL = []
 
 
-def check(name, cond, detail=""):
-    global passed, failed
-    if cond:
-        passed += 1
-        print(f"  ✅ {name}")
-    else:
-        failed += 1
-        DETAIL.append(f"{name} {detail}")
-        print(f"  ❌ {name} {detail}")
+from _check import bind_check  # noqa: E402  P0-1 断言助手单源：tests/_check.py
+
+check = bind_check(globals(), "passed", "failed", "DETAIL")
 
 
 def raises(exc, fn, *a, **kw):
