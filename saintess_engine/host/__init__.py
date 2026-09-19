@@ -32,6 +32,7 @@ ctx 七字段：`uid` · `text` · `group_id` · `is_group` · `at[]` · `ts` ·
 from .env import BUILTIN_GUARDS, Env, run_guards
 from .outcome import BattleOutcome, Scenario, StandIns
 from .package import Package, PackageError, load_package
+from .shell import ShellBase, ShellEnv, store_half
 from .runtime import (DEFAULTS_HINTS, DEFAULT_BATTLE_HINT, DEFAULT_REGISTER_HINT,
                       MINIMAL_SAVE_KEYS, Host)
 
@@ -39,6 +40,7 @@ __all__ = [
     "Host",
     "Env", "run_guards", "BUILTIN_GUARDS",
     "Package", "PackageError", "load_package",
+    "ShellBase", "ShellEnv", "store_half",
     "Scenario", "BattleOutcome", "StandIns",
     "DEFAULTS_HINTS", "DEFAULT_REGISTER_HINT", "DEFAULT_BATTLE_HINT", "MINIMAL_SAVE_KEYS",
 ]
