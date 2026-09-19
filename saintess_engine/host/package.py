@@ -24,22 +24,14 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
-import json
 import os
 import sys
+
+from ..records.shapes import read_json  # noqa: F401  W8：与引擎通用小工具同一份（原两处逐字重复）
 
 
 class PackageError(RuntimeError):
     """包不可用：清单缺失 / 声明了 entry 却没有文件 / 版本门槛不过 / 契约函数缺失。"""
-
-
-def read_json(path, default=None):
-    """读 JSON（缺文件 / 坏 JSON → default，不抛）。"""
-    try:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:                                            # noqa: BLE001
-        return default
 
 
 def _engine_version():
