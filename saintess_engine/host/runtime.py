@@ -552,7 +552,6 @@ class Host:
         return ["未知宿主命令：%s（%shelp）" % (name, self.prefix)]
 
     def help_text(self) -> list:
-        visible = self.commands.visible()
         return ["宿主：包 %s（%d 域 / %d 条指令声明 / %d 条已实现处理器）"
                 % (self.pkg.id, len(self.pkg.domains), len(self.commands), len(self.handlers)),
                 "宿主命令：%shelp · %squit · %s<包内指令 key>" % ((self.prefix,) * 3),

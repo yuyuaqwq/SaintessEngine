@@ -5,3 +5,4 @@ __pycache__/
 *.db-journal
 .workdir/
 .pytest_cache/
+/data/          # AstrBot 插件运行时数据（从引擎目录误启动时生成，非引擎内容；见台账 T6⑥）
