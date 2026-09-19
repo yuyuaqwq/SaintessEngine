@@ -281,7 +281,7 @@ def t2_positive(body, tpat):
     # ★ C 档 36b（B-2 第 30 片）：`content/economy_cmds.py::bp_craft` 图纸合成族
     #   （10 处 / 10 新键，分类 锻造）⇒ 3126 → 3136。
     #   ★ C 档 37a（B-2 第 31 片 · C 档收口片：economy 货架行/孤品行/体力恢复 hook + combat 荣誉行/双形态可用行 + pets 宠物蛋 desc + instance_gate 人数措辞；10 处替换 / 10 新键，零同值复用）⇒ 3136 → 3146
-    check("包内文案条数锚点 == 3146（条数变了就同步更新本门禁的锚点）", len(body) == 3146, len(body))
+    check("包内文案条数锚点 == 3165（条数变了就同步更新本门禁的锚点）", len(body) == 3165, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
