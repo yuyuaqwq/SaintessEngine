@@ -233,10 +233,15 @@ def t2_positive(body, tpat):
     #     36 新键，6 处同值幂等复用）⇒ 2369 → 2405。
     #   ★ 2026-09-19 C 档 27a（B-2 第 13 片：world 余量「交付目标行 / 武器自选礼包」
     #     15 新键，0 处同值幂等复用）⇒ 2405 → 2420。
+    #   ★ 2026-09-19 C 档 28a（B-2 第 14 片：settlement「战斗结算：经验/金币加成 + 掉落播报」
+    #     37 新键，0 处同值幂等复用）⇒ 2420 → 2457。
+    #     ②中文键数锚点仍不变（expcurve.* / expbonus.* / petexp.* / wevent.* / fortune.* /
+    #     kills.* / lucky.* / mfold.* / knowexp / nextstep.* / rbp.* / req.* / regg / rmount / rrune / rgem
+    #     键名全 ASCII），③标签字已同步。
     #     ②中文键数锚点仍不变（objline.* / wpick.* 键名全 ASCII），③标签字已同步。
     #     ②中文键数锚点仍不变（map.* / time.* / notes.* / npcwhere.* / wildcond.* / time_name.* /
     #     season_cn.* / weather_cn.* / home.head_* 键名全 ASCII），③标签字已同步。
-    check("包内文案条数锚点 == 2420（条数变了就同步更新本门禁的锚点）", len(body) == 2420, len(body))
+    check("包内文案条数锚点 == 2457（条数变了就同步更新本门禁的锚点）", len(body) == 2457, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
