@@ -237,6 +237,9 @@ def t2_positive(body, tpat):
     #     37 新键，0 处同值幂等复用）⇒ 2420 → 2457。
     #   ★ 2026-09-19 C 档 28b（B-2 第 15 片：settlement「胜利面板 / 战败结算」两个大编排
     #     9 新键，0 处同值幂等复用）⇒ 2457 → 2466。
+    #   ★ 2026-09-19 C 档 29a（B-2 第 16 片：quests_flow 全文件
+    #     42 新键，6 处与 27a 的 objline.* 同值幂等复用）⇒ 2466 → 2508。
+    #     中文键数锚点仍不变（qflow.* / objline.* 键名全 ASCII）。
     #     ②中文键数锚点仍不变（vsettle.* / dsettle.* 键名全 ASCII），③标签字已同步。
     #     ②中文键数锚点仍不变（expcurve.* / expbonus.* / petexp.* / wevent.* / fortune.* /
     #     kills.* / lucky.* / mfold.* / knowexp / nextstep.* / rbp.* / req.* / regg / rmount / rrune / rgem
@@ -244,7 +247,7 @@ def t2_positive(body, tpat):
     #     ②中文键数锚点仍不变（objline.* / wpick.* 键名全 ASCII），③标签字已同步。
     #     ②中文键数锚点仍不变（map.* / time.* / notes.* / npcwhere.* / wildcond.* / time_name.* /
     #     season_cn.* / weather_cn.* / home.head_* 键名全 ASCII），③标签字已同步。
-    check("包内文案条数锚点 == 2466（条数变了就同步更新本门禁的锚点）", len(body) == 2466, len(body))
+    check("包内文案条数锚点 == 2508（条数变了就同步更新本门禁的锚点）", len(body) == 2508, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
