@@ -270,7 +270,9 @@ def t2_positive(body, tpat):
     #     ②中文键数锚点仍不变（wk.* / tv.* 键名全 ASCII），③标签字已同步。
     # ★ C 档 34a（B-2 第 24 片）：`content/talk_actions.py`「对话动作」+ `content/race_talent_display.py`
     #     「种族天赋」43 处替换 / 43 新键（两新分类）⇒ 2694 → 2737。
-    check("包内文案条数锚点 == 2737（条数变了就同步更新本门禁的锚点）", len(body) == 2737, len(body))
+    # ★ C 档 34b（B-2 第 25 片）：`content/cmds_event.py`「今日事件」+ `content/reward.py`
+    #     「奖励发放」39 处替换 / 37 新键（两新分类）⇒ 2737 → 2774。
+    check("包内文案条数锚点 == 2774（条数变了就同步更新本门禁的锚点）", len(body) == 2774, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
