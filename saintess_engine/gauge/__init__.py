@@ -42,7 +42,7 @@ S3 通用件归位（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §6.5 / §7-S3）
 （S3 前这里是 importlib 延迟直读 data.battle_config/data.battle_rules——
 既为避 core ↔ data 循环导入，也是引擎反向依赖的一条边。）
 """
-from math import ceil, floor
+from math import floor
 
 from .. import config as _bcfg
 

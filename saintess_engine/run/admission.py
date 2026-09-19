@@ -47,7 +47,7 @@
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Optional, Sequence
+from typing import Callable, Optional, Sequence
 
 __all__ = ["Rule", "Admission", "Verdict", "PASS", "DENY", "SKIP"]
 
