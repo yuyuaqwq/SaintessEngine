@@ -50,7 +50,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import Any, Callable, Mapping, Optional
 
-__all__ = ["WireMissing", "LazyRef", "Surface", "Wire"]
+__all__ = ["WireMissing", "LazyRef", "Surface", "Wire", "slot"]
 
 
 def _missing(name: str, detail: str = "") -> "WireMissing":
@@ -307,3 +307,42 @@ class Wire:
 
     def __repr__(self) -> str:
         return "<Wire 句柄 %d 个 / 惰性 %d 个>" % (len(self._handles), len(self._lazy))
+
+# ============================================================
+# 模块注入槽（包侧样板 = 一行声明）
+# ------------------------------------------------------------
+# 包内每个「要接宿主注入」的模块原先各写一段 5 行样板：
+#
+#     from saintess_engine.wire import Wire
+#     _WIRE = Wire()
+#
+#     def bind_host(**objs):
+#         """宿主薄壳 import 期注入（幂等）"""
+#         _WIRE.bind(**objs)
+#
+# 这段样板在包里抄了 37 遍、且**毫无内容侧知识**（引擎形状，与具体包无关）
+# ⇒ 收成引擎的一个动词：`slot()` 返回 `(wire, bind_host)` 一对，包侧写作
+#
+#     from saintess_engine.wire import slot as _slot
+#     _WIRE, bind_host = _slot()
+#
+# 语义**不新增任何口径**：`bind_host(**objs)` 就是 `wire.bind(**objs)` 本身
+# （同名后写者胜 / 值 `None` = 没给 / 未 bind 的取件 → `WireMissing` 点名，全由 `Wire` 定）。
+# 不注册全局单例：谁调谁得**新的一对**（与「引擎不做注册表 / 不做依赖注入容器」一致）。
+# ============================================================
+def slot() -> "tuple[Wire, Callable[..., Wire]]":
+    """建「模块注入槽」：一只 `Wire` + 一个转发它的 `bind_host`（调用方一行声明）。
+
+    返回 `(wire, bind_host)`：
+
+    * `wire`：本模块自己的取件面（该建几只由调用方定，引擎不记账）
+    * `bind_host(**objs)`：等价于 `wire.bind(**objs)`，幂等、无返回（与包内手写样板逐字同义）
+
+    **不吞异常、不做兜底**：`bind` 的校验异常原样上抛。
+    """
+    w = Wire()
+
+    def bind_host(**objs):
+        w.bind(**objs)
+
+    return w, bind_host
