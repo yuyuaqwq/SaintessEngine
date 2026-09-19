@@ -298,7 +298,9 @@ def t3_chinese_keys_revive(body, tpat):
     # ★ 2026-09-17 锚点同步（C 档 5a）：来源图标 9 个中文键（src_icon.图纸/锻造/商店/任务/支线/
     #   宝藏/精英/精英专属/副本Boss）⇒ 156 → 165。**本门禁的锚点共三处**：条数、中文键数、标签字，
     #   三处都要改判据里的数字（只改标签字会假红）。
-    check("含中文的 key 数 == 165（域研究口径）", len(cn) == 165, len(cn))
+    #   ★ 2026-09-19 C 档 PRE2（并行批 2）：路 A 的 4 个中文键
+    #     （instance.面板_站位_敌方 / _我方 / _防御 / _精英）⇒ 165 → 169。
+    check("含中文的 key 数 == 169（域研究口径）", len(cn) == 169, len(cn))
     rx = re.compile(tpat)
     still_bad = [k for k in cn if not rx.search(k)]
     check("★ 156 个中文 key 逐条过新 pattern", not still_bad, still_bad[:5])
