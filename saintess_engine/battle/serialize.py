@@ -3,7 +3,7 @@
 
 按 docs/archive/REFACTOR_v181P4_FULL_PLAN.md Part 4.2：
 - to_state 输出 sides-only JSON 结构（battle_state.state 存）
-- from_state 重建 Battle + sides + actors
+- from_state 重建 Battle + sides + actors（文案表由恢复方重新注入：`text=`；不落盘）
 - actor 全字段可 JSON 化（state/buffs/ext 等）；无循环引用（召唤物 owner 存 uid）
 
 state = {
@@ -54,14 +54,21 @@ def _serialize_actor(actor: dict) -> dict:
     return out
 
 
-def from_state(st: dict) -> Battle:
-    """dict → Battle（重建 sides + actors + meta）。"""
+def from_state(st: dict, *, text=None) -> Battle:
+    """dict → Battle（重建 sides + actors + meta）。
+
+    text: （v186 文案注入）可选文案表（鸭子类型同 `Battle.__init__`）。表实例不可 JSON 化
+      ⇒ 不随 `to_state` 落盘，恢复方**每次重新注入**（与 target_picker 一类运行回调同款）；
+      不传 = 未注入 ⇒ 战斗日志走调用点兜底模板（逐字节 = 历史内联串）。
+    """
     b = Battle(
         btype=st.get("type", "monster"),
         sides={sn: [_deserialize_actor(a) for a in acts]
                for sn, acts in (st.get("sides") or {}).items()},
         title_bonus=st.get("title_bonus") or {},
         hostile_map=st.get("hostile_map") or {},
+        # 文案表：不落盘 ⇒ 由恢复方重新注入（未注入 = 兜底模板）
+        text=text,
         # N10-B6b：恢复路径不重播初始 ct（actor ct 已随存档反序列化）
         seed_ct=False,
     )

@@ -137,7 +137,7 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 
 ```python
 to_state() -> dict                    # battle.py:602 → serialize.to_state
-Battle.from_state(st) -> Battle       # battle.py:608（classmethod）→ serialize.from_state
+Battle.from_state(st, *, text=None)   # battle.py:608（classmethod）→ serialize.from_state
 ```
 
 ## 3. 模块级公开函数

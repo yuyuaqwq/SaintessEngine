@@ -263,5 +263,34 @@ check("text_of 与 render_via 同源：读同一处 `.text`",
 check("text_of(None) / 无 text 替身 → None（未注入）",
       text_of(None) is None and text_of(object()) is None)
 
+# ---------------------------------------------------------------- 7. 续战/恢复路径
+print()
+print("【7. 续战 / 面板恢复：from_state(text=…) 同口径注入（注入不停在首战）】")
+_b7, _p7, _e7 = _setup(text=_Stub({"battle.landing.damage": "／表：续战伤害"}))
+_st7 = _b7.to_state()
+check("to_state 不落文案表（表不可 JSON 化；state 顶层与 actor 内都无 text）",
+      "text" not in _st7 and all("text" not in a for acts in _st7["sides"].values() for a in acts),
+      sorted(_st7)[:6])
+_sig7 = _insp.signature(Battle.from_state).parameters
+check("★ from_state 的 text 为关键字专属（不留位置参数口子）",
+      "text" in _sig7 and _sig7["text"].kind is _insp.Parameter.KEYWORD_ONLY,
+      str({_n: str(_pp.kind) for _n, _pp in _sig7.items()}))
+_c7 = Battle.from_state(_st7, text=_Stub({"battle.landing.damage": "／表：续战伤害"}))
+_lg7 = []
+random.seed(7)
+landing.deal_damage(_c7, None, _c7.sides_of("enemy")[0], 3, _lg7)
+check("★ 恢复带 text= ⇒ 续战日志取自表（注入链不断在 from_state）",
+      _lg7 == ["／表：续战伤害"], _lg7)
+_c8 = Battle.from_state(_st7)
+check("恢复不传 text ⇒ .text is None（未注入）", _c8.text is None)
+_lg8 = []
+random.seed(7)
+landing.deal_damage(_c8, None, _c8.sides_of("enemy")[0], 3, _lg8)
+check("未注入恢复 ⇒ 逐字节 == 兜底模板（历史内联串）",
+      _lg8 == ["💥 房间怪 受到 3 点伤害！"], _lg8)
+from saintess_engine import from_state as _fs_mod                            # noqa: E402
+check("模块级 from_state 同款（text= 关键字透传）",
+      _fs_mod(_st7, text=_Stub({"battle.landing.damage": "／表：模块级"})).text is not None)
+
 print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
 sys.exit(1 if failed else 0)

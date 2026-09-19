@@ -188,7 +188,7 @@ fire(battle, "time_advance", {"dt": dt, "now": battle._now}, logs)   # ③ 广�
 ## 序列化与时钟
 
 `to_state` 存 `now`（`serialize.py:38`）、actor 的 `ct` 随 actor 字段一起存。
-`from_state` 恢复 `_now` 且 **`seed_ct=False`**（`serialize.py:66/70`）——
+`from_state` 恢复 `_now` 且 **`seed_ct=False`**（`serialize.py:73/70`）——
 不重播初始 ct，因为存档里已经有每个 actor 的真实 ct。改这条会让续战起手错位。
 
 ## 相关

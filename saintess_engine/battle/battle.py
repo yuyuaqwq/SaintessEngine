@@ -605,7 +605,11 @@ class Battle:
         return _ts(self)
 
     @classmethod
-    def from_state(cls, st: dict) -> "Battle":
-        """dict → Battle（断线恢复/续战用）。"""
+    def from_state(cls, st: dict, *, text=None) -> "Battle":
+        """dict → Battle（断线恢复/续战用）。
+
+        text: 同构造注入（可选，关键字专属）。表不落盘 ⇒ 续战方**重新传入**；
+          不传 = 未注入（日志走调用点兜底模板，逐字节 = 历史内联串）。
+        """
         from .serialize import from_state as _fs
-        return _fs(st)
+        return _fs(st, text=text)

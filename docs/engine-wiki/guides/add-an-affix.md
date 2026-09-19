@@ -54,7 +54,7 @@ def we_affix_dot(battle, caster, target, params, logs):
 （`serialize._serialize_actor` 不剥 `ext`，只剥 `_skill_index`，`serialize.py:31`）。
 所以「本次战斗的 CD」用 `ext` 是安全的；如果你的 `ext` 里放了不可 JSON 化的东西，
 存档时 `json.dumps` 会抛 —— `serialize.state_to_json` 用了 `default=str` 兜底
-（`serialize.py:116`），结果是静默变成字符串。
+（`serialize.py:123`），结果是静默变成字符串。
 
 ## 事件映射：旧事件名 → 引擎事件名
 

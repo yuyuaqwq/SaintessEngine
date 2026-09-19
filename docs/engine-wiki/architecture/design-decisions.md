@@ -200,7 +200,7 @@ Boss 剧本导演。这些都需要游戏知识。
 
 **代价**：
 - **它们不落盘**：`from_state` 只恢复 `btype/sides/title_bonus/hostile_map`，
-  恢复后必须自己重挂（[../guides/serialize-and-resume.md](../guides/serialize-and-resume.md)）
+  恢复后必须自己重挂（文案表 `text=` 同理：可选关键字参数，恢复时重新传入）（[../guides/serialize-and-resume.md](../guides/serialize-and-resume.md)）
 - 异常被吞掉（`script_hook` 异常 → 回落默认行动，`battle.py:340-341`），
   钩子写错不容易发现
 
