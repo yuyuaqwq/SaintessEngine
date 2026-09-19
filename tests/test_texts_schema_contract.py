@@ -243,6 +243,8 @@ def t2_positive(body, tpat):
     #     转职面板 / 转职重置 / 战力 / 注销确认」8 新键）⇒ 2508 → 2516。
     #   ★ 2026-09-19 C 档 31a（B-2 第 18 片：world_cmds 余量「野外来客未出现提示 /
     #     对话支线菜单 / 编年史」3 新键，NPC查找 / NPC对话 沿用既有分类）⇒ 2516 → 2519。
+    #   ★ C 档 32a（B-2 第 19 片）：`content/gm.py` 余量「GM 指令回执族」19 函数 59 处替换 /
+    #     58 新键（新分类 GM指令；玩家列表四行归既有 GM面板）⇒ 2519 → 2577。
     #     ②中文键数锚点仍不变（register.* / evolve.* / power.* / account.* 键名全 ASCII）。
     #     ③标签字已同步。
     #     中文键数锚点仍不变（qflow.* / objline.* 键名全 ASCII）。
@@ -253,7 +255,7 @@ def t2_positive(body, tpat):
     #     ②中文键数锚点仍不变（objline.* / wpick.* 键名全 ASCII），③标签字已同步。
     #     ②中文键数锚点仍不变（map.* / time.* / notes.* / npcwhere.* / wildcond.* / time_name.* /
     #     season_cn.* / weather_cn.* / home.head_* 键名全 ASCII），③标签字已同步。
-    check("包内文案条数锚点 == 2519（条数变了就同步更新本门禁的锚点）", len(body) == 2519, len(body))
+    check("包内文案条数锚点 == 2577（条数变了就同步更新本门禁的锚点）", len(body) == 2577, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
