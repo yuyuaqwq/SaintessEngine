@@ -8,7 +8,7 @@ saintess_engine = Battle.from_state(state)   # ← 重建 Battle / sides / actor
 ```
 
 入口：`serialize.to_state`（`serialize.py:34`）/ `serialize.from_state`（`serialize.py:57`），
-包门面也 re-export 了模块级 `to_state` / `from_state`（`saintess_engine/__init__.py:39`），
+包门面也 re-export 了模块级 `to_state` / `from_state`（`saintess_engine/__init__.py:41`），
 `Battle.to_state` / `Battle.from_state` 是类方法包装（`battle.py:578/532`）。
 **两条路等价**，内容层两种都在用（游戏仓侧拆仓前的迁移计划 `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §5 记了
 `B2.from_state` 与 `Battle.from_state` 两种形态）。

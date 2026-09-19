@@ -14,8 +14,11 @@
 **为什么 JSON 为源**：编辑器要稳定读写；py dict 回写会毁注释与排版（见 EDITOR_SPEC
 的方案 A）。`apply.py` 仍然可以是 py —— 那是「代码」，不是「数据」。
 
-本模块**只做文件 IO 与结构校验**，不 import `saintess_engine`（编辑器主进程零引擎副作用；
-真正跑战斗在子进程里，见 simulate.py）。
+本模块**只做文件 IO 与结构校验**，不 import 引擎的**战斗域 / 装配面**（编辑器主进程零
+引擎副作用 —— 真正跑战斗在子进程里，见 simulate.py）。唯一的引擎依赖是
+`saintess_engine.domains`（纯常量 + 合并规则：不挂 hook、不改全局态）—— 因为
+「域元数据怎么合并」只有那一份，引擎装载口与编辑器必须看到同一份有效域表
+（2026-09-20 T1 双向迁移演习；见 `overnight/T1_DUAL_MIGRATION_DRILL.md`）。
 """
 from __future__ import annotations
 
@@ -28,96 +31,31 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FRAMEWORK_ROOT = os.path.dirname(HERE)
 DEFAULT_GAMES_DIR = os.path.join(FRAMEWORK_ROOT, "games")
 
-# ---------------- 域注册表：**引擎域内置默认集（回退用，不是真源）** ----------------
+# ---------------- 域注册表：**引擎默认集（回退用，不是真源）** ----------------
 # ⚠️ 域的真源是**包自己的** `<pkg>/editor/domains.json`（读法见下面 `_read_package_domains()` /
 #    `package_domains()` / `effective_domains()`）—— 所以「加一个域」是**纯包侧动作**：
 #    包里写 3 样东西（域声明 + schema + 数据文件），框架一行不改（最小样板见
-#    `examples/minimal-game/`）。这份常量**只做两件事**：
-#      · 包**没有**可用声明时兜底（第三方包 / 坏包 / 未迁移的老包）—— 让编辑器不至于空白；
-#      · 包声明**同名域**时给「没写的字段」补缺省值（写了的字段一律以包为准）。
-#    包声明了同名域 → 这份里的那一域**不再参与取值**（见 `effective_domains()` 里
-#    「包声明覆盖内置」分支，且必进 warnings）；把这份整体置空，自带声明的包照旧完整可编
-#    —— 反证门禁：`tests/test_editor_step3_pkg_first.py`（monkeypatch 置空 + orlandia 全量读写）。
+#    `examples/minimal-game/`）。
 #
-# ★ 2026-09-13 B2b：**19 → 8，只留「引擎域」**。口径一句话：
-#   **只有引擎侧真有消费端代码的域才内置**（引擎自带一个通用结构件/规则表读它）；
-#   **内容域（某个具体游戏才有的域）一律不内置** —— 它们只能由内容包自己声明
-#   （`games/orlandia/editor/domains.json` 声明 24 个；内容域那 16 个框架一侧一个字都没有）。
-#   移出的 11 个内容域（skills / classes / monsters / affixes / items / loot_vocab /
-#   equip_roster / pois / legendary_effects / pets / monster_roster）过去靠这份兜底才能显示，
-#   等于「框架里揣着某个具体游戏的域」；现在它们在包里，框架侧零字面量。
-#   为什么「引擎域」是这 8 个：每个域在 `saintess_engine/` 里都能指到消费它的代码（逐条见下）。
-#   判定时**只认引擎仓内的消费端**：`editor/*_view.py` 之类编辑器侧的读点不算数
-#   （否则 `loot_vocab` 也会被留下 —— 它只被 `editor/loot_view.py:load_vocab()` 读，
-#   引擎侧一个字没有，取值全是内容词汇：前缀 / 特殊 ref / 去哪个域查）。
-#
-# kind: "data"（content/data/）| "rules"（content/rules/）
-# schema: 文件名（**不是**「框架里的路径」）—— 按 `schema_path()` 解析：
-#         <pkg>/schemas/<file> → <pkg>/<file> → 框架 schemas/<file> → None
-#         （包自带优先、框架只留回退；orlandia 的 17 份已搬进 games/orlandia/schemas/）
-# primary: schema $defs 里「一条数据」的 def 名
-BUILTIN_DEFAULT_DOMAINS = {
-    # ── ① effect_rules「声明表」：引擎的效果规则表。消费端
-    #    `battle/state_effects.py:13-15` state_def(key) → `config.get_effect_rules()`；
-    #    装配面 `config.py:26-28`（_LOADED["effect_rules"]）/ `:88-91` load_game_rules /
-    #    `:105-107` get_effect_rules。读点遍布引擎：effects.py:67(cap)/:245/:310(period)/
-    #    :351(consume)/:458(panel)、stats.py:57(stat_scale)、landing.py:128/173/312-313、
-    #    schedule.py:235-243(period)、actions.py:89-97(cd_mult)。不填 = 纯数值无规则（零行为）。
-    "effect_rules": {"label": "声明表", "kind": "rules", "schema": "effect_rules.schema.json",
-                     "primary": "effect_rule", "icon": "📜"},
-    # ── ② passive_proc「被动声明」：**引擎事件总线/动作注册面**上的声明形状。消费端不是
-    #    「读这张表」（读它的是内容侧装配器），而是引擎的既有面：事件全集
-    #    `battle/effect_triggers.py:52` EVENTS（26 个 = 引擎协议）+ `:61` fire(battle,event,ctx,logs)
-    #    消费 `actor["triggers"][事件]`；动作经 `battle/effects.py:95` register_action / `:135`
-    #    resolve_actions 注册执行（triggers 里的 `action` 直通 handler，见 effects.py:197-201）。
-    #    声明里的键/取值全是**引擎协议词**（event ∈ EVENTS、action = 引擎动词、domain=cap/cost
-    #    = 引擎概念），没有任何游戏专有名词 —— 所以是引擎域，不是内容域。
-    "passive_proc": {"label": "被动声明", "kind": "rules",
-                     "schema": "passive_proc.schema.json", "primary": "passive_proc",
-                     "icon": "🌀"},
-    # ── ③ commands「指令」：引擎通用命令注册表。消费端 `command/registry.py:164`
-    #    class CommandRegistry（`:206` from_data 直接吃这张表）；配套泛用件 `command/router.py`
-    #    / `command/guards.py` / `command/text.py`。不填 = 无指令（零行为）。
-    "commands": {"label": "指令", "kind": "data", "schema": "command.schema.json",
-                 "primary": "command", "icon": "⌨️"},
-    # ── ④ texts「文案」：引擎通用文案表。消费端 `text/template.py:129` class TextTable
-    #    （`:176` from_data）+ `safe_format` / `extract_params`（同文件）。不填 = 零行为。
-    "texts": {"label": "文案", "kind": "data", "schema": "text.schema.json",
-              "primary": "text_entry", "icon": "💬"},
-    # ── ⑤ tlogs「流水声明」：引擎结构化流水。「哪个 kind 有哪些字段」的声明表。
-    #    消费端 `tlog/record.py:115` class KindTable（`tlog/core.py:34` 再导出、
-    #    `:47`/`:53` 由 TLog(kinds=KindTable) 吃）。不填 = 不做校验（零行为）。
-    "tlogs": {"label": "流水声明", "kind": "data", "schema": "tlog.schema.json",
-              "primary": "tlog_entry", "icon": "🧾"},
-    # ── ⑥ maps「地图」：引擎空间结构件。消费端 `space/graph.py:42` class Space
-    #    （节点表 + topology → 邻接/深度/出入口/必经路径，`:45` __init__(nodes, topology…)）；
-    #    配套 `space/topology.py`。不给数据 = 不影响任何东西。
-    "maps": {"label": "地图", "kind": "data", "schema": "maps.schema.json",
-             "primary": "map", "icon": "🗺"},
-    # ── ⑦ drop_pools「掉落池」：引擎随机产出结构件。消费端 `loot/pool.py:200` class LootTable
-    #    （`loot/__init__.py` 导出；策略注册 `pool.py:47` register_strategy / STRATEGIES）。
-    #    引擎零知识：策略名是自由串，引用前缀/具体产出全在内容侧。
-    "drop_pools": {"label": "掉落池", "kind": "data", "schema": "drop_pools.schema.json",
-                   "primary": "pool", "icon": "🎁"},
-    # ── ⑧ instances「副本」：引擎运行结构件。消费端 `run/progress.py:49` class Progress、
-    #    `run/roster.py:37` class Roster、`run/admission.py:131` class Admission（`run/__init__.py`
-    #    统一导出）。一条 = 一个副本：stages 顺序即进度节点序。
-    "instances": {"label": "副本", "kind": "data", "schema": "instances.schema.json",
-                  "primary": "instance", "icon": "🏯"},
-    # 注：以下 11 个是**内容域**（曾内置，2026-09-13 B2b 移出）—— 引擎侧指不到消费端，
-    #     取值/结构都是某个具体游戏的词汇；现在只能由内容包声明（orlandia 在
-    #     `games/orlandia/editor/domains.json` 里声明它们，schema 随包走）：
-    #     skills · classes · monsters · affixes · items · loot_vocab · equip_roster ·
-    #     pois · legendary_effects · pets · monster_roster
-}
+# ★ 2026-09-20 T1（引擎默认集下移到引擎层）：常量与合并规则现在住在
+#   `saintess_engine/domains.py` —— 引擎自己的装载口（`records.read_domain_decl` /
+#   `resolve_domain`）要用**同一份**有效域表；否则「域的声明搬到引擎」之后编辑器还能编、
+#   装载口却读不到（实测：`overnight/T1_DUAL_MIGRATION_DRILL.md` §六）。
+#   本模块只**转出**需要的名字，并保留 `builtin_default_domains()` 薄包装 ——
+#   它读的是**本模块的全局名**，于是「把内置默认集整体置空」的反证门禁
+#   （monkeypatch `PK.BUILTIN_DEFAULT_DOMAINS`，`tests/test_editor_step3_pkg_first.py`）
+#   逐字照旧生效。
+#   该常量自身「为什么是这 8 个 / 为什么内容域不内置 / 每个域指哪个引擎消费端」的口径
+#   随常量一起搬到了 `saintess_engine/domains.py`（那边逐域有证据）。
+from saintess_engine.domains import BUILTIN_DEFAULT_DOMAINS, merge_decls  # noqa: E402,F401
 
 # 兼容别名 —— 历史调用点（`editor/server.py`、`editor/glossary.py`、若干测试）仍按 `DOMAINS`
-# 引用这份**内置默认集**；新代码请走 `builtin_default_domains()` / `effective_domains()`。
+# 引用这份**引擎默认集**；新代码请走 `builtin_default_domains()` / `effective_domains()`。
 DOMAINS = BUILTIN_DEFAULT_DOMAINS
 
 
 def builtin_default_domains() -> dict:
-    """内置默认集（回退用）**副本** —— 别改它：要加域/改域请改包内 `editor/domains.json`。"""
+    """引擎默认集（回退用）**副本** —— 别改它：要加域/改域请改内容包自己的声明表。"""
     return {k: dict(v) for k, v in BUILTIN_DEFAULT_DOMAINS.items()}
 
 
@@ -360,16 +298,17 @@ def effective_domains(pkg_dir=None) -> tuple:
     * 合并顺序 = 内置默认集顺序 + 包新增域（追加在末尾），所以既有 tab 的位置不会乱跳。
     """
     decls, warns, use_builtin = _package_domains_cached(pkg_dir)
-    merged = builtin_default_domains() if use_builtin else {}
+    # 合并规则**唯一源** = `saintess_engine.domains.merge_decls`（引擎装载口用的是同一份）；
+    # `builtin=` 显式传本模块的全局名 ⇒ 「整体置空」的反证门禁照旧生效。
+    merged = merge_decls(decls, builtin=BUILTIN_DEFAULT_DOMAINS, use_builtin=use_builtin)
     for did, meta in decls.items():
-        if did in merged:
-            old = merged[did]
+        old = (BUILTIN_DEFAULT_DOMAINS if use_builtin else {}).get(did)
+        if isinstance(old, dict):
             diff = "；".join(f"{f}: {old.get(f)!r} → {meta.get(f)!r}"
                              for f in _OVER_FIELDS if old.get(f) != meta.get(f))
             if diff:
                 warns.append(f"域 {did} 被包声明覆盖（{diff}）—— 该域的 "
                              f"label/kind/schema/primary/icon 一律以包内 {DOMAINS_REL} 为准")
-        merged[did] = dict(meta)
     if not use_builtin and not merged:
         warns.append(f"包声明里写了 `\"$builtin\": false`（不启用内置默认集），但一条可用域都没有"
                      f" —— 该包域表为空：请在 {DOMAINS_REL} 里声明自己的域")

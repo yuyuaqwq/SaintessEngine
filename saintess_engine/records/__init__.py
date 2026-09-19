@@ -123,6 +123,7 @@ __all__ = ["Records", "RecordsSet", "RecordsOrderMismatch", "RecordsReloadError"
 
 # 通用视图注册表（派生重建）：引擎只按 `(order, 登记序)` 调函数 + 按身份做别名回填，
 # 不认识任何具体派生名字（零领域知识）。实现与文档在 `records/views.py`。
+from ..domains import decl_switch as _decl_switch, merge_decls as _merge_decls  # noqa: E402
 from .views import (ViewsRebuildError, apply_replacements, placeholder,   # noqa: E402
                     rebuild_views, register_view, update_in_place, views)
 
@@ -555,6 +556,14 @@ class RecordsSet:
 # 同一张域在两处写法不一致时，装载期**看不出来**（两边都读得到文件），直到行为漂移。
 # 本段把「域 id → 落点子目录」的推导收成一处：调用方只声明**我要哪些域**，
 # 落点由包内域声明的 `kind` 派生，且**声明缺项 / 文件缺 / 声明与磁盘不符一律报错**。
+#
+# ★ 2026-09-20 T1（装配点）：**有效域表 = 包声明 ∪ 引擎默认集**
+#   （合并规则唯一源 = `saintess_engine.domains.merge_decls`；编辑器
+#   `editor/packages.py::effective_domains()` 委托的是同一份）。
+#   于是「域的声明 + schema 上移成引擎内置」对**装载口**与对编辑器是同一件事 ——
+#   否则声明搬走之后这里就读不到它了（T1 双向迁移演习实测；设计见
+#   `overnight/T1_DUAL_MIGRATION_DRILL.md` §六）。兜底只发生在「声明文件在、但没写这个域」
+#   这一层；文件缺失 / 坏 JSON / 顶层形状不对照旧 fail-closed。
 
 #: 包内域声明的默认相对路径（内容侧约定；引擎只读调用方给的那一份，不猜别处）。
 DEFAULT_DECL = "editor/domains.json"
@@ -576,7 +585,19 @@ def _kind_dirs(kind_dirs=None) -> dict:
 def read_domain_decl(pkg_root, *, decl: str = DEFAULT_DECL) -> dict:
     """读包内域声明（`<pkg>/<decl>`，默认 `editor/domains.json`）→ `{域: 声明 dict}`。
 
-    缺文件 / 坏 JSON / 顶层不是非空映射 → `RecordsDeclarationError`（**不静默空表**）。
+    ★ **装配点（全链唯一一处）**：返回的是「包声明 ∪ 引擎默认集」的**合并**结果 —— 域元数据
+    放包内、还是放引擎默认集里，编辑器与装载口看到的是**同一份**有效域表（合并规则唯一源 =
+    `saintess_engine.domains.merge_decls`）。「把一个域的形状上移成引擎内置」因此只是搬声明
+    + 搬文件，装载链上不需要再开第二个洞。
+
+    * 同名域**整体以包内那份为准**（不做字段级补缺 —— 那是编辑器 `_read_package_domains()`
+      的活：它要在读声明时就报「哪个字段写坏了」）；引擎默认集只补包**没**声明的域。
+    * 包声明里写 `"$builtin": false` ⇒ 不兜底（只认包自己声明的那几个域）。
+    * 开关名与 `{"domains": {...}}` 包装层的口径与编辑器一致
+      （`saintess_engine.domains.decl_switch`）。
+
+    fail-closed 一条没放松：文件缺失 / 坏 JSON / 顶层不是非空映射 → `RecordsDeclarationError`
+    （**不静默空表**）—— 兜底只发生在「文件在、但没写这个域」这一层。
     """
     path = os.path.join(pkg_root, decl)
     try:
@@ -590,7 +611,8 @@ def read_domain_decl(pkg_root, *, decl: str = DEFAULT_DECL) -> dict:
     if not isinstance(data, dict) or not data:
         raise RecordsDeclarationError(
             "包内域声明顶层不是非空映射：%s（是 %s）" % (path, type(data).__name__))
-    return data
+    pkg_decls, use_builtin = _decl_switch(data)
+    return _merge_decls(pkg_decls, use_builtin=use_builtin)
 
 
 def domain_sub(entry, domain: str, *, kind_dirs=None) -> str:
@@ -617,7 +639,8 @@ def resolve_domain(pkg_root, domain: str, *, decl: str = DEFAULT_DECL,
     decl_table = read_domain_decl(pkg_root, decl=decl) if declaration is None else declaration
     if domain not in decl_table:
         raise RecordsDeclarationError(
-            "域 %r 不在包内域声明里（%s）—— 声明缺项，拒绝装载（不静默给空表）"
+            "域 %r 既不在包内域声明里、也不在引擎默认集里（%s）"
+            "—— 声明缺项，拒绝装载（不静默给空表）"
             % (domain, os.path.join(pkg_root, decl)))
     sub = domain_sub(decl_table[domain], domain, kind_dirs=kind_dirs)
     path = os.path.join(pkg_root, sub, "%s.json" % (domain,))

@@ -8,7 +8,7 @@
 
 S2 固化（`docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §5）：把内容层**实际消费的 26 个符号**
 全量 re-export，并保留模块级 `config` / `effects` / `stats`
-（`saintess_engine/__init__.py:38-55`）。
+（`saintess_engine/__init__.py:40-57`）。
 
 ```python
 # Actor / 战斗主体
@@ -31,7 +31,7 @@ heal_amount · skill_pay_of
 from_state · to_state
 ```
 
-`__all__` 就是上面这份（`saintess_engine/__init__.py:51-74`）。门禁
+`__all__` 就是上面这份（`saintess_engine/__init__.py:53-76`）。门禁
 `tests/test_engine_purity.py` 会逐个断言这些符号存在，并断言 **5 个私有符号
 已升公开且旧下划线名是同一对象别名**：
 

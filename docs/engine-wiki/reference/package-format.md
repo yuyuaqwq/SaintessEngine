@@ -340,10 +340,14 @@ JSON 由导出脚本生成，并由**同步门禁**断言「派生一致」；�
 ```
 effective_domains(pkg) = 包 editor/domains.json  ∪（可选）框架内置默认集
   · 同名域：包声明优先（框架那份不参与该域取值）；真改了字段 → 一条可读 warning
-  · 框架内置默认集（editor/packages.py 的 BUILTIN_DEFAULT_DOMAINS，**8 个引擎域**：
+  · 框架内置默认集（**saintess_engine/domains.py:33** 的 BUILTIN_DEFAULT_DOMAINS，**8 个引擎域**：
     effect_rules / passive_proc / commands / texts / tlogs / maps / drop_pools / instances
     —— 逐个都能在 `saintess_engine/` 指到消费端；内容域不内置，否则等于「框架里揣着某个游戏的域」）
      **只在包里没有可用声明时兜底**（第三方包 / 坏包 / 未迁移的老包）—— 它是回退，不是真源
+  · ★ 合并规则**只有一份**：`saintess_engine/domains.py:94` 的 merge_decls —— 编辑器
+    `effective_domains()` 与**引擎装载口** `records.read_domain_decl` 委托的是同一份
+    ⇒ 域元数据放包内还是放引擎默认集里，两边看到的是**同一份有效域表**
+    （2026-09-20 T1 双向迁移演习的「一处装配点」：`saintess_engine/records/__init__.py:585`）
   · {"$builtin": false}：显式声明「本包的域就这些，不要兜底」（examples/minimal-game 用的就是它）
   · 坏声明（坏 JSON / 缺 kind / kind 非法 / schema 越界 / 域 id 越界）→ 该条（或整份）忽略 +
     黄条告警 + 回退默认集，**绝不 500**（「列表里有它、点开 500」是不允许的）
@@ -361,7 +365,7 @@ effective_domains(pkg) = 包 editor/domains.json  ∪（可选）框架内置默
 
 - **给某个游戏加/改域** → 只改那个包（§10.1 那三个文件）。框架那份默认集**不用动**。
 - **改内置默认集** → 只有当你要换掉「所有没声明的包的兜底域集」时才动它；那是**所有包**的口径变更，
-  不是给某个游戏加域的手段（`editor/packages.py:48`）。
+  不是给某个游戏加域的手段（`saintess_engine/domains.py:33` 起的常量段 + 该模块头注）。
 - 尚未搬进包的框架侧扩展面：字段词典 `editor/glossary.py`、取值提示 `editor/hints.py`、
   专属视图分派 `editor/{loot,instance,space}_view.py`（第 2/3 层扩展面，见设计稿）。
 

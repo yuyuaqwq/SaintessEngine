@@ -4,6 +4,8 @@
 模块布局（全部平级）：
 
   基础      config      引擎注入面（内容侧装配 hook 的唯一入口）
+            domains     引擎默认域集 + 「包声明 ∪ 引擎默认集」合并规则（域元数据合并唯一源：
+                        编辑器 `editor/packages.py` 与装载口 `records` 委托同一份）
   战斗域    battle/      CTB 调度 / 行动结算 / 效果叠层 / 落地 / 存档 / AI / 面板公式
   通用原语  expr/        表达式求值器（数值公式自定义）
             gauge/       计量条（累积/衰减/阈值/免疫窗口）
@@ -55,8 +57,8 @@ from .battle import (  # noqa: F401
     landing, schedule, serialize, state_effects, stats,
 )
 from . import (  # noqa: F401
-    clock, command, container, dialogue, events, expr, formation, gauge, log, loot, presence, run, session,
-    space, store, text, tlog,
+    clock, command, container, dialogue, domains, events, expr, formation, gauge, log, loot,
+    presence, run, session, space, store, text, tlog,
 )
 from . import host  # noqa: F401  （宿主运行时：放在最后 import，避免与上面各模块的加载顺序打架）
 from .host import Host, load_package  # noqa: F401
@@ -107,6 +109,8 @@ __all__ = [
     "run", "Admission", "Rule", "Verdict", "Progress", "Roster",
     # 对话树形状（节点 / 选项 / 条件槽 / 会话游标）
     "Dialogue", "Cursor",
+    # 引擎默认域集 + 合并规则（域元数据合并唯一源：编辑器与装载口同看一份）
+    "domains",
     # 声明驱动（指令 / 文案 / 流水）
     "CommandRegistry", "CommandSpec", "TextTable", "TextSpec", "safe_format",
     "TLog", "Record", "KindTable",

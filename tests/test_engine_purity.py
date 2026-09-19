@@ -3,7 +3,7 @@
 
 **被守的包（2026-09-11 模块化重排后）**：`saintess_engine/` —— 单一包、多模块并列：
 
-  基础      config.py
+  基础      config.py / domains.py
   战斗域    battle/（12 模块）
   通用原语  expr/ gauge/ formation/（2026-09-13 P4 下沉：中文 kind 词表 kinds/ 已归内容侧）
   运行时    store/ command/ events/ clock/ container/ session/
@@ -75,6 +75,7 @@ MODULE_ATTRS = [
     ("landing", "battle.landing"), ("schedule", "battle.schedule"),
     ("serialize", "battle.serialize"), ("state_effects", "battle.state_effects"),
     ("stats", "battle.stats"),
+    ("domains", "domains"),
     ("expr", "expr"), ("gauge", "gauge"), ("formation", "formation"),
     ("store", "store"), ("command", "command"), ("events", "events"),
     ("clock", "clock"), ("log", "log"), ("tlog", "tlog"), ("space", "space"), ("loot", "loot"),
