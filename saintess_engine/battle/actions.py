@@ -619,7 +619,6 @@ def _settle_lifesteal(battle, actor: dict, dmg_total: int, kind: str, logs: list
         st = S.actor_stats(battle, actor)
         rate = float(st.get("lifesteal", 0) or 0)
         # 物/魔细分合成（对齐旧：1-(1-rate)(1-sub)）；混合段物段走 phys、魔段走 magi
-        sub_rate = 0.0
         if magi_part > 0 and 0 < magi_part < dmg_total:
             # 物理段伤害 × phys 吸血 + 魔法段伤害 × magi 吸血（各自合成）
             phys_dmg = dmg_total - magi_part
