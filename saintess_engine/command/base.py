@@ -24,7 +24,7 @@ from typing import Optional, Sequence
 
 from ..log import get_logger
 
-from .guards import DEFAULT_BATTLE_HINT, DEFAULT_REGISTER_HINT, require_battle, require_player
+from .guards import DEFAULT_BATTLE_HINT, DEFAULT_REGISTER_HINT
 from .paging import page_items, parse_page
 from .router import HandlerHit, PatternSet, find_static, matches_any, run_shortcut
 from .text import strip_command
