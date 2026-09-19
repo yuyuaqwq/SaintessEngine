@@ -15,6 +15,13 @@ B. **全量命令覆盖（196/196）**：包内 `content/data/commands.json` 的
 C. **逐字节对拍（≥20 条）**：同 seed + 同命令序列 + 同固定墙钟下，
    试玩通道（引擎 host + 包）与 QQ 侧（`shim_astrbot` + `_host_bridge.run_async`）
    每条命令的 `digest`（key + 文本段 + 平台动作 + 状态 sha）逐条相同，且整串 sha 相同。
+C2. **★ 无宿主 vs 有宿主（T7 第 3 轮 · 试玩脱宿主）**：试玩链的壳**恒为引擎侧**
+   `editor/play_shell.py::PlayShell`（无宿主）；只有显式给 `host_root` 才换成插件
+   `host.shell.HostShell`。两侧同 seed / 同固定墙钟 / 同序列 / 各自新库 ⇒ 逐条 `digest` 相同。
+C0. **无宿主也要能跑（缺宿主时本文件的唯一判据）**：8 条子集真跑全绿（不靠插件任何文件）。
+   因此本门禁**不再整文件跳过** —— QQ 侧对拍（C 段）与路由片段（E 段）才需要宿主。
+E2. **反证**：把 `ShellBase.__getattr__` 打桩成抛错 ⇒ `背包` 必红（证「按名解析包内助手」
+   是真的在用，不是形状相似）。
 D. **子进程健壮**：超时可掐死（明确报 timeout，不静默）；worker 崩溃 → 明确报错；
    seed 可指定（同 seed 复现、异 seed 可不同）。
 """
@@ -36,7 +43,7 @@ ROOT = os.path.dirname(HERE)                       # 引擎仓（含 editor/ + g
 def _find_host_root() -> str:
     """宿主根 = 平台插件目录（需含 `game/` + `framework/`）。env 优先，其次常见位置。
 
-    本仓（引擎仓）通常**不含宿主**；没有宿主时本门禁整体跳过（见 main 开头），
+    本仓（引擎仓）通常**不含宿主**；没有宿主时只跳「QQ 侧对拍」两段（见 main），
     提供方式：`B20_HOST_ROOT=<插件目录>` 或下列候选之一命中。
 
     ★ 候选顺序里**部署布局优先**：插件目录 = 本引擎仓的上一级（`<plugin>/framework` +
@@ -145,9 +152,14 @@ def test_zero_engine_import() -> None:
 
     from editor import play as PLAY
     cfg = PLAY.discover()
-    check("discover() 找到 包/宿主/引擎 三个根",
-          bool(cfg.get("pkg_dir")) and bool(cfg.get("host_root")) and bool(cfg.get("engine_root")),
-          json.dumps(cfg, ensure_ascii=False))
+    if HOST_ROOT:
+        check("discover() 找到 包/宿主/引擎 三个根",
+              bool(cfg.get("pkg_dir")) and bool(cfg.get("host_root")) and bool(cfg.get("engine_root")),
+              json.dumps(cfg, ensure_ascii=False))
+    else:
+        check("无宿主：discover() 仍给出 包/引擎 两个根（host_root 显式为空）",
+              bool(cfg.get("pkg_dir")) and bool(cfg.get("engine_root")) and cfg.get("host_root") == "",
+              json.dumps(cfg, ensure_ascii=False))
 
 
 # ============================================================
@@ -483,27 +495,165 @@ def test_routes_fragment() -> None:
 
 
 # ============================================================
+# C0 / C2. 试玩脱宿主（T7 第 3 轮）：无宿主子集 · 无宿主 vs 有宿主逐字节对拍
+# ============================================================
+#: 对拍子集（建档 → 面板 → 列表 → 商店/任务）：试玩链最常用的一条，覆盖动态助手解析。
+HOSTLESS_SAMPLES = ["注册 试玩者 男", "背包", "状态", "帮助", "日常", "生活技能", "任务", "商店"]
+
+
+def _run_play(tag, host_root, seq, *, clock=CLOCK, seed=11, uid="9001", group_id="g9"):
+    """跑一侧（`host_root=""` ⇒ 无宿主/引擎试玩壳；给了 ⇒ 真插件宿主壳）。"""
+    from editor import play as PLAY
+    os.makedirs(DB_DIR, exist_ok=True)
+    db = os.path.join(DB_DIR, "t7_%s.db" % tag)
+    if os.path.exists(db):
+        os.remove(db)
+    return PLAY.run(PKG, seq, seed=seed, uid=uid, group_id=group_id, host_root=host_root,
+                    db=db, db_dir=DB_DIR, clock=clock)
+
+
+def _brief(res: dict) -> str:
+    return json.dumps({k: v for k, v in res.items() if k != "rows"}, ensure_ascii=False)[:300]
+
+
+def test_hostless_subset() -> None:
+    """C0 · 无宿主：引擎试玩壳真跑 8 条子集全绿 + 可复现（同 seed / 钟 ⇒ 同 sha）。"""
+    print()
+    print("=== C0. 无宿主（host_root="" ）子集实跑 ===")
+    a = _run_play("hostless_a", "", HOSTLESS_SAMPLES)
+    check("无宿主 stage=done", a.get("stage") == "done", _brief(a))
+    rows = a.get("rows") or []
+    bad = [(r.get("text"), (r.get("error") or "")[:80]) for r in rows if not r.get("ok")]
+    check("无宿主子集 %d 条全绿（包内助手按名解析可用）"
+          % len(HOSTLESS_SAMPLES), len(rows) == len(HOSTLESS_SAMPLES) and not bad, str(bad[:3]))
+    check("无宿主 host_modules=0（不蹭宿主树任何文件）", a.get("host_modules") == 0,
+          str(a.get("host_modules")))
+    b = _run_play("hostless_b", "", HOSTLESS_SAMPLES)
+    check("同 seed + 同固定墙钟 + 同序列 ⇒ digests_sha 可复现",
+          bool(a.get("digests_sha")) and a.get("digests_sha") == b.get("digests_sha"),
+          "%s vs %s" % (a.get("digests_sha"), b.get("digests_sha")))
+    note("无宿主子集 digests_sha = %s" % a.get("digests_sha"))
+
+
+def test_hostless_vs_host_parity() -> None:
+    """C2 · 无宿主（引擎 `PlayShell`）vs 有宿主（插件 `HostShell`）逐条 digest 相同。"""
+    print()
+    print("=== C2. 无宿主 vs 有宿主：逐字节对拍（%d 条子集）===" % len(HOSTLESS_SAMPLES))
+    a = _run_play("hostless", "", HOSTLESS_SAMPLES)
+    b = _run_play("withhost", HOST_ROOT, HOSTLESS_SAMPLES)
+    check("两侧都 stage=done", a.get("stage") == "done" and b.get("stage") == "done",
+          "A=%s B=%s" % (a.get("stage"), b.get("stage")))
+    ra, rb = a.get("rows") or [], b.get("rows") or []
+    check("两侧条数一致", len(ra) == len(rb) == len(HOSTLESS_SAMPLES),
+          "A=%d B=%d" % (len(ra), len(rb)))
+    diffs = []
+    same = 0
+    for i in range(min(len(ra), len(rb))):
+        if ra[i].get("digest") and ra[i].get("digest") == rb[i].get("digest"):
+            same += 1
+            continue
+        diffs.append({"i": i, "text": ra[i].get("text"), "a_ok": ra[i].get("ok"),
+                      "b_ok": rb[i].get("ok"), "a_key": ra[i].get("key"), "b_key": rb[i].get("key"),
+                      "a_err": (ra[i].get("error") or "")[:80],
+                      "b_err": (rb[i].get("error") or "")[:80],
+                      "a_seg": (ra[i].get("segments") or [])[:1],
+                      "b_seg": (rb[i].get("segments") or [])[:1]})
+    check("★ 逐条 digest 相同（key + 文本段 + 平台动作 + 状态 sha）",
+          same == len(HOSTLESS_SAMPLES),
+          "%d/%d；差异 %s" % (same, len(HOSTLESS_SAMPLES),
+                            json.dumps(diffs[:3], ensure_ascii=False)[:700]))
+    check("★ 两侧整串 digests_sha 相同",
+          bool(a.get("digests_sha")) and a.get("digests_sha") == b.get("digests_sha"),
+          "A=%s B=%s" % (a.get("digests_sha"), b.get("digests_sha")))
+    check("有宿主侧 host_modules=1（真宿主壳确实被装上，不是同侧互比）",
+          b.get("host_modules") == 1, str(b.get("host_modules")))
+    note("两侧 digests_sha = %s" % a.get("digests_sha"))
+
+
+# ============================================================
+# E2. 反证：打桩 `ShellBase.__getattr__` ⇒ `背包` 必红
+# ============================================================
+_SABOTAGE = """
+import importlib.util, json, sys
+sys.path.insert(0, %r)
+import saintess_engine.host.shell as SB
+def _boom(self, name):
+    raise AttributeError("sabotage: " + name)
+SB.ShellBase.__getattr__ = _boom
+spec = importlib.util.spec_from_file_location("pw", %r)
+pw = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(pw)
+pw.run(json.loads(sys.stdin.read()))
+"""
+
+
+def _read_play_rows(out: str) -> list:
+    rows = []
+    for line in out.splitlines():
+        if not line.startswith("__B20_PLAY__"):
+            continue
+        try:
+            obj = json.loads(line[len("__B20_PLAY__"):])
+        except ValueError:
+            continue
+        if "i" in obj:
+            rows.append(obj)
+    return rows
+
+
+def test_helper_resolution_negative() -> None:
+    """E2 · 把 `ShellBase.__getattr__` 打桩成抛错 ⇒ `背包` 必红（「按名解析」真在用）。"""
+    print()
+    print("=== E2. 反证：打桩 ShellBase.__getattr__ ⇒ 背包 必红 ===")
+    from editor import play as PLAY
+    os.makedirs(DB_DIR, exist_ok=True)
+    probe = os.path.join(DB_DIR, "_t7_sabotage.py")
+    with open(probe, "w", encoding="utf-8", newline="") as f:
+        f.write(_SABOTAGE % (ROOT, PLAY.WORKER))
+    payload = {"pkg_dir": PKG, "host_root": "", "engine_root": ROOT,
+               "commands": ["注册 打桩者 男", "背包"], "seed": 11, "uid": "9101",
+               "group_id": "gs", "db": os.path.join(DB_DIR, "t7_sabotage.db"),
+               "db_dir": DB_DIR, "clock": CLOCK}
+    pr = subprocess.run([sys.executable, probe], input=json.dumps(payload),
+                        capture_output=True, text=True, encoding="utf-8", errors="replace",
+                        timeout=600, env={**os.environ, "PYTHONIOENCODING": "utf-8",
+                                          "PYTHONUTF8": "1"})
+    rows = _read_play_rows(pr.stdout or "")
+    bag = rows[1] if len(rows) > 1 else {}
+    check("打桩后 `背包` 明确失败（不是静默通过）", bool(bag) and not bag.get("ok"),
+          json.dumps(bag, ensure_ascii=False)[:240])
+    err = bag.get("error") or ""
+    check("失败原因 = 助手按名解析被打桩（AttributeError）",
+          "sabotage" in err or "AttributeError" in err, err[:240])
+    note("打桩侧 背包 报错：%s" % err[:120])
+
+
+# ============================================================
 def main() -> int:
-    if not HOST_ROOT:
-        print("⚠️  SKIP：本仓未找到宿主插件目录（需含 game/ + framework/）。\n"
-              "    试玩通道要宿主才能跑 —— 设环境变量 B20_HOST_ROOT=<插件目录> 后重跑。")
-        print("SKIP test_editor_play（缺宿主根）")
-        return 0
     print("=== B20 门禁：编辑器「试玩」通道 ===")
     print("包：%s" % PKG)
-    print("宿主副本：%s" % HOST_ROOT)
+    print("宿主副本：%s" % (HOST_ROOT or "（无 —— 本仓不含宿主：只跳 QQ 侧对拍与路由片段）"))
     test_zero_engine_import()
     cov = test_full_command_coverage()
-    test_byte_parity(cov.get("missing"))
+    if HOST_ROOT:
+        test_byte_parity(cov.get("missing"))      # C 段：试玩通道 vs QQ 侧
+        test_hostless_vs_host_parity()            # C2 段：无宿主 vs 有宿主
+    else:
+        test_hostless_subset()                    # C0 段：无宿主子集实跑
+    test_helper_resolution_negative()             # E2 段：反证
     test_subprocess_robustness()
-    test_routes_fragment()
-    print("\n" + "=" * 60)
+    if HOST_ROOT:
+        test_routes_fragment()
+    print()
+    print("=" * 60)
     print("通过 %d / 失败 %d" % (PASS, FAIL))
     for f in FAILURES:
         print("  ❌ %s" % f)
     if FAIL:
         return 1
-    print("✅ 试玩门禁全绿：零 import 引擎 / 全量 196 覆盖 / 逐字节对拍 / 子进程健壮")
+    print("✅ 试玩门禁全绿：零 import 引擎 / 全量 %d 覆盖 / %s / 子进程健壮"
+          % (len(cov.get("keys") or []),
+             "逐字节对拍（QQ 侧 + 无宿主 vs 有宿主）" if HOST_ROOT else "无宿主子集实跑 + 打桩反证"))
     return 0
 
 

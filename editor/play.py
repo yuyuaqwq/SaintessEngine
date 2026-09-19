@@ -7,7 +7,8 @@
 
 提供给编辑器 / 测试的 API
 ------------------------
-    discover(pkg_dir=None) -> dict          # 找出包 / 宿主 / 引擎根（供 UI 显示与门禁）
+    discover(pkg_dir=None, host_root=None) -> dict
+                                            # 三个根；host_root="" ⇒ 显式无宿主（试玩正常态）
     list_commands(pkg_dir, ...) -> dict     # 包内全部指令声明（194 条 key + 正则/描述/守卫）
     audit(pkg_dir, ...) -> dict             # 覆盖率审计：声明 / 处理器 / 可解析（不跑 handler）
     run(pkg_dir, commands, *, seed, uid, group_id, ...) -> dict
@@ -35,20 +36,26 @@ TIMEOUT = int(os.environ.get("B20_PLAY_TIMEOUT", os.environ.get("FW_SIM_TIMEOUT"
 HOST_ROOT_ENVS = ("B20_HOST_ROOT", "GWEN_PLUGIN_ROOT", "DRAGONFALL_ROOT")
 
 
-def discover(pkg_dir: str = "", host_root: str = "", engine_root: str = "") -> dict:
+def discover(pkg_dir: str = "", host_root=None, engine_root: str = "") -> dict:
     """定位三个根：引擎（`saintess_engine` 所在）/ 宿主插件（`game/` 的父目录）/ 游戏包。
 
     包目录缺省在引擎仓的 `games/<id>` 里找第一个带 `game.json` 的；
     宿主目录缺省读环境变量，再退到「引擎仓同级的 `work2`」（B20 工作副本布局）。
+
+    ★ `host_root` 三态（T7 第 3 轮 · 试玩脱宿主）：
+      · `None`（缺省）→ 自动：环境变量 → `work2` 兜底；
+      · `""` → **显式「无宿主」**（试玩链的正常态：壳 = 引擎 `PlayShell`）；
+      · 非空 → 用给的目录（**只**为「与 QQ 侧逐字节对拍」）。
     """
     engine_root = engine_root or (FRAMEWORK_ROOT if os.path.isdir(
         os.path.join(FRAMEWORK_ROOT, "saintess_engine")) else "")
-    host_root = host_root or next((os.environ.get(k) for k in HOST_ROOT_ENVS
-                                   if os.environ.get(k)), "")
-    if not host_root:
-        cand = os.path.join(os.path.dirname(FRAMEWORK_ROOT), "work2")
-        if os.path.isdir(os.path.join(cand, "game")):
-            host_root = cand
+    if host_root is None:
+        host_root = next((os.environ.get(k) for k in HOST_ROOT_ENVS
+                          if os.environ.get(k)), "")
+        if not host_root:
+            cand = os.path.join(os.path.dirname(FRAMEWORK_ROOT), "work2")
+            if os.path.isdir(os.path.join(cand, "game")):
+                host_root = cand
     if not pkg_dir:
         games = os.path.join(engine_root or FRAMEWORK_ROOT, "games")
         cands = []
@@ -107,7 +114,7 @@ def list_commands(pkg_dir: str = "", **kw) -> dict:
 
     返回 `{"ok":True,"count":194,"commands":[{"key","desc","category","usage","guards","patterns"}]}`。
     """
-    cfg = discover(pkg_dir, kw.get("host_root", ""), kw.get("engine_root", ""))
+    cfg = discover(pkg_dir, kw.get("host_root"), kw.get("engine_root", ""))
     path = os.path.join(cfg["pkg_dir"] or "", "content", "data", "commands.json")
     if not os.path.isfile(path):
         return {"ok": False, "stage": "load", "message": "读不到指令声明：%s" % path,
@@ -128,7 +135,7 @@ def list_commands(pkg_dir: str = "", **kw) -> dict:
 
 def audit(pkg_dir: str = "", **kw) -> dict:
     """覆盖率审计（子进程）：逐 key 回报「有处理器 / 可解析」——不跑 handler。"""
-    cfg = discover(pkg_dir, kw.get("host_root", ""), kw.get("engine_root", ""))
+    cfg = discover(pkg_dir, kw.get("host_root"), kw.get("engine_root", ""))
     payload = {**cfg, "audit": True, "db": kw.get("db") or ""}
     payload.pop("worker", None)
     payload.pop("timeout", None)
@@ -141,7 +148,7 @@ def run(pkg_dir: str = "", commands=None, *, seed=1, uid="u1", group_id="g1",
 
     `clock`（unix 秒）给了就把包内墙钟读取点钉死到该时刻 —— 对拍/复现用（见 worker 头注）。
     """
-    cfg = discover(pkg_dir, kw.get("host_root", ""), kw.get("engine_root", ""))
+    cfg = discover(pkg_dir, kw.get("host_root"), kw.get("engine_root", ""))
     payload = {**cfg, "commands": [str(c) for c in (commands or [])],
                "seed": seed, "uid": str(uid), "group_id": str(group_id), "db": db or "",
                "db_dir": kw.get("db_dir") or os.path.join(os.path.dirname(FRAMEWORK_ROOT), "db", "play")}

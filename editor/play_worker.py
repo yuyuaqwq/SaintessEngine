@@ -5,8 +5,8 @@
 ------------------
     {
       "pkg_dir":   "<游戏包目录：game.json 所在>",     # 必填（也读环境变量 FW_PKG_DIR）
-      "host_root": "<宿主插件目录：game/ 的父目录>",   # 必填（也读 B20_HOST_ROOT）——包内
-                                                        # `content/**` 的宿主替身口要靠它接线
+      "host_root": "<宿主插件目录：game/ 的父目录>",   # 可选（也读 B20_HOST_ROOT）——**只**为
+                                                        # 「与 QQ 侧逐字节对拍」用；缺省空 = 纯试玩
       "engine_root": "<saintess_engine 所在目录>",      # 缺省读 FW_FRAMEWORK_ROOT
       "commands":  ["注册 试玩 男", "背包", ...],       # 命令序列（原样喂，含 @ 前缀/参数）
       "uid": "...", "group_id": "...",
@@ -32,26 +32,29 @@
 宿主面怎么来（关键设计）
 ------------------------
 包内 `content/**` 大量走「宿主替身口」（`_HostMod("db")` / `_host_attr("core.stats", …)` /
-`Function` 句柄 `bind_host(db=…, C=…)`）：这些**不是**引擎 host 契约的一部分，而是平台插件
-（`host_root`）在装配期注入的。所以本 worker 的装配顺序照 **QQ 宿主同款**：
+`Function` 句柄 `bind_host(db=…, C=…)`）：这些**不是**引擎 host 契约的一部分。
+★ T7 第 3 轮（2026-09-20 · 编辑器试玩「脱宿主」）之后，它们由**引擎包加载器 + 包清单声明**
+（`bind`）在装配期注入 —— **QQ 插件不再参与装配**（旧 `import game` / `game.commands` 两处
+实测皆空转，已删）。所以本 worker 的装配顺序：
 
-    ① 引擎根 + 插件根 + 插件 framework 根 → sys.path
+    ① 引擎根 → sys.path（**只在**给了 `host_root` 时才额外挂插件根，见下「对拍通路」）
     ② `GWEN_GAME_DB` → 独立库（缺省 <db_dir>/play.db；绝不碰真仓任何库）
-    ③ `import game`（插件装配入口：装引擎 hook + 加载包 + 宿主替身口注入）
-    ④ `saintess_engine.host.load_package(pkg_dir, inject=…)` + `install_engine()`（引擎官方包
+    ③ `saintess_engine.host.load_package(pkg_dir, inject=…)` + `install_engine()`（引擎官方包
        加载器）—— ★ W2a：包声明了 `bind`，注入面（库路径/时钟/日志/流水 sink）从这里给
-    ⑤ `PlayHost(Host)` 覆写 `build_env`：把 `env.state["shell"]` 换成 `PlayShell`
+    ④ `PlayHost(Host)` 覆写 `build_env`：把 `env.state["shell"]` 换成壳
        —— 包内实现体经它做宿主取件（`_uid/_player/_strip_cmd/_page_items/_tip/_broadcast`…）
-    ⑥ 逐条 `host.handle(ctx)` → 收 `say()` 段 → 打印 JSON 行
+    ⑤ 逐条 `host.handle(ctx)` → 收 `say()` 段 → 打印 JSON 行
 
-`PlayShell` 只实现包内实现体真正用到的 ~20 个宿主壳方法（清单来源：AST 扫
-`content/**` 的 `self./_shell(env).` 访问 ∩ 插件 `game/**` 的同名实现），
-纯函数口径逐字照插件实现；平台侧动作（广播 / webhook）落成「记录 + 无网络副作用」。
+壳（`env.state["shell"]`）**恒为引擎侧** `editor/play_shell.py::PlayShell`：引擎
+`ShellBase`（取件管道 / 包内内容半边转发 / 环境位）+ 试玩平台半边（广播·通知落记录，
+身份面 fail-closed）。**只有显式给了 `host_root`** 才换成插件 `host.shell.HostShell`
+（同继承 `ShellBase`）—— 那是**对拍专用**通路（「无宿主 vs 有宿主」逐字节比），
+编辑器正常跑不走它。旧的手搓 stub（33 个方法，缺 `__getattr__` 动态解析 ⇒ `背包` 必红）
+已删。
 """
 from __future__ import annotations
 
 import hashlib
-import importlib
 import json
 import os
 import random
@@ -161,204 +164,6 @@ class PlayEvent:
 
     def stop_event(self):
         self.stopped = True
-
-
-# ============================================================
-# 宿主壳（包内 `env.state["shell"]`）
-# ============================================================
-class PlayShell:
-    """无平台宿主壳 —— 只提供包内实现体真正取用的那批方法。
-
-    口径来源（逐条对照插件实现，行号见注释）：
-      `_uid`/`_player`/`_in_any_battle`  ← `game/commands/base.py:323/332/335`
-      `_stamina*`/`_spend_stamina`/`_add_stamina`/`_at_*`/`_sa_shop_kind`/`_wild_trader_here`
-      /`_facility_hint`                  ← `game/commands/base.py:349-407` 家族，
-                                           实现真源在包内 `content/cmds_base_rules.py`
-      `_strip_cmd`/`_page_items`/`_parse_page`/`_tip` ← 引擎原语 + 插件同名薄壳
-      `_broadcast`/`_notify_hermes`      ← `game/commands/base.py:301` / `misc.py:56`
-                                           （平台动作 → 落成记录，无网络副作用）
-    """
-
-    def __init__(self, host, session, events: list):
-        self.host = host                  # PlayHost（拿 pkg / db / blobs）
-        self.session = session            # 引擎 SessionAdapter（组/用户归一）
-        self.events = events              # 平台动作记录（回话之外的动作）
-        self._db = None
-
-    # ---------- 取件 ----------
-    def _pkg_mod(self, dotted):
-        return importlib.import_module(dotted)
-
-    @property
-    def db(self):
-        if self._db is None:
-            # 插件 `game.db` 与包内 `content.persistence` 是**同一只库**（B17）
-            self._db = importlib.import_module("game.db")
-        return self._db
-
-    def _rules(self):
-        return self._pkg_mod("content.cmds_base_rules")
-
-    # ---------- 认人 / 读档 ----------
-    def _uid(self, event):
-        return self.session.uid(event)
-
-    def _player(self, group_id, qq_id):
-        from content.persistence import get_player
-        return get_player(group_id, qq_id)
-
-    def _in_any_battle(self, group_id, qq_id) -> bool:
-        if self.db.get_battle(group_id, qq_id):
-            return True
-        f = getattr(self, "_instance_battle_for", None)
-        if f is None:                     # 包内实现另有同名方法（副本战斗）
-            return False
-        try:
-            return bool(f(group_id, qq_id))
-        except Exception:                 # noqa: BLE001
-            return False
-
-    # ---------- 取参 / 分页 / 提示（引擎原语） ----------
-    def _strip_cmd(self, event, cmd="", aliases=()):
-        from saintess_engine.command import strip_command
-        return strip_command(event.get_message_str() or "", cmd, aliases).strip()
-
-    def _page_items(self, items, page=1, per_page=10):
-        from saintess_engine.command import page_items
-        return page_items(items, page, per_page=per_page)
-
-    def _parse_page(self, text, default=1):
-        from saintess_engine.command import parse_page
-        try:
-            return int(parse_page(text or "") or default)
-        except Exception:                 # noqa: BLE001
-            return int(default)
-
-    def _tip_pool_map(self) -> dict:
-        return self._rules().TIP_POOL
-
-    def _tip(self, name, key="", **kw):
-        """面板底部引导提示（v127 数据驱动）——引擎 `pick_tip` + 包侧提示库。"""
-        pool = self._tip_pool_map()
-        if isinstance(name, str) and name in pool:
-            pool, name = pool.get(name), key
-        try:
-            from saintess_engine.command import pick_tip
-            return pick_tip(pool, name, **kw)
-        except Exception:                 # noqa: BLE001
-            return ""
-
-    def _record_state(self, key: str, value) -> None:
-        self.db.set_event_state(key, value)
-
-    # ---------- 体力 / 设施（实现真源在包内） ----------
-    def _stamina_max(self, player):
-        return self._rules().stamina_max(player)
-
-    def _stamina(self, player):
-        return self._rules().stamina(player)
-
-    def _spend_stamina(self, group_id, qq_id, cost, player, action="行动"):
-        return self._rules().spend_stamina(group_id, qq_id, cost, player, action)
-
-    def _add_stamina(self, group_id, qq_id, amount, player):
-        return self._rules().add_stamina(group_id, qq_id, amount, player)
-
-    def _stamina_bar(self, player, sep=" "):
-        return self._rules().stamina_bar(player, sep)
-
-    def _at_smith(self, player):
-        return self._rules().at_smith(player)
-
-    def _at_shop(self, player, group_id="", qq_id=""):
-        return self._rules().at_shop(player, group_id, qq_id)
-
-    def _sa_shop_kind(self, player):
-        return self._rules().sa_shop_kind(player)
-
-    def _wild_trader_here(self, player, group_id="", qq_id=""):
-        return self._rules().wild_trader_here(player, group_id, qq_id)
-
-    def _at_healer(self, player):
-        return self._rules().at_healer(player)
-
-    def _facility_hint(self, player, kind):
-        return self._rules().facility_hint(player, kind)
-
-    # ---------- 规则 / 称号 ----------
-    def _title_bonus(self, group_id, qq_id):
-        """外部面板增益聚合（真源 = 包内 `stat_bonus`；与线上 `host/shell.py::_title_bonus` 同款）。
-
-        ★ 2026-09-15 修：此前写的是 `mod.title_bonus(...)` —— **包内没有这个名字**（线上壳用的是
-        `stat_bonus(gid, qid, player)`）⇒ 试玩一走到玩家/战斗路径就报
-        `AttributeError: module 'content.stat_bonus' has no attribute 'title_bonus'`。
-        """
-        mod = self._pkg_mod("content.stat_bonus")
-        return mod.stat_bonus(group_id, qq_id, self._player(group_id, qq_id) or {})
-
-    def _rule_fire(self, trigger, group_id, qq_id, player, cur_map, evt=None):
-        mod = self._pkg_mod("content.rule_engine")
-        return mod.fire(group_id, qq_id, player, cur_map, trigger, evt or {},
-                        hooks={"title_bonus": lambda q: self._title_bonus(group_id, q)})
-
-    # ---------- GM / 停服（照插件判定，无平台依赖） ----------
-    def _gm_whitelist(self) -> set:
-        wl = set()
-        for x in (os.environ.get("GWEN_GM_QQ") or "").split(","):
-            x = x.strip()
-            if x:
-                wl.add(x)
-        try:
-            raw = self.db.get_event_state("gm_whitelist")
-            if raw:
-                for x in json.loads(raw):
-                    wl.add(str(x))
-        except Exception:                 # noqa: BLE001
-            pass
-        return wl
-
-    def _is_gm(self, qq_id) -> bool:
-        qq_id = str(qq_id)
-        if qq_id.startswith("gm_"):
-            return True
-        return qq_id in self._gm_whitelist()
-
-    @staticmethod
-    def _server_down() -> bool:
-        try:
-            from content.persistence import get_event_state
-            return get_event_state("server_maintenance") == "1"
-        except Exception:                 # noqa: BLE001
-            return False
-
-    @staticmethod
-    def _server_down_msg() -> str:
-        try:
-            from content.persistence import get_event_state
-            return get_event_state("server_maintenance_msg") or ""
-        except Exception:                 # noqa: BLE001
-            return ""
-
-    # ---------- 平台动作（试玩里只记录，不外发） ----------
-    async def _broadcast(self, text, exclude_group=None):
-        self.events.append({"action": "broadcast", "text": str(text),
-                            "exclude": str(exclude_group or "")})
-
-    async def _notify_hermes(self, group_id, qq_id, content, msg_type):
-        self.events.append({"action": "hermes", "content": str(content),
-                            "msg_type": str(msg_type)})
-
-    def _instance_battle_for(self, group_id, qq_id):
-        """副本内战斗查询（包内实现同名方法；缺件 → False，不发明分支）。"""
-        mod = getattr(self, "_instance_mod", None)
-        if mod is None:
-            try:
-                mod = self._pkg_mod("content.instance_cmds")
-            except Exception:             # noqa: BLE001
-                return False
-            self._instance_mod = mod
-        fn = getattr(mod, "instance_battle_for", None)
-        return bool(fn(group_id, qq_id)) if callable(fn) else False
 
 
 # ============================================================
@@ -570,99 +375,30 @@ def _freeze_clock(ts: float) -> None:
         pass
 
 
-def _import_host(host_root: str):
-    """照 QQ 宿主装配口径 import 插件（`game`）——引擎 hook 装配入口。"""
-    if not host_root or not os.path.isdir(os.path.join(host_root, "game")):
-        return None
-    return importlib.import_module("game")
+def _make_host_shell(host_root: str, adapter, pkg=None):
+    """**真宿主壳**（插件 `host.shell.HostShell`）—— 只在显式给了 `host_root` 时装配。
 
+    唯一用途：与 QQ 侧**逐字节对拍**（同一份壳 + 同一份包 + 同 seed + 同固定墙钟）。
+    编辑器正常跑（`host_root` 缺省为空）用 `editor/play_shell.py::PlayShell`；两者同继承引擎
+    `saintess_engine.host.shell.ShellBase`，差异只剩「真平台面」那几个方法（广播 / 通知 /
+    停服投递 / 身份映射 / 窥探投递 / 平台例外 `_maint_gate`·`gm_play`·`gm_spy`）。
 
-def _import_host_commands(host_root: str):
-    """import 插件的命令层（`game.commands`）——**宿主替身口的注入点**。
-
-    这一步是包内命令表可加载的前提（见 run() 里的顺序铁律）：各 `game/commands/*.py`
-    在模块级调 `content.economy_host.bind_host(...)` / `content.<域>.bind_host(...)`，
-    把宿主侧的表/句柄注入包内替身口。缺了它，包内 `cmds_economy` 等模块 import 即抛。
-    返回实际 import 到的模块名（证据用）。
-    """
-    if not host_root or not os.path.isdir(os.path.join(host_root, "game", "commands")):
-        return []
-    mod = importlib.import_module("game.commands")
-    names = [getattr(mod, "__name__", "game.commands")]
-    for name in sorted(os.listdir(os.path.join(host_root, "game", "commands"))):
-        if name.endswith(".py") and not name.startswith("__"):
-            names.append(name[:-3])
-    return names
-
-
-def _make_platform_shell(host_root: str, adapter, seed, pkg=None):
-    """平台宿主壳（`env.state["shell"]`）。
-
-    为什么用真的壳而不是手搓 stub：包内实现体（`economy_cmds.EconomyImpl` /
-    `world_cmds` / `player_cmds` / `combat_cmds` / `instance_cmds` 的模块级函数）以
-    `self` = 壳调用 **~235 个宿主私有方法**（`_bag_view` / `_craft_line` / `_instance_*` …），
-    它们不是引擎 host 契约的一部分，手搓 stub 等于把宿主命令层再抄一遍（不可避免的漂移）。
-    试玩侧与 QQ 侧共用**同一个壳类**：差异只剩「事件对象」（`PlayEvent` vs AstrBot 事件）
-    与「驱动方式」（引擎 `Host.handle` vs 通道派发）。
-
-    ★ 终态装配（2026-09-15，P5C/P5F 删壳后）——「测试装配差」修正
-    ----------------------------------------------------------
-    宿主壳已从「`game/commands/**` 194 个 Mixin 汇编」收编为**单文件**
-    `host/shell.py::HostShell`（通用半边在引擎 `CommandBase`，内容半边经
-    `Package.optional_submodule` 转引包内真源）。旧写法 `import game.commands` 取 Mixin 类，
-    在删壳后的树上拿到的是**空 namespace package**（`game/commands/` 只剩两个孤立 `.pyc`，
-    零 `.py`）⇒ `bases=()` ⇒ `type("B20PlayShell", (), {})` ⇒ 壳上 `_uid/_player/_db/...`
-    全缺。**实测**（本文件修改前，`work/host/framework/tests/test_editor_play.py`）：
-    44 条对拍样本里 **34 条** play 侧红，典型
-    `AttributeError: 'B20PlayShell' object has no attribute '_uid'` /
-    `RuntimeError: cmds_player：实现体同步驱动失败：KeyError('class_name')`；且
-    `试玩侧注册建档` 首条就红（共同起点建不出来）⇒ 7 条断言连锁红。
-
-    故**先建终态壳**；仅当宿主树里没有 `host/shell.py`（删壳前的旧树）才回落旧 Mixin 汇编。
-    两条路都要求包已物化：终态壳的存档半边经 `pkg.optional_submodule("persistence")` 取
-    （调用方传 `pkg`）。
-
-    `_static_source`（平台例外命令的静态兜底表）**故意不装**：它要宿主插件包的
-    `registration` 模块在 sys.path 上，而本 worker 只按「host_root 直接可 import」装配
-    （与该函数历史上只 import `game` 的口径一致）；对拍样本里没有平台例外命令。
-    缺省 `None` ⇒ 空静态表（引擎静态路由仍按包内声明工作）。
+    ★ 不回退、不静默：宿主根给了却装不起来 ⇒ 直接抛（调用处收成 `stage="host"` 报错），
+      不假装成试玩壳 —— 否则「对拍」会退化成「两个试玩壳互相比」的假绿。
     """
     if not host_root or not os.path.isdir(os.path.join(host_root, "game")):
         return None
-    # ---- ① 终态宿主壳（删壳后唯一落点）----
-    try:
-        from host.shell import HostShell
-    except Exception:                     # noqa: BLE001  旧树（删壳前）没有 host/shell.py
-        HostShell = None
-    if HostShell is not None:
-        try:
-            from saintess_engine.session import SessionAdapter
-            _session = SessionAdapter(private_fallback="private", unknown_fallback="unknown")
-        except Exception:                 # noqa: BLE001
-            _session = None
-        return HostShell(pkg=pkg, events=adapter.events, session=_session)
-    # ---- ② 旧树回退：`game.commands` 的 `Main` Mixin 汇编（删壳前）----
-    # 插件宿主类 `Main` 的 MRO（`main.py:285`）：按声明序多继承全部命令 Mixin
-    # （与插件自己的 `Main` 逐位同序；不 import `main.py`：它顶部 `from astrbot.api import star`
-    #  + `AstrMain` 注册壳属平台面，试玩不需要）。
-    names = ("PlayerCmds", "WorldCmds", "CombatCmds", "EconomyCmds", "SocialCmds", "MiscCmds",
-             "InstanceCmds", "GmCmds", "ExplorationCmds", "JobGuideCmds", "CollectionCmds",
-             "WeeklyCmds", "TowerCmds", "EventMenuCmds")
-    cmds = importlib.import_module("game.commands")
-    bases = tuple(getattr(cmds, n) for n in names if hasattr(cmds, n))
-    shell_cls = type("B20PlayShell", bases, {})
-    shell = shell_cls()
-    try:
-        from saintess_engine.session import SessionAdapter
-        shell._session = SessionAdapter(private_fallback="private", unknown_fallback="unknown")
-    except Exception:                     # noqa: BLE001
-        pass
-    return shell
+    from host.shell import HostShell          # 装不起来就抛（调用处报 stage="host"）
+    return HostShell(pkg=pkg, events=adapter.events)
 
 
 def run(payload: dict) -> int:
     pkg_dir = payload.get("pkg_dir") or PKG_DIR
-    host_root = payload.get("host_root") or HOST_ROOT
+    # host_root 三态（与 `editor/play.py::discover` 同口径）：键在 payload 里 → 以它为准
+    # （"" = 显式无宿主）；键缺 → 落环境变量 `B20_HOST_ROOT`。
+    host_root = payload.get("host_root")
+    if host_root is None:
+        host_root = HOST_ROOT
     engine_root = payload.get("engine_root") or FW_ROOT
     if not pkg_dir or not os.path.isdir(pkg_dir):
         emit({"ok": False, "stage": "load", "message": "包目录不存在：%s" % pkg_dir})
@@ -688,20 +424,12 @@ def run(payload: dict) -> int:
               "clock": (lambda _ts=_clock_fixed: _ts) if _clock_fixed is not None else time.time,
               "log": _PlayLog(), "tlog": _PlayTLog()}
 
-    # ---- ① 插件宿主面（宿主替身口；缺 → 包内数据链会 fail-closed）----
-    # ★ 顺序铁律（实测得出的硬约束）：包内 `content/commands.py` 的命令表**只能在宿主
-    #   替身口注入完成之后**才 import 得动 —— 它模块级就 `import content.cmds_*.py`，而那些
-    #   文件模块级即读 `economy_host._HostRef("_shop_svc")`（未注入 → RuntimeError）。
-    #   故这里先按**平台插件自己的装配顺序** import `game.commands`（各 Mixin 模块级
-    #   `_EH.bind_host(...)` / `_WC.bind_host(...)` / `_PC.bind_host(...)` …），
-    #   之后的 `load_package` / `host.boot()` 才能拿到 194 条处理器。
-    try:
-        game = _import_host(host_root)
-        mods = _import_host_commands(host_root) if game is not None else []
-    except Exception:
-        emit({"ok": False, "stage": "host", "message": "宿主插件装配失败（game.commands 装配入口抛异常）",
-              "traceback": traceback.format_exc()})
-        return 0
+    # ---- ① 宿主插件：**已删**（T7 第 3 轮 · 实测两处皆空转）----
+    # 旧写法 = `import game` + `game.commands`（据称是「宿主替身口的注入点」）。实测：插件树
+    # `game/` 下已无任何 `.py`（只剩 `data/` 与 `*.db`）⇒ `game.commands` 不存在、恒返回 `[]`；
+    # 而宿主替身口现在由**引擎包加载器 + 包清单声明**（`bind`）注入，与插件无关。
+    # 故整段删除（不留兼容壳）：试玩装配不再依赖任何插件文件。
+    mods = []
 
     # ---- ② 引擎包加载器（官方口径）----
     try:
@@ -738,7 +466,6 @@ def run(payload: dict) -> int:
     # ---- ③ 宿主运行时 ----
     try:
         from saintess_engine.host import Host, load_package
-        from saintess_engine.session import SessionAdapter
         from saintess_engine import version as _V
     except Exception:
         emit({"ok": False, "stage": "engine", "message": "引擎 import 失败",
@@ -817,11 +544,19 @@ def run(payload: dict) -> int:
     except Exception:                     # noqa: BLE001
         total = declared
 
-    # ★ 终态装配：把**已物化的包对象**交给壳（终态壳的存档半边 = 包内 `persistence`）
-    shell = _make_platform_shell(host_root, adapter, seed_val, pkg=pkg_obj)
+    # ★ 壳装配：**已物化的包对象**交给壳（壳的存档半边 = 包内 `persistence`）。
+    #   缺省 = 引擎试玩壳（`editor/play_shell.py`）；只有给了 `host_root` 才换真宿主壳（对拍通路）。
+    try:
+        shell = _make_host_shell(host_root, adapter, pkg=pkg_obj)
+    except Exception:
+        emit({"ok": False, "stage": "host", "message": "宿主壳装配失败（host.shell.HostShell）",
+              "traceback": traceback.format_exc()})
+        return 0
     if shell is None:
-        shell = PlayShell(host, SessionAdapter(private_fallback="private", unknown_fallback="unknown"),
-                          adapter.events)
+        from editor.play_shell import PlayShell       # 子进程侧才允许 import 引擎
+        shell = PlayShell(pkg=pkg_obj, events=adapter.events)
+    else:
+        mods.append("host.shell")
     host.shell = shell
     adapter.shell = shell
 
