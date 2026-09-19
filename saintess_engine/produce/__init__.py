@@ -51,7 +51,7 @@ import json
 from collections.abc import Mapping, MutableMapping
 from typing import Callable, Optional
 
-from .._validators import clock_now
+from .._validators import clock_now, owner_key
 
 __all__ = ["AlreadyBusy", "Job", "Jobs", "ProduceStorageError"]
 
@@ -231,12 +231,8 @@ class Jobs:
 
     # ---------------------------------------------------------------- 内部
     def _key_of(self, owner: str) -> str:
-        owner_key = self.key(str(owner))
-        if not isinstance(owner_key, str):
-            raise TypeError(f"key(owner) 必须返回 str，收到 {type(owner_key).__name__}")
-        if not owner_key.strip():
-            raise ValueError("key(owner) 返回空键 —— 拒绝落到无名存储位上")
-        return owner_key
+        """本形状的取键口径：**先 `str(owner)` 再问 `key`**（守卫单源 = `_validators.owner_key`）。"""
+        return owner_key(self.key, str(owner))
 
     def _keys(self) -> list:
         for name in ("keys", "__iter__"):

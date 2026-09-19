@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Optional
 
-__all__ = ["callable_of", "clock_now", "int_of", "number_of"]
+__all__ = ["callable_of", "clock_now", "int_of", "number_of", "owner_key"]
 
 
 def int_of(value: Any, label: str, *, minimum: Optional[int] = None) -> int:
@@ -51,3 +51,22 @@ def clock_now(clock: Callable[[], Any], now: Optional[int]) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise TypeError(f"时钟必须给整数秒，收到 {type(value).__name__}：{value!r}")
     return int(value)
+
+
+def owner_key(key_fn: Callable[[Any], Any], owner: Any, *, label: str = "key") -> str:
+    """存储键取值：`key_fn(owner)` 必须给**非空 `str`**（空 / 全空白 ⇒ 拒绝）。
+
+    为什么要单源：`produce.Jobs._key_of` 与 `timers.Timers._key_of` 原先各抄一份
+    （同一段守卫，只有报错措辞不同）。它守的是**同一个洞** —— 键落成 `None` /
+    `""` / `"  "` 时，一行坏数据会静默落到「无名存储位」上，把两个持有者的作业串到一起。
+
+    * 非 `str` ⇒ `TypeError`（**`bool` 也不算**：它没有「键」的语义）；
+    * 空 / 全空白 ⇒ `ValueError`；
+    * `owner` 只在报错文案里出现 —— **取值前的归一（如 `str(owner)`）留在调用方**。
+    """
+    got = key_fn(owner)
+    if not isinstance(got, str):
+        raise TypeError(f"{label}(owner) 必须返回 str，收到 {type(got).__name__}：{got!r}")
+    if not got.strip():
+        raise ValueError(f"{label}(owner) 返回空键（owner={owner!r}）—— 拒绝落到无名存储位上")
+    return got

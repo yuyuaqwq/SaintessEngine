@@ -66,7 +66,7 @@ import json
 from collections.abc import Mapping, MutableMapping
 from typing import Any, Callable, Optional
 
-from .._validators import clock_now
+from .._validators import clock_now, owner_key
 from ..log import get_logger
 from ..log.warn import WarnMixin
 
@@ -310,13 +310,8 @@ class Timers(WarnMixin):
             self._fire(owner, k, ev)
 
     def _key_of(self, owner: Any) -> str:
-        owner_key = self.key(owner)
-        if not isinstance(owner_key, str):
-            raise TypeError(f"key(owner) 必须返回 str，"
-                            f"收到 {type(owner_key).__name__}：{owner_key!r}")
-        if not owner_key.strip():
-            raise ValueError(f"key(owner) 返回空键（owner={owner!r}）—— 拒绝落到无名存储位上")
-        return owner_key
+        """本形状的取键口径：**原值交给 `key`**（守卫单源 = `_validators.owner_key`）。"""
+        return owner_key(self.key, owner)
 
     def _load(self, owner_key: str) -> dict:
         """按存储键读事件表。缺失 → 空表；在但取不出来 → fail-closed 抛错。"""

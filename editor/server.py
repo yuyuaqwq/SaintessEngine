@@ -114,6 +114,7 @@ from editor import space_view as SV  # noqa: E402
 from editor import table_view as TV  # noqa: E402
 from editor import validate as VD    # noqa: E402
 from editor import wiki as WK        # noqa: E402
+from editor._util import file_sig as _file_sig  # noqa: E402  （P0-10 单源：文件签名）
 
 EDITOR_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(EDITOR_DIR, "web")
@@ -141,15 +142,6 @@ _VAL_CACHE_MAX = 200_000              # 兜底上限（防无界增长）
 _VALIDATORS: dict = {}                # 域 -> validator | None（None = 该域无 schema / 不可复用）
 _STATUS_CACHE: dict = {}              # (包目录, 域) -> (文件签名, 域状态) —— 热调用主路径
 _HINTS_CACHE: dict = {}               # 包目录 -> (全域文件签名, 联想数据)
-
-
-def _file_sig(path: str):
-    """域文件签名（mtime_ns + size）—— 文件没变，域状态就不用重算。"""
-    try:
-        st = os.stat(path)
-        return (st.st_mtime_ns, st.st_size)
-    except OSError:
-        return None
 
 
 def _entry_stamp(data) -> str:

@@ -56,6 +56,7 @@ import os
 import time
 
 from . import render_decl as RD
+from ._util import file_sig as _sig
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FRAMEWORK_ROOT = os.path.dirname(HERE)
@@ -85,14 +86,6 @@ _SCHEMA_CACHE_MAX = 500
 # ═══════════════════════════ 一、文件与解析（纯 stdlib，无包 import） ═══════════════════════════
 def _key(pkg_dir) -> str:
     return os.path.normpath(os.path.abspath(str(pkg_dir))) if pkg_dir else ""
-
-
-def _sig(path: str):
-    try:
-        st = os.stat(path)
-        return (st.st_mtime_ns, st.st_size)
-    except OSError:
-        return None
 
 
 def decl_dir(pkg_dir: str) -> str:

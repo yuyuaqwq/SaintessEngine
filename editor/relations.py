@@ -67,6 +67,7 @@ import json
 import os
 
 from . import packages as PK
+from ._util import file_sig as _sig
 
 RELATIONS_REL = "editor/relations.json"
 VIEWS_REL = "editor/views.json"
@@ -106,14 +107,6 @@ def relations_decl_path(pkg_dir: str) -> str:
 
 def views_decl_path(pkg_dir: str) -> str:
     return os.path.join(pkg_dir, VIEWS_REL)
-
-
-def _sig(path: str):
-    try:
-        st = os.stat(path)
-        return (st.st_mtime_ns, st.st_size)
-    except OSError:
-        return None
 
 
 def _read_json_rel(path: str, label: str):
