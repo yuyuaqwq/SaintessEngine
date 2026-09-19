@@ -62,18 +62,14 @@ from __future__ import annotations
 
 from typing import Any, Callable, Iterable
 
+from .._validators import callable_of
+
 __all__ = ["CLAIMED", "LOCKED", "READY", "Tally", "TierBoard", "tier_state"]
 
 #: 档位三态（通用英文标识；中文措辞由内容侧映射）
 LOCKED = "locked"
 READY = "ready"
 CLAIMED = "claimed"
-
-
-def _callable_of(fn: Any, label: str) -> Callable:
-    if not callable(fn):
-        raise TypeError(f"{label} 必须可调用，收到 {type(fn).__name__}")
-    return fn
 
 
 def _id_of(value: Any, label: str) -> str:
@@ -96,7 +92,7 @@ class Tally:
     __slots__ = ("_rows", "_hit")
 
     def __init__(self, rows: Iterable = (), hit: Callable[[Any], bool] = None) -> None:
-        self._hit = _callable_of(hit, "hit（hit(row) -> bool）")
+        self._hit = callable_of(hit, "hit（hit(row) -> bool）")
         self._rows = tuple(rows or ())
 
     @property
@@ -166,10 +162,10 @@ class TierBoard:
                     f"不要传 None/半个壳：{type(claimed).__name__}")
         self._tiers = tuple(tiers or ())
         self._claimed = claimed
-        self._key = _callable_of(key, "key（key(tier) -> 档位标识）")
-        self._reached = _callable_of(reached, "reached（reached(tier) -> bool）")
+        self._key = callable_of(key, "key（key(tier) -> 档位标识）")
+        self._reached = callable_of(reached, "reached（reached(tier) -> bool）")
         self._claimable = ((lambda tier: True) if claimable is None
-                           else _callable_of(claimable, "claimable（claimable(tier) -> bool）"))
+                           else callable_of(claimable, "claimable（claimable(tier) -> bool）"))
 
     @property
     def tiers(self) -> tuple:

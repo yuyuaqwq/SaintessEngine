@@ -66,6 +66,7 @@ import json
 from collections.abc import Mapping, MutableMapping
 from typing import Any, Callable, Optional
 
+from .._validators import clock_now
 from ..log import get_logger
 from ..log.warn import WarnMixin
 
@@ -175,7 +176,7 @@ class Timers(WarnMixin):
         self.key = key or (lambda owner: str(owner))
         self._logger = log
         self._types: dict = {}
-        self._now(None)                       # 探一次：时钟给不出整数秒 → 装配即报错
+        clock_now(self.clock, None)            # 探一次：时钟给不出整数秒 → 装配即报错
 
     # ---------------------------------------------------------------- 类型注册
     def register(self, type_key: str, *, duration: Optional[int] = None,
@@ -215,7 +216,7 @@ class Timers(WarnMixin):
         if data is not None and not isinstance(data, Mapping):
             raise TypeError(f"data 必须是映射，收到 {type(data).__name__}")
         owner_key = self._key_of(owner)
-        now = self._now(None)
+        now = clock_now(self.clock, None)
         if duration is not None:
             dur = _duration_of(duration, "duration")
         else:
@@ -265,7 +266,7 @@ class Timers(WarnMixin):
         ev = events.get(key)
         if ev is None:
             return None
-        at = self._now(now)
+        at = clock_now(self.clock, now)
         if at >= ev["expire"]:
             del events[key]
             self._persist(owner_key, events)
@@ -281,7 +282,7 @@ class Timers(WarnMixin):
         """
         owner_key = self._key_of(owner)
         events = self._load(owner_key)
-        at = self._now(now)
+        at = clock_now(self.clock, now)
         self._purge(owner, owner_key, events, at)
         return [_view(ev, at, key=k) for k, ev in events.items()]
 
@@ -293,7 +294,7 @@ class Timers(WarnMixin):
         """
         owner_key = self._key_of(owner)
         events = self._load(owner_key)
-        at = self._now(now)
+        at = clock_now(self.clock, now)
         self._purge(owner, owner_key, events, at)
 
     # ---------------------------------------------------------------- 内部
@@ -307,12 +308,6 @@ class Timers(WarnMixin):
         self._persist(owner_key, events)
         for k, ev in expired:
             self._fire(owner, k, ev)
-
-    def _now(self, now: Optional[int]) -> int:
-        value = self.clock() if now is None else now
-        if isinstance(value, bool) or not isinstance(value, int):
-            raise TypeError(f"时钟必须给整数秒，收到 {type(value).__name__}：{value!r}")
-        return int(value)
 
     def _key_of(self, owner: Any) -> str:
         owner_key = self.key(owner)

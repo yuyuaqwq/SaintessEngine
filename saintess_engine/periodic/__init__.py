@@ -63,6 +63,8 @@ from __future__ import annotations
 
 from typing import Any, Callable, Optional
 
+from .._validators import callable_of, int_of, number_of
+
 __all__ = ["PeriodCounter", "PeriodLimitExceeded", "PeriodSlot", "Streak", "Cooldown"]
 
 
@@ -76,12 +78,6 @@ def _key_of(period_key: Any) -> str:
     if not period_key.strip():
         raise ValueError("period_key 必须是非空字符串（键由调用方拼）")
     return period_key
-
-
-def _callable_of(fn: Any, label: str) -> Callable:
-    if not callable(fn):
-        raise TypeError(f"{label} 必须可调用，收到 {type(fn).__name__}")
-    return fn
 
 
 def _as_count(raw: Any, key: str) -> int:
@@ -110,36 +106,6 @@ def _as_count(raw: Any, key: str) -> int:
     return value
 
 
-def _n_of(n: Any) -> int:
-    if isinstance(n, bool) or not isinstance(n, int):
-        raise TypeError(f"n 必须是整数，收到 {n!r}")
-    if n <= 0:
-        raise ValueError(f"n 必须为正，收到 {n!r}")
-    return n
-
-
-def _cap_of(cap: Any) -> int:
-    if isinstance(cap, bool) or not isinstance(cap, int):
-        raise TypeError(f"cap 必须是整数，收到 {cap!r}")
-    if cap < 0:
-        raise ValueError(f"cap 不能为负，收到 {cap!r}")
-    return cap
-
-
-def _positive_int_of(value: Any, label: str) -> int:
-    if isinstance(value, bool) or not isinstance(value, int):
-        raise TypeError(f"{label} 必须是整数，收到 {value!r}")
-    if value <= 0:
-        raise ValueError(f"{label} 必须为正，收到 {value!r}")
-    return value
-
-
-def _number_of(value: Any, label: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise TypeError(f"{label} 必须是数值，收到 {value!r}")
-    return float(value)
-
-
 # ───────────────────────────────────────────────────────── 周期键 → 一格值
 class PeriodSlot:
     """周期键 → **一格值**：读 / 写 / 判在场。值形态由调用方定，引擎原样搬运。
@@ -155,8 +121,8 @@ class PeriodSlot:
 
     def __init__(self, read: Callable[[str], Any], write: Callable[[str, Any], None],
                  period_key: str) -> None:
-        self._read = _callable_of(read, "read（read(key) -> 原始值）")
-        self._write = _callable_of(write, "write（write(key, value)）")
+        self._read = callable_of(read, "read（read(key) -> 原始值）")
+        self._write = callable_of(write, "write（write(key, value)）")
         self._key = _key_of(period_key)
 
     @property
@@ -211,12 +177,12 @@ class PeriodCounter(PeriodSlot):
 
     def remaining(self, cap: int) -> int:
         """本周期剩余额度 = `max(0, cap - used)`。"""
-        return max(0, _cap_of(cap) - self.used())
+        return max(0, int_of(cap, "cap", minimum=0) - self.used())
 
     def consume(self, n: int = 1, *, cap: Optional[int] = None) -> int:
         """记一笔 `n`，返回记完后的本周期计数；超上限 → `PeriodLimitExceeded`（且不写）。"""
-        n = _n_of(n)
-        limit = None if cap is None else _cap_of(cap)
+        n = int_of(n, "n", minimum=1)
+        limit = None if cap is None else int_of(cap, "cap", minimum=0)
         used = self.used()
         if limit is not None and used + n > limit:
             raise PeriodLimitExceeded(
@@ -236,8 +202,8 @@ class Streak:
     __slots__ = ("_step", "_reset_to")
 
     def __init__(self, *, step: int = 1, reset_to: int = 1) -> None:
-        self._step = _positive_int_of(step, "step")
-        self._reset_to = _positive_int_of(reset_to, "reset_to")
+        self._step = int_of(step, "step", minimum=1)
+        self._reset_to = int_of(reset_to, "reset_to", minimum=1)
 
     @property
     def step(self) -> int:
@@ -293,10 +259,10 @@ class Cooldown:
 
     def __init__(self, read: Callable[[str], Any], write: Callable[[str, Any], None],
                  key: str, *, window) -> None:
-        self._read = _callable_of(read, "read（read(key) -> 原始值）")
-        self._write = _callable_of(write, "write（write(key, value)）")
+        self._read = callable_of(read, "read（read(key) -> 原始值）")
+        self._write = callable_of(write, "write（write(key, value)）")
         self._key = _key_of(key)
-        win = _number_of(window, "window")
+        win = number_of(window, "window")
         if win < 0:
             raise ValueError(f"window 不能为负，收到 {window!r}")
         self._window = win
@@ -321,11 +287,11 @@ class Cooldown:
 
     def remaining(self, now) -> float:
         """距可再次触达还剩多久（`now - last >= window` → 0）。"""
-        return max(0.0, self._window - (_number_of(now, "now") - self.last()))
+        return max(0.0, self._window - (number_of(now, "now") - self.last()))
 
     def ready(self, now) -> bool:
         """现在可以触达（距上次触达已满一个窗口）。"""
-        return (_number_of(now, "now") - self.last()) >= self._window
+        return (number_of(now, "now") - self.last()) >= self._window
 
     def touch(self, now) -> None:
         """记下本次触达（写 `now`）。"""

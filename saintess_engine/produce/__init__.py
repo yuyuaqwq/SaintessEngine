@@ -51,6 +51,8 @@ import json
 from collections.abc import Mapping, MutableMapping
 from typing import Callable, Optional
 
+from .._validators import clock_now
+
 __all__ = ["AlreadyBusy", "Job", "Jobs", "ProduceStorageError"]
 
 #: 「键不在存储里」的哨兵 —— 与「键在但值是 None」区分开（后者是坏数据，要报错）。
@@ -139,7 +141,7 @@ class Jobs:
                     f"不要传 None/半个壳：{type(self.store).__name__}")
         if not callable(self.clock):
             raise TypeError("clock 必须是可调用（收无参、返回当前秒）")
-        self._now(None)                      # 探一次：时钟取不到整数 → 当场报错
+        clock_now(self.clock, None)          # 探一次：时钟取不到整数 → 当场报错
         self._key_of("\x00probe")            # 探一次：键不合规 → 当场报错
 
     # ---------------------------------------------------------------- 读
@@ -162,7 +164,7 @@ class Jobs:
 
         顺序稳定：持有者键升序，同一持有者内按存放顺序。
         """
-        at = self._now(now)
+        at = clock_now(self.clock, now)
         out = []
         for owner_key in sorted(self._keys()):
             jobs = self._load_by_key(owner_key)
@@ -188,7 +190,7 @@ class Jobs:
         if not isinstance(job.payload, dict):
             raise TypeError(f"job.payload 必须是映射，收到 {type(job.payload).__name__}")
         self._key_of(owner)
-        at = self._now(None)
+        at = clock_now(self.clock, None)
         if job.ends_at <= at:
             raise ValueError(f"ends_at({job.ends_at}) 必须晚于当前时刻({at})")
         jobs = self._load(owner)
@@ -211,7 +213,7 @@ class Jobs:
 
         只动这一条：同一持有者的其它作业（未到点 / 别类）留在队列里。
         """
-        at = self._now(now)
+        at = clock_now(self.clock, now)
         jobs = self._load(owner)
         hit = next((j for j in sorted(jobs, key=lambda j: (j.ends_at, j.started_at))
                     if j.done(at)), None)
@@ -235,12 +237,6 @@ class Jobs:
         if not owner_key.strip():
             raise ValueError("key(owner) 返回空键 —— 拒绝落到无名存储位上")
         return owner_key
-
-    def _now(self, now: Optional[int]) -> int:
-        value = self.clock() if now is None else now
-        if isinstance(value, bool) or not isinstance(value, int):
-            raise TypeError(f"时钟必须给整数秒，收到 {type(value).__name__}：{value!r}")
-        return int(value)
 
     def _keys(self) -> list:
         for name in ("keys", "__iter__"):

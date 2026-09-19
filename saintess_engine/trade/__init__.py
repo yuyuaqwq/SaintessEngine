@@ -44,6 +44,8 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 from typing import NamedTuple
 
+from .._validators import int_of
+
 __all__ = ["DailyLimit", "DailyLimitExceeded", "SaleResult", "apply_rate", "settle_sale"]
 
 
@@ -120,33 +122,17 @@ class DailyLimit:
 
     def remaining(self, key, cap: int) -> int:
         """当日剩余额度 = max(0, cap - used)。"""
-        return max(0, self._check_cap(cap) - self.used(key))
+        return max(0, int_of(cap, "cap", minimum=0) - self.used(key))
 
     # ------------------------------------------------------------ 写
-    @staticmethod
-    def _check_cap(cap) -> int:
-        if isinstance(cap, bool) or not isinstance(cap, int):
-            raise TypeError(f"cap 必须是整数，收到 {cap!r}")
-        if cap < 0:
-            raise ValueError(f"cap 不能为负，收到 {cap!r}")
-        return cap
-
-    @staticmethod
-    def _check_n(n) -> int:
-        if isinstance(n, bool) or not isinstance(n, int):
-            raise TypeError(f"n 必须是整数，收到 {n!r}")
-        if n <= 0:
-            raise ValueError(f"n 必须为正，收到 {n!r}")
-        return n
-
     def consume(self, key, n: int = 1, *, cap=None) -> int:
         """记一笔 `n`，返回记完后的当日已用数。
 
         * 传了 `cap` 且 `已用 + n > cap` → `DailyLimitExceeded`（**先判后写**，state 不变）
         * 不传 `cap` → 不判上限
         """
-        n = self._check_n(n)
-        limit = None if cap is None else self._check_cap(cap)
+        n = int_of(n, "n", minimum=1)
+        limit = None if cap is None else int_of(cap, "cap", minimum=0)
         store_key = self._store_key(key)          # 当日标识只取一次（中途不换日）
         used = self._used_at(store_key)
         if limit is not None and used + n > limit:

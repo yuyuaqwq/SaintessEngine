@@ -109,7 +109,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Callable, Optional
+from typing import Any, Callable
+
+from .._validators import callable_of, int_of, number_of
 
 __all__ = ["Lookup", "Presence", "day_slot", "day_hit", "minutes_left",
            "guarded_roll", "cooldown_ok", "merge_tables"]
@@ -142,22 +144,6 @@ _EV_EXPIRE = "expire"
 
 
 # ───────────────────────────────────────────────────────── 校验口（fail-closed）
-def _int_of(value: Any, label: str, *, minimum: Optional[int] = None) -> int:
-    """整数校验：`bool` 不算整数（它是 `int` 的子类，混进来会静默变成 0/1）。"""
-    if isinstance(value, bool) or not isinstance(value, int):
-        raise TypeError(f"{label} 必须是整数，收到 {type(value).__name__}：{value!r}")
-    if minimum is not None and value < minimum:
-        raise ValueError(f"{label} 必须 >= {minimum}，收到 {value!r}")
-    return value
-
-
-def _number_of(value: Any, label: str) -> float:
-    """数值校验（`bool` 不算数值）。"""
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise TypeError(f"{label} 必须是数值，收到 {type(value).__name__}：{value!r}")
-    return float(value)
-
-
 def _str_of(value: Any, label: str) -> str:
     if not isinstance(value, str):
         raise TypeError(f"{label} 必须是字符串，收到 {type(value).__name__}：{value!r}")
@@ -186,12 +172,6 @@ def _mapping_of(value: Any, label: str) -> Mapping:
     return value
 
 
-def _callable_of(fn: Any, label: str) -> Callable:
-    if not callable(fn):
-        raise TypeError(f"{label} 必须可调用，收到 {type(fn).__name__}：{fn!r}")
-    return fn
-
-
 def _exclude_of(exclude: Any) -> frozenset:
     """`exclude` 的键集合：字符串整体当**一个**键（写成 `"abc"` 是常见笔误，不许拆成字符）。"""
     if exclude is None:
@@ -217,8 +197,8 @@ def day_slot(seed: int, size: int, *, salt: str = "") -> int:
     * `salt` —— 内容侧盐（同一天、不同盐 = 不同的独立派生）
     * `size <= 0` → `ValueError`（空候选桶是调用方 bug，**不许**静默返回 0）
     """
-    _int_of(seed, "seed")
-    span = _int_of(size, "size", minimum=1)
+    int_of(seed, "seed")
+    span = int_of(size, "size", minimum=1)
     s = _str_of(salt, "salt")
     total = seed * _HASH_MULT + (sum(ord(c) for c in s) if s else 0)
     return (total & _HASH_MASK) % span
@@ -232,7 +212,7 @@ def day_hit(seed: int, *, salt: str = "", rate: float) -> bool:
     正用 / 反用（「命中 = 出现」还是「命中 = 不出现」）是**调用方**的语义，本函数只给裸结果。
     """
     slot = day_slot(seed, _THRESHOLD_SPAN, salt=salt)
-    return slot >= int(_number_of(rate, "rate") * _THRESHOLD_SPAN)
+    return slot >= int(number_of(rate, "rate") * _THRESHOLD_SPAN)
 
 
 def minutes_left(remain_sec) -> int:
@@ -258,9 +238,9 @@ def guarded_roll(miss: int, *, guarantee: int, chance, rng) -> tuple:
     不缓存、不落盘：调用方拿 `miss_after` / `cleared` 在自己的调用点写。
     `rng` 必填（缺失 / 不可调用 → `TypeError`）—— 引擎**不许**悄悄用系统随机。
     """
-    _callable_of(rng, "rng")
-    current = _int_of(miss, "miss", minimum=0)
-    threshold = _int_of(guarantee, "guarantee", minimum=1)
+    callable_of(rng, "rng")
+    current = int_of(miss, "miss", minimum=0)
+    threshold = int_of(guarantee, "guarantee", minimum=1)
     if not chance:
         return (True, current, False)
     if current >= threshold:
@@ -275,10 +255,10 @@ def cooldown_ok(last, now, window) -> bool:
 
     `last` / `now` / `window` 的原值形态由调用方给（秒 / 整数都行）；本函数不读钟。
     """
-    span = _number_of(window, "window")
+    span = number_of(window, "window")
     if not last:
         return True
-    return (_number_of(now, "now") - _number_of(last, "last")) >= span
+    return (number_of(now, "now") - number_of(last, "last")) >= span
 
 
 # ───────────────────────────────────────────────────────── 表合并 / 多表首命中
@@ -358,9 +338,9 @@ class Presence:
             raise TypeError(
                 f"lookup 必须有可调用的 rows(ids)，收到 {type(lookup).__name__}：{lookup!r}")
         self._lookup = lookup
-        self._keep = _callable_of(keep, "keep（keep(row_id, row) -> bool）")
-        self._place_of = _callable_of(place_of, "place_of（place_of(row_id, row, ordinal)）")
-        self._key = _callable_of(key, "key（key(row_id, row)）")
+        self._keep = callable_of(keep, "keep（keep(row_id, row) -> bool）")
+        self._place_of = callable_of(place_of, "place_of（place_of(row_id, row, ordinal)）")
+        self._key = callable_of(key, "key（key(row_id, row)）")
 
     @property
     def lookup(self):
@@ -407,7 +387,7 @@ class Presence:
 
     def slot_at(self, slots: list, index: int):
         """1-based 取用序号对应的**整条** ``(序号, 来源, 项)``；越界（含 `< 1`）→ `None`（不抛）。"""
-        position = _int_of(index, "index")
+        position = int_of(index, "index")
         if position < 1 or position > len(slots):
             return None
         return slots[position - 1]
@@ -419,8 +399,8 @@ class Presence:
         分钟口径经注入的 `minutes`（缺省 `minutes_left`）。事件本身原样放进 `raw`
         （**不拷贝**）—— 展示口径在引擎，事件内容在调用方。
         """
-        at = _number_of(now, "now")
-        to_minutes = _callable_of(minutes, "minutes")
+        at = number_of(now, "now")
+        to_minutes = callable_of(minutes, "minutes")
         out = []
         for index, raw in enumerate(events):
             _mapping_of(raw, f"events[{index}]")
