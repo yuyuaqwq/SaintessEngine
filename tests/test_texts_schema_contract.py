@@ -227,7 +227,13 @@ def t2_positive(body, tpat):
     #   ★ 2026-09-19 C 档 24a（B-2 第 10 片：world「副本内移动 · 落点模式提示」8 新键，
     #     1 处幂等复用 move.same_sa）⇒ 2333 → 2341。
     #     ②中文键数锚点仍不变（inst_move.* / move.* 键名全 ASCII），③标签字未动。
-    check("包内文案条数锚点 == 2369（条数变了就同步更新本门禁的锚点）", len(body) == 2369, len(body))
+    #   ★ 2026-09-19 C 档 25a（B-2 第 11 片：world「NPC 支线/进化教学族」28 新键）⇒ 2341 → 2369。
+    #     ②中文键数锚点仍不变（teach.* / join.* / evolve.* / quest.* / npcabsent.* 键名全 ASCII），③标签字已同步。
+    #   ★ 2026-09-19 C 档 26a（B-2 第 12 片：world 收尾「见闻录 / 时间面板 / 地图尾块 / 指路」
+    #     36 新键，6 处同值幂等复用）⇒ 2369 → 2405。
+    #     ②中文键数锚点仍不变（map.* / time.* / notes.* / npcwhere.* / wildcond.* / time_name.* /
+    #     season_cn.* / weather_cn.* / home.head_* 键名全 ASCII），③标签字已同步。
+    check("包内文案条数锚点 == 2405（条数变了就同步更新本门禁的锚点）", len(body) == 2405, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
