@@ -122,9 +122,7 @@ MAX_COND_DEPTH = 4               # `when` 深度 ≤ 4
 MAX_COND_BRANCH = 4              # `all` / `any` 分支 ≤ 4
 MAX_TREE_BYTES = 256 * 1024      # 树序列化字节 ≤ 256 KB（render.py 截断）
 MAX_TREE_BLOCKS = 64
-MAX_TREE_DEPTH = 8
 MAX_LIST_ITEMS = 200             # 树里 `list` 预渲染项 ≤ 200
-MAX_ID_LEN = 41                  # `^[a-z][a-z0-9_\-]{0,40}$`
 
 _ID_RE = re.compile(r"^[a-z][a-z0-9_\-]{0,40}$")
 _PATH_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*|\[\d+\]|\[\*\])*$")

@@ -55,7 +55,6 @@ _EXPORT_ONLY_RE = re.compile(r"^DIST_", re.I)
 # 为什么这件事值得在**导入/导出报告**里做：包内 `editor/` 会随 zip 传播到第三方（F10），
 # 而「请求跑代码 / 请求注入 JS」是**该包自己声明的**风险面。导入方在**落盘之后**就该看到。
 RENDER_DIR_REL = "editor/render"
-RENDER_LEGACY_REL = "editor/render.json"
 RENDER_MAX_FILES = 128                    # 与 `editor/render_decl.py:MAX_FILES` 同口径
 RENDER_MAX_FILE_BYTES = 256 * 1024        # 与 `editor/render_decl.py:MAX_FILE_BYTES` 同口径
 RENDER_LIST_MAX = 64                      # 报告里最多列几项（避免报告被包刷爆）
