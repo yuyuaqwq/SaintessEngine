@@ -48,6 +48,7 @@
     # 落点 sub 由声明的 kind 派生（data→content/data，rules→content/rules）；
     # 声明缺项 / 文件缺 / 声明与磁盘不符 → RecordsDeclarationError（点名域与实际路径）。
     keys = orders_of(pkg_dir, "roster_first", domain="key_order")   # 命名序声明（可多段拼接）
+    bag2 = set_from_module(__file__, ("roster", "grade"))          # = 包根从本模块文件向上找
 
 **零知识**：引擎不认任何具体域、字段、条目含义 —— `domain` / `field` / `order` / `drop` /
 `key_type` / 谓词 / `factory` 全由内容侧给；本形状不猜字段语义、不改写字段值。
@@ -116,6 +117,7 @@ __all__ = ["Records", "RecordsSet", "RecordsOrderMismatch", "RecordsReloadError"
            "sets", "reload_all_sets",
            "RecordsDeclarationError", "read_domain_decl", "domain_sub",
            "resolve_domain", "records_from_domain", "set_from_domains", "orders_of",
+           "package_root_of", "set_from_module",
            "DEFAULT_DECL", "DEFAULT_KIND_DIRS",
            # 通用视图注册表（`records/views.py`；见该模块头注「两条口径」）
            "register_view", "views", "rebuild_views", "ViewsRebuildError",
@@ -701,6 +703,46 @@ def set_from_domains(pkg_root, domains, *, decl: str = DEFAULT_DECL, kind_dirs=N
         raise RecordsDeclarationError(
             "overrides 里有**没有请求**的域：%r（不静默忽略）" % (sorted(overrides),))
     return RecordsSet(pkg_root, spec)
+
+
+def package_root_of(module_file, *, decl: str = DEFAULT_DECL, limit: int = 8) -> str:
+    """从某个模块文件向上找**包根**（= 含 `<decl>` 声明文件的那一层）。
+
+    * 起点 = `module_file` 所在目录（惯例传 `__file__`）；**从近到远**取第一层命中者，
+      嵌套部署（包被检进别的树里）因此不会误取外层。
+    * 只在 `limit + 1` 层内找；找不到 → `RecordsDeclarationError`（点名起点与试过的层）——
+      **fail-closed**，不猜、不返回空串、不返回「当前目录」当兜底。
+    * 这层「包根 = 最近含域声明的祖先目录」的约定与 `read_domain_decl` 的 `decl` 是**同一份
+      `DEFAULT_DECL`**；包改了布局（`decl=`）两边一起改。
+
+    用途：包内模块一行声明读表口 —— `_R = set_from_module(__file__, ("maps",))`，
+    不必每个模块各写一遍 `os.path.dirname(os.path.abspath(__file__))` 两级。
+    """
+    start = os.path.dirname(os.path.abspath(module_file))
+    tried = []
+    cur = start
+    for _ in range(limit + 1):
+        tried.append(cur)
+        if os.path.isfile(os.path.join(cur, decl)):
+            return cur
+        parent = os.path.dirname(cur)
+        if parent == cur:                                      # 到盘根
+            break
+        cur = parent
+    raise RecordsDeclarationError(
+        "包根找不到：从 %s 向上 %d 层都没有包内域声明 %s（试过：%s）"
+        % (start, limit, decl, " · ".join(tried)))
+
+
+def set_from_module(module_file, domains, *, decl: str = DEFAULT_DECL, kind_dirs=None,
+                    overrides: Optional[dict] = None, limit: int = 8) -> "RecordsSet":
+    """`set_from_domains(package_root_of(module_file), domains, ...)` —— 包内一行声明读表口。
+
+    语义与 `set_from_domains` **逐字相同**（域元数据唯一源仍是包内域声明；fail-closed 一条不松），
+    只多了「包根从本模块文件向上找」这一步。
+    """
+    return set_from_domains(package_root_of(module_file, decl=decl, limit=limit),
+                            domains, decl=decl, kind_dirs=kind_dirs, overrides=overrides)
 
 
 def orders_of(pkg_root, *names, domain: str, decl: str = DEFAULT_DECL,
