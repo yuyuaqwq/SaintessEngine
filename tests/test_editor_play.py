@@ -24,6 +24,10 @@ E2. **反证**：把 `ShellBase.__getattr__` 打桩成抛错 ⇒ `背包` 必红
    是真的在用，不是形状相似）。
 D. **子进程健壮**：超时可掐死（明确报 timeout，不静默）；worker 崩溃 → 明确报错；
    seed 可指定（同 seed 复现、异 seed 可不同）。
+F. **平台动作记录「真的进对拍」**（T7 第 5 轮）：① 源码级禁「重绑动作表」+ 必须就地清空 +
+   壳装配必须交同一张表（两侧）；② 反证按老 bug 改一行必红（含不误伤 `self.events = []`）；
+   ③ 运行时 `._events is lst`（就地清空生效 / 清空拷贝无效）；④ 端到端「过期拍卖 ⇒
+   actions 非空」，对照组「角色」为空。
 """
 from __future__ import annotations
 
@@ -573,6 +577,227 @@ def test_hostless_vs_host_parity() -> None:
 # ============================================================
 # E2. 反证：打桩 `ShellBase.__getattr__` ⇒ `背包` 必红
 # ============================================================
+# F. 平台动作记录「真的进对拍」（T7 第 5 轮 · 常驻门禁）
+# ============================================================
+# 为什么要有这一段
+# ----------------
+# T7-B 修掉的那个 bug：命令循环把动作表**重绑**成新 list（`adapter.events = []`）⇒
+# 壳装配时握的是**旧表**，壳写进去的动作永远读不到 ⇒ 每条 `rec["actions"]` 恒空。
+# 当时唯一的证据是「两侧 digests_sha 相同」—— 那是「**同为空的相同**」：平台动作
+# （广播 / 通知 / 投递）实际**从未进入对拍**。本段把它变成常驻门禁：
+#   F1 源码级（两侧）：「不重绑外部对象的动作表」+「有就地清空」+「壳装配交同一张表」
+#   F2 反证：按老 bug 的样子改一行 ⇒ 判据必红（扫描器不是摆设；并核 `self.events = []` 不误伤）
+#   F3 运行时：真 `PlayShell(pkg=…, events=lst)._events is lst`；就地清空生效；**清空拷贝无效**
+#   F4 端到端：造一条「已过期拍卖」⇒ `拍卖` 的 actions **非空**（对照组「角色」为空）
+#: 命令循环里「平台动作表」的属性名（壳握着的那个 list 对象）
+_ACTION_ATTRS = ("events", "_events")
+
+
+def _action_wiring_report(src: str) -> dict:
+    """静态核一个「命令循环」文件的动作表接线 ⇒ `{"rebind": [...], "clear": [...], "wire": [...]}`。
+
+    R1 `rebind`（**必红**）：给**外部对象**（不是 `self`）的动作表属性赋值 / `del` 属性
+       —— 壳握的是那**一个** list 对象，重绑后循环读的是新表 ⇒ `actions` 恒空。
+       `self.events = []`（适配器自己在 `__init__` 里建表）**不误伤**（见 F2 反证③）。
+    R2 `clear`：`del <动作表>[:]`（切片删除 = **就地**清空真对象，不是重绑）。
+    R3 `wire`：壳装配处 `events=<…>.events` 的实参（必须全是同一张表，不许 `events=[]`）。
+    """
+    import ast as _ast
+    tree = _ast.parse(src)
+    rebind, clear, wire = [], [], []
+    for node in _ast.walk(tree):
+        if (isinstance(node, _ast.Attribute) and node.attr in _ACTION_ATTRS
+                and isinstance(node.ctx, (_ast.Store, _ast.Del))
+                and not (isinstance(node.value, _ast.Name) and node.value.id == "self")):
+            rebind.append("%s（行 %d）" % (_ast.unparse(node), node.lineno))
+        elif isinstance(node, _ast.Delete):
+            for t in node.targets:
+                if isinstance(t, _ast.Subscript) and isinstance(t.slice, _ast.Slice):
+                    clear.append(_ast.unparse(t))
+        elif isinstance(node, _ast.Call):
+            for kw in node.keywords:
+                if kw.arg == "events":
+                    wire.append(_ast.unparse(kw.value))
+    return {"rebind": rebind, "clear": clear, "wire": wire}
+
+
+def _wiring_ok(rep: dict) -> bool:
+    """F1 判据本体：三条件同时成立才算接线对。"""
+    return (not rep["rebind"]
+            and any(c.endswith("[:]") for c in rep["clear"])
+            and len(rep["wire"]) >= 2
+            and all(w.endswith(".events") for w in rep["wire"]))
+
+
+def _func_clears_in_place(src: str, fname: str) -> bool:
+    """`fname` 函数体内是否有「就地清空」`del <x>[:]`（QQ 侧参考跑用的是临时名 `_ev`）。"""
+    import ast as _ast
+    for node in _ast.walk(_ast.parse(src)):
+        if isinstance(node, (_ast.FunctionDef, _ast.AsyncFunctionDef)) and node.name == fname:
+            for sub in _ast.walk(node):
+                if isinstance(sub, _ast.Delete):
+                    for t in sub.targets:
+                        if isinstance(t, _ast.Subscript) and isinstance(t.slice, _ast.Slice):
+                            return True
+    return False
+
+
+def test_action_list_wiring() -> None:
+    """F1 · 源码级（引擎试玩侧 + QQ 侧参考跑）：不重绑 / 就地清空 / 壳装同表。"""
+    print()
+    print("=== F1. 源码级：动作表「不重绑 / 就地清空 / 壳装同表」===")
+    eng_path = os.path.join(ROOT, "editor", "play_worker.py")
+    with open(eng_path, encoding="utf-8") as f:
+        eng = f.read()
+    rep = _action_wiring_report(eng)
+    check("试玩侧：无「重绑动作表」写法（`adapter.events = …` / `del adapter.events`）",
+          not rep["rebind"], str(rep["rebind"])[:200])
+    check("试玩侧：有「就地清空」`del adapter.events[:]`",
+          "adapter.events[:]" in rep["clear"], str(rep["clear"])[:200])
+    check("试玩侧：壳装配都把同一张表交给壳（`events=adapter.events` ≥2 处）",
+          len(rep["wire"]) >= 2 and all(w == "adapter.events" for w in rep["wire"]),
+          str(rep["wire"])[:200])
+    check("试玩侧：三条件同时成立（`_wiring_ok`）", _wiring_ok(rep), str(rep)[:200])
+    host_path = os.path.join(HOST_ROOT, "tests", "b20_qq_ref.py") if HOST_ROOT else ""
+    if host_path and os.path.exists(host_path):
+        with open(host_path, encoding="utf-8") as f:
+            hsrc = f.read()
+        hrep = _action_wiring_report(hsrc)
+        check("QQ 侧参考跑：无「重绑动作表」写法（`shell._events = …`）",
+              not hrep["rebind"], str(hrep["rebind"])[:200])
+        check("QQ 侧参考跑：`_run_one` 里就地清空（`del _ev[:]`）",
+              _func_clears_in_place(hsrc, "_run_one"), str(hrep["clear"])[:200])
+    else:
+        note("无宿主：跳过 QQ 侧参考跑的源码级核（与 C/E 段同口径）")
+
+
+def test_action_wiring_negative() -> None:
+    """F2 · 反证：按 T7-B 那个 bug 的样子改一行 ⇒ 判据必红。"""
+    print()
+    print("=== F2. 反证：老 bug 的写法必须被扫出来 ===")
+    with open(os.path.join(ROOT, "editor", "play_worker.py"), encoding="utf-8") as f:
+        eng = f.read()
+    bad1 = eng.replace("del adapter.events[:]", "adapter.events = []")
+    r1 = _action_wiring_report(bad1)
+    check("反证①：把「就地清空」改成重绑 ⇒ R1 必中 + 整体判据必红",
+          bad1 != eng and bool(r1["rebind"]) and not _wiring_ok(r1), str(r1["rebind"])[:200])
+    bad2 = eng.replace("events=adapter.events", "events=[]")
+    r2 = _action_wiring_report(bad2)
+    check("反证②：壳装配改成 `events=[]` ⇒ 判据必红（壳另起一张表）",
+          bad2 != eng and not _wiring_ok(r2), str(r2["wire"])[:200])
+    check("反证③：`self.events = []`（适配器自身建表）**不误伤**",
+          not _action_wiring_report(
+              "class A:\n    def __init__(self):\n        self.events = []\n").get("rebind"))
+    host_path = os.path.join(HOST_ROOT, "tests", "b20_qq_ref.py") if HOST_ROOT else ""
+    if host_path and os.path.exists(host_path):
+        with open(host_path, encoding="utf-8") as f:
+            hsrc = f.read()
+        bad3 = hsrc.replace("del _ev[:]", "shell._events = []")
+        r3 = _action_wiring_report(bad3)
+        check("反证④：QQ 侧改成 `shell._events = []` ⇒ R1 必中",
+              bad3 != hsrc and bool(r3["rebind"]), str(r3["rebind"])[:200])
+
+
+#: F3 探针（子进程跑：核「壳握的就是循环清空/读取的那**一个** list」）
+_F3_PROBE = '''
+import asyncio, json, sys
+sys.path.insert(0, %r)
+from saintess_engine.host import load_package
+from editor.play_shell import PlayShell
+pkg = load_package(%r, inject={"db_path": "", "clock": None, "log": None, "tlog": None})
+lst = []
+sh = PlayShell(pkg=pkg, events=lst)
+out = {"same_object": sh._events is lst}
+asyncio.run(sh._deliver("g1", "hi"))
+out["hit_same_list"] = [dict(a) for a in lst]
+del lst[:]
+out["cleared_in_place"] = list(sh._events)
+copy = list(lst)
+asyncio.run(sh._deliver("g1", "x"))
+del copy[:]
+out["copy_clear_ineffective"] = [dict(a) for a in sh._events]
+print("__F3__" + json.dumps(out, ensure_ascii=False))
+'''
+
+
+def test_action_list_runtime_identity() -> None:
+    """F3 · 运行时：壳与命令循环共用**同一个**动作表对象（拷贝清空无效）。"""
+    print()
+    print("=== F3. 运行时：壳与循环共用同一个动作表对象 ===")
+    os.makedirs(DB_DIR, exist_ok=True)
+    probe = os.path.join(DB_DIR, "_t7_action_list.py")
+    with open(probe, "w", encoding="utf-8", newline="") as f:
+        f.write(_F3_PROBE % (ROOT, PKG))
+    pr = subprocess.run([sys.executable, probe], capture_output=True, text=True,
+                        encoding="utf-8", errors="replace", timeout=600,
+                        env={**os.environ, "PYTHONIOENCODING": "utf-8",
+                             "PYTHONUTF8": "1"})
+    out = {}
+    for line in (pr.stdout or "").splitlines():
+        if line.startswith("__F3__"):
+            out = json.loads(line[len("__F3__"):])
+    check("探针跑通（真包 + 真引擎 PlayShell）", bool(out),
+          ((pr.stderr or "") or (pr.stdout or ""))[-200:])
+    check("`PlayShell(events=lst)._events is lst`（同一个对象，不是拷贝）",
+          out.get("same_object") is True, str(out)[:200])
+    hit = out.get("hit_same_list") or [{}]
+    check("壳写的动作落进循环那张表（`deliver` 记录）",
+          bool(hit) and hit[0].get("action") == "deliver",
+          json.dumps(hit, ensure_ascii=False)[:160])
+    check("`del lst[:]` ⇒ 壳侧同步清空（就地清空真对象）",
+          out.get("cleared_in_place") == [], str(out.get("cleared_in_place"))[:160])
+    check("★ 反证：清空**拷贝**无效（壳的表仍在）⇒ 必须就地清空真对象",
+          bool(out.get("copy_clear_ineffective")),
+          json.dumps(out.get("copy_clear_ineffective"), ensure_ascii=False)[:160])
+
+
+def test_action_list_end_to_end() -> None:
+    """F4 · 端到端：有动作的样本 `actions` 真的非空（对拍不再是「同为空的相同」）。"""
+    print()
+    print("=== F4. 端到端：过期拍卖结算 ⇒ actions 非空（对照组为空）===")
+    import sqlite3
+    from editor import play as PLAY
+    os.makedirs(DB_DIR, exist_ok=True)
+    tmp = tempfile.mkdtemp(prefix="t7_f4_", dir=DB_DIR)
+    reg = os.path.join(tmp, "reg.db")
+    r0 = PLAY.run(PKG, ["注册 动作探针 男"], seed=11, uid="9201", group_id="gf",
+                  host_root="", db=reg, db_dir=tmp, clock=CLOCK)
+    check("F4 建档 stage=done", r0.get("stage") == "done", _brief(r0))
+    data = {"items": [{"id": 1, "name": "试作胸甲", "slot": "armor", "lv": 30,
+                       "quality": "purple", "bids": {}, "base": 100, "buyout": 500}]}
+    con = sqlite3.connect(reg, timeout=10)
+    con.execute("DELETE FROM world_event")
+    con.execute("INSERT INTO world_event (etype, starts_at, ends_at, data) VALUES (?,?,?,?)",
+                ("auction", int(CLOCK) - 600, int(CLOCK) - 300,
+                 json.dumps(data, ensure_ascii=False)))
+    con.commit()
+    con.close()
+    db_ctrl = os.path.join(tmp, "ctrl.db")
+    db_act = os.path.join(tmp, "act.db")
+    shutil.copyfile(reg, db_ctrl)
+    shutil.copyfile(reg, db_act)
+    ctrl = PLAY.run(PKG, ["角色"], seed=11, uid="9201", group_id="gf", host_root="",
+                    db=db_ctrl, db_dir=tmp, clock=CLOCK)
+    act = PLAY.run(PKG, ["拍卖"], seed=11, uid="9201", group_id="gf", host_root="",
+                   db=db_act, db_dir=tmp, clock=CLOCK)
+    crow = (ctrl.get("rows") or [{}])[0]
+    arow = (act.get("rows") or [{}])[0]
+    check("对照组（角色）actions 为空（不是「永远非空」）",
+          crow.get("ok") and crow.get("actions") == [], _brief(ctrl))
+    acts = arow.get("actions") or []
+    check("★ 有动作样本（过期拍卖结算 → 广播）actions 非空",
+          arow.get("ok") and bool(acts), json.dumps(arow, ensure_ascii=False)[:300])
+    check("动作形状 = 记录式平台半边（dict + action 字段）",
+          bool(acts) and all(isinstance(a, dict) and a.get("action") for a in acts),
+          json.dumps(acts, ensure_ascii=False)[:200])
+    check("结算文本进了动作记录（落槌结算 → 播报）",
+          bool(acts) and "落槌结算" in str(acts[0].get("text") or ""),
+          json.dumps(acts, ensure_ascii=False)[:200])
+    note("过期拍卖 `拍卖` 的动作 = %s" % json.dumps(acts, ensure_ascii=False)[:120])
+
+
+
+# ============================================================
 _SABOTAGE = """
 import importlib.util, json, sys
 sys.path.insert(0, %r)
@@ -640,6 +865,10 @@ def main() -> int:
         test_hostless_vs_host_parity()            # C2 段：无宿主 vs 有宿主
     else:
         test_hostless_subset()                    # C0 段：无宿主子集实跑
+    test_action_list_wiring()                     # F1 段：源码级（重绑/就地清空/装同表）
+    test_action_wiring_negative()                 # F2 段：反证（老 bug 必红）
+    test_action_list_runtime_identity()           # F3 段：运行时同一个动作表对象
+    test_action_list_end_to_end()                  # F4 段：有动作的样本 actions 非空
     test_helper_resolution_negative()             # E2 段：反证
     test_subprocess_robustness()
     if HOST_ROOT:
