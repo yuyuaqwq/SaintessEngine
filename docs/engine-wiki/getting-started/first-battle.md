@@ -89,7 +89,7 @@ b = Battle(btype="monster", sides={"player": [hero], "enemy": [wolf]})
    —— 快者先手、开局第一动也按速度排（`schedule.initial_ct`，`schedule.py:42`）
 
 `sides` 的键名由你定；引擎唯一硬编码的约定是 **`"player"`** 这个键名
-（`_check_side_end` 里 `alive[0] == "player"` → `result="victory"`，`battle.py:645`）。
+（`_check_side_end` 里 `alive[0] == "player"` → `result="victory"`，`battle.py:646`）。
 
 ## 3. 打一拳
 
@@ -114,7 +114,7 @@ print("\n".join(logs))
 
 `who` 是这套引擎对「多人同时在场」的答案：`human_act` 内部先 `act()`，
 再 `_after_act` 推 caster 的 `ct`，然后 `advance()` 一路推进自动 actor，
-直到撞上**下一个 ct 最小的人控 actor**（`schedule.advance`，`schedule.py:278`）。
+直到撞上**下一个 ct 最小的人控 actor**（`schedule.advance`，`schedule.py:282`）。
 单玩家场景 `who` 通常仍是自己。
 
 内部调用链（详见 [../architecture/data-flow.md](../architecture/data-flow.md)）：
@@ -133,9 +133,9 @@ print(b.result, b.winner_side)       # victory / player
 ```
 
 - `auto_run` 里人控 actor 也走普攻（`battle.py:343`），适合测试与仿真。
-- 胜负判定在 `_check_side_end`（`battle.py:629`）：存活阵营数 ≤ 1 → 置 `result`；
+- 胜负判定在 `_check_side_end`（`battle.py:630`）：存活阵营数 ≤ 1 → 置 `result`；
   `alive[0] == "player"` → `"victory"`，否则 `"defeat"`；全灭 → `"defeat"`。
-- `"fled"` 只由 `Battle._do_flee`（`battle.py:587`）写。
+- `"fled"` 只由 `Battle._do_flee`（`battle.py:588`）写。
 
 ## 5. 读日志 / 读状态
 

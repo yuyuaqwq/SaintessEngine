@@ -21,7 +21,7 @@
 **痕迹**：
 - `actors.py:1-9` 的模块 docstring 原文：「引擎逻辑只用字段值，不按字段猜身份」
 - `Battle.focus()`：只认 `human_controlled`（`battle.py:203-212`）
-- `schedule._next_player_due` / `_next_auto_due`：按同一个 bool 分流（`schedule.py:325/128`）
+- `schedule._next_player_due` / `_next_auto_due`：按同一个 bool 分流（`schedule.py:329/128`）
 - `Battle.add_actor` 注释：「不认识随从/召唤/亡灵/援军，只做注册 + 索引 + 排程」（`battle.py:254`）
 - `Battle.find_actor(uid)`：承伤/治疗转移的查找口（只读，不猜身份）（`battle.py:197`）
 

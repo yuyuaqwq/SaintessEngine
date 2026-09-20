@@ -128,16 +128,16 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 | 方法 | 位置 | 内容层引用数（全仓 grep） |
 |---|---|---|
 | `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:113/117/151` | 仅引擎内 |
-| `_do_defend` / `_do_flee` | `battle.py:580/458` | 仅引擎内 |
-| `_ensure_battle_started` | `battle.py:596` | 仅引擎内 |
-| `_on_actor_dead(actor, logs=None)` | `battle.py:611` | `landing._apply_damage` 调（`landing.py:385`） |
-| `_check_side_end` | `battle.py:629` | 仅引擎内 |
+| `_do_defend` / `_do_flee` | `battle.py:581/458` | 仅引擎内 |
+| `_ensure_battle_started` | `battle.py:597` | 仅引擎内 |
+| `_on_actor_dead(actor, logs=None)` | `battle.py:612` | `landing._apply_damage` 调（`landing.py:385`） |
+| `_check_side_end` | `battle.py:630` | 仅引擎内 |
 
 ### 序列化
 
 ```python
-to_state() -> dict                    # battle.py:656 → serialize.to_state
-Battle.from_state(st, *, text=None)   # battle.py:662（classmethod）→ serialize.from_state
+to_state() -> dict                    # battle.py:657 → serialize.to_state
+Battle.from_state(st, *, text=None)   # battle.py:663（classmethod）→ serialize.from_state
 ```
 
 ## 3. 模块级公开函数
