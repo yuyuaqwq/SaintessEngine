@@ -20,7 +20,7 @@
      并给一条可读告警（容错但**不静默** —— 静默「不校验」是今天反复踩的坑）。
 
 另钉两条「别把回退删了」：框架 `schemas/` 的 17 份必须还在（sha 冻结）；没声明 schema 的域
-（`classes` / `loot_vocab`）仍是「不校验」。
+（★ 2026-09-20 台账 T12 第 2 轮起**认实机**现取 —— 内容包补 schema 后例子会变，别再钉死域名）仍是「不校验」。
 
 跑法：python tests/test_editor_package_schemas.py
 退出码：0 = 全过；1 = 有失败。
@@ -237,10 +237,16 @@ def main():
     check("解析结果**不是**框架那份（包内优先不是摆设）",
           all(_p(PK.schema_path(REAL_ORLANDIA, d)) != _p(os.path.join(FW_SCHEMAS, m["schema"]))
               for d, m in schemas_meta.items()))
-    check("没声明 schema 的域仍是不校验（classes / loot_vocab）",
-          PK.schema_path(REAL_ORLANDIA, "classes") is None
-          and PK.schema_path(REAL_ORLANDIA, "loot_vocab") is None
-          and VD.load_schema("classes", REAL_ORLANDIA) is None)
+    # ★ 2026-09-20（台账 T12 第 2 轮）：`classes` 已随 T12 补上包内 schema（不再适合当例子）——
+    #   锚点改「认实机」：从生效域表现取仍无 schema 的域，免得每补一个 schema 就要改这里一次。
+    _no_schema = sorted(d for d, m in PK.effective_domains(REAL_ORLANDIA)[0].items()
+                        if not m.get("schema"))
+    check("没声明 schema 的域仍是不校验（实机取 %d 个，例：%s）"
+          % (len(_no_schema), " / ".join(_no_schema[:2])),
+          len(_no_schema) >= 2
+          and PK.schema_path(REAL_ORLANDIA, _no_schema[0]) is None
+          and PK.schema_path(REAL_ORLANDIA, _no_schema[1]) is None
+          and VD.load_schema(_no_schema[0], REAL_ORLANDIA) is None)
     check("包内解析不产告警（正常路径必须安静）",
           all(VD.schema_warnings(d, REAL_ORLANDIA) == [] for d in schemas_meta))
 
