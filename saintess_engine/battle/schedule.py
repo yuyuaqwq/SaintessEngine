@@ -245,6 +245,32 @@ def _resolve_due_pending(battle, logs: list):
         a["charging"] = None
         battle._dispatch_pending(a, s, logs)
 
+def settle_landing(battle, logs: list, actor=None) -> Optional[float]:
+    """把**已登记**的待发行动推进到落地并结算（驱动方口径：一次出手 = 落地后返回）。
+
+    与 `advance()` 的区别：`advance()` 会一路跑到**下一个决策点**（真人轮流制下那个决策点
+    可能就在当刻 ⇒ 一步不推时钟 ⇒ 本次落地被挂起到对手那一回合）；本函数只推时钟到
+    **待发落地时刻**并结算，**不驱动任何 actor 决策**。
+
+    `actor=None` ⇒ 取全场最早的那个待发；给了 actor ⇒ 锚定**它**这一手落地（早于它的
+    其它待发由 `_advance_time` 按时刻顺路结算，口径与 `advance()` 一致）。
+    无待发 / 该 actor 无待发 ⇒ 返回 None（零行为）。返回结算后的战斗时刻。
+    """
+    if actor is not None:
+        slot = pending_of(actor) if actor_alive(actor) else None
+        at = float(slot.get("cast_done_at", 0.0) or 0.0) if slot else None
+    else:
+        at = _next_pending_at(battle)
+    if at is None:
+        return None
+    dt = at - float(battle._now)
+    if dt > 0:
+        _advance_time(battle, dt, logs)
+    else:
+        _resolve_due_pending(battle, logs)
+    return float(battle._now)
+
+
 # ============================================================
 # 推进（命令层驱动）
 # ============================================================

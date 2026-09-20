@@ -34,11 +34,11 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 | 9 | `on_heal` | `landing.py:460`（`heal_actor`） | `actor`, `target`, `source`, `amount`, `overflow` | 被治疗者 | 实际回血 > 0 时 |
 | 10 | `on_kill` | `landing.py:391`（`_apply_damage`） | `actor`, `target`, `dmg` | **击杀者** | 致死伤害落地后；`source is None`（DOT/环境杀）不触发 |
 | 11 | `on_death` | `battle.py:625`（`_on_actor_dead`） | `actor`, `target` | 死者 | 所有死亡路径统一在此；**死者的声明仍会执行**（subject 例外） |
-| 12 | `dot_tick` | `schedule.py:575`（`_settle_time_effects`） | `actor`, `target`, `key`, `dmg` | 受跳者 | DOT 每一跳 |
-| 13 | `dot_calc` | `schedule.py:547`（同上） | `target`, `dot_key`, `dmg`, `mult` | **无**（广播） | DOT 伤害落地**前**的乘区钩子 |
+| 12 | `dot_tick` | `schedule.py:601`（`_settle_time_effects`） | `actor`, `target`, `key`, `dmg` | 受跳者 | DOT 每一跳 |
+| 13 | `dot_calc` | `schedule.py:573`（同上） | `target`, `dot_key`, `dmg`, `mult` | **无**（广播） | DOT 伤害落地**前**的乘区钩子 |
 | 14 | `on_act_consume` | `battle.py:488`（`act`） | `actor`, `tag` | 行动者 | 被控跳过行动（`mode="skip"`）时 |
 | 15 | `on_hit_consume` | `actions.py:516`（`_consume_hit_buffs`） | `actor`, `key` | 出手者 | 一次性出手 buff 被消费时 |
-| 16 | `buff_expire` | `schedule.py:416`（`_settle_time_effects`） | `actor`, `target`, `key` | 条目持有者 | `effects` 条目到期被删时（原 `buff_expire` 名保留兼容） |
+| 16 | `buff_expire` | `schedule.py:442`（`_settle_time_effects`） | `actor`, `target`, `key` | 条目持有者 | `effects` 条目到期被删时（原 `buff_expire` 名保留兼容） |
 | 17 | `threshold` | `effects.py:442`（`act_apply` 叠层分支） | `actor`, `key`, `value` | 条目持有者 | 叠层数值变化后（「战意满 10 → 狂暴」类） |
 | 18 | `dmg_calc` | `actions.py:426`（`_single_target_pipeline`） | `actor`, `target`, `dmg`, `is_crit`, `info`, `mult` | 攻击者 | 伤害算出后、落地前（攻击方乘区） |
 | 19 | `taken_calc` | `landing.py:115`（`deal_damage`） | `actor`, `target`, `source`, `dmg`, `mult` | 承伤者 | 承伤修正（承伤方乘区） |
@@ -48,7 +48,7 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 | 23 | `player_low` | ⚠️ **无引擎点位** | — | — | 玩家低血量（上层驱动） |
 | 24 | `pv_broken` | ⚠️ **无引擎点位** | — | — | 破防（上层驱动） |
 | 25 | `interrupt` | `landing.py:200`（伤害打断蓄力）/ `effects.py:697`（`act_interrupt` 动词） | `actor`, `target`, `source` | 被打断者 | 读条被打断 |
-| 26 | `time_advance` | `schedule.py:376`（`_advance_time`） | `dt`, `now` | **无**（广播） | 时钟推进（结算**之后**广播） |
+| 26 | `time_advance` | `schedule.py:402`（`_advance_time`） | `dt`, `now` | **无**（广播） | 时钟推进（结算**之后**广播） |
 
 ### 关于 `skill_hit` / `attack_hit` 的「静态 grep 不到」
 
@@ -157,7 +157,7 @@ act()                        → turn_start
 
 另外的时间线事件：`_advance_time` → `_settle_time_effects`
 （`buff_expire` × n → `dot_calc` → `deal_damage` → `dot_tick` × n）→ `time_advance`
-（`schedule.py:343-378`）。
+（`schedule.py:369-404`）。
 
 ## 相关
 

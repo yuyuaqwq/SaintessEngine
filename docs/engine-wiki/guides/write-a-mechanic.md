@@ -87,7 +87,7 @@ attacker = ctx.get("source")
 | `dmg_calc` | 攻击方总伤 | ×mult 增伤 | `actions.py:422-428` |
 | `taken_calc` | 承伤前 | ×mult 减伤（<1）或增伤（>1） | `landing.py:79-90` |
 | `heal_calc` | 治疗量落地前 | ×mult 治疗增幅 | `actions.py:649-713` |
-| `dot_calc` | DOT 每跳 | ×mult DOT 增伤 | `schedule.py:547-561` |
+| `dot_calc` | DOT 每跳 | ×mult DOT 增伤 | `schedule.py:573-587` |
 
 写法（实测可用的最小骨架）：
 

@@ -54,6 +54,7 @@ API_SYMBOLS = [
     "stats", "register_action", "config", "fire", "all_state_effects",
     "action_time", "initial_ct", "recover_time", "hostile_sides", "act_shield",
     "norm_stack", "effects", "heal_amount", "skill_pay_of", "make_actor",
+    "settle_landing",
     "get_effect_rules", "get_effect_actions",
     "Space", "LootTable", "TierTable",
 ]

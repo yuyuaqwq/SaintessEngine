@@ -23,7 +23,7 @@ actor["effects"] = {
 于是每个新机制都要问「这个东西算 buff 还是 state？」，而且**净化/到期/序列化要写四遍**。
 合并成一个容器后（`actors.py:48-50` 的原文：`V 系列统一：四容器 → 单 effects 容器`）：
 
-- 到期只有一处（`schedule._settle_time_effects`，`schedule.py:402-419`）
+- 到期只有一处（`schedule._settle_time_effects`，`schedule.py:428-445`）
 - 净化只有一处（`effects.act_cleanse`，`effects.py:612-621`）
 - 面板折算只有一处（`stats._apply_effects`，`stats.py:39`）
 - 序列化天然覆盖（`serialize._serialize_actor` 全字段带走，`serialize.py:51`）
@@ -46,7 +46,7 @@ actor["effects"] = {
 | `v` | `act_apply` value 型 | **无引擎消费者**（☞ 见下） | 值型数值（如减伤 0.45） |
 | `stat` / `op` / `mult` | `act_apply` 快照分支 | `stats._apply_effects`（`stats.py:69-80`） | 面板增益快照 |
 | `hit` | `act_apply` hit 子键 | `actions._consume_hit_buffs`（`actions.py:478`） | 出手消费型（`dmg_mult` / `guaranteed_crit` / `bonus_atk_pct`） |
-| `period` | **内容侧**直接写入 | `schedule._settle_time_effects`（`schedule.py:445-453`） | 动态周期声明（条目自带优先，回落表声明） |
+| `period` | **内容侧**直接写入 | `schedule._settle_time_effects`（`schedule.py:471-479`） | 动态周期声明（条目自带优先，回落表声明） |
 | `value` | 内容侧（`heal_amp_pct` 等） | `landing._apply_heal_mods`（`landing.py:487`） | 附加数值袋（形态自定，消费方自己解释） |
 
 ### `v` 字段的消费缺口
@@ -75,7 +75,7 @@ actor["effects"] = {
 
 **为什么需要 float**：资源可以有非整数速率（信仰每刻 −0.7、磐核每刻 +0.4）。
 `apply` 的叠层分支读 `float()`（`effects.py:418`）、`consume` 读 `float()`
-（`effects.py:523`）、`schedule` 的 gain 分支 `round(..., 6)`（`schedule.py:630`）。
+（`effects.py:523`）、`schedule` 的 gain 分支 `round(..., 6)`（`schedule.py:656`）。
 读侧全用 `float()` 保真，写侧统一过 `norm_stack` 保持「int 资源看起来还是 int」。
 
 ## cap 的唯一收敛点
@@ -96,23 +96,23 @@ def _cap_of(actor, key):                       # effects.py:59，S2 公开别名
 - `bonus` 为负数时按 0 处理（`max(0, bonus)`）——**只增不减**
 
 读它的地方（都是叠层 clamp）：`act_apply` 叠层分支（`effects.py:419`）、
-`schedule` 周期 gain 分支（`schedule.py:627`，且**表声明可被 `period.cap` 覆盖**）。
+`schedule` 周期 gain 分支（`schedule.py:653`，且**表声明可被 `period.cap` 覆盖**）。
 内容侧的渠道攒取也走它（`class_mech_proc.py` 的 `class_res_channel_gain`）。
 
 ## 周期结算（`period`）
 
 `period` 是「按刻重复发生」的声明，形态见 [../reference/effect-rules.md](../reference/effect-rules.md)。
-引擎的实现要点（`schedule._settle_time_effects`，`schedule.py:436-580`）：
+引擎的实现要点（`schedule._settle_time_effects`，`schedule.py:462-606`）：
 
 1. **首次挂不给跳**：第一次看到某 key 时只登记 `dot_next[key] = now + interval`
-   （`schedule.py:464-467`，对齐旧引擎的「首跳延迟」）
+   （`schedule.py:490-493`，对齐旧引擎的「首跳延迟」）
 2. **到点补跳**：`while now >= dot_next[key]`，一次最多补 20 跳（`guard < 20`）防死循环
 3. **`dir` 四向**：`damage`（掉血）/ `heal`（回血 + 可选 mana_pct）/ `mana`（回蓝）/ `gain`（给自身叠层加/减，**静默**、clamp `[0, cap]`）
-4. **`turns` 限跳**：跳够 `turns` 次就清层（计数器 `dot_jumps`，`schedule.py:636-642`）
+4. **`turns` 限跳**：跳够 `turns` 次就清层（计数器 `dot_jumps`，`schedule.py:662-668`）
 5. **`dir="gain"` 不需要 `stacks > 0`**：0 层也要回（游侠精力耗到 0 若被拦将永远回不了，
-   `schedule.py:457-460` 注释）
+   `schedule.py:483-486` 注释）
 6. **boss 档**：`is_boss` 或 `role == "boss"` 时读 `pct_boss` / `pct_cur_boss`
-   （`schedule.py:477` / `:286`）
+   （`schedule.py:503` / `:286`）
 
 ⚠️ `dot_next` / `dot_jumps` 是 actor 上的运行期辅助字段，会**随存档落盘**（不在
 `_STRIP_KEYS` 里）——这是续战行为能对上的原因，但如果你是手写存档要注意它们。

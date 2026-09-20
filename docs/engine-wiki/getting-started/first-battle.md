@@ -114,7 +114,7 @@ print("\n".join(logs))
 
 `who` 是这套引擎对「多人同时在场」的答案：`human_act` 内部先 `act()`，
 再 `_after_act` 推 caster 的 `ct`，然后 `advance()` 一路推进自动 actor，
-直到撞上**下一个 ct 最小的人控 actor**（`schedule.advance`，`schedule.py:252`）。
+直到撞上**下一个 ct 最小的人控 actor**（`schedule.advance`，`schedule.py:278`）。
 单玩家场景 `who` 通常仍是自己。
 
 内部调用链（详见 [../architecture/data-flow.md](../architecture/data-flow.md)）：
