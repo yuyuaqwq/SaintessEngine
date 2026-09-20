@@ -9,7 +9,7 @@ saintess_engine = Battle.from_state(state)   # ← 重建 Battle / sides / actor
 
 入口：`serialize.to_state`（`serialize.py:34`）/ `serialize.from_state`（`serialize.py:57`），
 包门面也 re-export 了模块级 `to_state` / `from_state`（`saintess_engine/__init__.py:41`），
-`Battle.to_state` / `Battle.from_state` 是类方法包装（`battle.py:602/532`）。
+`Battle.to_state` / `Battle.from_state` 是类方法包装（`battle.py:607/532`）。
 **两条路等价**，内容层两种都在用（游戏仓侧拆仓前的迁移计划 `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §5 记了
 `B2.from_state` 与 `Battle.from_state` 两种形态）。
 
@@ -68,9 +68,9 @@ _STRIP_KEYS = {"_skill_index"}      # serialize.py:31 —— 运行时索引，�
 | 字段 | 来源 | 说明 |
 |---|---|---|
 | `_content_applied` | 内容侧 `apply_game_content` 的幂等标记（`game/content_rules/apply.py:81`） | 会落盘（原文自记：游戏仓侧拆仓计划的收口步 S9 若要清掉需改引擎 `serialize.py`） |
-| `dot_next` / `dot_jumps` | 引擎周期结算辅助（`schedule.py:259-260`） | 落盘是**续战能对上**的原因，别手删 |
+| `dot_next` / `dot_jumps` | 引擎周期结算辅助（`schedule.py:315-316`） | 落盘是**续战能对上**的原因，别手删 |
 | `_dmg_taken_mult` | 上层直写（例 `commands/boss_script.py:684`） | 承伤乘区（`landing.py:92-99` 读） |
-| `act_count` | `actor_auto` 每动 +1（`battle.py:418`） | AI `round_mod` 谓词读它 |
+| `act_count` | `actor_auto` 每动 +1（`battle.py:421`） | AI `round_mod` 谓词读它 |
 | `reduce_left` | `effects.act_apply`（`effects.py:463`） | ⚠️ 无消费者 |
 
 ## 恢复时的三个隐式决定
@@ -93,7 +93,7 @@ def from_state(st, *, text=None):
 
 ### ② `_started=True`
 
-`battle_start` 事件是**整场一次**的（`_ensure_battle_started`，`battle.py:542`），
+`battle_start` 事件是**整场一次**的（`_ensure_battle_started`，`battle.py:547`），
 它承载「起手效果 / 词条套装 / 仪式祝福」。恢复的战斗已经在开战之后，
 再 fire 一次会让起手 buff **双份**。
 
@@ -111,7 +111,7 @@ for uid in (st.get("killed") or []):
 ⚠️ 用的是**对象引用**重建：从 squad 里找 `uid` 相同的 actor。注释说
 「找不到跳过——已从 sides 移除的阵亡单位」（`serialize.py:81`）。
 但**引擎其实从不把阵亡 actor 从 `sides` 移除**（`_on_actor_dead` 只 append 进
-`killed_actors`，`battle.py:557-573`；`_check_side_end` 也不删）。
+`killed_actors`，`battle.py:562-578`；`_check_side_end` 也不删）。
 所以正常情况下找得到；「找不到」只在外部手工删过 sides 时才发生。
 
 ## 旧档迁移：`_deserialize_actor`

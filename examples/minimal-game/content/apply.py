@@ -42,7 +42,7 @@ def _lazy_mount():
 
 
 def _time_model(spd, base):
-    """内容侧时间模型（`time_model_fn` 供体）：一次行动耗时（游戏秒）。
+    """内容侧时间模型（`time_model_fn` 供体）：**第一段**耗时（游戏秒）。
 
     形状 = **linear**（`base × spd_ref/spd`），参数读本游戏 `R.TIME_MODEL`。
     引擎不内置任何公式 —— 第三方照这个签名给函数即可换一套节奏。
@@ -55,10 +55,27 @@ def _time_model(spd, base):
     return float(base) * (float(cfg["spd_ref"]) / _spd)
 
 
+def _recover_model(spd, base):
+    """内容侧第二段时间模型（`recover_model_fn` 供体）：**第二段**耗时（游戏秒）。
+
+    本示例与第一段同形状（也可以给独立形状，例如「收招不吃速度」）。
+    """
+    return _time_model(spd, base)
+
+
 def _action_base(action):
-    """内容侧「行动类别 → 基准耗时」表（`action_base_fn` 供体）。"""
+    """内容侧「行动类别 → 第一段基准耗时」表（`action_base_fn` 供体）。"""
     _cast = R.TIME_MODEL["cast"]
     return float(_cast.get(action) or _cast["attack"])
+
+
+def _recover_base(action):
+    """内容侧「行动类别 → 第二段基准耗时」表（`recover_base_fn` 供体）。
+
+    本示例两段刻意分开：`recover` 全 0 ⇒ 行为与「只有一段」逐字节相同。
+    """
+    _rec = R.TIME_MODEL["recover"]
+    return float(_rec.get(action) or _rec["attack"])
 
 
 def install_engine() -> None:
@@ -85,8 +102,10 @@ def install_engine() -> None:
         skill_flat_fn=lambda: R.SKILL_FLAT,
         skill_up_fn=lambda info: {},                        # 本游戏不做技能等级成长
         skill_level_of_fn=lambda player, skill_name: 1,
-        time_model_fn=_time_model,                          # CTB 时间模型（本游戏 = linear）
-        action_base_fn=_action_base,                        # 行动类别 → 基准耗时
+        time_model_fn=_time_model,                          # CTB 时间模型·第一段（本游戏 = linear）
+        action_base_fn=_action_base,                        # 行动类别 → 第一段基准耗时
+        recover_model_fn=_recover_model,                    # 第二段（收招）耗时（本游戏 = 同形状）
+        recover_base_fn=_recover_base,                      # 行动类别 → 第二段基准耗时（全 0）
     )
     config.load_game_rules(R)   # EFFECT_ACTIONS / EFFECT_RULES
     _MOUNTED = True

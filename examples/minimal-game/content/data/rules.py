@@ -118,15 +118,19 @@ SKILL_FLAT = {
 }
 
 # ============================================================
-# CTB 时间模型（喂给引擎 schedule 的注入面：time_model_fn / action_base_fn）
+# CTB 时间模型（喂给引擎 schedule 的注入面：time_model_fn / action_base_fn /
+# recover_model_fn / recover_base_fn —— 两段：`cast` 出招 + `recover` 收招）
 # ============================================================
 # 引擎只留机制（谁 ct 小谁先动、行动后 ct = now + 本次耗时），形状与数值由本游戏给。
 # 本游戏选 **linear**：一次行动耗时 = base × (spd_ref / max(spd, 1))；spd_cap=None 不截断。
 # `cast` 的键就是引擎的动作类别通用键（attack/skill/defend/item…）；
 # 引擎对未声明类别回落 `schedule.DEFAULT_ACTION`（= "attack"）。
+# ★ 两段：`cast` = 第一段（出招），`recover` = 第二段（收招）。两段各按形状折算后相加。
+#   本示例 `recover` 全 0 ⇒ 行为与「只有一段」逐字节相同（先落能力，数值按需再配）。
 TIME_MODEL = {
     "shape": "linear",
     "spd_ref": 50.0,
     "cast": {"attack": 1.0, "skill": 1.6, "defend": 0.6, "item": 1.0},
+    "recover": {"attack": 0.0, "skill": 0.0, "defend": 0.0, "item": 0.0},
     "spd_cap": None,
 }

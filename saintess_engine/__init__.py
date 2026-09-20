@@ -41,7 +41,7 @@ from .config import get_effect_actions, get_effect_rules
 from .battle.effect_triggers import fire
 from .battle.effects import act_apply, act_shield, apply_effects, cap_of, norm_stack, register_action
 from .battle.landing import deal_damage, heal_actor
-from .battle.schedule import action_time, initial_ct
+from .battle.schedule import action_time, initial_ct, recover_time
 from .battle.serialize import from_state, to_state
 from .battle.state_effects import all_state_effects, state_def
 from .battle.stats import actor_stats
@@ -92,7 +92,7 @@ __all__ = [
     "state_def", "all_state_effects", "get_effect_actions", "get_effect_rules",
     "config",
     # 事件 / 时间轴
-    "fire", "action_time", "initial_ct",
+    "fire", "action_time", "initial_ct", "recover_time",
     # 阵营
     "hostile_sides",
     # 行动结算工具

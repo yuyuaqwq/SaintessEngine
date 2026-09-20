@@ -104,8 +104,8 @@ hit（dict）                           →  {stacks:1, expire, hit}      出手
 | `stat_scale` | `stats._apply_effects`（`stats.py:60`）面板折算 |
 | `debuff_scale` | ✅ **引擎消费**（`landing.deal_damage`，2026-09-11 接线）：Σ(每层系数 × stacks) → 承伤 ×(1+Σ)，与 `stat_scale` 对称。`hunt_mark`/`soul_mark`/`curse` 的「每层承伤 +N%」现生效；`target["_dmg_taken_mult"]`（`landing.py`）仍是无状态来源的固定乘区 |
 | `panel` | `effects.act_apply` 快照分支（`effects.py:459-471`） |
-| `consume.mode` | `effects.act_apply` 控制分支（`effects.py:351-354`）+ `Battle.act` 的控制消费（`battle.py:450-477`） |
-| `period` | `schedule._settle_time_effects`（`schedule.py:270-278`） |
+| `consume.mode` | `effects.act_apply` 控制分支（`effects.py:351-354`）+ `Battle.act` 的控制消费（`battle.py:453-480`） |
+| `period` | `schedule._settle_time_effects`（`schedule.py:326-334`） |
 | `cleanse` / `period` / `on=="target"` | `effects.act_cleanse`（`effects.py:612-621`） |
 | `cd_mult` | `actions.do_skill` 冷却设置（`actions.py:90-98`，取多态最小） |
 | `negative` | **内容侧**负面种数计数（`class_mech_proc.py:767`），引擎不读 |

@@ -87,7 +87,7 @@ attacker = ctx.get("source")
 | `dmg_calc` | 攻击方总伤 | ×mult 增伤 | `actions.py:422-428` |
 | `taken_calc` | 承伤前 | ×mult 减伤（<1）或增伤（>1） | `landing.py:79-90` |
 | `heal_calc` | 治疗量落地前 | ×mult 治疗增幅 | `actions.py:649-713` |
-| `dot_calc` | DOT 每跳 | ×mult DOT 增伤 | `schedule.py:372-386` |
+| `dot_calc` | DOT 每跳 | ×mult DOT 增伤 | `schedule.py:428-442` |
 
 写法（实测可用的最小骨架）：
 
@@ -144,7 +144,7 @@ def my_cond_mult(battle, caster, target, params, logs):
 |---|---|---|
 | 开战前（按已学技能/已装备） | 命令层开战仪式调你的装配函数，写 `actor["triggers"]` | `apply_class_mech(actor)`（`class_mech_proc.py:2201`） |
 | 战斗中途（某个效果生效时） | 在动词里直接改 `triggers`（会立刻生效，因为 fire 每次都现读） | 内容侧「进入守护姿态时挂反击 trigger」 |
-| 一次性行动 | `Battle.action_override`（`battle.py:496`） | `use_item` 类自定义行动 |
+| 一次性行动 | `Battle.action_override`（`battle.py:500`） | `use_item` 类自定义行动 |
 
 装配器的最简形态（实测跑通）：
 

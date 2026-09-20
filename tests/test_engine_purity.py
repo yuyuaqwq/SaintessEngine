@@ -52,7 +52,7 @@ API_SYMBOLS = [
     "deal_damage", "state_def", "heal_actor", "Battle", "actor_alive",
     "act_apply", "cap_of", "actor_stats", "apply_effects", "now_of",
     "stats", "register_action", "config", "fire", "all_state_effects",
-    "action_time", "initial_ct", "hostile_sides", "act_shield",
+    "action_time", "initial_ct", "recover_time", "hostile_sides", "act_shield",
     "norm_stack", "effects", "heal_amount", "skill_pay_of", "make_actor",
     "get_effect_rules", "get_effect_actions",
     "Space", "LootTable", "TierTable",

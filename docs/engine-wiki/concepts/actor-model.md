@@ -16,7 +16,7 @@
 - 序列化不需要按类型分派（`serialize._serialize_actor` 对任何 actor 一视同仁，`serialize.py:51`）
 
 代价：**身份信息全靠字段**。要表达「这是 Boss」就写 `is_boss=True` 或 `role="boss"`
-（引擎真读这两个的地方：控制时长减半 `effects.py:373`、DOT 的 `pct_boss` / `boss_pct_mult` 档 `schedule.py:302`、
+（引擎真读这两个的地方：控制时长减半 `effects.py:373`、DOT 的 `pct_boss` / `boss_pct_mult` 档 `schedule.py:358`、
 `is_boss`/`role` 也在部分内容侧判定里被读）。
 
 ## 字段全集
@@ -41,7 +41,7 @@
 ⚠️ 这些是**裸值**。战斗内的「有效面板」要经 `stats.actor_stats()`（`stats.py:18`）
 聚合：有 `class_name` → 调 `panel_fn` hook 重算职业面板；无 → 直读字段；
 然后叠加 `effects` 里的面板修正。**伤害/速度/暴击都读聚合面板，不读裸字段**
-（例：`schedule._after_act` 用 `stats.actor_spd`，`schedule.py:174`）。
+（例：`schedule._after_act` 用 `stats.actor_spd`，`schedule.py:225`）。
 
 > 唯一的数值兜底：`stats._monster_base_stats` 里 `crit` 缺省取 **0.05**（`stats.py:121`），
 > 而 `make_actor` 播种的是 0.0（`actors.py:98`）。这两处不一致，见
@@ -59,8 +59,8 @@
 | `ct` | float | **下次可行动时刻**（绝对时刻，见 [ctb-schedule.md](ctb-schedule.md)） |
 | `poi_buff` | any | 透传字段，引擎不读 |
 | `triggers` | `{事件名: [效果 dict]}` | 事件声明（见 [event-bus.md](event-bus.md)） |
-| `act_count` | int | 个体行动计数，`actor_auto` 每动 +1（`battle.py:418`） |
-| `dot_next` / `dot_jumps` | `{key: 数值}` | 周期结算的运行期辅助（`schedule.py:259-260` 惰性建） |
+| `act_count` | int | 个体行动计数，`actor_auto` 每动 +1（`battle.py:421`） |
+| `dot_next` / `dot_jumps` | `{key: 数值}` | 周期结算的运行期辅助（`schedule.py:315-316` 惰性建） |
 
 **为什么 `shields` / `cooldown` 不进 `effects`**：它们**不是状态**。
 护盾是「承伤时按值扣减的资源」，冷却键是「还能不能再放」的调度表——
@@ -76,7 +76,7 @@
 | `equipment` | 装备 dict，透传给 `panel_fn` |
 | `skills` | 技能 key 列表（构造 Battle 时索引进 `_skill_index`） |
 | `learned_skills` | 已学技能列表（**引擎不读**，是给你的装配器扫的，如《奥兰迪亚》的 `_learned_mech_skills`） |
-| `auto_act` | 自动行动配置（`actor_auto` 读它，`battle.py:373`） |
+| `auto_act` | 自动行动配置（`actor_auto` 读它，`battle.py:376`） |
 | `ai` | 通用怪 AI 决策数据（`ai.normalize_ai` / `resolve_ai_move` 读） |
 | `_skill_index` | 技能名/index → 技能 dict。**不进存档**（`serialize._STRIP_KEYS`，`serialize.py:31`） |
 

@@ -21,7 +21,7 @@
 **痕迹**：
 - `actors.py:1-9` 的模块 docstring 原文：「引擎逻辑只用字段值，不按字段猜身份」
 - `Battle.focus()`：只认 `human_controlled`（`battle.py:203-212`）
-- `schedule._next_player_due` / `_next_auto_due`：按同一个 bool 分流（`schedule.py:144/128`）
+- `schedule._next_player_due` / `_next_auto_due`：按同一个 bool 分流（`schedule.py:195/128`）
 - `Battle.add_actor` 注释：「不认识随从/召唤/亡灵/援军，只做注册 + 索引 + 排程」（`battle.py:254`）
 - `Battle.find_actor(uid)`：承伤/治疗转移的查找口（只读，不猜身份）（`battle.py:197`）
 
@@ -88,7 +88,7 @@
   （`stats.py:121`），而 `make_actor` 播种的是 0.0（`actors.py:98`）
 
 **痕迹**：
-- `config.py:71-75` 的 R8 说明：「静默降级」两档语义
+- `config.py:76-80` 的 R8 说明：「静默降级」两档语义
 - `formulas.py:95` 原文：「『零默认值』：无挂载 → 空 dict = 无成长配置」
 - 内容侧 `_merge_agg_entry` 的注释：「缺字段 = 无此行为（零默认值铁律）」
 
@@ -163,7 +163,7 @@ actor 的 `triggers = {事件名: [效果声明]}` 决定响应什么。
   `data.plugins.dragonfall.game.*` **两套模块树**（同一份文件的两个模块对象），
   每棵树各自 hold 自己的 `config` 实例 —— 这也是 `config` 需要
   `register_hook_provider` 惰性装配的原因（游戏仓 `game/bootstrap.py:196-201`、
-  引擎 `config.py:78-83`）。要做真正的多内容隔离，靠进程或模块树，不要靠全局单例
+  引擎 `config.py:83-88`）。要做真正的多内容隔离，靠进程或模块树，不要靠全局单例
 - 惰性装配器会在首次读 hook 时把整份内容拉进来（[../getting-started/installation.md](../getting-started/installation.md)）
 
 **痕迹**：`config.py:11-15` 原文（「本包历史上直接 import `game.engine` / `game.content` /
@@ -201,7 +201,7 @@ Boss 剧本导演。这些都需要游戏知识。
 **代价**：
 - **它们不落盘**：`from_state` 只恢复 `btype/sides/title_bonus/hostile_map`，
   恢复后必须自己重挂（文案表 `text=` 同理：可选关键字参数，恢复时重新传入）（[../guides/serialize-and-resume.md](../guides/serialize-and-resume.md)）
-- 异常被吞掉（`script_hook` 异常 → 回落默认行动，`battle.py:340-341`），
+- 异常被吞掉（`script_hook` 异常 → 回落默认行动，`battle.py:343-344`），
   钩子写错不容易发现
 
 **痕迹**：`battle.py:42-63` 的三段注释；

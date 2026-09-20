@@ -63,7 +63,7 @@ flowchart TD
   `schedule → actors, effects` 与 `battle → actors`。
 - **函数内 import 制造了恰好 2 对双向互指**：`effects ↔ effect_triggers`
   （`effects.py:441` / `effect_triggers.py:99`）与 `battle ↔ serialize`
-  （`battle.py:604` / `serialize.py:64`）。这两对都是「延迟 import 破环」的写法，
+  （`battle.py:609` / `serialize.py:64`）。这两对都是「延迟 import 破环」的写法，
   **改它们的时候不要把 import 提到模块级**。
 - `support/*` 只 import 上级包（`from .. import config`），不 import 任何兄弟结算模块 ——
   它是可单独复制的纯函数库。
@@ -132,7 +132,7 @@ flowchart TD
 ## 分层带来的三条硬规则
 
 1. **落地只能走 `landing`**。任何模块自己扣 `hp` 都会绕过护盾/死亡/事件。
-   （例：`schedule` 的 DOT 结算也调 `landing.deal_damage`，`schedule.py:390`）
+   （例：`schedule` 的 DOT 结算也调 `landing.deal_damage`，`schedule.py:446`）
 2. **状态只能写 `effects`**（护盾/冷却除外，它们各有独立容器与消费点）。
    写别的地方 = `stats`/`schedule`/`cleanse` 都看不见它。
 3. **引擎不 import 内容**。需要数值就读 hook、需要行为就读声明。

@@ -154,6 +154,92 @@ def test_configured_path_unchanged():
     check("已装配 skill_flat_value 可调用", isinstance(v, int), f"{v!r}")
 
 
+def test_recover_second_segment():
+    """【第二段（收招）注入面：未装配 fail-closed · 两段相加 · 零段逐位等值 · 独立形状】
+
+    T14：引擎只做「两段相加」，不认识「出招/收招」业务词；形状/数值/段数全在内容侧
+    （「没有第二段」= 内容侧显式声明 0）。本段挂的是**测试自己的**两段 hook，退出还原。
+    """
+    print("【第二段（收招）注入面】")
+    from saintess_engine.battle import schedule as SCH
+
+    _NAMES = ("time_model_fn", "action_base_fn", "recover_model_fn", "recover_base_fn")
+    saved = {n: CFG._HOOKS.get(n) for n in _NAMES}
+    provider, strict = CFG._hook_provider, CFG.strict
+
+    class _Battle:
+        _now = 10.0
+
+    def _act(spd):
+        return {"uid": "p", "name": "甲", "side": "player", "spd": spd, "stats_spd": spd}
+
+    def _t1(spd, base):                      # 第一段：linear（spd=50 时 = base）
+        return float(base) * (50.0 / max(float(spd or 0), 1.0))
+
+    def _flat(spd, base):                    # 段内独立形状：收招不吃速度
+        return float(base)
+
+    def _base_tbl(action):
+        return 1.0 if action in ("attack", "skill", "defend") else 0.0
+
+    try:
+        CFG._hook_provider = None
+        CFG.strict = False
+        # ① 两个名字进名单（否则内容侧 mount 会被静默丢弃）
+        check("config._HOOKS 认识两个第二段 hook 名",
+              {"recover_model_fn", "recover_base_fn"} <= set(CFG._HOOKS),
+              str(sorted(CFG._HOOKS)))
+
+        # ② 未装配第二段 → fail-closed（与出招同口径，点名 hook 名；不受 strict 影响）
+        CFG.mount(time_model_fn=_t1, action_base_fn=_base_tbl)
+        CFG._HOOKS["recover_model_fn"] = None
+        CFG._HOOKS["recover_base_fn"] = None
+        for _call, _tag in ((lambda: SCH.recover_time(50, 0.0), "recover_time"),
+                            (lambda: SCH.recover_base_of("attack"), "recover_base_of")):
+            try:
+                _call()
+                check(f"未装配时 {_tag} 抛 EngineNotConfigured", False, "没抛")
+            except CFG.EngineNotConfigured as e:
+                check(f"未装配时 {_tag} 抛 EngineNotConfigured（点名 hook）",
+                      "recover_" in str(e), str(e)[:60])
+
+        # ③ 装配两段：查表 / 转发 / 两段相加
+        CFG.mount(recover_model_fn=_flat,
+                  recover_base_fn=lambda action: 0.25 if action == "skill" else 0.0)
+        check("第二段基准查表（skill → 0.25）", SCH.recover_base_of("skill") == 0.25)
+        check("未声明类别回落默认项", SCH.recover_base_of("spd_x") == 0.0,
+              f"{SCH.recover_base_of('spd_x')}")
+        check("第二段模型转发内容侧 fn", SCH.recover_time(200, 0.25) == 0.25)
+        a = _act(50)
+        SCH._after_act(_Battle(), a, "skill")
+        check("ct = now + 第一段 + 第二段（10 + 1.0 + 0.25）",
+              a["ct"] == 10.0 + 1.0 + 0.25, f"ct={a['ct']}")
+        check("第二段独立形状（flat）⇒ 收招不随速度变（spd=1 与 spd=200 同值）",
+              SCH.recover_time(1, 0.25) == SCH.recover_time(200, 0.25) == 0.25,
+              f"{SCH.recover_time(1, 0.25)} / {SCH.recover_time(200, 0.25)}")
+        check("对照：第一段仍按速度缩放（spd=1 ≠ spd=200）",
+              SCH.action_time(1, 1.0) != SCH.action_time(200, 1.0),
+              f"{SCH.action_time(1, 1.0)} / {SCH.action_time(200, 1.0)}")
+        a1 = _act(200)
+        SCH._after_act(_Battle(), a1, "skill")     # 第二段基准表：skill = 0.25
+        check("两段合成：spd=200 → 10 + 0.25(第一段缩放) + 0.25(flat 第二段)",
+              a1["ct"] == 10.0 + 0.25 + 0.25, f"ct={a1['ct']}")
+
+        # ④ 零段等值：内容侧声明 0 ⇒ ct 与「只有一段」**逐位相同**（不是约等）
+        CFG.mount(recover_base_fn=lambda action: 0.0)
+        z = _act(50)
+        SCH._after_act(_Battle(), z, "attack")
+        check("第二段 = 0 ⇒ ct 逐位等于 now + 第一段",
+              z["ct"] == 10.0 + SCH.action_time(50, SCH.action_base_of("attack")),
+              f"ct={z['ct']}")
+        check("零段时 recover_time 恒 0", SCH.recover_time(1, 0.0) == 0.0)
+    finally:
+        for n in _NAMES:
+            CFG._HOOKS[n] = saved[n]
+        CFG._hook_provider = provider
+        CFG.strict = strict
+
+
 if __name__ == "__main__":
     import saintess_engine as _b2
     from saintess_engine import config as _c
@@ -167,6 +253,7 @@ if __name__ == "__main__":
     test_other_growth_functions_no_crash()
     test_strict_mode_still_raises()
     test_configured_path_unchanged()
+    test_recover_second_segment()
     print(f"\n== 结果：通过 {PASS} / 共 {PASS + FAIL} ==")
     if FAILURES:
         for f in FAILURES:

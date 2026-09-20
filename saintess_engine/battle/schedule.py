@@ -4,9 +4,11 @@
 按 docs/archive/REFACTOR_v181P4_FULL_PLAN.md Part 7 schedule.py + 旧引擎 v154 语义：
 
 - **机制（归引擎）**：actor.ct = 下次能行动的时刻（绝对时刻）；谁 ct 小谁先动；
-  行动后 `ct = now + 本次行动耗时`；1 刻 = 1 时刻 = 1 游戏秒（ACT_TICK=1）。
+  行动后 `ct = now + 第一段耗时 + 第二段耗时`；1 刻 = 1 时刻 = 1 游戏秒（ACT_TICK=1）。
 - **一次行动耗时多少（归内容侧）**：引擎**不内置**任何时间公式形状与基准耗时数值，
-  一律向注入面取 —— 见下方 `_time_model_fn()` / `action_time()` / `action_base_of()`。
+  一律向注入面取 —— 见下方 `_time_model_fn()` / `action_time()` / `action_base_of()`；
+  第二段（收招）同口径：`_recover_fn()` / `recover_time()` / `recover_base_of()`。
+  引擎不叫它「出招/收招」，只做「两段相加」——业务词归内容侧。
 - 命令层驱动：玩家出手 → advance() 推进到下一个决策点（途中自动 actor 自动行动）
 
 注入面（内容侧装配；与 `battle/formulas.py` 同款 `saintess_engine.config` hook 面）：
@@ -14,6 +16,8 @@
     time_model_fn   hook 名，值 = `fn(spd, base) -> float`（一次行动耗时，单位 = 游戏秒）
     action_base_fn  hook 名，值 = `fn(action) -> float`（行动类别 → 基准耗时；
                     未声明的类别由引擎回落到内容侧基准表的 `DEFAULT_ACTION` 项）
+    recover_model_fn  hook 名，值 = `fn(spd, base) -> float`（**第二段**耗时，单位 = 游戏秒）
+    recover_base_fn   hook 名，值 = `fn(action) -> float`（行动类别 → 第二段基准耗时）
 
 **未装配 → fail-closed**：直接抛 `config.EngineNotConfigured`（点名 hook 名）。
 引擎不提供任何"中性/默认公式"——那是编出来的数，本仓口径禁止静默降级。
@@ -57,6 +61,34 @@ def _base_fn():
     return fn
 
 
+def _recover_fn():
+    """内容侧第二段时间模型（收招）——未装配即抛 `EngineNotConfigured`（fail-closed）。
+
+    ★ 「没有第二段」由内容侧**显式声明 0** 表达，不由引擎兜底（引擎不内置默认值）。
+    """
+    fn = _cfg.get_hook("recover_model_fn")
+    if fn is None:
+        raise _cfg.EngineNotConfigured(
+            "第二段耗时模型未装配：引擎不内置耗时公式（形状与参数归内容侧）。"
+            "内容侧应把 `recover_model_fn` 挂进 saintess_engine.config"
+            "（见 content/mech/time_model.py + content/apply.py::install_engine）；"
+            "「无第二段」= 内容侧显式声明 0"
+        )
+    return fn
+
+
+def _recover_base_fn():
+    """内容侧「行动类别 → 第二段基准耗时」表——未装配即抛 `EngineNotConfigured`。"""
+    fn = _cfg.get_hook("recover_base_fn")
+    if fn is None:
+        raise _cfg.EngineNotConfigured(
+            "第二段基准耗时表未装配：引擎不内置数值。"
+            "内容侧应把 `recover_base_fn` 挂进 saintess_engine.config"
+            "（见 content/mech/time_model.py + content/apply.py::install_engine）"
+        )
+    return fn
+
+
 def action_time(spd: int, base: Optional[float] = None) -> float:
     """一次行动耗时（游戏秒）= 内容侧时间模型 `fn(spd, base)`。
 
@@ -82,7 +114,7 @@ def next_ct(battle, actor: dict, base: Optional[float] = None) -> float:
         spd = S.actor_spd(battle, actor)
     except Exception:
         pass
-    return float(battle._now) + action_time(spd, base)
+    return float(battle._now) + action_time(spd, base) + recover_time(spd, recover_base_of(DEFAULT_ACTION))
 
 
 def action_base_of(action: str) -> float:
@@ -92,6 +124,25 @@ def action_base_of(action: str) -> float:
     （未声明的类别 → 回落到 `DEFAULT_ACTION` 项；表里连它都没有 → KeyError 现形）。
     """
     return float(_base_fn()(action or DEFAULT_ACTION))
+
+
+def recover_base_of(action: str) -> float:
+    """行动类别 → **第二段**基准耗时（内容侧第二段基准表的查表转发）。
+
+    与 `action_base_of` 同口径；「没有第二段」由内容侧显式声明 0.0 表达。
+    """
+    return float(_recover_base_fn()(action or DEFAULT_ACTION))
+
+
+def recover_time(spd: int, base: Optional[float] = None) -> float:
+    """一次行动的**第二段**耗时（游戏秒）= 内容侧第二段模型 `fn(spd, base)`。
+
+    `base=None` → 取内容侧「默认行动类别」（`DEFAULT_ACTION`）的第二段基准。
+    形状与参数（含「第二段不吃速度」这类独立形状）全部由内容侧装配。
+    """
+    if base is None:
+        base = recover_base_of(DEFAULT_ACTION)
+    return float(_recover_fn()(spd, base))
 
 
 # ============================================================
@@ -171,9 +222,14 @@ def _next_auto_due(battle):
     return (best, best_t) if best else None
 
 
-def _after_act(battle, actor: dict, action: str):
-    """行动后推进 actor.ct（行动耗时 + 固定推进）。"""
+def _after_act(battle, actor: dict, action: str, recover_base: Optional[float] = None):
+    """行动后推进 actor.ct（第一段耗时 + 第二段耗时 + 固定推进）。
+
+    `recover_base=None` → 第二段基准走内容侧基准表（`action` 那一项）；
+    给了值 → 用它（由 `battle.action_override` 回执的第二段透传，单位与基准表一致）。
+    """
     base = action_base_of(action)
+    _rb = recover_base_of(action) if recover_base is None else float(recover_base)
     # 用聚合面板速度（buffs 修正）——actor 裸 spd 字段可能是 0（玩家面板由
     # stats.actor_stats 从 class/equip 聚合），与 next_ct 保持一致口径。
     try:
@@ -181,7 +237,7 @@ def _after_act(battle, actor: dict, action: str):
         spd = S.actor_spd(battle, actor)
     except Exception:
         spd = int(actor.get("spd", 0) or 0)
-    actor["ct"] = float(battle._now) + action_time(spd, base)
+    actor["ct"] = float(battle._now) + action_time(spd, base) + recover_time(spd, _rb)
 
 
 def _advance_time(battle, dt: float, logs: list):

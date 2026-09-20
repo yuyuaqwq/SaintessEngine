@@ -25,7 +25,7 @@ from .battle import Battle, now_of
 from .effect_triggers import fire
 from .effects import act_apply, act_shield, apply_effects, cap_of, norm_stack, register_action
 from .landing import deal_damage, heal_actor
-from .schedule import action_time, initial_ct
+from .schedule import action_time, initial_ct, recover_time
 from .serialize import from_state, to_state
 from .state_effects import all_state_effects, state_def
 from .stats import actor_stats
@@ -35,6 +35,6 @@ __all__ = [
     "deal_damage", "heal_actor",
     "act_apply", "act_shield", "apply_effects", "register_action", "cap_of", "norm_stack",
     "actor_stats", "state_def", "all_state_effects",
-    "fire", "action_time", "initial_ct", "hostile_sides",
+    "fire", "action_time", "initial_ct", "recover_time", "hostile_sides",
     "heal_amount", "skill_pay_of", "from_state", "to_state", "now_of",
 ]

@@ -542,12 +542,15 @@ def _lazy_mount():
 # ---- CTB 时间模型（★ 引擎**不内置**任何行动耗时公式与常量：不挂即 fail-closed）----
 # 一次行动耗时 = base × (spd_ref / spd)（linear；spd = spd_ref 时 = base）。
 # 换公式形状/参数只改下面这一张表；引擎侧只按 ct 排序推进，不认识速度语义。
+# ★ 两段：`cast` = 第一段，`recover` = 第二段（收招）；两段都按同一形状折算。
+#   「没有第二段」在此显式声明 0（引擎不兜底）。
 _TIME_MODEL = {{"shape": "linear", "spd_ref": 50.0, "spd_cap": None,
-               "cast": {{"attack": 1.0, "skill": 1.6, "defend": 0.6, "item": 1.0}}}}
+               "cast": {{"attack": 1.0, "skill": 1.6, "defend": 0.6, "item": 1.0}},
+               "recover": {{"attack": 0.0, "skill": 0.0, "defend": 0.0, "item": 0.0}}}}
 
 
 def _time_scale(spd, base) -> float:
-    """`time_model_fn` 供体：一次行动耗时（游戏秒）。"""
+    """`time_model_fn` 供体：第一段耗时（游戏秒）。"""
     s = max(float(spd or 0), 1.0)
     cap = _TIME_MODEL.get("spd_cap")
     if cap:
@@ -555,9 +558,19 @@ def _time_scale(spd, base) -> float:
     return float(base) * (float(_TIME_MODEL["spd_ref"]) / s)
 
 
+def _recover_scale(spd, base) -> float:
+    """`recover_model_fn` 供体：第二段耗时（游戏秒；本模板与第一段同形状）。"""
+    return _time_scale(spd, base)
+
+
 def _action_base(action: str) -> float:
-    """`action_base_fn` 供体：行动类别 → 基准耗时。"""
+    """`action_base_fn` 供体：行动类别 → 第一段基准耗时。"""
     return float((_TIME_MODEL["cast"] or {{}}).get(action) or _TIME_MODEL["cast"]["attack"])
+
+
+def _recover_base(action: str) -> float:
+    """`recover_base_fn` 供体：行动类别 → 第二段基准耗时（本模板全 0）。"""
+    return float((_TIME_MODEL["recover"] or {{}}).get(action) or _TIME_MODEL["recover"]["attack"])
 
 
 def install_engine() -> None:
@@ -568,12 +581,14 @@ def install_engine() -> None:
     import saintess_engine.battle.formulas as formulas
 
     config.register_hook_provider(_lazy_mount)
-    # ⚠️ hook（引擎只认 13 个名字）走 `mount`；**声明表不要走 mount** ——
+    # ⚠️ hook（引擎只认 17 个名字）走 `mount`；**声明表不要走 mount** ——
     # `set_hook` 对不认识的名字是**静默忽略**，写 `mount(effect_rules=…)` 会"看起来装配成功、
     # 实则规则表是空的"（效果全部不生效且不报错）。声明表走 `load_game_rules`。
     config.mount(formulas=formulas,          # 引擎自带通用公式模块
-                 time_model_fn=_time_scale,  # ★ CTB 时间模型（不挂即 fail-closed）
-                 action_base_fn=_action_base)  # 行动类别 → 基准耗时
+                 time_model_fn=_time_scale,  # ★ CTB 时间模型·第一段（不挂即 fail-closed）
+                 action_base_fn=_action_base,  # 行动类别 → 第一段基准耗时
+                 recover_model_fn=_recover_scale,  # ★ 第二段（收招）耗时（不挂即 fail-closed）
+                 recover_base_fn=_recover_base)    # 行动类别 → 第二段基准耗时
 
     class _Rules:
         pass

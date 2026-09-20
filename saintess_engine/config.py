@@ -66,6 +66,11 @@ _HOOKS = {
     "time_model_fn": None,
     # 行动类别 → 基准耗时 fn(action) -> float（内容侧基准表；未声明类别引擎回落 DEFAULT_ACTION）
     "action_base_fn": None,
+    # ---- 第二段（收招）注入面：与上面两条同形，只多一段耗时槽 ----
+    # 第二段耗时 fn(spd, base) -> float（游戏秒；形状与参数全在内容侧）
+    "recover_model_fn": None,
+    # 行动类别 → 第二段基准耗时 fn(action) -> float（「无第二段」= 内容侧显式声明 0.0）
+    "recover_base_fn": None,
 }
 
 # R8：无挂载静默降级开关。

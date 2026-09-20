@@ -297,13 +297,16 @@ class Battle:
             from .schedule import _after_act
             if _is_override:
                 _cast = getattr(ctx, "_override_cast", None) or "attack"
-                # 回调返回的 cast：str=内置动作基准（defend/skill/attack，按 spd 缩放）
-                # 或数字=绝对耗时秒（命令层已算好时长，直接落 ct）
+                _rec = getattr(ctx, "_override_recover", None)
+                # 回调返回的**两段**：str=内置动作基准（defend/skill/attack，按 spd 缩放，
+                # 第二段一并按内容侧基准表/回执值折算）；或数字=绝对耗时秒
+                # （命令层已算好时长，两段直接相加落 ct，不经内容侧形状）
                 if isinstance(_cast, str):
-                    _after_act(self, caster, _cast)
+                    _after_act(self, caster, _cast, _rec)
                 else:
                     try:
-                        caster["ct"] = float(self._now) + max(0.0, float(_cast))
+                        caster["ct"] = (float(self._now) + max(0.0, float(_cast))
+                                        + max(0.0, float(_rec or 0.0)))
                     except Exception:
                         _after_act(self, caster, "attack")
             else:
@@ -492,14 +495,16 @@ class Battle:
             # N5b4-5a R3：非引擎内置动作（use_item/命令层自定义）→ 先问外部
             # action_override 注入点（引擎零游戏知识——不认识道具/吃药/特殊动作，
             # 只提供"这次行动做什么 + 耗时多少"的执行注入；效果由回调用引擎动词写）。
-            # 回调返回 (logs, cast_base_or_None)；None = 未消费 → 回落默认未知提示。
+            # 回调返回 (logs, cast, recover) 三元组；None = 未消费 → 回落默认未知提示。
+            # 两段都是「类别名（str，按内容侧形状折算）或绝对秒（数字直接落 ct）或 None」。
             if self.action_override is not None:
                 try:
-                    _ov_logs, _ov_cast = self.action_override(
+                    _ov_logs, _ov_cast, _ov_recover = self.action_override(
                         self, ctx.action, actor, ctx.skill_name, ctx.target)
                     if _ov_logs is not None:
                         logs = _ov_logs
-                        ctx._override_cast = _ov_cast  # str("defend"/"skill"/"attack") 或数字秒或 None
+                        ctx._override_cast = _ov_cast        # str("defend"/"skill"/"attack") 或数字秒或 None
+                        ctx._override_recover = _ov_recover  # 第二段：同形（None = 走内容侧基准表）
                         ctx._override_consumed = True
                 except Exception:
                     logs = [self._t("battle.core.unknown_action",

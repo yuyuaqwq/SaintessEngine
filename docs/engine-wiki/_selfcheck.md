@@ -99,7 +99,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 |---|---|
 | `type` | **无消费方**（参考实现 `bleed` 写了 `"type": "flat"`） |
 | `per_layer` | **无消费方**（同上 `"per_layer": 0`） |
-| `dmg_type` | **2026-09-11 已接线**：DOT 落地改传 `dmg_kind=period.get("dmg_type")`（`schedule.py:390`） | ✅ **已消费**。`corros` 的「真伤 DOT」声明现成立（真伤 → 物免/魔免/格挡全跳过）；非真伤 DOT 仍空 kind，行为与接线前一致 |
+| `dmg_type` | **2026-09-11 已接线**：DOT 落地改传 `dmg_kind=period.get("dmg_type")`（`schedule.py:446`） | ✅ **已消费**。`corros` 的「真伤 DOT」声明现成立（真伤 → 物免/魔免/格挡全跳过）；非真伤 DOT 仍空 kind，行为与接线前一致 |
 
 ### 1.3 引擎 API / 常量
 
@@ -111,9 +111,9 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | ~~`Battle._cast_ctx` / `_target_ctx`~~ | ~~`battle.py:88-89`~~ | **已删**（2026-09-11） |
 | ~~`Battle._events`~~ | ~~`battle.py:97`~~ | **已删**（2026-09-11） |
 | ~~`DEFAULT_CT_WAIT = 2.0`~~ | ~~`battle.py:23`~~ | **已删**（2026-09-11） |
-| ~~`schedule.CAST_ITEM = 1.0`~~ | ~~`schedule.py:25`~~ | **已删**（2026-09-11） |
-| ~~`schedule.HOT_INTERVAL = 1.0`~~ | ~~`schedule.py:29`~~ | **已删**（2026-09-11） |
-| `schedule.next_ct` | `schedule.py:42` | 有定义、无调用方（实际推进走 `_after_act`） |
+| ~~`schedule.CAST_ITEM = 1.0`~~ | ~~`schedule.py:29`~~ | **已删**（2026-09-11） |
+| ~~`schedule.HOT_INTERVAL = 1.0`~~ | ~~`schedule.py:33`~~ | **已删**（2026-09-11） |
+| `schedule.next_ct` | `schedule.py:46` | 有定义、无调用方（实际推进走 `_after_act`） |
 | `state_effects.stat_scale_of` | `state_effects.py:18` | 仅测试引用 |
 | `actions._aoe_falloff_apply` | `actions.py:532` | **占位实现**（原样返回 logs）。`info["aoe_falloff"]` 在 `actions.py:367` 被读取但随后被丢弃 → AOE falloff 实际未生效 |
 | `formation.reachable_units` | `formation/__init__.py:28` | 零外部引用 |
@@ -121,9 +121,9 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | `gauge.charge_*`（6 个） | `gauge/__init__.py:244-321` | **全部零外部引用** —— 蓄力三律无消费者 |
 | `support.battle_bars.bar_should_trigger` / `bar_preserve` | `:164` / `:204` | 仅内部/单点引用（`bar_preserve` 被命令层 Boss 脚本用 1 处） |
 | `effects.effects_from_skill(..., caster_side_is_player=True)` | `effects.py:217` | **第三个参数在函数体里从未使用** |
-| `config.set_hook` | `config.py:128` | 零外部引用（都走 `mount`） |
+| `config.set_hook` | `config.py:133` | 零外部引用（都走 `mount`） |
 | `serialize.to_state` 的 `flags` | `serialize.py:47` | 恒写入 `{}`；**没有读取方**，也没有写入方 |
-| `Battle.auto_run(max_steps=500)` | `battle.py:329` | 全仓调用点**只在 `tests/`**（游戏仓 `test_battle_add_actor.py:159`、游戏仓 `test_battle_bridge.py:154`、游戏仓 `test_battle_bar_procs.py:240` 等），内容侧零调用 —— 实质是**测试/AI 模式辅助**，不是生产路径（生产走 `human_act` + `advance`） |
+| `Battle.auto_run(max_steps=500)` | `battle.py:332` | 全仓调用点**只在 `tests/`**（游戏仓 `test_battle_add_actor.py:159`、游戏仓 `test_battle_bridge.py:154`、游戏仓 `test_battle_bar_procs.py:240` 等），内容侧零调用 —— 实质是**测试/AI 模式辅助**，不是生产路径（生产走 `human_act` + `advance`） |
 
 ### 1.4 `EFFECT_ACTIONS` / 技能数据侧的静默 no-op
 
@@ -139,10 +139,10 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | 项 | 结论 |
 |---|---|
 | `actor["_content_applied"]`（bool） | S7 的 `apply_game_content` 幂等标记（游戏仓 `game/content_rules/apply.py:81`）。**会随 actor 全量落进战斗存档 / PVP 状态**（引擎 `serialize._STRIP_KEYS` 只剥 `_skill_index`）。原文自记「无任何数值/读取语义依赖它，S9 若要清掉需改引擎 `serialize.py`」（游戏仓 `apply.py:55-58`） |
-| `actor["dot_next"]` / `actor["dot_jumps"]`（dict） | 引擎周期结算的运行期辅助（`schedule.py:259-260` 惰性建），**同样落盘**。这是「续战能对上」的原因，但字段名与内容无关 |
+| `actor["dot_next"]` / `actor["dot_jumps"]`（dict） | 引擎周期结算的运行期辅助（`schedule.py:315-316` 惰性建），**同样落盘**。这是「续战能对上」的原因，但字段名与内容无关 |
 | `actor["_dmg_taken_mult"]`（float） | 承伤乘区（`landing.py:92-99` 读）。由上层直写（例 游戏仓 `commands/boss_script.py:684`）；**同样落盘** |
 | `actor["reduce_left"]` / `reduce_all_left` | `effects.act_apply` 写（`effects.py:463`）+ 内容侧 bridge 透传/播种；**无消费者**（见 §1.3） |
-| `actor["act_count"]` | `actor_auto` 每动 +1（`battle.py:418`），AI 的 `round_mod` 谓词读它；落盘 |
+| `actor["act_count"]` | `actor_auto` 每动 +1（`battle.py:421`），AI 的 `round_mod` 谓词读它；落盘 |
 
 ## 2. 事件点位
 
@@ -177,7 +177,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | B1 | ~~`kinds/` 枚举值写死中文（`PHYS = "物理"` …）~~ **2026-09-13 P4 下沉已消除** | 引擎侧无 `kinds/`（词表移居内容侧，引擎只经 `config.kind_of` 读值） |
 | B2 | 固定效果 key：`"death_guard"`（濒死保护）、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`（受疗修正）。（原含 `"sleep"` 打醒 —— **2026-09-11 已数据化**移除，改读 `wake_on_hit` 字段） | `landing.py:169-181, 248, 384-407` |
 | B3 | `effects.act_apply` 里 `if key == "reduce":` | `effects.py:462` |
-| B4 | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | `effects.py:373` · `schedule.py:302,286` |
+| B4 | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | `effects.py:373` · `schedule.py:358,286` |
 | B5 | `battle.py` 里 `"player"` 阵营名 | `battle.py:183, 515` |
 | B6 | `_is_stack_resource` 的判据关键词含无消费方的字段（`debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct`） | `effects.py:278-282` |
 

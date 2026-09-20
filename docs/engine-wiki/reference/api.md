@@ -65,10 +65,10 @@ Battle(btype="monster", sides=None, title_bonus=None, dmg_mult=1.0, pet=None,
 | `dmg_mult` | 全局伤害倍率 | ⚠️ **仅赋值，无消费方**（`battle.py:75`） |
 | `pet` | 宠物数据 | ⚠️ **仅赋值，无消费方**（`battle.py:76`） |
 | `st` | （旧参数） | ⚠️ **仅存在于签名，函数体从未引用** |
-| `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:405-409`） |
+| `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:408-412`） |
 | `on_event` | `callable(battle, event, ctx, logs)`，事件总线尾部观察者 | `effect_triggers.fire`（`effect_triggers.py:116-121`） |
-| `action_override` | `callable(battle, action, actor, skill_name, target) -> (logs, cast)`；接管非内置行动 | `Battle.act`（`battle.py:496-503`） |
-| `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:360-367`） |
+| `action_override` | `callable(battle, action, actor, skill_name, target) -> (logs, cast)`；接管非内置行动 | `Battle.act`（`battle.py:500-508`） |
+| `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:363-370`） |
 | `seed_ct` | `True` = 播种初始 ct；`from_state` 传 `False` | `battle.py:96-99` |
 | `**kwargs` | **静默吞掉未知参数** | — |
 
@@ -105,10 +105,10 @@ add_actor(actor: dict, side: str, front: bool = False) -> dict      # battle.py:
 ```python
 human_act(action, skill_name, actor=None, target=None, target_side=None)
     -> (logs: list, ended: bool, who: dict | None)                   # battle.py:271
-advance(logs: list) -> dict | None                                   # battle.py:320
-auto_run(logs: list, max_steps: int = 500) -> None                    # battle.py:329
-actor_auto(actor: dict, ctx_target=None) -> (logs, ended)             # battle.py:345
-act(ctx: ActCtx) -> (logs, ended)                                     # battle.py:425
+advance(logs: list) -> dict | None                                   # battle.py:323
+auto_run(logs: list, max_steps: int = 500) -> None                    # battle.py:332
+actor_auto(actor: dict, ctx_target=None) -> (logs, ended)             # battle.py:348
+act(ctx: ActCtx) -> (logs, ended)                                     # battle.py:428
 ```
 
 - `human_act`：命令层唯一入口。`actor` 缺省用 `focus()`。战斗已结束 → `(["战斗已结束！"], True, None)`。
@@ -128,16 +128,16 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 | 方法 | 位置 | 内容层引用数（全仓 grep） |
 |---|---|---|
 | `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:113/117/151` | 仅引擎内 |
-| `_do_defend` / `_do_flee` | `battle.py:526/458` | 仅引擎内 |
-| `_ensure_battle_started` | `battle.py:542` | 仅引擎内 |
-| `_on_actor_dead(actor, logs=None)` | `battle.py:557` | `landing._apply_damage` 调（`landing.py:394`） |
-| `_check_side_end` | `battle.py:575` | 仅引擎内 |
+| `_do_defend` / `_do_flee` | `battle.py:531/458` | 仅引擎内 |
+| `_ensure_battle_started` | `battle.py:547` | 仅引擎内 |
+| `_on_actor_dead(actor, logs=None)` | `battle.py:562` | `landing._apply_damage` 调（`landing.py:394`） |
+| `_check_side_end` | `battle.py:580` | 仅引擎内 |
 
 ### 序列化
 
 ```python
-to_state() -> dict                    # battle.py:602 → serialize.to_state
-Battle.from_state(st, *, text=None)   # battle.py:608（classmethod）→ serialize.from_state
+to_state() -> dict                    # battle.py:607 → serialize.to_state
+Battle.from_state(st, *, text=None)   # battle.py:613（classmethod）→ serialize.from_state
 ```
 
 ## 3. 模块级公开函数
@@ -192,10 +192,12 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 
 | 符号 | 位置 | 语义 |
 |---|---|---|
-| `action_time(spd, base=None) -> float` | `:59` | **转发内容侧时间模型**（`time_model_fn`）；`base=None` → 默认行动类别的基准耗时 |
+| `action_time(spd, base=None) -> float` | `:92` | **转发内容侧时间模型**（`time_model_fn`）；`base=None` → 默认行动类别的基准耗时 |
 | `initial_ct(spd, base=None) -> float` | `:70` | 开局第一动等待 = `action_time` |
 | `next_ct(battle, actor, base=None) -> float` | `:75` | ⚠️ **无调用方**（实际推进走 `_after_act`） |
-| `action_base_of(action) -> float` | `:87` | **转发内容侧基准表**（`action_base_fn`）；未知类别回落 `DEFAULT_ACTION` |
+| `action_base_of(action) -> float` | `:120` | **转发内容侧基准表**（`action_base_fn`）；未知类别回落 `DEFAULT_ACTION` |
+| `recover_time(spd, base=None) -> float` | `:137` | **转发内容侧第二段时间模型**（`recover_model_fn`）；`base=None` → 默认行动类别的第二段基准 |
+| `recover_base_of(action) -> float` | `:129` | **转发内容侧第二段基准表**（`recover_base_fn`）；未知类别回落 `DEFAULT_ACTION` |
 | `advance(battle, logs, max_steps=200) -> ("player", actor) \| ("over", None)` | `:100` | 推进到下一个决策点 |
 | `_after_act(battle, actor, action)` | `:172` | 行动后推 ct |
 | `_advance_time(battle, dt, logs)` | `:185` | 加时钟 → 结算 → 广播 `time_advance` |
@@ -204,7 +206,12 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 常量：`DEFAULT_ACTION = "attack"`（`:32`，通用类别键：未知动作类别回落到它那一项）。
 **引擎侧已无** `CAST_ATK` / `CAST_SKILL` / `CAST_DEFEND` / `SPD_REF` 等时间/基准常量 ——
 公式形状与基准数值归内容侧（装配面见 [../concepts/ctb-schedule.md](../concepts/ctb-schedule.md) §公式）。
-未装配 `time_model_fn` / `action_base_fn` → `action_time` / `action_base_of` 抛
+`recover_time` / `recover_base_of` 与出招同口径（T14：引擎只做「两段相加」，
+「没有第二段」= 内容侧显式声明 0，引擎不兜底）；`recover_time` 也在
+`saintess_engine` / `saintess_engine.battle` 两处门面导出。
+
+未装配 `time_model_fn` / `action_base_fn` / `recover_model_fn` / `recover_base_fn`
+→ 对应的 `action_time` / `action_base_of` / `recover_time` / `recover_base_of` 抛
 `config.EngineNotConfigured`（fail-closed，无默认公式）。
 
 ### `stats.py`
@@ -221,7 +228,7 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 
 ### `config.py`
 
-见 [../concepts/config-injection.md](../concepts/config-injection.md) 的 15 hook 表。
+见 [../concepts/config-injection.md](../concepts/config-injection.md) 的 17 hook 表。
 公开函数：`EngineNotConfigured`（`:20`）· `set_config`（`:83`）· `load_game_rules`（`:89`）·
 `register_defaults_loader`（`:95`）· `register_hook_provider`（`:101`）·
 `load_game_defaults`（`:107`，兼容 shim）· `get_effect_actions`（`:119`）·
@@ -352,7 +359,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 已整体下沉到**内容侧**（游戏仓 `game/data/kinds.py`；奥兰迪亚内容包 `content/mech/kinds.py`
 是同内容同源的副本）。原实现里的中文枚举值（`PHYS = "物理"` … `TAUNT = "嘲讽"`）随之离开引擎。
 
-引擎主路径一律经 `config.kind_of(name)` 注入（`config.py:240`）读 kind 值 —— 第三方内容
+引擎主路径一律经 `config.kind_of(name)` 注入（`config.py:245`）读 kind 值 —— 第三方内容
 自带词表即可，不受任何语言限制。
 （历史上该模块是 S3「通用件归位」时从 `game/core/` 搬进引擎的；P4 实测引擎内部**零消费者**，
 故按「机制归引擎、词表归内容」的边界原则迁回内容侧 —— 见
@@ -398,13 +405,13 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 
 | 名称 | 位置 | 状态 |
 |---|---|---|
-| `schedule.next_ct` | `schedule.py:42` | 有定义、无调用方 |
+| `schedule.next_ct` | `schedule.py:46` | 有定义、无调用方 |
 | `state_effects.stat_scale_of` | `state_effects.py:18` | 仅测试引用 |
 | `formation.reachable_units` | `formation/__init__.py:28` | 零外部引用 |
 | `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
 | ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 本引擎不实现） |
-| `config.set_hook` | `config.py:128` | 零外部引用（都走 `mount`） |
+| `config.set_hook` | `config.py:133` | 零外部引用（都走 `mount`） |
 | `effects.resolve_actions` | `effects.py:136` | 零外部引用（引擎内部调用） |
 | `ai.eval_when` | `ai.py:152` | 零外部引用（`resolve_ai_move` 内部调） |
 | ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |
