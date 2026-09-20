@@ -10,7 +10,7 @@
 | 面 | 落点 |
 |---|---|
 | 取件管道 · 包内转发 · `_gm_whitelist` / `_is_gm` / `_server_down*` | 引擎 `ShellBase`（父类） |
-| 平台动作 `_broadcast` / `_notify_hermes` / `_deliver` | **本文件**：落 `events` 记录，零网络副作用 |
+| 平台动作**记录**（`_deliver` → 落 `events`，零网络副作用） | **本文件**（广播 / 通知的扇出与记录形状在引擎 `ShellBase`） |
 | 平台身份 `_identity_ops` · 窥探投递 `_spy_ops` | **本文件**：fail-closed 点名报错（见下） |
 
 为什么身份面是 fail-closed 而不是本地兜底
@@ -39,22 +39,15 @@ class PlayShell(ShellBase):
     logger_name = "editor.play"
 
     # ============================================================
-    # 平台动作（记录，不外发）
+    # 平台动作（只有「投递到某个群」这一步是平台侧的；记录不外发）
     # ============================================================
-    async def _broadcast(self, text, exclude_group=None):
-        """全服广播 → 试玩里只落记录（无网络副作用）。"""
-        self._events.append({"action": "broadcast", "text": str(text),
-                             "exclude": str(exclude_group or "")})
-
-    async def _notify_hermes(self, group_id, qq_id, content, msg_type):
-        """Hermes webhook 通知 → 试玩里只落记录。"""
-        self._events.append({"action": "hermes", "content": str(content),
-                             "msg_type": str(msg_type)})
-
+    # 广播 / 通知的**扇出**（按群表逐群）与记录的**形状**都在引擎 `ShellBase`
+    # （`_broadcast` / `_notify_hermes` / `_record_deliver`）—— 这里只实现「发到某个群」
+    # 这一步：试玩里没有平台发送面 ⇒ 只落记录。两侧同一条形状 ⇒ 有平台动作的样本也能进对拍
+    # （台账 §0 D10 / T8）。
     async def _deliver(self, group_id, text):
-        """单群投递（`_broadcast` 的底层口）→ 试玩里只落记录。"""
-        self._events.append({"action": "deliver", "group_id": str(group_id),
-                             "text": str(text)})
+        """单群投递 → 试玩里只落记录（零网络副作用）。"""
+        self._record_deliver(group_id, text)
 
     # ============================================================
     # 平台能力口（编辑器无平台身份 / 无投递面 ⇒ fail-closed）

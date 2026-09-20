@@ -28,6 +28,9 @@ F. **平台动作记录「真的进对拍」**（T7 第 5 轮）：① 源码级
    壳装配必须交同一张表（两侧）；② 反证按老 bug 改一行必红（含不误伤 `self.events = []`）；
    ③ 运行时 `._events is lst`（就地清空生效 / 清空拷贝无效）；④ 端到端「过期拍卖 ⇒
    actions 非空」，对照组「角色」为空。
+F5. **有动作的样本两侧逐字节**（T8 · 台账 §0 D10 A 案）：广播 / 通知的扇出与记录形状上移
+   引擎 `ShellBase`（两壳只剩 `_deliver`）⇒ ① 过期拍卖落槌（真命令路径）② 广播 + 一条通知
+   （真扇出口）两侧同库跑 ⇒ `actions` 序列化 sha 相同；并核「形状只有一处定义」（AST）。
 """
 from __future__ import annotations
 
@@ -798,6 +801,198 @@ def test_action_list_end_to_end() -> None:
 
 
 # ============================================================
+# F5. 有动作的样本「真的进对拍」（T8 · 台账 §0 D10 A 案）
+# ============================================================
+# T7-C 暴露的问题：两侧「平台动作记录」形状不同（QQ 记 `say` / 试玩记 `broadcast`）⇒
+# 有平台动作的样本进 C 段对拍必红 ⇒ 动作面**实际未被逐字节覆盖**。A 案把**扇出**（按群表
+# 逐群）与**记录形状**上移引擎 `ShellBase`（两壳只剩 `_deliver` = 真投递那一步）⇒ 两侧记录
+# **按构造**逐字节相同。本段把这条常驻化：
+#   形状只有一处定义（AST：引擎 `ShellBase` 有扇出 / 试玩壳与 QQ 壳没有）
+#   ① 过期拍卖落槌（真命令路径 · 两侧真跑）⇒ `actions` 序列化 sha 相同 + digest 相同
+#   ② 广播 + 一条通知（真扇出口 · 两侧真跑）⇒ `actions` 序列化 sha 相同
+# 无宿主时只跑试玩侧那半（与 C 段同口径）。
+_F5_TAGS = ("broadcast", "notice")
+_F5_BROADCAST = "【全服播报】T8 探针：扇出与记录口径"
+_F5_NOTICE = "T8 通知内容"
+_F5_UID, _F5_GID = "9301", "ga"
+
+#: 试玩侧探针（子进程：真包 + 真 `PlayShell`，直接驱动扇出口）
+_F5_PROBE = """
+import asyncio, json, os, sys
+payload = json.loads(sys.stdin.read())
+sys.path.insert(0, payload["engine_root"])
+from saintess_engine.host import load_package
+from editor.play_shell import PlayShell
+os.environ["GWEN_GAME_DB"] = payload["db"]
+pkg = load_package(payload["pkg_dir"], inject={"db_path": payload["db"], "clock": None,
+                                               "log": None, "tlog": None})
+sh = PlayShell(pkg=pkg, events=[])
+for tag in payload["tags"]:
+    if tag == "broadcast":
+        asyncio.run(sh._broadcast(payload["broadcast"]))
+    elif tag == "notice":
+        asyncio.run(sh._notify_hermes(payload["group_id"], payload["uid"],
+                                      payload["notice"], "feedback"))
+print("__F5__" + json.dumps([dict(a) for a in sh._events], ensure_ascii=False))
+"""
+
+
+def _actions_sha(actions) -> str:
+    """动作记录的序列化 sha（键序无关 ⇒ 比的是**内容与形状**，不是 dict 插入序）。"""
+    return sha(json.dumps(actions, ensure_ascii=False, sort_keys=True))
+
+
+def _class_method_names(src: str, cls: str) -> set:
+    """类里**直接定义**的方法名集合（AST；用于核「形状只有一处定义」）。"""
+    import ast as _ast
+    for node in _ast.walk(_ast.parse(src)):
+        if isinstance(node, _ast.ClassDef) and node.name == cls:
+            return {n.name for n in node.body
+                    if isinstance(n, (_ast.FunctionDef, _ast.AsyncFunctionDef))}
+    return set()
+
+
+def _f5_play_probe(tmp, db):
+    """试玩侧：真包 + 真 `PlayShell` → 扇出口（广播 / 通知）记录。"""
+    probe = os.path.join(tmp, "_f5_actions.py")
+    with open(probe, "w", encoding="utf-8", newline="") as f:
+        f.write(_F5_PROBE)
+    payload = {"engine_root": ROOT, "pkg_dir": PKG, "db": db, "tags": list(_F5_TAGS),
+               "broadcast": _F5_BROADCAST, "notice": _F5_NOTICE,
+               "group_id": _F5_GID, "uid": _F5_UID}
+    pr = subprocess.run([sys.executable, probe], input=json.dumps(payload), capture_output=True,
+                        text=True, encoding="utf-8", errors="replace", timeout=600,
+                        env={**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1",
+                             "GWEN_GAME_DB": db})
+    out = None
+    for line in (pr.stdout or "").splitlines():
+        if line.startswith("__F5__"):
+            out = json.loads(line[len("__F5__"):])
+    return out, ((pr.stderr or "") or (pr.stdout or ""))[-300:]
+
+
+def _f5_qq_probe(db):
+    """QQ 侧：`tests/b20_qq_ref.py` 的 `actions_probe` 模式（真宿主壳 + 真扇出口）。"""
+    req = {"actions_probe": list(_F5_TAGS), "commands": [], "handlers": [], "uid": _F5_UID,
+           "group_id": _F5_GID, "db": db, "seed": 11, "clock": CLOCK,
+           "broadcast": _F5_BROADCAST, "notice": _F5_NOTICE}
+    pr = subprocess.run([sys.executable, QQ_REF], input=json.dumps(req), capture_output=True,
+                        text=True, encoding="utf-8", errors="replace", cwd=HOST_ROOT, timeout=600,
+                        env={**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1",
+                             "B20_CLOCK": str(CLOCK), "PYTHONPATH": HOST_ROOT})
+    out = None
+    for line in (pr.stdout or "").splitlines():
+        if line.startswith("__B20_QQREF__"):
+            obj = json.loads(line[len("__B20_QQREF__"):])
+            if obj.get("stage") == "actions_probe":
+                out = obj.get("actions")
+    return out, ((pr.stdout or "") + (pr.stderr or ""))[-300:]
+
+
+def test_action_parity() -> None:
+    """F5 · 有动作的样本两侧同库跑 ⇒ `actions` 序列化 sha 相同（形状只有一处定义）。"""
+    print()
+    print("=== F5. 有动作的样本进对拍：两侧 actions 序列化 sha 相同 ===")
+    import sqlite3
+    from editor import play as PLAY
+    os.makedirs(DB_DIR, exist_ok=True)
+
+    # ---- 形状只有一处定义（源码级 · A 案的判据本体）----
+    eng_shell = os.path.join(ROOT, "saintess_engine", "host", "shell.py")
+    play_shell = os.path.join(ROOT, "editor", "play_shell.py")
+    host_shell = os.path.join(HOST_ROOT, "host", "shell.py") if HOST_ROOT else ""
+    with open(eng_shell, encoding="utf-8") as f:
+        base_m = _class_method_names(f.read(), "ShellBase")
+    need = {"_broadcast", "_notify_hermes", "_group_table", "_record_deliver"}
+    check("引擎 `ShellBase` 定义扇出 + 记录形状（4 个口）", need.issubset(base_m),
+          str(sorted(need - base_m)))
+    with open(play_shell, encoding="utf-8") as f:
+        play_m = _class_method_names(f.read(), "PlayShell")
+    check("试玩壳只留 `_deliver`（不再自记 `_broadcast` / `_notify_hermes`）",
+          "_deliver" in play_m and {"_broadcast", "_notify_hermes"}.isdisjoint(play_m),
+          str(sorted(play_m)))
+    if host_shell and os.path.exists(host_shell):
+        with open(host_shell, encoding="utf-8") as f:
+            host_m = _class_method_names(f.read(), "HostShell")
+        check("QQ 壳只留 `_deliver`（不再自记 `_broadcast` / `_notify_hermes`）",
+              "_deliver" in host_m and {"_broadcast", "_notify_hermes"}.isdisjoint(host_m),
+              str(sorted(host_m)))
+    check("反证：形状不同 ⇒ sha 必不同（判据不是恒真）",
+          _actions_sha([{"action": "say", "group_id": "ga", "text": "x"}])
+          != _actions_sha([{"action": "deliver", "group_id": "ga", "text": "x"}]))
+
+    tmp = tempfile.mkdtemp(prefix="t8_f5_", dir=DB_DIR)
+    reg = os.path.join(tmp, "reg.db")
+    r0 = PLAY.run(PKG, ["注册 动作对拍 男"], seed=11, uid=_F5_UID, group_id=_F5_GID,
+                  host_root="", db=reg, db_dir=tmp, clock=CLOCK)
+    check("F5 建档 stage=done", r0.get("stage") == "done", _brief(r0))
+
+    # ---- ① 过期拍卖落槌（真命令路径）----
+    data = {"items": [{"id": 1, "name": "试作胸甲", "slot": "armor", "lv": 30,
+                       "quality": "purple", "bids": {}, "base": 100, "buyout": 500}]}
+    con = sqlite3.connect(reg, timeout=10)
+    con.execute("DELETE FROM world_event")
+    con.execute("INSERT INTO world_event (etype, starts_at, ends_at, data) VALUES (?,?,?,?)",
+                ("auction", int(CLOCK) - 600, int(CLOCK) - 300,
+                 json.dumps(data, ensure_ascii=False)))
+    con.commit()
+    con.close()
+    play_db = os.path.join(tmp, "f5_play.db")
+    shutil.copyfile(reg, play_db)
+    play = PLAY.run(PKG, ["拍卖"], seed=11, uid=_F5_UID, group_id=_F5_GID, host_root="",
+                    db=play_db, db_dir=tmp, clock=CLOCK)
+    p_row = (play.get("rows") or [{}])[0]
+    p_acts = p_row.get("actions") or []
+    check("① 试玩侧：过期拍卖落槌 ⇒ actions 非空", bool(p_row.get("ok")) and bool(p_acts),
+          json.dumps(p_row, ensure_ascii=False)[:300])
+    if HOST_ROOT:
+        qq_db = os.path.join(tmp, "f5_qq.db")
+        shutil.copyfile(reg, qq_db)
+        q_rows, _q_tail, _q_log = _run_qq_ref([("拍卖", "auction")], qq_db,
+                                              uid=_F5_UID, group_id=_F5_GID)
+        q_row = (q_rows or [{}])[0]
+        q_acts = q_row.get("actions") or []
+        check("① QQ 侧：过期拍卖落槌 ⇒ actions 非空", bool(q_acts),
+              json.dumps(q_row, ensure_ascii=False)[:300])
+        check("① ★ 两侧 actions 序列化 sha 相同（记录形状统一）",
+              _actions_sha(q_acts) == _actions_sha(p_acts),
+              "qq=%s play=%s" % (json.dumps(q_acts, ensure_ascii=False)[:200],
+                                 json.dumps(p_acts, ensure_ascii=False)[:200]))
+        check("① 两侧 digest 相同（动作面真的进对拍了）",
+              bool(q_row.get("digest")) and q_row.get("digest") == p_row.get("digest"),
+              "qq=%s play=%s" % (q_row.get("digest"), p_row.get("digest")))
+        note("① 落槌动作 = %s · 序列化 sha = %s"
+             % (json.dumps(q_acts, ensure_ascii=False)[:110], _actions_sha(q_acts)))
+    else:
+        note("无宿主：① 只跑试玩侧（与 C 段同口径）")
+
+    # ---- ② 广播 + 一条通知（真扇出口）----
+    fan_play = os.path.join(tmp, "f5_fan_play.db")
+    shutil.copyfile(reg, fan_play)
+    p2_acts, p2_err = _f5_play_probe(tmp, fan_play)
+    check("② 试玩侧：扇出口探针跑通（真包 + 真 PlayShell）", p2_acts is not None, p2_err)
+    check("② 试玩侧：广播 + 通知各落一条（不是「同为空的相同」）",
+          len(p2_acts or []) == 2
+          and [a.get("text") for a in (p2_acts or [])] == [_F5_BROADCAST, _F5_NOTICE],
+          json.dumps(p2_acts or [], ensure_ascii=False)[:300])
+    if HOST_ROOT:
+        fan_qq = os.path.join(tmp, "f5_fan_qq.db")
+        shutil.copyfile(reg, fan_qq)
+        q2_acts, q2_log = _f5_qq_probe(fan_qq)
+        check("② QQ 侧：扇出口探针跑通（真宿主壳）", q2_acts is not None, (q2_log or "")[-300:])
+        check("② ★ 两侧 actions 序列化 sha 相同（逐字节）",
+              _actions_sha(q2_acts or []) == _actions_sha(p2_acts or []),
+              "qq=%s play=%s" % (json.dumps(q2_acts or [], ensure_ascii=False)[:200],
+                                 json.dumps(p2_acts or [], ensure_ascii=False)[:200]))
+        note("② 广播 + 通知动作 = %s 条 · 序列化 sha = %s"
+             % (len(q2_acts or []), _actions_sha(q2_acts or [])))
+    else:
+        note("无宿主：② 只跑试玩侧（与 C 段同口径）")
+
+
+
+
+# ============================================================
 _SABOTAGE = """
 import importlib.util, json, sys
 sys.path.insert(0, %r)
@@ -869,6 +1064,7 @@ def main() -> int:
     test_action_wiring_negative()                 # F2 段：反证（老 bug 必红）
     test_action_list_runtime_identity()           # F3 段：运行时同一个动作表对象
     test_action_list_end_to_end()                  # F4 段：有动作的样本 actions 非空
+    test_action_parity()                          # F5 段：有动作的样本**两侧**逐字节（T8）
     test_helper_resolution_negative()             # E2 段：反证
     test_subprocess_robustness()
     if HOST_ROOT:

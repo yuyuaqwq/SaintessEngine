@@ -14,7 +14,8 @@
 | 包内内容半边转发（体力族 / 设施判定 / 面板增幅 / 行为规则 / 翻页族 …） | **本文件**（值仍取包内真源） |
 | 写档半边取件（`store_half`） | **本文件** |
 | 环境位（GM 白名单 / 停服位） | **本文件**（只读环境变量 + 存档半边） |
-| 广播 / 通知 / 停服投递 / 平台身份 / 窥探投递 | 各平台的宿主子类（如 QQ 宿主 `host/shell.py::HostShell`） |
+| 平台动作的**扇出 + 记录口径**（广播 / 通知 ⇒ 逐群 `_deliver`） | **本文件**（平台无关；记录形状的**唯一**落点 `_record_deliver`） |
+| 真投递面（发送 / 停服投递 / 平台身份 / 窥探投递） | 各平台的宿主子类（如 QQ 宿主 `host/shell.py::HostShell`） |
 
 零平台 / 零包名的口径
 --------------------
@@ -325,6 +326,37 @@ class ShellBase(_EngineCommandBase):
             raise AttributeError(
                 "%s has no attribute %r（包内无同名落点）" % (type(self).__name__, name))
         return functools.partial(helper, self) if _binds_shell(helper) else helper
+
+    # ============================================================
+    # 平台动作：**扇出 + 记录口径**（平台无关）—— 真投递落子类 `_deliver`
+    # ============================================================
+    # 为什么在引擎：同一件事（广播 / 通知）两侧壳各写一遍 ⇒ 记录形状必然漂移（实测 T7-C：
+    # QQ 记 `say`、试玩记 `broadcast` ⇒「有动作的样本」进不了对拍）。扇出（按群表逐群）与
+    # 记录形状写在**引擎一处** ⇒ 两侧按构造逐字节相同；平台子类只留 `_deliver` 的真投递
+    # （与可选的「群表取值口」覆盖）。
+    async def _broadcast(self, text, exclude_group=None):
+        """全服广播：按**群表**逐群扇出 ⇒ 每群一条 `_deliver`（`exclude_group` = 不发的那群）。"""
+        for gid in self._group_table():
+            if exclude_group and str(gid) == str(exclude_group):
+                continue
+            await self._deliver(str(gid), str(text))
+
+    async def _notify_hermes(self, group_id, qq_id, content, msg_type):
+        """Hermes webhook 通知：与广播**同一条落点**（`_deliver` ⇒ 一条记录）。"""
+        await self._deliver(str(group_id), str(content))
+
+    def _group_table(self):
+        """群表取值口（平台无关的缺省）：存档半边的玩家群列表；平台群表不同则子类覆盖它。"""
+        if self._store is None:
+            raise RuntimeError(
+                "%s：未绑定存档半边，取不到广播群表（装配处应先 `bind_package(pkg)`）"
+                % type(self).__name__)
+        return [str(g) for g in (self._store.get_player_groups() or [])]
+
+    def _record_deliver(self, group_id, text):
+        """单群投递的**记录** —— 记录形状的**唯一**落点（两侧按构造逐字节相同）。"""
+        self._events.append({"action": "deliver", "group_id": str(group_id),
+                             "text": str(text)})
 
     # ============================================================
     # 环境位（GM 白名单 / 停服位）—— 只读环境变量 + 存档半边，平台无关
