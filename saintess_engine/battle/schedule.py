@@ -185,6 +185,9 @@ def pending_begin(battle, ctx, cast=None, recover=None, pre_logs=None) -> dict:
     cast / recover：两段耗时声明 —— str = 行动类别（过内容侧形状）· 数字 = 绝对秒 ·
       None = 第一段按 `ctx.action` 类别、第二段按内容侧基准表（形状与数值全在内容侧）。
     pre_logs：内容层自定义动作在 T0 的回执日志（B 段原样吐出 ⇒ 回调只调一次）。
+    info：T0 登记时 `ActCtx` 身上的**动作配置**（技能 dict）—— 必须随槽带上，
+      否则 B 段重建 `ActCtx` 时只能按 `actor._skill_index` 反查，调用方**内联传入**的
+      配置被静默丢弃（登记的动作 ≠ 落地的动作）。
     槽内全字段 JSON 安全 ⇒ 待发随存档往返（serialize / 宿主回写面零改动）。
     """
     actor = ctx.caster
@@ -194,6 +197,7 @@ def pending_begin(battle, ctx, cast=None, recover=None, pre_logs=None) -> dict:
         "target_uid": (ctx.target or {}).get("uid"),
         "target_side": ctx.target_side,
         "scope": ctx.scope,
+        "info": ctx.info,
         "cast_done_at": float(battle._now) + _segment_seconds(battle, actor, cast),
         "cast_base": cast,
         "recover_base": recover,

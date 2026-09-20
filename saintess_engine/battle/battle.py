@@ -537,6 +537,7 @@ class Battle:
         ctx = ActCtx(caster=actor,
                      action=str(slot.get("action") or "attack"),
                      skill_name=slot.get("skill"),
+                     info=slot.get("info"),
                      target=self.find_actor(slot.get("target_uid")),
                      target_side=slot.get("target_side"),
                      scope=str(slot.get("scope") or "single"),
