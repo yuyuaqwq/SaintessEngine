@@ -567,7 +567,11 @@ def run(payload: dict) -> int:
     for i, text in enumerate(cmds):
         text = str(text)
         adapter.said = []
-        adapter.events = []
+        # ★ 2026-09-20（T7-B）：**就地清空**，不是重绑 —— 壳装配时拿到的是同一个 list
+        #   对象（`PlayShell(events=adapter.events)` / `HostShell(events=...)`），
+        #   重绑后壳仍往**旧表**里记，`list(adapter.events)` 恒为空 ⇒ 平台动作
+        #   （广播 / 通知 / 投递）**从未进入对拍**。
+        del adapter.events[:]
         ctx = {"uid": uid, "group_id": group_id, "text": text,
                "raw": PlayEvent(text, group_id, uid)}
         rec = {"i": i, "text": text, "key": "", "segments": [], "message": "", "actions": [],
