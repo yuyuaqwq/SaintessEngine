@@ -18,7 +18,7 @@ register_action       config.set_config           actor["triggers"]
 
 - `battle` 是战斗实例；`logs` 是 list，直接 `append` 就是玩家看到的日志
 - **不要自己扣血/加血** —— 落地必须走 `landing.heal_actor` / `landing.deal_damage`
-  （`landing.py:415` / `:23`）。绕过落地会丢掉护盾、死亡判定、濒死保护、`on_heal` 事件
+  （`landing.py:406` / `:23`）。绕过落地会丢掉护盾、死亡判定、濒死保护、`on_heal` 事件
 - 抛异常会被 `apply_effects` 吞掉并跳过该动作（`effects.py:173-177`），不会中断战斗
 
 ```python
@@ -78,7 +78,7 @@ def equip_blood_pact(actor):
         {"type": "blood_pact"})
 ```
 
-`triggers` 结构 = `{事件名: [效果 dict, ...]}`（`actors.py:120-123` 注释）。
+`triggers` 结构 = `{事件名: [效果 dict, ...]}`（`actors.py:122-125` 注释）。
 引擎在固定点位 `fire(事件名, ctx, logs)`，总线遍历所有存活 actor 找 `triggers[事件名]`，
 逐个交给 `apply_effects` 翻译执行（`effect_triggers.fire`，`effect_triggers.py:61`）。
 

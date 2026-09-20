@@ -231,10 +231,9 @@ def formation_view(units, side: str = "enemy") -> list:
             # v164.1：血量带最大值（❤️当前/最大）——站位图即完整血量，消除下方重复汇总
             hp_txt = f"❤️{hp}" + (f"/{mx}" if mx else "")
             seg = f"{tag} {icon} {nm} {hp_txt}".strip()
-            ch = u.get("charging")
-            if ch:
-                left = ch.get("left", 1)
-                seg += f" ⏳蓄力中(剩{left})"
+            if u.get("charging"):
+                # 出招窗口中（前摇）：剩余秒归内容侧展示口，站位图只标「在飞」
+                seg += " ⏳出招中"
             parts.append(seg)
         rows.append(f"{side_mark}{r}层: " + " | ".join(parts))
     return rows

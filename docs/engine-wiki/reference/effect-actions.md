@@ -40,7 +40,7 @@ EFFECT_ACTIONS = {
 | `cleanse_all` | `effects.py:629` | 同上，`target or caster` |
 | `heal` | `effects.py:637` | `pct`（max_hp 比例）/ `missing_pct`（已损比例）/ `value`；`info.hp_pct` 兜底 |
 | `interrupt` | `effects.py:676` | 清 `target["charging"]`，fire `interrupt` |
-| `damage` | `effects.py:695` | `value` / `pct`（`pct_max_hp` 别名）/ `kind`；`on=target`（缺省）或 `on=caster`（自伤/反伤） |
+| `damage` | `effects.py:703` | `value` / `pct`（`pct_max_hp` 别名）/ `kind`；`on=target`（缺省）或 `on=caster`（自伤/反伤） |
 
 已删除的旧动词（V4 收敛）：`control` / `buff` / `state_add` / `state_spend` / `state_set`
 → 并入 `apply` / `consume`。**表里再出现这些名字 = 静默 no-op**（原文警告见 `effects.py:17-18`）。

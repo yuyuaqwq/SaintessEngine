@@ -26,6 +26,8 @@ class ActCtx:
     target: Optional[dict] = None         # 单目标 actor（伤害/debuff 对象）
     target_side: Optional[str] = None     # 范围目标（AOE 打哪个 side；"all"=敌对全阵营）
     scope: str = "single"                 # single|all|front|side:<name>|self
+    unstoppable: bool = False             # 出招窗口霸体（内容侧声明的布尔；
+                                          #   真 = 前摇期不被任何效果打断 —— T15 §0 D15 ③）
 
     def __post_init__(self):
         # 信息冗余防御：action=skill 但 info 为空时尝试从 caster.skills 索引

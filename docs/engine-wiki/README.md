@@ -14,7 +14,7 @@
 > 它是本框架的**参考实现 + 压力测试**，不是本框架的一部分。
 > 下方未显式标注「游戏仓」的路径，均指**框架仓**。
 
-- 引擎目录：`saintess_engine/`（**32** 个子包 + **6** 个顶层模块；共 **107** 个 `.py` / **22 932** 行）
+- 引擎目录：`saintess_engine/`（**32** 个子包 + **6** 个顶层模块；共 **107** 个 `.py` / **23 100** 行）
   —— 数字由 `tests/test_editor_wiki.py` 逐项对照磁盘锁定，改模块结构必同步（否则门禁红）
 - 路线图（待建形状 / 待搬骨架 / `log`·`tlog` 设计）：[reference/roadmap.md](reference/roadmap.md)
 - 已建成的形状（**可拔插**，不配 = 不存在）：[reference/log.md](reference/log.md)（日志门面）·
@@ -89,7 +89,7 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
 
 | 特性 | 一句话 | 入口 |
 |---|---|---|
-| **全同构 actor** | 玩家/怪/召唤物/变身是同一个 dict 模型，无身份分派 | `make_actor`（`actors.py:58`） |
+| **全同构 actor** | 玩家/怪/召唤物/变身是同一个 dict 模型，无身份分派 | `make_actor`（`actors.py:60`） |
 | **单 effects 容器** | 增益/减益/DOT/控制/标记/资源全部是 `actor.effects[key]` 一个容器 | `effects.py` 的 `act_apply` |
 | **事件总线** | 26 个引擎事件名（`EVENTS`）+ `fire()`；效果声明挂 `actor.triggers` | `effect_triggers.py:52/57` |
 | **声明表驱动** | 效果行为查 `EFFECT_RULES`；名词→动词查 `EFFECT_ACTIONS` | `game/data/battle_rules.py`（游戏仓侧） |

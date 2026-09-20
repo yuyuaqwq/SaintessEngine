@@ -239,6 +239,141 @@ def test_recover_second_segment():
         CFG._hook_provider = provider
         CFG.strict = strict
 
+def test_cast_window_two_phase():
+    """【出招窗口（前摇）两段化：T0 登记 → T0+第一段 落地 → +第二段 可再动】
+
+    T15：**全量生效**（普攻/技能/防御/自定义动作一律两段，不留新旧两套时序）；
+    ct 公式一字不动 ⇒ **行动序不变**，变的只有**结算时刻**。
+    本段挂测试自己的两段 hook（linear：spd=50 ⇒ 第一段 = base；第二段恒 0），退出还原。
+    观测点刻意**不依赖伤害公式**（本文件环境未装配公式面）：「落地」以被分派动作的
+    状态效果（`defending`）+ 待发槽 + 文案为准；伤害口径的端到端证据在
+    `examples/minimal-game/tests/test_smoke.py::test_cast_window_delays_damage`（真内容）。
+    """
+    print("【出招窗口（前摇）两段化】")
+    from saintess_engine import Battle, make_actor
+    from saintess_engine.battle.actors import ActCtx
+    from saintess_engine.battle import schedule as SCH
+    from saintess_engine.battle import landing as LND
+    from saintess_engine.battle.effects import act_interrupt
+
+    _NAMES = ("time_model_fn", "action_base_fn", "recover_model_fn", "recover_base_fn")
+    saved = {n: CFG._HOOKS.get(n) for n in _NAMES}
+    provider, strict = CFG._hook_provider, CFG.strict
+
+    def _mk(uid, side, spd=50, hp=100, human=False):
+        return make_actor(uid, uid, side, human_controlled=human,
+                          **{"hp": hp, "max_hp": hp, "atk": 10, "matk": 10,
+                             "def": 0, "mdef": 0, "spd": spd, "stats_spd": spd})
+
+    def _bt(a, b, **kw):
+        return Battle(btype="monster", sides={"player": [a], "enemy": [b]},
+                      seed_ct=False, **kw)
+
+    try:
+        CFG._hook_provider = None
+        CFG.strict = False
+        CFG.mount(time_model_fn=lambda spd, base: float(base) * (50.0 / max(float(spd or 0), 1.0)),
+                  action_base_fn=lambda a: 1.0 if a in ("attack", "skill", "defend") else 0.0,
+                  recover_model_fn=lambda spd, base: float(base),
+                  recover_base_fn=lambda a: 0.0)
+
+        # ---------- ① 落地时刻 = T0 + 第一段 ----------
+        a, b = _mk("a", "player", human=True), _mk("b", "enemy")
+        bt = _bt(a, b)
+        logs1, _ended = bt.act(ActCtx(caster=a, action="defend"))
+        slot = SCH.pending_of(a)
+        check("① T0 只登记：日志是「开始出招」，被分派动作**未**执行（defending=False）",
+              a.get("defending") is not True and any("开始出招" in x for x in logs1),
+              f"defending={a.get('defending')} logs={logs1}")
+        check("① 待发槽：落地时刻 = T0 + 第一段（spd=50 ⇒ 1.0）",
+              bool(slot) and abs(float(slot["cast_done_at"]) - 1.0) < 1e-9,
+              str(slot))
+        lg = []
+        SCH._advance_time(bt, 0.5, lg)
+        check("① 未到点不落地（0.5 < 1.0）", a.get("defending") is not True, str(lg))
+        SCH._advance_time(bt, 0.5, lg)
+        check("① 到点真落地（防御姿态在 T0+第一段 生效）", a.get("defending") is True, str(lg))
+        check("① 落地后槽已清（无残留待发）", SCH.pending_of(a) is None)
+        check("① 第一段按速度缩放（spd=100 ⇒ 0.5）",
+              abs(SCH._segment_seconds(bt, _mk("z", "player", spd=100), "attack") - 0.5) < 1e-9)
+        check("① 行动耗时仍两段相加（ct 公式一字不动）",
+              abs(SCH.next_ct(bt, a) - (float(bt._now) + 1.0 + 0.0)) < 1e-9,
+              f"next_ct={SCH.next_ct(bt, a)} now={bt._now}")
+
+        # ---------- ② 前摇中被打死 ⇒ 这一手不出力 ----------
+        a2, b2 = _mk("a2", "player", human=True), _mk("b2", "enemy", hp=1000)
+        bt2 = _bt(a2, b2)
+        bt2.act(ActCtx(caster=a2, action="defend"))
+        LND.deal_damage(bt2, b2, a2, 999, [])          # 窗口内被打死
+        lg2 = []
+        SCH._advance_time(bt2, 2.0, lg2)
+        check("② 前摇中被打死 ⇒ 该手不落地（槽清、姿态未生效）",
+              SCH.pending_of(a2) is None and a2.get("defending") is not True
+              and LND.__name__ == "saintess_engine.battle.landing", str(lg2))
+
+        # ---------- ③ interrupt 动作取消该手 ----------
+        a3, b3 = _mk("a3", "player", human=True), _mk("b3", "enemy", hp=1000)
+        bt3 = _bt(a3, b3)
+        bt3.act(ActCtx(caster=a3, action="defend"))
+        lg3 = []
+        act_interrupt(bt3, b3, a3, {}, lg3)             # 控制类效果挂的引擎动作
+        check("③ interrupt 清掉待发 + 出「被打断」文案",
+              SCH.pending_of(a3) is None and any("被打断" in x for x in lg3), str(lg3))
+        lg3b = []
+        SCH._advance_time(bt3, 2.0, lg3b)
+        check("③ 被打断 ⇒ 这一手真的不发生（姿态未生效）",
+              a3.get("defending") is not True, str(lg3b))
+
+        # ---------- ④ 槽内霸体拒绝打断 ----------
+        a4, b4 = _mk("a4", "player", human=True), _mk("b4", "enemy", hp=1000)
+        bt4 = _bt(a4, b4)
+        bt4.act(ActCtx(caster=a4, action="defend", unstoppable=True))
+        lg4 = []
+        act_interrupt(bt4, b4, a4, {}, lg4)
+        check("④ 霸体（unstoppable）拒绝打断：槽仍在、无打断文案",
+              SCH.pending_of(a4) is not None and not lg4, str(lg4))
+        lg4b = []
+        SCH._advance_time(bt4, 2.0, lg4b)
+        check("④ 霸体者照常落地", a4.get("defending") is True, str(lg4b))
+
+        # ---------- ⑤ 子片推进：一次推进跨多个待发时刻 · 广播仍一次 ----------
+        a5, b5 = _mk("a5", "player", human=True), _mk("b5", "enemy", hp=1000)
+        seen = {"n": 0}
+        bt5 = Battle(btype="monster", sides={"player": [a5], "enemy": [b5]}, seed_ct=False,
+                     on_event=lambda _b, evt, _c, _l: seen.__setitem__("n", seen["n"] + 1)
+                     if evt == "time_advance" else None)
+        bt5.act(ActCtx(caster=a5, action="defend"))       # 落地 0 → 1.0
+        bt5.act(ActCtx(caster=b5, action="flee"))         # 第二个待发（同刻另一侧）
+        lg5 = []
+        SCH._advance_time(bt5, 3.0, lg5)
+        check("⑤ 一次推进跨多个待发时刻：两者都已落地（无残留槽）",
+              SCH.pending_of(a5) is None and SCH.pending_of(b5) is None)
+        check("⑤ time_advance 仍**整段广播一次**（子片不重复广播）", seen["n"] == 1,
+              f"n={seen['n']}")
+        check("⑤ 同刻优先级：待发落地先于该刻到点的行动（两边都已结算）",
+              a5.get("defending") is True and bt5.result == "fled",
+              f"defending={a5.get('defending')} result={bt5.result}")
+
+        # ---------- ⑥ 待发随存档往返（续战中间态可恢复） ----------
+        a6, b6 = _mk("a6", "player", human=True), _mk("b6", "enemy", hp=1000)
+        bt6 = _bt(a6, b6)
+        bt6.act(ActCtx(caster=a6, action="defend"))
+        st = bt6.to_state()
+        bt7 = Battle.from_state(st)
+        a7 = bt7.find_actor("a6")
+        s_before, s_after = SCH.pending_of(a6), SCH.pending_of(a7)
+        check("⑥ 待发随 to_state/from_state 往返：字段逐项相同（JSON 安全）",
+              isinstance(s_after, dict) and s_after == s_before,
+              f"{s_before} / {s_after}")
+        lg7 = []
+        SCH._advance_time(bt7, 2.0, lg7)
+        check("⑥ 恢复后照常在 cast_done_at 落地", a7.get("defending") is True,
+              str(lg7))
+    finally:
+        for n in _NAMES:
+            CFG._HOOKS[n] = saved[n]
+        CFG._hook_provider = provider
+        CFG.strict = strict
 
 if __name__ == "__main__":
     import saintess_engine as _b2
@@ -254,6 +389,7 @@ if __name__ == "__main__":
     test_strict_mode_still_raises()
     test_configured_path_unchanged()
     test_recover_second_segment()
+    test_cast_window_two_phase()
     print(f"\n== 结果：通过 {PASS} / 共 {PASS + FAIL} ==")
     if FAILURES:
         for f in FAILURES:

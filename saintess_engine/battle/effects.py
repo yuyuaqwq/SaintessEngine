@@ -675,21 +675,29 @@ def act_heal(battle, caster, target, params, logs):
 
 @register_action("interrupt")
 def act_interrupt(battle, caster, target, params, logs):
-    """打断读条（N7.5a）：清 target.charging（蓄力技被打断）。"""
+    """打断出招窗口（N7.5a / T15）：清 target 的待发行动 ⇒ 该手**不出伤**。
+
+    「哪些效果算控制」全在内容侧（挂本动作即可）；引擎只读槽内通用布尔
+    `unstoppable`（出招窗口霸体：真 ⇒ 拒绝打断），不认识任何控制/技能名词。
+    """
     actor = target or caster
     if not actor:
         return
-    if actor.get("charging") and actor["charging"].get("skill"):
-        actor["charging"] = None
-        logs.append(render_via(battle, "battle.effects.charge_broken", "🔨 {name} 的蓄力被打破了！",
-                            name=actor.get('name', '目标')))
-        # N5B5c P5：打断事件（on_interrupt 剧本联动同 landing 伤害打断口径）
-        try:
-            from .effect_triggers import fire as _fire
-            _fire(battle, "interrupt", {"actor": actor, "target": actor,
-                                        "source": caster}, logs)
-        except Exception:
-            pass
+    slot = actor.get("charging")
+    if not isinstance(slot, dict):
+        return
+    if slot.get("unstoppable"):
+        return
+    actor["charging"] = None
+    logs.append(render_via(battle, "battle.effects.cast_broken", "💥 {name} 的出招被打断了！",
+                        name=actor.get('name', '目标')))
+    # N5B5c P5：打断事件（on_interrupt 剧本联动：出招被断 → 反噬/易伤）
+    try:
+        from .effect_triggers import fire as _fire
+        _fire(battle, "interrupt", {"actor": actor, "target": actor,
+                                    "source": caster}, logs)
+    except Exception:
+        pass
 
 
 @register_action("damage")

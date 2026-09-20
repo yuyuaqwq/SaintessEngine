@@ -16,12 +16,12 @@
 - 序列化不需要按类型分派（`serialize._serialize_actor` 对任何 actor 一视同仁，`serialize.py:51`）
 
 代价：**身份信息全靠字段**。要表达「这是 Boss」就写 `is_boss=True` 或 `role="boss"`
-（引擎真读这两个的地方：控制时长减半 `effects.py:373`、DOT 的 `pct_boss` / `boss_pct_mult` 档 `schedule.py:358`、
+（引擎真读这两个的地方：控制时长减半 `effects.py:373`、DOT 的 `pct_boss` / `boss_pct_mult` 档 `schedule.py:477`、
 `is_boss`/`role` 也在部分内容侧判定里被读）。
 
 ## 字段全集
 
-`make_actor`（`actors.py:58`）产生的字段分四组。
+`make_actor`（`actors.py:60`）产生的字段分四组。
 
 ### ① 身份 / 数据标签
 
@@ -41,10 +41,10 @@
 ⚠️ 这些是**裸值**。战斗内的「有效面板」要经 `stats.actor_stats()`（`stats.py:18`）
 聚合：有 `class_name` → 调 `panel_fn` hook 重算职业面板；无 → 直读字段；
 然后叠加 `effects` 里的面板修正。**伤害/速度/暴击都读聚合面板，不读裸字段**
-（例：`schedule._after_act` 用 `stats.actor_spd`，`schedule.py:225`）。
+（例：`schedule._after_act` 用 `stats.actor_spd`，`schedule.py:329`）。
 
 > 唯一的数值兜底：`stats._monster_base_stats` 里 `crit` 缺省取 **0.05**（`stats.py:121`），
-> 而 `make_actor` 播种的是 0.0（`actors.py:98`）。这两处不一致，见
+> 而 `make_actor` 播种的是 0.0（`actors.py:100`）。这两处不一致，见
 > [_selfcheck.md](../_selfcheck.md)。
 
 ### ③ 战斗可变状态（构造时已播种）
@@ -59,24 +59,24 @@
 | `ct` | float | **下次可行动时刻**（绝对时刻，见 [ctb-schedule.md](ctb-schedule.md)） |
 | `poi_buff` | any | 透传字段，引擎不读 |
 | `triggers` | `{事件名: [效果 dict]}` | 事件声明（见 [event-bus.md](event-bus.md)） |
-| `act_count` | int | 个体行动计数，`actor_auto` 每动 +1（`battle.py:421`） |
-| `dot_next` / `dot_jumps` | `{key: 数值}` | 周期结算的运行期辅助（`schedule.py:315-316` 惰性建） |
+| `act_count` | int | 个体行动计数，`actor_auto` 每动 +1（`battle.py:425`） |
+| `dot_next` / `dot_jumps` | `{key: 数值}` | 周期结算的运行期辅助（`schedule.py:434-435` 惰性建） |
 
 **为什么 `shields` / `cooldown` 不进 `effects`**：它们**不是状态**。
 护盾是「承伤时按值扣减的资源」，冷却键是「还能不能再放」的调度表——
 把护盾塞进 `effects` 会让「净化」把盾一起清掉、让面板折算把盾值当减伤算。
-设计原话见 `actors.py:112-115`。
+设计原话见 `actors.py:114-117`。
 
 ### ④ 配置 / 能力
 
 | 字段 | 说明 |
 |---|---|
 | `class_name` | 有值 → `stats` 走职业面板公式；**这是引擎唯一的「身份→行为」分支**，但它是配置读取，不是类型分派 |
-| `level` | 等级。⚠️ 引擎不认 `lv`（`actors.py:79`），旧数据的 `lv` 必须由你的桥翻译 |
+| `level` | 等级。⚠️ 引擎不认 `lv`（`actors.py:81`），旧数据的 `lv` 必须由你的桥翻译 |
 | `equipment` | 装备 dict，透传给 `panel_fn` |
 | `skills` | 技能 key 列表（构造 Battle 时索引进 `_skill_index`） |
 | `learned_skills` | 已学技能列表（**引擎不读**，是给你的装配器扫的，如《奥兰迪亚》的 `_learned_mech_skills`） |
-| `auto_act` | 自动行动配置（`actor_auto` 读它，`battle.py:376`） |
+| `auto_act` | 自动行动配置（`actor_auto` 读它，`battle.py:378`） |
 | `ai` | 通用怪 AI 决策数据（`ai.normalize_ai` / `resolve_ai_move` 读） |
 | `_skill_index` | 技能名/index → 技能 dict。**不进存档**（`serialize._STRIP_KEYS`，`serialize.py:31`） |
 
@@ -84,11 +84,11 @@
 
 | 区域 | 位置 | 用途 |
 |---|---|---|
-| `ext` | `actor["ext"]`，`actor_ext()` 惰性播种（`actors.py:168`） | 你的机制自定义状态（名字空间自管） |
+| `ext` | `actor["ext"]`，`actor_ext()` 惰性播种（`actors.py:170`） | 你的机制自定义状态（名字空间自管） |
 | `bonus` | `actor["bonus"]["panel" / "cap" / "cost"]` | 外部数值增幅聚合（引擎读 `bonus.cap` / `bonus.cost` / `bonus.panel`） |
 | `triggers` | 见上 | 事件声明 |
 
-`ext` 的原文约定（`actors.py:133-134`）：**「引擎绝不读；职业/机制自定义状态放这里，
+`ext` 的原文约定（`actors.py:135-136`）：**「引擎绝不读；职业/机制自定义状态放这里，
 命名空间自管」**。
 
 `bonus` 是「平行容器哲学」：引擎把它当**纯数值增量**读，不认识里面的语义。
@@ -103,7 +103,7 @@
 ### 其余透传字段
 
 `make_actor(**stats)` 里没被上面消费的任何键都会**原样留在 actor 上**
-（`actors.py:137-139`）。这就是 `rank` / `reach` / `is_boss` / `exp` / `gold` /
+（`actors.py:139-141`）。这就是 `rank` / `reach` / `is_boss` / `exp` / `gold` /
 `drops` / `element_immune` / `element_weak` / `phys_reduce` / `magic_reduce` 的来路。
 它们由**引擎的具体规则**按键读取，不需要在 `make_actor` 里声明。
 
@@ -121,7 +121,7 @@ class ActCtx:                       # actors.py:19
     scope: str = "single"           # single|all|front|side:<name>|self
 ```
 
-`__post_init__`（`actors.py:30`）做两件防御：
+`__post_init__`（`actors.py:32`）做两件防御：
 `action="skill"` 但 `info` 为空时从 `caster["_skill_index"]` 补；
 `scope` 为空但给了 `target_side` 时推导。
 
@@ -136,7 +136,7 @@ class ActCtx:                       # actors.py:19
 事件广播（`fire` 遍历全部 sides）都在运行期直接遍历它，所以 `add_actor` 不需要
 通知任何人（`battle.py:254-256`）。
 
-阵营敌对关系由 `hostile_sides`（`actors.py:193`）决定：优先读 `battle.hostile_map[side]`，
+阵营敌对关系由 `hostile_sides`（`actors.py:195`）决定：优先读 `battle.hostile_map[side]`，
 没有则「除自己外的全部阵营」。**引擎不预设玩家/怪身份**。
 
 ## 相关

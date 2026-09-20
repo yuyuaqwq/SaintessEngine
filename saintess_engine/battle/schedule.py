@@ -107,13 +107,8 @@ def initial_ct(spd: int, base: Optional[float] = None) -> float:
 
 def next_ct(battle, actor: dict, base: Optional[float] = None) -> float:
     """actor 行动后推进的 ct（绝对时刻）。"""
-    spd = int((actor.get("stats_spd") or 0) or actor.get("spd", 0) or 0)
-    # 用聚合面板速度（buffs 修正）
-    try:
-        from . import stats as S
-        spd = S.actor_spd(battle, actor)
-    except Exception:
-        pass
+    # 用聚合面板速度（buffs 修正）——与 _after_act / 待发槽同一口径
+    spd = _spd_of(battle, actor)
     return float(battle._now) + action_time(spd, base) + recover_time(spd, recover_base_of(DEFAULT_ACTION))
 
 
@@ -144,6 +139,111 @@ def recover_time(spd: int, base: Optional[float] = None) -> float:
         base = recover_base_of(DEFAULT_ACTION)
     return float(_recover_fn()(spd, base))
 
+# ============================================================
+# 在飞行动（前摇窗口）—— 待发行动的登记 / 查询 / 结算
+# ============================================================
+# 时序：T0 登记待发（`pending_begin`）→ T0+第一段 落地（`_resolve_due_pending`）
+#      → T0+第一段+第二段 可再动（ct 公式照旧）。
+# 引擎只做「登记 / 到点结算」，不认识技能/蓄力/读条任何一个游戏词。
+
+def _spd_of(battle, actor: dict) -> int:
+    """聚合面板速度（buffs 修正）；聚合不可用 → 裸 spd 字段。
+
+    唯一口径：`next_ct` / `_after_act` / 待发槽三处共用（玩家面板由
+    stats.actor_stats 从 class/equip 聚合，actor 裸 spd 可能是 0）。
+    """
+    try:
+        from . import stats as S
+        return int(S.actor_spd(battle, actor))
+    except Exception:
+        return int(actor.get("spd", 0) or 0)
+
+
+def _segment_seconds(battle, actor: dict, decl) -> float:
+    """一段耗时（游戏秒）——`decl` = str（行动类别，过内容侧形状）/ 数字（绝对秒）。"""
+    if isinstance(decl, str) or decl is None:
+        return action_time(_spd_of(battle, actor), action_base_of(decl or DEFAULT_ACTION))
+    return max(0.0, float(decl))
+
+
+def pending_of(actor) -> Optional[dict]:
+    """在飞行槽（前摇窗口内的待发行动）；非 dict 一律 None（未登记 / 坏档）。"""
+    s = actor.get("charging") if isinstance(actor, dict) else None
+    return s if isinstance(s, dict) else None
+
+
+def pending_left(actor, now: float) -> float:
+    """待发行动剩余秒（展示用；无待发 = 0.0）。"""
+    s = pending_of(actor)
+    if not s:
+        return 0.0
+    return max(0.0, float(s.get("cast_done_at", 0.0) or 0.0) - float(now or 0.0))
+
+def pending_begin(battle, ctx, cast=None, recover=None, pre_logs=None) -> dict:
+    """登记待发行动（T0）：写槽 `actor["charging"]`，落地时刻 = 登记时刻 + 第一段耗时。
+
+    cast / recover：两段耗时声明 —— str = 行动类别（过内容侧形状）· 数字 = 绝对秒 ·
+      None = 第一段按 `ctx.action` 类别、第二段按内容侧基准表（形状与数值全在内容侧）。
+    pre_logs：内容层自定义动作在 T0 的回执日志（B 段原样吐出 ⇒ 回调只调一次）。
+    槽内全字段 JSON 安全 ⇒ 待发随存档往返（serialize / 宿主回写面零改动）。
+    """
+    actor = ctx.caster
+    slot = {
+        "action": str(ctx.action or DEFAULT_ACTION),
+        "skill": ctx.skill_name,
+        "target_uid": (ctx.target or {}).get("uid"),
+        "target_side": ctx.target_side,
+        "scope": ctx.scope,
+        "cast_done_at": float(battle._now) + _segment_seconds(battle, actor, cast),
+        "cast_base": cast,
+        "recover_base": recover,
+        "unstoppable": bool(getattr(ctx, "unstoppable", False)),
+        "pre_logs": pre_logs,
+    }
+    actor["charging"] = slot
+    return slot
+
+def _next_pending_at(battle) -> Optional[float]:
+    """全场最小的待发落地时刻（含已到点的；无待发 = None）。"""
+    best = None
+    for acts in battle.sides.values():
+        for a in acts:
+            s = pending_of(a)
+            if not s or not actor_alive(a):
+                continue
+            t = float(s.get("cast_done_at", 0.0) or 0.0)
+            if best is None or t < best:
+                best = t
+    return best
+
+
+def _resolve_due_pending(battle, logs: list):
+    """结算所有已到点的待发行动（升序 · 同刻按 sides 序稳定）。
+
+    倒地者的待发直接作废（与死亡清理同口径：前摇中被打死 ⇒ 这一手不出伤）。
+    清槽先于落地 —— 落地过程可能再登记 / 打断 / 死亡，不留二次结算路径。
+    """
+    due = []
+    for si, acts in enumerate(battle.sides.values()):
+        for ai, a in enumerate(acts):
+            s = pending_of(a)
+            if not s:
+                continue
+            if not actor_alive(a):
+                a["charging"] = None
+                continue
+            t = float(s.get("cast_done_at", 0.0) or 0.0)
+            if t <= float(battle._now) + 1e-9:
+                due.append((t, si, ai, a))
+    if not due:
+        return
+    due.sort(key=lambda x: (x[0], x[1], x[2]))
+    for _t, _si, _ai, a in due:
+        s = pending_of(a)
+        if not s:
+            continue
+        a["charging"] = None
+        battle._dispatch_pending(a, s, logs)
 
 # ============================================================
 # 推进（命令层驱动）
@@ -162,6 +262,10 @@ def advance(battle, logs: list, max_steps: int = 200) -> tuple:
     guard = 0
     while battle.result is None and guard < max_steps:
         guard += 1
+        # 已到点的待发行动先落地（同刻优先级；也覆盖「推进步长为 0」的时刻边界）
+        _resolve_due_pending(battle, logs)
+        if battle.result:
+            return ("over", None)
         # 玩家决策点（所有 human_controlled 存活 actor 中 ct 最小者）
         fp = _next_player_due(battle)
         # 自动 actor 行动点（ct 最小）
@@ -231,12 +335,8 @@ def _after_act(battle, actor: dict, action: str, recover_base: Optional[float] =
     base = action_base_of(action)
     _rb = recover_base_of(action) if recover_base is None else float(recover_base)
     # 用聚合面板速度（buffs 修正）——actor 裸 spd 字段可能是 0（玩家面板由
-    # stats.actor_stats 从 class/equip 聚合），与 next_ct 保持一致口径。
-    try:
-        from . import stats as S
-        spd = S.actor_spd(battle, actor)
-    except Exception:
-        spd = int(actor.get("spd", 0) or 0)
+    # stats.actor_stats 从 class/equip 聚合），与 next_ct / 待发槽同一口径。
+    spd = _spd_of(battle, actor)
     actor["ct"] = float(battle._now) + action_time(spd, base) + recover_time(spd, _rb)
 
 
@@ -249,9 +349,28 @@ def _advance_time(battle, dt: float, logs: list):
     """
     if dt <= 0:
         return
-    battle._now += dt
-    # N4：DOT/时效结算（state_effects dot 规则 + buff 到期）接入点
-    _settle_time_effects(battle, logs)
+    target = float(battle._now) + float(dt)
+    guard = 0
+    while True:
+        guard += 1
+        if guard > 64:
+            # fail-closed：待发落地应逐段收敛；不收敛 = 状态机坏了，不静默兜底
+            raise RuntimeError(
+                "推进子片超限：待发行动结算未收敛（{} → {}）".format(battle._now, target))
+        # 1) 先结算「已到点」的待发行动 —— 同刻优先级：待发落地先于该刻到点者行动
+        _resolve_due_pending(battle, logs)
+        nxt = _next_pending_at(battle)
+        # 2) 推进到「下一个待发落地时刻」与「目标时刻」中较近的那个
+        if nxt is None or nxt >= target - 1e-9:
+            step = target - float(battle._now)
+        else:
+            step = nxt - float(battle._now)
+        if step > 0:
+            battle._now += step
+            _settle_time_effects(battle, logs)
+            continue  # 推进后重来一轮：先把落到这一时刻的待发结算掉
+        break
+    # 整段广播**一次**（内容侧「按刻连续结算」的监听节奏零变化：不按子片重复广播）
     try:
         from .effect_triggers import fire as _fire
         _fire(battle, "time_advance", {"dt": float(dt), "now": float(battle._now)}, logs)

@@ -52,7 +52,7 @@ if pct <= 0:
 ## 3. 落地只能走 `landing`
 
 **任何模块自己扣 `hp` 都是 bug。** 引擎自己的 DOT 也走 `landing.deal_damage`
-（`schedule.py:446`）。自己的动词也必须走：
+（`schedule.py:565`）。自己的动词也必须走：
 
 ```python
 from saintess_engine.landing import deal_damage, heal_actor
@@ -64,8 +64,8 @@ from saintess_engine.landing import deal_damage, heal_actor
 
 一个机制的持久状态请写 `actor["effects"][key]`。
 `shields`（承伤资源）与 `cooldown`（调度）是**唯一**允许的独立容器
-（`actors.py:112-115` 给了理由）。要放「引擎不读的自定义状态」用 `actor["ext"]`
-（`actors.py:133-134`：**引擎绝不读**）。
+（`actors.py:114-117` 给了理由）。要放「引擎不读的自定义状态」用 `actor["ext"]`
+（`actors.py:135-136`：**引擎绝不读**）。
 
 ⚠️ 三个容器都会随存档落盘。别把不可 JSON 化的对象塞进去。
 
@@ -104,7 +104,7 @@ from saintess_engine.landing import deal_damage, heal_actor
 # v181.M-R2：dir=gain（资源自然回）不依赖现有层数——0 层也要回
 # （游侠 energy 耗到 0 若被 n<=0 拦截将永远回不了，卡死）
 ```
-（`schedule.py:334-335`）
+（`schedule.py:453-454`）
 
 ```python
 # 事件主体过滤（N9 修正）：ctx.actor = 该事件的主体 actor——只处理主体 actor

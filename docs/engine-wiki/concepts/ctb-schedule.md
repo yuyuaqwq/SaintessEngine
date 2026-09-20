@@ -17,7 +17,7 @@
 | **绝对时刻制**（本引擎） | 时间只在「从 A 到 B」时被推进；`_advance_time(battle, dt)` 一次推进就能结算期间所有到期事件 |
 
 绝对时刻制的关键收益：**时间推进是一个显式函数调用**（`schedule._advance_time`，
-`schedule.py:243`），它内部依次做「加时钟 → 结算周期/到期 → 广播 `time_advance`」。
+`schedule.py:343`），它内部依次做「加时钟 → 结算周期/到期 → 广播 `time_advance`」。
 所以「3 秒内发生了 3 次 DOT」这件事是确定的、可断言的，不依赖主循环被调用了几次。
 
 ## 公式（**由内容侧装配**，不在引擎里）
@@ -73,7 +73,7 @@ def action_time(spd, base=None):                     # schedule.py:92
 
 **速度口径**：始终读**聚合面板** `stats.actor_spd(battle, actor)`（`stats.py:139`），
 不是裸 `actor["spd"]`。播种（`battle._seed_ct_one`，`battle.py:113`）、
-行动后推进（`schedule._after_act`，`schedule.py:263`）、`next_ct`（`schedule.py:160`）
+行动后推进（`schedule._after_act`，`schedule.py:382`）、`next_ct`（`schedule.py:260`）
 三处一致。原因：玩家 actor 的裸 `spd` 可能是 0（面板要从职业/装备算），
 用裸值会让排序崩（`battle.py:128-130` 注释）。
 
@@ -94,7 +94,7 @@ next_ct(battle, actor)    # 返回 actor 行动后的 ct（绝对时刻 = now + 
 ## 推进：`advance()` 是命令层驱动的心脏
 
 ```python
-def advance(battle, logs, max_steps=200):     # schedule.py:185
+def advance(battle, logs, max_steps=200):     # schedule.py:289
     while battle.result is None and guard < max_steps:
         fp   = _next_player_due(battle)       # ct 最小的存活「人控」
         auto = _next_auto_due(battle)         # ct 最小的存活「自动」
@@ -125,7 +125,7 @@ now=1.12  │  （下次 human_act 前，命令层会 advance → 推到怪的 1
 ```
 
 **谁会被 `advance` 认为是「人控」**：`actor["human_controlled"]` 为真
-（`schedule._next_player_due`，`schedule.py:233-247`）。**不是** `kind` / `side`。
+（`schedule._next_player_due`，`schedule.py:337-347`）。**不是** `kind` / `side`。
 如果没有配置 `human_controlled`，`advance` 会一路跑完所有自动行动 ——
 这正是 `auto_run` 能「全自动打完」的原因。
 
@@ -136,7 +136,7 @@ now=1.12  │  （下次 human_act 前，命令层会 advance → 推到怪的 1
 
 ## 时间推进时发生什么
 
-`_advance_time(battle, dt, logs)`（`schedule.py:276`）：
+`_advance_time(battle, dt, logs)`（`schedule.py:395`）：
 
 ```python
 battle._now += dt            # ① 时钟前进
@@ -145,7 +145,7 @@ fire(battle, "time_advance", {"dt": dt, "now": battle._now}, logs)   # ③ 广�
 ```
 
 顺序很重要：**广播在结算之后**，所以监听 `time_advance` 的内容层读到的
-`now` 已经是结算后的状态（`schedule.py:246-248` 注释：挂敌身条等按刻连续结算的
+`now` 已经是结算后的状态（`schedule.py:346-348` 注释：挂敌身条等按刻连续结算的
 声明订阅此事件，「读点永远拿到当刻值」）。
 
 `_settle_time_effects`（`schedule.py:253`）三轮：
@@ -155,11 +155,11 @@ fire(battle, "time_advance", {"dt": dt, "now": battle._now}, logs)   # ③ 广�
 3. **周期跳**：见 [effects.md](effects.md) 的「周期结算」节
 
 `damage` 方向的周期跳在落地前会先 `fire("dot_calc", {"target", "dot_key", "dmg", "mult"})`
-（`schedule.py:471`，**不带 `actor` 键** → 广播给所有人，因为施毒者不在承伤者身上；
+（`schedule.py:590`，**不带 `actor` 键** → 广播给所有人，因为施毒者不在承伤者身上；
 效果侧用 `ctx["dot_key"]` 自己过滤）。落地后 `fire("dot_tick", {"actor", "target", "key", "dmg"})`
-（`schedule.py:456`）。
+（`schedule.py:575`）。
 
-## 行动耗时表（`action_base_of`，`schedule.py:172`）
+## 行动耗时表（`action_base_of`，`schedule.py:276`）
 
 引擎侧**没有**这张表：`action_base_of(action)` 只是把「行动类别」转发给内容侧装配的
 `action_base_fn(action)`。奥兰迪亚当前装配值：
@@ -175,11 +175,11 @@ fire(battle, "time_advance", {"dt": dt, "now": battle._now}, logs)   # ③ 广�
 
 ⚠️ 自定义行动（`use_item` 等）**不会被 `action_base_of` 识别**——它们走
 `Battle.action_override` 回调返回的耗时：返回 `str`（内置动作名）按上表缩放，
-返回**数字**则当作绝对秒直接落 `ct`（`battle.py:299-308`）。
+返回**数字**则当作绝对秒直接落 `ct`（`battle.py:300-309`）。
 
 ## 控制效果如何与时间轴互动
 
-被控（`mode="skip"`）时的语义是「**行动浪费**」（`battle.py:471-480`）：
+被控（`mode="skip"`）时的语义是「**行动浪费**」（`battle.py:482-491`）：
 
 ```
 被控 actor 轮到行动 → 打日志 → 从 effects 删掉控制条目
@@ -188,13 +188,13 @@ fire(battle, "time_advance", {"dt": dt, "now": battle._now}, logs)   # ③ 广�
                     → return，不结算行动       ← 调用方照样推 ct
 ```
 
-「照样推 ct」由调用方完成：`actor_auto`（`battle.py:423-425`）或 `human_act`
+「照样推 ct」由调用方完成：`actor_auto`（`battle.py:427-429`）或 `human_act`
 （`battle.py:296-310`）在 `act()` 返回后都调 `_after_act`。所以控制不是「冻结时间」，
 而是「这次行动白费」——这是 CTB 类游戏的标准语义。
 
 `mode="no_skill"`（沉默）不跳行动，只把 `attack` 换成 `skill` 清掉技能名
-（`battle.py:464-469`），耗时按 `attack` 计（`human_act` 里 `ctx.action` 已被改写，
-`battle.py:293-294` 注释）。
+（`battle.py:475-480`），耗时按 `attack` 计（`human_act` 里 `ctx.action` 已被改写，
+`battle.py:294-295` 注释）。
 
 ## 序列化与时钟
 

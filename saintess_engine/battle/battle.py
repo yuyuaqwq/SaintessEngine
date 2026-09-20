@@ -270,7 +270,7 @@ class Battle:
 
     def human_act(self, action: str, skill_name: Optional[str],
                   actor: Optional[dict] = None, target=None,
-                  target_side=None) -> tuple:
+                  target_side=None, unstoppable: bool = False) -> tuple:
         """命令层唯一入口。构造 ActCtx 后调 self.act()。
 
         返回 (logs, ended, who)：
@@ -287,7 +287,8 @@ class Battle:
         # 必须在 ActCtx 构造前——ActCtx.__post_init__ 是技能 dict 的唯一解析时机）
         self.refresh_skill_index(caster)
         ctx = ActCtx(caster=caster, action=action, skill_name=skill_name,
-                     target=target, target_side=target_side)
+                     target=target, target_side=target_side,
+                     unstoppable=unstoppable)
         logs, ended = self.act(ctx)
         # 玩家出手后：行动耗时推 ct + 推进自动 actor 到下一个决策点
         # （v181.N7.2：被沉默转普攻后 action 已变 attack → 耗时按普攻打）
@@ -373,11 +374,13 @@ class Battle:
         self.refresh_skill_index(caster)
         action = "attack"
         skill_name = None
+        unstoppable = False
         aa = caster.get("auto_act") or {}
         if aa.get("act"):
             _a = aa["act"]
             action = _a.get("type", "attack")
             skill_name = _a.get("skill")
+            unstoppable = bool(_a.get("unstoppable"))
         else:
             # N5B 怪 AI 决策器（无 auto_act 显式招时——导演换招/装配指定优先，
             # AI 只兜底自选；再回落普攻）。resolve 返回 None = 普攻。
@@ -387,6 +390,7 @@ class Battle:
                 if _mv and isinstance(_mv, dict):
                     action = str(_mv.get("type") or "attack")
                     skill_name = _mv.get("skill")
+                    unstoppable = bool(_mv.get("unstoppable"))
                     # N5B target_hint：AI 战术目标提示（如残血收割 lowest_hp）——
                     # 挂瞬态字段，target_picker（命令层）消费后即弃；
                     # 无 picker/未知 hint → 回落默认仇恨目标，尾部清理防残留
@@ -413,7 +417,7 @@ class Battle:
         # hint 一次性消费（picker 未识别也清，防残留到下一帧）
         caster.pop("_target_hint", None)
         ctx = ActCtx(caster=caster, action=action, skill_name=skill_name,
-                     target=ctx_target)
+                     target=ctx_target, unstoppable=unstoppable)
         logs, ended = self.act(ctx)
         if _hook_logs:
             logs = _hook_logs + logs
@@ -426,7 +430,14 @@ class Battle:
         return logs, ended
 
     def act(self, ctx: ActCtx) -> tuple:
-        """统一行动执行（人类/AI/随从都走这里）。返回 (logs, ended)。
+        """统一行动执行（人类/AI/随从都走这里）—— **两段化**：本函数 = A 段（T0 登记）。
+
+        两段状态机（T15 · 全量生效，不留新旧两套时序）：
+            T0（本函数）   开战事件 → turn_start → 控制消费 → act_begin → **登记待发行动**
+            T0+第一段      `_dispatch_pending`（由 `schedule._advance_time` 子片推进结算）
+                           → 分派落地 → act_done → 胜负判定
+        返回 (logs, ended)：`ended` 只反映 T0 事实（开战即终局 / 被控跳过）；
+        落地段日志由推进循环（`advance` → `_advance_time`）转交调用方，口径不变。
 
         事件总线插桩（N8）：turn_start（回合开始，先于控制检查）→ 控制消费
         （skip 时 on_act_consume）→ act_begin（行动执行前）。
@@ -483,35 +494,74 @@ class Battle:
         # 登记行动点（展示用）
         self._p_acts += 1
         action = ctx.action
-        if action == "attack":
-            logs = actions.do_attack(self, ctx)
-        elif action == "skill":
-            logs = actions.do_skill(self, ctx)
-        elif action == "defend":
-            logs = self._do_defend(ctx)
-        elif action == "flee":
-            logs = self._do_flee(ctx)
-        else:
-            # N5b4-5a R3：非引擎内置动作（use_item/命令层自定义）→ 先问外部
-            # action_override 注入点（引擎零游戏知识——不认识道具/吃药/特殊动作，
-            # 只提供"这次行动做什么 + 耗时多少"的执行注入；效果由回调用引擎动词写）。
-            # 回调返回 (logs, cast, recover) 三元组；None = 未消费 → 回落默认未知提示。
-            # 两段都是「类别名（str，按内容侧形状折算）或绝对秒（数字直接落 ct）或 None」。
+        # ---- 非引擎内置动作：问外部 action_override（引擎零游戏知识——不认识道具/
+        # 吃药/特殊动作，只问"这次行动做什么 + 耗时多少"）----
+        # 回执 (logs, cast, recover) 三元组：T0 取「做什么 + 两段耗时」，效果日志存进
+        # 待发槽、B 段原样吐出 ⇒ 回调**只调一次**（不留二次调用的兼容壳）。
+        pre_logs = None
+        if action not in ("attack", "skill", "defend", "flee"):
+            pre_logs = []
             if self.action_override is not None:
                 try:
                     _ov_logs, _ov_cast, _ov_recover = self.action_override(
-                        self, ctx.action, actor, ctx.skill_name, ctx.target)
+                        self, action, actor, ctx.skill_name, ctx.target)
                     if _ov_logs is not None:
-                        logs = _ov_logs
+                        pre_logs = list(_ov_logs)
                         ctx._override_cast = _ov_cast        # str("defend"/"skill"/"attack") 或数字秒或 None
-                        ctx._override_recover = _ov_recover  # 第二段：同形（None = 走内容侧基准表）
+                        ctx._override_recover = _ov_recover  # 第二段：同形
                         ctx._override_consumed = True
                 except Exception:
-                    logs = [self._t("battle.core.unknown_action",
-                                    "未知行动类型：{action}", action=action)]
+                    pre_logs = [self._t("battle.core.unknown_action",
+                                        "未知行动类型：{action}", action=action)]
             if not getattr(ctx, "_override_consumed", False):
-                logs = [self._t("battle.core.unknown_action",
-                                "未知行动类型：{action}", action=action)]
+                pre_logs = [self._t("battle.core.unknown_action",
+                                    "未知行动类型：{action}", action=action)]
+        # ---- 登记待发行动（T0）：第一段耗时由回执 / 行动类别决定（形状与数值全在内容侧）----
+        from .schedule import pending_begin
+        _consumed = bool(getattr(ctx, "_override_consumed", False))
+        pending_begin(self, ctx,
+                      cast=(getattr(ctx, "_override_cast", None) if _consumed else action),
+                      recover=(getattr(ctx, "_override_recover", None) if _consumed else None),
+                      pre_logs=pre_logs)
+        logs.append(self._t("battle.schedule.cast_begin", "🌀 {name} 开始出招…",
+                            name=actor.get('name', '目标')))
+        return logs, bool(self.result)
+
+    def _dispatch_pending(self, actor: dict, slot: dict, logs: list):
+        """B 段（T0+第一段）：把待发行动真正落地。
+
+        复用既有分派路径（`actions.do_attack/do_skill` / `_do_defend` / `_do_flee` /
+        override 回执），**零新结算路径**。目标按 uid 重取（离场 → None → 走既有
+        默认目标回落）；技能/资源/冷却校验随 B 段落（与落时刻同口径）。
+        """
+        ctx = ActCtx(caster=actor,
+                     action=str(slot.get("action") or "attack"),
+                     skill_name=slot.get("skill"),
+                     target=self.find_actor(slot.get("target_uid")),
+                     target_side=slot.get("target_side"),
+                     scope=str(slot.get("scope") or "single"),
+                     unstoppable=bool(slot.get("unstoppable")))
+        if slot.get("pre_logs") is not None:
+            # 内容层自定义动作：T0 回执原样吐出（回调只调一次；耗时已在 T0 落 ct）
+            ctx._override_consumed = True
+            ctx._override_cast = slot.get("cast_base")
+            ctx._override_recover = slot.get("recover_base")
+            logs.extend(list(slot.get("pre_logs") or []))
+        else:
+            action = ctx.action
+            if action == "attack":
+                logs.extend(actions.do_attack(self, ctx))
+            elif action == "skill":
+                logs.extend(actions.do_skill(self, ctx))
+            elif action == "defend":
+                logs.extend(self._do_defend(ctx))
+            elif action == "flee":
+                logs.extend(self._do_flee(ctx))
+            else:
+                # T0 已校验过动作合法性（unknown = 走 override 回执分支）⇒ 落到这里
+                # 只可能是待发槽被外部改坏：直接现形，不留兜底
+                raise RuntimeError(
+                    "待发行动落地失败：未知动作 {!r}（无 action_override 回执）".format(action))
         # N9A-2 事件：行动完成（全员广播——不带 actor 键避免主体过滤拦截旁观者；
         # 刚行动的 actor 放 ctx["acted"]，效果侧自己 if 敌我判断，如按敌我自判的效果
         # 监听敌对 actor 行动叠减速）。被控跳过（skip）早退 return 不触发。
@@ -522,7 +572,6 @@ class Battle:
             pass  # 事件源异常不阻断行动结算
         # 胜负判定（死亡可能已触发）
         self._check_side_end()
-        return logs, bool(self.result)
 
     # ============================================================
     # 简单行动

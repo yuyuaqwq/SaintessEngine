@@ -121,8 +121,22 @@ def test_noun_to_verb_control():
     foe["auto_act"] = {"act": {"type": "skill", "skill": "ms_clamp"}}
     logs = []
     b.actor_auto(foe, ctx_target=hero)
-    check("名词→动词链把控制写到目标身上", "clamp" in hero["effects"],
-          f"hero effects={hero['effects']}")
+    # T15 两段化：怪在 T0 只**登记**出招（前摇窗口在飞），落地在 T0+第一段 ⇒
+    # 先断言槽位，再真推进若干刻让前摇落地（慢招 2.35s vs 玩家快招 0.93s）。
+    from saintess_engine.battle.schedule import pending_of
+    _slot = pending_of(foe)
+    check("怪登记了出招（前摇窗口在飞：槽位有待发技能）",
+          bool(_slot) and _slot.get("skill") == "ms_clamp" and _slot.get("cast_done_at") > b._now,
+          f"slot={_slot} now={b._now}")
+    for _ in range(6):
+        if "clamp" in hero["effects"]:
+            break
+        _got, _ended, _who = b.human_act("attack", None)
+        logs.extend(_got)
+        if _ended:
+            break
+    check("名词→动词链把控制写到目标身上（前摇落地后）", "clamp" in hero["effects"],
+          f"hero effects={hero['effects']} now={b._now}")
     before = foe["hp"]
     logs2, _ended = b.act(ActCtx(caster=hero, action="attack"))
     check("被控者行动被跳过（mode=skip）", "无法行动" in "\n".join(logs2),
@@ -138,6 +152,29 @@ def test_passive_proc():
     check("被动 proc 触发（PASSIVE_PROC → backdraft）", "回火" in "\n".join(logs))
     check("反击伤害落到来源身上", foe["hp"] < foe["max_hp"], f"foe hp={foe['hp']}")
 
+
+
+def test_cast_window_delays_damage():
+    """T15：出招窗口（前摇）—— 伤害**不在行动点结算**，而在 T0+第一段 落地（真内容）。"""
+    hero, foe = _fresh(foe_hp=500)
+    b = _battle(hero, foe)
+    from saintess_engine.battle.schedule import pending_of, _advance_time
+    hero["defending"] = False
+    logs = []
+    b.human_act("attack", None)          # 玩家出手：T0 只登记（advance 后立即算出敌 ct）
+    # 直接拿怪的待发做「时刻 → 落地」的证据：先让怪登记一次普攻
+    foe["auto_act"] = {"act": {"type": "attack"}}
+    b.actor_auto(foe, ctx_target=hero)
+    slot = pending_of(foe)
+    hp0 = hero["hp"]
+    check("出招窗口在飞：槽位落地时刻 > 当前时刻",
+          bool(slot) and float(slot["cast_done_at"]) > float(b._now),
+          f"slot={slot} now={b._now}")
+    check("登记期伤害**未**落地（伤害不在行动点结算）", hero["hp"] == hp0, f"hp={hero['hp']}")
+    _advance_time(b, float(slot["cast_done_at"]) - float(b._now) + 1e-6, logs)
+    check("推进到 T0+第一段 ⇒ 伤害真落地", hero["hp"] < hp0,
+          f"hp {hp0}→{hero['hp']} logs={logs}")
+    check("落地后槽已清", pending_of(foe) is None)
 
 def test_engine_mounts():
     """装配自检：引擎的 hook 是「写错名字静默忽略」的，所以要自己点名核对。"""
@@ -205,6 +242,7 @@ def main():
     for fn in (test_battle_runs_and_attack_damages, test_resource_channel,
                test_custom_mechanic, test_skill_consumes_resource,
                test_noun_to_verb_control, test_passive_proc,
+               test_cast_window_delays_damage,
                test_engine_mounts, test_purity):
         print(f"-- {fn.__name__}")
         fn()

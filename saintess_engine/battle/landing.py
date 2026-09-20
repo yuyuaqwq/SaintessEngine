@@ -189,18 +189,9 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
                     logs.append(render_via(battle, "battle.landing.woken", "💥 目标被攻击惊醒！"))
     except Exception:
         pass  # 打醒异常不阻断落地
-    # 蓄力打断（主动伤害打断读条；DOT wake_sleep=False 不打）
-    if target.get("charging") and target["charging"].get("skill"):
-        target["charging"] = None
-        logs.append(render_via(battle, "battle.landing.charge_broken", "🔨 {name} 的蓄力被打破了！",
-                            name=target.get('name', '目标')))
-        # N5B5c P5：打断事件（on_interrupt 剧本联动：读条被断 → 反噬/易伤）
-        try:
-            from .effect_triggers import fire as _fire
-            _fire(battle, "interrupt", {"actor": target, "target": target,
-                                        "source": source}, logs)
-        except Exception:
-            pass
+    # 出招窗口的打断**不**由「受到主动伤害」触发（T15 §0 D15 第 2 条）：普通伤害照常
+    # 结算，只是不取消前摇；控制类效果由内容侧挂引擎 `interrupt` 动作显式打断
+    # （effects.act_interrupt —— 内容侧定「哪些效果算控制」，引擎不认识控制词）。
     # 承伤落地（护盾吸收 → 扣血 → 死亡）
     real = _apply_damage(battle, target, dmg, logs, source)
     # N8 事件：受击（承伤后）——主体=受击者；死者走 on_death/on_kill 不再触发。

@@ -64,7 +64,7 @@ for acts in battle.sides.values():
 - **主体死亡也执行**：`on_death` 的死者自己的声明照样跑（死亡遗言类效果）。
   判据是 `a is subject` 那一支。
 - **有些事件故意不带 `actor`**：`act_done` 只放 `ctx["acted"]`，让效果侧自己判敌我
-  （`battle.py:515-517` 注释：`randuin`/`ice_vein` 靠它监听「敌对 actor 行动」叠减速）。
+  （`battle.py:565-567` 注释：`randuin`/`ice_vein` 靠它监听「敌对 actor 行动」叠减速）。
 
 ### 4. `_owner` 注入
 
@@ -96,7 +96,7 @@ if _m != 1.0:
     total = max(1, int(total * _m))
 ```
 （`actions.py:422-428`，同款出现在 `landing.py:79-90` 的 `taken_calc`、
-`actions.py:649-713` 的 `heal_calc`、`schedule.py:428-442` 的 `dot_calc`）
+`actions.py:649-713` 的 `heal_calc`、`schedule.py:547-561` 的 `dot_calc`）
 
 ⚠️ **它是单槽、覆盖式、不落盘**（`effect_triggers.py:83-84` 注释）：
 单线程同步 fire 所以成立；**别在异步/多线程里依赖它**。`dot_calc` 广播后

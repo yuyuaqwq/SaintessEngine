@@ -58,17 +58,17 @@ Battle(btype="monster", sides=None, title_bonus=None, dmg_mult=1.0, pet=None,
 
 | 参数 | 语义 | 引擎内消费者 |
 |---|---|---|
-| `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:228`） |
+| `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:219`） |
 | `sides` | `{阵营名: [actor]}`，**唯一入口** | 全引擎 |
 | `title_bonus` | 面板增幅 dict（整场一份） | `stats._player_base_stats`：`actor.bonus.panel or battle.title_bonus or {}`（`stats.py:95-96`） |
-| `hostile_map` | `{side: [敌对 side]}` | `actors.hostile_sides`（`actors.py:200-202`）；缺省 = 除自己外全部阵营 |
+| `hostile_map` | `{side: [敌对 side]}` | `actors.hostile_sides`（`actors.py:202-204`）；缺省 = 除自己外全部阵营 |
 | `dmg_mult` | 全局伤害倍率 | ⚠️ **仅赋值，无消费方**（`battle.py:75`） |
 | `pet` | 宠物数据 | ⚠️ **仅赋值，无消费方**（`battle.py:76`） |
 | `st` | （旧参数） | ⚠️ **仅存在于签名，函数体从未引用** |
-| `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:408-412`） |
+| `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:412-416`） |
 | `on_event` | `callable(battle, event, ctx, logs)`，事件总线尾部观察者 | `effect_triggers.fire`（`effect_triggers.py:116-121`） |
 | `action_override` | `callable(battle, action, actor, skill_name, target) -> (logs, cast)`；接管非内置行动 | `Battle.act`（`battle.py:500-508`） |
-| `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:363-370`） |
+| `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:364-371`） |
 | `seed_ct` | `True` = 播种初始 ct；`from_state` 传 `False` | `battle.py:96-99` |
 | `**kwargs` | **静默吞掉未知参数** | — |
 
@@ -105,10 +105,10 @@ add_actor(actor: dict, side: str, front: bool = False) -> dict      # battle.py:
 ```python
 human_act(action, skill_name, actor=None, target=None, target_side=None)
     -> (logs: list, ended: bool, who: dict | None)                   # battle.py:271
-advance(logs: list) -> dict | None                                   # battle.py:323
-auto_run(logs: list, max_steps: int = 500) -> None                    # battle.py:332
-actor_auto(actor: dict, ctx_target=None) -> (logs, ended)             # battle.py:348
-act(ctx: ActCtx) -> (logs, ended)                                     # battle.py:428
+advance(logs: list) -> dict | None                                   # battle.py:324
+auto_run(logs: list, max_steps: int = 500) -> None                    # battle.py:333
+actor_auto(actor: dict, ctx_target=None) -> (logs, ended)             # battle.py:349
+act(ctx: ActCtx) -> (logs, ended)                                     # battle.py:432
 ```
 
 - `human_act`：命令层唯一入口。`actor` 缺省用 `focus()`。战斗已结束 → `(["战斗已结束！"], True, None)`。
@@ -128,16 +128,16 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 | 方法 | 位置 | 内容层引用数（全仓 grep） |
 |---|---|---|
 | `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:113/117/151` | 仅引擎内 |
-| `_do_defend` / `_do_flee` | `battle.py:531/458` | 仅引擎内 |
-| `_ensure_battle_started` | `battle.py:547` | 仅引擎内 |
-| `_on_actor_dead(actor, logs=None)` | `battle.py:562` | `landing._apply_damage` 调（`landing.py:394`） |
-| `_check_side_end` | `battle.py:580` | 仅引擎内 |
+| `_do_defend` / `_do_flee` | `battle.py:580/458` | 仅引擎内 |
+| `_ensure_battle_started` | `battle.py:596` | 仅引擎内 |
+| `_on_actor_dead(actor, logs=None)` | `battle.py:611` | `landing._apply_damage` 调（`landing.py:385`） |
+| `_check_side_end` | `battle.py:629` | 仅引擎内 |
 
 ### 序列化
 
 ```python
-to_state() -> dict                    # battle.py:607 → serialize.to_state
-Battle.from_state(st, *, text=None)   # battle.py:613（classmethod）→ serialize.from_state
+to_state() -> dict                    # battle.py:656 → serialize.to_state
+Battle.from_state(st, *, text=None)   # battle.py:662（classmethod）→ serialize.from_state
 ```
 
 ## 3. 模块级公开函数
@@ -181,7 +181,7 @@ Battle.from_state(st, *, text=None)   # battle.py:613（classmethod）→ serial
 deal_damage(battle, source, target, amount, logs, dmg_kind="", defend_reduce=None, element="") -> int
 # landing.py:26
 heal_actor(battle, target, amount, logs, source=None, label="") -> int
-# landing.py:415
+# landing.py:406
 ```
 
 两个都是**落地唯一收口**。内部子函数（无外部引用）：`_lv_pressure`（`:146`）、
