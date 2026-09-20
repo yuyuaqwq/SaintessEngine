@@ -134,6 +134,23 @@ now=1.12  │  （下次 human_act 前，命令层会 advance → 推到怪的 1
 > 「先 `advance()` 拿到它返回的 who，再用 `human_act(actor=who)` 让那个人出手」。
 > 直接连点 `human_act` 等于给玩家无限行动权。
 
+## 两段化：出招窗口（在飞待发）与 `settle_landing()`
+
+`act()` 只**登记**待发（`cast_done_at` = 登记时刻 + 第一段耗时），落地（伤害 / 治疗结算）
+发生在时钟被推过该时刻的那一瞬（`schedule.py:220` `_resolve_due_pending`）。于是
+**「谁把时钟推过那个时刻」决定了行动何时出伤**：
+
+- `advance()`（`schedule.py:278`，命令层心脏）一路推到**下一个决策点**。真人轮流制
+  （PVP / 多人副本）里那个决策点常常就在当刻 ⇒ **一步不推时钟** ⇒ 本次落地被挂起到
+  对手那一回合（面板读到的是登记态旧值）。
+- `settle_landing(battle, logs, actor=None)`（`schedule.py:248`）只把时钟推到**待发落地
+  时刻**并结算，**不驱动任何 actor 决策** ⇒ 驱动方口径 = **一次出手 = 落地后返回**。
+  给了 `actor` ⇒ 锚定它这一手（早于它的其它待发由 `_advance_time` 按时刻顺路结算）；
+  `None` ⇒ 全场最早那个。无待发 ⇒ 零行为（返回 `None`）。
+
+调用位置在**内容层命令层**（`human_act()` 之后），引擎不认识任何游戏词：
+`settle_landing` 是「把已登记的待发推进到点」这一**通用驱动口**，与 `advance()` 并列。
+
 ## 时间推进时发生什么
 
 `_advance_time(battle, dt, logs)`（`schedule.py:421`）：
