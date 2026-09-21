@@ -64,6 +64,9 @@ _HOOKS = {
     # ---- CTB 时间模型注入面：`battle/schedule.py` 的读点（引擎零公式/零数值）----
     # 时间模型 fn(spd, base) -> float（一次行动耗时，游戏秒；形状与参数全在内容侧）
     "time_model_fn": None,
+    # ★ E1（2026-09-21）：声明式公式表供体（`saintess_engine.formula.FormulaTable`）。
+    #   不配 = 不存在 ⇒ 既有 20 处 `_cfg.formulas()` 调用点全部走原路，行为逐字节不变。
+    "formula_table_fn": None,
     # 行动类别 → 基准耗时 fn(action) -> float（内容侧基准表；未声明类别引擎回落 DEFAULT_ACTION）
     "action_base_fn": None,
     # ---- 第二段（收招）注入面：与上面两条同形，只多一段耗时槽 ----

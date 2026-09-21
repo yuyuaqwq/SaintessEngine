@@ -1,0 +1,25 @@
+feat(E1/P4): 声明式公式表 FormulaTable（形状 + 求值器 + V1-V12 校验 + 逐步打印）
+
+新增 saintess_engine/formula/__init__.py（~500 行）：
+- 三类条目：formula(expr) / aggregate(op·over·item_expr·combine) / chain(steps·random)
+- 通用字段：kind/label/version/vars/params/returns/clamp/floor·cap/guard/round/random/when/note
+- params.ref 四种前缀：const.(同文件常量段) / formula.(另一条，拓扑排序禁环) /
+  skeleton.(既有骨架表，不造第二份参数源) / param.(ctx tables，引擎只按路径取)
+- V1-V12 全 fail-closed，异常 FormulaDeclError(ValueError)
+- 接口：from_decl / ids / vars_of / eval / run(返回 StepRow 逐步中间量) / check / wrong_vars
+config._HOOKS 加 formula_table_fn（共 18 个 hook）—— 不配 = 不存在
+
+验证（_w3a/p4_smoke.py，exit=0 全绿）：
+- 三类条目求值 OK · 4 种 ref 前缀 OK · ^ 幂（F5 形态）OK · chain 逐步中间量 OK
+- 7 条校验有牙（V1/V2/V3/V4x2/V5/V8 逐条报错点名）OK
+- 随机源定种子 + variance=0 确定性对照 OK
+
+两处与设计文档的偏差，均按「示例为准」并登记：
+  1. chain 的 returns：设计字段表写「必填」，但设计自己的示例省略
+     ⇒ 裁决为可选（可从末步推出），顶层写是冗余
+  2. expr 会静默忽略孤立的二元操作符（"a +* 3" 被当作 a+3 求值，不报错）
+     ⇒ V4（能编译通过）抓不住这类笔误。属 expr 既有行为，E1 边界明写
+     「不改 expr 除 ^ 之外任何一行」⇒ 本批不动，已写进模块 docstring 待下一轮
+
+门禁：引擎 82/82 · purity + no_game_vocabulary 双绿 · test_wiki_refs 绿
+行锚点跟账：README 32 子包/107 .py/23 150 行 → 33/108/23 700；新增 reference/formula.md
