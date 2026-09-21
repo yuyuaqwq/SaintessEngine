@@ -347,7 +347,7 @@ effective_domains(pkg) = 包 editor/domains.json  ∪（可选）框架内置默
   · ★ 合并规则**只有一份**：`saintess_engine/domains.py:94` 的 merge_decls —— 编辑器
     `effective_domains()` 与**引擎装载口** `records.read_domain_decl` 委托的是同一份
     ⇒ 域元数据放包内还是放引擎默认集里，两边看到的是**同一份有效域表**
-    （2026-09-20 T1 双向迁移演习的「一处装配点」：`saintess_engine/records/__init__.py:585`）
+    （2026-09-20 T1 双向迁移演习的「一处装配点」：`saintess_engine/records/__init__.py:590`）
   · {"$builtin": false}：显式声明「本包的域就这些，不要兜底」（examples/minimal-game 用的就是它）
   · 坏声明（坏 JSON / 缺 kind / kind 非法 / schema 越界 / 域 id 越界）→ 该条（或整份）忽略 +
     黄条告警 + 回退默认集，**绝不 500**（「列表里有它、点开 500」是不允许的）

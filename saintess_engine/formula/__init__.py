@@ -365,7 +365,12 @@ class FormulaTable:
         prev = None
         for st in e["_steps"]:
             if "use" in st:                     # 引用另一条条目的结果
-                v = self._eval_ref(eid, st["use"], vrs, ctx)
+                # ★ E1b/P2 修：必须传 `local`（已累积前面所有步的输出），**不是** `vrs`。
+                #   设计口径「每步可用前面所有步结果作变量，步 id 即变量名」对 `use` 步同样成立。
+                #   传 `vrs` 会让"用 `use` 把多条串成一条全链"**根本不可行**：
+                #   被引的条目看不到上一步产出的 `eff_def` / `k_def` 这类中间量。
+                #   （`expr` 步一直是传 `local` 的 —— 这是两处不一致，不是有意区分。）
+                v = self._eval_ref(eid, st["use"], local, ctx)
             else:
                 v = _expr.eval_expr(st["_compiled"]["expr"], local)
             fl = st.get("floor")
