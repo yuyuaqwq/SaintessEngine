@@ -614,6 +614,21 @@ def apply_game_content(actor: dict) -> dict:
 
 
 # ---------------- 条目 CRUD ----------------
+def is_entry_key(key) -> bool:
+    """域表顶层键是否算「条目」（引擎**唯一**口径）。
+
+    `_` 开头的键 = **私有键 / 文件级元信息**（文案表的 `_meta` / `_categories`、命令表的私有停服
+    gate `_maint_gate`），**不是条目** —— 与装载器 `content/texts.py:139`（`_` 前缀键不进文案表）
+    以及引擎/包内测试既有剔除口径（`tests/_engine_harness.py` 的私有键段、`test_command_parse.py:28`、
+    `test_v1304_use_batch.py:29`）一致。
+
+    编辑器**全部条目读口**必须走本函数（`list_entries` / `domain_status` · `server._domain_status` ·
+    `relations._target_values` · `tests/test_item_field_coverage` 的字段覆盖扫描）—— 口径散成多份
+    实现时，漏一处就出假红。
+    """
+    return not str(key).startswith("_")
+
+
 def list_entries(pkg_dir: str, dom: str, domains: dict | None = None) -> dict:
     """返回 {entries: [{key, name, kind, ...}], count}。
 
@@ -628,8 +643,8 @@ def list_entries(pkg_dir: str, dom: str, domains: dict | None = None) -> dict:
         table = {}
     rows = []
     for k, v in table.items():
-        if str(k).startswith("_"):
-            continue            # 文件级元信息键（`_meta` / `_categories`）不是条目 —— 与装载器同口径
+        if not is_entry_key(k):
+            continue                      # 私有 / 文件级元信息键不是条目（见 is_entry_key）
         if not isinstance(v, dict):
             continue
         rows.append({
@@ -695,8 +710,8 @@ def domain_status(pkg_dir: str, dom: str, domains: dict | None = None) -> dict:
         refs = []
     table = read_json(domain_path(pkg_dir, dom, domains), {})
     for k, v in (table or {}).items():
-        if str(k).startswith("_"):
-            continue            # 文件级元信息键（`_meta` / `_categories`）不是条目 —— 与 list_entries 同口径
+        if not is_entry_key(k):
+            continue                      # 私有 / 文件级元信息键不是条目（见 is_entry_key）
         if not isinstance(v, dict):
             continue
         errs = V.validate_entry(dom, v, pkg_dir)

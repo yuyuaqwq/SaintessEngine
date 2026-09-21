@@ -240,9 +240,13 @@ def main():
             if not isinstance(data, dict):
                 continue
             scanned += 1
-            entries += len(data)
+            # 私有 / 文件级元信息键（`_meta` / `_categories` / `_maint_gate`）不是条目 —— 与
+            # `PK.domain_status` 同口径（本门禁曾因它报 6 条 `text_specs/_meta.*` 假缺失）。
+            entries += sum(1 for k in data if PK.is_entry_key(k))
             sink = bad_cov if dom in STRICT_DOMAINS else soft
             for key, ent in data.items():
+                if not PK.is_entry_key(key):
+                    continue
                 if not isinstance(ent, dict):
                     sink.append(f"{pkg}/{dom}/{key} 不是对象")
                     continue
