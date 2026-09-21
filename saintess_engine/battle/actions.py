@@ -562,12 +562,14 @@ def _skill_seg_damage(battle, actor, target, st, est, info, lv,
     power = float(info.get("power", 1.0) or 1.0)
     if kind == _kind("true"):
         return _cfg.formulas().calc_damage(int((st.get("atk", 0) * power + skill_flat)), 0, seg_crit,
-                                           dmg_type="true"), 0
+                                           dmg_type="true", level=st.get("_player_lv")), 0
     if kind == _kind("phys"):
         return _cfg.formulas().calc_damage(int((st.get("atk", 0) * power + skill_flat)), est.get("def", 0),
-                                           seg_crit, pene_pct=pp_phys, pene_flat=pf_phys, dmg_type="phys"), 0
+                                           seg_crit, pene_pct=pp_phys, pene_flat=pf_phys, dmg_type="phys",
+                                           level=st.get("_player_lv")), 0
     return _cfg.formulas().calc_damage(int((st.get("matk", 0) * power + skill_flat)), est.get("mdef", 0),
-                                       seg_crit, pene_pct=pp_magi, pene_flat=pf_magi, dmg_type="magi"), 0
+                                       seg_crit, pene_pct=pp_magi, pene_flat=pf_magi, dmg_type="magi",
+                                       level=st.get("_player_lv")), 0
 
 
 def _deal_hit(battle, actor: dict, target: dict, dmg: int,

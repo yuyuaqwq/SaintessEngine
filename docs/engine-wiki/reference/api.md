@@ -43,7 +43,7 @@ from_state · to_state
 | `actions` | `heal_amount` | `_heal_amount` |
 | `actions` | `skill_pay_of` | `_skill_pay_of` |
 
-（别名赋值处：`effects.py:81-82`、`battle.py:29`、`actions.py:311`、`actions.py:765`）
+（别名赋值处：`effects.py:81-82`、`battle.py:29`、`actions.py:311`、`actions.py:767`）
 
 ## 2. `Battle`（`battle.py:32`）
 

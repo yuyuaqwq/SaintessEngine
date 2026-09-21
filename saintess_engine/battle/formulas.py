@@ -395,13 +395,59 @@ def skill_expr_preview(info: dict | None, level: int, stats: dict | None = None)
 # 战斗
 # ============================================================
 
-def calc_damage(atk, def_, is_crit=False, variance=0.15, pierce=False, pene_pct=0.0, pene_flat=0, dmg_type="phys"):
+def _damage_binding():
+    """E1b：槽位 `damage` 绑了哪条声明？未装配 / 未绑 ⇒ None（调用方走原路）。"""
+    from .. import config
+    from ..formula import FormulaDeclError, binding_of
+    if config.get_hook("formula_bindings_fn") is None:
+        return None, None
+    tab_hook = config.get_hook("formula_table_fn")
+    tbl = tab_hook() if tab_hook is not None else None
+    if tbl is None:
+        raise FormulaDeclError(
+            "槽位 'damage' 有绑定但 `formula_table_fn` 未装配（或返回 None）——"
+            "绑定表与公式表必须同时给")
+    return binding_of("damage", table=tbl), tbl
+
+
+def calc_damage(atk, def_, is_crit=False, variance=0.15, pierce=False, pene_pct=0.0, pene_flat=0, dmg_type="phys", *, level=None):
     """伤害公式(v22 非线性减伤)：dmg = atk²/(atk+def)，防御收益递减，杜绝物理免疫
     v106 穿透：有效防御 = max(0, int(def × (1-pene_pct)) - pene_flat)（先百分比后固定，下限 0）
     v107 伤害类型四层架构（鱼鱼拍板）：dmg_type = phys/magi/true
     - true 真伤：绕过全部减伤（无防御公式，dmg = atk 直伤），与 pierce 语义区分——
       pierce 仅无视防御公式、调用方仍可能叠加免伤段；true 为纯真伤（不吸/不反/全无视）
-    - 真伤同样吃波动与暴击（暴击倍率由调用方 crit_dmg 段统一追加）"""
+    - 真伤同样吃波动与暴击（暴击倍率由调用方 crit_dmg 段统一追加）
+
+    ★ E1b（2026-09-21）：槽位 `damage` 被绑定时走**声明**；不配绑定表 ⇒ 下面一字不动。
+      声明链的输入映射（足量、无静默兜底）：
+        base=atk · def=def_（真伤/穿透 ⇒ 0，等价于"绕过减伤"）
+        crit_mult = 1.5 / 1.0 · variance=variance · pene_* 原样
+        level ⇒ 算 k_def 用（**没给就抛**，不猜）
+      ★ 两处**有意**的语义差异（新游戏的声明是设计真源，旧路径只服务未绑定的包）：
+        1. 旧：先波动后暴击（两次取整）；声明：先暴击后波动（一次取整）
+        2. 旧：非线性减伤 atk²/(atk+def)；声明：def/(def+k_def) 双曲线
+      ⇒ 未绑定的包（含旧包）行为逐字节不变；这是 R1「不配 = 不存在」的判据。
+    """
+    _did, _tbl = _damage_binding()
+    if _did is not None:
+        if level is None:
+            from ..formula import FormulaDeclError       # 局部导入：避开可能的循环导入
+            raise FormulaDeclError(
+                "槽位 'damage' 已绑定声明，但调用方没给 level（算 k_def 要用）——"
+                "★ 不许拿默认等级兜底：那会把『少传参数』变成静默错值")
+        _zero_dr = bool(pierce) or dmg_type == "true"
+        _v = {
+            "level": float(level),
+            "def": 0.0 if _zero_dr else float(def_),
+            "base": float(atk),
+            "mult_skill": 1.0, "amp": 0.0, "mitigation": 0.0,
+            "crit_mult": 1.5 if is_crit else 1.0, "elem_mult": 1.0,
+            "variance": float(variance),
+            "pene_pct": 0.0 if _zero_dr else float(pene_pct or 0.0),
+            "pene_flat": 0.0 if _zero_dr else float(pene_flat or 0),
+        }
+        return max(1, int(_tbl.run(_did, _v)[0]))
+
     if dmg_type == "true" or pierce:
         dmg = atk
     else:
@@ -445,6 +491,9 @@ def resolve_formula(formula, stats, target_def, target_mdef, is_crit=False,
 
     返回 (总伤害, 魔法段伤害) —— magi 段单独返回供吸血/魔免分账。
     """
+    # ★ E1b：槽位 `damage` 的声明链要用 level 算 k_def。本函数一直在读 stats["_player_lv"]
+    #   （下面 build_vars 那处），提上来一份给 calc_damage 用；缺键 ⇒ 0（未绑定时无人读它）。
+    _lv = int((stats or {}).get("_player_lv", 0) or 0)
     total = 0
     magi_part = 0
     if not formula:
@@ -489,18 +538,18 @@ def resolve_formula(formula, stats, target_def, target_mdef, is_crit=False,
                 base = int(stats.get("atk", 0) * fmult) + fflat
         # 伤害类型 → 防御/穿透
         if ftype == "true":
-            dmg = calc_damage(base, 0, is_crit, variance=variance, dmg_type="true")
+            dmg = calc_damage(base, 0, is_crit, variance=variance, dmg_type="true", level=_lv)
         elif ftype == "magi":
-            dmg = calc_damage(base, target_mdef, is_crit, variance=variance,
+            dmg = calc_damage(base, target_mdef, is_crit, variance=variance, level=_lv,
                               pene_pct=pene_magi, pene_flat=pene_flat_magi, dmg_type="magi")
             magi_part += dmg
         else:
             # v157 formula 段级 pierce：seg 带 "pierce": true → 绕过防御公式
             # （与非 formula 物理 pierce 技能 calc_damage(pierce=True) 等价）
             if seg.get("pierce"):
-                dmg = calc_damage(base, 0, is_crit, variance=variance, pierce=True, dmg_type="phys")
+                dmg = calc_damage(base, 0, is_crit, variance=variance, pierce=True, dmg_type="phys", level=_lv)
             else:
-                dmg = calc_damage(base, target_def, is_crit, variance=variance,
+                dmg = calc_damage(base, target_def, is_crit, variance=variance, level=_lv,
                                   pene_pct=pene_phys, pene_flat=pene_flat_phys, dmg_type="phys")
         total += dmg
     return total, magi_part

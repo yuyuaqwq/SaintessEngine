@@ -42,7 +42,7 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 | 17 | `threshold` | `effects.py:442`（`act_apply` 叠层分支） | `actor`, `key`, `value` | 条目持有者 | 叠层数值变化后（「战意满 10 → 狂暴」类） |
 | 18 | `dmg_calc` | `actions.py:426`（`_single_target_pipeline`） | `actor`, `target`, `dmg`, `is_crit`, `info`, `mult` | 攻击者 | 伤害算出后、落地前（攻击方乘区） |
 | 19 | `taken_calc` | `landing.py:115`（`deal_damage`） | `actor`, `target`, `source`, `dmg`, `mult` | 承伤者 | 承伤修正（承伤方乘区） |
-| 20 | `heal_calc` | `actions.py:705`（`_do_heal`） | `actor`, `target`, `heal`, `info`, `mult` | 施法者 | 治疗量算出后、落地前 |
+| 20 | `heal_calc` | `actions.py:707`（`_do_heal`） | `actor`, `target`, `heal`, `info`, `mult` | 施法者 | 治疗量算出后、落地前 |
 | 21 | `act_done` | `battle.py:571`（`act` 尾部） | `acted`（**不是** `actor`） | **无**（全员广播） | 行动完成；被控跳过不触发 |
 | 22 | `phase` | ⚠️ **无引擎点位** | — | — | Boss 阶段转换（上层驱动） |
 | 23 | `player_low` | ⚠️ **无引擎点位** | — | — | 玩家低血量（上层驱动） |

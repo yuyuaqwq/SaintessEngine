@@ -130,10 +130,10 @@
 | R2 | `actions.py:17` → `game.core.constants` | 死 import |
 | R3 | `actions.py:36` → `game.content`（`C.CLASSES` 直读） | 内容表直读 |
 | R4 | `actions.py:343` → `game.core.formation` | 合规（通用纯函数，层级归属错） |
-| R5 | `actions.py:736` → `game.core.formula_expr` | 合规（通用解释器） |
-| R6 | `actions.py:769` → `game.engine.skill_buff_turns` | 反向边 |
-| R7 | `actions.py:786` → `game.core.constants` | 死 import |
-| R8 | `actions.py:815` → `game.engine.skill_mech_val` | 反向边 |
+| R5 | `actions.py:738` → `game.core.formula_expr` | 合规（通用解释器） |
+| R6 | `actions.py:771` → `game.engine.skill_buff_turns` | 反向边 |
+| R7 | `actions.py:788` → `game.core.constants` | 死 import |
+| R8 | `actions.py:817` → `game.engine.skill_mech_val` | 反向边 |
 | R9 | `battle.py:133` → `game.engine`（技能表查询） | 反向边 |
 | R10 | `battle.py:134` → `game.content.MONSTER_SKILLS` | 内容表直读 |
 | R11 | `stats.py:15` → `game.engine.player_final_stats` | **最重的一条**（玩家面板全算） |
@@ -261,7 +261,7 @@ def apply_game_content(actor: dict, ctx: dict | None = None) -> dict:   # game/c
 | `game/content_rules/{skills,panel,gameplay}.py` | 技能表 / 面板公式 / 游戏规则（S5 从 `engine.py` 拆出） |
 
 ⚠️ **一个已核实的重要内容侧缺口**：技能数据的 `cond`（条件倍率）在引擎里是死字段 ——
-`actions._do_heal` 里 `cond_mult = 1.0  # N2b 补，恒 1.0 起步`（`actions.py:687`）。
+`actions._do_heal` 里 `cond_mult = 1.0  # N2b 补，恒 1.0 起步`（`actions.py:689`）。
 内容侧用 `battle_cond_procs.py` 把它接回乘区（「**引擎零改动**，走既有装配层扩展动作模式」，
 游戏仓 `battle_cond_procs.py:5-11`）。第三方要 `cond` 就得自己写这个装配器。
 

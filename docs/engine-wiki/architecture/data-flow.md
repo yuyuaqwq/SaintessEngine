@@ -118,9 +118,9 @@ actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:
   7. total *= _st_mult；total *= hit_buffs.dmg_mult
   8. ⚡ fire("dmg_calc", {actor, target, dmg, is_crit, info, mult:1.0})  actions.py:422-428
        └─ 读回 battle._fire_ctx["mult"] → total *= mult
-  9. _deal_hit(battle, actor, target, total, defend_reduce, element)   actions.py:573
+  9. _deal_hit(battle, actor, target, total, defend_reduce, element)   actions.py:575
        └─ landing.deal_damage(...)                                  landing.py:26
- 10. _settle_lifesteal(...)（非 AOE）                               actions.py:610
+ 10. _settle_lifesteal(...)（非 AOE）                               actions.py:612
        └─ rate = min(lifesteal 类面板, 0.30)，真伤不吸，mortal_wound ×0.5
           → landing.heal_actor → on_heal ⚡
  11. bonus_atk_pct > 0 → 再 _deal_hit 一段附伤

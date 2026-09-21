@@ -134,7 +134,7 @@ ctrl · ctrl_any · res · left_key · left_init · cost_field · buff_key
 |---|---|---|
 | 影响**我打出的伤害**（增伤/处决/破魔） | `dmg_calc` | 攻击方视角乘区，`actions.py:422` |
 | 影响**我受到的伤害**（减伤/护盾转化） | `taken_calc` | 承伤方视角乘区，`landing.py:79` |
-| 影响**我造成的治疗**（治疗增幅） | `heal_calc` | 施法者视角乘区，`actions.py:649` |
+| 影响**我造成的治疗**（治疗增幅） | `heal_calc` | 施法者视角乘区，`actions.py:651` |
 | 影响**DOT 每跳伤害** | `dot_calc` | 广播事件（无 subject），用 `ctx["dot_key"]` 过滤 |
 | 命中后做事（叠层/挂条/上控制） | `skill_hit` / `attack_hit` | 主体=攻击者；普攻走 `attack_hit` |
 | 受击后自我强化/反击 | `on_taken` | 主体=受击者，`ctx["source"]` = 攻击者 |
