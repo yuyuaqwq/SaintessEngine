@@ -26,12 +26,16 @@ _TOKEN_RE = re.compile(r"""
     \s*(?:
         (?P<num>\d+\.?\d*|\.\d+)   # 数字
       | (?P<var>[A-Za-z_][A-Za-z0-9_]*)  # 变量
-      | (?P<op>[+\-*/()])          # 操作符/括号
+      | (?P<op>[+\-*/()^])         # 操作符/括号（★ `^` = 幂，2026-09-21 新增）
     )
 """, re.VERBOSE)
 
-# 操作符优先级
-_PREC = {"+": 1, "-": 1, "*": 2, "/": 2}
+# 操作符优先级（★ `^` 最高 —— 幂高于乘除，且**右结合**：a^b^c = a^(b^c)）
+_PREC = {"+": 1, "-": 1, "*": 2, "/": 2, "^": 4}
+#: 右结合的二元操作符。★ 为什么单独一张表：现行 shunting-yard 对同优先级一律弹栈
+#: （左结合）；`^` 必须反过来（不弹同优先级）才能得到 a^(b^c)。
+#: 不含 `^` 的表达式走不到这条分支 ⇒ 编译产物与新增前**逐项相同**（零回归）。
+_RIGHT_ASSOC = {"^"}
 _UNARY = {"-": 3}  # 一元负号优先级最高
 
 #: 编译缓存：表达式串 → 操作数栈。串来自数据表（技能/装备/食物公式），取值集合有限
@@ -91,7 +95,10 @@ def compile_expr(expr: str):
             elif op == ")":
                 tokens.append(("rparen",))
                 prev_token = ")"
-            elif op in "+-*/":
+            # ★ 2026-09-21：`^` 必须进这张分派名单 —— 否则令牌会被**静默丢弃**
+            #   （实测：漏了这一处 ⇒ `2^3` 编译成 `[num 2, num 3]`，报「栈不归约到单值」而**不是**语法错，
+            #    报错类型误导，很难查）。这是 P3 的**第 4 个改动点**。
+            elif op in "+-*/^":
                 # 一元负号：表达式开头 / 操作符后 / 左括号后
                 unary = (prev_token is None or prev_token in "+-*/( ")
                 if unary and op == "-":
@@ -130,7 +137,10 @@ def compile_expr(expr: str):
             while ops and ops[-1][0] in ("op", "neg"):
                 if ops[-1][0] == "neg" and p <= _UNARY["-"]:
                     out.append(ops.pop())
-                elif ops[-1][0] == "op" and p <= _PREC[ops[-1][1]]:
+                elif ops[-1][0] == "op" and (
+                        p < _PREC[ops[-1][1]]
+                        or (p == _PREC[ops[-1][1]] and tok[1] not in _RIGHT_ASSOC)):
+                    # ★ 左结合：同优先级弹栈（原行为不变）；右结合（`^`）：同优先级**不弹**
                     out.append(ops.pop())
                 else:
                     break
@@ -182,6 +192,15 @@ def eval_expr(code, vars_: dict | None = None) -> float:
                 stack.append(a * b)
             elif o == "/":
                 stack.append(a / b if b != 0 else 0.0)
+            elif o == "^":
+                # ★ `^` = 幂（2026-09-21 新增，用于 F5 的 `(SPD_REF/spd)^α`）
+                try:
+                    _r = a ** b
+                except (OverflowError, ZeroDivisionError, ValueError):
+                    _r = 0.0
+                # 负底数 + 分数指数 ⇒ Python 返回复数（`float()` 会 TypeError）
+                # ⇒ 按引擎既有「不抛、退化为 0」的口径处理（同除零）
+                stack.append(float(_r) if not isinstance(_r, complex) else 0.0)
     if len(stack) != 1:
         raise ExprError("表达式求值异常（栈不归约到单值）")
     return stack[0]
