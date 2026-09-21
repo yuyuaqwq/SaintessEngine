@@ -1,0 +1,33 @@
+fix(loot): 未知掉落策略不再静默回落 weighted（fail-closed）+ 编辑器面按坏数据报出来
+
+★ 真 bug（数据包侧审计发现）：`get_strategy`/`strategy_of` 原本是
+    STRATEGIES.get(name) or STRATEGIES["weighted"]
+  ⇒ 写了未注册的策略名时**静默换成 weighted**：语义从「每项按 chance 独立掷」
+    变成「必掉一件」，加载期不报错、运行期语义变了 —— 查不出的哑弹。
+  实证：`get_strategy("per_entry_roll")` 曾静默返回 _s_weighted。
+
+引擎侧改动：
+1. loot/pool.py 新增 `UnknownStrategy(ValueError)` 并导出
+   - get_strategy / strategy_spec：未知 ⇒ 抛
+   - strategy_of(pool, *, strict=True)：未知 ⇒ 抛（新增 strict 参数）
+     ★ `strict=False` **只给诊断面**（audit / 编辑器预览）用，让整张表能审计完
+   - roll_pool：`except UnknownStrategy: raise` —— 它在非严格模式下不再被吞
+     （未知策略是**声明错**，不该被当成「这次没掉」空掉落）
+2. editor/loot_view.py：
+   - 未知策略 ⇒ 预览**不崩**，加一条点名警告 + 按 weighted 展示结构
+     （对齐该文件既有口径：坏数据要能看见，不是 500/异常外泄）
+   - `_safe_expand` 改三返回值 `(展开, 硬错, 软警告)`：递归不收敛=硬错，
+     未知策略=软警告（本池自己非法时上层已点名过，此处再当硬错会让预览整体失败）
+   - 更新两处过时注释（「未注册时引擎按 weighted 兜底」已不成立）
+
+★ 保留的有意行为：缺 `type` ⇒ 仍回落 weighted（旧池没写 type 时的既有语义）；
+  写了但未注册 ⇒ 抛。两者不同：前者是「没声明」，后者是「声明错了」。
+
+★ 一处刻意的**不**报：`audit()` 不把「未注册」记为 issue。
+  因为内容侧可 `register_strategy` 注册自己的策略名，而 audit 可能跑在
+  一张没拿到内容侧注册表的表上（引擎侧用例就是）⇒ 报就是误报。
+  「未知」的可见性交给 ①运行期 roll_pool 抛 ②编辑器预览警告行。
+  （实测依据：真包 596 池里有 11 个用内容侧注册的 `fish`，全合法。）
+
+门禁：82/82 全绿 · purity + 零词汇双绿 · 行锚点位移 6 处 · README → 24 840 行
+★ 自身失误登记：注释里第二次写了游戏名，被 test_no_game_vocabulary 拦下（已中性化）

@@ -69,7 +69,7 @@ expanded_unique, audit: {ok, issues}, warnings}`；坏数据 / 池不存在 → 
 from __future__ import annotations
 
 # 纯计算模块：不挂 hook、不改全局（同 space / version 的性质）
-from saintess_engine.loot import STRATEGIES, LootTable, weigh
+from saintess_engine.loot import STRATEGIES, LootTable, UnknownStrategy, weigh
 
 _ANCHOR = "__pool__"          # key 缺省时的锚点（只用于表内查找，不对外露出）
 
@@ -275,11 +275,24 @@ _CYCLE = "池之间疑似循环引用（子池展开递归不收敛）—— 检
 
 
 def _safe_expand(table: LootTable, ref):
-    """引擎 `expand()` 的守卫：池互相引用会递归不收敛 → 报「坏数据」，不是 500。"""
+    """引擎 `expand()` 的守卫：坏数据**报出来**而不是崩。返回 `(展开结果, 硬错, 软警告)`。
+
+    | 情形 | 返回 | 上层处置 |
+    |---|---|---|
+    | 池互相引用 ⇒ 递归不收敛（`RecursionError`） | 硬错 | `_fail`（预览整体不可信） |
+    | 子池 `type` 未注册（`UnknownStrategy`） | **软警告** | 只 `_add(warnings)` |
+    | 正常 | `(列表, None, None)` | —— |
+
+    ★ 为什么未知策略是**软**警告而不是硬错：本池自己的 `type` 非法时，上层已经加过一条
+      点名警告了；若这里再当硬错，预览就会整个失败 —— 而预览面的口径是
+      「坏数据要能看见」，不是「看到坏数据就崩」。
+    """
     try:
-        return table.expand(ref), None
+        return table.expand(ref), None, None
     except RecursionError:
-        return [], _CYCLE
+        return [], _CYCLE, None
+    except UnknownStrategy as e:
+        return [], None, f"子池展开时命中未知策略（运行期会抛）：{e}"
 
 
 def _add(warnings: list, msg: str) -> None:
@@ -326,15 +339,23 @@ def build(entry: dict, key: str = "", pools=None, vocab=None) -> dict:
                      "内容侧也能注册自己的策略名", warnings)
     ptype = ptype.strip()
 
-    spec = table.strategy_of(entry)
+    # ★ 未知策略：**预览面不崩**，渲染成"坏数据"警告（对齐本文件既有口径：
+    #   坏数据要报出来，不是 500/异常外泄）。运行期 `roll_pool` 则会抛 `UnknownStrategy`。
+    try:
+        spec = table.strategy_of(entry)
+    except UnknownStrategy:
+        _add(warnings, f"策略名 {ptype!r} 不在内置策略表里（内置：{', '.join(sorted(STRATEGIES))}）——"
+                       "★ 运行期 `roll_pool` 会抛 `UnknownStrategy`（**不再静默回落 weighted**）。"
+                       "本预览按 weighted 展示结构，仅供看形状；要「每项按 chance 独立掷」请改用 `table`。")
+        spec = table.strategy_of({**entry, "type": "weighted"})
     uses = spec.get("uses", "entries")
     if v["declared"]:
         _add(warnings, _VOCAB_NOTE.format(path="content/rules/loot_vocab.json"))
     else:
         _add(warnings, _NO_RESOLVER)
     if ptype not in STRATEGIES:
-        _add(warnings, f"策略名 {ptype!r} 不在内置策略表里（内置：{', '.join(sorted(STRATEGIES))}）——"
-                       f"内容侧可以注册自己的策略；未注册时引擎按 weighted 兜底，预览同此。")
+        _add(warnings, f"策略名 {ptype!r} 未注册 —— 内容侧可注册自己的策略；"
+                       "未注册时运行期会抛 `UnknownStrategy`，**不再按 weighted 兜底**。")
 
     rows: list = []
     rolls: list = []
@@ -396,9 +417,12 @@ def build(entry: dict, key: str = "", pools=None, vocab=None) -> dict:
         for rc in raw:
             sub = str(rc.get("pool")).strip()
             is_sub_pool = table.pool(sub) is not None   # 引擎查表（含前缀剥离规则）
-            sub_expanded, cycle = _safe_expand(table, sub) if is_sub_pool else ([], None)
-            if cycle:
-                return _fail(cycle, warnings)
+            _se, _sh, _ss = _safe_expand(table, sub) if is_sub_pool else ([], None, None)
+            if _ss:
+                _add(warnings, _ss)
+            sub_expanded = _se
+            if _sh:
+                return _fail(_sh, warnings)
             if not is_sub_pool:
                 if _is_declared_ref(sub, v):
                     _add(warnings, f"rolls 里的 {sub} 是包内声明过的引用（不是本域的池 key）——"
@@ -422,9 +446,11 @@ def build(entry: dict, key: str = "", pools=None, vocab=None) -> dict:
         _add(warnings, f"策略 {ptype!r} 声明 uses={uses!r}：参数表既不是 entries 也不是 rolls，"
                        f"预览只给展开结果（内容侧策略自己解释数据）。")
 
-    expanded, cycle = _safe_expand(table, anchor)     # ← 引擎同一份展开
-    if cycle:
-        return _fail(cycle, warnings)
+    expanded, _hard, _soft = _safe_expand(table, anchor)     # ← 引擎同一份展开
+    if _soft:
+        _add(warnings, _soft)
+    if _hard:
+        return _fail(_hard, warnings)
     audit_rep = table.audit(resolvable=_make_resolvable(v))   # ← 引擎同一份审计（声明参与判定）
     issues = [{"level": lvl, "pool": pk, "message": msg}
               for (lvl, pk, msg) in audit_rep["issues"] if pk == anchor]

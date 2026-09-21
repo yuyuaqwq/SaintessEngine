@@ -64,13 +64,32 @@ def strategy_names() -> tuple:
     return tuple(sorted(STRATEGIES))
 
 
+class UnknownStrategy(ValueError):
+    """未知掉落策略 —— **不静默换策略**。
+
+    ★ 为什么必须抛：`STRATEGIES.get(name) or STRATEGIES["weighted"]` 这种写法会把
+      「按掉率逐项掷」（`table`）悄悄变成「必掉一件」（`weighted`）——
+      加载期不报错、运行期语义变了，是查不出的哑弹。
+      实证：`get_strategy("per_entry_roll")` 曾静默返回 `_s_weighted`。
+    """
+
+
+def _lookup(name: str) -> dict:
+    try:
+        return STRATEGIES[name]
+    except KeyError:
+        raise UnknownStrategy(
+            f"未知掉落策略 {name!r}；已注册 = {tuple(STRATEGIES)}。"
+            "★ 不许静默回落 weighted —— 那会把「每项独立判定」静默变成「必掉一件」。"
+            "（若本意就是「每项按 chance 独立掷」，请用 `table`。）") from None
+
+
 def get_strategy(name: str):
-    spec = STRATEGIES.get(name) or STRATEGIES["weighted"]
-    return spec["fn"]
+    return _lookup(name)["fn"]
 
 
 def strategy_spec(name: str) -> dict:
-    return dict(STRATEGIES.get(name) or STRATEGIES["weighted"])
+    return dict(_lookup(name))
 
 
 class SimpleCtx:
@@ -238,8 +257,28 @@ class LootTable:
     def has_pool(self, pool_key) -> bool:
         return self.pool(pool_key) is not None
 
-    def strategy_of(self, pool: dict) -> dict:
-        return self._strategies.get(pool.get("type", "weighted")) or self._strategies["weighted"]
+    def strategy_of(self, pool: dict, *, strict: bool = True) -> dict:
+        """池的 `type` → 策略 spec。
+
+        ★ 缺 `type` ⇒ 回落 `weighted`（**有意**：旧池没写 type 时的既有语义）。
+        ★ 写了 `type` 但没注册 ⇒ **抛 `UnknownStrategy`**（不静默回落 ——
+          那是「声明错」被当成「默认策略」，语义会静默变）。
+
+        `strict=False`（**只给诊断面用**，如 `audit`）：未注册 ⇒ 回落 weighted 以便
+        把整个池的形状渲染出来；运行期（`roll_pool` / `expand`）必须保持 `strict=True`。
+        """
+        name = pool.get("type")
+        if name is None:
+            return self._strategies["weighted"]
+        spec = self._strategies.get(name)
+        if spec is None:
+            if not strict:
+                return self._strategies["weighted"]   # 仅诊断面（audit）用；运行期一律抛
+            raise UnknownStrategy(
+                f"未知掉落策略 {name!r}；已注册 = {tuple(sorted(self._strategies))}。"
+                "★ 不许静默回落 weighted —— 那会把「每项独立判定」静默变成「必掉一件」。"
+                "（若本意就是「每项按 chance 独立掷」，请用 `table`。）")
+        return spec
 
     def resolve(self, ref, ctx):
         """调内容侧解析器（未配置 → None，等于"这条出不来"）。"""
@@ -294,12 +333,18 @@ class LootTable:
         return []
 
     def roll_pool(self, pool: dict, ctx) -> list:
-        """按池的 `type` 分派策略；策略抛错时：非严格模式吞掉返回 []（优雅跳过）。"""
-        fn = self.strategy_of(pool)["fn"]
+        """按池的 `type` 分派策略；**运行期**策略抛错时非严格模式吞掉返回 []（优雅跳过）。
+
+        ★ 但「未知策略」是**声明错**，不是运行期掉落失败 ⇒ 一律上抛（`UnknownStrategy`），
+          与 strict 无关。否则它会被当成"这次没掉"，等价于把声明错误静默变成空掉落。
+        """
+        fn = self.strategy_of(pool)["fn"]            # 未知策略在此已抛
         if self.strict:
             return fn(pool, ctx, self) or []
         try:
             return fn(pool, ctx, self) or []
+        except UnknownStrategy:
+            raise
         except Exception:                                     # noqa: BLE001
             return []
 
@@ -347,7 +392,15 @@ class LootTable:
         get = pool_of or self.pool
         issues = []
         for pool_key, pool in pools.items():
-            spec = self.strategy_of(pool)
+            # ★ 诊断面：未注册的 type 也要能把整张表审计完（报成 issue），
+            #   不能因为一个坏池就中断审计。运行期 `roll_pool` 那边保持严格。
+            #
+            # ★ 这里**故意不把「未知」报成 issue**：内容侧可以用 `register_strategy`
+            #   注册自己的策略名；而 `audit()` 可能跑在一张**没拿到内容侧注册表**的表上
+            #   （如引擎侧用例）⇒ 此时把内容侧注册过的名字报成 error 就是误报。
+            #   ⇒ 「未知」的可见性交给 ①运行期 `roll_pool` 抛 `UnknownStrategy`
+            #     ②编辑器预览的警告行，各管一段。
+            spec = self.strategy_of(pool, strict=False)
             uses = spec.get("uses", "entries")
             entries = pool.get("entries") or []
             if uses == "entries":

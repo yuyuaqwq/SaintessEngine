@@ -32,7 +32,8 @@ from __future__ import annotations
 from .mount import draw_slots
 from .pick import pick_index, pick_many, pick_weighted, roll_range, total_weight, weigh
 from .pity import pity_advance, pity_force
-from .pool import (STRATEGIES, LootTable, SimpleCtx, get_strategy, register_strategy,
+from .pool import (STRATEGIES, LootTable, SimpleCtx, UnknownStrategy, get_strategy,
+                   register_strategy,
                    strategy_names, strategy_spec)
 from .tier import TierTable, count_for
 
@@ -41,7 +42,7 @@ __all__ = [
     "pick_weighted", "pick_many", "pick_index", "roll_range", "weigh", "total_weight",
     # 池
     "LootTable", "SimpleCtx", "register_strategy", "strategy_names", "get_strategy",
-    "strategy_spec", "STRATEGIES",
+    "strategy_spec", "STRATEGIES", "UnknownStrategy",
     # 档位 / 挂载
     "TierTable", "count_for", "draw_slots",
     # 计数保底
