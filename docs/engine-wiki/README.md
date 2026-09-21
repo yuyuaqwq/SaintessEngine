@@ -14,7 +14,7 @@
 > 它是本框架的**参考实现 + 压力测试**，不是本框架的一部分。
 > 下方未显式标注「游戏仓」的路径，均指**框架仓**。
 
-- 引擎目录：`saintess_engine/`（**35** 个子包 + **6** 个顶层模块；共 **110** 个 `.py` / **24 310** 行）
+- 引擎目录：`saintess_engine/`（**35** 个子包 + **6** 个顶层模块；共 **110** 个 `.py` / **24 377** 行）
   —— 数字由 `tests/test_editor_wiki.py` 逐项对照磁盘锁定，改模块结构必同步（否则门禁红）
 - 路线图（待建形状 / 待搬骨架 / `log`·`tlog` 设计）：[reference/roadmap.md](reference/roadmap.md)
 - 已建成的形状（**可拔插**，不配 = 不存在）：[reference/log.md](reference/log.md)（日志门面）·
@@ -30,7 +30,8 @@
   [reference/battle-declarations.md](reference/battle-declarations.md)（触发器声明编译器：五种去重键 / 四种写策略 / 未知名只告警）·
   [reference/formula.md](reference/formula.md)（声明式公式表：`formula`/`aggregate`/`chain` 三类条目 / 4 种 `ref` 前缀 / V1–V12 fail-closed）·
   [reference/panel.md](reference/panel.md)（面板栈：键级 add/mul/set 合成 / `when`·`status`·`weight` / 逐层归因 `trace`·`shares`）·
-  [reference/gates.md](reference/gates.md)（数值预算门禁：预算内 / 同组极差 / 成长单调 / 属性 cap / 占比 / 合计，六个纯函数校验器）
+  [reference/gates.md](reference/gates.md)（数值预算门禁：预算内 / 同组极差 / 成长单调 / 属性 cap / 占比 / 合计，六个纯函数校验器）·
+  [reference/skill-dimensions.md](reference/skill-dimensions.md)（技能 7 维：`cd`/`cast`/`recover`/`range`/`mp+res_cost`/`power`/功能性扁平键；schema 住包）
 - 纯度门禁：`tests/test_engine_purity.py`（AST 静态断言：引擎零「引擎→内容」import 边）
 - 参考实现（**游戏仓 `dragonfall` 侧**）：《奥兰迪亚》内容侧（`game/data/battle_rules.py` + `game/services/`）
   —— 本 wiki **不**把它当规范，只当「可粘贴的真实声明样例」的来源
@@ -98,9 +99,9 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
 | **声明表驱动** | 效果行为查 `EFFECT_RULES`；名词→动词查 `EFFECT_ACTIONS` | `game/data/battle_rules.py`（游戏仓侧） |
 | **动词注册制** | 8 个引擎动词 + `register_action` 任意扩展（内容侧已扩到 70+） | `effects.py:96` |
 | **CTB 绝对时刻制** | `ct` = 下次可行动时刻；耗时多少由**内容侧装配**（引擎零公式） | `schedule.py:92` + `time_model_fn` |
-| **零默认值** | 未声明即无行为（`strict=False` 静默 / `strict=True` 抛错两档） | `config.py:84` |
+| **零默认值** | 未声明即无行为（`strict=False` 静默 / `strict=True` 抛错两档） | `config.py:88` |
 | **存档/续战** | sides-only JSON，`to_state` / `from_state`，旧档字段迁移 | `serialize.py:34/59` |
-| **注入式边界** | 引擎不 import 游戏；游戏把公式/面板/技能表 mount 进来 | `config.py:142` |
+| **注入式边界** | 引擎不 import 游戏；游戏把公式/面板/技能表 mount 进来 | `config.py:146` |
 
 ---
 

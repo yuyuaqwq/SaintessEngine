@@ -19,7 +19,8 @@ from __future__ import annotations
 
 from typing import Any, Callable, Optional
 
-__all__ = ["callable_of", "clock_now", "int_of", "number_of", "owner_key"]
+__all__ = ["callable_of", "clock_now", "int_of", "layer_of", "number_of", "owner_key",
+           "segment_of"]
 
 
 def int_of(value: Any, label: str, *, minimum: Optional[int] = None) -> int:
@@ -43,6 +44,68 @@ def callable_of(fn: Any, label: str) -> Callable:
     if not callable(fn):
         raise TypeError(f"{label} 必须可调用，收到 {type(fn).__name__}：{fn!r}")
     return fn
+
+
+def segment_of(value: Any, label: str):
+    """**一段耗时**的声明值校验（两段耗时形状统一 —— 内容侧习惯叫「前摇 / 后摇」，
+    本模块是引擎侧，一律说「第一段 / 第二段」）。
+
+    四种合法形态（其余一律抛，文案点名 `label` 与收到的类型）：
+
+    | 输入 | 返回 | 语义 |
+    |---|---|---|
+    | `None` | `None` | 本次不声明（调用方落回既有默认） |
+    | 非空 `str` | 原样 `str` | **行动类别名** —— 具体秒数由内容侧时间模型按类别给 |
+    | `int`/`float`（≥0，`bool` 不算） | `float` | **绝对秒**（绕过速度/施法急速模型） |
+    | `{"base": number ≥ 0}` | 原样 `dict` | **基准秒**（过内容侧时间模型 ⇒ 吃速度） |
+
+    ★ 为什么要区分「绝对秒」与「基准秒」：混用会让同一条数值在"吃不吃速度"上不确定，
+      而这两者的战斗结果不同（基准 0.5 在 spd=100 下 = 0.5 秒，spd=400 下 = 0.25 秒）。
+    ★ 本守卫**只校验形状**，校验不了"这个类别名合不合法"（类别集在内容侧时间模型里）
+      ⇒ 枚举收紧属于内容侧 schema 的职责（`<pkg>/schemas/skill.schema.json` 的 enum）。
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise TypeError(f"{label} 必须是 str / 数值 / {{'base': 数值}}，收到 bool：{value!r}")
+    if isinstance(value, str):
+        if not value.strip():
+            raise ValueError(f"{label} 作为类别名不得为空串")
+        return value
+    if isinstance(value, (int, float)):
+        if value < 0:
+            raise ValueError(f"{label} 不得为负，收到 {value!r}")
+        return float(value)
+    if isinstance(value, dict):
+        extra = set(value) - {"base"}
+        if extra:
+            raise ValueError(f"{label} 只允许键 'base'，多出：{sorted(extra)}")
+        if "base" not in value:
+            raise ValueError(f"{label} 必须含键 'base'")
+        b = value["base"]
+        if isinstance(b, bool) or not isinstance(b, (int, float)):
+            raise TypeError(f"{label}.base 必须是数值，收到 {type(b).__name__}：{b!r}")
+        if b < 0:
+            raise ValueError(f"{label}.base 不得为负，收到 {b!r}")
+        return {"base": float(b)}
+    raise TypeError(f"{label} 必须是 str / 数值 / {{'base': 数值}}，"
+                    f"收到 {type(value).__name__}：{value!r}")
+
+
+def layer_of(value: Any, label: str, *, default: Optional[int] = None) -> int:
+    """**射程层号**校验（整数 ≥ 1；`bool` 不算整数）。
+
+    `None` → 返回 `default`（`default` 也为 `None` 时抛）。
+
+    ★ 补掉现状的一个硬伤：调用点曾有 `int(info.get("reach") or 3)` ——
+      遇到 `"near"` 这类字符串会抛**裸 ValueError**，栈里看不出是哪个条目。
+      走本守卫则文案点名 `label`。
+    """
+    if value is None:
+        if default is None:
+            raise ValueError(f"{label} 缺失且未给默认值")
+        return default
+    return int_of(value, label, minimum=1)
 
 
 def clock_now(clock: Callable[[], Any], now: Optional[int]) -> int:
