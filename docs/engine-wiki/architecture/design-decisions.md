@@ -88,7 +88,7 @@
   （`stats.py:146`），而 `make_actor` 播种的是 0.0（`actors.py:100`）
 
 **痕迹**：
-- `config.py:83-87` 的 R8 说明：「静默降级」两档语义
+- `config.py:90-94` 的 R8 说明：「静默降级」两档语义
 - `formulas.py:95` 原文：「『零默认值』：无挂载 → 空 dict = 无成长配置」
 - 内容侧 `_merge_agg_entry` 的注释：「缺字段 = 无此行为（零默认值铁律）」
 
@@ -163,7 +163,7 @@ actor 的 `triggers = {事件名: [效果声明]}` 决定响应什么。
   `data.plugins.dragonfall.game.*` **两套模块树**（同一份文件的两个模块对象），
   每棵树各自 hold 自己的 `config` 实例 —— 这也是 `config` 需要
   `register_hook_provider` 惰性装配的原因（游戏仓 `game/bootstrap.py:196-201`、
-  引擎 `config.py:90-95`）。要做真正的多内容隔离，靠进程或模块树，不要靠全局单例
+  引擎 `config.py:97-102`）。要做真正的多内容隔离，靠进程或模块树，不要靠全局单例
 - 惰性装配器会在首次读 hook 时把整份内容拉进来（[../getting-started/installation.md](../getting-started/installation.md)）
 
 **痕迹**：`config.py:11-15` 原文（「本包历史上直接 import `game.engine` / `game.content` /

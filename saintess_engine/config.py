@@ -67,6 +67,13 @@ _HOOKS = {
     # ★ E1（2026-09-21）：声明式公式表供体（`saintess_engine.formula.FormulaTable`）。
     #   不配 = 不存在 ⇒ 既有 20 处 `_cfg.formulas()` 调用点全部走原路，行为逐字节不变。
     "formula_table_fn": None,
+    # ★ E1b（2026-09-21）：**语义槽位 → 声明 id** 的绑定表，形状 = fn(slot: str) -> str | None。
+    #   引擎按**中性槽位名**问（"damage" / "miss" / "crit_pct" / "act_time" / …），
+    #   包按自己的命名回答声明 id；答 None = 本槽位不声明 ⇒ 引擎走原路。
+    #   ★ 为什么需要它：声明被有意做成"原子"的（每条只吃自己的输入），
+    #     「level+敌防 → 伤害」要串 4 条；若让引擎自己串，引擎里就得出现内容 id（R2 明禁）。
+    #   不配 = 不存在 ⇒ 所有读口一字不动。
+    "formula_bindings_fn": None,
     # ★ E2（2026-09-21）：面板栈供体（`saintess_engine.panel.PanelStack`），形状 = fn(stack_id) -> dict | None。
     #   不配 = 不存在 ⇒ `battle/stats.py` 原路调 `panel_fn`，既有包行为逐字节不变。
     "panel_layers_fn": None,

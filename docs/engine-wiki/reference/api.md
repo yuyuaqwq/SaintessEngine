@@ -359,7 +359,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 已整体下沉到**内容侧**（游戏仓 `game/data/kinds.py`；奥兰迪亚内容包 `content/mech/kinds.py`
 是同内容同源的副本）。原实现里的中文枚举值（`PHYS = "物理"` … `TAUNT = "嘲讽"`）随之离开引擎。
 
-引擎主路径一律经 `config.kind_of(name)` 注入（`config.py:252`）读 kind 值 —— 第三方内容
+引擎主路径一律经 `config.kind_of(name)` 注入（`config.py:259`）读 kind 值 —— 第三方内容
 自带词表即可，不受任何语言限制。
 （历史上该模块是 S3「通用件归位」时从 `game/core/` 搬进引擎的；P4 实测引擎内部**零消费者**，
 故按「机制归引擎、词表归内容」的边界原则迁回内容侧 —— 见
@@ -411,7 +411,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 | `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
 | ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 本引擎不实现） |
-| `config.set_hook` | `config.py:140` | 零外部引用（都走 `mount`） |
+| `config.set_hook` | `config.py:147` | 零外部引用（都走 `mount`） |
 | `effects.resolve_actions` | `effects.py:136` | 零外部引用（引擎内部调用） |
 | `ai.eval_when` | `ai.py:152` | 零外部引用（`resolve_ai_move` 内部调） |
 | ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |

@@ -1,0 +1,21 @@
+feat(E1b/P1): 语义槽位→声明 id 绑定读口（不接线，零消费方）
+
+★ E1b 的实测卡点（见 aetheran-designer/12_迁移引擎评估/04_E1b接线卡点与提案.md）：
+  艾瑟兰包的声明被有意做成"原子"的 —— F1_k_def(level) / F1_eff_def(def,…) /
+  F1_damage_reduction(eff_def,k_def) / F2_damage(base,…,dr,…) 四条各自只吃自己的输入，
+  含 level 的 chain 一条都没有（26 条实测）。从「level+敌防」到「伤害」要串 4 条。
+  ⇒ 若让 calc_damage 自己串，引擎里就得出现 F* id —— R2「引擎零游戏词汇」明禁。
+  ⇒ 缺的不是实现，是**一层设计**：「引擎的某个语义槽位，对应哪条（或哪串）声明」。
+
+本批（P1，零消费方）：
+  config._HOOKS += formula_bindings_fn（共 21 个）
+    形状 fn(slot: str) -> 声明 id | None；不配 = 不存在
+  formula/__init__.py 加 SLOTS（9 个引擎槽位名，中性）+ binding_of(slot, *, table=None)
+  + bindings(*, table=None)（一次问全，体检/打印用）
+
+★ binding_of 的纪律：槽位名不在 SLOTS 里 ⇒ **抛 FormulaDeclError**，不静默返回 None
+  —— 否则"绑了但没生效"会变成查不出的哑弹。
+★ 绑到的 id 若不在表里（给了 table 时）⇒ 装配期抛错点名。
+
+实测：未装配 ⇒ None；拼错槽位名 ⇒ 点名抛；装配后 ⇒ 取到 id；撤装配 ⇒ 回 None。
+门禁：82/82 · purity + no_game_vocabulary 双绿 · README → 24 730 行

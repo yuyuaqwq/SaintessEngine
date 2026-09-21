@@ -545,3 +545,64 @@ def _check_var_domain(eid: str, e: dict) -> None:
         for st in e["_steps"]:
             if "expr" in st:
                 scan(f"steps.{st['id']}.expr", st["_compiled"]["expr"], extra=step_ids)
+
+# ============================================================
+# E1b：语义槽位 → 声明 id 的绑定（读口）
+# ============================================================
+
+#: 引擎**拥有**的槽位名全集。★ 名字中性（引擎不认识任何内容 id）；
+#: 包只回答它认识的槽位，答 `None` = 本槽位不声明 ⇒ 对应读口走原路。
+#: 加槽位 = 加引擎能力，所以这张表放在引擎侧并在 wiki 列全。
+SLOTS = (
+    "damage",        # 一次命中的伤害
+    "miss",          # 未命中率
+    "crit_pct",      # 暴击率
+    "crit_mult",     # 暴击倍率
+    "act_time",      # 一次行动耗时（时间模型）
+    "cd",            # 冷却
+    "heal",          # 治疗量
+    "threat",        # 仇恨
+    "drop_rate",     # 掉落率
+)
+
+
+def binding_of(slot, *, table=None):
+    """按**中性槽位名**问绑定表 ⇒ 声明 id（`str`）| `None`。
+
+    **不配 = 不存在**（R1）：
+      - `formula_bindings_fn` 未装配 ⇒ 返回 `None`
+      - 槽位名不在 `SLOTS` 里 ⇒ 抛 `FormulaDeclError`（**拼错槽位名必须现形**，
+        不许静默返回 None —— 否则"绑了但没生效"会变成一个查不出的哑弹）
+      - 装配了但答 `None` ⇒ 返回 `None`（= 本槽位有意不声明）
+
+    :param table: 可选，已装配的 `FormulaTable`。给了就不再自己取 hook
+        （热路径上避免一次 hook 查询 + 一次装配）
+    """
+    if slot not in SLOTS:
+        raise FormulaDeclError(
+            f"槽位名 {slot!r} 不在引擎槽位全集里：{list(SLOTS)}。"
+            "★ 拼错槽位名必须现形 —— 静默返回 None 会让『绑了但没生效』变成查不出的哑弹。")
+    from .. import config
+    f = config.get_hook("formula_bindings_fn")
+    if f is None:
+        return None
+    did = f(slot)
+    if did is None:
+        return None
+    if not isinstance(did, str) or not did.strip():
+        raise FormulaDeclError(
+            f"槽位 {slot!r} 的绑定必须是声明 id（非空字符串）或 None，收到 {did!r}")
+    if table is not None and did not in table.ids():
+        raise FormulaDeclError(
+            f"槽位 {slot!r} 绑到了声明 {did!r}，但公式表里没有这条（现有 {len(table.ids())} 条）")
+    return did
+
+
+def bindings(*, table=None):
+    """一次问全 `SLOTS` ⇒ `{槽位: 声明 id}`（只含**真正绑了**的槽位）。体检/打印用。"""
+    out = {}
+    for slot in SLOTS:
+        did = binding_of(slot, table=table)
+        if did is not None:
+            out[slot] = did
+    return out
