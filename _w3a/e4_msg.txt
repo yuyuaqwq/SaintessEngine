@@ -1,0 +1,31 @@
+feat(E4): 解锁闸门 Unlocks —— 三档 fail-closed（形状，零 hook、零词汇）
+
+新增 saintess_engine/unlock/__init__.py（~330 行）：
+  Unlocks(entries, *, conditions, condition_key_of=None, text_of=None)
+    .is_unlocked(target, ctx) -> bool
+    .gate(target, ctx)        -> None（放行）| Locked（未解锁）
+    .entry_of(target)         -> 条目 id | None
+    .render(locked)           -> {label, locked, progress}
+    .audit()                  -> [问题文案]（只报不改）
+  Locked（__slots__ 结构，带 label_key/locked_text/progress_text 三个**文案表 key** 槽位）
+  UnlockDeclError(ValueError)
+
+★ 为什么需要它：引擎已有 run/quest/presence，但没有一个的语义是
+  「这个东西对玩家开放了没有」。旧做法是判据散在各命令分支 + 不成立时静默 return。
+
+★ 三档行为（逐档可测）：
+  ① 目标未被任何条目覆盖 ⇒ **放行**（R1「不配 = 不存在」；不许把"没声明"当"没解锁"）
+  ② 条件未注册 / 声明形状不合法 ⇒ **装配期抛** UnknownCondition / SpecError
+     （不许把「没实现」伪装成「未满足」—— 这是本设计的关键切分）
+  ③ 条件判不成立 ⇒ gate() 返回 Locked（**结构**，不是渲染好的字符串）
+
+零词汇口径：引擎不出现「阶段/地图/指令/系统」字面量；targets 的 (kind, id) 中
+kind 取值集由包声明（unlock_kinds 域），引擎只做等值匹配 —— 裸 id 会逼引擎猜，引擎不许猜。
+条件真源一律是 conditions.Conditions（复用 declarative.compile_spec），不新造判据语言。
+
+验证（_w3a/e4_smoke.py，exit=0 全绿）：
+  三档逐档 + Locked 槽位 + 取条顺序（order 说话，声明序反排也一样）+ render
+  （未装 text_of 原样透 key、装了换行文）+ 12 种结构错逐条点名 + audit 三类
+
+门禁：82/82 · purity + no_game_vocabulary 双绿 · wiki_refs + editor_wiki 绿
+README 计数 → 36 子包 / 111 .py / 24 662 行；新增 reference/unlock.md

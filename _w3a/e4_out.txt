@@ -1,0 +1,57 @@
+  装配 3 条；覆盖目标 3 个
+
+【1】★ 档① —— 目标**未被任何条目覆盖** ⇒ 放行（R1「不配 = 不存在」）
+  ✅ gate 未知目标 ⇒ None                               = None                   预期 None
+  ✅ is_unlocked 未知目标 ⇒ True                        = True                   预期 True
+  ✅ entry_of 未知目标 ⇒ None                           = None                   预期 None
+       ★ 不许把「没声明」当「没解锁」—— 未声明的 target 一律开放
+
+【2】★ 档② —— 条件未注册 / 声明不合法 ⇒ **装配期抛**（不许伪装成未满足）
+  ✅ 未注册条件 ⇒ UnknownCondition：未注册的条件："解锁条目 'UN_x' 引用了未注册的条件 'nope'；已注册 = ['flag_open', 'lv5plus'
+  ✅ 非法声明节点 ⇒ SpecError：解锁条目 'UN_y' 的 condition 声明不合法：算子不认识：'bogus'（可用：['and', 'contai
+
+【3】★ 档③ —— 条件判不成立 ⇒ `Locked`（**结构**，不是渲染好的字符串）
+  ✅ lv=3 ⇒ gate 返回 Locked                          = True                   预期 True
+  ✅   Locked.target 是规整二元组                         = ('map', 'map_b')       预期 ('map', 'map_b')
+  ✅   Locked.entry_id 点名到条目                        = 'UN_lock_map_b'        预期 'UN_lock_map_b'
+  ✅   label_key 槽位                                 = 'ui.mapb.name'         预期 'ui.mapb.name'
+  ✅   locked_text 槽位                               = 'ui.mapb.locked'       预期 'ui.mapb.locked'
+  ✅   progress_text 未声明 ⇒ None                     = None                   预期 None
+  ✅ lv=9 ⇒ gate 放行                                 = None                   预期 None
+       repr = Locked(('map', 'map_b') ← 'UN_lock_map_b', label='ui.mapb.name', text='ui.mapb.locked')
+
+【4】同目标多条覆盖 ⇒ 取 order 最小者（不猜，顺序由数据给）
+  ✅ entry_of(craft) 取 order=5 那条                   = 'UN_lock_craft_early'  预期 'UN_lock_craft_early'
+  ✅ 声明顺序反着来也一样（order 说话）                           = 'UN_lock_craft_early'  预期 'UN_lock_craft_early'
+
+【5】render —— 引擎**不生成行文**；装 text_of 才换自然语言
+  ✅ 未装 text_of ⇒ 原样透 key                           = {'label': 'ui.mapb.name', 'locked': 'ui.mapb.locked', 'progress': None} 预期 {'label': 'ui.mapb.name', 'locked': 'ui.mapb.locked', 'progress': None}
+  ✅ 装了 text_of ⇒ 换成行文                              = {'label': '边境哨站', 'locked': '路还没通到这里', 'progress': None} 预期 {'label': '边境哨站', 'locked': '路还没通到这里', 'progress': None}
+  ✅   craft 未解锁（early 条 flag_open=False）           = 'UN_lock_craft_early'  预期 'UN_lock_craft_early'
+  ✅   其 progress_text 未声明 ⇒ None                   = None                   预期 None
+
+【6】装配期 fail-closed：结构错一律抛（逐条）
+  ✅ target 是裸字符串             ⇒ 点名: 解锁条目 'UN_z' 的 targets 每项必须是 {kind, id} 映射，收到 'craft'
+  ✅ targets 空数组              ⇒ 点名: 解锁条目 'UN_z' 的 targets 必须是非空数组（≥1），收到 []
+  ✅ targets 缺 id             ⇒ 点名: 解锁条目 'UN_z' 的 target.id 必须是非空字符串，收到 None
+  ✅ target 多带键               ⇒ 点名: 解锁条目 'UN_z' 的 target 只允许键 kind/id，多出：['z']
+  ✅ kind 空串                  ⇒ 点名: 解锁条目 'UN_z' 的 target.kind 必须是非空字符串，收到 ''
+  ✅ label_key 缺失             ⇒ 点名: 解锁条目 'UN_z' 的 'label_key' 必须是非空字符串（文案表 key），收到 None
+  ✅ locked_text 空串           ⇒ 点名: 解锁条目 'UN_z' 的 'locked_text' 必须是非空字符串（文案表 key），收到 ''
+  ✅ progress_text 空串         ⇒ 点名: 解锁条目 'UN_z' 的 'progress_text' 若给就必须是非空字符串，收到 ''
+  ✅ 条件两个都写                   ⇒ 点名: 解锁条目 'UN_z' 同时写了 condition_key 与 condition（声明自相矛盾）
+  ✅ 条件一个都不写                  ⇒ 点名: 解锁条目 'UN_z' 必须给 condition_key 或 condition 之一
+  ✅ order 非整数                ⇒ 点名: 解锁条目 'UN_z' 的 order 必须是整数，收到 '10'
+  ✅ targets 内部重复             ⇒ 点名: 解锁条目 'UN_z' 的 targets 重复：('s', 'x')
+  ✅ entries 不是映射             ⇒ 点名: entries 必须是映射，收到 str
+  ✅ conditions 不是 Conditions ⇒ 点名: conditions 必须是 conditions.Conditions 实例，收到 NoneType
+
+【7】audit 三类问题（只报不改）
+       · 目标 ('s', 'same') 被 2 条覆盖但 order 重复 [0] ⇒ 取条顺序只靠声明序（脆）：['A_dup_order', 'B_dup_order']
+       · 解锁条目 'C_same_text' 的文案 key 有重复 ⇒ 多半是复制粘贴没改：['same.k', 'same.k']
+  ✅ 报出 order 重复（取条顺序脆）                             = True                   预期 True
+  ✅ 报出文案 key 重复                                    = True                   预期 True
+  ✅ 干净的表 audit 为空                                  = True                   预期 True
+
+======================================================================
+E4 ✅ 全绿（三档行为 + 取条顺序 + render + 12 种结构错 + audit 三类）

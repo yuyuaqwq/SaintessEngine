@@ -14,7 +14,7 @@
 > 它是本框架的**参考实现 + 压力测试**，不是本框架的一部分。
 > 下方未显式标注「游戏仓」的路径，均指**框架仓**。
 
-- 引擎目录：`saintess_engine/`（**35** 个子包 + **6** 个顶层模块；共 **110** 个 `.py` / **24 377** 行）
+- 引擎目录：`saintess_engine/`（**36** 个子包 + **6** 个顶层模块；共 **111** 个 `.py` / **24 662** 行）
   —— 数字由 `tests/test_editor_wiki.py` 逐项对照磁盘锁定，改模块结构必同步（否则门禁红）
 - 路线图（待建形状 / 待搬骨架 / `log`·`tlog` 设计）：[reference/roadmap.md](reference/roadmap.md)
 - 已建成的形状（**可拔插**，不配 = 不存在）：[reference/log.md](reference/log.md)（日志门面）·
@@ -31,7 +31,8 @@
   [reference/formula.md](reference/formula.md)（声明式公式表：`formula`/`aggregate`/`chain` 三类条目 / 4 种 `ref` 前缀 / V1–V12 fail-closed）·
   [reference/panel.md](reference/panel.md)（面板栈：键级 add/mul/set 合成 / `when`·`status`·`weight` / 逐层归因 `trace`·`shares`）·
   [reference/gates.md](reference/gates.md)（数值预算门禁：预算内 / 同组极差 / 成长单调 / 属性 cap / 占比 / 合计，六个纯函数校验器）·
-  [reference/skill-dimensions.md](reference/skill-dimensions.md)（技能 7 维：`cd`/`cast`/`recover`/`range`/`mp+res_cost`/`power`/功能性扁平键；schema 住包）
+  [reference/skill-dimensions.md](reference/skill-dimensions.md)（技能 7 维：`cd`/`cast`/`recover`/`range`/`mp+res_cost`/`power`/功能性扁平键；schema 住包）·
+  [reference/unlock.md](reference/unlock.md)（解锁闸门：`(kind,id)` 二元组目标 / 三档 fail-closed / 取条顺序 / `audit` 只报不改）
 - 纯度门禁：`tests/test_engine_purity.py`（AST 静态断言：引擎零「引擎→内容」import 边）
 - 参考实现（**游戏仓 `dragonfall` 侧**）：《奥兰迪亚》内容侧（`game/data/battle_rules.py` + `game/services/`）
   —— 本 wiki **不**把它当规范，只当「可粘贴的真实声明样例」的来源
