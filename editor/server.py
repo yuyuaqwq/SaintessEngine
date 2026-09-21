@@ -228,6 +228,8 @@ def _domain_status(pkg_dir: str, dom: str, domains: dict | None = None) -> dict:
     if not isinstance(table, dict):
         table = {}
     for k, v in table.items():
+        if str(k).startswith("_"):
+            continue            # 文件级元信息键 / 私有键（`_meta` / `_maint_gate`）不是条目 —— 与 PK.domain_status 同口径
         if not isinstance(v, dict):
             continue
         st["count"] += 1

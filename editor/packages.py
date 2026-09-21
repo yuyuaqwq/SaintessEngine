@@ -628,6 +628,8 @@ def list_entries(pkg_dir: str, dom: str, domains: dict | None = None) -> dict:
         table = {}
     rows = []
     for k, v in table.items():
+        if str(k).startswith("_"):
+            continue            # 文件级元信息键（`_meta` / `_categories`）不是条目 —— 与装载器同口径
         if not isinstance(v, dict):
             continue
         rows.append({
@@ -693,6 +695,8 @@ def domain_status(pkg_dir: str, dom: str, domains: dict | None = None) -> dict:
         refs = []
     table = read_json(domain_path(pkg_dir, dom, domains), {})
     for k, v in (table or {}).items():
+        if str(k).startswith("_"):
+            continue            # 文件级元信息键（`_meta` / `_categories`）不是条目 —— 与 list_entries 同口径
         if not isinstance(v, dict):
             continue
         errs = V.validate_entry(dom, v, pkg_dir)

@@ -298,6 +298,8 @@ def _target_values(pkg_dir, domain: str, by: str) -> list:
         return []
     out = []
     for k, v in table.items():
+        if str(k).startswith("_"):
+            continue            # 私有 / 文件级元信息键不是条目（`_meta` / `_maint_gate`）—— 与 PK.domain_status 同口径
         if by == "name":
             if isinstance(v, dict) and isinstance(v.get("name"), str) and v["name"]:
                 out.append(v["name"])
