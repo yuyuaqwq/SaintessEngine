@@ -67,6 +67,9 @@ _HOOKS = {
     # ★ E1（2026-09-21）：声明式公式表供体（`saintess_engine.formula.FormulaTable`）。
     #   不配 = 不存在 ⇒ 既有 20 处 `_cfg.formulas()` 调用点全部走原路，行为逐字节不变。
     "formula_table_fn": None,
+    # ★ E2（2026-09-21）：面板栈供体（`saintess_engine.panel.PanelStack`），形状 = fn(stack_id) -> dict | None。
+    #   不配 = 不存在 ⇒ `battle/stats.py` 原路调 `panel_fn`，既有包行为逐字节不变。
+    "panel_layers_fn": None,
     # 行动类别 → 基准耗时 fn(action) -> float（内容侧基准表；未声明类别引擎回落 DEFAULT_ACTION）
     "action_base_fn": None,
     # ---- 第二段（收招）注入面：与上面两条同形，只多一段耗时槽 ----

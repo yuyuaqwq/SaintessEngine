@@ -1,0 +1,39 @@
+【1】装配成功
+
+【2】求值（无形态 flag）
+  ✅ hp = 100 + 900 + 500 + 500（int_keys ⇒ int）           = 2000               预期 2000
+  ✅ atk = 12 + 88 + 200（未触 set 层）                        = 300                预期 300
+  ✅ def = (60 + 940) × 1.10 = 1100 ⇒ 再加 9999 后被 cap 到 2500 = 2500               预期 2500
+  ✅ spd = 100（没层碰它）                                      = 100.0              预期 100.0
+  ✅ ★ mul 的键不在基础里 ⇒ 结果 0（不改成 ×1）                         = 0.0                预期 0
+  ✅ ★ inactive 层被跳过（否则 atk 会 +77777）                     = True               预期 True
+
+【3】set 层 + when 判据 + weight 竞争
+  ✅ when={'form':'wolf'} 命中 ⇒ atk 被 set 成 5000           = 5000               预期 5000
+  ✅ when={'form':'eagle'} 命中 ⇒ atk 被 set 成 3000          = 3000               预期 3000
+  ✅ when 写了但不认识 ⇒ 不命中（fail-closed）                       = 300                预期 300
+  ✅ 多 flag 时按命中的那条走                                      = 5000               预期 5000
+  ✅ ★ 同键多个 set 同时命中 ⇒ weight 大者胜                         = 222                预期 222
+
+【4】ref 取数 + 取不到即报错
+  ✅ ref 接通（ctx['refs']['eq']['atk'] = 250）               = 350.0              预期 350
+  ✅ ref 取不到 ⇒ 报错点名: 层 'eq' 的 ref='$eq.atk' 取不到（ctx['refs'] 顶层域：[]…）
+
+【5】归因打印：trace + shares
+     lv         等级成长       add  in=12       out=100      Δ=88
+     gear_atk   武器         add  in=100      out=300      Δ=200
+     shares('atk') = {}   ← 只算 add 层（占比的语义是'贡献了多少点'）
+  ✅ shares 合计 = 1.0（或空）
+
+【6】有牙：非法声明必须装配期报错（抽查 8 条）
+  ✅ version 缺/非法 —— 点名: 栈的 version 必须是 ≥1 的整数，收到 None
+  ✅ base.mode 非法 —— 点名: base.mode='x' 非法（允许 ('actor', 'value')）
+  ✅ actor 模式未列 keys —— 点名: base.mode=actor 时必须显式列出 base.keys（零默认值：引擎不猜键集）
+  ✅ 层 mode 非法 —— 点名: 层 'L' 的 mode='pow' 非法（允许 ('add', 'mul', 'set')）
+  ✅ 层 id 重复 —— 点名: 层 id 'L' 重复
+  ✅ 层 src 空白 —— 点名: 层 'L' 的 src 不得为空
+  ✅ values 与 ref 同现 —— 点名: 层 'L' 必须**恰好**有 values 或 ref 之一
+  ✅ order 重号 —— 点名: 层序 order=0 重号
+
+====================================================================
+E2-P1 ✅ 全绿（求值 + 三条定死语义 + when/weight/status + ref + 归因打印 + 8 条校验有牙）

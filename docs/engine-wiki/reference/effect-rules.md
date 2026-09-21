@@ -4,7 +4,7 @@
 引擎通过 `config.set_config("effect_rules", ...)` / `load_game_rules(module)` 读它，
 读点在 `state_effects.state_def`（`state_effects.py:13`）。
 
-**无条目 = 空 dict = 纯数值无规则**（`config.state_def`，`config.py:120-126`）——
+**无条目 = 空 dict = 纯数值无规则**（`config.state_def`，`config.py:123-129`）——
 这是合法状态，不是错误。
 
 字段清单来自游戏仓参考实现（`game/data/battle_rules.py`，78 个 key）的**实际使用并集**，
