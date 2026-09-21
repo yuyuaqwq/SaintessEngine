@@ -43,7 +43,7 @@
 然后叠加 `effects` 里的面板修正。**伤害/速度/暴击都读聚合面板，不读裸字段**
 （例：`schedule._after_act` 用 `stats.actor_spd`，`schedule.py:359`）。
 
-> 唯一的数值兜底：`stats._monster_base_stats` 里 `crit` 缺省取 **0.05**（`stats.py:121`），
+> 唯一的数值兜底：`stats._monster_base_stats` 里 `crit` 缺省取 **0.05**（`stats.py:146`），
 > 而 `make_actor` 播种的是 0.0（`actors.py:100`）。这两处不一致，见
 > [_selfcheck.md](../_selfcheck.md)。
 

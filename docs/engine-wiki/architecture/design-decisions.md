@@ -85,7 +85,7 @@
 - 报错少、调试难：症状是「没反应」而不是「抛异常」
 - 必须自己写测试（[../guides/testing.md](../guides/testing.md)）
 - 唯一的例外要记住：`stats._monster_base_stats` 的 `crit` 兜底 **0.05**
-  （`stats.py:121`），而 `make_actor` 播种的是 0.0（`actors.py:100`）
+  （`stats.py:146`），而 `make_actor` 播种的是 0.0（`actors.py:100`）
 
 **痕迹**：
 - `config.py:79-83` 的 R8 说明：「静默降级」两档语义

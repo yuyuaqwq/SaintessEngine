@@ -165,7 +165,7 @@
 | B5 | `effects.act_apply` 里 `if holder.get("is_boss") or holder.get("role") == "boss"` | `effects.py:373` | 同上（控制时长减半） |
 | B6 | `effects._mech_to_effect` 的 `_is_stack_resource` 判据关键词含 `debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct` | `effects.py:278-282` | 这些字段**没有消费者**（`debuff_scale` 已于 2026-09-11 接线），但它们的**存在与否改变分派结果** —— 声明了 `debuff_scale` 会意外让 mech 走叠层路径 |
 | B7 | `battle.py` 里 `"player"` 阵营名硬编码 | `battle.py:646`（`_check_side_end`）、`:170`（`focus`） | 你的游戏若不叫 `player` 就得改引擎或用 `hostile_map` 绕过 |
-| B8 | `B6` 的反面：`stats._monster_base_stats` 的 `crit` 兜底 0.05 与 `make_actor` 播种 0.0 不一致 | `stats.py:121` vs `actors.py:100` | 同一种 actor 在不同路径下暴击率不同 |
+| B8 | `B6` 的反面：`stats._monster_base_stats` 的 `crit` 兜底 0.05 与 `make_actor` 播种 0.0 不一致 | `stats.py:146` vs `actors.py:100` | 同一种 actor 在不同路径下暴击率不同 |
 
 **结论**：引擎的 import 边界是干净的（机器可验），但**语义边界还没完全干净**：
 B1/B2/B6/B7 属于拆仓时一并带进框架仓的残留，需要在「彻底零游戏知识」之前处理，

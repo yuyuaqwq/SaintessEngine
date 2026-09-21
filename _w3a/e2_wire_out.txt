@@ -1,0 +1,23 @@
+【态 A】不装 `panel_layers_fn` ⇒ 走原路 panel_fn（零回归路径）
+  ✅ get_hook('panel_layers_fn') is None                = None                   预期 None
+  ✅ 面板来自旧口（hp = 1000 + 10×10）                          = 1100                   预期 1100
+  ✅ 面板来自旧口（atk = 50 + 10）                              = 60                     预期 60
+  ✅ 面板带旧口的来源标签                                         = '旧口:WARDEN'            预期 '旧口:WARDEN'
+
+【态 B】装 `panel_layers_fn` ⇒ 走新形状 PanelStack（同一段代码）
+  ✅ 面板来自栈（hp = 100 + 900）                              = 1000                   预期 1000
+  ✅ 面板来自栈（atk = (12+88+200)）                           = 300                    预期 300
+  ✅ 旧口被**完全**绕过（没有 'src' 键）                            = False                  预期 False
+  ✅ 返回值是普通 dict（兼容下游 st.get 读法）                        = 'dict'                 预期 'dict'
+
+【态 B′】base.mode=actor ⇒ 从 actor 裸字段取基础值
+  ✅ 基础值从 actor 取（hp=777）                               = 777                    预期 777
+  ✅ 基础值从 actor 取 + 层作用（atk=33+500）                     = 533                    预期 533
+
+【fail-closed】装了新口但 actor 不配合 ⇒ 必须点名报错
+  ✅ 缺 panel_stack ⇒ 装配了 panel_layers_fn，但 actor 未声明 panel_stack（要点名原因，不猜栈）
+  ✅ 栈不存在   ⇒ panel_layers 无此栈：'nope'
+  ✅ actor 缺声明键 ⇒ base.mode=actor：调用方未提供声明的键 ['hp', 'atk']（声明的 keys = ['hp', 'atk']）
+
+==================================================================
+E2-P2 ✅ 全绿（两态切换正确 + mode=actor/value 都对 + 3 条 fail-closed 点名）

@@ -94,6 +94,31 @@ def _player_base_stats(battle, actor: dict) -> dict:
     """
     _tb = ((actor.get("bonus") or {}).get("panel")
            or getattr(battle, "title_bonus", None) or {})
+
+    # ★ E2（2026-09-21）：面板栈**前置分支**。
+    #   不装配 `panel_layers_fn` ⇒ `_fn2 is None` ⇒ 直接落到下面原路（**一字不动**）。
+    #   装了才进新形状：actor 自报 `panel_stack`（内容侧写入的栈 id，引擎当不透明字符串）。
+    _fn2 = _cfg.get_hook("panel_layers_fn")
+    if _fn2 is not None:
+        from ..panel import PanelDeclError, PanelStack
+        _sid = actor.get("panel_stack")
+        if not _sid:
+            raise PanelDeclError(
+                "装配了 panel_layers_fn，但 actor 未声明 panel_stack（要点名原因，不猜栈）")
+        _decl = _fn2(_sid)
+        if _decl is None:
+            raise PanelDeclError(f"panel_layers 无此栈：{_sid!r}")
+        _st = PanelStack.from_decl(_decl)
+        _bk = _st._decl["base"]
+        # ★ 不补 0：`actor` 缺声明键时必须让 `PanelStack.resolve` 抛错点名，
+        #   而不是把"没这个字段"静默当 0（项目明禁静默兜底：零默认值口径）。
+        _base = ({} if _bk["mode"] == "value"
+                 else {k: actor[k] for k in _bk["keys"] if k in actor})
+        _ctx = {"refs": (actor.get("panel_refs") or {}),
+                "flags": (actor.get("panel_flags") or {}),
+                "actor": actor, "battle": battle}
+        return dict(_st.resolve(_base, _ctx))
+
     fn = _cfg.get_hook("panel_fn")
     if fn is None:
         return _cfg.unconfigured("panel_fn", {})
