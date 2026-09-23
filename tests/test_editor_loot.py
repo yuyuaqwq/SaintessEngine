@@ -3,7 +3,7 @@
 
 守两条：
   ① **算法只有一份**：预览里的权重占比、展开候选、结构审计，必须来自引擎
-     `saintess_engine.loot.LootTable`（`editor/loot_view.py` 只是适配），不是编辑器或前端另写的一套。
+     `ext_loot.loot.LootTable`（`editor/loot_view.py` 只是适配），不是编辑器或前端另写的一套。
   ② **不装懂**：`resolver=None` —— 预览不假装知道某个引用是什么物品；需要解析的地方只能给 warning。
 
 跑法：python tests/test_editor_loot.py
@@ -27,7 +27,7 @@ from editor import loot_view as LV          # noqa: E402
 from editor import packages as PK           # noqa: E402
 from editor import server as SRV            # noqa: E402
 from editor import validate as VD           # noqa: E402
-from saintess_engine.loot import LootTable  # noqa: E402
+from ext_loot.loot import LootTable  # noqa: E402
 
 PASS = 0
 FAIL = 0

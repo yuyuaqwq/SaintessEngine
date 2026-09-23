@@ -4,7 +4,7 @@
 为什么值得为它破一条纪律
 ------------------------
 `editor/packages.py` 写着「编辑器主进程零引擎副作用，不 import `saintess_engine`」——
-那条纪律针对的是**会挂 hook / 改全局状态**的战斗域。`saintess_engine.space` 是**纯计算模块**
+那条纪律针对的是**会挂 hook / 改全局状态**的战斗域。`ext_world.space` 是**纯计算模块**
 （零挂载、零全局副作用，与 `version` 同性质），import 它不产生任何引擎副作用。
 
 换来的东西是硬的：邻接 / 深度 / 出入口 / 审计**只有一份实现** ——
@@ -32,7 +32,7 @@ def _nodes(entry: dict) -> list:
 
 def build(entry: dict) -> dict:
     """把一条 map 数据算成视图：`{ok, view?, warnings, error?}`（view 纯 JSON）。"""
-    from saintess_engine.space import MESH, Space
+    from ext_world.space import MESH, Space
 
     if not isinstance(entry, dict):
         return {"ok": False, "error": "数据不是对象", "warnings": []}

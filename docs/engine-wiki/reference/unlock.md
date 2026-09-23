@@ -1,6 +1,6 @@
 # `unlock` · 解锁闸门
 
-> **归属**：`saintess_engine/unlock/__init__.py`（E4，2026-09-21）· **形状，零 hook**
+> **归属**：`extends/ext_life/unlock/__init__.py`（E4，2026-09-21）· **形状，零 hook**
 > **为什么建**：引擎已有 `run` / `quest` / `presence`，但**都不是解锁闸门** ——
 > `run` 管一次战斗流程、`quest` 管任务状态机、`presence` 管在场集合，
 > 没有任何一个的语义是「**这个东西对玩家开放了没有**」。
@@ -19,7 +19,7 @@
 ## 对外形状
 
 ```python
-from saintess_engine.unlock import Unlocks, Locked
+from ext_life.unlock import Unlocks, Locked
 
 u = Unlocks(entries,                       # {条目 id: 条目 dict}（包数据）
             conditions=conds,              # conditions.Conditions 实例（条件真源）

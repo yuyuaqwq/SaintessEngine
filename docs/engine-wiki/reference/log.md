@@ -33,7 +33,7 @@
 （已建好的 logger 对象名字不会变）。
 
 ```python
-get_logger("battle.turn")     # → saintess_engine.battle.turn
+get_logger("battle.turn")     # → ext_combat.battle.turn
 logger_name("battle.turn")    # → 同名（不开 logger，诊断/测试用）
 ```
 

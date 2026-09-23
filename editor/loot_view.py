@@ -4,7 +4,7 @@
 为什么值得为它破一条纪律
 ------------------------
 `editor/packages.py` 写着「编辑器主进程零引擎副作用，不 import `saintess_engine`」——
-那条纪律针对的是**会挂 hook / 改全局状态**的战斗域。`saintess_engine.loot` 是**纯计算模块**
+那条纪律针对的是**会挂 hook / 改全局状态**的战斗域。`ext_loot.loot` 是**纯计算模块**
 （池 + 策略注册表 + 展开 + 审计；零挂载、零全局副作用，与 `space` / `version` 同性质），
 import 它不产生任何引擎副作用。
 
@@ -69,7 +69,7 @@ expanded_unique, audit: {ok, issues}, warnings}`；坏数据 / 池不存在 → 
 from __future__ import annotations
 
 # 纯计算模块：不挂 hook、不改全局（同 space / version 的性质）
-from saintess_engine.loot import STRATEGIES, LootTable, UnknownStrategy, weigh
+from ext_loot.loot import STRATEGIES, LootTable, UnknownStrategy, weigh
 
 _ANCHOR = "__pool__"          # key 缺省时的锚点（只用于表内查找，不对外露出）
 

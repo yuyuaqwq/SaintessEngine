@@ -137,7 +137,40 @@ def discover_extensions(paths) -> dict:
     return found
 
 
-def plan_stack(game_dir: str, *, exts=()) -> list:
+def default_ext_dirs(game_dir: str = "") -> list:
+    """扩展包搜索路径的**约定默认**（调用方没显式给 `exts` 时用它）。
+
+    按优先级：
+
+      ① 环境变量 `SAINTESS_EXTENDS` —— `os.pathsep` 分隔，部署与测试可覆盖
+      ② 数据包同级的 `../extends` —— 游戏仓把扩展包放这儿时最省事
+      ③ 引擎仓根下的 `extends/` —— 引擎自带的扩展包（ext_combat / ext_quest / …）
+
+    只返回**存在**的目录；顺序即发现优先级。显式传 `exts=[...]` 时本函数不参与，
+    传 `exts=[]` 即「不搜任何扩展包」（门禁要的严格模式）。
+    """
+    out = []
+    env = os.environ.get("SAINTESS_EXTENDS", "").strip()
+    if env:
+        out += [x for x in env.split(os.pathsep) if x.strip()]
+    if game_dir:
+        out.append(os.path.join(os.path.dirname(os.path.abspath(game_dir)), "extends"))
+    out.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "extends"))
+    seen, keep = set(), []
+    for d in out:
+        d = os.path.abspath(d)
+        if d in seen or not os.path.isdir(d):
+            continue
+        seen.add(d); keep.append(d)
+    return keep
+
+
+def _exts_or_default(exts, game_dir):
+    """`exts=None` → 约定默认；`exts=[]` → 显式空（不搜）；否则原样。"""
+    return default_ext_dirs(game_dir) if exts is None else list(exts)
+
+
+def plan_stack(game_dir: str, *, exts=None) -> list:
     """依赖解析 + 拓扑排序 → 加载计划（被依赖者在前，数据包在最后）。
 
     * `exts`：扩展包搜索路径（目录）序列；不在计划里的扩展包不会被加载。
@@ -151,6 +184,8 @@ def plan_stack(game_dir: str, *, exts=()) -> list:
                            % (game["kind"], game_dir))
     if not game["manifest"].get("entry"):
         raise PackageError("数据包 %s 没声明 entry（纯数据导出包不能当栈的底）" % game["id"])
+    exts = _exts_or_default(exts, game_dir)
+
     pool = discover_extensions(exts)
     plan: list = []
     state: dict = {}          # 0 = 访问中（在栈上）, 1 = 已完成
@@ -639,7 +674,7 @@ class PackageStack:
         return "PackageStack(%s)" % " → ".join(self.ids)
 
 
-def load_stack(game_dir: str, *, exts=(), inject=None) -> PackageStack:
+def load_stack(game_dir: str, *, exts=None, inject=None) -> PackageStack:
     """**唯一入口**：加载一个包栈（扩展包 + 数据包）。
 
         from saintess_engine.package import load_stack
@@ -647,12 +682,13 @@ def load_stack(game_dir: str, *, exts=(), inject=None) -> PackageStack:
         stack.install()
 
     依赖解析 / 拓扑 / 环检测见 `plan_stack()`；失败一律 `PackageError`（可读，不猜）。
+    `exts` 缺省（`None`）时按 `default_ext_dirs()` 的约定搜索；传 `[]` 即不搜。
     """
     plan = plan_stack(game_dir, exts=exts)
     return PackageStack(plan, inject=inject).load()
 
 
-def probe_stack(game_dir: str, *, exts=(), inject=None, install: bool = False) -> dict:
+def probe_stack(game_dir: str, *, exts=None, inject=None, install: bool = False) -> dict:
     """工具 / 子进程 / 编辑器用：加载包栈**不抛**，把结果与错误装进一个 dict。
 
     `install=True`：顺带跑 `install_engine()`（编辑器「试玩/自检」要的是「能装配」，

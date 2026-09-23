@@ -1,12 +1,12 @@
 # 触发器声明编译器（数据行 → `actor["triggers"]`）
 
-> 模块：`saintess_engine.battle.declarations` —— `Declaration`（一条声明行）+ `Compiler`
+> 模块：`ext_combat.battle.declarations` —— `Declaration`（一条声明行）+ `Compiler`
 > （`compile` / `validate` / `unknown_name` / `mount` / `purge` / `events_of`）
 > + `compile_rows` / `mount`（模块级入口）。
 > 一句话：**把「行表 → `{事件名: [载荷, …]}` → 幂等写进宿主容器」抽成引擎形状**；
 > 事件名取自引擎自己的事件全集（`EVENTS`，见 `effect_triggers.py:52`），
 > 去重键 / 写策略 / 未知名策略 / 载荷全部由调用方给，**引擎零游戏知识**。
-> **不进 battle 门面**：内容侧走子模块直取（`from saintess_engine.battle.declarations import Compiler`）。
+> **不进 battle 门面**：内容侧走子模块直取（`from ext_combat.battle.declarations import Compiler`）。
 
 ## 为什么有它
 
@@ -26,8 +26,8 @@
 ## 用法
 
 ```python
-from saintess_engine.battle.declarations import Compiler, Declaration, compile_rows, mount
-from saintess_engine.battle.effect_triggers import EVENTS          # 引擎事件全集（可默认取）
+from ext_combat.battle.declarations import Compiler, Declaration, compile_rows, mount
+from ext_combat.battle.effect_triggers import EVENTS          # 引擎事件全集（可默认取）
 
 # ① 注入面（引擎零默认取值：旧名迁移 / 去重键 / 未知名策略 / 归属字段都由内容侧给）
 _DECL = Compiler(

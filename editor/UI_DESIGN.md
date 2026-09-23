@@ -214,7 +214,7 @@ tests/test_editor_api.py               45 断言（新增：hints 接口）
 ## 10. 实施记录：`maps` 域 + 拓扑视图（2026-09-12 第五轮）
 
 框架路线图 #6「地图形状 → 引擎」的编辑器侧验收项是 **「配 `maps` 域 → 编辑器能画地图」**。
-引擎侧（`saintess_engine.space`）与内容侧（参考实现的 `core/maps.py`）同批完成，见
+引擎侧（`ext_world.space`）与内容侧（参考实现的 `core/maps.py`）同批完成，见
 `docs/engine-wiki/reference/space.md` 与游戏仓 `docs/archive/REFACTOR_v183_space_shape.md`。
 
 ### 10.1 数据形态：一条 = 一张图
@@ -234,7 +234,7 @@ tests/test_editor_api.py               45 断言（新增：hints 接口）
 
 ### 10.2 关键决定：派生只有一份（编辑器不重写引擎）
 
-`editor/space_view.py` 直接 import `saintess_engine.space` 算视图，前端**只负责画**。
+`editor/space_view.py` 直接 import `ext_world.space` 算视图，前端**只负责画**。
 这破了 `packages.py` 里「编辑器主进程不 import 引擎」的纪律 —— 理由写在 `space_view.py` 开头：
 那条纪律针对的是**会挂 hook / 改全局状态**的战斗域，而 `space` 是**纯计算模块**
 （零挂载、零副作用，与 `version` 同性质）。

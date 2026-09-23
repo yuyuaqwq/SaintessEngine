@@ -1,6 +1,6 @@
 # 对话树形状（节点 / 选项 / 条件槽 / 会话游标）
 
-> 模块：`saintess_engine.dialogue` —— `Dialogue`（树读取 + 条件槽 + 渲染槽 + 选项路由）
+> 模块：`ext_dialogue.dialogue` —— `Dialogue`（树读取 + 条件槽 + 渲染槽 + 选项路由）
 > + `Cursor`（会话游标**值**）+ `END_KEY`（注入面**字段名**）。
 > 一句话：**一棵「跟谁说话 → 说哪句 → 给哪些选项 → 选了去哪」的树**；
 > 节点 id、台词、条件、动作、结束哨兵全部由内容侧给，引擎只认**字段名**与**注入口**。
@@ -24,7 +24,7 @@
 ## 用法
 
 ```python
-from saintess_engine.dialogue import END_KEY, Cursor, Dialogue
+from ext_dialogue.dialogue import END_KEY, Cursor, Dialogue
 
 # ① 一份注入面（引擎零默认值：结束哨兵 / 兜底文案 / 谓词查表口 / 未注册键策略都必填）
 cfg = Dialogue(

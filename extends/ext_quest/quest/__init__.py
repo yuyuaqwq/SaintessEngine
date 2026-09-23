@@ -15,7 +15,7 @@
 
 用法::
 
-    from saintess_engine.quest import Objective, Objectives, Quest, QuestLog, parse_needs
+    from ext_quest.quest import Objective, Objectives, Quest, QuestLog, parse_needs
 
     fields = {"current": ..., "status": ..., "progress": ...,
               "archive": ..., "lanes": ...}          # 取值：存档字段名（内容侧给）

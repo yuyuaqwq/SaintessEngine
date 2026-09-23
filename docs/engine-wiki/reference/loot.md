@@ -1,6 +1,6 @@
 # 随机产出形状（掉落池 / 档位阶梯 / 槽位挂载）
 
-> 模块：`saintess_engine.loot` —— `LootTable`（池 + 策略注册表 + roll/expand/audit）·
+> 模块：`ext_loot.loot` —— `LootTable`（池 + 策略注册表 + roll/expand/audit）·
 > `TierTable`（有序档位 + 按等级插值的权重表）· `pick_weighted` / `pick_many` / `roll_range` ·
 > `draw_slots`（固定 + 随机补足）· `count_for`（档位 → 条数）。
 > 一句话：**数据说「有什么」，引擎管「怎么摸」**。
@@ -105,7 +105,7 @@ draw_slots(pool_ids, 3, fixed=("series_mark",), no_dup=True, rng=rng)  # 固定�
 | 引擎 | 池结构（`pool`/`entry`/`roll`/`n`/`w`）、策略分派、抽取 / 插值 / 升档 / 挂载、审计 |
 | 内容 | 池数据、**引用前缀与解析**（`resolver`）、档位**取值**与顺序、`chance` / 权重 / 条数的具体数字、专属策略（`fish`） |
 
-门禁有一条**静态断言**：`saintess_engine/loot/` 的**代码常量**里不得出现任何内容侧取值
+门禁有一条**静态断言**：`extends/ext_loot/loot/` 的**代码常量**里不得出现任何内容侧取值
 （档位取值 / 引用前缀 / 专属策略名）—— 文档串可举例（`tests/test_loot.py` 第 8 组）。
 
 ## API

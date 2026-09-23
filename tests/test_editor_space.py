@@ -2,7 +2,7 @@
 """maps 域（空间形状）编辑器门禁：域注册 / 词典与分组 / 视图派生 / HTTP 端到端。
 
 守两条：
-  ① **派生只有一份**：编辑器画图用的邻接/深度/出入口，必须来自引擎 `saintess_engine.space`
+  ① **派生只有一份**：编辑器画图用的邻接/深度/出入口，必须来自引擎 `ext_world.space`
      （`editor/space_view.py` 只是适配），不是前端或编辑器里另写的一套。
   ② **编辑器 → 数据文件 → 引擎**这条链闭合：编辑器校验过的数据，喂给 `Space` 能算出图。
 
@@ -27,7 +27,7 @@ from editor import packages as PK         # noqa: E402
 from editor import server as SRV          # noqa: E402
 from editor import space_view as SV       # noqa: E402
 from editor import validate as VD         # noqa: E402
-from saintess_engine.space import Space   # noqa: E402
+from ext_world.space import Space   # noqa: E402
 
 PASS = 0
 FAIL = 0

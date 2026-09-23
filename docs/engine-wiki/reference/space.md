@@ -1,6 +1,6 @@
 # 空间形状（节点表 + 拓扑 → 派生）
 
-> 模块：`saintess_engine.space` —— `Space`（邻接 / 深度 / 出入口 / 必经路径 / 结构审计 / 视图）
+> 模块：`ext_world.space` —— `Space`（邻接 / 深度 / 出入口 / 必经路径 / 结构审计 / 视图）
 > + 拓扑注册表（`chain` / `star` + 第三方可注册）。一句话：**数据给节点与角色，引擎给几何**。
 
 ## 为什么有它
@@ -21,7 +21,7 @@
 ## 两个邻接来源（互斥，显式优先）
 
 ```python
-from saintess_engine.space import Space, register_topology
+from ext_world.space import Space, register_topology
 
 sp = Space(
     nodes=[{"id": "a", "role": "hub"}, {"id": "b"}, {"id": "c", "role": "exit"}],
@@ -48,11 +48,11 @@ sp.to_view()         # 纯 JSON 视图（编辑器画图 / 序列化）
 
 ## 内置形状
 
-### `chain` —— 链状 / 线性（`saintess_engine/space/topology.py:79`）
+### `chain` —— 链状 / 线性（`extends/ext_world/space/topology.py:79`）
 
 按声明序相邻：`i ↔ i+1`；**出入口 = 首节点**。
 
-### `star` —— 星形（`saintess_engine/space/topology.py:93`）
+### `star` —— 星形（`extends/ext_world/space/topology.py:93`）
 
 ```ini
 枢纽(hub)     → 全部非 exit 节点；★ 若无 through 节点，枢纽**额外**直连 exit
@@ -103,7 +103,7 @@ BFS 最短路，**含两端**；`route("a", "a") == ["a"]`；任一端未知或�
 ## 第三方拓扑（可拔插）
 
 ```python
-from saintess_engine.space import register_topology
+from ext_world.space import register_topology
 
 def _ring(nodes, *, roles, role_key, root):
     ids = [n["id"] for n in nodes]
@@ -121,7 +121,7 @@ register_topology("ring", _ring, doc="环形：首尾相连")
 ## 零知识
 
 `hub` / `through` / `exit` 只是**角色名**；角色**取值**由内容侧给（参考实现给的是中文取值）。
-门禁里有一条**静态断言**：`saintess_engine/space/` 的代码常量里不得出现任何角色取值
+门禁里有一条**静态断言**：`extends/ext_world/space/` 的代码常量里不得出现任何角色取值
 （只准出现角色名）—— 换一套取值，结构必须逐格一致（`tests/test_space.py` 门禁第 8 组）。
 
 引擎不 import 宿主、不认地图、不认玩家、不认数据库。

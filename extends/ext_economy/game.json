@@ -1,0 +1,9 @@
+{
+  "id": "ext_economy",
+  "kind": "extension",
+  "name": "交易与产出形状（限购 / 货架 / 计时生产）",
+  "desc": "游戏级能力包：每日限购计数与成交结算（trade）· 限量货架（shelf，换货/补货两类周期）· 计时生产作业队列（produce）。纯形状库 —— 装不装都不影响引擎其它部分；数据包 depends 它即可用。",
+  "engine": ">=0.1",
+  "entry": "apply.py",
+  "created": "2026-09-23"
+}

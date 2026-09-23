@@ -25,7 +25,7 @@ sys.path.insert(0, _REPO)
 from saintess_engine.bonus import Bonus                                # noqa: E402
 from saintess_engine.clock import wall                                 # noqa: E402
 from saintess_engine.log import get_logger                            # noqa: E402
-from saintess_engine.produce import AlreadyBusy, Jobs                 # noqa: E402
+from ext_economy.produce import AlreadyBusy, Jobs                 # noqa: E402
 from saintess_engine.records import Records, RecordsOrderMismatch     # noqa: E402
 from saintess_engine.store import Database, DeclaredRepository        # noqa: E402
 from saintess_engine.wire import Wire, WireMissing                    # noqa: E402
@@ -35,7 +35,7 @@ from content.outpost import DAY, SITE_ORDER, VISIT_SPEC, Outpost      # noqa: E4
 FORM_BAN = re.compile(r"import json|CREATE TABLE|SELECT |INSERT |UPDATE |sqlite3"
                       r"|_HOST_PKG|_resolve_host|os\.environ")
 #: 五个引擎形状必须出现在 outpost.py 的 import 面里
-SHAPES = ("saintess_engine.records", "saintess_engine.store", "saintess_engine.produce",
+SHAPES = ("saintess_engine.records", "saintess_engine.store", "ext_economy.produce",
           "saintess_engine.wire", "saintess_engine.bonus")
 T0 = 1700000000                                       # 假钟起点（UTC 2023-11-14）
 
@@ -268,8 +268,9 @@ def t5_form():
         if m == "game" or m.startswith("game.") or m in ("json", "sqlite3"):
             bad.append(m)
     check("不 import 其他游戏包 / 不 import json / 不 import sqlite3", not bad, bad)
-    check("只用引擎 + 标准库（__future__ / 自己）",
-          all(m.startswith("saintess_engine") or m == "__future__" for m in mods), sorted(mods))
+    check("只用引擎通用件 + 扩展包 + 标准库（__future__ / 自己）",
+          all(m.startswith("saintess_engine") or m.startswith("ext_") or m == "__future__"
+              for m in mods), sorted(mods))
 
 
 def main():

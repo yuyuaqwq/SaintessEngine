@@ -4,7 +4,7 @@
 为什么值得为它破一条纪律
 ------------------------
 `editor/packages.py` 写着「编辑器主进程零引擎副作用，不 import `saintess_engine`」——
-那条纪律针对的是**会挂 hook / 改全局状态**的战斗域。`saintess_engine.run.Progress` 是
+那条纪律针对的是**会挂 hook / 改全局状态**的战斗域。`ext_world.run.Progress` 是
 **纯计算模块**（有序节点 + 具名剩余池 + 当前位置 + 预算；零挂载、零全局副作用，与
 `loot` / `space` / `version` 同性质），import 它不产生任何引擎副作用。
 
@@ -30,7 +30,7 @@
 from __future__ import annotations
 
 # 纯计算模块：不挂 hook、不改全局（同 loot / space / version 的性质）
-from saintess_engine.run import Progress
+from ext_world.run import Progress
 
 _POOL = "units"          # 每层的剩余池名（层内要清的战斗单位）
 

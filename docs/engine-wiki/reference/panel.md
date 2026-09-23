@@ -102,7 +102,7 @@ for L in sorted(layers, key=(order, 声明序)):
 ## 6. 一个最小例子
 
 ```python
-from saintess_engine.panel import PanelStack
+from ext_combat.panel import PanelStack
 
 st = PanelStack.from_decl({
   "version": 1,

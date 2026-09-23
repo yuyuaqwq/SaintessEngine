@@ -121,7 +121,7 @@ repo.get(conn, member, site_id)
 ```python
 from saintess_engine.records import RecordsSet
 from saintess_engine.store import Column, TableSpec, declare
-from saintess_engine.produce import Job, Jobs
+from ext_economy.produce import Job, Jobs
 from saintess_engine.wire import Wire
 from saintess_engine.bonus import Bonus
 

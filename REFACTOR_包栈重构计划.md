@@ -1,5 +1,8 @@
 # 包栈重构计划 —— 引擎通用化（2026-09-23 起）
 
+> 进度：第 0 / 1 / 2 / 3 批 **已完成**；引擎 111 py / 24,840 行 → 63 py / 12,310 行。
+> 第 3 批实际切法（与下面的初稿不同）：13 个形状 → **6 个扩展包**，六路并行搬迁。
+
 > 目标：引擎从「战斗引擎 + 一堆游戏原语」变成**通用文字游戏框架**；
 > 游戏原语（战斗 / 副本 / 任务 / 经济 / 社交 / 图鉴 / 世界）抽成**可插拔扩展包**。
 > 终态判据（可判定）：
@@ -93,4 +96,24 @@
 · 不许留兼容壳，旧 API 全删（引擎铁律）
 · 搬迁批次不混别的改动；文档跟着改（README 数字 / wiki / 包格式）
 · 编辑仓内文件必须保 LF（io.open 要 newline=""，否则整文件 CRLF 污染）
+```
+
+
+## 已完成（实际，2026-09-23）
+
+```text
+第0批 ✅ 787f8bf  包栈加载器（kind/depends/拓扑/环检测/命名空间/域分层）
+第1批 ✅ 80a9a6a  ext_quest（969 行）—— 打通「搬出去」的流程
+第2批 ✅ f60e5c7  ext_combat（6,417 行 = battle+gauge+formation+panel）
+                  + 引擎新增「能力提供者」声明 provides（引擎只认键+引用，零游戏词汇）
+                  + 解耦 host→Battle（改走 provides.battle）
+第3批 ✅ 本轮     6 个新扩展包 · 13 个形状（5,433 行）· 六路并行搬迁
+                  ext_world(space+run 1,152) · ext_life(collect+periodic+timers+unlock 1,161)
+                  ext_economy(trade+shelf+produce 906) · ext_social(membership+presence 862)
+                  ext_loot(loot 938) · ext_dialogue(dialogue 414)
+                  + 包栈支持「扩展包搜索路径的约定默认」（default_ext_dirs）
+                  + 12 个形状门禁跟着包走 · 引擎门面只剩通用件
+盛下的     第4批 域归属重排（maps/drop_pools/instances 跟扩展包）
+           第5批 门禁 + 文档收口（AST 守卫：通用件不许 import 游戏原语）
+           第6批 奥兰迪亚全量迁移（各批已顺带迁，剩验证）
 ```

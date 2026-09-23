@@ -52,16 +52,13 @@ except AttributeError:                                        # pragma: no cover
 
 # 公开 API 面（内容层/第三方实际消费的符号）
 API_SYMBOLS = [
-    # 引擎门面 = **通用件**（2026-09-23 包栈重构：战斗符号随 ext_combat 迁出引擎，
-    # 它们现在由 `from ext_combat import Battle, make_actor, …` 提供）。
+    # 引擎门面 = 通用件（游戏级形状已全部迁到 extends/ 扩展包，2026-09-23 第 3 批）
     "config", "get_effect_rules", "get_effect_actions",
-    "Package", "PackageError", "PackageStack", "load_stack", "probe_stack",
-    "Host",
-    "Space", "LootTable", "TierTable",
-    "Admission", "Progress", "Roster", "Rule", "Verdict",
-    "Dialogue", "Cursor",
-    "CommandRegistry", "CommandSpec", "TextTable", "TextSpec", "safe_format",
-    "TLog", "Record", "KindTable",
+    "Package", "PackageError", "PackageStack", "load_stack",
+    "Host", "version",
+    "CommandRegistry", "CommandSpec",
+    "TextSpec", "TextTable", "safe_format",
+    "KindTable", "Record", "TLog",
 ]
 # 私有 → 公开的 5 个符号（cap_of / norm_stack / now_of / heal_amount / skill_pay_of）
 # 已随战斗迁到扩展包 `ext_combat`（2026-09-23），这条门禁现在归那边 —— 这里留空表。
@@ -69,12 +66,12 @@ PROMOTED_ALIASES = []
 
 # 门面转出的子模块（`getattr(包, 名)` 取到对应模块）—— 只列**通用件**
 MODULE_ATTRS = [
+    # 门面转出的子模块（`getattr(包, 名)` 取到对应模块）—— 只列**通用件**
     ("domains", "domains"),
     ("expr", "expr"),
     ("store", "store"), ("command", "command"), ("events", "events"),
-    ("clock", "clock"), ("log", "log"), ("tlog", "tlog"), ("space", "space"), ("loot", "loot"),
-    ("run", "run"), ("container", "container"), ("session", "session"),
-    ("dialogue", "dialogue"), ("presence", "presence"),
+    ("clock", "clock"), ("log", "log"), ("tlog", "tlog"),
+    ("container", "container"), ("session", "session"),
 ]
 
 passed = failed = 0

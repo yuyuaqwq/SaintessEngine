@@ -1,0 +1,9 @@
+{
+  "id": "ext_life",
+  "kind": "extension",
+  "name": "生活循环：收集 / 周期 / 倒计时 / 解锁闸门",
+  "desc": "游戏级形状包：收集进度与档位领取三态（collect）· 周期键上的计数/上限/连续段/冷却（periodic）· 倒计时事件（timers）· 解锁闸门（unlock）。纯形状库 —— 装不装都不影响引擎其它部分；数据包 depends 它即可用。",
+  "engine": ">=0.1",
+  "entry": "apply.py",
+  "created": "2026-09-23"
+}

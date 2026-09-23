@@ -317,9 +317,9 @@ def main():
         "commands": ("saintess_engine/command/registry.py", "class CommandRegistry"),
         "texts": ("saintess_engine/text/template.py", "class TextTable"),
         "tlogs": ("saintess_engine/tlog/record.py", "class KindTable"),
-        "maps": ("saintess_engine/space/graph.py", "class Space"),
-        "drop_pools": ("saintess_engine/loot/pool.py", "class LootTable"),
-        "instances": ("saintess_engine/run/progress.py", "class Progress"),
+        "maps": ("extends/ext_world/space/graph.py", "class Space"),
+        "drop_pools": ("extends/ext_loot/loot/pool.py", "class LootTable"),
+        "instances": ("extends/ext_world/run/progress.py", "class Progress"),
     }
     _miss = [(d, f, sym) for d, (f, sym) in _ENGINE_EVIDENCE.items()
              if sym not in open(os.path.join(ROOT, f), encoding="utf-8").read()]

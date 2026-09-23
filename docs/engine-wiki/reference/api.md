@@ -8,7 +8,7 @@
 
 S2 固化（`docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §5）：把内容层**实际消费的 26 个符号**
 全量 re-export，并保留模块级 `config` / `effects` / `stats`
-（`saintess_engine/__init__.py:40-57`）。
+（`saintess_engine/__init__.py:50-61`）。
 
 ```python
 # Actor / 战斗主体
@@ -31,7 +31,7 @@ heal_amount · skill_pay_of
 from_state · to_state
 ```
 
-`__all__` 就是上面这份（`saintess_engine/__init__.py:82-105`）。门禁
+`__all__` 就是上面这份（`saintess_engine/__init__.py:50-61`）。门禁
 `tests/test_engine_purity.py` 会逐个断言这些符号存在，并断言 **5 个私有符号
 已升公开且旧下划线名是同一对象别名**：
 
@@ -208,7 +208,7 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 公式形状与基准数值归内容侧（装配面见 [../concepts/ctb-schedule.md](../concepts/ctb-schedule.md) §公式）。
 `recover_time` / `recover_base_of` 与出招同口径（T14：引擎只做「两段相加」，
 「没有第二段」= 内容侧显式声明 0，引擎不兜底）；`recover_time` 也在
-`saintess_engine` / `saintess_engine.battle` 两处门面导出。
+`saintess_engine` / `ext_combat.battle` 两处门面导出。
 
 未装配 `time_model_fn` / `action_base_fn` / `recover_model_fn` / `recover_base_fn`
 → 对应的 `action_time` / `action_base_of` / `recover_time` / `recover_base_of` 抛

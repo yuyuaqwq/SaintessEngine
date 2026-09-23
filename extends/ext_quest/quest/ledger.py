@@ -59,7 +59,7 @@
 * ❌ 不做可接清单过滤 / 门槛 / 奖励发放（取值 + 信息设计，落内容侧）。
 * ❌ 不做全表扫描 / 悬空链校验（导出器职责；读路径零遍历）。
 
-**为什么不复用 `run.Progress` 与 `collect`**：见包 docstring（`saintess_engine.quest`）。
+**为什么不复用 `run.Progress` 与 `collect`**：见包 docstring（`ext_quest.quest`）。
 """
 from __future__ import annotations
 

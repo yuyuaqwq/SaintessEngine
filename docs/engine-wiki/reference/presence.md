@@ -1,6 +1,6 @@
 # 在场形状（清单判定 + 当天派生 + 保底冷却）
 
-> 模块：`saintess_engine.presence` —— `Lookup`（多表首命中）+ `Presence`（在场清单）+
+> 模块：`ext_social.presence` —— `Lookup`（多表首命中）+ `Presence`（在场清单）+
 > 六个纯函数（`day_slot` / `day_hit` / `minutes_left` / `guarded_roll` / `cooldown_ok` /
 > `merge_tables`）。一句话：**数据给「谁在、在哪」，引擎给「怎么筛、怎么编号、怎么算」**。
 
@@ -25,7 +25,7 @@
 ## 形状总览
 
 ```python
-from saintess_engine.presence import (Lookup, Presence, day_slot, day_hit,
+from ext_social.presence import (Lookup, Presence, day_slot, day_hit,
                                       minutes_left, guarded_roll, cooldown_ok,
                                       merge_tables)
 

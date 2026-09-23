@@ -1,0 +1,9 @@
+{
+  "id": "ext_social",
+  "kind": "extension",
+  "name": "成员关系与在场（职位 / 贡献 / 申请 · 在场清单）",
+  "desc": "游戏级能力包：成员关系三件形状（职位槽 RoleSlots · 贡献 Contribution · 待批队列 Applications）+ 在场形状（多表首命中 Lookup · 在场清单 Presence · 当天派生与保底冷却算术）。纯形状库 —— 不注册任何引擎级东西；成员集合本体仍由名单（Roster）持有，取值与判据全由数据包给。",
+  "engine": ">=0.1",
+  "entry": "apply.py",
+  "created": "2026-09-23"
+}

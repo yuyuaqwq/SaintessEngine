@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from saintess_engine.bonus import Bonus
 from saintess_engine.clock import wall
-from saintess_engine.produce import Job, Jobs
+from ext_economy.produce import Job, Jobs
 from saintess_engine.records import Records
 from saintess_engine.store import Column, TableSpec, declare
 from saintess_engine.wire import Wire

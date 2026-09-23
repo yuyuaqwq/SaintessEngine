@@ -3,7 +3,7 @@
 
 守三条：
   ① **推进语义只有一份**：`is_last` / 每层剩余 / 总剩余 / done 必须来自引擎
-     `saintess_engine.run.Progress`（`editor/instance_view.py` 只是适配），不是编辑器另写的一套。
+     `ext_world.run.Progress`（`editor/instance_view.py` 只是适配），不是编辑器另写的一套。
   ② **不装懂**：怪名 / Boss / 钥匙 / 地图 / 层名都是内容侧词汇 —— 预览不判断某个引用是什么，
      需要解析的地方只能给 warning；数据不合法（层空 / Boss 不在末层）**如实报错**，不假装有内容。
   ③ **零 enum**：框架不预设怪物名、层名、钥匙名（那会是内容分类）。
@@ -24,7 +24,7 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 sys.path.insert(0, ROOT)
 
-import saintess_engine.run as ERUN        # noqa: E402
+import ext_world.run as ERUN        # noqa: E402
 from editor import glossary as G          # noqa: E402
 from editor import instance_view as IV    # noqa: E402
 from editor import packages as PK         # noqa: E402

@@ -31,7 +31,7 @@ from editor import packages as PK            # noqa: E402
 from editor import server as SRV             # noqa: E402
 from editor import validate as VD            # noqa: E402
 import _domain_fixtures as FX                # noqa: E402  （内容域只能由包声明：B2b）
-from saintess_engine.loot import LootTable   # noqa: E402
+from ext_loot.loot import LootTable   # noqa: E402
 
 REAL_PKG = os.path.join(ROOT, "games", "orlandia")
 POOLS_REL = os.path.join("content", "data", "drop_pools.json")

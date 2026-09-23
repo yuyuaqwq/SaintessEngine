@@ -1,6 +1,6 @@
 # 运行形状（准入链 + 进度 + 名单）
 
-> 模块：`saintess_engine.run` —— `Admission`/`Rule`（准入链）+ `Progress`（进度）+ `Roster`（名单）。
+> 模块：`ext_world.run` —— `Admission`/`Rule`（准入链）+ `Progress`（进度）+ `Roster`（名单）。
 > 一句话：**一次运行的三件事 —— 谁能进、谁在里面、打到哪了**；数据与措辞全由内容侧给。
 
 ## 为什么有它
@@ -23,7 +23,7 @@
 ## 三个子形状
 
 ```python
-from saintess_engine.run import Admission, Rule, Progress, Roster
+from ext_world.run import Admission, Rule, Progress, Roster
 
 # ① 准入链：有序规则，首拒即返；副作用（消耗）延迟到全过才执行
 adm = Admission([
