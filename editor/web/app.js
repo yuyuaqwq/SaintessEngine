@@ -2025,13 +2025,116 @@ function renderSettingsForm() {
     <label>包 id（目录名，创建后不可改）<input value="${esc(m.id || '')}" disabled></label>
     <label>显示名<input id="pkName" value="${esc(m.name || '')}"></label>
     <label>简介<input id="pkDesc" value="${esc(m.desc || '')}"></label>
-    <label>引擎版本要求<input id="pkEngine" value="${esc(m.engine || '')}"></label>`;
+    <label>引擎版本要求<input id="pkEngine" value="${esc(m.engine || '')}"></label>
+    <section class="cap-block" id="capBlock">
+      <header class="cap-head">
+        <b>能力开关</b><span class="cap-sum" id="capSum">读取中…</span>
+      </header>
+      <p class="cap-hint">这些是<b>扩展包</b>——引擎里只留通用件，战斗 / 任务 / 掉落 / 对话这些都在包里。
+        勾掉 = 不写进 <code>depends</code>，这个包就不装了。取消勾选会<b>实时试算</b>代价（不写盘，
+        点「保存包清单」才落盘）。</p>
+      <div class="cap-list" id="capList"></div>
+      <div class="cap-trial hidden" id="capTrial"></div>
+    </section>`;
+  renderCapabilities();
+}
+
+/* ── 能力开关（扩展包）─────────────────────────────────────────────
+   后端：GET /api/package/<id>/capabilities[?disable=a,b]（只读试算）
+   实关：勾选状态进 manifest.depends，走已有的「保存包清单」落盘。 */
+let CAP = null;                       // 最近一次 /capabilities 响应
+
+async function renderCapabilities() {
+  const r = await api('GET', `/api/package/${encodeURIComponent(S.pkgId)}/capabilities`);
+  if (!r.ok || !r.json) { $('capList').innerHTML = '<div class="cap-empty">读不到扩展包清单</div>'; return; }
+  CAP = r.json;
+  $('capList').innerHTML = CAP.extensions.map((e) => `
+    <label class="cap-row" data-ext="${esc(e.id)}" title="${esc(e.desc || '')}">
+      <input type="checkbox" class="cap-cb" data-ext="${esc(e.id)}" ${e.enabled ? 'checked' : ''}>
+      <span class="cap-name">${esc(e.id)}</span>
+      <span class="cap-mods">${esc(e.modules.join(' · ') || '(单文件)')}</span>
+      <span class="cap-refs ${refClass(e.refs)}">${e.refs} 处引用</span>
+      ${e.provides.length ? `<span class="chip">${esc(e.provides.join('/'))}</span>` : ''}
+      <span class="cap-drop">${e.loses_domains.length ? '失去 ' + esc(e.loses_domains.join(' · ')) : ''}</span>
+    </label>`).join('');
+  $('capList').querySelectorAll('.cap-cb').forEach((cb) => {
+    cb.addEventListener('change', () => {
+      cb.closest('.cap-row').classList.toggle('off', !cb.checked);
+      capTrialSoon();
+    });
+  });
+  capSummary();
+}
+
+//: 引用数分档着色 —— 0 处是「关掉只少能力」，上百处是「关掉包基本跑不起来」
+function refClass(n) {
+  if (!n) return 'ok';
+  if (n > 20) return 'bad';
+  if (n > 5) return 'warn';
+  return '';
+}
+
+function capChecked() {
+  return Array.from($('capList').querySelectorAll('.cap-cb')).filter((c) => c.checked)
+    .map((c) => c.dataset.ext);
+}
+
+function capSummary() {
+  if (!CAP) return;
+  const on = capChecked();
+  const was = CAP.enabled;
+  const add = on.filter((x) => !was.includes(x));
+  const del = was.filter((x) => !on.includes(x));
+  const bits = [`装了 ${on.length} / ${CAP.extensions.length}`, `有效域 ${CAP.trial.domains_before}`];
+  if (add.length) bits.push(`＋${add.join(', ')}`);
+  if (del.length) bits.push(`－${del.join(', ')}`);
+  $('capSum').textContent = bits.join(' · ');
+  $('capSum').classList.toggle('dirty', !!(add.length || del.length));
+}
+
+let capTimer = null;
+function capTrialSoon() {
+  capSummary();
+  clearTimeout(capTimer);
+  capTimer = setTimeout(capTrial, 220);      // 连点几下不狂发请求
+}
+
+async function capTrial() {
+  const on = capChecked();
+  const was = CAP ? CAP.enabled : [];
+  const del = was.filter((x) => !on.includes(x));
+  const add = on.filter((x) => !was.includes(x));
+  if (!del.length && !add.length) { $('capTrial').classList.add('hidden'); return; }
+  const box = $('capTrial');
+  box.classList.remove('hidden');
+  box.innerHTML = '<div class="cap-empty">试算中…</div>';
+  const r = await api('GET', `/api/package/${encodeURIComponent(S.pkgId)}/capabilities?disable=${encodeURIComponent(del.join(','))}`);
+  if (!r.ok || !r.json) { box.innerHTML = '<div class="cap-empty">试算失败</div>'; return; }
+  const t = r.json.trial;
+  const head = del.length ? `关掉 ${del.join(' · ')} 后` : `加上 ${add.join(' · ')} 后`;
+  const dom = t.loses_domains.length
+    ? `有效域 <b>${t.domains_before} → ${t.domains_after}</b>，失去 <code>${esc(t.loses_domains.join('</code> · <code>'))}</code>`
+    : `有效域不变（<b>${t.domains_before}</b>）—— 这些包提供的是指令与机制，不在域表里`;
+  const refs = t.refs_cut
+    ? `<br>内容侧 <b>${t.refs_cut} 处引用</b>会断，涉及 <b>${t.ref_files_cut.length} 个文件</b>
+       <details><summary>看断在哪</summary><pre>${esc(t.ref_files_cut.join('\n'))}</pre></details>`
+    : `<br>内容侧没有引用它，关掉只少能力。`;
+  const sev = t.refs_cut > 20 ? 'bad' : (t.refs_cut ? 'warn' : 'ok');
+  box.innerHTML = `<div class="cap-warn ${sev}">${head}：<br>${dom}${refs}</div>`;
 }
 
 async function savePkg() {
   const m = Object.assign({}, (S.pkg && S.pkg.manifest) || {}, {
     name: $('pkName').value, desc: $('pkDesc').value, engine: $('pkEngine').value,
   });
+  // ★ 能力开关：勾选框的当前状态就是新的 depends（顺序沿用后端给的稳定序）
+  if (CAP) {
+    const on = new Set(capChecked());
+    m.depends = CAP.extensions.filter((e) => on.has(e.id)).map((e) => e.id);
+    const del = CAP.enabled.filter((x) => !on.has(x));
+    if (del.length && !confirm(
+      `关掉 ${del.join(' · ')} —— 内容侧引用它的代码会断，确定保存吗？`)) return;
+  }
   const r = await api('PUT', `/api/package/${encodeURIComponent(S.pkgId)}/manifest`, { manifest: m });
   if (!r.ok) { toast('保存包清单失败', 'bad'); return; }
   toast('包清单已保存', 'ok');

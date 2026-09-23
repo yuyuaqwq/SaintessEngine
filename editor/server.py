@@ -62,9 +62,23 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, unquote, urlparse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_ENGINE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _ENGINE_ROOT)
+
+# ★ 扩展包也要在导入路径上（2026-09-23 包栈重构）：游戏原语搬进 `<引擎根>/extends/`
+#   之后，编辑器自己的视图模块要 `from ext_loot.loot import …` 这类取件。
+#   约定搜索路径与包栈同一份（`SAINTESS_EXTENDS` 优先，其次数据包同级、引擎仓）。
+#   ⚠ 这条曾经漏掉过一次：测试都手动设了 PYTHONPATH ⇒ 测试全绿而**编辑器根本起不来**
+#     （ModuleNotFoundError: No module named 'ext_loot'）。改完必须真启动一次。
+for _d in (os.environ.get("SAINTESS_EXTENDS", "").split(os.pathsep)
+           + [os.path.join(_ENGINE_ROOT, "extends")]):
+    _d = (_d or "").strip()
+    if _d and os.path.isdir(_d) and _d not in sys.path:
+        sys.path.insert(0, _d)
+del _d
 
 from editor import actions as AC     # noqa: E402
+from editor import capabilities as CAP  # noqa: E402  能力开关（试算 + 代价）
 from editor import dist as DIST      # noqa: E402
 from editor import glossary as GL    # noqa: E402
 
@@ -502,6 +516,16 @@ class H(BaseHTTPRequestHandler):
                 body["effective"] = {k: v for k, v in eff.items() if v["render"]}
                 body["warnings"] = list(body["warnings"]) + ["响应超过 64 KB：effective 已裁剪"]
             return self._send(200, body)
+        if len(parts) == 3 and parts[0] == "package" and parts[2] == "capabilities":
+            # 能力开关：扩展包清单 + 关掉某几个的代价（试算，不写文件）。
+            # `?disable=a,b` = 试算这组包没装时域表变化（前端勾选时实时调）。
+            d = PK.resolve_package(parts[1], GAMES_DIR)
+            if not d:
+                return self._err(404, f"包不存在：{parts[1]}")
+            q = parse_qs(getattr(self, "_query", ""))
+            _raw = ",".join(q.get("disable") or [])
+            _disable = [x.strip() for x in _raw.split(",") if x.strip()]
+            return self._send(200, CAP.effects(d, disable=_disable))
         if len(parts) == 3 and parts[0] == "package" and parts[2] == "views":
             d = PK.resolve_package(parts[1], GAMES_DIR)
             if not d:

@@ -1181,3 +1181,36 @@ fieldset.cat>.cat-legend{
 @keyframes busy-spin{to{transform:rotate(360deg)}}
 .busy-text{font-size:13px;letter-spacing:.02em;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){.busy-spin{animation-duration:2.4s}}
+
+/* ═══ 能力开关（扩展包）—— 包设置页 ═══════════════════════════════
+   状态样式由 JS 打类（`.off`），不用 :has() —— 那东西漏一层嵌套就静默失效。 */
+.cap-block{margin-top:var(--sp6);padding-top:var(--sp6);border-top:1px solid var(--line)}
+.cap-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp4);margin-bottom:var(--sp3)}
+.cap-head b{font-size:12.5px;color:var(--fg-0)}
+.cap-sum{font-family:var(--mono);font-size:11px;color:var(--fg-2)}
+.cap-sum.dirty{color:var(--warn)}
+.cap-hint{font-size:11.5px;color:var(--fg-2);line-height:1.65;margin:0 0 var(--sp5)}
+.cap-hint b{color:var(--fg-1)}
+.cap-hint code{font-family:var(--mono);font-size:11px;background:var(--bg-3);padding:1px 5px;border-radius:var(--r-sm);color:var(--fg-1)}
+.cap-list{display:flex;flex-direction:column;gap:var(--sp2)}
+.cap-row{display:flex;align-items:center;gap:var(--sp3);flex-wrap:wrap;padding:var(--sp3) var(--sp4);background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r);cursor:pointer;transition:background var(--t),border-color var(--t),opacity var(--t)}
+.cap-row:hover{background:var(--bg-2);border-color:var(--line-2)}
+.cap-row.off{opacity:.58}
+.cap-cb{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;flex:none}
+.cap-name{font-family:var(--mono);font-size:12px;color:var(--fg-0)}
+.cap-mods{font-size:11px;color:var(--fg-3)}
+.cap-refs{font-family:var(--mono);font-size:11px;color:var(--fg-3);margin-left:auto}
+.cap-refs.warn{color:var(--warn)}
+.cap-refs.bad{color:var(--err)}
+.cap-refs.ok{color:var(--fg-3)}
+.cap-drop{flex-basis:100%;font-size:11px;color:var(--fg-3);padding-left:22px}
+.cap-trial{margin-top:var(--sp4)}
+.cap-warn{font-size:11.5px;line-height:1.7;padding:var(--sp4);border-radius:var(--r);border:1px solid var(--line);background:var(--bg-1);color:var(--fg-1)}
+.cap-warn.warn{border-color:var(--warn-soft);background:var(--warn-dim)}
+.cap-warn.bad{border-color:var(--err-soft);background:var(--err-dim)}
+.cap-warn b{color:var(--fg-0)}
+.cap-warn code{font-family:var(--mono);font-size:11px;color:var(--warn)}
+.cap-warn details{margin-top:var(--sp3)}
+.cap-warn summary{cursor:pointer;font-size:11px;color:var(--fg-2)}
+.cap-warn pre{font-family:var(--mono);font-size:10.5px;line-height:1.6;color:var(--fg-2);background:var(--bg-0);padding:var(--sp3);border-radius:var(--r-sm);max-height:200px;overflow:auto;margin:var(--sp2) 0 0}
+.cap-empty{font-size:11.5px;color:var(--fg-3);padding:var(--sp3)}

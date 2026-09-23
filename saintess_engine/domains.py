@@ -70,7 +70,7 @@ BUILTIN_DEFAULT_DOMAINS = {
 }
 
 
-def ext_domain_decls(pkg_root: str = "") -> list:
+def ext_domain_decls(pkg_root: str = "", *, depends: list | None = None) -> list:
     """该包 `depends` 的扩展包带来的**域声明**（按声明序，浅 → 深）。
 
     域跟消费端走（2026-09-23 包栈重构）：`instances` 的消费端在 `run/`（已搬进 `ext_world`），
@@ -90,7 +90,11 @@ def ext_domain_decls(pkg_root: str = "") -> list:
             return out
         with io.open(mf, encoding="utf-8") as f:
             manifest = _json.load(f)
-        deps = [str(x) for x in ((manifest or {}).get("depends") or [])]
+        # `depends` 显式给了就用它 —— 编辑器「能力开关」要**试算另一组 depends**
+        # 会得到什么域表（关掉某扩展包前先看清代价），而试算**必须共用这一份口径**，
+        # 不能另写一个拼装器（两边口径漂 = 2026-09-20 踩过的坑）。
+        deps = ([str(x) for x in depends] if depends is not None
+                else [str(x) for x in ((manifest or {}).get("depends") or [])])
         if not deps:
             return out
         found: dict = {}
@@ -120,7 +124,8 @@ def ext_domain_decls(pkg_root: str = "") -> list:
 
 
 def layered_decls(pkg_root: str = "", pkg_decls: dict | None = None, *,
-                  use_builtin: bool = True, builtin: dict | None = None) -> dict:
+                  use_builtin: bool = True, builtin: dict | None = None,
+                  depends: list | None = None) -> dict:
     """**唯一一份**分层合并 —— 编辑器与装载口都走它（别再各写一套）。
 
         ① 引擎默认集（通用件自己的表）
@@ -132,7 +137,7 @@ def layered_decls(pkg_root: str = "", pkg_decls: dict | None = None, *,
     """
     base = BUILTIN_DEFAULT_DOMAINS if builtin is None else builtin
     out = merge_decls({}, builtin=base, use_builtin=use_builtin)
-    for d in ext_domain_decls(pkg_root):
+    for d in ext_domain_decls(pkg_root, depends=depends):
         out = merge_decls(d, builtin=out)
     if pkg_decls:
         out = merge_decls(pkg_decls, builtin=out)
