@@ -107,9 +107,21 @@ _hook_provider_running = False
 
 
 def set_config(kind: str, table) -> None:
-    """游戏层挂载配置表。kind: effect_actions/effect_rules。"""
-    if kind in _LOADED:
-        _LOADED[kind] = table if table is not None else {}
+    """挂载一张配置表 —— **表名由调用方定，引擎不认识任何具体表名**。
+
+    （2026-09-23 第 7 批：原先这里只认 `effect_actions` / `effect_rules` 两个白名单，
+      那等于把游戏侧的词汇写进了引擎。改成任何 kind 都能挂。）
+    """
+    _LOADED[kind] = table if table is not None else {}
+
+
+def get_config(kind: str, default=None):
+    """读一张配置表（未挂载 → `default`）。与 `set_config` 配对的**泛型口**。
+
+    游戏侧的专用取件（`get_effect_rules` / `state_def` / `skill_*` …）
+    由扩展包在这上面包一层，引擎侧不再出现它们的名字。
+    """
+    return _LOADED.get(kind, default)
 
 
 def load_game_rules(module) -> None:

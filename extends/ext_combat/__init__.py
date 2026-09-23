@@ -24,6 +24,11 @@ from .battle.landing import deal_damage, heal_actor
 from .battle.schedule import action_time, initial_ct, recover_time, settle_landing
 from .battle.serialize import from_state, to_state
 from .battle.state_effects import all_state_effects, state_def
+#: 游戏配置取件面（第 7 批：从引擎 config.py 搬来 —— effect_rules / skill / mech / bar / kind）
+from .battle.game_config import (  # noqa: F401
+    bar_prefix, get_effect_actions, get_effect_rules, kind_of,
+    load_game_rules, mech_cfg, monster_skill_of, skill_by_key, skill_info_of,
+)
 from .battle.stats import actor_stats
 
 # 子模块形态（`from ext_combat import battle` / `ext_combat.battle.effects`）
@@ -56,4 +61,12 @@ __all__ = [
     "battle", "actions", "actors", "ai", "effect_triggers", "effects", "formulas",
     "landing", "schedule", "serialize", "state_effects", "stats",
     "gauge", "formation", "panel",
-]
+    "bar_prefix",
+    "get_effect_actions",
+    "get_effect_rules",
+    "kind_of",
+    "load_game_rules",
+    "mech_cfg",
+    "monster_skill_of",
+    "skill_by_key",
+    "skill_info_of",]

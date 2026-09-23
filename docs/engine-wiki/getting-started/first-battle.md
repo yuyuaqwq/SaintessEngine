@@ -49,7 +49,7 @@ config.mount(
 | + `formula_skeleton_fn` | 起得了战斗，但 `human_act` 返回 `[]`、目标 hp 不变 —— **静默 0 伤害**（R8 语义） |
 | + `time_model_fn` / `action_base_fn` | ✅ `💥 野狼 受到 34 点伤害！` |
 
-> ⚠️ **坑（建议改进）**：`config.mount(**hooks)`（`config.py:153`）只认 `_HOOKS`
+> ⚠️ **坑（建议改进）**：`config.mount(**hooks)`（`config.py:165`）只认 `_HOOKS`
 > （`config.py:33-69`）名单里的 15 个名字，**未知名会被静默忽略**（`set_hook` 里
 > `if name in _HOOKS` 没有 else 分支）。写错 hook 名不会报错，只是不生效。
 > 开发期建议打开 `config.strict = True`（`config.py:95`）——未装配的 hook 会抛
