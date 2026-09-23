@@ -73,6 +73,17 @@ def discover():
         for f in sorted(os.listdir(ex_dir)):
             if f.startswith("test_") and f.endswith(".py"):
                 paths.append(os.path.join(ex_dir, f))
+    # ★ 扩展包自带的门禁也进门禁（包栈重构 2026-09-23：能力包跟着引擎仓一起长大，
+    #   它们的测试不许只在各自目录里手动跑）。
+    ext_base = os.path.join(ROOT, "extends")
+    if os.path.isdir(ext_base):
+        for name in sorted(os.listdir(ext_base)):
+            tdir = os.path.join(ext_base, name, "tests")
+            if not os.path.isdir(tdir):
+                continue
+            for f in sorted(os.listdir(tdir)):
+                if f.startswith("test_") and f.endswith(".py"):
+                    paths.append(os.path.join(tdir, f))
     return paths
 
 

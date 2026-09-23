@@ -1,6 +1,6 @@
 # 任务账本形状（账本 / 目标类型注册表 / 单条外壳）
 
-> 模块：`saintess_engine.quest` —— `QuestLog`（账本状态机）+ `Objectives` / `Objective` /
+> 模块：`ext_quest.quest`（**扩展包** —— 2026-09-23 起从引擎迁出，见 `extends/ext_quest/`） —— `QuestLog`（账本状态机）+ `Objectives` / `Objective` /
 > `parse_needs`（目标类型注册表 + 进度折叠 + 行文骨架）+ `Quest`（单条只读外壳）。
 > 一句话：**一份跨会话持久的多 lane 账本 + 一张有序的目标类型表**；
 > 字段名、状态词、目标类型词、需求数口径、行文模板全部由内容侧给，引擎只认**结构字段名**与**注入口**。
@@ -23,7 +23,7 @@
 ## 用法
 
 ```python
-from saintess_engine.quest import Objective, Objectives, Quest, QuestLog, parse_needs
+from ext_quest.quest import Objective, Objectives, Quest, QuestLog, parse_needs
 
 # ① 注入面（引擎零默认取值：字段名 / 状态词 / 子账本形态都由内容侧给）
 fields = {"current": <字段名>, "status": <字段名>, "progress": <字段名>,

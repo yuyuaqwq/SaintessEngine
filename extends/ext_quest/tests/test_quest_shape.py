@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """quest 门禁：任务账本形状（`QuestLog` / `Objective` / `Objectives` / `Quest`）。
 
-跑法：`python tests/test_quest_shape.py`
+跑法：`python extends/ext_quest/tests/test_quest_shape.py`（或随 `python tests/run_all.py` 一起跑）
 退出码：0 = 全绿；1 = 有失败（结尾打印 `结果：通过 X / 共 Y` + 失败清单）。
 
 覆盖（照 `U1-D2_BATCHES.md` §1 的 L1 判据 + `U1-D2_DESIGN.md` §2 的字段级形状 + §2.3 的 12 条口径分歧）：
@@ -27,12 +27,15 @@ import os
 import sys
 import time
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(_HERE)
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
+_HERE = os.path.dirname(os.path.abspath(__file__))      # extends/ext_quest/tests
+PKG_ROOT = os.path.dirname(_HERE)                       # extends/ext_quest
+EXT_BASE = os.path.dirname(PKG_ROOT)                    # extends（扩展包搜索路径）
+ROOT = os.path.dirname(EXT_BASE)                        # framework-engine（引擎仓根）
+for _p in (ROOT, EXT_BASE, _HERE):                      # 引擎 / 本包 / 同目录 _check
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
-from saintess_engine.quest import (  # noqa: E402
+from ext_quest.quest import (  # noqa: E402
     Objective, Objectives, Quest, QuestLog, parse_needs,
 )
 
@@ -850,7 +853,7 @@ def t_fingerprint():
 
 
 def _quest_sources():
-    base = os.path.join(ROOT, "saintess_engine", "quest")
+    base = os.path.join(PKG_ROOT, "quest")      # 本包内的 quest/（引擎已不再持有它）
     return [os.path.join(r, f) for r, _d, fs in os.walk(base)
             for f in sorted(fs) if f.endswith(".py")]
 
@@ -924,7 +927,7 @@ def t_zero_knowledge():
           not bad_imp, bad_imp[:8])
     check("★ 判据 8 零字段知识（无那 9 个字面量）", not bad_field, bad_field[:8])
 
-    import saintess_engine.quest as mod
+    import ext_quest.quest as mod
     check("__all__ 恰为设计给定的五个符号",
           mod.__all__ == ["Quest", "QuestLog", "Objective", "Objectives", "parse_needs"],
           mod.__all__)
