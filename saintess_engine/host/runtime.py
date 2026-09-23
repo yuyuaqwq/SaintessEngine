@@ -71,7 +71,7 @@ class Host:
                  idle_sleep=0.05, echo_battle=True, tlog_limit=500, id_key="uid",
                  register_hint=DEFAULT_REGISTER_HINT, battle_hint=DEFAULT_BATTLE_HINT,
                  battle_check=None, texts_domain="texts", inject=None, async_runner=None,
-                 ext_paths=()):
+                 ext_paths=None):
         self.adapter = adapter
         self.package_dir = package_dir
         self.scenario = scenario or Scenario()
@@ -93,7 +93,12 @@ class Host:
         #: 包命令模块之前）② 每轮消息并入 `Env.state`。引擎**不解释**其键值（零游戏知识）。
         self.inject: dict = dict(inject or {})
         #: 扩展包搜索路径（装扩展包目录的父目录）—— 空 = 只用数据包自己的内容。
-        self.ext_paths = tuple(ext_paths or ())
+        #: 扩展包搜索路径。**`None` = 走约定默认**（`SAINTESS_EXTENDS` → 数据包同级
+        #: `../extends` → 引擎仓 `extends/`），这是部署与普通用法的常态；
+        #: 显式传空序列（`()` / `[]`）才是「一个扩展包都不搜」的严格模式。
+        #: ⚠ 默认值只能是 None —— 写成 `()` 会让每个宿主都静默变成严格模式，
+        #:   在真实部署树里表现为「数据包 depends 的扩展包一个都找不到」。
+        self.ext_paths = None if ext_paths is None else tuple(ext_paths)
         self.stack: PackageStack | None = None
         self.commands = CommandRegistry(name="host")
         self.handlers: dict = {}          # 包内命令处理器表（content/commands.py::COMMANDS）
