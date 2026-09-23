@@ -40,13 +40,13 @@
   - **运行时** `store/` · `command/` · `events/` · `clock/` · `container/` · `text/` · `session/` ·
     `log/` · `tlog/` · `records/`
   - **宿主** `host/`（包加载 / 会话循环 / 命令通道 / 战斗驱动半边）
-- 扩展包目录 `extends/`：引擎自带 **8** 个（见下表）。装法永远是一句话 ——
+- 扩展包目录 `extends/`：引擎自带 **11** 个（见下表）。装法永远是一句话 ——
   数据包 `game.json` 里 `"depends": ["ext_xxx"]`，包栈按拓扑序装（被依赖者在前）
 - 数据包目录 `games/`：一款游戏一个包（`games/orlandia` = 《奥兰迪亚》导出包，
   `games/my_game` = 演示包）。**一个进程只允许一个数据包**：指令路由 / 动作注册表 / 文案表 /
   时钟都是进程级单例，两个数据包会互撞 —— 要同时跑两款游戏就开两个进程
 
-### 引擎自带的 10 个扩展包（18 个原语模块搬出后的新家 + 抽包工程新增）
+### 引擎自带的 11 个扩展包（18 个原语模块搬出后的新家 + 抽包工程新增）
 
 | 扩展包 | 从引擎搬出去的模块 | 它提供什么 |
 |---|---|---|
@@ -60,6 +60,7 @@
 | `extends/ext_dialogue/` | `dialogue/` | 对话树与会话游标 |
 | `extends/ext_reward/` | ——（2026-09-24 B4a 从**数据包**抽入） | 战斗流水采集半边（`tlog_collect.BattleTLog`：事件 → 流水，靠引擎观察者通道） |
 | `extends/ext_effect/` | ——（2026-09-24 B7a 从**数据包**抽入） | 场景交互效果层（`POI_EFFECTS` 注册表 + `PoiContext` + `execute_poi`；注入面 = `ctx.host/dom/text/static`） |
+| `extends/ext_achieve/` | ——（2026-09-24 B2a 从**数据包**抽入） | 条件判定的通用形状：`cond.registry` 条件注册表（未知名按默认键兜底 · 声明表整表装配）+ `cond.envs` 环境位图（`EnvCtx` · 词表由调用方注入） |
 
 ### 包栈：三层怎么装起来
 
