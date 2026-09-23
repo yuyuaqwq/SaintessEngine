@@ -394,9 +394,18 @@ def main():
               os.path.isfile(PK.domains_decl_path(scaf["dir"])))
         check("脚手架声明的域来源 == package",
               all(PK.domain_source(scaf["dir"], d) == "package" for d in PK.declared_domain_ids(scaf["dir"])))
+        # ★ 2026-09-24：脚手架生成的是「能跑战斗的最小包」⇒ 清单里**声明了
+        #   `depends: ["ext_combat"]`**（它生成的 `content/apply.py` import 的就是它）。
+        #   于是有效域表 = 内置默认集 ∪ ext_combat 声明的域（`layered_decls` ②
+        #   「域跟消费端走」）—— 期望值从**扩展包自己的声明文件**读，不写死数字。
+        with open(os.path.join(ROOT, "extends", "ext_combat", "domains.json"),
+                  encoding="utf-8") as _f:
+            _ext_decl = json.load(_f)
         eff_s, warns_s = PK.effective_domains(scaf["dir"])
-        check("等值声明不产 warning（零回归）/ 域表仍等于内置默认集",
-              warns_s == [] and len(eff_s) == len(ORIG), f"{warns_s} {len(eff_s)}")
+        check("等值声明不产 warning（零回归）/ 域表 = 内置默认集 ∪ depends 声明的域",
+              warns_s == [] and len(eff_s) == len(ORIG) + len(_ext_decl)
+              and set(ORIG) <= set(eff_s) and set(_ext_decl) <= set(eff_s),
+              f"{warns_s} {len(eff_s)} vs {len(ORIG)}+{len(_ext_decl)}")
 
         # ──────────────────────────────────────────────────────────── 7. `$builtin` 开关
         print("\n【7. `\"$builtin\": false`（只用本包声明的域）】")

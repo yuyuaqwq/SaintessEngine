@@ -550,6 +550,16 @@ def create_package(pkg_id: str, name: str, desc: str = "",
     write_json(manifest_path(pkg_dir), {
         "id": pkg_id, "name": name or pkg_id, "desc": desc,
         "engine": ">=0.1", "domains": doms,
+        # ★ 2026-09-24（第 7 批收口）：脚手架生成的 `content/apply.py` **确实** import 扩展包
+        #   （`ext_combat.battle.formulas` + `ext_combat.battle.game_config`，见
+        #   `_write_apply_scaffold`）⇒ 依赖必须**声明出来**。声明之后由引擎负责：
+        #   `plan_stack` 把 ext_combat 排进加载计划（被依赖者在前）→ `Package.load()`
+        #   把 `<引擎根>/extends` 摆上 `sys.path` → 包内 import 与 `install_engine()` 才跑得起来。
+        #   连带（**正确**的那一半）：有效域表 = 引擎默认集 ∪ ext_combat 声明的域
+        #   （`layered_decls` ②「域跟消费端走」）—— 脚手架挂的就是那两张表，
+        #   它们本来就该出现在编辑器的域表里。不声明 = 沙箱/导出冒烟当场
+        #   `ModuleNotFoundError: No module named 'ext_combat'`（实测）。
+        "depends": ["ext_combat"],
         "entry": "content/apply.py",
         "created": time.strftime("%Y-%m-%d %H:%M:%S"),
     })

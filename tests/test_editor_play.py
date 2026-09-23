@@ -18,6 +18,19 @@ C. **逐字节对拍（≥20 条）**：同 seed + 同命令序列 + 同固定�
 C2. **★ 无宿主 vs 有宿主（T7 第 3 轮 · 试玩脱宿主）**：试玩链的壳**恒为引擎侧**
    `editor/play_shell.py::PlayShell`（无宿主）；只有显式给 `host_root` 才换成插件
    `host.shell.HostShell`。两侧同 seed / 同固定墙钟 / 同序列 / 各自新库 ⇒ 逐条 `digest` 相同。
+T. **一套树规则（2026-09-24）**：**包 / 引擎 / 宿主三者必须同树** —— 有宿主 ⇒ 整棵部署树
+   （`<插件>/framework` 的引擎 + 同树 `games/*` 的包；QQ 侧参考跑跑的正是这一棵）；
+   无宿主 ⇒ 本仓树。四个根（`ENGINE_ROOT` / `GAMES_DIR` / `PKG` / `EXT_DIRS`）一次算清、
+   之后**一律显式传参**，不靠 `sys.path` 的插入顺序。混装（本仓包 + 别的仓引擎）当场
+   ImportError（实测：本仓引擎第 7 批摘掉 `config.load_game_rules` ⇒ 部署树那份包在
+   `install_engine()` 里炸 `AttributeError`，报错指向包、根因是「根从哪来」）。
+   另一条（顺序铁律）：**包内模块的 import 一律归 `boot()` 之后** —— 扩展包目录要等
+   `load_stack()` 把扩展包排进加载计划时才会上 `sys.path`，而包内 `content/**` 在
+   **import 期**就 `from ext_combat…`。QQ 侧参考跑原先有一句**死 import**
+   （`from content import persistence`）把整条 content 链提前 ⇒ 本文件 12 条红全由它而来
+   （2026-09-24 已在宿主侧删掉那行，本文件不再注入任何路径）。路由段（E）反着来：它走
+   **本仓树**（route 的包根与 `play.discover()` 的引擎根都钉在 `FRAMEWORK_ROOT`），
+   故显式清掉宿主变量。
 C0. **无宿主也要能跑（缺宿主时本文件的唯一判据）**：8 条子集真跑全绿（不靠插件任何文件）。
    因此本门禁**不再整文件跳过** —— QQ 侧对拍（C 段）与路由片段（E 段）才需要宿主。
 E2. **反证**：把 `ShellBase.__getattr__` 打桩成抛错 ⇒ `背包` 必红（证「按名解析包内助手」
@@ -74,10 +87,23 @@ def _find_host_root() -> str:
 
 
 HOST_ROOT = _find_host_root()                      # 宿主插件目录（QQ 侧同一份）
+
+# ★ 一套树规则（本文件**唯一**的根选择口径）：**包 / 引擎 / 宿主三者同树**。
+#   有宿主 ⇒ 整棵部署树（`<插件>/framework` 的引擎 + 同树 `games/*` 的包；QQ 侧参考跑
+#   跑的正是这一棵）；无宿主 ⇒ 本仓树（本仓引擎 + 本仓包）。四个根**一次算清、后续显式
+#   传参** —— 不再靠 `sys.path` 的插入顺序碰运气（`editor/play_worker.py::_setup_paths`
+#   先插引擎根、后插宿主根 ⇒ 宿主根盖住引擎根；那是巧合，不是契约）。
+#   ⚠ 混装（本仓包 + 别的仓引擎）当场 ImportError：本仓引擎第 7 批摘掉
+#     `config.load_game_rules` 之后，部署树那份包在 `install_engine()` 里炸
+#     `AttributeError` —— 报错指向包，根因却是「根从哪来」。
+_HOST_TREE = os.path.join(HOST_ROOT, "framework") if HOST_ROOT else ""
+ENGINE_ROOT = _HOST_TREE or ROOT                   # 引擎根（= PKG 所在的那棵树）
+GAMES_DIR = os.path.join(ENGINE_ROOT, "games")     # 包目录的父级（`editor/packages` 同口径）
+PKG = os.path.join(GAMES_DIR, "orlandia")          # 游戏包
 if HOST_ROOT:
     os.environ.setdefault("B20_HOST_ROOT", HOST_ROOT)   # play.discover() 读它
-PKG = (os.path.join(HOST_ROOT, "framework", "games", "orlandia") if HOST_ROOT
-       else os.path.join(ROOT, "games", "orlandia"))   # 游戏包
+os.environ["GWEN_FRAMEWORK_DIR"] = ENGINE_ROOT     # 包内 `tests/_paths.py`：引擎根（同树）
+os.environ.setdefault("GWEN_HOST_DIR", HOST_ROOT)  # 同上：宿主壳根（空 = 由引擎根推）
 QQ_REF = os.path.join(HOST_ROOT, "tests", "b20_qq_ref.py") if HOST_ROOT else ""
 DB_DIR = tempfile.mkdtemp(prefix="b20_play_db_")   # 每次运行独立目录（并发/残留互不污染）
 atexit.register(shutil.rmtree, DB_DIR, ignore_errors=True)   # 退出清理（含异常/早退）
@@ -179,14 +205,14 @@ def test_full_command_coverage() -> dict:
     keys = sorted(decl)
     check("包内声明表 key 数 == 196", len(keys) == 196, "实际 %d" % len(keys))
 
-    listing = PLAY.list_commands(PKG)
+    listing = PLAY.list_commands(PKG, engine_root=ENGINE_ROOT)
     check("play.list_commands() 列出全部 key",
           listing.get("ok") and listing.get("count") == len(keys),
           "count=%s" % listing.get("count"))
     check("清单 key 集合与声明表逐字相等",
           sorted(c["key"] for c in listing["commands"]) == keys)
 
-    audit = PLAY.audit(PKG, db=os.path.join(DB_DIR, "audit.db"))
+    audit = PLAY.audit(PKG, db=os.path.join(DB_DIR, "audit.db"), engine_root=ENGINE_ROOT)
     check("子进程审计 stage=audit", audit.get("stage") == "audit", str(audit)[:200])
     akeys = sorted(r["key"] for r in (audit.get("rows") or []))
     check("审计覆盖全部 196 条（_maint_gate 在内）", akeys == keys,
@@ -240,8 +266,7 @@ def _run_qq_ref(pairs, db, uid="9001", group_id="g9"):
                         capture_output=True, text=True, encoding="utf-8", errors="replace",
                         cwd=HOST_ROOT, timeout=600,
                         env={**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1",
-                             "B20_CLOCK": str(CLOCK),
-                             "PYTHONPATH": HOST_ROOT})
+                             "B20_CLOCK": str(CLOCK), "PYTHONPATH": HOST_ROOT})
     rows, tail = [], None
     for line in (pr.stdout or "").splitlines():
         if not line.startswith("__B20_QQREF__"):
@@ -267,7 +292,7 @@ def test_byte_parity(missing_keys=None) -> None:
 
     # ① 试玩侧先注册（建档），再把**同一份库**复制成两侧起点 —— 初始状态逐字节相同
     reg = PLAY.run(PKG, ["注册 对拍者 男"], seed=11, uid="9001", group_id="g9", db=reg_db,
-                   db_dir=DB_DIR)
+                   db_dir=DB_DIR, engine_root=ENGINE_ROOT)
     check("试玩侧注册建档（两条通道的共同起点）", reg.get("ok") and reg.get("ran") == 1,
           str(reg)[:200])
     qq_db = os.path.join(DB_DIR, "parity_qq.db")
@@ -297,7 +322,7 @@ def test_byte_parity(missing_keys=None) -> None:
     check("QQ 侧参考跑通（stage=done）", bool(qq_tail) and qq_tail.get("stage") == "done",
           (qq_log or "")[-400:])
     play_res = PLAY.run(PKG, [t for t, _k in pairs], seed=11, uid="9001", group_id="g9",
-                        db=play_db, db_dir=DB_DIR, clock=CLOCK)
+                        db=play_db, db_dir=DB_DIR, clock=CLOCK, engine_root=ENGINE_ROOT)
     check("试玩侧跑通（stage=done）", play_res.get("stage") == "done", str(play_res)[:300])
     p_rows = play_res.get("rows") or []
 
@@ -401,9 +426,9 @@ def test_subprocess_robustness() -> None:
             os.remove(p)
     seq = ["注册 种子甲 男", "探索"]
     r1 = PLAY.run(PKG, seq, seed=4242, uid="9501", group_id="gs", db=db1, db_dir=DB_DIR,
-                  clock=CLOCK)
+                  clock=CLOCK, engine_root=ENGINE_ROOT)
     r2 = PLAY.run(PKG, seq, seed=4242, uid="9501", group_id="gs", db=db2, db_dir=DB_DIR,
-                  clock=CLOCK)
+                  clock=CLOCK, engine_root=ENGINE_ROOT)
     check("同 seed + 同序列 + 同起点 + 同固定墙钟 → digests_sha 相同",
           r1.get("digests_sha") and r1.get("digests_sha") == r2.get("digests_sha"),
           "%s vs %s" % (r1.get("digests_sha"), r2.get("digests_sha")))
@@ -480,8 +505,15 @@ def test_routes_fragment() -> None:
     pr = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
                         encoding="utf-8", errors="replace", timeout=900,
                         env={**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1",
-                             "PYTHONPATH": HOST_ROOT,
-                             "B20_HOST_ROOT": HOST_ROOT})
+                             "PYTHONPATH": HOST_ROOT or "",
+                             # ★ 路由段走**本仓树**：`editor/packages.py::DEFAULT_GAMES_DIR`
+                             #   与 `play.discover()` 的引擎根都钉在 `FRAMEWORK_ROOT` ⇒ 这一段
+                             #   的包与引擎天然同源。故这里把宿主变量显式清空 —— 否则 play
+                             #   子进程会按 `B20_HOST_ROOT` 去装**部署树**的引擎（`_setup_paths`
+                             #   把宿主根摆在引擎根前面），与 `FW_GAMES_DIR` 指的本仓包混装。
+                             "FW_GAMES_DIR": os.path.join(ROOT, "games"),
+                             "B20_HOST_ROOT": "", "GWEN_PLUGIN_ROOT": "",
+                             "DRAGONFALL_ROOT": ""})
     out = (pr.stdout or "") + (pr.stderr or "")
     check("GET …/play/commands → 200 + 196 条", ("LIST 200 196 True" in out) or ("LIST 200 195 True" in out), out[-400:])
     check("POST …/play → 200 + stage=done + 2 条 + 有文本段", "RUN 200 done 2 True" in out, out[-400:])
@@ -516,7 +548,7 @@ def _run_play(tag, host_root, seq, *, clock=CLOCK, seed=11, uid="9001", group_id
     if os.path.exists(db):
         os.remove(db)
     return PLAY.run(PKG, seq, seed=seed, uid=uid, group_id=group_id, host_root=host_root,
-                    db=db, db_dir=DB_DIR, clock=clock)
+                    db=db, db_dir=DB_DIR, clock=clock, engine_root=ENGINE_ROOT)
 
 
 def _brief(res: dict) -> str:
@@ -705,9 +737,10 @@ def test_action_wiring_negative() -> None:
 _F3_PROBE = '''
 import asyncio, json, sys
 sys.path.insert(0, %r)
-from saintess_engine.package import load_stack
+import saintess_engine.package as _eng          # ① 引擎：与 PKG 同树（先进 sys.modules）
+sys.path.insert(0, %r)                          # ② 本仓 `editor/**`（被测实现）置前
 from editor.play_shell import PlayShell
-pkg = load_stack(%r, inject={"db_path": "", "clock": None, "log": None, "tlog": None})
+pkg = _eng.load_stack(%r, inject={"db_path": "", "clock": None, "log": None, "tlog": None})
 lst = []
 sh = PlayShell(pkg=pkg, events=lst)
 out = {"same_object": sh._events is lst}
@@ -730,7 +763,7 @@ def test_action_list_runtime_identity() -> None:
     os.makedirs(DB_DIR, exist_ok=True)
     probe = os.path.join(DB_DIR, "_t7_action_list.py")
     with open(probe, "w", encoding="utf-8", newline="") as f:
-        f.write(_F3_PROBE % (ROOT, PKG))
+        f.write(_F3_PROBE % (ENGINE_ROOT, ROOT, PKG))
     pr = subprocess.run([sys.executable, probe], capture_output=True, text=True,
                         encoding="utf-8", errors="replace", timeout=600,
                         env={**os.environ, "PYTHONIOENCODING": "utf-8",
@@ -764,8 +797,12 @@ def test_action_list_end_to_end() -> None:
     tmp = tempfile.mkdtemp(prefix="t7_f4_", dir=DB_DIR)
     reg = os.path.join(tmp, "reg.db")
     r0 = PLAY.run(PKG, ["注册 动作探针 男"], seed=11, uid="9201", group_id="gf",
-                  host_root="", db=reg, db_dir=tmp, clock=CLOCK)
+                  host_root="", db=reg, db_dir=tmp, clock=CLOCK, engine_root=ENGINE_ROOT)
     check("F4 建档 stage=done", r0.get("stage") == "done", _brief(r0))
+    if r0.get("stage") != "done":
+        note("F4 前置建档失败 ⇒ 跳过本段（后面的 `DELETE FROM world_event` 会因缺表抛 "
+             "未捕获异常，把整份门禁的表直接带崩，看不到失败汇总）")
+        return
     data = {"items": [{"id": 1, "name": "试作胸甲", "slot": "armor", "lv": 30,
                        "quality": "purple", "bids": {}, "base": 100, "buyout": 500}]}
     con = sqlite3.connect(reg, timeout=10)
@@ -780,9 +817,9 @@ def test_action_list_end_to_end() -> None:
     shutil.copyfile(reg, db_ctrl)
     shutil.copyfile(reg, db_act)
     ctrl = PLAY.run(PKG, ["角色"], seed=11, uid="9201", group_id="gf", host_root="",
-                    db=db_ctrl, db_dir=tmp, clock=CLOCK)
+                    db=db_ctrl, db_dir=tmp, clock=CLOCK, engine_root=ENGINE_ROOT)
     act = PLAY.run(PKG, ["拍卖"], seed=11, uid="9201", group_id="gf", host_root="",
-                   db=db_act, db_dir=tmp, clock=CLOCK)
+                   db=db_act, db_dir=tmp, clock=CLOCK, engine_root=ENGINE_ROOT)
     crow = (ctrl.get("rows") or [{}])[0]
     arow = (act.get("rows") or [{}])[0]
     check("对照组（角色）actions 为空（不是「永远非空」）",
@@ -821,10 +858,11 @@ _F5_PROBE = """
 import asyncio, json, os, sys
 payload = json.loads(sys.stdin.read())
 sys.path.insert(0, payload["engine_root"])
-from saintess_engine.package import load_stack
+import saintess_engine.package as _eng          # ① 引擎：与 PKG 同树
+sys.path.insert(0, payload["ed_root"])          # ② 本仓 `editor/**`（被测实现）置前
 from editor.play_shell import PlayShell
 os.environ["GWEN_GAME_DB"] = payload["db"]
-pkg = load_stack(payload["pkg_dir"], inject={"db_path": payload["db"], "clock": None,
+pkg = _eng.load_stack(payload["pkg_dir"], inject={"db_path": payload["db"], "clock": None,
                                                "log": None, "tlog": None})
 sh = PlayShell(pkg=pkg, events=[])
 for tag in payload["tags"]:
@@ -857,7 +895,8 @@ def _f5_play_probe(tmp, db):
     probe = os.path.join(tmp, "_f5_actions.py")
     with open(probe, "w", encoding="utf-8", newline="") as f:
         f.write(_F5_PROBE)
-    payload = {"engine_root": ROOT, "pkg_dir": PKG, "db": db, "tags": list(_F5_TAGS),
+    payload = {"engine_root": ENGINE_ROOT, "ed_root": ROOT, "pkg_dir": PKG, "db": db,
+               "tags": list(_F5_TAGS),
                "broadcast": _F5_BROADCAST, "notice": _F5_NOTICE,
                "group_id": _F5_GID, "uid": _F5_UID}
     pr = subprocess.run([sys.executable, probe], input=json.dumps(payload), capture_output=True,
@@ -924,8 +963,11 @@ def test_action_parity() -> None:
     tmp = tempfile.mkdtemp(prefix="t8_f5_", dir=DB_DIR)
     reg = os.path.join(tmp, "reg.db")
     r0 = PLAY.run(PKG, ["注册 动作对拍 男"], seed=11, uid=_F5_UID, group_id=_F5_GID,
-                  host_root="", db=reg, db_dir=tmp, clock=CLOCK)
+                  host_root="", db=reg, db_dir=tmp, clock=CLOCK, engine_root=ENGINE_ROOT)
     check("F5 建档 stage=done", r0.get("stage") == "done", _brief(r0))
+    if r0.get("stage") != "done":
+        note("F5 前置建档失败 ⇒ 跳过本段（与 F4 同因：缺表会抛未捕获异常）")
+        return
 
     # ---- ① 过期拍卖落槌（真命令路径）----
     data = {"items": [{"id": 1, "name": "试作胸甲", "slot": "armor", "lv": 30,
@@ -940,7 +982,7 @@ def test_action_parity() -> None:
     play_db = os.path.join(tmp, "f5_play.db")
     shutil.copyfile(reg, play_db)
     play = PLAY.run(PKG, ["拍卖"], seed=11, uid=_F5_UID, group_id=_F5_GID, host_root="",
-                    db=play_db, db_dir=tmp, clock=CLOCK)
+                    db=play_db, db_dir=tmp, clock=CLOCK, engine_root=ENGINE_ROOT)
     p_row = (play.get("rows") or [{}])[0]
     p_acts = p_row.get("actions") or []
     check("① 试玩侧：过期拍卖落槌 ⇒ actions 非空", bool(p_row.get("ok")) and bool(p_acts),
@@ -997,6 +1039,7 @@ _SABOTAGE = """
 import importlib.util, json, sys
 sys.path.insert(0, %r)
 import saintess_engine.host.shell as SB
+sys.path.insert(0, %r)          # 本仓 `editor/**`（被 worker 引用）置前
 def _boom(self, name):
     raise AttributeError("sabotage: " + name)
 SB.ShellBase.__getattr__ = _boom
@@ -1029,8 +1072,8 @@ def test_helper_resolution_negative() -> None:
     os.makedirs(DB_DIR, exist_ok=True)
     probe = os.path.join(DB_DIR, "_t7_sabotage.py")
     with open(probe, "w", encoding="utf-8", newline="") as f:
-        f.write(_SABOTAGE % (ROOT, PLAY.WORKER))
-    payload = {"pkg_dir": PKG, "host_root": "", "engine_root": ROOT,
+        f.write(_SABOTAGE % (ENGINE_ROOT, ROOT, PLAY.WORKER))
+    payload = {"pkg_dir": PKG, "host_root": "", "engine_root": ENGINE_ROOT,
                "commands": ["注册 打桩者 男", "背包"], "seed": 11, "uid": "9101",
                "group_id": "gs", "db": os.path.join(DB_DIR, "t7_sabotage.db"),
                "db_dir": DB_DIR, "clock": CLOCK}

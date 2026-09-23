@@ -225,10 +225,10 @@
 3. **「默认关」+「用户显式确认」两个开关不得取消** —— 不许因为"包作者嫌麻烦"就改成默认开，
    也不许把确认弹窗做成可永久跳过。
 4. **编辑器链路的「零引擎 import」硬门禁不得破** —— 既有口径是：干净解释器里 `import editor.play`
-   之后 `sys.modules` 不许出现 `saintess_engine*`（`tests/test_editor_play.py:131` 的 `test_zero_engine_import`），
+   之后 `sys.modules` 不许出现 `saintess_engine*`（`tests/test_editor_play.py:157` 的 `test_zero_engine_import`），
    反证是**子进程侧**才许 import 引擎；**层 3 批 1 已加同款断言**（`tests/test_editor_layer3_render_decl.py` 的硬断言段：AST 不 import 引擎、`import editor.render` 后 `sys.modules` 零 `saintess_engine*`）。
    ⚠️ 口径注意：说的是**试跑 / 试玩 / 渲染这些链路自身**，不是"整个 `server.py` 进程" ——
-   `server.py:71` 经 `editor/packages.py` 的 `install_engine`（`packages.py:588`）本来就会碰到引擎装配。
+   `server.py:71` 经 `editor/packages.py` 的 `install_engine`（`packages.py:641`）本来就会碰到引擎装配。
 
 ---
 

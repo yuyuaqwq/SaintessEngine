@@ -196,9 +196,15 @@ def main() -> int:
     same = open(os.path.join(pkg, "content", "data", "skills.json"), "rb").read() == \
         open(os.path.join(dest, "content", "data", "skills.json"), "rb").read()
     check("往返内容逐字节一致（skills.json）", same)
-    # ★ B2b：域数 = **该包的有效域表**（内置 8 引擎域 ∪ 包声明的内容域），不再等于内置集
-    check(f"导入报告带域数 / 条目数（域数应为 {len(PK.effective_domains(dest)[0])}）",
-      (r.get("report") or {}).get("domains") == len(PK.effective_domains(dest)[0])
+    # ★ B2b / 2026-09-24 修口径：报告的「域数」= **清单里声明的域中有效的那几个**
+    #   （`editor/dist.py::_validate`：`doms = manifest["domains"]`，逐条过 `domain_status`）
+    #   —— 拿「有效域表的大小」去比是**两个量**：包声明了 `depends` 之后，有效域表比清单长
+    #   （多出扩展包声明的域，如 ext_combat 的 effect_rules / passive_proc），旧写法必然错位。
+    _eff_dest = PK.effective_domains(dest)[0]
+    _decl_dest = PK.load_manifest(dest).get("domains") or list(_eff_dest)
+    _exp_doms = len([d for d in _decl_dest if d in _eff_dest])
+    check(f"导入报告带域数 / 条目数（域数应为 清单∩有效 = {_exp_doms}）",
+      (r.get("report") or {}).get("domains") == _exp_doms
           and (r.get("report") or {}).get("entries") == 2, f"{r.get('report')}")
     check("导入后无临时目录残留",
           not [d for d in os.listdir(gd2) if d.startswith(".import_")], f"{os.listdir(gd2)}")

@@ -89,14 +89,19 @@ def main():
     #     往 content/rules/effect_rules.json 写一条，再在子进程里 import + install_engine()，
     #     断言引擎侧规则表非空。为什么必须真跑：`config.set_hook` 对不认识的名字**静默忽略**，
     #     脚手架曾用 `mount(effect_rules=…)` 挂声明表 → "装配看起来成功"但表是空的（效果全不生效且不报错）。
-    with open(PK.domain_path(pkg_dir, "effect_rules"), "w", encoding="utf-8") as f:
+    # ★ 第 7 批：`effect_rules` 已随 ext_combat 搬出引擎内置集，`PK.domain_path` 不再认它；
+    #   而脚手架生成的 apply.py 本来就是**自己按名字拼路径**读（见 editor/packages.py 的
+    #   `_load(name)`），所以这里直接落它要读的那个文件，不经过域表。
+    _rules_dir = os.path.join(pkg_dir, "content", "rules")
+    os.makedirs(_rules_dir, exist_ok=True)
+    with open(os.path.join(_rules_dir, "effect_rules.json"), "w", encoding="utf-8") as f:
         json.dump({"sk_probe": {"name": "探针", "period": {"turns": 1}}}, f, ensure_ascii=False)
     probe = ("import json, sys\n"
              f"sys.path.insert(0, {ROOT!r})\n"
              f"sys.path.insert(0, {os.path.join(ROOT, 'extends')!r})\n"
              f"sys.path.insert(0, {pkg_dir!r})\n"
              "import content.apply as A\n"
-             "A.install()\n"
+             "A.install_engine()\n"   # ★ 脚手架导出的是 install_engine()（不是 install）
              "from ext_combat.battle import game_config as C\n"
              "print(json.dumps({'rules': len(C.get_effect_rules() or {})}))\n")
     pr = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, timeout=180)

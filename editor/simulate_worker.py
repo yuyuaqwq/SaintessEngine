@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 import traceback
 
 MARKER = "__FW_SIM_RESULT__"
@@ -29,8 +30,45 @@ def _emit(obj: dict) -> None:
     sys.stdout.flush()
 
 
+class _NullLog(object):
+    """最小日志门面（包内取用口只要 `.warning/.info/…`）。"""
+
+    def _emit(self, *a, **k):
+        return None
+
+    debug = info = warning = error = critical = exception = _emit
+
+
+class _NullTLog(object):
+    """最小流水控制面：`enabled()=False` + `tlog()=None` = 宿主契约里的「未启用」。"""
+
+    def enabled(self) -> bool:
+        return False
+
+    def tlog(self):
+        return None
+
+    def emit(self, kind, actor="", **fields):
+        return None
+
+
+def _sandbox_inject() -> dict:
+    """沙箱的宿主注入面（与 `editor/play_worker.py` 同口径：库路径 / 时钟 / 日志 / 流水）。
+
+    包清单声明了 `bind` 时引擎**拒绝**空注入（`Package.apply_bind`）；沙箱给不了真宿主
+    能力，就给最小实现。不声明 `bind` 的包（脚手架生成的包就是）用不到它。
+    """
+    return {"db_path": os.environ.get("GWEN_GAME_DB") or "",
+            "clock": time.time, "log": _NullLog(), "tlog": _NullTLog()}
+
+
 def _setup_paths(pkg_dir: str) -> None:
-    """框架根（saintess_engine 所在）+ 游戏包根（它的 content 包）+ 包目录本身。"""
+    """框架根（saintess_engine 所在）+ 游戏包根（它的 content 包）+ 包目录本身。
+
+    扩展包的路径**不在这里铺**：包声明了 `depends` 就该由引擎负责
+    （`plan_stack` → `Package.load()` 把 `<引擎根>/extends` 摆上 `sys.path`），
+    这里再铺一次 = 双源、且会把「忘了声明 depends」掩盖成「碰巧能跑」。
+    """
     for p in (os.path.join(pkg_dir, "content"), pkg_dir, FW_ROOT):
         if p and os.path.isdir(p) and p not in sys.path:
             sys.path.insert(0, p)
@@ -52,12 +90,18 @@ def main() -> int:
     _setup_paths(pkg_dir)
 
     # ---- 载入游戏包（走引擎官方加载器：它以「包」的方式导入 content，包内相对导入可用）----
+    # ★ 2026-09-24：原先 `info = load_stack(pkg_dir)` 再读 `info["ok"]` —— 那是**旧 API**
+    #   的形状（`load_package()` 回 dict）。现在 `load_stack()` 回 `PackageStack` 对象
+    #   （`saintess_engine/package.py`），`info["ok"]` 当场
+    #   `TypeError: 'PackageStack' object is not subscriptable` ⇒ **任何包**都「装配失败」。
+    #   编辑器（沙箱 / 试玩）要的是「能装配 + 一条可读错误」，故用引擎给子进程准备的
+    #   `probe_stack()`（不抛；`install=True` 顺带跑 `install_engine()`）。
     try:
-        from saintess_engine.package import load_stack
-        info = load_stack(pkg_dir)
-        if not info["ok"]:
+        from saintess_engine.package import probe_stack
+        info = probe_stack(pkg_dir, install=True, inject=_sandbox_inject())
+        if not info.get("ok"):
             return _emit({"ok": False, "stage": "load", "message": "游戏包装配失败",
-                          "traceback": "\n".join(info["errors"])}) or 0
+                          "traceback": "\n".join(info.get("errors") or [])}) or 0
     except Exception:
         return _emit({"ok": False, "stage": "load", "message": "游戏包装配失败",
                       "traceback": traceback.format_exc()}) or 0
