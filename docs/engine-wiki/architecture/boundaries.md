@@ -157,7 +157,7 @@
 | R9 | `battle.py:133` → `game.engine`（技能表查询） | 反向边 |
 | R10 | `battle.py:134` → `game.content.MONSTER_SKILLS` | 内容表直读 |
 | R11 | `stats.py:15` → `game.engine.player_final_stats` | **最重的一条**（玩家面板全算） |
-| R12 | `config.py:38` → `game.data.battle_rules` | 位置不合规（装配逻辑落在引擎包内） |
+| R12 | `config.py:35` → `game.data.battle_rules` | 位置不合规（装配逻辑落在引擎包内） |
 | R13 | `stats.py:96` → 字面量 `"战士"` | 内容名侵入 |
 | R14 | `actions.py:23-27` → 中文字面量 kind | 内容语义耦合 |
 | R15 | `actions.py:43` → 字面量 `"攻击"` | 内容名侵入（普攻兜底） |

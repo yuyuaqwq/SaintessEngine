@@ -21,12 +21,9 @@ class EngineNotConfigured(RuntimeError):
     """引擎求解所需的游戏挂载缺失（strict=True 模式下抛出，见 R8）。"""
 
 
-# 挂载的游戏配置表（引擎只调接口，不认识内容）
-# 结构见各字段 docstring；由游戏层 set_config / 直接赋值 注入
-_LOADED = {
-    "effect_actions": {},  # 游戏名词效果 → 引擎动词动作序列
-    "effect_rules": {},    # 统一效果规则表（V 系列：cap/panel/stat_scale/period/consume/cleanse…）
-}
+# 挂载的配置表容器（引擎只存不认 —— 表名由调用方定，见 set_config / get_config）。
+# ⚠ 这里**不许**预置任何具体表名：预置 = 把游戏侧的词汇写进引擎（第 7 批清掉的那批）。
+_LOADED: dict = {}
 
 # S1 注入面：hook 名 → 内容侧装配件（默认 None = 未装配）。
 # ⚠️ 引擎不得自行实现这些 hook 的内容语义（那就是反向依赖）。
@@ -124,35 +121,10 @@ def get_config(kind: str, default=None):
     return _LOADED.get(kind, default)
 
 
-def load_game_rules(module) -> None:
-    """从游戏规则模块加载约定字段。"""
-    set_config("effect_actions", getattr(module, "EFFECT_ACTIONS", {}))
-    set_config("effect_rules", getattr(module, "EFFECT_RULES", {}))
-
-
 def register_hook_provider(fn) -> None:
     """内容侧注册「hook 惰性装配器」：首次访问未装配 hook 时调用一次。"""
     global _hook_provider
     _hook_provider = fn
-
-
-def get_effect_actions() -> dict:
-    """当前挂载的名词→动词动作表（默认空）。"""
-    return _LOADED["effect_actions"]
-
-
-def get_effect_rules() -> dict:
-    """当前挂载的统一效果规则表（V 系列；EFFECT_RULES 字段全谱见设计文档）。"""
-    return _LOADED.get("effect_rules") or {}
-
-
-def state_def(key: str) -> dict:
-    """查效果规则（无挂载/无条目 = 空 dict = 纯数值无规则）。
-
-    V 系列直切：规则统一查 EFFECT_RULES 单表（数据层已把 STATE_EFFECTS
-    内容并入 EFFECT_RULES，引擎不感知双表）。
-    """
-    return get_effect_rules().get(key) or {}
 
 
 # ============================================================
@@ -160,7 +132,14 @@ def state_def(key: str) -> dict:
 # ============================================================
 
 def set_hook(name: str, value) -> None:
-    """内容侧挂载单个 hook（未知名忽略——引擎只认 _HOOKS 名单）。"""
+    """内容侧挂载单个 hook（未知名忽略 —— 引擎只认 `_HOOKS` 名单）。
+
+    ★ `_HOOKS` 的名单是**注入面契约**（引擎声明它认识哪些 hook 名），不是
+      「引擎里的游戏词」—— 第 7 批一度把它清空，两个门禁立刻红：
+      `test_engine_purity.py` 正面断言「注入面含 hook X」、
+      `test_engine_neutral_fallback.py` 断言「_HOOKS 认识两个第二段 hook 名」。
+      名单留着；被搬走的是**取件函数**（get_effect_rules / skill_by_key …）。
+    """
     if name in _HOOKS:
         _HOOKS[name] = value
 
@@ -208,112 +187,6 @@ def unconfigured(name: str, default):
     return default
 
 
-class _NullFormulas:
-    """未装配时的中性公式兜底（strict=True 时 config.formulas() 改为抛异常）。
-
-    返回值全部为"零效应"：伤害 0 / 成长倍率 1.0 / 等级 0 / 无表达式。
-    引擎据此不炸，但也不产生任何数值 —— 这正是 R8 提醒的"静默空放"，
-    生产接入点必须显式装配（game.bootstrap.load_engine_config()）。
-    """
-
-    @staticmethod
-    def calc_damage(atk, def_, is_crit=False, variance=0.15, pierce=False,
-                    pene_pct=0.0, pene_flat=0, dmg_type="phys"):
-        return 0
-
-    @staticmethod
-    def resolve_formula(formula, stats, target_def, target_mdef, **kwargs):
-        return 0, 0
-
-    @staticmethod
-    def skill_formula_expr(info, level=1):
-        return None
-
-    @staticmethod
-    def skill_formula_expr_for_seg(seg, level=1):
-        return None
-
-    @staticmethod
-    def skill_power_mult(level, info=None):
-        return 1.0
-
-    @staticmethod
-    def skill_flat_value(player_lv, skill_lv, info=None):
-        return 0
-
-    @staticmethod
-    def skill_level_of(player, skill_name):
-        return 0
-
-    @staticmethod
-    def skill_lifesteal_pct(info, level):
-        return 0.0
-
-    @staticmethod
-    def skill_buff_turns(level, base=3, info=None):
-        return base
-
-    @staticmethod
-    def skill_mech_val(info, level):
-        return 0
-
-
-_NULL_FORMULAS = _NullFormulas()
-
-
-def formulas():
-    """引擎数值公式对象（内容侧注入）。
-
-    未装配：strict=True → 抛 EngineNotConfigured；否则返回中性兜底对象
-    （_NullFormulas，全零效应，见 R8）。
-    """
-    value = get_hook("formulas")
-    return value if value is not None else _NULL_FORMULAS
-
-
-def kind_of(name: str) -> str:
-    """kind 语义值（内容侧注入；未装配 → ""）。
-
-    引擎不内置任何 kind 字面量（旧 actions.py 写死"物理/魔法/真伤/治疗/增益"）。
-    """
-    return (_HOOKS.get("kinds") or {}).get(name, "")
-
-
-def skill_info_of(class_name: str, skill_key: str):
-    """技能表查询（玩家侧）：内容侧 skill_lookup.skill_info。"""
-    lookup = get_hook("skill_lookup")
-    if lookup is None:
-        return None
-    return lookup.skill_info(class_name, skill_key)
-
-
-def skill_by_key(skill_key: str):
-    """技能表查询（key 侧）：内容侧 skill_lookup.skill_by_key。"""
-    lookup = get_hook("skill_lookup")
-    if lookup is None:
-        return None
-    return lookup.skill_by_key(skill_key)
-
-
-def monster_skill_of(skill_key: str):
-    """怪物技能表查询：内容侧 monster_skill_fn（未装配 → None）。"""
-    fn = get_hook("monster_skill_fn")
-    if fn is None:
-        return None
-    return fn(skill_key)
-
-
-def mech_cfg(name: str) -> dict:
-    """机制配置表查询（内容侧 mech_cfg_fn；未装配 → {}）。"""
-    fn = get_hook("mech_cfg_fn")
-    if fn is None:
-        return {}
-    return fn(name) or {}
-
-
-def bar_prefix() -> str:
-    """挂敌身条键前缀（内容侧 bar_prefix_fn；未装配 → ""）。"""
-    fn = get_hook("bar_prefix_fn")
-    if fn is None:
-        return ""
-    return fn() or ""
+# 效果规则 / 公式 / 技能表 / 机制配置 / 条前缀 这一批游戏词取件，已搬进
+# `ext_combat.battle.game_config`（第 7 批）。引擎侧只留上面的通用件：
+# set_config / get_config / set_hook / mount / get_hook / unconfigured。

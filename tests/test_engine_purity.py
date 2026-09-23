@@ -54,7 +54,8 @@ except AttributeError:                                        # pragma: no cover
 # 公开 API 面（内容层/第三方实际消费的符号）
 API_SYMBOLS = [
     # 引擎门面 = 通用件（游戏级形状已全部迁到 extends/ 扩展包，2026-09-23 第 3 批）
-    "config", "get_effect_rules", "get_effect_actions",
+    "config",   # ★ 第 7 批：get_effect_rules / get_effect_actions 已随游戏配置取件
+                #   搬进 ext_combat.battle.game_config，不再是引擎门面的符号。
     "Package", "PackageError", "PackageStack", "load_stack",
     "Host", "version",
     "CommandRegistry", "CommandSpec",

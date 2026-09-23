@@ -27,7 +27,7 @@
 
 ## 17 个 hook
 
-`_HOOKS`（`config.py:33-74`）白名单，`mount(**hooks)` / `set_hook(name, value)` 写，
+`_HOOKS`（`config.py:30-71`）白名单，`mount(**hooks)` / `set_hook(name, value)` 写，
 `get_hook(name)` 读。
 
 | hook | 类型 | 引擎在哪里用 | 不装配的行为 |
@@ -65,7 +65,7 @@
 [../concepts/ctb-schedule.md](ctb-schedule.md)），「没有第二段」由**内容侧显式声明 0** 表达
 （对应 `recover_time()` 返回 `0.0`，加法结果逐位不变），**不由引擎兜底**。
 
-> ⚠️ **未知名被静默忽略**：`set_hook`（`config.py:159`）里 `if name in _HOOKS`
+> ⚠️ **未知名被静默忽略**：`set_hook`（`config.py:131`）里 `if name in _HOOKS`
 > 没有 else。写错 hook 名不报错。开发期用 `strict=True`。
 
 ## 两张规则表：`set_config`
@@ -74,14 +74,14 @@
 config.set_config("effect_actions", EFFECT_ACTIONS)   # 名词 → 动词序列
 config.set_config("effect_rules",   EFFECT_RULES)     # key → 行为规则
 # 或者一次给一个模块（读它的 EFFECT_ACTIONS / EFFECT_RULES 属性）
-config.load_game_rules(my_rules_module)               # config.py:115
+config.load_game_rules(my_rules_module)               # config.py:112
 ```
 
 读取端（**S2 公开 API**）：
 
 | 函数 | 位置 | 语义 |
 |---|---|---|
-| `get_effect_actions()` | `config.py:136` | 默认 `{}` |
+| `get_effect_actions()` | `config.py:127` | 默认 `{}` |
 | `get_effect_rules()` | `config.py:141` | 默认 `{}` |
 | `state_def(key)` | `config.py:146`（`state_effects.py:13` 的实体） | `get_effect_rules().get(key) or {}` |
 
@@ -93,13 +93,13 @@ config.load_game_rules(my_rules_module)               # config.py:115
 |---|---|
 | **什么 hook 都没装** | 一切「静默降级为 0」。`human_act` 返回 `[]`，双方 hp 不变，**不抛异常** |
 | **装了 `formulas` 但没装 `formula_skeleton_fn` / `skill_flat_fn`** | 伤害链内部抛 `KeyError: 'skill_growth'` / `TypeError: float() ... NoneType` —— **硬崩**，而且栈不指向 hook 名 |
-| **`config.strict = True`** | `get_hook` 对未装配 hook 抛 `EngineNotConfigured`（`config.py:182`），错误信息直接点名缺哪个 hook |
+| **`config.strict = True`** | `get_hook` 对未装配 hook 抛 `EngineNotConfigured`（`config.py:161`），错误信息直接点名缺哪个 hook |
 
 ```python
-config.strict = True    # 开发/测试环境建议打开（config.py:95）
+config.strict = True    # 开发/测试环境建议打开（config.py:92）
 ```
 
-原文说明（`config.py:90-94`）：`False`（默认）与历史行为一致——未装配给中性兜底不炸；
+原文说明（`config.py:87-91`）：`False`（默认）与历史行为一致——未装配给中性兜底不炸；
 `True` 防测试假绿 / 线上静默失效。**生产接入点必须显式装配**，否则你会得到一场
 「谁都不掉血的战斗」。
 
@@ -143,7 +143,7 @@ config.load_game_rules(my_rules_module)
 config.register_hook_provider(my_lazy_mount)   # config.py:130
 ```
 
-引擎首次访问某个未装配 hook 时调用一次（`_lazy_bootstrap`，`config.py:188`，带防重入）。
+引擎首次访问某个未装配 hook 时调用一次（`_lazy_bootstrap`，`config.py:167`，带防重入）。
 游戏仓 `dragonfall`（《奥兰迪亚》）内容侧就是这么接的：它的装配入口收敛到
 `game/content_rules/apply.py` 的 `ensure_engine_configured()`（幂等；旧
 `load_game_defaults` 的收敛点），hook 与规则表经 `game/bootstrap.py`

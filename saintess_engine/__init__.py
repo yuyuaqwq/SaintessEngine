@@ -32,7 +32,6 @@
 包内模块一律相对导入，不反向依赖门面（纯度门禁 tests/test_engine_purity.py）。
 """
 # ---- 规则 / 配置 ----
-from .config import get_effect_actions, get_effect_rules   # noqa: F401
 # ---- 版本 ----
 from .version import __version__, VERSION_INFO             # noqa: F401
 from . import version                                       # noqa: F401
@@ -57,5 +56,4 @@ __all__ = [
     "CommandRegistry", "CommandSpec",
     "TextSpec", "TextTable", "safe_format",
     "KindTable", "Record", "TLog",
-    "get_effect_actions", "get_effect_rules",
 ]
