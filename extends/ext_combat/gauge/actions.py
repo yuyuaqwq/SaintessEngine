@@ -30,7 +30,7 @@
 from __future__ import annotations
 
 from ..battle.effects import register_action
-from ..text import render_via, text_of
+from saintess_engine.text import render_via, text_of
 
 
 def _now_of(battle) -> float:

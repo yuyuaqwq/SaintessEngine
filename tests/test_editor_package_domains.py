@@ -313,7 +313,7 @@ def main():
     # 判定表见 packages.py 的逐条注释；这里做的是「证据仍在那」的机器复核。
     _ENGINE_EVIDENCE = {
         "effect_rules": ("saintess_engine/config.py", "def get_effect_rules"),
-        "passive_proc": ("saintess_engine/battle/effect_triggers.py", "def fire("),
+        "passive_proc": ("extends/ext_combat/battle/effect_triggers.py", "def fire("),
         "commands": ("saintess_engine/command/registry.py", "class CommandRegistry"),
         "texts": ("saintess_engine/text/template.py", "class TextTable"),
         "tlogs": ("saintess_engine/tlog/record.py", "class KindTable"),

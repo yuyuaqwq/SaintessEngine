@@ -1206,7 +1206,7 @@ REF_DOMAINS = {
     "elite_equip_drop": "equip_roster",
 }
 
-# 引擎面板键（**框架协议**，出自 `saintess_engine/battle/stats.py:117-122` 的 actor 面板读取）
+# 引擎面板键（**框架协议**，出自 `extends/ext_combat/battle/stats.py:117-122` 的 actor 面板读取）
 # —— 给 stat_scale / panel.stat 这类字段做候选；与任何具体游戏无关。
 PANEL_KEYS = ["atk", "def", "matk", "mdef", "spd", "crit", "dodge", "max_hp", "max_mp",
               "hp", "mp", "dmg_mult", "reduce"]

@@ -115,7 +115,7 @@ from saintess_engine.package import probe_stack
 info = probe_stack(".")                 # game.json → 版本门禁 → 加载包栈（不抛，错误在 info["errors"]）
 assert info["ok"], info["errors"]
 stack = info["stack"]                   # PackageStack：扩展包（拓扑序）+ 数据包
-from saintess_engine import Battle, make_actor
+        from ext_combat import Battle, make_actor
 ```
 
 ## 内容清单
@@ -167,7 +167,7 @@ def _ensure_minimum_assembly():
     真正的内容侧装配应该写在 content/apply.py 里（本包是否已装配由 get_hook 判断）。
     """
     from saintess_engine import config as cfg
-    from saintess_engine import formulas as F
+    from ext_combat.battle import formulas as F
     add = {}
     if not cfg.get_hook("formulas"):
         add["formulas"] = F
@@ -211,8 +211,9 @@ def main():
         traceback.print_exc()
         return 1
     try:
-        from saintess_engine import Battle, make_actor, version   # noqa: PLC0415
-        from saintess_engine import config as cfg                 # noqa: PLC0415
+        from saintess_engine import version                        # noqa: PLC0415
+        from ext_combat import Battle, make_actor                  # noqa: PLC0415
+        from saintess_engine import config as cfg                  # noqa: PLC0415
     except Exception:
         print("[x] 引擎 import 失败 —— 先装好 saintess_engine，"
               "或用 FW_FRAMEWORK_ROOT 指向框架仓根目录。")

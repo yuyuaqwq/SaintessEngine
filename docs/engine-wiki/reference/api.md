@@ -31,7 +31,7 @@ heal_amount · skill_pay_of
 from_state · to_state
 ```
 
-`__all__` 就是上面这份（`saintess_engine/__init__.py:53-76`）。门禁
+`__all__` 就是上面这份（`saintess_engine/__init__.py:82-105`）。门禁
 `tests/test_engine_purity.py` 会逐个断言这些符号存在，并断言 **5 个私有符号
 已升公开且旧下划线名是同一对象别名**：
 

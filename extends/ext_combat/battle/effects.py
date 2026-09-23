@@ -25,7 +25,7 @@ from __future__ import annotations
 from typing import Callable, Optional
 
 from .state_effects import state_def
-from ..text import render_via
+from saintess_engine.text import render_via
 
 # ============================================================
 # stacks 数值口径（v181.M-R2e B3：effects float 通用层）
@@ -138,7 +138,7 @@ def resolve_actions(name: str) -> list:
 
     找不到映射时按"本身就是动词"处理（动作名直通执行器）。
     """
-    from .. import config
+    from saintess_engine import config
     table = config.get_effect_actions()
     mapped = table.get(name)
     if isinstance(mapped, list):

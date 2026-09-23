@@ -64,7 +64,7 @@ def main() -> int:
 
     # ---- 引擎 ----
     try:
-        from saintess_engine import Battle, make_actor
+        from ext_combat import Battle, make_actor
         from saintess_engine import version as _V
     except Exception:
         return _emit({"ok": False, "stage": "engine", "message": "引擎 import 失败",
@@ -138,7 +138,7 @@ def main() -> int:
 
     events = []
     try:
-        from saintess_engine import effect_triggers as ET
+        from ext_combat.battle import effect_triggers as ET
         _orig = ET.fire
 
         def _spy(battle, ev, ctx, logs=None):

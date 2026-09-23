@@ -44,8 +44,8 @@ S3 通用件归位（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §6.5 / §7-S3）
 """
 from math import floor
 
-from .. import config as _bcfg
-from ..text import render_or
+from saintess_engine import config as _bcfg
+from saintess_engine.text import render_or
 
 
 def _battle_cfg(name: str) -> dict:
@@ -144,7 +144,7 @@ def bar_settle(enemy: dict, bar_key: str, now: float, logs: list | None = None) 
 def _default_bar_max() -> float:
     """条 `max` 缺省上限（V4 下沉：内容侧骨架表 `FORMULA_SKELETON["gauge"]["default_max"]`）。
 
-    未装配 → 0.0 → 调用处回落历史兜底 100（`saintess_engine.gauge` 的旧字面量口径）。
+    未装配 → 0.0 → 调用处回落历史兜底 100（`ext_combat.gauge` 的旧字面量口径）。
     """
     try:
         from ..battle import formulas as _F

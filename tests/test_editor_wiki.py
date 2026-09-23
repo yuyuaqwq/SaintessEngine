@@ -85,8 +85,10 @@ def main() -> int:
           not r2.get("ok") and r2.get("crossrepo"), f"{r2}")
     check("垃圾输入不崩", not W.code_ref("随便什么").get("ok"))
     r3 = W.code_ref("battle.py:1")
-    check("同名文件优先取引擎包（saintess_engine/...）",
-          r3.get("ok") and r3["file"].startswith("saintess_engine/"), f"{r3.get('file')}")
+    # 战斗已迁成扩展包（2026-09-23）：同名文件仍按「引擎包 → 扩展包 → 游戏包」的优先级解析，
+    # 而 battle.py 现在只存在于扩展包里 ⇒ 应解析到 extends/ext_combat/ 下那一份。
+    check("同名文件按优先级解析（引擎包 → 扩展包），battle.py 落到 ext_combat",
+          r3.get("ok") and r3["file"].startswith("extends/ext_combat/"), f"{r3.get('file')}")
 
     # 5. 渲染细节（表格 / 代码 / 强调 / 转义）
     h, _toc = W.render_md("| a | b |\n|---|---|\n| 1 | `x` |\n\n**粗** *斜* `code`\n")

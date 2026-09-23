@@ -4,7 +4,7 @@
 **被守的包（2026-09-11 模块化重排后）**：`saintess_engine/` —— 单一包、多模块并列：
 
   基础      config.py / domains.py
-  战斗域    battle/（12 模块）
+  扩展包    extends/ext_combat（战斗，12 模块）· extends/ext_quest（任务）
   通用原语  expr/ gauge/ formation/（2026-09-13 P4 下沉：中文 kind 词表 kinds/ 已归内容侧）
   运行时    store/ command/ events/ clock/ container/ session/
 
@@ -19,7 +19,7 @@
   2. 零动态导入穿透：`importlib.import_module("外部包")` / `__import__("外部包")`
   3. 公开 API 面完整（包门面 re-export 全量符号）
   4. 存档兼容：`Battle.from_state` / `to_state` 在 API 面内
-  5. `battle/actions.py` 零 kind 中文字面量常量（机制/名词不得进框架）
+  5. 扩展包 `ext_combat/battle/actions.py` 零 kind 中文字面量常量（机制/名词不得进框架）
 
 运行：python tests/test_engine_purity.py（exit=0 全绿）
 """
@@ -32,6 +32,9 @@ FW_ROOT = os.path.dirname(_HERE)
 
 # 被守的包：单一包（模块化重排后，全部能力都是它的并列子模块）
 ENGINE_DIR = os.path.join(FW_ROOT, "saintess_engine")
+EXT_DIR = os.path.join(FW_ROOT, "extends")      # 扩展包仓内目录（ext_combat / ext_quest）
+if EXT_DIR not in sys.path:
+    sys.path.insert(0, EXT_DIR)
 ENGINE_NAME = "saintess_engine"
 PKG_DIRS = (ENGINE_DIR,)
 
@@ -49,35 +52,25 @@ except AttributeError:                                        # pragma: no cover
 
 # 公开 API 面（内容层/第三方实际消费的符号）
 API_SYMBOLS = [
-    "deal_damage", "state_def", "heal_actor", "Battle", "actor_alive",
-    "act_apply", "cap_of", "actor_stats", "apply_effects", "now_of",
-    "stats", "register_action", "config", "fire", "all_state_effects",
-    "action_time", "initial_ct", "recover_time", "hostile_sides", "act_shield",
-    "norm_stack", "effects", "heal_amount", "skill_pay_of", "make_actor",
-    "settle_landing",
-    "get_effect_rules", "get_effect_actions",
+    # 引擎门面 = **通用件**（2026-09-23 包栈重构：战斗符号随 ext_combat 迁出引擎，
+    # 它们现在由 `from ext_combat import Battle, make_actor, …` 提供）。
+    "config", "get_effect_rules", "get_effect_actions",
+    "Package", "PackageError", "PackageStack", "load_stack", "probe_stack",
+    "Host",
     "Space", "LootTable", "TierTable",
+    "Admission", "Progress", "Roster", "Rule", "Verdict",
+    "Dialogue", "Cursor",
+    "CommandRegistry", "CommandSpec", "TextTable", "TextSpec", "safe_format",
+    "TLog", "Record", "KindTable",
 ]
-# 私有 → 公开的 5 个符号（旧下划线名保别名：模块全路径 → (公开名, 私有名)）
-# 注意：模块化重排后取自**真实模块**（`saintess_engine.battle.battle`），
-# 不能用包门面属性名（`pkg.battle` 现在是子包，不是 battle 模块）。
-PROMOTED_ALIASES = [
-    ("battle.effects", "cap_of", "_cap_of"),
-    ("battle.effects", "norm_stack", "_norm_stack"),
-    ("battle.battle", "now_of", "_now_of"),
-    ("battle.actions", "heal_amount", "_heal_amount"),
-    ("battle.actions", "skill_pay_of", "_skill_pay_of"),
-]
-# 模块化重排：门面转出的子模块名（`getattr(包, 名)` 取到对应模块）
+# 私有 → 公开的 5 个符号（cap_of / norm_stack / now_of / heal_amount / skill_pay_of）
+# 已随战斗迁到扩展包 `ext_combat`（2026-09-23），这条门禁现在归那边 —— 这里留空表。
+PROMOTED_ALIASES = []
+
+# 门面转出的子模块（`getattr(包, 名)` 取到对应模块）—— 只列**通用件**
 MODULE_ATTRS = [
-    ("battle", "battle"), ("actions", "battle.actions"), ("actors", "battle.actors"),
-    ("ai", "battle.ai"), ("effect_triggers", "battle.effect_triggers"),
-    ("effects", "battle.effects"), ("formulas", "battle.formulas"),
-    ("landing", "battle.landing"), ("schedule", "battle.schedule"),
-    ("serialize", "battle.serialize"), ("state_effects", "battle.state_effects"),
-    ("stats", "battle.stats"),
     ("domains", "domains"),
-    ("expr", "expr"), ("gauge", "gauge"), ("formation", "formation"),
+    ("expr", "expr"),
     ("store", "store"), ("command", "command"), ("events", "events"),
     ("clock", "clock"), ("log", "log"), ("tlog", "tlog"), ("space", "space"), ("loot", "loot"),
     ("run", "run"), ("container", "container"), ("session", "session"),
@@ -167,7 +160,8 @@ def main():
           "\n      " + "\n      ".join(dyn))
 
     # battle/actions.py 不得持有游戏 kind 中文字面量常量
-    act = os.path.join(PKG_DIR, "battle", "actions.py")
+    # 战斗已迁成扩展包（2026-09-23）：这条判据跟着文件走，仍钉「不许持有游戏 kind 中文字面量」
+    act = os.path.join(FW_ROOT, "extends", "ext_combat", "battle", "actions.py")
     tree = ast.parse(open(act, encoding="utf-8").read(), filename=act)
     consts = {t.id for node in tree.body if isinstance(node, ast.Assign)
               for t in node.targets if isinstance(t, ast.Name)}
@@ -187,6 +181,9 @@ def main():
     import importlib
     _B2 = importlib.import_module(PKG_NAME)
     missing = [s for s in API_SYMBOLS if not hasattr(_B2, s)]
+    check("战斗符号已不在引擎门面（2026-09-23 迁成扩展包 ext_combat）",
+          not any(hasattr(_B2, s) for s in ("Battle", "make_actor", "deal_damage")),
+          "引擎门面仍有战斗符号")
     check(f"包门面 re-export 全量 {len(API_SYMBOLS)} 符号", not missing,
           f"missing={missing}")
     alias_bad = []
@@ -211,9 +208,15 @@ def main():
     check(f"门面转出全部 {len(MODULE_ATTRS)} 个子模块（属性即模块对象）", not mod_bad,
           f"bad={mod_bad}")
 
-    check("存档兼容：Battle.from_state / to_state 在 API 面内",
-          hasattr(_B2.Battle, "from_state") and hasattr(_B2.Battle, "to_state")
-          and hasattr(_B2, "from_state") and hasattr(_B2, "to_state"))
+    # 存档兼容（`Battle.from_state` / `to_state`）随战斗迁到扩展包 —— 这条判据跟着走
+    _ext_ok = False
+    try:
+        _C = importlib.import_module("ext_combat")
+        _ext_ok = (hasattr(_C.Battle, "from_state") and hasattr(_C.Battle, "to_state")
+                   and hasattr(_C, "from_state") and hasattr(_C, "to_state"))
+    except Exception:                                          # noqa: BLE001
+        _ext_ok = False
+    check("存档兼容：Battle.from_state / to_state 在扩展包（ext_combat）API 面内", _ext_ok)
 
     print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
     return 1 if failed else 0

@@ -13,5 +13,8 @@
     "mech_verbs",
     "sites"
   ],
-  "created": "2026-09-13"
+  "created": "2026-09-13",
+  "depends": [
+    "ext_combat"
+  ]
 }

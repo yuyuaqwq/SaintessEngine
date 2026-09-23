@@ -1,0 +1,12 @@
+{
+  "id": "ext_combat",
+  "kind": "extension",
+  "name": "回合制战斗（CTB）",
+  "desc": "游戏级能力包：CTB 战斗调度 · 行动结算 · 效果叠层 · 落地 · 通用怪 AI · 面板公式 · 计量条 · 站位几何。零游戏知识（职业/技能/怪物/数值全在数据包）。通过 provides.battle 向宿主提供战斗类。",
+  "engine": ">=0.1",
+  "entry": "apply.py",
+  "created": "2026-09-23",
+  "provides": {
+    "battle": "ext_combat.battle.battle:Battle"
+  }
+}

@@ -39,7 +39,7 @@ check = bind_check(globals(), "PASS", "FAIL", "FAILURES")
 
 
 PKG_SRC = '''
-from saintess_engine import register_action
+from ext_combat import register_action
 
 
 @register_action("tst_plain")

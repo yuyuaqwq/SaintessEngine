@@ -34,10 +34,10 @@ ROOT = os.path.dirname(_HERE)
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from saintess_engine.battle.declarations import (  # noqa: E402
+from ext_combat.battle.declarations import (  # noqa: E402
     Compiler, Declaration, compile_rows, mount,
 )
-from saintess_engine.battle.effect_triggers import EVENTS, fire  # noqa: E402
+from ext_combat.battle.effect_triggers import EVENTS, fire  # noqa: E402
 
 passed = failed = 0
 DETAIL = []
@@ -375,7 +375,7 @@ class _BattleStub:
 
 def t_fire_pair():
     print("\n[7] 与 fire() 配套：validate 出的未知名在 fire() 下零执行（真调 fire）")
-    from saintess_engine.battle import effects as _fx
+    from ext_combat.battle import effects as _fx
 
     probe = []
     action = "decl_probe_spy"
@@ -770,7 +770,7 @@ def t_teeth():
 
 
 # ─────────────────────────────────────────────────────────── ⑬ 零知识静态扫描
-_DECL_REL = "saintess_engine/battle/declarations.py"
+_DECL_REL = "extends/ext_combat/battle/declarations.py"
 _VALUE_WORDS = (
     # ① 本游戏的取值词（引擎里出现即红）
     "奥兰迪亚", "余烬", "镇长", "游商", "见闻", "师门",
@@ -848,7 +848,7 @@ def t_zero_knowledge():
           not abs_imports, abs_imports)
     check("★ 不读 battle 的 _fire_ctx（编译器不碰消费端内部）", "_fire_ctx" not in src)
 
-    import saintess_engine.battle.declarations as mod
+    import ext_combat.battle.declarations as mod
     check("__all__ 恰为设计给定的四个符号",
           mod.__all__ == ["Declaration", "Compiler", "compile_rows", "mount"], mod.__all__)
     doc = mod.__doc__ or ""

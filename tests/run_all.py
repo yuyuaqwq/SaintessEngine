@@ -62,6 +62,14 @@ _SHARED_DB_RE = re.compile(
     r'os\.environ\[["\']GWEN_GAME_DB["\']\]\s*=\s*[^\n]*test_game_data\.db')
 
 
+def _ext_path():
+    """测试进程的 `PYTHONPATH`：仓内扩展包目录（`extends/`）—— 战斗/任务这些能力包的
+    测试与依赖它们的测试都要能 `import ext_combat` / `import ext_quest`。"""
+    ext = os.path.join(ROOT, "extends")
+    cur = os.environ.get("PYTHONPATH", "")
+    return ext + (os.pathsep + cur if cur else "")
+
+
 def discover():
     files = sorted(f for f in os.listdir(HERE)
                    if f.startswith("test_") and f.endswith(".py") and f not in SKIP)
@@ -175,7 +183,8 @@ def _summary(results, t0):
 
 def _run_serial(paths, fail_fast):
     """纯串行 —— `--serial` 的逐字行为（env 与旧实现完全一致，无 worker 目录、无隔离注入）。"""
-    env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1",
+           "PYTHONPATH": _ext_path()}
     t0 = time.time()
     results = []
     for p in paths:
@@ -189,7 +198,8 @@ def _run_serial(paths, fail_fast):
 
 
 def _run_parallel(serial_files, parallel_files, jobs, fail_fast):
-    base_env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
+    base_env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1",
+                "PYTHONPATH": _ext_path()}
     worker_dir = os.path.join(
         tempfile.gettempdir(),
         f"fw_run_all_workers_{os.getpid()}_{int(time.time())}")

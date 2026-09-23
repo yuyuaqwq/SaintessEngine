@@ -13,10 +13,10 @@ from __future__ import annotations
 import random
 from typing import Optional
 
-from .. import config as _cfg
+from saintess_engine import config as _cfg
 from . import stats as S
 from .actors import actor_alive
-from ..text import render_via
+from saintess_engine.text import render_via
 
 # S1 断链（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 R1/R2/R14/R15）：
 # 引擎不得 import game.engine / game.core.constants —— 原 `E.*` 数值公式调用与
@@ -742,7 +742,7 @@ def _heal_amount(st: dict, actor: dict, info: dict, lv: int) -> int:
             lvx = max(1, min(int(lv or 1), len(hf_raw)))
             hf = hf_raw[lvx - 1]
         try:
-            from ..expr import compile_expr, eval_expr, build_vars
+            from saintess_engine.expr import compile_expr, eval_expr, build_vars
             st2 = dict(st)
             st2["_player_lv"] = int(actor.get("level", 1) or 1)
             st2["_skill_lv"] = lv

@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import Optional
 
 from . import formulas as _F
-from ..text import render_via
+from saintess_engine.text import render_via
 
 # ============================================================
 # 伤害落地

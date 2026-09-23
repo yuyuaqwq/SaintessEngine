@@ -24,7 +24,7 @@ _REPO = os.path.dirname(os.path.dirname(_EXAMPLE))             # 框架根（sai
 sys.path.insert(0, _EXAMPLE)
 sys.path.insert(0, _REPO)
 
-from saintess_engine import ActCtx, Battle, deal_damage               # noqa: E402
+from ext_combat import ActCtx, Battle, deal_damage               # noqa: E402
 from content import apply_game_content                          # noqa: E402
 from content.data.classes import build_player                   # noqa: E402
 from content.data.monsters import build_monster                 # noqa: E402
@@ -123,7 +123,7 @@ def test_noun_to_verb_control():
     b.actor_auto(foe, ctx_target=hero)
     # T15 两段化：怪在 T0 只**登记**出招（前摇窗口在飞），落地在 T0+第一段 ⇒
     # 先断言槽位，再真推进若干刻让前摇落地（慢招 2.35s vs 玩家快招 0.93s）。
-    from saintess_engine.battle.schedule import pending_of
+    from ext_combat.battle.schedule import pending_of
     _slot = pending_of(foe)
     check("怪登记了出招（前摇窗口在飞：槽位有待发技能）",
           bool(_slot) and _slot.get("skill") == "ms_clamp" and _slot.get("cast_done_at") > b._now,
@@ -158,7 +158,7 @@ def test_cast_window_delays_damage():
     """T15：出招窗口（前摇）—— 伤害**不在行动点结算**，而在 T0+第一段 落地（真内容）。"""
     hero, foe = _fresh(foe_hp=500)
     b = _battle(hero, foe)
-    from saintess_engine.battle.schedule import pending_of, _advance_time
+    from ext_combat.battle.schedule import pending_of, _advance_time
     hero["defending"] = False
     logs = []
     b.human_act("attack", None)          # 玩家出手：T0 只登记（advance 后立即算出敌 ct）

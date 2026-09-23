@@ -226,13 +226,19 @@ def _walk_py(root: str):
 # ───────────────────────── 导出 ─────────────────────────
 def export(pkg_dir: str | None = None) -> dict:
     actions, files = [], []
-    # ① 框架内置动作
-    for p in _walk_py(ENGINE_DIR):
-        rel = os.path.relpath(p, FW_ROOT).replace("\\", "/")
-        got = scan_file(p, "engine", rel)
-        if got:
-            actions += got
-            files.append(rel)
+    # ① 框架内置动作 = 引擎 + 扩展包（2026-09-23 包栈重构：战斗/任务等能力包搬到 extends/）
+    _roots = [ENGINE_DIR]
+    _ext_root = os.path.join(FW_ROOT, "extends")
+    if os.path.isdir(_ext_root):
+        _roots += [os.path.join(_ext_root, _d) for _d in sorted(os.listdir(_ext_root))
+                   if os.path.isdir(os.path.join(_ext_root, _d))]
+    for _root in _roots:
+        for p in _walk_py(_root):
+            rel = os.path.relpath(p, FW_ROOT).replace("\\", "/")
+            got = scan_file(p, "engine", rel)
+            if got:
+                actions += got
+                files.append(rel)
     # ② 游戏包自带动作（content/mech/*.py 及包内任意 .py 的 register_action）
     if pkg_dir and os.path.isdir(pkg_dir):
         for p in _walk_py(pkg_dir):

@@ -30,7 +30,7 @@ V4（2026-09-16）—— 最后 7 处「写死在引擎的游戏数值」下沉�
 """
 import random
 
-from .. import config as _cfg
+from saintess_engine import config as _cfg
 
 
 # 未装配时的中性骨架参数（与 _NullFormulas 同语义：零效应，不产生额外数值）。
@@ -173,7 +173,7 @@ def reduce_cap() -> float:
 def gauge_default_max() -> float:
     """敌身条 `max` 缺省上限（gauge `bar_gain` 的封顶兜底）。
 
-    未装配 → 0.0；调用方按「<=0 → 历史兜底 100」处理（见 `saintess_engine.gauge`）。
+    未装配 → 0.0；调用方按「<=0 → 历史兜底 100」处理（见 `ext_combat.gauge`）。
     """
     return _skel_sub_num("gauge", "default_max", 0.0)
 
@@ -354,7 +354,7 @@ def skill_expr_preview(info: dict | None, level: int, stats: dict | None = None)
     if not info:
         return 0.0
     lv = max(1, min(int(level or 1), skill_max_level(info)))
-    from ..expr import compile_expr, eval_expr, build_vars
+    from saintess_engine.expr import compile_expr, eval_expr, build_vars
     _expr = skill_formula_expr(info, lv)
     if not _expr:
         # 治疗逐级（heal_formula 字符串数组 / heal_exprs）
@@ -397,8 +397,8 @@ def skill_expr_preview(info: dict | None, level: int, stats: dict | None = None)
 
 def _damage_binding():
     """E1b：槽位 `damage` 绑了哪条声明？未装配 / 未绑 ⇒ None（调用方走原路）。"""
-    from .. import config
-    from ..formula import FormulaDeclError, binding_of
+    from saintess_engine import config
+    from saintess_engine.formula import FormulaDeclError, binding_of
     if config.get_hook("formula_bindings_fn") is None:
         return None, None
     tab_hook = config.get_hook("formula_table_fn")
@@ -431,7 +431,7 @@ def calc_damage(atk, def_, is_crit=False, variance=0.15, pierce=False, pene_pct=
     _did, _tbl = _damage_binding()
     if _did is not None:
         if level is None:
-            from ..formula import FormulaDeclError       # 局部导入：避开可能的循环导入
+            from saintess_engine.formula import FormulaDeclError       # 局部导入：避开可能的循环导入
             raise FormulaDeclError(
                 "槽位 'damage' 已绑定声明，但调用方没给 level（算 k_def 要用）——"
                 "★ 不许拿默认等级兜底：那会把『少传参数』变成静默错值")
@@ -512,7 +512,7 @@ def resolve_formula(formula, stats, target_def, target_mdef, is_crit=False,
         _expr = skill_formula_expr_for_seg(seg, int(stats.get("_skill_lv", 1) or 1))
         if _expr:
             try:
-                from ..expr import compile_expr, eval_expr, build_vars
+                from saintess_engine.expr import compile_expr, eval_expr, build_vars
                 _vars = build_vars(stats, player_lv=int(stats.get("_player_lv", 0) or 0),
                                    skill_lv=int(stats.get("_skill_lv", 0) or 0),
                                    target_max_hp=target_max_hp,

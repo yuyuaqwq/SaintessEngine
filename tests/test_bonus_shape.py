@@ -94,7 +94,7 @@ def _pkg_panel_merge(values):
 
 def _engine_panel_mul(base, mult):
     """引擎读侧乘算口径：`op="mul"` → `int(base × mult)`（stats._apply_effects）。"""
-    from saintess_engine.battle import stats as _S
+    from ext_combat.battle import stats as _S
     st = {"atk": base}
     _S._apply_effects(st, {"effects": {"k": {"stacks": 1, "stat": "atk",
                                              "op": "mul", "mult": mult}}})
@@ -104,7 +104,7 @@ def _engine_panel_mul(base, mult):
 def _engine_cap_flat(flat):
     """引擎读侧上限口径：`cap_of` = 基础 cap + 容器 flat（累加，只认正数）。"""
     from saintess_engine import config as _cfg
-    from saintess_engine.battle import effects as _E
+    from ext_combat.battle import effects as _E
     old = _cfg.get_effect_rules()
     try:
         _cfg.set_config("effect_rules", {"rage": {"cap": 10}})
@@ -115,7 +115,7 @@ def _engine_cap_flat(flat):
 
 def _engine_cost_flat(flat_pct):
     """引擎读侧消耗口径：`skill_pay_of` = max(1, floor(声明 × (1 - flat_pct)))。"""
-    from saintess_engine.battle.actions import skill_pay_of
+    from ext_combat.battle.actions import skill_pay_of
     return skill_pay_of({"bonus": {"cost": {"mp_pct": flat_pct}}}, {"mp": 100})["mp"]
 
 

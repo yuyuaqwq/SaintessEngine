@@ -14,7 +14,7 @@ schedule / battle + gauge），与「文案唯一真源在内容包的表」相�
   1. **注入生效（反证）**：给了表 → 输出**随表变**（证明注入不是死代码）。
   2. **未注入 = 兜底模板**：不传 `text` → 输出**逐字节等于历史内联串**（零回归）。
   3. **表缺 key 回落**：表里只声明一条 → 其余仍走兜底（渐进迁移语义）。
-  4. **残留扫描**：`saintess_engine/battle/*.py` + `gauge/*.py` 的日志实参**零中文**
+  4. **残留扫描**：`extends/ext_combat/battle/*.py` + `gauge/*.py` 的日志实参**零中文**
      （措辞全走「key + 兜底模板 + 槽位」；T2 第 2 轮已把 `gauge/` 两文件纳入本扫描）。
 
 跑法：python tests/test_battle_text_inject.py（exit=0 全绿）
@@ -32,10 +32,10 @@ FW_ROOT = os.path.dirname(_HERE)
 if FW_ROOT not in sys.path:
     sys.path.insert(0, FW_ROOT)
 
-from saintess_engine import Battle                                   # noqa: E402
-from saintess_engine.battle import landing                           # noqa: E402
-from saintess_engine.battle.actors import ActCtx, make_actor          # noqa: E402
-from saintess_engine import gauge as G                                 # noqa: E402
+from ext_combat import Battle                                   # noqa: E402
+from ext_combat.battle import landing                           # noqa: E402
+from ext_combat.battle.actors import ActCtx, make_actor          # noqa: E402
+from ext_combat import gauge as G                                 # noqa: E402
 from saintess_engine.text import TextTable, render_or, render_via, text_of  # noqa: E402
 
 passed = failed = 0
@@ -46,8 +46,8 @@ from _check import bind_check  # noqa: E402
 check = bind_check(globals(), "passed", "failed")
 
 CJK = re.compile(r"[\u4e00-\u9fff]")
-BATTLE_DIR = os.path.join(FW_ROOT, "saintess_engine", "battle")
-GAUGE_DIR = os.path.join(FW_ROOT, "saintess_engine", "gauge")
+BATTLE_DIR = os.path.join(FW_ROOT, "extends", "ext_combat", "battle")
+GAUGE_DIR = os.path.join(FW_ROOT, "extends", "ext_combat", "gauge")
 
 
 class _Stub:
@@ -288,7 +288,7 @@ random.seed(7)
 landing.deal_damage(_c8, None, _c8.sides_of("enemy")[0], 3, _lg8)
 check("未注入恢复 ⇒ 逐字节 == 兜底模板（历史内联串）",
       _lg8 == ["💥 房间怪 受到 3 点伤害！"], _lg8)
-from saintess_engine import from_state as _fs_mod                            # noqa: E402
+from ext_combat import from_state as _fs_mod                            # noqa: E402
 check("模块级 from_state 同款（text= 关键字透传）",
       _fs_mod(_st7, text=_Stub({"battle.landing.damage": "／表：模块级"})).text is not None)
 

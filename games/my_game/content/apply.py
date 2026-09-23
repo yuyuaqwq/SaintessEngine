@@ -38,7 +38,7 @@ def install_engine() -> None:
     global _MOUNTED
     if _MOUNTED:
         return
-    import saintess_engine.battle.formulas as formulas
+    import ext_combat.battle.formulas as formulas
 
     # 本游戏的机制动作：**import 即注册**（@register_action 在 import 期执行）。
     # 不 import 就等于动作不存在 —— 声明表里写了也跑不起来（静默无行为）。

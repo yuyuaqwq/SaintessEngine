@@ -16,8 +16,8 @@ from typing import Optional
 
 from .actors import ActCtx, actor_alive, actor_dead
 from . import actions
-from .. import config as _cfg
-from ..text import render_or as _render_or
+from saintess_engine import config as _cfg
+from saintess_engine.text import render_or as _render_or
 
 
 def _now_of(battle) -> float:

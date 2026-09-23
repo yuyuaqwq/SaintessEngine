@@ -18,7 +18,7 @@
 """
 from __future__ import annotations
 
-from saintess_engine import actor_stats, deal_damage, register_action
+from ext_combat import actor_stats, deal_damage, register_action
 
 
 def _stacks(actor, key) -> int:

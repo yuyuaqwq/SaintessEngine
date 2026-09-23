@@ -578,7 +578,7 @@ def install_engine() -> None:
     global _MOUNTED
     if _MOUNTED:
         return
-    import saintess_engine.battle.formulas as formulas
+    import ext_combat.battle.formulas as formulas
 
     config.register_hook_provider(_lazy_mount)
     # ⚠️ hook（引擎只认 17 个名字）走 `mount`；**声明表不要走 mount** ——

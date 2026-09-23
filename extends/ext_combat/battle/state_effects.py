@@ -7,7 +7,7 @@ V 系列统一：规则表 = EFFECT_RULES（cap/panel/stat_scale/period/consume/
 """
 from __future__ import annotations
 
-from .. import config
+from saintess_engine import config
 
 
 def state_def(key: str) -> dict:

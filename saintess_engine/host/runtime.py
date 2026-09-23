@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """宿主运行时 · `Host`（装配 + 会话循环 + 命令通道 + 战斗驱动 + 落档）。
 
+战斗能力由包声明（`provides.battle`）—— 宿主不 import 战斗实现，没装就不开这条通道。
+
 **归属**：这是「通用那一半」——任何平台、任何包的宿主都要做的编排。平台三函数
 （`recv` / `load_player`+`save_player` / `say`）与可选钩子由**适配器**提供，本模块不碰平台 SDK。
 
@@ -26,7 +28,6 @@ import random
 import threading
 import time
 
-from ..battle.battle import Battle
 from ..command.registry import CommandRegistry
 from ..tlog import KindTable, MemorySink, TLog
 from .env import Env, run_guards
@@ -409,6 +410,13 @@ class Host:
                                                       if isinstance(v, (str, int, float, bool))}})
 
         real_seed = self.seed_now(seed)
+        # 战斗**不是**宿主的内置依赖：谁提供战斗由包声明（`provides.battle`），
+        # 宿主只按名取件 —— 没装战斗扩展包时这里报一句可读的话，而不是 import 就炸。
+        Battle = pkg.provider("battle")
+        if Battle is None:
+            raise PackageError(
+                "这个包栈没有战斗能力：没有任何包声明 `provides.battle`"
+                "（装 ext_combat 扩展包、并在数据包 depends 里声明即可）")
         battle = Battle(btype=btype, sides=sides, on_event=observe)
         tlog = self._attach_tlog(battle, player, enemies, real_seed)
         logs: list = []

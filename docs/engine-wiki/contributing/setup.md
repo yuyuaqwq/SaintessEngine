@@ -152,7 +152,8 @@ import os, sys, random
 FW_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # 框架仓根
 sys.path.insert(0, FW_ROOT)
 
-from saintess_engine import Battle, make_actor, config
+from ext_combat import Battle, make_actor
+from saintess_engine import config
 from saintess_engine import formulas as F
 
 # 最小装配（否则伤害恒 0 / 战斗起不来 —— 见 getting-started/first-battle.md）

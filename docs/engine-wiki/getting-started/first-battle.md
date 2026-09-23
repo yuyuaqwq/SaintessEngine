@@ -12,7 +12,8 @@
 ```python
 import math
 import saintess_engine
-from saintess_engine import Battle, make_actor, config
+from ext_combat import Battle, make_actor
+from saintess_engine import config
 from saintess_engine import formulas as F
 
 config.mount(

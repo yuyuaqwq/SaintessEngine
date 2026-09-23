@@ -37,7 +37,7 @@ check = bind_check(globals(), "PASS", "FAIL", "FAILURES")
 
 GAME_ENTRY = '''# -*- coding: utf-8 -*-
 """探针数据包：注册一个动作 + 声明自己的域 + 覆盖扩展包给的默认域。"""
-from saintess_engine import register_action
+from ext_combat import register_action
 
 
 @register_action("probe_game_verb")
@@ -46,7 +46,7 @@ def probe_game_verb(battle, caster, target, params, logs):     # noqa: ARG001
 
 
 def install_engine() -> None:
-    import saintess_engine.battle.formulas as formulas
+    import ext_combat.battle.formulas as formulas
     from saintess_engine import config
     config.mount(formulas=formulas)
 
@@ -57,7 +57,7 @@ def apply_game_content(actor):
 
 EXT_ENTRY = '''# -*- coding: utf-8 -*-
 """探针扩展包：注册一个动作（用**自己命名空间**的模块），证明命名空间隔离。"""
-from saintess_engine import register_action
+from ext_combat import register_action
 from . import helper          # 包内相对导入（命名空间不同也不冲突）
 
 
@@ -125,7 +125,7 @@ try:
     plan = plan_stack({game!r}, exts={exts!r})
     out["ordered"] = [[p["kind"], p["id"], p["namespace"]] for p in plan]
     stack = load_stack({game!r}, exts={exts!r})
-    from saintess_engine.battle.effects import action_names
+    from ext_combat.battle.effects import action_names
     out["ok"] = True
     out["ids"] = stack.ids
     out["actions"] = sorted(action_names())

@@ -383,6 +383,27 @@ class Package:
                 self._guards = {str(k): v for k, v in table.items() if callable(v)}
         return self._guards
 
+    def provides(self) -> dict:
+        """清单里的**能力提供者**声明：`{"battle": "ext_combat.battle.battle:Battle"}`。
+
+        引擎**不解释键名**（零游戏词汇）—— 谁提供什么、键叫什么，全由包声明；
+        引擎只做两件事：按层找到最近的声明，把引用解析成对象。
+        这样宿主/内容要拿「某个能力」时不必写死 import，也不必让引擎认识那个词。
+        """
+        decl = self.manifest.get("provides")
+        return {str(k): str(v) for k, v in decl.items()} if isinstance(decl, dict) else {}
+
+    def resolve_ref(self, ref, *, what: str = "引用"):
+        """解析 `"模块:属性"` / `"模块.属性"` 引用 → 对象。
+
+        **声明了却解析不到 = 报错**（fail-closed）：静默给 None 会把「配错了」变成
+        「这个能力不存在」，两种故障分不清。
+        """
+        obj = self.resolve_handler(ref)
+        if obj is None:
+            raise PackageError("包 %s 的%s解析不到：%r" % (self.id, what, ref))
+        return obj
+
     def resolve_handler(self, ref):
         """处理器引用 → 可调用：`"content.cmds.x:fn"` / `"content.cmds.x.fn"` / callable。"""
         if callable(ref):
@@ -465,6 +486,27 @@ class PackageStack:
     @property
     def ids(self) -> list:
         return [p.id for p in self.packages]
+
+    # ------------------------------------------------------------ 能力提供者（分层）
+    def provider(self, key: str, default=None):
+        """取一个**能力提供者**：数据包优先，其次扩展包（离数据包近的先）。
+
+        返回第一个在 `game.json.provides` 里声明了 `key` 的包所指向的对象；
+        没有任何层声明 → `default`。声明了却解析不到 → `PackageError`（不静默）。
+        """
+        for pkg in reversed(self.packages):
+            ref = pkg.provides().get(str(key))
+            if ref:
+                return pkg.resolve_ref(ref, what="能力提供者 provides.%s" % key)
+        return default
+
+    def providers(self) -> dict:
+        """**逐层合并**后的能力提供者表（键 → `(包 id, 引用)`），近数据包者胜 —— 审计用。"""
+        out: dict = {}
+        for pkg in self.packages:
+            for k, v in pkg.provides().items():
+                out[k] = (pkg.id, v)
+        return out
 
     # ------------------------------------------------------------ 域（分层）
     def domain_decl(self) -> dict:

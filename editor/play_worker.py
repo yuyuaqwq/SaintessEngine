@@ -466,7 +466,7 @@ def run(payload: dict) -> int:
     # ---- ③ 宿主运行时 ----
     try:
         from saintess_engine.host import Host
-from saintess_engine.package import load_stack
+        from saintess_engine.package import load_stack
         from saintess_engine import version as _V
     except Exception:
         emit({"ok": False, "stage": "engine", "message": "引擎 import 失败",

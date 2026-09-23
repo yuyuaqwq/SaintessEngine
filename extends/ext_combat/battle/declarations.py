@@ -14,7 +14,7 @@
 
 对外：`Declaration` / `Compiler`（`compile` / `validate` / `unknown_name` / `mount` /
 `purge` / `events_of`）· `compile_rows` · `mount`。**不进 battle 门面**（子模块直取：
-`from saintess_engine.battle.declarations import Compiler`），与设计稿「本稿拍板不加导出」一致。
+`from ext_combat.battle.declarations import Compiler`），与设计稿「本稿拍板不加导出」一致。
 
 口径分歧（照 `U1-D2_DESIGN.md` §4.3 逐条；**故意不统一**）
 ========================================================

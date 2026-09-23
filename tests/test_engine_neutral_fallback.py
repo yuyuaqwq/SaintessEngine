@@ -28,7 +28,7 @@ os.environ.setdefault("GWEN_TEST_MODE", "1")
 sys.path.insert(0, FW_ROOT)
 
 from saintess_engine import config as CFG  # noqa: E402
-from saintess_engine import formulas as F  # noqa: E402
+from ext_combat.battle import formulas as F  # noqa: E402
 
 PASS = 0
 FAIL = 0
@@ -161,7 +161,7 @@ def test_recover_second_segment():
     （「没有第二段」= 内容侧显式声明 0）。本段挂的是**测试自己的**两段 hook，退出还原。
     """
     print("【第二段（收招）注入面】")
-    from saintess_engine.battle import schedule as SCH
+    from ext_combat.battle import schedule as SCH
 
     _NAMES = ("time_model_fn", "action_base_fn", "recover_model_fn", "recover_base_fn")
     saved = {n: CFG._HOOKS.get(n) for n in _NAMES}
@@ -250,11 +250,11 @@ def test_cast_window_two_phase():
     `examples/minimal-game/tests/test_smoke.py::test_cast_window_delays_damage`（真内容）。
     """
     print("【出招窗口（前摇）两段化】")
-    from saintess_engine import Battle, make_actor
-    from saintess_engine.battle.actors import ActCtx
-    from saintess_engine.battle import schedule as SCH
-    from saintess_engine.battle import landing as LND
-    from saintess_engine.battle.effects import act_interrupt
+    from ext_combat import Battle, make_actor
+    from ext_combat.battle.actors import ActCtx
+    from ext_combat.battle import schedule as SCH
+    from ext_combat.battle import landing as LND
+    from ext_combat.battle.effects import act_interrupt
 
     _NAMES = ("time_model_fn", "action_base_fn", "recover_model_fn", "recover_base_fn")
     saved = {n: CFG._HOOKS.get(n) for n in _NAMES}
@@ -309,7 +309,7 @@ def test_cast_window_two_phase():
         SCH._advance_time(bt2, 2.0, lg2)
         check("② 前摇中被打死 ⇒ 该手不落地（槽清、姿态未生效）",
               SCH.pending_of(a2) is None and a2.get("defending") is not True
-              and LND.__name__ == "saintess_engine.battle.landing", str(lg2))
+              and LND.__name__ == "ext_combat.battle.landing", str(lg2))
 
         # ---------- ③ interrupt 动作取消该手 ----------
         a3, b3 = _mk("a3", "player", human=True), _mk("b3", "enemy", hp=1000)

@@ -22,7 +22,7 @@
 """
 from __future__ import annotations
 
-from saintess_engine import make_actor
+from ext_combat import make_actor
 
 from .data.classes import CLASSES, build_player
 from .data.monsters import MONSTERS, build_monster

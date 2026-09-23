@@ -83,7 +83,7 @@ def install_engine() -> None:
     global _MOUNTED
     if _MOUNTED:
         return
-    from saintess_engine import formulas as _formulas
+    from ext_combat.battle import formulas as _formulas
 
     # 引擎只认「hook 惰性装配器」这一个回调（内容 → 引擎方向）。
     # 框架**不提供** load_game_defaults 之类游戏概念 API：本游戏的配置入口

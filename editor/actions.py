@@ -5,7 +5,7 @@
 `action` 变成「从真实注册的动作里选」，并按该动作的**实际消费参数**给出提示。
 
 数据来源 = **静态 AST 扫描源码**（不是另行维护的声明表）：
-  - 框架内置动作：`saintess_engine/**` 里的 `@register_action`
+  - 框架内置动作：`saintess_engine/**` 与 `extends/**`（扩展包）里的 `@register_action`
   - 游戏包动作：包目录里的 `@register_action`
 由此得到的信息天然与实现一致，不会漂移。
 
@@ -38,6 +38,14 @@ def _src_stamp(pkg_dir: str | None):
     n = 0
     newest = 0.0
     roots = [r for r in (pkg_dir, os.path.join(FW_ROOT, "saintess_engine")) if r and os.path.isdir(r)]
+    # 扩展包里的机制动作也算「框架侧内置」（2026-09-23 包栈重构：战斗/任务这些
+    # 能力包从引擎抽到 extends/，编辑器要给联想就得跟着扫）。
+    _ext = os.path.join(FW_ROOT, "extends")
+    if os.path.isdir(_ext):
+        for _name in sorted(os.listdir(_ext)):
+            _d = os.path.join(_ext, _name)
+            if os.path.isdir(_d):
+                roots.append(_d)
     for root_dir in roots:
         for dirpath, dirnames, filenames in os.walk(root_dir):
             dirnames[:] = [d for d in dirnames if d not in ("__pycache__", ".git", "node_modules")]

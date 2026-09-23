@@ -1,7 +1,7 @@
 # `panel` · 面板栈
 
 > **可拔插形状**：不配 = 不存在。引擎不装配 `panel_layers_fn` 时，本形状零影响。
-> **归属**：`saintess_engine/panel/__init__.py`（E2，2026-09-21）
+> **归属**：`extends/ext_combat/panel/__init__.py`（E2，2026-09-21）
 > **为什么建**：`_HOOKS["panel_fn"]` 的**形参就是游戏词汇**
 > （`fn(class_name, level, equipment, tier, evolve_path, title_bonus, race)` —— 实测 8 个位置参数、6/8 是游戏词）
 > ⇒ 引擎纯度缺陷；且面板聚合本体写在内容侧的 Python 里。

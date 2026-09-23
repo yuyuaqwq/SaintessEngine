@@ -28,10 +28,10 @@ from __future__ import annotations
 
 from typing import Optional
 
-from .. import config as _cfg
+from saintess_engine import config as _cfg
 from .actors import actor_alive
 from .effects import _cap_of as _stack_cap_of
-from ..text import render_via
+from saintess_engine.text import render_via
 
 #: 内容侧「行动类别 → 基准耗时」表里，未知/未声明类别回落到哪个类别（通用键名，非游戏词）
 DEFAULT_ACTION = "attack"

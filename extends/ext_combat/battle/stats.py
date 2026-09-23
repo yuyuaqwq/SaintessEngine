@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 
-from .. import config as _cfg
+from saintess_engine import config as _cfg
 
 
 def actor_stats(battle, actor: dict) -> dict:

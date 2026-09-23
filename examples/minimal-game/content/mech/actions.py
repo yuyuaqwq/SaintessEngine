@@ -14,9 +14,7 @@ actor_alive / actor_stats（都在 saintess_engine.__all__ 里）。
 """
 from __future__ import annotations
 
-from saintess_engine import (
-    actor_alive, actor_stats, apply_effects, deal_damage, register_action,
-)
+from ext_combat import actor_alive, actor_stats, apply_effects, deal_damage, register_action
 
 
 def _holder_of(caster, params):

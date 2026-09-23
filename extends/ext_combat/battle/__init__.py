@@ -17,7 +17,7 @@
   serialize   战斗存档（to_state / from_state）
 
 对外只需 `from saintess_engine import X`（顶层门面）；
-需要深路径时用 `from saintess_engine.battle.<模块> import Y`。
+需要深路径时用 `from ext_combat.battle.<模块> import Y`。
 """
 from .actors import ActCtx, actor_alive, actor_ext, actor_dead, hostile_sides, make_actor
 from .actions import heal_amount, skill_pay_of

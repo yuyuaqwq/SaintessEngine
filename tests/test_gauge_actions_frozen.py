@@ -53,8 +53,8 @@ ROOT = os.path.dirname(HERE)
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from saintess_engine.battle.effects import ACTION_HANDLERS, REGISTERED_OVERWRITES  # noqa: E402
-from saintess_engine.gauge import actions as A  # noqa: E402
+from ext_combat.battle.effects import ACTION_HANDLERS, REGISTERED_OVERWRITES  # noqa: E402
+from ext_combat.gauge import actions as A  # noqa: E402
 
 # ---- 冻结片段：搬运前包内 `content/mech/bar_procs.py:38-202` 逐字（5 助手 + 4 动词）----
 _FROZEN_BLOCK = r'''def _now_of(battle) -> float:
@@ -462,8 +462,8 @@ class _Holder:
 
 def test_log_render_equivalence():
     print("【gauge 5 条日志：未注入逐字 == 搬运前文案；注入 = 表说了算】")
-    import saintess_engine.gauge as G
-    from saintess_engine.battle import landing as L
+    import ext_combat.gauge as G
+    from ext_combat.battle import landing as L
     saved = (G.bar_def, G.bar_should_trigger, G.bar_trigger, L.deal_damage)
     G.bar_def = lambda k: {"trigger_effect": "skip_turn", "name": "破绽",
                            "max": 100, "threshold_base": 10}

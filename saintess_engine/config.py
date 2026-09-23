@@ -74,7 +74,7 @@ _HOOKS = {
     #     「level+敌防 → 伤害」要串 4 条；若让引擎自己串，引擎里就得出现内容 id（R2 明禁）。
     #   不配 = 不存在 ⇒ 所有读口一字不动。
     "formula_bindings_fn": None,
-    # ★ E2（2026-09-21）：面板栈供体（`saintess_engine.panel.PanelStack`），形状 = fn(stack_id) -> dict | None。
+    # ★ E2（2026-09-21）：面板栈供体（`ext_combat.panel.PanelStack`），形状 = fn(stack_id) -> dict | None。
     #   不配 = 不存在 ⇒ `battle/stats.py` 原路调 `panel_fn`，既有包行为逐字节不变。
     "panel_layers_fn": None,
     # ★ E5（2026-09-21）：两段耗时的**声明供体**，形状 = fn(actor, action, entry) -> dict | None。

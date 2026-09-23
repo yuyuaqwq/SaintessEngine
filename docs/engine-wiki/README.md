@@ -14,7 +14,7 @@
 > 它是本框架的**参考实现 + 压力测试**，不是本框架的一部分。
 > 下方未显式标注「游戏仓」的路径，均指**框架仓**。
 
-- 引擎目录：`saintess_engine/`（**35** 个子包 + **6** 个顶层模块；共 **107** 个 `.py` / **24 136** 行）
+- 引擎目录：`saintess_engine/`（**31** 个子包 + **6** 个顶层模块；共 **89** 个 `.py` / **17 751** 行）
   —— 数字由 `tests/test_editor_wiki.py` 逐项对照磁盘锁定，改模块结构必同步（否则门禁红）
 - 路线图（待建形状 / 待搬骨架 / `log`·`tlog` 设计）：[reference/roadmap.md](reference/roadmap.md)
 - 已建成的形状（**可拔插**，不配 = 不存在）：[reference/log.md](reference/log.md)（日志门面）·
@@ -49,7 +49,8 @@
 ```python
 import math
 import saintess_engine
-from saintess_engine import Battle, make_actor, config
+from ext_combat import Battle, make_actor
+from saintess_engine import config
 from saintess_engine import formulas as F          # 引擎自带的纯数值公式模块
 
 # ① 挂最小配置（引擎不内置任何数值/名词；这几样是"能起战斗并打出伤害"的下界）
