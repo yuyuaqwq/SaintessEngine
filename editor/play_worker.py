@@ -433,8 +433,10 @@ def run(payload: dict) -> int:
 
     # ---- ② 引擎包加载器（官方口径）----
     try:
-        from saintess_engine.package import load_stack
-        info = load_stack(pkg_dir)
+        # ★ `load_stack` 返回 **PackageStack**（抛异常）；返回 dict 的是 `probe_stack`。
+        #   这里要的是「先探一遍、失败给出原因」，所以用 probe_stack。
+        from saintess_engine.package import probe_stack
+        info = probe_stack(pkg_dir, inject=inject)
         if not info.get("ok"):
             emit({"ok": False, "stage": "load", "message": "游戏包装配失败",
                   "traceback": "\n".join(info.get("errors") or [])})

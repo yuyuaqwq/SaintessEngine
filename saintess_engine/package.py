@@ -670,6 +670,23 @@ class PackageStack:
     def resolve_handler(self, ref):
         return self.game.resolve_handler(ref)
 
+    def bind_decl(self) -> dict:
+        """数据包的 `bind` 声明（宿主注入面的契约形状）—— 转发给数据包。
+
+        `bind` 只有**数据包**会声明（扩展包是纯能力，不接宿主注入面），
+        所以这里转发 `self.game` 而不是逐层找。
+        """
+        return self.game.bind_decl()
+
+    def check_engine(self) -> None:
+        """逐个包核引擎版本门槛。任一不满足即抛 —— 不做「第一个通过就算过」。
+
+        `Package.load()` 里已经逐个查过；这个方法留给**装配前想先探一遍**的调用方
+        （骨架的 info 打印、编辑器自检），语义与 load 期一致。
+        """
+        for pkg in self.packages:
+            pkg.check_engine()
+
     def __repr__(self) -> str:  # pragma: no cover - 调试用
         return "PackageStack(%s)" % " → ".join(self.ids)
 
