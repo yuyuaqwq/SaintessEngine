@@ -121,7 +121,7 @@ def my_cmd(env) -> str | list[str] | Iterable[str] | None: ...
 | **运行期** | `inject` 并入每条消息的 `Env.state`：引擎自有键 `spec` / `prefix` / `package` 在前，注入键在后，**同名以注入为准** |
 
 - 引擎**不解释** `inject` 的键值（零游戏知识，只原样转交）。
-- 入口两个：`Host(adapter, package_dir, inject={...})` 与 `load_package(root, inject={...})`（同一个面）。
+- 入口两个：`Host(adapter, package_dir, inject={...})` 与 `load_stack(root, inject={...})`（同一个面）。
 - `Package.command_handlers()` 只在「包确实没有 `content/commands.py`」时给空表；
   包自己 import 期抛的错**原样抛出**（曾经是 `except Exception → 空表`，把真错吞成静默失效）。
 
@@ -137,14 +137,14 @@ def my_cmd(env) -> str | list[str] | Iterable[str] | None: ...
 
 ```python
 from saintess_engine.host import Host, load_package
-pkg = load_package(package_dir)          # 路径由**配置**给，不是代码里写死
+pkg = load_stack(package_dir)          # 路径由**配置**给，不是代码里写死
 host = Host(adapter, package_dir, seed=12345)
 host.boot()                              # 加载包 + 装引擎（install_engine）
 host.serve_forever()                     # 或在自己的事件回调里 host.handle(ctx)
 ```
 
 ⚠️ **一个进程一个包**：`entry` 的 import 名（惯例 `content`）是包内相对导入的根，
-`load_package()` 会把包目录放进 `sys.path`。「换包能跑」= **换配置 + 重启进程**，不是同进程热切换。
+`load_stack()` 会把包目录放进 `sys.path`。「换包能跑」= **换配置 + 重启进程**，不是同进程热切换。
 
 ## 六、宿主必须满足的四条（门禁口径）
 

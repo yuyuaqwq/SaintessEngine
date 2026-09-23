@@ -31,7 +31,7 @@ from ..command.registry import CommandRegistry
 from ..tlog import KindTable, MemorySink, TLog
 from .env import Env, run_guards
 from .outcome import BattleOutcome, Scenario, StandIns
-from .package import Package, PackageError, load_package
+from ..package import Package, PackageError, PackageStack, load_stack
 
 #: 默认「没有角色档」的拦截文案（中性，**不是**游戏文案；宿主/包可覆盖）
 DEFAULT_REGISTER_HINT = "未找到你的角色档 —— 请先创建角色。"
@@ -69,7 +69,8 @@ class Host:
     def __init__(self, adapter, package_dir, *, scenario=None, prefix="/", seed=None,
                  idle_sleep=0.05, echo_battle=True, tlog_limit=500, id_key="uid",
                  register_hint=DEFAULT_REGISTER_HINT, battle_hint=DEFAULT_BATTLE_HINT,
-                 battle_check=None, texts_domain="texts", inject=None, async_runner=None):
+                 battle_check=None, texts_domain="texts", inject=None, async_runner=None,
+                 ext_paths=()):
         self.adapter = adapter
         self.package_dir = package_dir
         self.scenario = scenario or Scenario()
@@ -90,7 +91,9 @@ class Host:
         #: **宿主注入面**：一个 dict，两处用 —— ① 加载期交给包声明的 `bind` 钩子（在 import
         #: 包命令模块之前）② 每轮消息并入 `Env.state`。引擎**不解释**其键值（零游戏知识）。
         self.inject: dict = dict(inject or {})
-        self.pkg: Package | None = None
+        #: 扩展包搜索路径（装扩展包目录的父目录）—— 空 = 只用数据包自己的内容。
+        self.ext_paths = tuple(ext_paths or ())
+        self.stack: PackageStack | None = None
         self.commands = CommandRegistry(name="host")
         self.handlers: dict = {}          # 包内命令处理器表（content/commands.py::COMMANDS）
         self.texts = None                 # 包内文案表（content/data/texts.json → TextTable）
@@ -99,26 +102,28 @@ class Host:
         self._tlog_sink = None
 
     # ------------------------------------------------------------ 装配
-    def boot(self) -> Package:
+    def boot(self) -> PackageStack:
         """加载包 → 装引擎 → 装载「声明 + 处理器 + 守卫钩子 + 文案表」。"""
-        self.pkg = load_package(self.package_dir, inject=self.inject or None)
-        self.pkg.install_engine()
+        self.stack = load_stack(self.package_dir, exts=self.ext_paths,
+                                inject=self.inject or None)
+        self.stack.install()
         try:
-            self.commands = CommandRegistry(name=self.pkg.id).load(self.pkg.command_declarations())
+            self.commands = CommandRegistry(name=self.stack.id).load(self.stack.command_declarations())
         except Exception:                                        # noqa: BLE001
-            self.commands = CommandRegistry(name=self.pkg.id)
-        self.handlers = dict(self.pkg.command_handlers())
+            self.commands = CommandRegistry(name=self.stack.id)
+        self.handlers = dict(self.stack.command_handlers())
         self.texts = self._load_texts()
-        return self.pkg
+        return self.stack
 
     def _load_texts(self):
         """包内文案表（读不到 → None：文案是可选半边，缺了由包内自行兜底）。"""
-        data = self.pkg.domain(self.texts_domain) if self.pkg else {}
+        data = (self.stack.domain(self.texts_domain, required=False, default={})
+                if self.stack else {})
         if not isinstance(data, dict) or not data:
             return None
         try:
             from ..text import TextTable
-            return TextTable.from_data(data, name=self.pkg.id)
+            return TextTable.from_data(data, name=self.stack.id)
         except Exception:                                        # noqa: BLE001
             return None
 
@@ -229,7 +234,7 @@ class Host:
             blob_load=self.blob,
             blob_save=self.put_blob,
             state={"spec": spec, "prefix": self.prefix,
-                   "package": (self.pkg.id if self.pkg else ""), **self.inject},
+                   "package": (self.stack.id if self.stack else ""), **self.inject},
         )
         # 两段式：`save` 存的是 **env.player 的当前值**（处理器可整体替换 player 对象）
         env.save = lambda: self.save_player(env.uid, env.player)
@@ -241,10 +246,10 @@ class Host:
         返回 `list[str]`（已渲染文本段）。包没给处理器 → 回显声明（降级说明）。
         """
         key = str(getattr(spec, "key", "") or "")
-        entry = self.handlers.get(key) if self.pkg else None
+        entry = self.handlers.get(key) if self.stack else None
         if not entry:
             return self.declared_echo(spec)
-        fn = self.pkg.resolve_handler(entry.get("handler")) if self.pkg else None
+        fn = self.stack.resolve_handler(entry.get("handler")) if self.stack else None
         if fn is None:
             return ["【%s】包内处理器未解析：%r（检查 content/commands.py 的 handler 引用）"
                     % (key, entry.get("handler"))]
@@ -253,7 +258,7 @@ class Host:
         if guards is None:
             guards = list(getattr(spec, "guards", ()) or ())
         blocked = run_guards(guards, env, builtin=self.builtin_guards(),
-                             hooks=(self.pkg.guard_hooks() if self.pkg else {}))
+                             hooks=(self.stack.guard_hooks() if self.stack else {}))
         if blocked:
             return [blocked]
         return self._as_replies(self._resolve_async(fn(env)))
@@ -369,7 +374,7 @@ class Host:
         顺序即契约顺序：`install_engine()` → 开战仪式 → `build_sides` → `apply_game_content`
         → 首动前设种子 → `Battle` → `auto_run`。
         """
-        pkg = self.pkg or self.boot()
+        pkg = self.stack or self.boot()
         bridge = pkg.optional_submodule("bridge")
         stubs: list = []
         if bridge is None and pkg.entry_fn("build_sides") is None:
@@ -437,13 +442,14 @@ class Host:
         hook = self._hook("on_tlog")
         if hook is None:
             return None
-        collector_mod = self.pkg.optional_submodule("tlog_collect")
+        collector_mod = self.stack.optional_submodule("tlog_collect")
         if collector_mod is None:
             return None
-        table = KindTable.from_data(self.pkg.domain("tlogs"), name=self.pkg.id)
+        table = KindTable.from_data(self.stack.domain("tlogs", required=False, default={}),
+                                            name=self.stack.id)
         sink = MemorySink(limit=self.tlog_limit)
         tlog = TLog(sinks=[sink], kinds=table)
-        collector = collector_mod.BattleTLog(tlog=tlog, name="%s" % self.pkg.id)
+        collector = collector_mod.BattleTLog(tlog=tlog, name="%s" % self.stack.id)
         collector.attach(battle, btype="monster", seed=seed, player=player, enemies=list(enemies or []))
         self._tlog_sink = sink
         return collector, tlog
@@ -471,7 +477,7 @@ class Host:
         宿主只给「替身」（它自己的存储没有的 → 中性值；包内键清单在包模块），
         并把引擎已挂的面板 hook 算好的面板塞进去。跑不出来就**记桩**（不编数字）。
         """
-        mod = self.pkg.optional_submodule("settlement")
+        mod = self.stack.optional_submodule("settlement")
         if mod is None or not isinstance(monster, dict):
             self._stub_missing(out, "settlement")
             return
@@ -481,7 +487,7 @@ class Host:
             return
         mon = dict(monster)
         mon.setdefault("lv", mon.get("level", 1))
-        io = StandIns(self.pkg, self, player, uid=str(player.get("uid") or ""))
+        io = StandIns(self.stack, self, player, uid=str(player.get("uid") or ""))
         try:
             plan = fn(player, mon, out.result or "victory", io) or {}
         except Exception as e:                                   # noqa: BLE001
@@ -497,7 +503,7 @@ class Host:
 
     # ---- 战斗末段：掉落（包内 loot）---------------------------------
     def _post_battle(self, out: BattleOutcome, player: dict, enemies: list) -> None:
-        loot_mod = self.pkg.optional_submodule("loot")
+        loot_mod = self.stack.optional_submodule("loot")
         if loot_mod is None:
             out.stubs.append("loot: 包内 content/loot.py 缺失 → 未掉宝")
         else:
@@ -528,7 +534,7 @@ class Host:
         player = self.load_player(uid)
         if player is None:
             # 新玩家：先造初始档（内容给 `initial_save`；它显式返回空 = 「本包要求先注册」）
-            player = self.pkg.initial_save(uid, ctx, id_key=self.id_key) or {}
+            player = self.stack.initial_save(uid, ctx, id_key=self.id_key) or {}
             if not isinstance(player, dict):
                 player = {}
             if player:
@@ -553,7 +559,7 @@ class Host:
 
     def help_text(self) -> list:
         return ["宿主：包 %s（%d 域 / %d 条指令声明 / %d 条已实现处理器）"
-                % (self.pkg.id, len(self.pkg.domains), len(self.commands), len(self.handlers)),
+                % (self.stack.id, len(self.stack.domains), len(self.commands), len(self.handlers)),
                 "宿主命令：%shelp · %squit · %s<包内指令 key>" % ((self.prefix,) * 3),
                 "可选钩子：%s" % "、".join("%s=%s" % (k, ("适配器已给" if self._hook(k) else DEFAULTS_HINTS[k]))
                                           for k in DEFAULTS_HINTS)]

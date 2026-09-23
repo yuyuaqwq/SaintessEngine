@@ -131,7 +131,7 @@
    子进程里 `pkg_loader.load(pkg_dir)`（跑包的 `content/apply.py` + 引擎）跑一场最小战斗；
    父进程侧唯一一次起进程在 `simulate.py:30`。
 2. **试玩**：`POST /api/package/<id>/play`（`routes_play.py:81` 的 `_mutate` 分支）→ `editor/play.py`
-   起 `play_worker.py`，子进程里 `import game` + `load_package` 走真实游戏那条路；父进程侧起进程在 `play.py:74`。
+   起 `play_worker.py`，子进程里 `import game` + `load_stack` 走真实游戏那条路；父进程侧起进程在 `play.py:74`。
 
 两处共同点：**用户显式点击**、**一次性子进程**、超时掐死、父进程零引擎 import。
 本页说的是「要不要为**渲染**再开第三处，而且是在页面里」—— 答案是不开。

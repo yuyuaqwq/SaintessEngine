@@ -1,7 +1,7 @@
 # 宿主骨架（host-skeleton）—— **引擎 host 的最小适配器示例**
 
 > 一句话：**拿到一个内容包，只写三个函数就能跑起来。**
-> 2026-09-14 起，宿主运行时（`Host` / `load_package` / `Scenario` / `BattleOutcome` / `Env`）
+> 2026-09-14 起，宿主运行时（`Host` / `load_stack` / `Scenario` / `BattleOutcome` / `Env`）
 > 已**提升为引擎模块** `saintess_engine.host` —— 本目录随之从「第三个宿主实现」
 > 退回成**「引擎 host 的最小适配器示例」**：演示三函数怎么接、声明驱动的命令通道怎么走。
 > 契约本体（字段级）：[`docs/engine-wiki/reference/host-api.md`](../../docs/engine-wiki/reference/host-api.md)。
@@ -59,7 +59,7 @@ python examples/host-skeleton/adapter_cli.py \
 **一个 dict** 把包运行期要用的宿主对象交进来：
 
 ```python
-host = Host(adapter, package_dir, inject={"store": my_store})   # 或 load_package(root, inject=...)
+host = Host(adapter, package_dir, inject={"store": my_store})   # 或 load_stack(root, inject=...)
 ```
 
 * **加载期**：引擎在 import 包命令模块（`content/commands.py`）**之前**调 `bind_host(**inject)`
@@ -139,7 +139,7 @@ host = Host(adapter, package_dir, inject={"store": my_store})   # 或 load_packa
 | 原位置（本目录） | 现位置 | 为什么 |
 |---|---|---|
 | `Host`（装配/循环/路由/战斗驱动/落档） | `saintess_engine/host/runtime.py` | 三个宿主（平台插件 / 命令行 / 编辑器）**只有一份编排**才不会三处漂移 |
-| `load_package` / `Package` / `PackageError` | `saintess_engine/host/package.py` | 包契约的解析只有一份 |
+| `load_stack` / `Package` / `PackageStack` / `PackageError` | `saintess_engine/package.py` | 包契约的解析只有一份 |
 | `Scenario` / `BattleOutcome` / `StandIns` | `saintess_engine/host/outcome.py` | 通用形状（零游戏知识） |
 | —— （新增） | `saintess_engine/host/env.py` | `Env` 注入面 + 守卫调度：**包内处理器**的契约 |
 | 示例处理器 / `run_demo_battle` / CLI 入口 | 仍在本目录 `main.py` | 示例特有，不该进引擎 |

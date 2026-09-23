@@ -22,7 +22,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from saintess_engine.host import Host, PackageError, load_package   # noqa: E402
+from saintess_engine.host import Host, PackageError
+from saintess_engine.package import load_stack   # noqa: E402
 from _check import bind_check
 
 
@@ -140,7 +141,7 @@ def _fresh(root: str, **kw):
     for name in [n for n in list(sys.modules) if n == "content" or n.startswith("content.")]:
         del sys.modules[name]
     sys.path.insert(0, root)
-    return load_package(root, **kw)
+    return load_stack(root, **kw)
 
 
 class FakeAdapter:

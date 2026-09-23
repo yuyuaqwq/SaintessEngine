@@ -274,7 +274,7 @@ def test_minimal_adapter() -> None:
     adapter = _fake_adapter_class(store)({})
     # ★ W2a（2026-09-15）：orlandia 去 shim 完毕 + 包声明了 `bind` ⇒ 落地 2026-09-14 的 TODO：
     #   本段恢复成**无条件 `pkg = host.boot()`**（注入面给四类真·宿主能力）。
-    #   原来的「boot 失败 → 手工 load_package + install_engine」兜底已删（包不再硬依赖宿主树）。
+    #   原来的「boot 失败 → 手工 load_stack + install_engine」兜底已删（包不再硬依赖宿主树）。
     host = skel.Host(adapter, PKG, scenario=scen, seed=SEED, inject=_pkg_inject())
     pkg = host.boot()
     check("假适配器 boot() 成功（三函数 + 四类注入接满即可跑）",
@@ -331,8 +331,8 @@ def test_two_host_parity() -> None:
     import saintess_engine as engine
     skel = importlib.import_module("main")
     scen = skel.Scenario.from_dict(scenario())
-    # ★ W2a：包声明了 `bind` ⇒ `load_package` 必须给 inject（否则 PackageError，这是引擎的牙）
-    pkg = skel.load_package(PKG, inject=_pkg_inject())
+    # ★ W2a：包声明了 `bind` ⇒ `load_stack` 必须给 inject（否则 PackageError，这是引擎的牙）
+    pkg = skel.load_stack(PKG, inject=_pkg_inject())
     pkg.install_engine()
 
     store: dict = {}

@@ -61,7 +61,9 @@ from . import (  # noqa: F401
     presence, run, session, space, store, text, tlog,
 )
 from . import host  # noqa: F401  （宿主运行时：放在最后 import，避免与上面各模块的加载顺序打架）
-from .host import Host, load_package  # noqa: F401
+from .host import Host  # noqa: F401
+# 包栈加载器（唯一入口：数据包 + 扩展包）
+from .package import Package, PackageError, PackageStack, load_stack  # noqa: F401
 # 指令声明 / 文案表（声明驱动：可拔插，未装载 = 零行为）
 from .command import CommandRegistry, CommandSpec  # noqa: F401
 from .text import TextSpec, TextTable, safe_format  # noqa: F401

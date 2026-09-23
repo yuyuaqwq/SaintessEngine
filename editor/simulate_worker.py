@@ -53,8 +53,8 @@ def main() -> int:
 
     # ---- 载入游戏包（走引擎官方加载器：它以「包」的方式导入 content，包内相对导入可用）----
     try:
-        from saintess_engine import package as pkg_loader
-        info = pkg_loader.load(pkg_dir)
+        from saintess_engine.package import load_stack
+        info = load_stack(pkg_dir)
         if not info["ok"]:
             return _emit({"ok": False, "stage": "load", "message": "游戏包装配失败",
                           "traceback": "\n".join(info["errors"])}) or 0

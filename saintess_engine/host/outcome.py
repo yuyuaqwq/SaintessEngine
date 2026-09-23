@@ -15,7 +15,7 @@ from ..clock.wall import today as _wall_today      # 挂钟单一出口纪律：
 
 
 def _read_json(path, default=None):
-    from .package import read_json
+    from ..package import read_json
     return read_json(path, default)
 
 

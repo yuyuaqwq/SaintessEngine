@@ -3,7 +3,7 @@
 
 定位变更
 --------
-宿主运行时（`load_package` / `Host` / `Scenario` / `BattleOutcome` / `StandIns` / `Env`）
+宿主运行时（`load_stack` / `Host` / `Scenario` / `BattleOutcome` / `StandIns` / `Env`）
 已**提升为引擎模块** `saintess_engine.host` —— 因为「同一个包能被多个宿主跑」的前提是
 这份编排只有一份实现（否则 QQ 宿主 / 命令行 / 编辑器各写一遍 = 三处漂移）。
 
@@ -15,7 +15,8 @@
 
 契约本体（引擎侧）
 ------------------
-    from saintess_engine.host import Host, load_package, Scenario, BattleOutcome
+    from saintess_engine.host import Host
+from saintess_engine.package import load_stack, Scenario, BattleOutcome
 三函数与 ctx 七字段、可选钩子、命令通道全在引擎那个模块的说明里 —— 本文件不重复抄一遍。
 
 本文件只留**示例特有**的东西
@@ -30,7 +31,7 @@
 ---------------------------------------------
 宿主用**一个 dict** 把「包运行期要用的宿主对象」交给引擎：
 
-    Host(adapter, package_dir, inject={"store": my_store})     # 或 load_package(root, inject=...)
+    Host(adapter, package_dir, inject={"store": my_store})     # 或 load_stack(root, inject=...)
 
 引擎在两处用它：① **加载期** —— 包若在 `game.json` 声明了 `bind`（形状见
 `docs/engine-wiki/reference/package-format.md` §2.2），引擎在 import 包命令模块**之前**调
@@ -68,8 +69,9 @@ _ensure_engine_importable()
 
 from saintess_engine.host import (  # noqa: E402,F401  （re-export：本示例是引擎 host 的入口）
     MINIMAL_SAVE_KEYS, BattleOutcome, Env, Host as EngineHost, Package, PackageError,
-    Scenario, StandIns, load_package, run_guards,
+    Scenario, StandIns, run_guards,
 )
+from saintess_engine.package import load_stack  # noqa: E402,F401
 
 # 示例平台（命令行 / 冒烟）用的「平台身份」键名。引擎默认 `uid`；示例沿用历史上的 `qq_id`，
 # 以示**这个键名由适配器给**，引擎不认识它（零平台知识）。
@@ -283,7 +285,7 @@ def demo_zero_inject(package_dir: str | None = None):
     `inject` 缺省对它没有任何影响。要真跑起来请用 `adapter_cli.py`。
     """
     _drop_content_modules()
-    return load_package(package_dir or MINIMAL_GAME_DIR)
+    return load_stack(package_dir or MINIMAL_GAME_DIR)
 
 
 def demo_bind_package(root: str, *, inject=None) -> dict:

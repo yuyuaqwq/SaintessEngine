@@ -37,7 +37,8 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 import saintess_engine as engine                                    # noqa: E402
-from saintess_engine.host import Env, Host, load_package, run_guards  # noqa: E402
+from saintess_engine.host import Env, Host, run_guards
+from saintess_engine.package import load_stack  # noqa: E402
 from _check import bind_check
 
 
@@ -251,13 +252,13 @@ def main() -> int:
     out = run("测试", uid="u-new")
     check("新玩家 → 包 initial_save 造档 → 处理器照跑", bool(out) and out[0] == "pong uid=u-new", repr(out))
     check("新档已落库", store.get("u-new", {}).get("counter") == 0, repr(store.get("u-new")))
-    _orig_entry_fn = host.pkg.entry_fn
-    host.pkg.entry_fn = lambda name: ((lambda uid, ctx=None: None) if name == "initial_save" else None)
-    check("包显式返回 None → 空档（= 本包要求先注册）", host.pkg.initial_save("u-x") == {})
+    _orig_entry_fn = host.stack.game.entry_fn
+    host.stack.game.entry_fn = lambda name: ((lambda uid, ctx=None: None) if name == "initial_save" else None)
+    check("包显式返回 None → 空档（= 本包要求先注册）", host.stack.initial_save("u-x") == {})
     env_empty = Env(uid="u-x", player={}, text="测试")
     check("空档 → player 守卫拦截（文案来自调用方）",
           run_guards(["player"], env_empty, builtin=host.builtin_guards()) == "⚠️ 还没有档")
-    host.pkg.entry_fn = _orig_entry_fn
+    host.stack.game.entry_fn = _orig_entry_fn
 
     # 【3】包侧守卫 hook:
     print("\n【3】包侧守卫（guards: [\"hook:block\"] → content/guards.py::GUARDS）")

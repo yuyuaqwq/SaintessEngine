@@ -19,6 +19,26 @@
 引擎（`saintess_engine/`）**不认识任何一款游戏**，也不 import 任何包；
 包反过来 import 引擎的公开 API。方向单一：**包 → 引擎**。
 
+### 包栈：一个数据包 + N 个扩展包（2026-09-23）
+
+一个进程里装的不是「一个包」，而是一个**包栈**：
+
+```
+引擎 → 扩展包（N 个，可互相依赖）→ 数据包（1 个）
+```
+
+* **数据包**（`kind` 缺省 = `"game"`）：一款游戏的**内容** —— 职业 / 技能 / 怪物 / 地图 /
+  委托 / 文案 / 存档形状。**一个进程只有一个**：指令路由、动作注册表、文案表、存档、
+  时钟都是进程级单例，两个数据包会互撞（要跑两款游戏 = 开两个进程）。
+* **扩展包**（`kind: "extension"`）：游戏级**能力** —— 战斗 / 副本 / 任务 / 对话 / 经济 /
+  图鉴 / 社交。可以装多个，可以互相依赖；它不提供「身份」，只提供「这类事怎么做」，
+  所以同一份战斗扩展包，任何数据包都能用。
+* 依赖方向只有两个：`数据包 → 扩展包` 与 `扩展包 → 扩展包`。扩展包依赖数据包 = 方向错了
+  （加载期报错）。加载顺序 = **拓扑序**（被依赖者在前）；**成环 → 报错**（fail-closed）。
+* **域分层**：引擎默认集 → 扩展包（这一层给的默认值）→ 数据包（真源）。
+  同名域**整体覆盖**前层，取值取层序里最靠后的那一份；
+  `PackageStack.domain_layers(域)` 可以查出「这个域的值到底来自哪几层」（审计用）。
+
 ---
 
 ## 二、物理结构
@@ -53,6 +73,11 @@
 | `id` | 否 | 字符串 | 包身份；缺省 → 回退目录名（`Package.id`），`bind` 的报错文案里也用它 |
 | `name` / `desc` | 否 | 字符串 | 展示元数据（编辑器 / 宿主命令行）；引擎不解释 |
 | `engine` | 否 | 门槛字符串（如 `">=0.1"`） | 版本门槛：不满足 → `PackageError`（**显式报错，不静默降级**） |
+| `kind` | 否 | `"game"` \| `"extension"` | 缺省 `"game"`。**扩展包必须写 `"extension"`**，否则会被当成数据包 |
+| `depends` | 否 | 字符串数组（扩展包 id） | 本包依赖哪些扩展包。数据包与扩展包都能声明；**扩展包不许依赖数据包** |
+| `namespace` | 否 | 字符串 | **只对扩展包有意义**：Python 命名空间，必须等于包目录名（缺省 = `id`）。数据包固定 `content` |
+| `domain_dirs` | 否 | `{"data": …, "rules": …}` | 覆盖本包内的域落点（缺省：数据包 `content/{data,rules}`，扩展包 `{data,rules}`） |
+| `domain_decl` | 否 | 相对路径 | 覆盖域声明文件位置（缺省：数据包 `editor/domains.json`，扩展包 `domains.json`） |
 | `entry` | 否 | 包内相对路径（惯例 `content/apply.py`） | 装配入口。**声明了就必须存在**（缺文件 → `PackageError`）；纯数据包不声明 |
 | `domains` | 否 | 字符串数组 | 本包声明的域清单（编辑器 / 状态展示用） |
 | `bind` | 否 | `{"module": "<包内相对路径 .py>", "func": "<函数名>"}` | ★ **宿主注入声明**（见 2.2）。不声明 = 本包零宿主耦合 |
@@ -85,7 +110,7 @@
   `func(**inject)` —— 包命令模块因此可以在 import 期就 `from . import index` 并取宿主对象。
 * **运行期**：`inject` 并入每条消息的 `Env.state`（引擎自有键 `spec` / `prefix` / `package`
   在前、注入键在后，**同名以注入为准**）。
-* 入口是同一个面：`Host(adapter, package_dir, inject={...})` 与 `load_package(root, inject={...})`。
+* 入口是同一个面：`Host(adapter, package_dir, inject={...})` 与 `load_stack(root, inject={...})`。
 * 引擎**不解释** `inject` 的键值（零游戏知识，只原样转交）—— 键名与含义由宿主与包约定。
 
 **校验规则**（引擎已实现 → `PackageError`，绝不放行；宁可不跑，也不静默）：
@@ -140,7 +165,7 @@ def hello(env):
 
 ```python
 host = Host(adapter, package_dir, inject={"store": my_store})
-# 或：pkg = load_package(package_dir, inject={"store": my_store})
+# 或：stack = load_stack(package_dir, inject={"store": my_store})
 ```
 
 可运行的端到端演示见 `examples/host-skeleton/main.py`（`python main.py --demo-inject`：
@@ -148,6 +173,25 @@ host = Host(adapter, package_dir, inject={"store": my_store})
 字段级契约见 [host-api.md](host-api.md) §四「宿主注入面」。
 
 ---
+
+### 2.3 扩展包：目录名就是命名空间
+
+```
+<扩展包搜索路径>/            ← 传给 load_stack(game_dir, exts=[…]) 的那个目录
+  rpg_combat/                ← 目录名 == id == Python 命名空间（三者不一致 = 加载期报错）
+    game.json                {"kind": "extension", "id": "rpg_combat", "depends": […]}
+    apply.py                 入口惯例在包根：install_engine() / 可选 apply_game_content()
+    helper.py                包内其它模块（`from . import helper` 相对导入照常可用）
+    domains.json             本层带的域声明（可选）
+    data/<域>.json           本层带的「默认值」（可选；数据包要用自己的就整份覆盖）
+    rules/<域>.json
+```
+
+**为什么扩展包用目录名当命名空间**：数据包的 import 名固定是 `content`（一个进程只有一个
+数据包，不会撞）；扩展包可以有多个，各自用自己的 `id` 当命名空间 —— 于是
+「一个数据包 + N 个扩展包」在同一进程里互不干扰，包内的相对导入（`from . import x`）
+也照常可用。`optional_submodule()` / `bind.module` / handler 引用这些「按名取件」的面，
+在扩展包里都会自动带上命名空间前缀。
 
 ## 三、三层内容，谁改什么
 

@@ -111,9 +111,10 @@ python DIST_smoke.py
 
 ```python
 import sys; sys.path.insert(0, ".")          # 本包目录
-from saintess_engine import package as pkg_loader
-info = pkg_loader.load(".")                  # game.json → 版本门禁 → import content.apply → install_engine()
+from saintess_engine.package import probe_stack
+info = probe_stack(".")                 # game.json → 版本门禁 → 加载包栈（不抛，错误在 info["errors"]）
 assert info["ok"], info["errors"]
+stack = info["stack"]                   # PackageStack：扩展包（拓扑序）+ 数据包
 from saintess_engine import Battle, make_actor
 ```
 
@@ -194,18 +195,16 @@ def main():
     _setup_paths()
     try:
         # 用**引擎官方的包加载器**：它把 `content` 当**包**导入 → 包内 `from .mech import …`
-        # 这类相对导入可用（旧写法「content 进 path + 顶层 import apply」会在这类包上炸，
-        # 或被 except 吞掉 → 动作静默不注册）。
-        from saintess_engine import package as pkg_loader        # noqa: PLC0415
-        info = pkg_loader.load(HERE)
+        # 这类相对导入可用。
+        from saintess_engine.package import probe_stack       # noqa: PLC0415
+        info = probe_stack(HERE, install=True)
         if not info["ok"]:
             print("[x] 装配失败（content/apply.py）：")
             for e in info["errors"]:
                 print("   ", e)
             return 1
-        if info.get("import_style") == "top-level":
-            print("[i] 本包用的是旧式顶层导入（没有包内相对导入）—— 建议改成 "
-                  "`from saintess_engine import package; package.load(包根)`")
+        if len(info.get("plan") or []) > 1:
+            print("[i] 本包栈：%s" % " → ".join(p["id"] for p in info["plan"]))
     except Exception:
         print("[x] 引擎 import 失败 —— 先装好 saintess_engine，"
               "或用 FW_FRAMEWORK_ROOT 指向框架仓根目录。")

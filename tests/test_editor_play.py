@@ -705,9 +705,9 @@ def test_action_wiring_negative() -> None:
 _F3_PROBE = '''
 import asyncio, json, sys
 sys.path.insert(0, %r)
-from saintess_engine.host import load_package
+from saintess_engine.package import load_stack
 from editor.play_shell import PlayShell
-pkg = load_package(%r, inject={"db_path": "", "clock": None, "log": None, "tlog": None})
+pkg = load_stack(%r, inject={"db_path": "", "clock": None, "log": None, "tlog": None})
 lst = []
 sh = PlayShell(pkg=pkg, events=lst)
 out = {"same_object": sh._events is lst}
@@ -821,10 +821,10 @@ _F5_PROBE = """
 import asyncio, json, os, sys
 payload = json.loads(sys.stdin.read())
 sys.path.insert(0, payload["engine_root"])
-from saintess_engine.host import load_package
+from saintess_engine.package import load_stack
 from editor.play_shell import PlayShell
 os.environ["GWEN_GAME_DB"] = payload["db"]
-pkg = load_package(payload["pkg_dir"], inject={"db_path": payload["db"], "clock": None,
+pkg = load_stack(payload["pkg_dir"], inject={"db_path": payload["db"], "clock": None,
                                                "log": None, "tlog": None})
 sh = PlayShell(pkg=pkg, events=[])
 for tag in payload["tags"]:
