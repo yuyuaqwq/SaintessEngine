@@ -58,7 +58,7 @@ def get_effect_rules() -> dict:
 
 
 # ⚠ `state_def(key)` 不在这里 —— 本包 `battle/state_effects.py` 已有一个（实现逐字相同）。
-#   第 7 批搬配置取件时发现「引擎 config.state_def / 本包 state_effects.state_def」是两份
+#   第 7 批搬配置取件时发现「引擎 `config.py` 的 `state_def` / 本包 `state_effects.state_def`」是两份
 #   一样的实现，不再制造第三份：留 `state_effects.state_def`，让它改调本模块的
 #   `get_effect_rules()`。
 

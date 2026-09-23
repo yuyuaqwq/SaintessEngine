@@ -17,10 +17,11 @@
 
 数据驱动铁律（同 `gauge/__init__.py`）：
 - 引擎不写任何职业/条名/数值特判：阈值 / 衰减 / 保留比例 / 触发效果全从 `bar_def(key)` 读
-  （内容侧经 `config.mech_cfg("enemy_bar")` 注入；未装配 = 默认不启用）
+  （内容侧经 `mech_cfg("enemy_bar")`（本包 `battle/game_config.py`）注入；未装配 = 默认不启用）
 - 日志里的条显示名 = `bar_def(key)["name"]`（内容侧提供；缺省回落 bar key）——
   引擎不认识任何具体条名
-- 条键前缀经 `_state_prefix()`（内容侧 `config.bar_prefix()` 注入；未装配回落 `"bar:"`）
+- 条键前缀经 `_state_prefix()`（内容侧 `bar_prefix()`（本包 `battle/game_config.py`）注入；
+  未装配回落 `"bar:"`）
 
 搬运来源（P4-D2 逐字端口，本批 U1-I1 整块上移引擎）：包内
 `games/orlandia/content/mech/bar_procs.py` 的 5 个模块级助手 + 4 个 `@register_action`

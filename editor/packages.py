@@ -634,11 +634,12 @@ def install_engine() -> None:
     if _MOUNTED:
         return
     import ext_combat.battle.formulas as formulas
+    from ext_combat.battle import game_config as GC    # 游戏配置取件（第 7 批从引擎 config 搬来）
 
     config.register_hook_provider(_lazy_mount)
     # ⚠️ hook（引擎只认 17 个名字）走 `mount`；**声明表不要走 mount** ——
     # `set_hook` 对不认识的名字是**静默忽略**，写 `mount(effect_rules=…)` 会"看起来装配成功、
-    # 实则规则表是空的"（效果全部不生效且不报错）。声明表走 `load_game_rules`。
+    # 实则规则表是空的"（效果全部不生效且不报错）。声明表走 `GC.load_game_rules`。
     config.mount(formulas=formulas,          # 引擎自带通用公式模块
                  time_model_fn=_time_scale,  # ★ CTB 时间模型·第一段（不挂即 fail-closed）
                  action_base_fn=_action_base,  # 行动类别 → 第一段基准耗时
@@ -651,7 +652,7 @@ def install_engine() -> None:
     _r = _Rules()
     _r.EFFECT_RULES = _load("effect_rules", True)
     _r.EFFECT_ACTIONS = _load("effect_actions", True)
-    config.load_game_rules(_r)
+    GC.load_game_rules(_r)
     _MOUNTED = True
 
 

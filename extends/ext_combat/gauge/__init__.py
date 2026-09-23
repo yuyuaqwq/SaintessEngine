@@ -36,22 +36,22 @@ docs/archive/REFACTOR_v181_CLASS_MECH_ASSEMBLY.md『v139 形态层设计留档�
 见 tests/test_numeric_bar_decay.py 容器安全断言。
 
 S3 通用件归位（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §6.5 / §7-S3）：
-本体自 game/core/battle_bars.py 迁入引擎（saintess_engine/），**读点改 config
-注入面**——`config.mech_cfg(name)` / `config.bar_prefix()` 由内容侧装配
+本体自 game/core/battle_bars.py 迁入引擎（saintess_engine/），**读点改注入面**——
+`mech_cfg(name)` / `bar_prefix()`（本包 `battle/game_config.py`）由内容侧装配
 （game/bootstrap.py）注入，引擎零 game.data import（门禁 test_engine_no_content.py）。
 （S3 前这里是 importlib 延迟直读 data.battle_config/data.battle_rules——
 既为避 core ↔ data 循环导入，也是引擎反向依赖的一条边。）
 """
 from math import floor
 
-from saintess_engine import config as _bcfg
+from ..battle import game_config as _GC
 from saintess_engine.text import render_or
 
 
 def _battle_cfg(name: str) -> dict:
-    """读取机制配置表 MECH_CFG[机制键]（内容侧 config 注入；未装配 → {}）。"""
+    """读取机制配置表 MECH_CFG[机制键]（内容侧经 game_config 注入；未装配 → {}）。"""
     try:
-        return _bcfg.mech_cfg(name) or {}
+        return _GC.mech_cfg(name) or {}
     except Exception:
         return {}
 
@@ -63,9 +63,9 @@ def _cfg(cfg: dict, key, default=None):
 
 
 def _state_prefix() -> str:
-    """条状态在 effects 容器里的键前缀（内容侧 config 注入；未装配 → 历史兜底 "bar:"）。"""
+    """条状态在 effects 容器里的键前缀（内容侧经 game_config 注入；未装配 → 历史兜底 "bar:"）。"""
     try:
-        return _bcfg.bar_prefix() or "bar:"
+        return _GC.bar_prefix() or "bar:"
     except Exception:
         return "bar:"
 

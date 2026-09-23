@@ -138,8 +138,8 @@ def resolve_actions(name: str) -> list:
 
     找不到映射时按"本身就是动词"处理（动作名直通执行器）。
     """
-    from saintess_engine import config
-    table = config.get_effect_actions()
+    from .game_config import get_effect_actions
+    table = get_effect_actions()
     mapped = table.get(name)
     if isinstance(mapped, list):
         return mapped

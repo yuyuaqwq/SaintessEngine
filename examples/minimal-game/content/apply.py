@@ -84,6 +84,7 @@ def install_engine() -> None:
     if _MOUNTED:
         return
     from ext_combat.battle import formulas as _formulas
+    from ext_combat.battle import game_config as GC   # 游戏配置取件面（第 7 批从引擎 config 搬来）
 
     # 引擎只认「hook 惰性装配器」这一个回调（内容 → 引擎方向）。
     # 框架**不提供** load_game_defaults 之类游戏概念 API：本游戏的配置入口
@@ -107,7 +108,7 @@ def install_engine() -> None:
         recover_model_fn=_recover_model,                    # 第二段（收招）耗时（本游戏 = 同形状）
         recover_base_fn=_recover_base,                      # 行动类别 → 第二段基准耗时（全 0）
     )
-    config.load_game_rules(R)   # EFFECT_ACTIONS / EFFECT_RULES
+    GC.load_game_rules(R)       # EFFECT_ACTIONS / EFFECT_RULES（新家：ext_combat.battle.game_config）
     _MOUNTED = True
 
 

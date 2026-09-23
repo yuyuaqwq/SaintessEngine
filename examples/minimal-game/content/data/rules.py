@@ -17,7 +17,7 @@ CTB 时间轴（行动耗时）也是引擎的注入面（`time_model_fn` / `act
 """
 from __future__ import annotations
 
-# kind 语义词表（引擎零 kind 字面量：它只用 config.kind_of(name) 查这张表）
+# kind 语义词表（引擎零 kind 字面量：它只用 ext_combat.battle.game_config.kind_of(name) 查这张表）
 KIND_NAMES = {
     "phys": "冲击",
     "magi": "灼热",

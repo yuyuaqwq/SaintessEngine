@@ -93,10 +93,11 @@ def main():
         json.dump({"sk_probe": {"name": "探针", "period": {"turns": 1}}}, f, ensure_ascii=False)
     probe = ("import json, sys\n"
              f"sys.path.insert(0, {ROOT!r})\n"
+             f"sys.path.insert(0, {os.path.join(ROOT, 'extends')!r})\n"
              f"sys.path.insert(0, {pkg_dir!r})\n"
              "import content.apply as A\n"
              "A.install()\n"
-             "import saintess_engine.config as C\n"
+             "from ext_combat.battle import game_config as C\n"
              "print(json.dumps({'rules': len(C.get_effect_rules() or {})}))\n")
     pr = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, timeout=180)
     got = {}

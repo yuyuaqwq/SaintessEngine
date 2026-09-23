@@ -179,6 +179,7 @@ def test_cast_window_delays_damage():
 def test_engine_mounts():
     """装配自检：引擎的 hook 是「写错名字静默忽略」的，所以要自己点名核对。"""
     from saintess_engine import config
+    from ext_combat.battle import game_config as GC   # 游戏配置取件面（第 7 批搬到新家）
     names = ("formulas", "kinds", "panel_fn", "skill_lookup", "monster_skill_fn",
              "basic_skill_fn", "basic_fallback", "formula_skeleton_fn",
              "skill_flat_fn", "skill_up_fn", "skill_level_of_fn")
@@ -186,12 +187,12 @@ def test_engine_mounts():
     check(f"{len(names)} 个 hook 全部装配到位（无拼错 → 静默忽略）", not missing,
           f"missing={missing}")
     check("两张规则表已挂载（effect_actions / effect_rules）",
-          bool(config.get_effect_actions()) and bool(config.get_effect_rules()))
+          bool(GC.get_effect_actions()) and bool(GC.get_effect_rules()))
     check("basic_fallback 是内容侧自己的名字（引擎零字面量）",
           (config.get_hook("basic_fallback") or {}).get("name") == "应急撬棍",
           f"fallback={config.get_hook('basic_fallback')}")
     check("kind 词表是内容侧自己的词（引擎不认「冲击」）",
-          config.kind_of("phys") == "冲击", f"kind={config.kind_of('phys')!r}")
+          GC.kind_of("phys") == "冲击", f"kind={GC.kind_of('phys')!r}")
 
 
 def _iter_py(root):

@@ -3,7 +3,7 @@
 
 技能 dict 的字段是**引擎协议**：name / kind / exprs / cd / res_cost / mech /
 mech_val / cc_turns / aoe / hits…（见 wiki reference/api.md 与 concept/formulas 用法）。
-kind 的值是本游戏的词（"冲击"/"灼热"/…），引擎只拿它去 config.kind_of() 比对。
+kind 的值是本游戏的词（"冲击"/"灼热"/…），引擎只拿它去 game_config.kind_of() 比对。
 
 本模块整体作为引擎的 `skill_lookup` hook 使用 —— 只需要两个静态方法：
     skill_info(class_name, skill_key)  玩家侧查询

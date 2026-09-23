@@ -105,7 +105,8 @@ def _engine_cap_flat(flat):
     """引擎读侧上限口径：`cap_of` = 基础 cap + 容器 flat（累加，只认正数）。"""
     from saintess_engine import config as _cfg
     from ext_combat.battle import effects as _E
-    old = _cfg.get_effect_rules()
+    from ext_combat.battle import game_config as GC   # 游戏配置取件面（第 7 批从引擎 config 搬来）
+    old = GC.get_effect_rules()
     try:
         _cfg.set_config("effect_rules", {"rage": {"cap": 10}})
         return _E.cap_of({"bonus": {"cap": {"rage": flat}}}, "rage") - 10

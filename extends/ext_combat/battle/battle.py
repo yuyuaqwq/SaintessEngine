@@ -16,7 +16,7 @@ from typing import Optional
 
 from .actors import ActCtx, actor_alive, actor_dead
 from . import actions
-from saintess_engine import config as _cfg
+from . import game_config as _GC
 from saintess_engine.text import render_or as _render_or
 
 
@@ -144,15 +144,15 @@ class Battle:
                 info = None
                 # 尝试 skill_info（中文名/内部 key 双路）
                 if actor.get("class_name"):
-                    info = _cfg.skill_info_of(actor["class_name"], sk)
+                    info = _GC.skill_info_of(actor["class_name"], sk)
                 if not info:
                     # sk_xxx key → 查 skill_by_key
-                    info = _cfg.skill_by_key(sk)
+                    info = _GC.skill_by_key(sk)
                 if not info:
                     # N5B 怪技能源（ms_* 表——旧引擎 7666 同款：先怪表后玩家表；
                     # saintess_engine 此前只查玩家源 → 怪技能索引空 → 技能静默空放）
                     try:
-                        info = _cfg.monster_skill_of(sk)
+                        info = _GC.monster_skill_of(sk)
                     except Exception:
                         info = None
                 if info:

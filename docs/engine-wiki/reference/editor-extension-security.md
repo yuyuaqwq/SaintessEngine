@@ -94,7 +94,7 @@
 
 * 前端拼路径与发请求：`web/app.js` 的 `dPath`（`:204`）、保存（`:1416` / `:1476`）；
 * 服务端：`server.py:708-724`（`_mutate` 的 PUT 分支）先跑 schema + 引用校验，过了再调
-  `PK.put_entry`（`packages.py:716`）→ `write_json`（`packages.py:439`）落盘；`_mutate` 里**没有** Origin / CSRF 校验。
+  `PK.put_entry`（`packages.py:717`）→ `write_json`（`packages.py:439`）落盘；`_mutate` 里**没有** Origin / CSRF 校验。
 
 ⇒ **包的 JS 一旦进页面，等于把「写盘」这项能力交给包**：它不需要攻击编辑器进程，只要用页面的身份发请求
 就能改数据、导出整包、再导入别的包（`web/app.js:463` 导出 / `:491` 导入）。同源是浏览器里唯一真正有效的

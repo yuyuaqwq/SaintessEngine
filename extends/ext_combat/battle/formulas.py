@@ -331,7 +331,7 @@ def skill_learn_cost(need_lv: int) -> int:
 def skill_level_of(player: dict, skill_name: str) -> int:
     """技能等级查询（内容侧注入 `skill_level_of_fn`）。
 
-    引擎侧只保留签名/转发位（saintess_engine.actions 经 config.formulas() 消费）；实体在
+    引擎侧只保留签名/转发位（引擎 `.actions` 经本包 `battle/game_config.py` 的 `formulas()` 转发消费）；实体在
     `game/content_rules/skills.py: skill_level_of`（读 player.skill_levels + 技能 id resolve）。
     未装配 → 1（未升级 Lv.1 兜底，与原「查不到按未升级 Lv.1」一致）。
     """
