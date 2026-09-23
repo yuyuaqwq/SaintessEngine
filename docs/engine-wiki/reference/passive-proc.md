@@ -1,9 +1,14 @@
 # 参考：`PASSIVE_PROC` 声明
 
+> **归属**：本能力**不在引擎里**（2026-09-23 起）—— 表与装配器都在**内容侧**（`game/data/battle_rules.py` / `game/services/class_mech_proc.py`）；
+> 它的**域声明** `passive_proc` 住在扩展包 `extends/ext_combat/`（`domains.json`，编辑器靠它认识这张表）。
+> 数据包要用它：`game.json` 里写 `"depends": ["ext_combat"]`；配套形状（`triggers` / 动词执行器）也在该包（`battle/`）。
+> 引擎侧只剩通用件，见 `../architecture/boundaries.md`；下文 `effects.py:NNN` / `actions.py:NNN` 都在 `extends/ext_combat/battle/` 下。
+>
 > ⚠️ **边界声明**：这张表**不属于引擎**。它在你的内容规则模块里
 > （参考实现：**游戏仓 / 奥兰迪亚侧**的 `game/data/battle_rules.py:653`），由**你的装配器**读取并翻译成
 > `actor["triggers"]`（参考实现：`game/services/class_mech_proc.py:1974`
-> `apply_class_passives`）。引擎侧零代码认识 `PASSIVE_PROC`。
+> `apply_class_passives`）。引擎侧与扩展包都零代码认识 `PASSIVE_PROC`（它是纯内容表）。
 > 下文出现的 proc 名（`poison_cap` / `arcane_constant` / `reflect_bar` …）都是**那只游戏的实例**，不是引擎名词。
 >
 > 任务导向的写法 → [../guides/add-a-passive.md](../guides/add-a-passive.md)。
@@ -61,7 +66,7 @@ for _also in (cfg.get("also") or []):
 ```
 
 写入：`bonus.cap[cap_key] += add`（`add` 取 `passive.add` 或 `cfg.add`，**只累加正数**，
-`:2008-2018`）。消费者是引擎 `effects._cap_of`（`effects.py:72`）。
+`:2008-2018`）。消费者是扩展包 `effects._cap_of`（`extends/ext_combat/battle/effects.py:72`）。
 
 ⚠️ `cap_key` 缺省 = `proc` 名本身（`:2010`）。所以 `proc` 名 ≠ 资源 key 时必须写 `cap_key`。
 
@@ -83,8 +88,8 @@ for _also in (cfg.get("also") or []):
 | 有 `when` | `bonus.cost["when"].append({**when[0], "mp_pct": 原值 + passive.mp_mult})` |
 | 无 `when` 且 `mp_mult > 0` | `bonus.cost["mp_pct"] += passive.mp_mult` |
 
-⚠️ 只读 `passive.mp_mult` 一个字段（**不读 `mp_flat` / `res`**）。消费者是引擎
-`actions._skill_pay_of`（`actions.py:272`）。
+⚠️ 只读 `passive.mp_mult` 一个字段（**不读 `mp_flat` / `res`**）。消费者是扩展包
+`actions._skill_pay_of`（`extends/ext_combat/battle/actions.py:272`）。
 `cost` 域因为无 `event`，下方 `if not d.get("type"): continue` 自然拦截（`:2063-2064`）。
 
 ## `agg`：聚合族
@@ -132,19 +137,19 @@ for _also in (cfg.get("also") or []):
   （全部注册在 `game/services/class_mech_proc.py`）
 - `domain` 取值：`cap` · `cost`；`agg` 取值：`counter`
 
-## `MECH_CASH` vs `PASSIVE_PROC` vs → 引擎
+## `MECH_CASH` vs `PASSIVE_PROC` vs → 扩展包执行端
 
 ```
 技能数据 kind="被动" + passive.proc ──┐
                                      ├─→ PASSIVE_PROC[proc] ──→ 装配器 ──→ triggers
 PASSIVE_PROC 声明（event/action/judge）┘                                 │
                                                                         ↓
-技能数据 mech ─→ MECH_CASH[mech] ──→ 装配器 ──→ triggers ──→ 引擎 fire()
+技能数据 mech ─→ MECH_CASH[mech] ──→ 装配器 ──→ triggers ──→ ext_combat fire()
                                                                         ↓
                                         EFFECT_ACTIONS[名词] ──→ 动词执行器
 ```
 
-**引擎眼里只有最后一步**：`triggers` + `EFFECT_ACTIONS` + `ACTION_HANDLERS`。
+**扩展包 `ext_combat` 眼里只有最后一步**：`triggers` + `EFFECT_ACTIONS` + `ACTION_HANDLERS`。
 前三层全在你的仓库里 —— 这是这套设计的可移植性来源，也是它的成本
 （装配器要你自己维护，错了不报错）。
 

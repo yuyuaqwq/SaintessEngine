@@ -5,7 +5,8 @@
 
   基础      config.py / domains.py
   扩展包    extends/ext_combat（战斗，12 模块）· extends/ext_quest（任务）
-  通用原语  expr/ gauge/ formation/（2026-09-13 P4 下沉：中文 kind 词表 kinds/ 已归内容侧）
+  通用原语  expr/ formula/ conditions/ bonus/ grant/ gates/ wire/（中文 kind 词表 kinds/ 归内容侧）
+  ★ 2026-09-23：gauge/ formation/ panel/（连同 battle/）已随包栈重构搬进扩展包 extends/ext_combat/
   运行时    store/ command/ events/ clock/ container/ session/
 
 纯度契约对**全部子模块一致** —— 整包可拷进第三方项目、可独立分发。

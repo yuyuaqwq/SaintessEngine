@@ -10,15 +10,16 @@
   3. **坏声明不炸**：坏 JSON / 缺 kind / kind 非法 / 顶层形状不对 / 域 id 非法
      → 可读 warning + 回退内置（不抛、不静默）
   4. **现有包零回归**：`games/orlandia` 的 24 域里属于内置那份的逐字段相等（数量按声明口径比 / 0 告警）
-  5. **反证「真源在包」**（★ 2026-09-13 B2b）：框架内置集只剩 8 个**引擎域**
+  5. **反证「真源在包」**（★ 2026-09-13 B2b）：框架内置集只剩 3 个**引擎域**（commands / texts / tlogs）
      （每个都能在 `saintess_engine/` 指到消费端）；**内容域**只由包声明 ——
      把包里那份声明拿掉，那些域就**真的没有了**（不是换个来源，是没有）。
 
 并且**真起 HTTP 端到端**：新域在「域注册表 / 包概览 / 条目列表 / 单条读写 / 只校验 /
   schema / 各类域级视图」每条路上都要通 —— 漏一处就会出现「列表里有它、点开 500」。
 
-★ B2b 口径：内置默认集 19 → 8（引擎域：effect_rules / passive_proc / commands / texts /
-  tlogs / maps / drop_pools / instances）；被移出的 11 个内容域改由包声明，框架侧零字面量。
+★ B2b 口径：内置默认集 19 → 8 → **3**（2026-09-23 第 4 批：effect_rules / passive_proc /
+  maps / drop_pools / instances 随消费端搬进扩展包，引擎默认集只剩 commands / texts / tlogs）；
+  11 个内容域与那 5 个游戏级形状域都由包/扩展包声明，框架侧零字面量。
   本文件里凡是 `FX.all_domains()` 的地方都按**动态数量**比（不写死 19/8）—— 下次再增减也不假红。
 
 跑法：python tests/test_editor_package_domains.py

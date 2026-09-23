@@ -154,7 +154,7 @@ sys.path.insert(0, FW_ROOT)
 
 from ext_combat import Battle, make_actor
 from saintess_engine import config
-from saintess_engine import formulas as F
+from ext_combat.battle import formulas as F      # 公式表在扩展包 ext_combat（2026-09-23 起）
 
 # 最小装配（否则伤害恒 0 / 战斗起不来 —— 见 getting-started/first-battle.md）
 config.mount(formulas=F, kinds={...}, basic_fallback={...},

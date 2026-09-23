@@ -1,5 +1,9 @@
 # 运行形状（准入链 + 进度 + 名单）
 
+> **归属**：本能力**不在引擎里**（2026-09-23 起）—— 它在扩展包 `extends/ext_world/`（`run/`）。
+> 数据包要用它：`game.json` 里写 `"depends": ["ext_world"]`；副本数据对应它的域 `instances`。
+> 引擎侧只剩通用件，见 `../architecture/boundaries.md`；下文「形状层」= `ext_world.run` 的三个子形状。
+>
 > 模块：`ext_world.run` —— `Admission`/`Rule`（准入链）+ `Progress`（进度）+ `Roster`（名单）。
 > 一句话：**一次运行的三件事 —— 谁能进、谁在里面、打到哪了**；数据与措辞全由内容侧给。
 
@@ -48,11 +52,11 @@ r.alive("2"); r.living(); r.keep(lambda m: m in party); r.sort_by(key, reverse=T
 
 | 形状 | 语义要点 | 谁给 |
 |---|---|---|
-| `Rule` | 命名的单条校验；`check(ctx)` 返回 `None`/`True` 通过、`False` 用 `reason`、`str` 就地给措辞 | 引擎（规则体内容侧写） |
-| `Admission` | **首拒即返**（后续规则不求值）、**副作用延迟**（全过才按声明序各一次）、`trace`/`audit` | 引擎 |
-| `Progress` | 有序节点（线性 `advance` 或按 key `goto`）+ 具名剩余池（`push`/`take`/`drop`/`left`）+ 预算（`spend` 不足给剩余）+ 往返 | 引擎 |
-| `Roster` | 保序成员 + 队长 + 存活（未登记 = 存活）+ `keep`/`only`/`sort_by`/`join`/`leave` + 往返 | 引擎 |
-| 节点 key、池名、规则名、措辞、顺序依据 | **取值与措辞**，引擎不解释 | 内容侧 |
+| `Rule` | 命名的单条校验；`check(ctx)` 返回 `None`/`True` 通过、`False` 用 `reason`、`str` 就地给措辞 | 形状层（规则体内容侧写） |
+| `Admission` | **首拒即返**（后续规则不求值）、**副作用延迟**（全过才按声明序各一次）、`trace`/`audit` | 形状层 |
+| `Progress` | 有序节点（线性 `advance` 或按 key `goto`）+ 具名剩余池（`push`/`take`/`drop`/`left`）+ 预算（`spend` 不足给剩余）+ 往返 | 形状层 |
+| `Roster` | 保序成员 + 队长 + 存活（未登记 = 存活）+ `keep`/`only`/`sort_by`/`join`/`leave` + 往返 | 形状层 |
+| 节点 key、池名、规则名、措辞、顺序依据 | **取值与措辞**，形状层不解释 | 内容侧 |
 
 ## 三条纪律（门禁逐条钉住）
 
@@ -90,7 +94,7 @@ v = Admission([Rule("a", check=lambda c: kinds.append("a") or True),
 ### 3. 判定与措辞分离
 
 `check` 只说通过与否，`reason`（str 或 `callable(ctx)`）负责怎么说。
-引擎不含任何内容措辞 —— 同一个形状换个游戏只换措辞。
+本形状不含任何内容措辞 —— 同一个形状换个游戏只换措辞。
 
 ## 与其它形状的分工
 
@@ -110,5 +114,5 @@ v = Admission([Rule("a", check=lambda c: kinds.append("a") or True),
 
 ## 门禁
 
-`tests/test_run.py`（108 断言）：首拒即返 / 副作用延迟 / 审计 / 进度池与推进与往返 /
+`extends/ext_world/tests/test_run.py`（108 断言）：首拒即返 / 副作用延迟 / 审计 / 进度池与推进与往返 /
 预算不足给剩余 / 名单过滤排序 / **零知识静态扫描**（跳过文档串）/ 门面 re-export。

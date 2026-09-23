@@ -1,5 +1,9 @@
 # 手把手：起一场战斗
 
+> **归属**：本页用的战斗能力（`Battle` / `make_actor` / `landing` …）**不在引擎里**（2026-09-23 起）—— 它在扩展包 `extends/ext_combat/`（`battle/`）。
+> 数据包要用它：`game.json` 里写 `"depends": ["ext_combat"]`。
+> 引擎侧只剩通用件（`config` / `text` / `expr` / `formula` …），见 `../architecture/boundaries.md`；下文裸文件名（`battle.py` / `actors.py` / `schedule.py` / `landing.py` / `serialize.py` / `effect_triggers.py`）与行号都在 `extends/ext_combat/battle/` 下。
+
 本页所有代码块都在本仓库（框架仓 `framework-engine/`，引擎包是顶层 `saintess_engine/`）**当场跑过**。
 目标：读完之后你能自己构造 sides、
 驱动一次出手、读到日志，并知道每一步在引擎里的落点（带 `文件:行号` 与函数名）。
@@ -14,10 +18,10 @@ import math
 import saintess_engine
 from ext_combat import Battle, make_actor
 from saintess_engine import config
-from saintess_engine import formulas as F
+from ext_combat.battle import formulas as F
 
 config.mount(
-    formulas=F,                                   # ① 数值公式对象（引擎自带纯公式模块）
+    formulas=F,                                   # ① 数值公式对象（战斗包自带纯公式模块，extends/ext_combat/battle/formulas.py）
     kinds={"phys": "phys", "magi": "magi", "true": "true",
            "heal": "heal", "buff": "buff"},       # ② kind 语义值（引擎零 kind 字面量）
     basic_fallback={"name": "普攻", "kind": "phys", "exprs": ["atk*1.0"]},  # ③ 普攻兜底

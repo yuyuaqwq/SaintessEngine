@@ -1,71 +1,86 @@
-# 引擎与内容的物理边界
+# 三层的物理边界：引擎 / 扩展包 / 数据包
 
-本页是**框架仓与游戏仓的边界现状快照**。引擎已物理分离为独立仓 `framework-engine`
-（引擎包 `saintess_engine/`），游戏仓（奥兰迪亚）以 `git submodule framework/` 引用它；
-方案与迁移细节引用游戏仓内部文档 `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md`
+本页是**三层边界的现状快照**（2026-09-23 包栈重构后）。仓库形态没变：引擎物理分离为独立仓
+`framework-engine`（引擎包 `saintess_engine/`），游戏仓（奥兰迪亚）以 `git submodule framework/`
+引用它；方案与迁移细节引用游戏仓内部文档 `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md`
 （该文档不进本 wiki 的门面）。
 
 ## 边界在哪：一张图
 
-```
-┌──────────────────────── 你的仓库 ────────────────────────┐
-│                                                          │
-│  ┌────────────────────────────┐                          │
-│  │  内容侧（游戏知识）          │                          │
-│  │                            │                          │
-│  │  · 数据表：技能 / 怪 / 道具 / 词条 / 规则表            │
-│  │    EFFECT_ACTIONS · EFFECT_RULES · MECH_CASH ·        │
-│  │    PASSIVE_PROC · BAR_INJECT_FIELDS …                 │
-│  │  · 装配器：把数据表翻译成 actor["triggers"]            │
-│  │    + 注册扩展动词 register_action                     │
-│  │  · 公式实现 + 面板公式 + 技能查询函数                  │
-│  │  · 命令层：输入 / 展示 / 持久化 / 上层事件（phase 等）  │
-│  └───────────────┬────────────────────────┘              │
-│                  │ mount / set_config（内容 → 引擎）      │
-│                  │ 构造 actor + Battle(sides=...)         │
-│                  ↓                                       │
-│  ┌────────────────────────────────────────┐              │
-│  │  引擎  saintess_engine/（零游戏知识）            │              │
-│  │                                        │              │
-│  │  actors · battle · actions · effects · │              │
-│  │  effect_triggers · landing · schedule ·│              │
-│  │  serialize · stats · state_effects ·   │              │
-│  │  formulas · ai · config · support/     │              │
-│  │                                        │              │
-│  │  ✗ 不 import 内容                       │              │
-│  │  ✓ 只读 config 的表 + actor 的字段       │              │
-│  └────────────────────────────────────────┘              │
-└──────────────────────────────────────────────────────────┘
+```text
+一个进程 = 一次 load_stack(...)：数据包（1 个）+ 扩展包（N 个）+ 引擎
+
+数据包  games/<pkg>/              kind="game"（缺省）· 命名空间固定 content
+        · 内容表：技能 / 怪 / 道具 / 词条 / 职业 / 地图 / 文案 …
+        · 装配器：数据表 → actor["triggers"] + register_action
+        · 命令层：输入 / 展示 / 持久化 / 上层事件（phase 等）
+        · 一个进程只允许一个（指令路由 / 动作注册表 / 文案表 / 时钟都是单例）
+            │
+            │  depends: ["ext_combat", "ext_world", …]
+            │  （按 id 装，拓扑序：被依赖者在前；成环 = PackageError）
+            ▼
+扩展包  extends/<pkg>/            kind="extension" · 命名空间 = 目录名
+        · 游戏能力：CTB 战斗 / 任务 / 地图与副本 / 经济 / 社交 / 产出 / 对话
+        · 可装 N 个、可互相 depends —— 不提供「身份」，只提供「这类事怎么做」
+        · 带自己的 domains.json；可声明 provides（能力提供者）
+            │
+            │  from saintess_engine …（随便用）
+            ▼
+引擎    saintess_engine/          通用件，零游戏词汇
+        · 基础   config · domains · package（包栈加载器）
+        · 原语   expr/ formula/ conditions/ bonus/ grant/ gates/ wire/ _validators/
+        · 运行时 store/ command/ events/ clock/ container/ text/ session/ log/ tlog/ records/
+        · 宿主   host/（包加载 / 会话循环 / 命令通道 / 战斗驱动半边）
+        ✗ 不 import 扩展包 / 数据包；不再有任何游戏原语目录
+        ✓ 只读 config 的表 + actor 的字段 + 包栈给的清单
 ```
 
-**判断某个东西该放哪边**（`game/content_rules/__init__.py:10` 的判据）：
+依赖方向只有一条：**数据包 → 扩展包 → 引擎**。反向 = 报错（扩展包 `depends` 数据包 →
+`PackageError`），成环 = 报错，扩展包偷偷 import 没写进 `depends` 的包 = 门禁红。
 
-> **凡读游戏表或职业名 → 内容侧。** 引擎不得 import 内容包；
+## 每层能做什么 / 不许做什么
+
+| 层 | 目录 | 能做什么 | 不许做什么 |
+|---|---|---|---|
+| **引擎** | `saintess_engine/` | 通用件：注入面（`config`）、域合并规则（`domains`）、包栈加载器（`package`）、表达式 / 公式 / 条件 / 预算门禁、存储 / 指令 / 事件 / 时钟 / 容器 / 文案 / 会话 / 日志 / 流水 / 记录读取、宿主运行时（`host`） | 认识任何游戏原语（`battle/` `quest/` `space/` … 一个目录都不许有）· import 扩展包或数据包 · 写死表名 / 中文名词 / 职业 id |
+| **扩展包** | `extends/<pkg>/` | 装游戏能力：类与形状、`install_engine()` 注册动作与规则、自己的 `domains.json` 域声明、可选 `provides` 能力键；可 `depends` 别的扩展包 | `depends` 数据包（报错）· 偷偷 import 没写进 `depends` 的包（门禁 B）· 占「身份」（谁的玩家 / 哪款游戏） |
+| **数据包** | `games/<pkg>/` | 装一款游戏的全部内容：数据表 + 声明表 + 装配器（`install_engine()` / `apply_game_content(actor)`）+ 命令层；`depends` 任意扩展包 | 一个进程装两个（指令路由 / 动作注册表 / 文案表 / 时钟都是进程级单例，会互撞 —— 要跑两款游戏就开两个进程）· 要求别人 import 它 |
+
+**判断某个东西该放哪一层**（沿用游戏仓 `game/content_rules/__init__.py:10` 的判据）：
+
+> **凡读游戏表或职业名 → 数据包。** 引擎不得 import 内容包；
 > 需要数值时经 `saintess_engine.config` 注入 hook 取。
 
-三条自查问句：
+四条自查问句：
 
-1. 这段代码里出现了**职业 id / 表名 / 中文名词**吗？→ 内容侧
+1. 这段代码里出现了**职业 id / 表名 / 中文名词**吗？→ 数据包
 2. 这段代码在**别的游戏**里也成立吗？→ 可能引擎侧
-3. 换个游戏要改这行吗？→ 内容侧
+3. 换个游戏要改这行吗？→ 数据包
+4. 这段代码**任何文字游戏都要**吗？→ 引擎；只有**某一类玩法**要（战斗 / 任务 / 地图 / 掉落…）→ 扩展包
 
-## 机器验证：门禁测试
+★ 一条经验判据：**域跟消费端走**。某个数据域（`effect_rules` / `passive_proc` / `maps` /
+`instances` / `drop_pools` …）住哪一层，看它的消费端代码住哪一层 —— 消费端在引擎 → 域进
+引擎默认集（现在只剩 `commands` / `texts` / `tlogs` 三个通用表）；消费端在 `ext_combat` /
+`ext_world` / `ext_loot` → 域随包走，落在 `<包>/domains.json`。合并规则只有一份：
+`saintess_engine.domains.layered_decls`（编辑器与装载口共用）。
 
-`tests/test_engine_purity.py`（框架仓纯度门禁，AST 静态分析，不做运行时 import）断言：
+## 机器验证：门禁在哪
 
-| # | 断言 | 位置（`tests/test_engine_purity.py`） |
+| 门禁 | 守什么 | 判据要点 |
 |---|---|---|
-| 1 | `saintess_engine/**/*.py` 的**每一条绝对 import 都是标准库**（相对导入不限）—— 比旧的「零指向 `game.*` 的边」更强的**可分发性**闸门 | `STDLIB` 判据（`:28`/`:96-102`），断言 `:116` |
-| 2 | 零动态 import 穿透（`importlib.import_module` / `__import__` 指向外部包） | `:103-106`，断言 `:118` |
-| 3 | `actions.py` 不再持有 kind 中文字面量常量（`K_PHYS`/`K_MAGI`/`K_TRUE`/`K_HEAL`/`K_BUFF`） | `:121-128` |
-| 4 | 注入面存在（7 个 hook 名在 `config.py` 里） | `:130-134` |
-| 5 | 包门面 re-export 26 个符号，且 5 个私有符号的旧别名是同一对象 | `:136-152` |
-| 6 | （游戏仓侧）内容层零 `saintess_engine.*._私有符号` 引用 —— 框架仓无内容层，此项不在框架门禁内 | 属游戏仓约束 |
+| `tests/test_layering.py` | **依赖方向**（三层） | A 引擎里零游戏原语目录、零 import 扩展包 / 原语名 · B 扩展包只 import 引擎 / 自己 / 写进 `depends` 的包 · C 数据包 import 的扩展包必须在 `depends` 里 · D 反证：每个扩展包都被某个数据包或样板依赖（没有「丢进去没人用」的孤儿） |
+| `tests/test_engine_purity.py` | 引擎**可分发性** | 引擎内每一条**绝对 import 都是标准库**（零动态 import 穿透）· 门面 re-export 齐 · `Battle.from_state` / `to_state` 在 API 面内 · `ext_combat/battle/actions.py` 零 kind 中文字面量 |
+| `tests/test_no_game_vocabulary.py` | 框架层**零游戏身份** | `saintess_engine/` `schemas/` `editor/` `examples/` 零某款游戏的专有名词（`games/` 天然带身份，不在扫描内）· `schemas/*.json` 的 `enum` 取值不得含非 ASCII |
+| `tests/test_package_stack.py` | 包栈装载契约 | `kind` / `depends` / 拓扑序 / 环检测 / 命名空间 / 域分层 / `provides` |
+| `tests/test_editor_wiki.py` | 本 wiki 自己 | 页清单 / 渲染 / 零死链 / 源码直链（同名文件按「引擎包 → 扩展包 → 游戏包」解析）/ README 数字对磁盘 |
 
-跑法：框架仓 `python tests/run_all.py`（引擎全量 `tests/` + 示例游戏冒烟，exit=0 全绿）；
-也可单跑 `python tests/test_engine_purity.py`。门禁另含「存档兼容：`Battle.from_state` /
-`to_state` 在 API 面内」一条断言（`test_engine_purity.py:153-155`）。
+跑法：`python tests/run_all.py`（引擎全量 + 示例包冒烟，exit=0 全绿）；单跑一道即可，
+例如 `python tests/test_layering.py`。
 （游戏仓侧的全量回归是另一回事：`python scripts/run_all_tests.py`，住在游戏仓。）
+
+> 一道诚实备注：`tests/test_engine_purity.py` 的 docstring 里还留着 2026-09-13 那版模块清单
+> （写着 `expr/ gauge/ formation/`）。判据以本页与**代码**为准 —— `gauge/` `formation/`
+> 2026-09-23 起在 `extends/ext_combat/`。文档与代码不一致时，先认代码。
 
 ### 游戏仓侧常驻哨兵：`tests/test_patch_surface.py`
 
@@ -124,6 +139,11 @@
 
 来源：游戏仓内部文档 `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §3.2（逐条 R1–R15）。
 
+> **口径更新（2026-09-23）**：这一节是**拆仓前**的历史 —— 那时只有两层（引擎 / 内容）。
+> 现在第二层叫**数据包**，中间多了一层**扩展包**；边名换了，方向没变。今天同类毛病叫
+> **「回流」**：引擎里重新长出 `battle/` `quest/` … 这些目录，或写一句 `import ext_combat`。
+> 它由 `tests/test_layering.py` 的 A 项守着（不是靠自觉）。
+
 | 边 | 位置（快照） | 性质 |
 |---|---|---|
 | R1 | `actions.py:16` → `game.engine`（21 处公式调用） | 核心反向边 |
@@ -148,28 +168,39 @@
 对应做法：`E.*` 调用改走 `config.formulas()`；`C.CLASSES` / `C.MONSTER_SKILLS` 改走
 `skill_lookup` / `monster_skill_fn` hook；kind 字面量与 `"攻击"` 改走 `config.kind_of` /
 `basic_fallback`；`"战士"` 默认值拆除；`formula_expr` / `formation` / `skill_kinds` /
-`battle_bars` 四个通用件搬进 `saintess_engine/support/`（**模块化重排后**为顶层并列子包 `expr/` · `gauge/` · `formation/` · `kinds/`）。
+`battle_bars` 四个通用件搬进 `saintess_engine/support/`（该容器后改名 `container/`；**模块化重排后**为顶层并列子包 `expr/` · `gauge/` · `formation/` · `kinds/`）。
 > **2026-09-13 更新（P4 下沉）**：其中 `kinds/` 后来被实测证明「引擎内部零消费者」，
 > 已从引擎**删掉**、词表归内容侧（游戏仓 `game/data/kinds.py`）。现存顶层子包即上列前三者。
+> **2026-09-23 更新（包栈重构）**：前三者里 `gauge/`（计量条）与 `formation/`（站位）又被实测
+> 证明是**游戏原语**（只有战斗在消费），已随 `battle/` `panel/` 搬进扩展包 `extends/ext_combat/`；
+> 引擎侧只留 `expr/`，外加 `formula/` `conditions/` 等纯通用件。判据始终是那一条：**谁来消费**。
 
 ## 当前的边界瑕疵（诚实清单）
 
-门禁只验证「import 方向」，不能保证「引擎里零游戏知识」。以下都是已核实的残留：
+老的担心是「引擎里藏着游戏词汇」。2026-09-23 之后这个问题**换了主人**：带游戏词汇的模块整体
+搬进了扩展包，引擎侧只剩通用件（词表门禁 `tests/test_no_game_vocabulary.py` + 纯度门禁
+`tests/test_engine_purity.py` 一起钉）。下表是沿用下来的已核实残留，逐条标注它**现在住哪**：
 
-| # | 瑕疵 | 位置 | 影响 |
-|---|---|---|---|
-| B1 | ~~`kinds/` 的枚举值写死中文（`PHYS = "物理"` …）~~ **2026-09-13 P4 下沉已消除** | 引擎侧无此模块（词表移居内容侧；引擎只经 `config.kind_of` 注入面读 kind 值） | 原「两套 kind 词表」问题随之下线：引擎侧只此一个注入面，非中文 kind 的游戏不受影响 |
-| B2 | `landing._apply_death_guard` / `heal_actor` / `stats` 里硬编码 key：`"death_guard"`、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"` | `landing.py:250,384-407` | 「濒死保护」「禁疗/受疗增幅」三类机制**只认固定 key 名**。要换名只能改引擎（或复用这些名字）。（原「睡眠打醒」硬编码 `"sleep"` —— **2026-09-11 已数据化**为 `wake_on_hit` 字段，不再属本表） |
-| B3 | `effects.act_apply` 里 `if key == "reduce":` 写 `holder["reduce_left"]` | `effects.py:462-463` | 引擎里出现了内容 key 字面量 |
-| B4 | `schedule._settle_time_effects` 里 `pct_boss` / `boss_pct_mult` / `is_boss` / `role == "boss"` / `is_elite` | `schedule.py:507,275-285` | 「Boss」这个内容概念进了引擎（作为数据字段处理，尚可接受，但它是**唯一**被引擎认识的身份标签） |
-| B5 | `effects.act_apply` 里 `if holder.get("is_boss") or holder.get("role") == "boss"` | `effects.py:373` | 同上（控制时长减半） |
-| B6 | `effects._mech_to_effect` 的 `_is_stack_resource` 判据关键词含 `debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct` | `effects.py:278-282` | 这些字段**没有消费者**（`debuff_scale` 已于 2026-09-11 接线），但它们的**存在与否改变分派结果** —— 声明了 `debuff_scale` 会意外让 mech 走叠层路径 |
-| B7 | `battle.py` 里 `"player"` 阵营名硬编码 | `battle.py:646`（`_check_side_end`）、`:170`（`focus`） | 你的游戏若不叫 `player` 就得改引擎或用 `hostile_map` 绕过 |
-| B8 | `B6` 的反面：`stats._monster_base_stats` 的 `crit` 兜底 0.05 与 `make_actor` 播种 0.0 不一致 | `stats.py:146` vs `actors.py:100` | 同一种 actor 在不同路径下暴击率不同 |
+| # | 瑕疵 | 位置（旧快照） | 影响 | 现在住哪（2026-09-23 起） |
+|---|---|---|---|---|
+| B1 | ~~`kinds/` 的枚举值写死中文（`PHYS = "物理"` …）~~ **2026-09-13 P4 下沉已消除** | 引擎侧无此模块（词表移居内容侧；引擎只经 `config.kind_of` 注入面读 kind 值） | 原「两套 kind 词表」问题随之下线：引擎侧只此一个注入面，非中文 kind 的游戏不受影响 | ——（已消除） |
+| B2 | `landing._apply_death_guard` / `heal_actor` / `stats` 里硬编码 key：`"death_guard"`、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"` | `landing.py:250,384-407` | 「濒死保护」「禁疗/受疗增幅」三类机制**只认固定 key 名**。要换名只能改这个包（或复用这些名字）。（原「睡眠打醒」硬编码 `"sleep"` —— **2026-09-11 已数据化**为 `wake_on_hit` 字段，不再属本表） | `extends/ext_combat/battle/landing.py`（`stats.py` 同在 `battle/`） |
+| B3 | `effects.act_apply` 里 `if key == "reduce":` 写 `holder["reduce_left"]` | `effects.py:462-463` | 包里出现了内容 key 字面量 | `extends/ext_combat/battle/effects.py` |
+| B4 | `schedule._settle_time_effects` 里 `pct_boss` / `boss_pct_mult` / `is_boss` / `role == "boss"` / `is_elite` | `schedule.py:507,275-285` | 「Boss」这个内容概念进了包（作为数据字段处理，尚可接受，但它是**唯一**被包认识的身份标签） | `extends/ext_combat/battle/schedule.py` |
+| B5 | `effects.act_apply` 里 `if holder.get("is_boss") or holder.get("role") == "boss"` | `effects.py:373` | 同上（控制时长减半） | `extends/ext_combat/battle/effects.py` |
+| B6 | `effects._mech_to_effect` 的 `_is_stack_resource` 判据关键词含 `debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct` | `effects.py:278-282` | 这些字段**没有消费者**（`debuff_scale` 已于 2026-09-11 接线），但它们的**存在与否改变分派结果** —— 声明了 `debuff_scale` 会意外让 mech 走叠层路径 | `extends/ext_combat/battle/effects.py` |
+| B7 | `battle.py` 里 `"player"` 阵营名硬编码 | `battle.py:646`（`_check_side_end`）、`:170`（`focus`） | 你的游戏若不叫 `player` 就得改这个包或用 `hostile_map` 绕过 | `extends/ext_combat/battle/battle.py` |
+| B8 | `B6` 的反面：`stats._monster_base_stats` 的 `crit` 兜底 0.05 与 `make_actor` 播种 0.0 不一致 | `stats.py:146` vs `actors.py:100` | 同一种 actor 在不同路径下暴击率不同 | `extends/ext_combat/battle/stats.py` vs `battle/actors.py` |
 
-**结论**：引擎的 import 边界是干净的（机器可验），但**语义边界还没完全干净**：
-B1/B2/B6/B7 属于拆仓时一并带进框架仓的残留，需要在「彻底零游戏知识」之前处理，
-否则第三方拿去会遇到「引擎认识我不认识的词」的问题。
+**结论（三层后，边界瑕疵分成两类）**：
+
+| 类 | 现状 |
+|---|---|
+| **引擎** | import 边界干净（机器可验）；**语义边界也干净了** —— 游戏词汇与游戏原语都已搬走，剩下的通用件不认识任何具体游戏。今后要守的是**回流**（门禁 A） |
+| **扩展包** | B2–B8 随模块搬进 `extends/ext_combat/battle/`：**装了战斗包的第三方照样会撞上这些硬编码**（固定 key 名 / Boss 身份标签 / 阵营名 `player` / 暴击兜底不一致）。它们不再是「引擎不通用」的问题，而是「这个包的形状够不够通用」的问题 |
+
+处置顺序也随之变了：先按 `tests/test_layering.py` 防回流（引擎侧永远不许再长回游戏原语），
+再谈把 `ext_combat` 里那几处 key 字面量数据化 —— 那是**扩展包自己的**技术债，与引擎通用性无关。
 
 ## 物理拆仓的历程（拆仓前为什么不能直接拆 —— 现已完成）
 
@@ -189,19 +220,27 @@ B1/B2/B6/B7 属于拆仓时一并带进框架仓的残留，需要在「彻底�
 已成为独立仓 `framework-engine`，游戏仓（奥兰迪亚）以 `git submodule framework/`
 引用本仓的固定 commit。
 
-**进度表**（拆仓前按游戏仓 `git log` 核实；「状态」列已更新为拆仓后的现实）：
+**进度表**（上半段拆仓前按游戏仓 `git log` 核实、「状态」列已更新为拆仓后的现实；
+下半段是 2026-09-23 的**包栈重构**，见 `REFACTOR_包栈重构计划.md`）：
 
 | 步 | 内容 | 状态 |
 |---|---|---|
 | S1 | 断 15 条反向依赖边（`d5e323e`） | ✅ 已完成（门禁可验） |
 | S2 | 固化公开 API 面 | ✅ 已完成 |
-| S3 | 通用件归位（`→ saintess_engine/support/`，后重排为顶层子包） | ✅ 已完成 |
+| S3 | 通用件归位（`→ saintess_engine/support/`，后改名 `container/` 并重排为顶层子包） | ✅ 已完成 |
 | S4 | 引擎包改名 `saintess_engine → engine` | ❌ **已废止**（随拆仓定案：包名**保持 `saintess_engine`**，不再改中性名） |
 | S5' | 拆 `game/engine.py` → `extends/ext_combat/battle/formulas.py` + `content_rules/*`（`5eae164`） | ✅ 已完成（旧 `game/engine.py` shim 已随 S9-2 删除） |
 | S6' | 内容层重组快照 | ✅ 已完成 |
 | S7 | 单一装配入口 `apply_game_content`（`50eb8dc`） | ✅ 已完成（见下） |
 | S8 | 拆仓库 / submodule | ✅ **已完成**（引擎独立为 `framework-engine`；游戏仓 `git submodule framework/` 引用本仓固定 commit） |
 | S9 | 收口清理过渡 shim | ✅ **已完成**（S9-2 已删 `game/engine.py` 与 `game/core/*` 过渡件） |
+| 第 0 批 | 包栈加载器 `package.py` 重写：`kind` / `depends` / 拓扑加载 / 环检测 / 命名空间隔离 / 域分层 | ✅ 已完成（2026-09-23） |
+| 第 1 批 | 抽 `ext_quest`（打通「搬出去」的流程） | ✅ 已完成 |
+| 第 2 批 | 抽 `ext_combat`（`battle` `gauge` `formation` `panel`）+ 引擎新增 `provides` 能力提供者 + 解耦 `host → Battle` | ✅ 已完成 |
+| 第 3 批 | 13 个形状 → 6 个扩展包（`ext_world` `ext_life` `ext_economy` `ext_social` `ext_loot` `ext_dialogue`），六路并行搬迁 | ✅ 已完成 |
+| 第 4 批 | 域归属重排：`maps` / `instances` / `drop_pools` 跟消费端走 | ✅ 已完成（`<包>/domains.json`） |
+| 第 5 批 | 门禁与文档收口：`tests/test_layering.py`（三层依赖守卫）+ engine-wiki 口径 | 🔄 本轮 |
+| 第 6 批 | 奥兰迪亚全量迁移验证（各批已顺带迁完，剩验证） | 🔄 游戏仓侧 `scripts/run_all_tests.py` |
 
 所以**引擎的物理形态已经是独立仓 `framework-engine` 里的 `saintess_engine/` 包**（可整包拷走、
 零外部依赖），游戏仓（奥兰迪亚）以 `git submodule framework/` 引用它。
@@ -244,8 +283,10 @@ def apply_game_content(actor: dict, ctx: dict | None = None) -> dict:   # game/c
 
 ## 内容侧（游戏仓 / 奥兰迪亚侧）还有哪些 **不属于** 引擎文档的东西
 
-以下模块**不住在框架仓**（住在游戏仓 `dragonfall/game/...`），**不改引擎**，
-但会让引擎里的声明真正生效 —— 它们进不了本 wiki 的参考页，因为它们不是引擎能力：
+以下模块**不住在框架仓的 `saintess_engine/`**（住在游戏仓 `dragonfall/game/...`，2026-09-23 起
+以**数据包** `games/orlandia` 的形式导出到框架仓），**不改引擎**，
+但会让引擎里的声明真正生效 —— 它们进不了本 wiki 的参考页，因为它们不是**引擎**能力
+（它们是**数据包**层的活）：
 
 | 内容侧模块 | 职责 |
 |---|---|
@@ -270,5 +311,7 @@ def apply_game_content(actor: dict, ctx: dict | None = None) -> dict:   # game/c
 - 注入面细节 → [../concepts/config-injection.md](../concepts/config-injection.md)
 - 每个 ADR 的代价 → [design-decisions.md](design-decisions.md)
 - 分发清单 → [../contributing/release.md](../contributing/release.md)
+- 包格式权威规格（`game.json` 全字段 / 依赖 / 命名空间 / 域分层）→ [../reference/package-format.md](../reference/package-format.md)
+- 三层依赖守卫的运行方式 → `tests/test_layering.py`（A 引擎零原语 · B 扩展包只认 `depends` · C 数据包不漏声明 · D 无孤儿包）
 - 未取证项总表 → [../_selfcheck.md](../_selfcheck.md)
 - 壳化打桩面哨兵（游戏仓，常驻门禁）→ `tests/test_patch_surface.py`（`--self-test` 有牙自证）

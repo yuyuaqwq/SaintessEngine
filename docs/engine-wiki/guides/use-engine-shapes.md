@@ -1,7 +1,12 @@
 # 指南：用引擎形状做包（5 个常踩的坑）
 
+> **归属**：本页主体是**引擎侧通用件**（`records` / `store` / `wire` / `bonus` / `command` / `text` / `tlog`）—— 它们仍在引擎里。
+> 页里点到的形状已各自住进扩展包（2026-09-23 起）：`produce` → `extends/ext_economy/`、`loot` → `extends/ext_loot/`、`space` / `run` → `extends/ext_world/`。
+> 数据包要用它们：`game.json` 里写 `"depends": ["ext_economy", "ext_loot", "ext_world"]`。引擎侧只剩通用件，见 `../architecture/boundaries.md`。
+
 「引擎形状」= 引擎提供的**通用机制**：`records`（读资料表）· `store`（存档表 / CRUD / 迁移）·
-`produce`（计时作业）· `wire`（取件接线）· `bonus`（数值修正）· `command` / `text` / `tlog` / `loot` / `space` …
+`wire`（取件接线）· `bonus`（数值修正）· `command` / `text` / `tlog` ——
+外加**扩展包带的形状**：`produce`（计时作业，`ext_economy`）· `loot`（掉落，`ext_loot`）· `space` / `run`（空间 / 运行，`ext_world`）…
 
 做数据包时**这些都不该自己写** —— 你只给「数据 + 声明」。本页的 5 条全部来自一次
 **真实的「新包体验」实证**：在 `examples/minimal-game` 里加了一个小闭环
@@ -34,7 +39,7 @@ R = Records(pkg_root, "sites", sub="content/data")
 
 ---
 
-## 2 `produce.Jobs`：`store` 必须宿主给，别在包里造 dict
+## 2 `ext_economy.produce.Jobs`：`store` 必须宿主给，别在包里造 dict
 
 ```python
 # ✗ 症状：作业能排、能收，但**重启就没了**（玩家说"我的勘探不见了"）
@@ -56,7 +61,7 @@ jobs = Jobs(store=wire.handle("jobs"),                 # 宿主给的 MutableMap
 
 ---
 
-## 3 `produce.Jobs`：`clock` 必须**整数秒**
+## 3 `ext_economy.produce.Jobs`：`clock` 必须**整数秒**
 
 ```python
 # ✗ 症状：当场炸，不是静默
@@ -116,7 +121,7 @@ repo.get(conn, member, site_id)
 
 ## 6 最小骨架（可整份照抄）
 
-`examples/minimal-game/content/outpost.py`（92 行）的骨架形状 —— 用到的**全是引擎形状**：
+`examples/minimal-game/content/outpost.py`（92 行）的骨架形状 —— 用到的**全是引擎通用件 + 扩展包形状**：
 
 ```python
 from saintess_engine.records import RecordsSet

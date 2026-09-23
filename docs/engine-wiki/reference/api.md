@@ -4,36 +4,71 @@
 本页给签名与语义；原理见 [../concepts/](../concepts/README.md)，任务怎么做见
 [../guides/](../guides/write-a-mechanic.md)。本页不重复那两处的内容。
 
-## 1. 包门面：`saintess_engine/__init__.py`
+## 0. 三层与「要哪个符号从哪拿」（2026-09-23 包栈重构后）
 
-S2 固化（`docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §5）：把内容层**实际消费的 26 个符号**
-全量 re-export，并保留模块级 `config` / `effects` / `stats`
-（`saintess_engine/__init__.py:50-61`）。
+本仓现在是三层，依赖方向严格单向（门禁 `tests/test_layering.py` 钉死）：
 
-```python
-# Actor / 战斗主体
-Battle · ActCtx · make_actor · actor_ext · actor_alive
-# 伤害落地 / 治疗
-deal_damage · heal_actor
-# 效果系统
-act_apply · act_shield · apply_effects · register_action · cap_of · norm_stack
-# 面板
-actor_stats · stats
-# 规则 / 配置
-state_def · all_state_effects · get_effect_actions · get_effect_rules · config
-# 事件 / 时间轴
-fire · action_time · initial_ct
-# 阵营
-hostile_sides
-# 行动结算工具
-heal_amount · skill_pay_of
-# 序列化
-from_state · to_state
+```text
+引擎    saintess_engine/      通用件，零游戏词汇
+扩展包  extends/ext_*/       可插拔的游戏能力（能互相依赖）
+数据包  games/<包>/          一款游戏的内容（只允许一个）      ← 依赖方向：数据包 → 扩展包 → 引擎
 ```
 
-`__all__` 就是上面这份（`saintess_engine/__init__.py:50-61`）。门禁
-`tests/test_engine_purity.py` 会逐个断言这些符号存在，并断言 **5 个私有符号
-已升公开且旧下划线名是同一对象别名**：
+**§1 是引擎门面，里面只有通用件**；`Battle` / `Space` / `LootTable` / `Dialogue` 这些
+游戏级形状**不在引擎里** —— 各自在扩展包的门面，形状与当年在引擎里时相同，只是换了包名：
+
+```python
+from saintess_engine import Host, load_stack, config                 # 引擎通用件
+from ext_combat import Battle, make_actor, deal_damage, actor_stats  # 战斗（CTB / 结算 / 效果 / 面板）
+from ext_world import Space, Admission, Roster                       # 空间与准入链
+from ext_loot import LootTable, TierTable, pick_weighted             # 掉落池 / 档位阶梯
+from ext_dialogue import Dialogue, Cursor                            # 对话树与会话游标
+```
+
+| 要哪些符号 | 从哪 import | 数据包 `game.json` 里写 |
+|---|---|---|
+| `Battle` `ActCtx` `make_actor` `actor_alive` `deal_damage` `heal_actor` `apply_effects` `act_shield` `actor_stats` `state_def` `all_state_effects` `fire` `action_time` `initial_ct` `recover_time` `hostile_sides` `heal_amount` `skill_pay_of` `from_state` `to_state`（＋ `battle` / `gauge` / `formation` / `panel` 子模块） | `ext_combat` | `"depends": ["ext_combat"]` |
+| `Space` `MESH` `Admission` `Rule` `Verdict` `Progress` `Roster` | `ext_world` | `"depends": ["ext_world"]` |
+| `Tally` `TierBoard` `PeriodCounter` `Cooldown` `Timers` `Unlocks` `Locked` | `ext_life` | `"depends": ["ext_life"]` |
+| `Shelf` `Jobs` `Job` `DailyLimit` `settle_sale` | `ext_economy` | `"depends": ["ext_economy"]` |
+| `RoleSlots` `Contribution` `Applications` `Presence` `Lookup` | `ext_social` | `"depends": ["ext_social"]` |
+| `LootTable` `TierTable` `pick_weighted` `pick_many` `draw_slots` `count_for` | `ext_loot` | `"depends": ["ext_loot"]` |
+| `Dialogue` `Cursor` | `ext_dialogue` | `"depends": ["ext_dialogue"]` |
+| 任务账本（`quest/` 子模块） | `ext_quest` | `"depends": ["ext_quest"]` |
+
+装法只有一句：`"depends": ["ext_xxx"]`（包栈按拓扑序装好；扩展包搜索路径见
+[package-format.md](package-format.md)）。**域跟着消费端走**（`effect_rules` / `passive_proc`
+住在 `ext_combat`，`maps` / `instances` 住在 `ext_world`，`drop_pools` 住在 `ext_loot`）。
+
+**坐标约定**：`文件:行号` 里的文件是**包内模块名** —— §2–§4 除 `config.py` 与 `expr/` 是引擎件外，
+其余都指 `extends/ext_combat/…` 下的模块（`battle.py` = `extends/ext_combat/battle/battle.py`，
+`gauge/` `formation/` 同属 `ext_combat`）。
+
+## 1. 包门面：`saintess_engine/__init__.py`
+
+2026-09-23 包栈重构后，**引擎门面只剩通用件**（`__all__`：`saintess_engine/__init__.py:50-61`）；
+战斗 / 空间 / 掉落 / 对话这些游戏级符号随着各自的模块迁进了**扩展包**（对照表见 §0），
+引擎门面不再 re-export 它们。「S2 固化」那份历史口径（内容层实际消费的 26 个符号全量 re-export，
+见 `docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md` §5）**整体搬到了扩展包 `ext_combat` 的门面**。
+
+```python
+# 版本
+__version__ · VERSION_INFO · version
+# 包栈 / 包 / 宿主
+Package · PackageError · PackageStack · load_stack · Host
+# 指令 / 文案 / 流水
+CommandRegistry · CommandSpec · TextSpec · TextTable · safe_format · KindTable · Record · TLog
+# 规则 / 配置
+config · get_effect_actions · get_effect_rules
+# 门面转出的子模块
+clock · command · container · domains · events · expr · host · log · session · store · text · tlog
+```
+
+门禁 `tests/test_engine_purity.py` 逐个断言上面这批**通用件**符号存在（`API_SYMBOLS`），
+并断言包内每条绝对 import 都是标准库。
+要 `Battle` / `deal_damage` / `apply_effects` / `actor_stats` / `fire` … 的那批符号，
+现在写 `from ext_combat import Battle`（同形门面，见 §0）。
+「5 个私有符号已升公开且旧下划线名是同一对象别名」这条断言的归属也跟着符号一起搬去扩展包 `ext_combat`：
 
 | 模块 | 公开名 | 旧别名 |
 |---|---|---|
@@ -43,9 +78,10 @@ from_state · to_state
 | `actions` | `heal_amount` | `_heal_amount` |
 | `actions` | `skill_pay_of` | `_skill_pay_of` |
 
-（别名赋值处：`effects.py:81-82`、`battle.py:29`、`actions.py:311`、`actions.py:767`）
+（这五个符号都在扩展包 `ext_combat` 里；别名赋值处：`effects.py:81-82`、`battle.py:29`、
+`battle/actions.py:311`、`battle/actions.py:767`）
 
-## 2. `Battle`（`battle.py:32`）
+## 2. `Battle`（扩展包 `ext_combat` · `battle.py:32`）
 
 ### 构造
 
@@ -56,11 +92,11 @@ Battle(btype="monster", sides=None, title_bonus=None, dmg_mult=1.0, pet=None,
 ```
 （`battle.py:33-37`）
 
-| 参数 | 语义 | 引擎内消费者 |
+| 参数 | 语义 | 包内消费者 |
 |---|---|---|
 | `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:219`） |
-| `sides` | `{阵营名: [actor]}`，**唯一入口** | 全引擎 |
-| `title_bonus` | 面板增幅 dict（整场一份） | `stats._player_base_stats`：`actor.bonus.panel or battle.title_bonus or {}`（`stats.py:95-96`） |
+| `sides` | `{阵营名: [actor]}`，**唯一入口** | 全包（`ext_combat`） |
+| `title_bonus` | 面板增幅 dict（整场一份） | `stats._player_base_stats`：`actor.bonus.panel or battle.title_bonus or {}`（`battle/stats.py:95-96`） |
 | `hostile_map` | `{side: [敌对 side]}` | `actors.hostile_sides`（`actors.py:202-204`）；缺省 = 除自己外全部阵营 |
 | `dmg_mult` | 全局伤害倍率 | ⚠️ **仅赋值，无消费方**（`battle.py:75`） |
 | `pet` | 宠物数据 | ⚠️ **仅赋值，无消费方**（`battle.py:76`） |
@@ -78,7 +114,7 @@ Battle(btype="monster", sides=None, title_bonus=None, dmg_mult=1.0, pet=None,
 **普通属性**（可直接读写）：`sides`（dict）、`hostile_map`、`result`（`None|"victory"|"defeat"|"fled"`）、
 `winner_side`、`killed_actors`（list）、`_now`、`_p_acts`、`_started`、`_fire_ctx`。
 （`_cast_ctx` / `_target_ctx` / `_events` 三个只初始化、无消费方的字段已于 2026-09-11 删除；
-`dmg_mult` / `pet` / `st` 三个构造参数同期删除——注意 `dmg_mult` 是「调用方在用、引擎没读」的
+`dmg_mult` / `pet` / `st` 三个构造参数同期删除——注意 `dmg_mult` 是「调用方在用、实现没读」的
 静默失效功能，不是死字段，见 `_selfcheck.md` §0.4。）
 
 ### 查询
@@ -99,6 +135,7 @@ add_actor(actor: dict, side: str, front: bool = False) -> dict      # battle.py:
 入 sides（`front=True` 插队首）→ 建技能索引 → 播种 ct → 返回 actor。
 用于召唤 / 援军 / 变身。原文强调「引擎零游戏知识：不认识随从/召唤/亡灵/援军，
 只做注册 + 索引 + 排程」（`battle.py:254`）。
+（引文里的「引擎」是该模块的原文；2026-09-23 起这个模块属扩展包 `ext_combat`，纪律即「本包零游戏知识」）。
 
 ### 行动入口
 
@@ -127,11 +164,11 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 
 | 方法 | 位置 | 内容层引用数（全仓 grep） |
 |---|---|---|
-| `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:113/117/151` | 仅引擎内 |
-| `_do_defend` / `_do_flee` | `battle.py:581/458` | 仅引擎内 |
-| `_ensure_battle_started` | `battle.py:597` | 仅引擎内 |
+| `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:113/117/151` | 仅包内 |
+| `_do_defend` / `_do_flee` | `battle.py:581/458` | 仅包内 |
+| `_ensure_battle_started` | `battle.py:597` | 仅包内 |
 | `_on_actor_dead(actor, logs=None)` | `battle.py:612` | `landing._apply_damage` 调（`landing.py:385`） |
-| `_check_side_end` | `battle.py:630` | 仅引擎内 |
+| `_check_side_end` | `battle.py:630` | 仅包内 |
 
 ### 序列化
 
@@ -140,7 +177,10 @@ to_state() -> dict                    # battle.py:657 → serialize.to_state
 Battle.from_state(st, *, text=None)   # battle.py:663（classmethod）→ serialize.from_state
 ```
 
-## 3. 模块级公开函数
+## 3. 模块级公开函数（除 `config.py` 外都在扩展包 `ext_combat`）
+
+下面每节的文件都指包内模块（§0 坐标约定）；`ext_combat` 门面把其中的公开名原样转出，
+所以 `from ext_combat import make_actor` 与门面表 §0 一致。
 
 ### `actors.py`
 
@@ -204,11 +244,11 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 | `_settle_time_effects(battle, logs)` | `:204` | effects 到期 / shields 到期 / 周期跳 |
 
 常量：`DEFAULT_ACTION = "attack"`（`:32`，通用类别键：未知动作类别回落到它那一项）。
-**引擎侧已无** `CAST_ATK` / `CAST_SKILL` / `CAST_DEFEND` / `SPD_REF` 等时间/基准常量 ——
+**包内已无** `CAST_ATK` / `CAST_SKILL` / `CAST_DEFEND` / `SPD_REF` 等时间/基准常量 ——
 公式形状与基准数值归内容侧（装配面见 [../concepts/ctb-schedule.md](../concepts/ctb-schedule.md) §公式）。
-`recover_time` / `recover_base_of` 与出招同口径（T14：引擎只做「两段相加」，
-「没有第二段」= 内容侧显式声明 0，引擎不兜底）；`recover_time` 也在
-`saintess_engine` / `ext_combat.battle` 两处门面导出。
+`recover_time` / `recover_base_of` 与出招同口径（T14：只做「两段相加」，
+「没有第二段」= 内容侧显式声明 0，不兜底）；`recover_time` 由扩展包 `ext_combat` 门面导出
+（引擎门面不再有游戏级符号，见 §0）。
 
 未装配 `time_model_fn` / `action_base_fn` / `recover_model_fn` / `recover_base_fn`
 → 对应的 `action_time` / `action_base_of` / `recover_time` / `recover_base_of` 抛
@@ -296,7 +336,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 守卫谓词全集：`self_hp_lt` · `self_hp_gt` · `hostile_lowest_hp_lt` · `round_mod: [N, R]` ·
 `cd_ok`。**未知谓词 → `False`**（`ai.py:177`，防拼写漂移）。`when={}` 恒真。
 
-### `formulas.py`（引擎自带纯公式模块）
+### `formulas.py`（扩展包 `ext_combat` 内的纯公式模块）
 
 | 函数 | 位置 |
 |---|---|
@@ -320,9 +360,9 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 `skill_level_of_fn`）。直接 `mount(formulas=formulas)` 而不装常量表会在链深处崩 ——
 见 [../concepts/config-injection.md](../concepts/config-injection.md) 的三档行为表。
 
-## 4. `support/` 通用件
+## 4. 引擎通用件与已归扩展包的形状
 
-### `expr/__init__.py` — 安全表达式解释器
+### `expr/__init__.py` — 安全表达式解释器（**引擎件**）
 
 | 函数 | 位置 |
 |---|---|
@@ -337,7 +377,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 无第三方依赖：手写 tokenizer + 调度场（`_TOKEN_RE` `:25`、`_PREC` `:34`）。
 变量白名单在 `VARIABLE_WHITELIST`。中文变量名别名表 `_VAR_CN`（`:231`）。
 
-### `support/formation.py` — 站位 / 射程纯函数
+### `formation/` — 站位 / 射程纯函数（扩展包 `ext_combat`，`from ext_combat import formation`）
 
 | 函数 | 位置 |
 |---|---|
@@ -346,13 +386,13 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 | `front_rank(units)` | `:20` |
 | `reachable_units(attacker, units)` | `:28`（⚠️ 无外部引用） |
 | `select_target(attacker, units, threat=None, exclude_uid=None, threat_mode="front")` | `:34` |
-| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一引擎消费者：`actions._deal_aoe`，`actions.py:362`） |
+| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一消费者：`actions._deal_aoe`，`battle/actions.py:362`） |
 | `pick_by_policy(policy, units, threat=None, fallback=None)` | `:122` |
 | `compact(units)` | `:161` |
 | `numbered_units(units)` | `:191` |
 | `formation_view(units, side="enemy")` | `:209` |
 
-### ~~`support/skill_kinds.py`~~ — kind 语义枚举 **（2026-09-13 P4 下沉：本模块已不在引擎里）**
+### ~~`skill_kinds` 模块~~ — kind 语义枚举 **（2026-09-13 P4 下沉：本模块已不在引擎里）**
 
 引擎包内**没有** kind 词表模块：`SkillKind` 枚举（值 `PHYS/MAGI/HEAL/BUFF/PASSIVE/SUMMON/TRUE/TAUNT`）·
 `is_damage_kind(kind)` · `is_kind(kind, target)` · `seg_of(kind)` · `lifesteal_channel_of(kind)`
@@ -365,7 +405,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 故按「机制归引擎、词表归内容」的边界原则迁回内容侧 —— 见
 [_selfcheck.md](../_selfcheck.md) B1 行）
 
-### `support/battle_bars.py` — 挂敌身条 + 蓄力三律
+### `gauge/` — 挂敌身条 + 蓄力三律（扩展包 `ext_combat`，`from ext_combat import gauge`）
 
 | 函数 | 位置 | 语义 |
 |---|---|---|
@@ -385,15 +425,21 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 条状态存在 `actor.effects[config.bar_prefix() + key]`，
 所以它随存档序列化、并能被 `EFFECT_RULES` 声明折算。
 
-## 5. 声明表与扩展点（不是引擎 API，但第三方最常用）
+## 5. 声明表与扩展点（内容侧声明，**不在引擎里**，但第三方最常用）
 
 | 名称 | 物理位置 | 消费者 |
 |---|---|---|
-| `EFFECT_ACTIONS` | 你的规则模块 | `effects.resolve_actions`（引擎） |
-| `EFFECT_RULES` | 你的规则模块 | `state_effects.state_def`（引擎） |
-| `MECH_CASH` | 你的规则模块 | 你的装配器（**引擎不读**） |
-| `PASSIVE_PROC` | 你的规则模块 | 你的装配器（**引擎不读**） |
+| `EFFECT_ACTIONS` | 你的规则模块 | `effects.resolve_actions`（`ext_combat`） |
+| `EFFECT_RULES` | 你的规则模块 | `state_effects.state_def`（`ext_combat`） |
+| `MECH_CASH` | 你的规则模块 | 你的装配器（**引擎不读，`ext_combat` 也不读**） |
+| `PASSIVE_PROC` | 你的规则模块 | 你的装配器（**引擎不读，`ext_combat` 也不读**） |
 | `BAR_INJECT_FIELDS` / `BAR_STATE_PREFIX` | 你的规则模块 | 装配器 + `config.bar_prefix` |
+
+**域跟消费端走**（2026-09-23 起）：`effect_rules` / `passive_proc` 住在扩展包 `ext_combat`，
+`maps` / `instances` 住在 `ext_world`，`drop_pools` 住在 `ext_loot`：数据包要用哪个域，
+就在 `game.json` 里 `"depends": ["<那个包>"]`。分层 = 引擎默认集（`commands` / `texts` / `tlogs`）
+→ 该包 `depends` 的扩展包 → 包自己的声明；编辑器与装载口共用同一份
+（`saintess_engine.domains.layered_decls`）。
 
 详见 [../concepts/declaration-tables.md](../concepts/declaration-tables.md) 与
 [effect-actions.md](effect-actions.md) · [effect-rules.md](effect-rules.md) ·
@@ -402,6 +448,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 ## 6. 公开但当前无消费方的 API（诚实清单）
 
 写文档时逐项 grep 核实。**它们不会报错，但也不起作用**：
+下表除 `expr.expr_or` / `config.set_hook`（引擎件）外，符号都在扩展包 `ext_combat` 里：
 
 | 名称 | 位置 | 状态 |
 |---|---|---|
@@ -410,9 +457,9 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 | `formation.reachable_units` | `formation/__init__.py:28` | 零外部引用 |
 | `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
-| ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 本引擎不实现） |
+| ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 不实现） |
 | `config.set_hook` | `config.py:147` | 零外部引用（都走 `mount`） |
-| `effects.resolve_actions` | `effects.py:136` | 零外部引用（引擎内部调用） |
+| `effects.resolve_actions` | `effects.py:136` | 零外部引用（`effects` 内部调用） |
 | `ai.eval_when` | `ai.py:152` | 零外部引用（`resolve_ai_move` 内部调） |
 | ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |
 | ~~`Battle.DEFAULT_CT_WAIT`~~ | — | **已删**（2026-09-11） |

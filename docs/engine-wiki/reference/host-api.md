@@ -1,10 +1,16 @@
 # 参考：宿主 API（host contract）
 
 > 一句话：**宿主 = 引擎的壳**。平台插件的代码里没有游戏知识，只有三函数 + 引擎装配 + 四个注入句柄；
-> 游戏知识（数据 / 命令实现 / 文案 / 存档表 / 数值策略）全在**数据包**里。
+> 游戏知识（数据 / 命令实现 / 文案 / 存档表 / 数值策略）全在**数据包**里，
+> 游戏级**能力**（战斗 / 空间 / 掉落 / 对话 …）全在**扩展包**里。
 > 同一个宿主换个 `package_dir` 就能跑另一个包 —— 这是本契约存在的理由。
 
-实现：`saintess_engine/host/`（`Host` / `Package` / `Env` / `Scenario` / `BattleOutcome`）。
+**宿主只通过包栈加载**：`Host(adapter, package_dir, …)` / `load_stack(package_dir, …)` 会把数据包
+`game.json` 里 `depends` 的扩展包按拓扑序一起装好（方向严格单向：数据包 → 扩展包 → 引擎）。
+宿主**不 import 任何扩展包** —— 要战斗这类能力时按**键**取件，键由扩展包在 `game.json` 的
+`provides` 里声明（见 §四 ·「战斗能力走 `provides` 声明」）。
+
+实现：`saintess_engine/host/`（`Host` / `Package` / `PackageStack` / `load_stack` / `Env` / `Scenario` / `BattleOutcome`）。
 示例：`examples/host-skeleton/`（**最小适配器示例**，19 行假适配器即可接入）。
 门禁：`tests/test_host_contract.py`（26 项）· `tests/test_host_skeleton.py`（5 项）。
 
@@ -48,7 +54,8 @@ class MyAdapter:
 ## 三、包契约
 
 ```
-<包目录>/game.json                 清单：id / name / engine / entry / domains / created
+<包目录>/game.json                 清单：id / kind / depends / engine / entry / domains / bind
+                                          （数据包 kind 缺省；扩展包 kind=extension + namespace + provides）
 <包目录>/content/apply.py          entry：install_engine()（全局一次、幂等）
                                           apply_game_content(actor)（每 actor 一次、幂等）
                                           可选 initial_save(uid, ctx)（新玩家初始档 = 内容）
@@ -65,6 +72,21 @@ class MyAdapter:
 ```
 
 **包显式 `initial_save` 返回 `None` / 非 dict = 「本包要求先注册」** → 空档 → `player` 守卫拦截。
+
+**包栈装法**：数据包在 `game.json` 里写 `"depends": ["ext_combat", "ext_world", …]`；扩展包之间也能
+互相 `depends`（扩展包依赖数据包 = 报错，成环 = 报错，`tests/test_layering.py` 钉死方向）。
+**能力提供者**：扩展包用 `"provides": {"<键>": "<模块>:<属性>"}` 声明能力，宿主/内容按**键**取件 ——
+引擎只认「键 + 引用」，不认识「战斗」这个词（见 §四 ·「战斗能力走 `provides` 声明」）。
+
+```json
+// 数据包 games/<包>/game.json                    │ 扩展包 extends/ext_combat/game.json
+{ "id": "my_game",                               │ { "id": "ext_combat", "kind": "extension",
+  "entry": "content/apply.py",                   │   "engine": ">=0.1", "entry": "apply.py",
+  "depends": ["ext_combat"] }                    │   "provides": {"battle": "ext_combat.battle.battle:Battle"} }
+```
+
+（`namespace` 缺省 = 包 id；扩展包的域落点比数据包少一层 `content/` —— 清单字段与目录结构的完整规格见
+[package-format.md](package-format.md)。）
 
 ## 四、命令通道（声明在包 → 守卫 → `Env` → **包内处理器** → 回话）
 
@@ -133,29 +155,56 @@ def my_cmd(env) -> str | list[str] | Iterable[str] | None: ...
 | 新玩家**建档**（`initial_save` 返回了非空档） | **引擎**：落库一次（否则"新玩家"永远是瞬时判断） |
 | 「哪些字段可写」的过滤 | **适配器**：引擎把整份 player dict 交给 `save_player`，字段策略由宿主定 |
 
+### 战斗能力走 `provides` 声明（宿主不 import 战斗）
+
+战斗**不是**宿主的依赖：谁提供战斗由**扩展包**声明，宿主按**键**取件（引擎只认「键 + 引用」）。
+
+```python
+Battle = stack.provider("battle")        # 近数据包者胜；没有任何包声明 → None
+if Battle is None:                       # 没装战斗扩展包 = **一句可读的话**，不是 import 就炸
+    raise PackageError("这个包栈没有战斗能力：没有任何包声明 `provides.battle`"
+                       "（装 ext_combat 扩展包、并在数据包 depends 里声明即可）")
+```
+
+- 数据包 `game.json` 写 `"depends": ["ext_combat"]`；扩展包 `ext_combat` 自己声明
+  `"provides": {"battle": "ext_combat.battle.battle:Battle"}`；
+- **声明了却解析不到 = `PackageError`**（fail-closed）；全表审计用 `stack.providers()`（键 → `(包 id, 引用)`）；
+- 同理可声明别的能力键（引擎不解释键名）；宿主代码里**不出现** `from ext_combat import …`
+  或任何包名（门禁口径见 §六）；
+- `Host.boot()` 之后 `Host.run_battle(...)` 的战斗驱动半边就是这一句 `provider("battle")` ——
+  没有它（纯数据包）时那条通道不开，而不是加载期就崩。
+
 ## 五、换包
 
 ```python
-from saintess_engine.host import Host, load_package
-pkg = load_stack(package_dir)          # 路径由**配置**给，不是代码里写死
-host = Host(adapter, package_dir, seed=12345)
-host.boot()                              # 加载包 + 装引擎（install_engine）
+from saintess_engine.host import Host    # 或 from saintess_engine import Host, load_stack
+host = Host(adapter, package_dir, seed=12345)   # 路径由**配置**给，不是代码里写死
+host.boot()                              # = load_stack(package_dir, exts=ext_paths, inject=…) + stack.install()
 host.serve_forever()                     # 或在自己的事件回调里 host.handle(ctx)
+
+# 只要包栈、不要宿主运行时的场合：
+from saintess_engine import load_stack
+stack = load_stack(package_dir, exts=[...])   # exts 缺省 → SAINTESS_EXTENDS → 数据包同级 ../extends → 引擎仓 extends/
+stack.providers()                             # 能力提供者全表（键 → (包 id, 引用)）
 ```
 
-⚠️ **一个进程一个包**：`entry` 的 import 名（惯例 `content`）是包内相对导入的根，
+⚠️ **一个进程一个数据包**：`entry` 的 import 名（惯例 `content`）是包内相对导入的根，
 `load_stack()` 会把包目录放进 `sys.path`。「换包能跑」= **换配置 + 重启进程**，不是同进程热切换。
+数据包只能有一个，**扩展包可以多装** —— 装哪些由数据包的 `depends` 决定，搜索路径用
+`Host(ext_paths=…)` / `load_stack(exts=…)` 追加；扩展包 namespace 就是它的目录名，互不撞名。
 
 ## 六、宿主必须满足的四条（门禁口径）
 
 1. **量**：宿主平台面 ≤2k 行（实际参考实现 ≈1k）；
-2. **零包知识**：宿主里 `grep -rEn "包名|from content\." == 0`（注释里的历史说明逐条登记）；
+2. **零包知识**：宿主里 `grep -rEn "包名|from content\.|from ext_" == 0`（注释里的历史说明逐条登记）；
+   战斗 / 空间这类**能力**走 `provides` 键取件，不写死 import；
 3. **换包能跑**：同一份宿主代码跑两个包各一场；
 4. **过门禁**：`tests/test_host_contract.py` + `tests/test_host_skeleton.py`（import 白名单 / 零游戏词汇 /
    适配器接入成本 / 两宿主一致性）。
 
 ## 相关
 
+- 三层与依赖方向（引擎 / 扩展包 / 数据包）：[../architecture/boundaries.md](../architecture/boundaries.md)
 - 包格式（域 / schema / 声明）：[package-format.md](package-format.md)
 - 指令声明与文案表（声明驱动）：[declarative-commands-and-texts.md](declarative-commands-and-texts.md)
 - 指令声明规格：[command-spec.md](command-spec.md)

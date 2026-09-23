@@ -1,5 +1,10 @@
 # 快照与计数形状（owner 键单行 JSON + 命名累计计数）
 
+> **归属**：本页形状**仍在引擎里**（通用件，2026-09-23 包栈重构未迁出）—— `saintess_engine/store/snapshots.py` 与 `saintess_engine/store/counters.py`。
+> 它的门禁文件随包栈重构搬到了 `extends/ext_life/tests/test_store_blobs_shape.py`（该测试扫的仍是引擎 `store/`，故 ROOT 重新绑回引擎根）。
+> 正文提到的相邻形状 `periodic` / `timers` 已迁到扩展包 `extends/ext_life/`：数据包要用它们，`game.json` 里写 `"depends": ["ext_life"]`。
+> 引擎侧通用件总览（含 `store`）见 `../architecture/boundaries.md`。
+>
 > 模块：`saintess_engine.store.snapshots`（`SnapshotSpec` / `SnapshotRepo` / `declare_snapshot`）
 > 与 `saintess_engine.store.counters`（`CounterSpec` / `Counters` / `declare_counters`）。
 > 一句话：**按 owner 取一行 JSON 快照（带可选时间戳与过期门）** + **一行若干命名计数字段的白名单 `+δ`**；
@@ -81,7 +86,7 @@ with db.session() as conn:
 | ② | 过期动作三态（删行 / 打标保留 / 触发销毁） | `keep` + `on_expire` 两个注入口；**默认 = 删**。两个分支都会调 `on_expire`（保留那一支也要补销毁） |
 | ③ | 打标不改时间戳 | 打标只写载荷，绝不碰 `stamp`/`stamp_key` —— 否则「过期标记」会被自己续命 |
 | ④ | 标量文本 vs 结构载荷 | `put` 只收 `dict`（标量走 `counters` 或内容侧自己转），两种口径不混进一个方法 |
-| ⑤ | 「日」计数不做进 `counters` | 周期键 → 一格值归 `periodic.PeriodCounter`；`counters` 只收**永不归零的累计计数**，且**不 import `periodic`** |
+| ⑤ | 「日」计数不做进 `counters` | 周期键 → 一格值归 `ext_life.periodic.PeriodCounter`；`counters` 只收**永不归零的累计计数**，且**不 import `periodic`** |
 | ⑥ | 复合主键计数器单列 | `CounterSpec.subject` 显式承载；每条 subject 一行，不挤进 `fields` 的列 |
 | ⑦ | 白名单只在一处 | 收 `**deltas`（动态列名）的接口**必须**白名单 fail-closed；写死 SQL 的调用点保持原样 |
 | ⑧ | 无行 → `{}` vs 建行 | `read` 无行回 `{}`（无副作用）；只有 `init` 才建行，两件事分开 |
@@ -108,7 +113,7 @@ with db.session() as conn:
 
 | 相邻能力 | 归谁 | 说明 |
 |---|---|---|
-| 周期键 → 一格值 / 上限 / 冷却 | [clock-wall.md](clock-wall.md)（`periodic` 那一支） | 跨周期归零是它的活；本形状只收**累计**计数 |
+| 周期键 → 一格值 / 上限 / 冷却 | [clock-wall.md](clock-wall.md)（`periodic` 那一支，现住 `extends/ext_life/`） | 跨周期归零是它的活；本形状只收**累计**计数 |
 | 一次运行内的节点 / 剩余池 / 预算 | [run.md](run.md) | `run.Progress` 生命周期 = 一次运行；快照是**跨会话**的整段状态 |
 | 只读进度集合 + 档位领取 | [run.md](run.md) | `collect` 只读；本形状有**写**（`put` / `bump`） |
 | 表级 CRUD 骨架（`Repository`） | 既有 `store` 包 | 本形状**复用**它：建表 / 补列 / JSON 编解码 / upsert 全走既有口，不自开一套 |
@@ -118,7 +123,7 @@ with db.session() as conn:
 
 * **不落库策略**：表名、列名、主键、TTL、清洗规则、过期动作全在内容侧；引擎只认形状。
 * **不做后台定时清扫**：现状就是「惰性读门 + 显式 `sweep`」；引擎不注册回调、不引定时器。
-* **不做跨周期归零**：日 / 周 / 月维度指向 `periodic`；本形状要么累计、要么由内容侧自己换键。
+* **不做跨周期归零**：日 / 周 / 月维度指向 `ext_life.periodic`；本形状要么累计、要么由内容侧自己换键。
 * **不做实体宽表**：一行几十列、一列一个实体属性的表不是计数器行，不进 `counters`。
 * **不做复杂查询**：除 `owners(prefix=)` / `read_subject(order_by, limit)` 外不提供查询面；
   不生成 JOIN、不做聚合。
@@ -126,7 +131,7 @@ with db.session() as conn:
 
 ## 门禁
 
-`tests/test_store_blobs_shape.py`（137 断言，单文件自跑，不依赖 pytest）：
+`extends/ext_life/tests/test_store_blobs_shape.py`（137 断言，单文件自跑，不依赖 pytest）：
 
 * 注入面 fail-closed 逐条（`stamp`/`stamp_key` 同给、owner / blob / fields 空、非法名、
   列重名、`pk` 不符、单键表传 `subject`、复合表不传 `subject`……）。

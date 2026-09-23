@@ -1,8 +1,12 @@
 # 在场形状（清单判定 + 当天派生 + 保底冷却）
 
+> **归属**：本能力**不在引擎里**（2026-09-23 起）—— 它在扩展包 `extends/ext_social/`（`presence/`）。
+> 数据包要用它：`game.json` 里写 `"depends": ["ext_social"]`；引到的 `ext_life` 形状见 `extends/ext_life/`。
+> 引擎侧只剩通用件，见 `../architecture/boundaries.md`；下文裸文件名与行号都相对 `extends/ext_social/presence/`。
+>
 > 模块：`ext_social.presence` —— `Lookup`（多表首命中）+ `Presence`（在场清单）+
 > 六个纯函数（`day_slot` / `day_hit` / `minutes_left` / `guarded_roll` / `cooldown_ok` /
-> `merge_tables`）。一句话：**数据给「谁在、在哪」，引擎给「怎么筛、怎么编号、怎么算」**。
+> `merge_tables`）。一句话：**数据给「谁在、在哪」，本形状给「怎么筛、怎么编号、怎么算」**。
 
 ## 为什么有它
 
@@ -45,9 +49,9 @@ p.overlay(events, now=now_ts)                     # 限时事件视图（保有�
 merge_tables(wild_rows, hidden_rows, exclude=skip)  # 保序合并 → 新 dict
 ```
 
-引擎**一个业务字段名都不认识**：`Lookup` / `Presence` 只拿**不透明的行**，
+本形状**一个业务字段名都不认识**：`Lookup` / `Presence` 只拿**不透明的行**，
 判据（`keep`）/ 定位（`place_of`）/ 标识（`key`）全部注入；`day` 是调用方给的
-整数日序数（引擎不认识日历，不 import 时间/日期库）；随机只在注入的 `rng()` 里。
+整数日序数（本形状不认识日历，不 import 时间/日期库）；随机只在注入的 `rng()` 里。
 
 ## 三个纯派生
 
@@ -83,7 +87,7 @@ cooldown_ok(last, now, window) = (not last) or (now - last >= window)
 
 * **先判后写**：短路路径既不读 `rng`、也不产生 `miss+1`；本模块**不落盘**，
   调用方拿返回的 `miss_after` / `cleared` 在自己那里写。
-* `rng` 必填：缺省 / 不可调用 → `TypeError`（引擎不许悄悄用系统随机）。
+* `rng` 必填：缺省 / 不可调用 → `TypeError`（本形状不许悄悄用系统随机）。
 
 ## 表与清单
 
@@ -113,8 +117,8 @@ cooldown_ok(last, now, window) = (not last) or (now - last >= window)
 
 | 相邻形状 | 结论 | 理由 |
 |---|---|---|
-| `periodic.Cooldown` | **不复用** | 它的存储键是**它自己拼的**，且把「读 → 判 → 写」绑在一个对象上；本形状只抽**算术**（`cooldown_ok(last, now, window)`），时间戳存在调用方自己的嵌套映射里，落盘留在调用点 |
-| `timers.Timers` | **不复用（它已经在用）** | 限时在场就是一张 `Timers` 事件表；本形状只做「把事件表读出来并派生展示分钟/保序编号」（`overlay` / `minutes_left`），过期懒清除与回调仍是 `Timers` 的职责。再包一层会造出第二套过期语义 |
+| `periodic.Cooldown`（现住 `extends/ext_life/`） | **不复用** | 它的存储键是**它自己拼的**，且把「读 → 判 → 写」绑在一个对象上；本形状只抽**算术**（`cooldown_ok(last, now, window)`），时间戳存在调用方自己的嵌套映射里，落盘留在调用点 |
+| `timers.Timers`（现住 `extends/ext_life/`） | **不复用（它已经在用）** | 限时在场就是一张 `Timers` 事件表；本形状只做「把事件表读出来并派生展示分钟/保序编号」（`overlay` / `minutes_left`），过期懒清除与回调仍是 `Timers` 的职责。再包一层会造出第二套过期语义 |
 | [`space.Space`](space.md) | **不复用** | 定位在这里是**一个不透明 id 的相等判定**，不是连通性/深度/必经路径；套 `Space` 会要求把定位取值归口成节点 id（= 改内容数据） |
 | [`loot`](loot.md) / 加权抽取 | **不复用** | 日期派生是**确定性哈希**（同一天全服同答案），`loot` 的池+权重是随机抽取，形状不同；`guarded_roll` 只是一次伯努利 + 保底计数，套池/档位全是空转 |
 
@@ -131,7 +135,7 @@ cooldown_ok(last, now, window) = (not last) or (now - last >= window)
 | `Lookup(*tables)` | `first` / `rows` / `tables` |
 | `Presence(lookup, *, keep, place_of, key)` | `rows` / `here` / `slots` / `slot_at` / `overlay` / `lookup` / `key_of` |
 
-门禁：`tests/test_presence_shape.py`（93 断言：逐值表 ≥1000 组 / `day_hit` 五档门槛 /
+门禁：`extends/ext_social/tests/test_presence_shape.py`（93 断言：逐值表 ≥1000 组 / `day_hit` 五档门槛 /
 `minutes_left` 九格 / 保底写入时机 / 真值链 / 零知识静态扫描 / 口径分歧 /
 多故障「两处同坏 + 第三处仍绿」/ 五条顺序断言 / 只读）。
 
@@ -141,5 +145,5 @@ cooldown_ok(last, now, window) = (not last) or (now - last >= window)
 * 不掷骰：不 import `random`；随机源一律注入（可复现、可测试）
 * 不认字段：不读任何业务行的字段名；判据/定位/标识全经注入的可调用
 * 不落盘 / 不缓存：`Presence.rows()` 每次现算；保底计数与冷却时间戳的读写留在调用点
-* 不去重 / 不排序 / 不归并同名：这些是内容决策，引擎不替它决定
+* 不去重 / 不排序 / 不归并同名：这些是内容决策，本形状不替它决定
 * 不做数值调参：保底阈值 / 冷却窗口 / 盐 / 概率全部由调用方给

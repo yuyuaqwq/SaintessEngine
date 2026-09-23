@@ -1,10 +1,14 @@
 # 触发器声明编译器（数据行 → `actor["triggers"]`）
 
+> **归属**：本能力**不在引擎里**（2026-09-23 起）—— 它在扩展包 `extends/ext_combat/`（`battle/declarations.py`）。
+> 数据包要用它：`game.json` 里写 `"depends": ["ext_combat"]`。
+> 引擎侧只剩通用件，见 `../architecture/boundaries.md`；下文裸文件名（`effect_triggers.py` / `declarations.py`）与行号都在 `extends/ext_combat/battle/` 下。
+>
 > 模块：`ext_combat.battle.declarations` —— `Declaration`（一条声明行）+ `Compiler`
 > （`compile` / `validate` / `unknown_name` / `mount` / `purge` / `events_of`）
 > + `compile_rows` / `mount`（模块级入口）。
-> 一句话：**把「行表 → `{事件名: [载荷, …]}` → 幂等写进宿主容器」抽成引擎形状**；
-> 事件名取自引擎自己的事件全集（`EVENTS`，见 `effect_triggers.py:52`），
+> 一句话：**把「行表 → `{事件名: [载荷, …]}` → 幂等写进宿主容器」抽成扩展包形状**；
+> 事件名取自战斗包的事件全集（`EVENTS`，见 `extends/ext_combat/battle/effect_triggers.py:52`），
 > 去重键 / 写策略 / 未知名策略 / 载荷全部由调用方给，**引擎零游戏知识**。
 > **不进 battle 门面**：内容侧走子模块直取（`from ext_combat.battle.declarations import Compiler`）。
 
@@ -27,9 +31,9 @@
 
 ```python
 from ext_combat.battle.declarations import Compiler, Declaration, compile_rows, mount
-from ext_combat.battle.effect_triggers import EVENTS          # 引擎事件全集（可默认取）
+from ext_combat.battle.effect_triggers import EVENTS          # 战斗包事件全集（可默认取）
 
-# ① 注入面（引擎零默认取值：旧名迁移 / 去重键 / 未知名策略 / 归属字段都由内容侧给）
+# ① 注入面（形状层零默认取值：旧名迁移 / 去重键 / 未知名策略 / 归属字段都由内容侧给）
 _DECL = Compiler(
     events=EVENTS,                       # 缺省即 EVENTS；给空序列 = 不做未知名校验
     map_event=<旧名 → 新名元组>,          # mapping 形态才用（list 形态直取事件名）
@@ -53,12 +57,12 @@ _DECL.mount(actor, rows, merge="replace", owner=actor)
 _DECL.purge(actor, event=<事件名>, match=lambda d: d.get("action") == <动词>)
 ```
 
-## 引擎认什么（契约字段名）
+## 扩展包认什么（契约字段名）
 
 | 层 | 角色键（**字段名**，可注入） | 边界（有意保留的口径） |
 |---|---|---|
 | 宿主容器 | `host_key`（默认 `triggers`） | 缺失 → 懒建；已存在非 mapping → `TypeError`（fail-closed） |
-| 事件名 | 引擎事件全集（`EVENTS`，可注入替换） | **取值**：引擎只做成员判定；未知 → 告警 + 放行 |
+| 事件名 | 战斗包事件全集 `EVENTS`（`extends/ext_combat/battle/effect_triggers.py`，可注入替换） | **取值**：引擎只做成员判定；未知 → 告警 + 放行 |
 | mapping 行 | `{旧事件名: [载荷, …]}` | 桶值必须是 `list`/`tuple`；旧名经 `map_event` 展开（保序） |
 | list 行 | `event_key` / `action_key`（默认 `event` / `action`） | 行原对象即载荷；其余键原样搬；`action_key` **不用于分发** |
 | 载荷 | ——（**完全不透明、原对象**） | 引擎不读它的键、不拷贝它；非 mapping 载荷一律不去重 |
@@ -67,7 +71,7 @@ _DECL.purge(actor, event=<事件名>, match=lambda d: d.get("action") == <动词
 
 ## 8 条口径分歧（**故意不统一**）
 
-| # | 分歧 | 引擎怎么表达 |
+| # | 分歧 | 形状层怎么表达 |
 |---|---|---|
 | ① | 去重键**五种** | `key_of` 回调：`(动词,目标态)` / `目标态` / `动词` / `类型` / 无（`None`）。键的语义是「同一效果的身份由什么决定」，统一一个键 = 改行为 |
 | ② | 写策略**四种** | `merge`：`replace`（命中就地浅盖）/ `keep`（命中保留既有）/ `append`（命中留旧再追加）/ `prepend`（未命中前插桶首 = 执行序；命中不重排） |

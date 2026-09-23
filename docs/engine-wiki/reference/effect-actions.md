@@ -1,8 +1,12 @@
 # 参考：`EFFECT_ACTIONS` 名词→动词映射
 
+> **归属**：本能力**不在引擎里**（2026-09-23 起）—— 读它的 `effects.resolve_actions` 与自带的 8 个动词都在扩展包 `extends/ext_combat/`（`battle/effects.py`）。
+> 数据包要用它：`game.json` 里写 `"depends": ["ext_combat"]`。
+> 引擎侧只剩通用件，见 `../architecture/boundaries.md`；下文「引擎动词」= 该包自带的 8 个动词，其余一律 `register_action` 注册。
+
 `EFFECT_ACTIONS` = 「游戏名词 → 引擎动词动作序列」的翻译表。它**不是引擎文件**；
-引擎通过 `config.set_config("effect_actions", ...)` / `load_game_rules(module)` 读它，
-读点在 `effects.resolve_actions`（`effects.py:136`）。
+扩展包通过 `config.set_config("effect_actions", ...)` / `load_game_rules(module)` 读它，
+读点在 `effects.resolve_actions`（`extends/ext_combat/battle/effects.py:136`）。
 
 ## 表格格式
 
@@ -27,9 +31,9 @@ EFFECT_ACTIONS = {
 
 `eff["chance"]`（概率）由 `apply_effects` 消费（`effects.py:184-190`），与映射无关。
 
-## 引擎动词全集（8 个）
+## 扩展包自带动词全集（8 个）
 
-注册在 `effects.py`（`@register_action`），这是**引擎能力边界**：
+注册在 `effects.py`（`@register_action`），这是**该包的能力边界**（引擎不认识任何动词）：
 
 | 动词 | 注册行 | 参数要点 |
 |---|---|---|
@@ -47,7 +51,7 @@ EFFECT_ACTIONS = {
 
 ## 扩展动词：`register_action` 是另一半能力面
 
-引擎动词只有 8 个，其余全在内容侧注册。游戏仓参考实现注册了 **70+** 个：
+该包自带动词只有 8 个，其余全在内容侧注册。游戏仓参考实现注册了 **70+** 个：
 
 ```bash
 grep -rho 'register_action("[^"]*")' game/services/*.py | sort -u | wc -l
@@ -71,7 +75,7 @@ grep -rho 'register_action("[^"]*")' game/services/*.py | sort -u | wc -l
 ## 参考实现的 51 个名词（可粘贴起点）
 
 以下全部来自 `game/data/battle_rules.py:421-495`（真实键，非示例）。
-标注的含义：`→` 后是它映射到的动词。**除 `class_*` 三个外都是引擎动词**。
+标注的含义：`→` 后是它映射到的动词。**除 `class_*` 三个外都是该包自带动词**。
 
 ### 控制类（8）
 

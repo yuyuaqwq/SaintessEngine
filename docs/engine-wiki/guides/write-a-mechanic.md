@@ -1,5 +1,9 @@
 # 指南：写一个机制动作
 
+> **归属**：本页主体是**内容侧扩展动词**（`register_action` 注册的动作在游戏仓）；
+> 它依赖的配套形状（`effects` / `actions` / `landing` / `effect_triggers`）2026-09-23 起住在扩展包 `extends/ext_combat/`（`battle/`）。
+> 数据包要用它们：`game.json` 里写 `"depends": ["ext_combat"]`；下文 `effects.py:NNN` / `actions.py:NNN` / `landing.py:NNN` / `schedule.py:NNN` 都在 `extends/ext_combat/battle/` 下。
+
 适用：你要加一个**引擎不认识的行为**（「受击时反弹」「每层资源加伤害」「血量低于 X 时变身」）。
 
 入门版见 [../getting-started/first-mechanic.md](../getting-started/first-mechanic.md)（动词 + 名词 + triggers）。
@@ -14,7 +18,7 @@
 | 能（加个数值 / 挂个层 / 上个控制 / 加个盾） | **只写声明**（`EFFECT_ACTIONS` + `EFFECT_RULES`），不写代码 |
 | 不能（有分支逻辑 / 要读事件数值 / 要 roll 概率 + 多步副作用） | 写一个扩展动词 |
 
-N3 之后引擎只留 8 个动词，其余全走扩展注册 —— 这个比例本身就是答案：
+N3 之后战斗包（`ext_combat`）只留 8 个动词，其余全走扩展注册 —— 这个比例本身就是答案：
 《奥兰迪亚》（游戏仓侧的参考实现）在内容侧注册了 **70+** 个扩展动词（`register_action` 在
 `game/services/*.py` 里被调用 80 余次），但**没有一个是引擎改出来的**。
 
@@ -82,7 +86,7 @@ attacker = ctx.get("source")
 如果要「条件增伤 / 条件减伤」，不要重写伤害公式 —— 用四个乘区事件的
 `ctx["mult"]`：
 
-| 事件 | 谁读回 | 语义 | 引擎点位 |
+| 事件 | 谁读回 | 语义 | 包内点位（`extends/ext_combat/battle/`） |
 |---|---|---|---|
 | `dmg_calc` | 攻击方总伤 | ×mult 增伤 | `actions.py:422-428` |
 | `taken_calc` | 承伤前 | ×mult 减伤（<1）或增伤（>1） | `landing.py:79-90` |

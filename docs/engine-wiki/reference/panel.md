@@ -1,11 +1,13 @@
 # `panel` · 面板栈
 
-> **可拔插形状**：不配 = 不存在。引擎不装配 `panel_layers_fn` 时，本形状零影响。
-> **归属**：`extends/ext_combat/panel/__init__.py`（E2，2026-09-21）
+> **归属**：本能力**不在引擎里**（2026-09-23 起）—— 它在扩展包 `extends/ext_combat/`（`panel/`，E2，2026-09-21）。
+> 数据包要用它：`game.json` 里写 `"depends": ["ext_combat"]`。
+> 引擎侧只剩通用件，见 `../architecture/boundaries.md`；下文裸文件名与行号都在 `extends/ext_combat/battle/` 下。
+> **可拔插形状**：不配 = 不存在。宿主不装配 `panel_layers_fn` 时，本形状零影响。
 > **为什么建**：`_HOOKS["panel_fn"]` 的**形参就是游戏词汇**
 > （`fn(class_name, level, equipment, tier, evolve_path, title_bonus, race)` —— 实测 8 个位置参数、6/8 是游戏词）
 > ⇒ 引擎纯度缺陷；且面板聚合本体写在内容侧的 Python 里。
-> 本形状把「有哪些层、每层怎么作用到哪些键」变成**声明**，引擎负责逐键合并 + 钳制 + 归因。
+> 本形状把「有哪些层、每层怎么作用到哪些键」变成**声明**，形状层负责逐键合并 + 钳制 + 归因（原先是引擎里的面板聚合本体，现随包迁出）。
 
 ---
 
@@ -24,9 +26,9 @@
 
 | 字段 | 类型 | 必填 | 语义 |
 |---|---|---|---|
-| `version` | int ≥1 | **是** | 声明版本；引擎按 `(stack_id, version)` 缓存校验结果（版本变 ⇒ 重新校验，**不做旧版兼容分支**） |
+| `version` | int ≥1 | **是** | 声明版本；形状层按 `(stack_id, version)` 缓存校验结果（版本变 ⇒ 重新校验，**不做旧版兼容分支**） |
 | `base.mode` | `"actor"` \| `"value"` | **是** | `actor` = 从 actor 裸字段读（调用方按 `base.keys` 取值传入）；`value` = 用 `base.value` 常量 |
-| `base.keys` | str[] | `mode=actor` 时**是** | **必须显式列键**（零默认值口径：引擎不猜键集） |
+| `base.keys` | str[] | `mode=actor` 时**是** | **必须显式列键**（零默认值口径：形状层不猜键集） |
 | `base.value` | `{键: 数}` | `mode=value` 时**是** | 常量基础值 |
 | `layers` | Layer[] | **是**（可 `[]`） | 有序；顺序即合并序 |
 | `emit.int_keys` | str[] | 否 | 这些键最终落 `int` |
@@ -95,7 +97,7 @@ for L in sorted(layers, key=(order, 声明序)):
 | `cached_stack` | `(stack_id, decl) -> PanelStack` | 按 `(stack_id, version)` 缓存校验结果 |
 
 **`ctx` 结构**：`{"refs": {域: {键: 值}}, "flags": {...}, "actor": …, "battle": …}`。
-`refs` 是**不透明**的（内容侧装配点塞，引擎只按路径取）。
+`refs` 是**不透明**的（内容侧装配点塞，形状层只按路径取）。
 
 ---
 

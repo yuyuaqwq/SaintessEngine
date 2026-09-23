@@ -1,15 +1,19 @@
 # 指南：加一个被动 proc
 
+> **归属**：本页主体是**内容侧约定**（`PASSIVE_PROC` 表 + 装配器都在游戏仓）；`PASSIVE_PROC` 的**域声明**住在扩展包 `extends/ext_combat/`。
+> 它依赖的配套形状（`register_action` / `triggers` / `effects` / `actions` / `landing`）2026-09-23 起也在该包（`extends/ext_combat/battle/`）。
+> 数据包要用它们：`game.json` 里写 `"depends": ["ext_combat"]`；下文 `effects.py:NNN` / `actions.py:NNN` 都在 `extends/ext_combat/battle/` 下。
+
 「被动 proc」= 一个**被动技能**（`kind="被动"` + `passive.proc`）声明它监听哪个事件、
 跑哪个动作、判据是什么。装配器开战时读它，翻译成 `actor["triggers"]`。
 
-**这整套是内容侧约定，不是引擎 API**。引擎只提供 `register_action` 与 `triggers`；
+**这整套是内容侧约定，不是引擎 API**。扩展包 `ext_combat` 只提供 `register_action` 与 `triggers`（2026-09-23 起从引擎迁出）；
 `PASSIVE_PROC` 表 + 装配器都在内容侧（`game/data/battle_rules.py:653` 的表、
 `game/services/class_mech_proc.py:1974` 的 `apply_class_passives`）。
 本页两个都讲，因为第三方最省力的做法就是照抄这套格式。
 
 > 本页例子里的被动/技能（坚城之姿、战意、淬毒之心、反击之王…）都来自**游戏仓侧的参考实现《奥兰迪亚》**，
-> 不是引擎自带 —— 引擎不认识任何具体技能。
+> 不是引擎 / 扩展包自带 —— 它们不认识任何具体技能。
 
 ## 四张表的一句话区别
 
@@ -160,7 +164,7 @@ PASSIVE_PROC["my_proc"] = {
 }
 
 # ② 内容侧动作（game/services/my_procs.py）——若已有动作族可复用
-from saintess_engine.effects import register_action
+from ext_combat.battle.effects import register_action
 
 @register_action("passive_dmg_mult")   # 已存在则不要重复注册
 def _reuse_existing(): ...
