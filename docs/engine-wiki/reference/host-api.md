@@ -144,8 +144,10 @@ def my_cmd(env) -> str | list[str] | Iterable[str] | None: ...
 
 - 引擎**不解释** `inject` 的键值（零游戏知识，只原样转交）。
 - 入口两个：`Host(adapter, package_dir, inject={...})` 与 `load_stack(root, inject={...})`（同一个面）。
-- `Package.command_handlers()` 只在「包确实没有 `content/commands.py`」时给空表；
-  包自己 import 期抛的错**原样抛出**（曾经是 `except Exception → 空表`，把真错吞成静默失效）。
+- `PackageStack.command_handlers()` / `guard_hooks()` 是**逐层合并**后的表（扩展包带的命令也在里面，
+  见 `package-format.md` §4.5）；`Package.command_handlers()` 是**单包**口径，只在「包确实没有
+  `content/commands.py`」时给空表；包自己 import 期抛的错**原样抛出**（曾经是 `except Exception → 空表`，
+  把真错吞成静默失效）。
 
 ### 落档归处理器（引擎不代劳）
 

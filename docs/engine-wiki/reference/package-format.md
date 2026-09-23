@@ -252,7 +252,8 @@ host = Host(adapter, package_dir, inject={"store": my_store})
 ```
 
 * **能带**：代码（必须）· 域声明 `domains.json`（可选）· 域默认值 `data|rules/*.json`（可选）·
-  `provides` 声明（可选，见 2.1.1）· 宿主注入 `bind`（可选，见 2.2）。
+  **指令**：`data/commands.json`（声明）+ `commands.py`（`COMMANDS` 处理器表）+ `guards.py`（`GUARDS` 守卫表，
+  可选，见 §4.5）· `provides` 声明（可选，见 2.1.1）· 宿主注入 `bind`（可选，见 2.2）。
 * **不能带**：内容身份（职业 / 技能 / 怪物 / 文案 / 存档形状 —— 那是数据包的）· 另一款游戏的
   数据包（依赖方向错）· 引擎里的游戏原语（引擎零游戏词汇，门禁 §1.1 那条）。
 * 落点能用 `domain_dirs` 改名，声明文件位置能用 `domain_decl` 改名。
@@ -460,6 +461,35 @@ def initial_save(uid: str, ctx: dict) -> dict:      # 可选
 可复现：`python tests/test_package_stack.py` 的 ⑤⑥⑦ 三项（数据包那份整份覆盖扩展包默认值 /
 扩展包独有的域照样读得到 / `domain_layers` 报出层序），以及 `python tests/test_package_stack.py`
 ⑧~⑮ 对应的失败路径。
+
+### 4.5 指令分层：扩展包也能带命令（2026-09-24 · B1）
+
+**判据一句话**：**指令跟实现走** —— 哪一层搬走了那半边系统（守卫 / 取参 / 渲染），
+它带来的命令就归那一层声明，引擎只做「逐层合并」。
+
+```text
+① 扩展包（拓扑序）        extends/<包>/data/commands.json + commands.py + guards.py
+② 数据包（最后）          <包>/content/data/commands.json + content/commands.py
+```
+
+| 调用 | 作用 |
+|---|---|
+| `stack.command_declarations()` | 逐层合并后的**指令声明表**（正则/desc/category/order/usage/guards） |
+| `stack.command_handlers()` | 逐层合并后的**处理器表**（`COMMANDS`，`{key: {"handler": "ext_X.a:fn"}}`） |
+| `stack.guard_hooks()` | 逐层合并后的**守卫钩子表**（`GUARDS`，`{名字: callable}`） |
+| `stack.resolve_handler(ref)` | 处理器引用 → 可调用：**从数据包往回逐层问**（`ref` 自带命名空间：`ext_X.*` / `content.*`）；都没有 → `None` |
+
+* **近数据包者胜**：数据包同 key 覆盖扩展包（数据包是这套指令的最终真源 —— 想换 `patterns` /
+  `guards` / 处理器，在数据包里重声明即可）。
+* **两个扩展包撞同 key = `PackageError`**（点名两个包，可定位）：谁提供这条指令必须唯一，
+  静默覆盖会让「装了 A 包结果 B 包的指令失效」这类故障查不出来。
+* 每层只读自己的文件：扩展包**可以不带** `commands.py` / `guards.py` / `data/commands.json`
+  （读不到就是 `{}`，不是错）。
+* `Package.command_*()` 仍是**单包**口径（`PackageStack` 才做分层）；`PackageStack.resolve_handler`
+  的「从数据包往回问」与 `provider()` 同序。
+
+可复现：`python tests/test_package_stack_commands.py`（15 项：合并生效 / 数据包覆盖 / 撞 key 报错 /
+`resolve_handler` 解析扩展包命名空间 + 两条反证）。
 
 ---
 

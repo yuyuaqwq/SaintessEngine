@@ -658,17 +658,64 @@ class PackageStack:
     def optional_submodule(self, name: str):
         return self.game.optional_submodule(name)
 
+    # ------------------------------------------------------------ 指令（分层）
+    def _merge_command_layer(self, attr: str, what: str) -> dict:
+        """逐层合并一层指令表（扩展包拓扑序 → 数据包最后）。
+
+        规则与 `providers()` / `domain_decl()` 同源：**近数据包者胜**。
+
+        * 数据包覆盖扩展包同 key：**允许** —— 数据包是这套指令的最终真源
+          （想让某条命令换 patterns / guards / 处理器，在数据包里重声明即可）
+        * **两个扩展包声明同 key**：`PackageError` —— 谁提供这条指令必须唯一，
+          不许静默覆盖（否则「装了 A 包结果 B 包的指令失效」这类故障查不出来）
+
+        每层都是「该包自己的表」：扩展包**可以不带** `commands` 域/`commands.py`
+        （`Package.command_declarations()` 读不到就是 `{}`）；数据包照旧自己声明。
+        """
+        out: dict = {}
+        owner: dict = {}
+        for pkg in self.packages:
+            table = getattr(pkg, attr)() or {}
+            for key, value in table.items():
+                key = str(key)
+                if key in out and pkg is not self.game and owner[key] is not self.game:
+                    raise PackageError(
+                        "%s 里的 %r 同时由扩展包 %s 与 %s 声明：扩展包之间不许覆盖同 key —— "
+                        "请把其中一份改名，或交给数据包声明"
+                        % (what, key, owner[key].id, pkg.id))
+                out[key] = value
+                owner[key] = pkg
+        return out
+
     def command_declarations(self) -> dict:
-        return self.game.command_declarations()
+        """**逐层合并**的指令声明表（扩展包 → 数据包）。
+
+        扩展包带自己的指令是**能力的一部分**（副本/经济/社交各自那几条命令），
+        数据包留最终覆盖权。合并结果对数据包的旧行为**逐字不变**：
+        数据包声明了哪些 key，谁都没声明过，结果就还是那批 key。
+        """
+        return self._merge_command_layer("command_declarations", "指令声明表 commands")
 
     def command_handlers(self) -> dict:
-        return self.game.command_handlers()
+        """**逐层合并**的处理器表（`<entry 同级>/commands.py::COMMANDS`）。"""
+        return self._merge_command_layer("command_handlers", "命令处理器表 COMMANDS")
 
     def guard_hooks(self) -> dict:
-        return self.game.guard_hooks()
+        """**逐层合并**的守卫钩子表（`<entry 同级>/guards.py::GUARDS`）。"""
+        return self._merge_command_layer("guard_hooks", "守卫钩子表 GUARDS")
 
     def resolve_handler(self, ref):
-        return self.game.resolve_handler(ref)
+        """处理器引用 → 可调用：逐层问（近数据包者先）。
+
+        `ref` 自带命名空间（数据包 `content.*` / 扩展包 `ext_X.*`），所以每层都能
+        独立解析；`reversed(self.packages)` = 先问数据包，再往回问扩展包。
+        都没有 → `None`（调用方按既有口径处置，不在这里报错）。
+        """
+        for pkg in reversed(self.packages):
+            fn = pkg.resolve_handler(ref)
+            if fn is not None:
+                return fn
+        return None
 
     def bind_decl(self) -> dict:
         """数据包的 `bind` 声明（宿主注入面的契约形状）—— 转发给数据包。
