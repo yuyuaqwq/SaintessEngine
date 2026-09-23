@@ -25,6 +25,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, ROOT)
 
 import ext_world.run as ERUN        # noqa: E402
+import _domain_fixtures as FX             # noqa: E402  （域元数据：引擎默认集 / 扩展包域 / 内容域）
 from editor import glossary as G          # noqa: E402
 from editor import instance_view as IV    # noqa: E402
 from editor import packages as PK         # noqa: E402
@@ -83,8 +84,9 @@ FULL = {"inst_a": TWO_STAGE,
 
 def t1_domain():
     print("\n[1] 域注册与 schema")
-    meta = PK.DOMAINS.get("instances")
-    check("instances 域已注册", bool(meta), list(PK.DOMAINS))
+    # instances 随消费端搬进扩展包 ext_world（2026-09-23 第 4 批）→ 域元数据在扩展包那侧
+    meta = FX.meta_of("instances")
+    check("instances 域已注册（ext_world 声明）", bool(meta), sorted(FX.all_domains()))
     if not meta:
         return
     check("label = 副本 / icon = 🏯 / kind = data",
@@ -252,7 +254,8 @@ def t5_http():
     st, j = req(base, "GET", "/api/package/nope/d/instances/inst_a/run")
     check("包不存在 → 404", st == 404, f"{st} {j}")
 
-    st, j = req(base, "GET", "/api/domains")
+    # 域注册表不带包只有引擎默认集；要看扩展包带来的域（这 5 个随消费端搬走了）就带 pkg
+    st, j = req(base, "GET", "/api/domains?pkg=inst_demo")
     check("域列表里有 instances（前端 tab 的依据）",
           any(d.get("id") == "instances" for d in (j.get("domains") or [])), f"{st}")
     st, j = req(base, "GET", "/api/glossary")

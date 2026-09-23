@@ -149,7 +149,7 @@ def main() -> int:                          # noqa: C901
     global _CONTENT_PKG
     _tmp = tempfile.mkdtemp(prefix="fw_mini_val_")
     _CONTENT_PKG = os.path.join(_tmp, "content_pkg")
-    FX.declare(_CONTENT_PKG, "skills", "items")
+    FX.declare(_CONTENT_PKG, "skills", "items", "drop_pools")
 
     has_js = VD._js is not None
     print(f"  jsonschema 可用: {has_js}（{'装了，用作金标准对照' if has_js else '没装，对照段跳过'}）")

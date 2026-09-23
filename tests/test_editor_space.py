@@ -22,6 +22,7 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 sys.path.insert(0, ROOT)
 
+import _domain_fixtures as FX             # noqa: E402  （域元数据：引擎默认集 / 扩展包域 / 内容域）
 from editor import glossary as G          # noqa: E402
 from editor import packages as PK         # noqa: E402
 from editor import server as SRV          # noqa: E402
@@ -72,8 +73,9 @@ PLAIN = {
 
 def t1_domain():
     print("\n[1] 域注册与词典覆盖")
-    meta = PK.DOMAINS.get("maps")
-    check("maps 域已注册", bool(meta), list(PK.DOMAINS))
+    # maps 随消费端搬进扩展包 ext_world（2026-09-23 第 4 批）
+    meta = FX.meta_of("maps")
+    check("maps 域已注册（ext_world 声明）", bool(meta), sorted(FX.all_domains()))
     if meta:
         sp = os.path.join(ROOT, "schemas", meta["schema"])
         check(f"schema 文件存在（{meta['schema']}）", os.path.exists(sp), sp)
@@ -208,7 +210,8 @@ def t5_http():
     check("词典接口含 maps 域（编辑器面板不空白）",
           st == 200 and "maps" in (j.get("domains") or {}), f"{st}")
     check("分组接口含 maps 域", "maps" in (j.get("groups") or {}), str(list((j.get("groups") or {}))))
-    st, j = req(base, "GET", "/api/domains")
+    # 域注册表不带包只有引擎默认集；要看扩展包带来的域（这 5 个随消费端搬走了）就带 pkg
+    st, j = req(base, "GET", "/api/domains?pkg=map_demo")
     check("域列表里有 maps（前端 tab/模式判断的依据）",
           any(d.get("id") == "maps" for d in (j.get("domains") or [])), f"{st}")
     httpd.shutdown()

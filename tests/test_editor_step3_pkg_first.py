@@ -22,6 +22,7 @@
 """
 from __future__ import annotations
 
+import _domain_fixtures as FX             # noqa: E402  （扩展包域元数据：第 4 批）
 import json
 import os
 import shutil
@@ -172,8 +173,12 @@ def main():
             eff, warns = PK.effective_domains(orl)
             check("内置默认集置空 → 共享常量确实为空（置空生效）",
                   PK.DOMAINS == {} and PK.BUILTIN_DEFAULT_DOMAINS == {})
+            # ★ 2026-09-23 第 4 批：orlandia depends 了扩展包 ⇒ 域表 = 扩展包带来的（在前）
+            #   ∪ 包声明的 106 个（同名以包声明为准）⇒ **集合**与声明一致、数量一致；
+            #   次序上扩展包那 5 个排在前（它们是按 depends 序先合并进来的）。
             check(f"orlandia 仍列出**完整**域表（{n_orl} 个 = 包内声明那份，不靠框架常量）",
-                  len(eff) == n_orl and list(eff) == list(decl), f"{len(eff)} vs {n_orl}")
+                  len(eff) == n_orl and set(eff) == set(decl)
+                  and all(k in decl for k in eff), f"{len(eff)} vs {n_orl}")
             check("每一域逐字段 == 包内声明文件（不是框架那份）", eff == decl,
                   {k: (decl.get(k), eff.get(k)) for k in set(decl) | set(eff)
                    if decl.get(k) != eff.get(k)})
@@ -204,10 +209,15 @@ def main():
         with builtin_emptied():
             st, j = req(base, "GET", "/api/domains?pkg=orlandia")
             ids = [d["id"] for d in (j.get("domains") or [])]
-            check("域注册表 200 且域表齐全（id 序 = 包声明序）",
-                  st == 200 and ids == list(decl_of(orl)), f"{st} {len(ids)}")
-            check("域注册表把每一域标为 from_package",
-                  all(d["from_package"] is True for d in j["domains"]))
+            # ★ 2026-09-23 第 4 批：orlandia depends 了扩展包 ⇒ 域表 = 扩展包带来的 5 个（在前）
+            #   ∪ 包自己声明的 106 个（同名以包声明为准，位置保持首次插入）。
+            check("域注册表 200 且含全部包声明域（扩展包域在前，其余按包声明序）",
+                  st == 200 and set(ids) == set(decl_of(orl)), f"{st} {len(ids)}")
+            _ext_ids = set(FX.EXT_DOMAINS)
+            check("域注册表里包声明与扩展包带的域都标了来源（from_package）",
+                  all(d["from_package"] for d in j["domains"] if d["id"] in decl_of(orl))
+                  and all(not d["from_package"] for d in j["domains"]
+                          if d["id"] in _ext_ids and d["id"] not in decl_of(orl)))
             st, j = req(base, "GET", "/api/domains")
             check("不带包时域注册表 200 且为空（= 框架内置那份真被拿掉了，没人依赖它）",
                   st == 200 and (j.get("domains") or []) == [], f"{st} {len(j.get('domains') or [])}")
@@ -253,9 +263,12 @@ def main():
               and set(PK.package_domains(REAL_MINIMAL)) == set(decl_m), sorted(decl_m))
         check("声明里写了 $builtin: false（域表 = 它自己声明的，不夹带框架内置域）",
               PK.package_uses_builtin_defaults(REAL_MINIMAL) is False)
-        check("有效域表 == 声明那 7 个（顺序一致 / 无框架域掺进来）",
-              list(eff_m) == list(decl_m) == ["skills", "classes", "monsters",
-                                              "effect_rules", "passive_proc", "mech_verbs", "sites"],
+        # ★ 2026-09-23 第 4 批：`$builtin: false` 只关「引擎默认集」那一层 ——
+        #   样板包 depends 了 ext_combat，它带来的 effect_rules / passive_proc 照样在
+        #   （域跟消费端走：这两个域的声明现在也住在 ext_combat 里）。样板自己那 7 个一个不少。
+        check("有效域表 ⊇ 声明那 7 个（$builtin:false 只关引擎默认集，扩展包域照旧）",
+              set(decl_m) <= set(eff_m)
+              and set(eff_m) - set(decl_m) <= set(FX.EXT_DOMAINS),
               list(eff_m))
         check("框架内置域一个都没混进来（items / instances / texts 等不在）",
               not (set(eff_m) & {"items", "instances", "texts", "commands", "maps"}))

@@ -1,0 +1,16 @@
+{
+  "maps": {
+    "label": "地图",
+    "kind": "data",
+    "schema": "maps.schema.json",
+    "primary": "map",
+    "icon": "🗺"
+  },
+  "instances": {
+    "label": "副本",
+    "kind": "data",
+    "schema": "instances.schema.json",
+    "primary": "instance",
+    "icon": "🏯"
+  }
+}

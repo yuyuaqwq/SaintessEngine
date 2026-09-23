@@ -1318,7 +1318,9 @@ def all_widgets(pkg_dir=None) -> dict:
 
 # 域 → schema 文件：**从 packages.DOMAINS 派生**（别手写第二份 —— 手写的那份会漂：
 # 加一个域时忘了同步，词条分组/控件就静默不生效。classes 无 schema → 不在此表）
-DOMAIN_SCHEMA = {d: m["schema"] for d, m in PK.DOMAINS.items() if m.get("schema")}
+# ★ 2026-09-23 第 4 批：域声明可以住在扩展包里（域跟消费端走）⇒ 词典口径取
+#   `PK.known_domains()`（引擎默认集 + 自带扩展包域），不是 `PK.DOMAINS`（引擎默认集）。
+DOMAIN_SCHEMA = {d: m["schema"] for d, m in PK.known_domains().items() if m.get("schema")}
 
 # ───────────────────────────────────────────────────────────────────────── 查询
 def lookup(dom: str, path: str, pkg_dir=None):

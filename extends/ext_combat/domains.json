@@ -1,0 +1,16 @@
+{
+  "effect_rules": {
+    "label": "声明表",
+    "kind": "rules",
+    "schema": "effect_rules.schema.json",
+    "primary": "effect_rule",
+    "icon": "📜"
+  },
+  "passive_proc": {
+    "label": "被动声明",
+    "kind": "rules",
+    "schema": "passive_proc.schema.json",
+    "primary": "passive_proc",
+    "icon": "🌀"
+  }
+}

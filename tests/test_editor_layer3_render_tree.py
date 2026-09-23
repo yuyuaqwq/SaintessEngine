@@ -40,6 +40,7 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 sys.path.insert(0, ROOT)
 
+import _domain_fixtures as FX             # noqa: E402  （扩展包域元数据）
 from editor import render as R          # noqa: E402
 from editor import render_decl as RD    # noqa: E402
 from editor import server as SRV        # noqa: E402
@@ -83,7 +84,12 @@ DECL = {
     "readonly": ["lv"],
 }
 NEW_DOMS = {"my_dungeons": {"label": "副本", "kind": "data", "schema": "my_dungeons.schema.json",
-                            "primary": "my_dungeon", "icon": "🏯"}}
+                            "primary": "my_dungeon", "icon": "🏯"},
+            # 2026-09-23 第 4 批：maps / drop_pools 随消费端搬进扩展包（ext_world / ext_loot），
+            # 引擎默认集不再兜底 ⇒ 合成包要用它们就自己声明（本文件下面正是拿它们的数据测视图分派）。
+            "maps": dict(FX.EXT_DOMAINS["maps"]),
+            "drop_pools": dict(FX.EXT_DOMAINS["drop_pools"]),
+            "instances": dict(FX.EXT_DOMAINS["instances"])}
 
 PASS = 0
 FAIL = 0

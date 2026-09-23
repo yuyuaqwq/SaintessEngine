@@ -44,7 +44,7 @@ def main() -> int:
         os.makedirs(os.path.join(pkg, "content", "data"), exist_ok=True)
         os.makedirs(os.path.join(pkg, "content", "rules"), exist_ok=True)
         # ★ B2b：skills / items / monsters 是**内容域**（框架内置集只留引擎域）→ 由包声明
-        FX.declare(pkg, "skills", "items", "monsters")
+        FX.declare(pkg, "skills", "items", "monsters", "effect_rules", "passive_proc")
         PK.write_json(PK.manifest_path(pkg), {"id": "t_game", "name": "t", "engine": ">=0.1",
                                               "domains": list(PK.DOMAINS)
                                               + ["skills", "items", "monsters"]})

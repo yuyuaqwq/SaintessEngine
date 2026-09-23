@@ -22,6 +22,7 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 sys.path.insert(0, ROOT)
 
+import _domain_fixtures as FX             # noqa: E402  （域元数据：引擎默认集 / 扩展包域 / 内容域）
 from editor import glossary as G            # noqa: E402
 from editor import loot_view as LV          # noqa: E402
 from editor import packages as PK           # noqa: E402
@@ -86,8 +87,9 @@ FULL = {"weighted_a": WEIGHTED, "fixed_a": FIXED, "table_a": TABLE,
 
 def t1_domain():
     print("\n[1] 域注册与 schema")
-    meta = PK.DOMAINS.get("drop_pools")
-    check("drop_pools 域已注册", bool(meta), list(PK.DOMAINS))
+    # drop_pools 随消费端搬进扩展包 ext_loot（2026-09-23 第 4 批）
+    meta = FX.meta_of("drop_pools")
+    check("drop_pools 域已注册（ext_loot 声明）", bool(meta), sorted(FX.all_domains()))
     if meta:
         check("label = 掉落池 / icon = 🎁 / kind = data",
               meta["label"] == "掉落池" and meta["icon"] == "🎁" and meta["kind"] == "data",
@@ -349,7 +351,8 @@ def t6_http():
     st, j = req(base, "GET", "/api/package/loot_demo/d/drop_pools")
     check("被拦的条目没落盘（仍是 6 条）", j.get("count") == len(FULL), f"{st} {j}")
 
-    st, j = req(base, "GET", "/api/domains")
+    # 域注册表不带包只有引擎默认集；要看扩展包带来的域（这 5 个随消费端搬走了）就带 pkg
+    st, j = req(base, "GET", "/api/domains?pkg=loot_demo")
     check("域列表里有 drop_pools（前端 tab 的依据）",
           any(d.get("id") == "drop_pools" for d in (j.get("domains") or [])), f"{st}")
     st, j = req(base, "GET", "/api/glossary")

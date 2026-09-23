@@ -79,7 +79,7 @@ def _tmp_pkg(pools: dict, vocab=None, raw_vocab_text=None, name="pkg") -> str:
     os.makedirs(os.path.join(root, "content", "rules"))
     # ★ B2b：`loot_vocab` / `items` / `equip_roster` 都是**内容域**（框架内置集只留引擎域）
     #   → 声明表与引用目标域都要由包自己声明，`domain_path()` 才认得（真源在包）。
-    FX.declare(root, "loot_vocab", "items", "equip_roster")
+    FX.declare(root, "loot_vocab", "items", "equip_roster", "drop_pools")
     with open(os.path.join(root, "game.json"), "w", encoding="utf-8") as f:
         json.dump({"id": name, "name": name, "engine": ">=0.1",
                    "domains": ["drop_pools", "loot_vocab", "items", "equip_roster"]}, f)
@@ -308,7 +308,7 @@ def t6_prefix_domains():
     os.makedirs(os.path.join(root, "content", "data"))
     os.makedirs(os.path.join(root, "content", "rules"))
     # ★ B2b：同上 —— equip_roster / items / loot_vocab 是内容域，由包声明（真源在包）
-    FX.declare(root, "loot_vocab", "equip_roster", "items")
+    FX.declare(root, "loot_vocab", "equip_roster", "items", "drop_pools")
     with open(os.path.join(root, "game.json"), "w", encoding="utf-8") as f:
         json.dump({"id": "pkg", "name": "pkg", "engine": ">=0.1",
                    "domains": ["drop_pools", "equip_roster", "items", "loot_vocab"]}, f)

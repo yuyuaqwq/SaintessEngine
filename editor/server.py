@@ -402,14 +402,17 @@ class H(BaseHTTPRequestHandler):
 
     def _api_get(self, parts: list):
         if parts == ["domains"]:
-            # 域注册表（tab 列表）。`?pkg=<id>` → **该包的有效域表**（内置 + 包自带声明），
-            # 不带 = 内置那份（历史行为逐字不变）。
+            # 域注册表（tab 列表）。`?pkg=<id>` → **该包的有效域表**（引擎默认集 → 它 depends 的
+            # 扩展包 → 包自带声明）；不带 = 引擎默认集（回退表）。
+            # ★ 2026-09-23 第 4 批：域声明可以住在扩展包里（域跟消费端走）⇒ 想看 instances /
+            #   maps / drop_pools 这类域，要**带 `?pkg=`**（走该包的分层合并）。
             q = parse_qs(getattr(self, "_query", ""))
             pkg_id = (q.get("pkg") or [""])[0]
             pkg_dir = PK.resolve_package(pkg_id, GAMES_DIR) if pkg_id else None
             if pkg_id and not pkg_dir:
                 return self._err(404, f"包不存在：{pkg_id}")
-            domains, warns = PK.effective_domains(pkg_dir)
+            domains, warns = (PK.effective_domains(pkg_dir) if pkg_dir
+                              else (PK.DOMAINS, []))     # 回退表 = 引擎默认集（可注入可反证）
             decl = PK.package_domains(pkg_dir) if pkg_dir else {}
             return self._send(200, {"ok": True, "domains": [
                 {"id": k, **{x: v[x] for x in ("label", "icon", "kind")},

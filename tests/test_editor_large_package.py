@@ -158,9 +158,11 @@ def full_entry(dom: str, i: int) -> dict:
 
 def build_full_pkg(root: str) -> str:
     pkg = os.path.join(root, "full_game")
-    PK.create_package("full_game", "整包压测", "13 域", list(PK.DOMAINS), root)
-    # ★ B2b：合成包要用的**内容域**由包自己声明（框架内置集只留 8 个引擎域）
-    FX.declare(pkg, "items", "skills", "monsters", "affixes", "classes")
+    PK.create_package("full_game", "整包压测", "13 域", sorted(FULL_COUNTS), root)
+    # ★ B2b：合成包要用的**内容域**由包自己声明。
+    # ★ 2026-09-23 第 4 批：`FX.declare` 会**整份覆盖**包内声明 ⇒ 这里要一次性把 13 个域全写上
+    #   （含随消费端搬进扩展包的 effect_rules / passive_proc / maps / drop_pools / instances）。
+    FX.declare(pkg, *FULL_COUNTS)
     _m = PK.load_manifest(pkg)
     _m["domains"] = list(FULL_COUNTS)
     PK.save_manifest(pkg, _m)
@@ -174,8 +176,9 @@ def build_pkg(root: str) -> str:
     for sub in ("content/data", "content/rules"):
         os.makedirs(os.path.join(pkg, *sub.split("/")), exist_ok=True)
     data = {"items": make_items(ITEMS), "monsters": make_monsters(MONSTERS), "maps": make_maps(MAPS)}
-    # ★ B2b：内容域（items/monsters/skills/classes/affixes）由包声明；引擎域走内置
-    FX.declare(pkg, "items", "monsters", "skills", "classes", "affixes")
+    # ★ B2b：内容域（items/monsters/skills/classes/affixes）由包声明；引擎默认集那 3 个走兜底。
+    # ★ 2026-09-23 第 4 批：`maps` 随消费端搬进 ext_world（引擎默认集不再兜底）⇒ 数据用到它就得声明。
+    FX.declare(pkg, "items", "monsters", "skills", "classes", "affixes", "maps")
     for dom, tbl in data.items():
         PK.write_json(PK.domain_path(pkg, dom), tbl)
     for dom in ("skills", "classes", "affixes", "drop_pools"):
@@ -369,9 +372,11 @@ def main() -> int:
 
         # 1. 域列表 + 条目列表（**先量列表 = 真冷启动**：2000 条都要现算一遍校验）
         st, j, _ = req(base, "GET", "/api/domains")
-        # ★ B2b：不带包 = 框架内置（引擎域）那份（19 → 8）；包的域走 ?pkg= 拿
-        check(f"GET /api/domains 200 且内置域齐全（{len(PK.DOMAINS)} 个）",
-              st == 200 and len(j.get("domains") or []) == len(PK.DOMAINS) >= 8,
+        # ★ B2b：不带包 = 框架内置（引擎域）那份；★ 2026-09-23 第 4 批：那份只剩**通用件自己的
+        #   3 张表**（effect_rules / maps / drop_pools / instances 随消费端搬进扩展包了）；
+        #   要看游戏级域请走 `?pkg=`（走该包的分层合并）。
+        check(f"GET /api/domains 200 且内置域齐全（{len(PK.DOMAINS)} 个 = 引擎默认集）",
+              st == 200 and len(j.get("domains") or []) == len(PK.DOMAINS) >= 3,
               f"{st} / {len(j.get('domains') or [])}")
         med, first, (st, j) = timed(base, "/api/package/big_game/d/items", n=5)
         keys = [e["key"] for e in (j.get("entries") or [])]

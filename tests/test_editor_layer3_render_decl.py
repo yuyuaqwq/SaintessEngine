@@ -40,6 +40,7 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 sys.path.insert(0, ROOT)
 
+import _domain_fixtures as FX             # noqa: E402  （扩展包域元数据）
 from editor import render as R          # noqa: E402
 from editor import render_decl as RD    # noqa: E402
 from editor import server as SRV        # noqa: E402
@@ -79,7 +80,11 @@ GOOD_DECL = {
     "$notes": "包作者备注",
 }
 NEW_DOMS = {"my_dungeons": {"label": "副本", "kind": "data", "schema": "my_dungeons.schema.json",
-                            "primary": "my_dungeon", "icon": "🏯"}}
+                            "primary": "my_dungeon", "icon": "🏯"},
+            # 2026-09-23 第 4 批：instances / maps / drop_pools 随消费端搬进扩展包，
+            # 引擎默认集不再兜底 ⇒ 合成包要用它们就自己声明（本文件拿 instances 测「未声明 render
+            # 的域仍走既有分派」）。
+            **{k: dict(v) for k, v in FX.EXT_DOMAINS.items() if k in ("instances", "maps", "drop_pools")}}
 
 PASS = 0
 FAIL = 0
@@ -577,6 +582,9 @@ def t7_views_subsection():
               st2 == 200 and j2["render"]["declared"] == [] and j2["render"]["warnings"] == [])
         check("没声明时既有键逐项还是老样子",
               j2["views"] == {} and j2["warnings"] == []
+              # ★ 这里的 `effective` 是**「有内置视图的域」分派表**（views / builtin / none），
+              # 不是全量域表 —— 收 2026-09-23 第 4 批影响：这三个域的视图仍在编辑器侧
+              # （loot_view / space_view / 运行视图），与域声明搬去扩展包无关。
               and set(j2["effective"]) == {"maps", "drop_pools", "instances"})
         st3, j3 = req(base, "GET", "/api/package/v3_plain")
         check("包概览的 domain_warnings 仍为空（无声明 = 不新增噪声）",

@@ -47,10 +47,45 @@ DEFAULT_GAMES_DIR = os.path.join(FRAMEWORK_ROOT, "games")
 #   逐字照旧生效。
 #   该常量自身「为什么是这 8 个 / 为什么内容域不内置 / 每个域指哪个引擎消费端」的口径
 #   随常量一起搬到了 `saintess_engine/domains.py`（那边逐域有证据）。
+from saintess_engine import domains as D                              # noqa: E402
 from saintess_engine.domains import BUILTIN_DEFAULT_DOMAINS, merge_decls  # noqa: E402,F401
 
 # 兼容别名 —— 历史调用点（`editor/server.py`、`editor/glossary.py`、若干测试）仍按 `DOMAINS`
 # 引用这份**引擎默认集**；新代码请走 `builtin_default_domains()` / `effective_domains()`。
+def _bundled_ext_domains() -> dict:
+    """**引擎自带扩展包**（`extends/*/domains.json`）声明的域。
+
+    用途只有一个：算出「框架侧**知道**的域全集」（`known_domains()`）—— 这些域的 schema 文件
+    都在框架 `schemas/` 里，编辑器词典与校验要认得它们。**不参与** `effective_domains()`：
+    「某个包实际有哪些表」由 `layered_decls()`（引擎默认集 → 该包 depends 的扩展包 → 包声明）决定。
+    """
+    out: dict = {}
+    base = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "extends")
+    if not os.path.isdir(base):
+        return out
+    for name in sorted(os.listdir(base)):
+        fp = os.path.join(base, name, "domains.json")
+        if not os.path.isfile(fp):
+            continue
+        try:
+            raw = json.load(open(fp, encoding="utf-8"))
+        except Exception:                                          # noqa: BLE001
+            continue
+        if isinstance(raw, dict):
+            out.update(raw)
+    return out
+
+
+def known_domains() -> dict:
+    """**框架侧知道的域全集** = 引擎默认集 + 引擎自带扩展包声明的域（schema 都在框架 `schemas/`）。
+
+    与 `effective_domains(pkg)` 的区别（两件事，别混）：
+      · `known_domains()`   静态全集 —— 编辑器词典、schema 映射、校验器的口径
+      · `effective_domains(pkg)` 某包**实际**的表 —— 分层合并（引擎默认集 → 该包 depends 的扩展包 → 包声明）
+    """
+    return {**BUILTIN_DEFAULT_DOMAINS, **_bundled_ext_domains()}
+
+
 DOMAINS = BUILTIN_DEFAULT_DOMAINS
 
 
@@ -281,6 +316,7 @@ def domain_source(pkg_dir, dom: str):
         return "package"
     if use_builtin and dom in BUILTIN_DEFAULT_DOMAINS:
         return "builtin"
+
     return None
 
 
@@ -300,9 +336,12 @@ def effective_domains(pkg_dir=None) -> tuple:
     decls, warns, use_builtin = _package_domains_cached(pkg_dir)
     # 合并规则**唯一源** = `saintess_engine.domains.merge_decls`（引擎装载口用的是同一份）；
     # `builtin=` 显式传本模块的全局名 ⇒ 「整体置空」的反证门禁照旧生效。
-    merged = merge_decls(decls, builtin=BUILTIN_DEFAULT_DOMAINS, use_builtin=use_builtin)
+    # 层序（**唯一源** = `saintess_engine.domains.layered_decls`，装载口走同一份）：
+    #   ① 引擎默认集 → ② 该包 depends 的扩展包声明（域跟消费端走）→ ③ 包自己的声明。
+    # `builtin=DOMAINS` 是注入点（测试把编辑器那份整体置空，反证门禁照旧生效）。
+    merged = D.layered_decls(pkg_dir, decls, use_builtin=use_builtin, builtin=DOMAINS)
     for did, meta in decls.items():
-        old = (BUILTIN_DEFAULT_DOMAINS if use_builtin else {}).get(did)
+        old = (DOMAINS if use_builtin else {}).get(did)
         if isinstance(old, dict):
             diff = "；".join(f"{f}: {old.get(f)!r} → {meta.get(f)!r}"
                              for f in _OVER_FIELDS if old.get(f) != meta.get(f))
@@ -316,10 +355,18 @@ def effective_domains(pkg_dir=None) -> tuple:
 
 
 def domain_meta(pkg_dir, dom: str, domains: dict | None = None):
-    """该包视角下某个域的元数据（包声明优先）；未知域 → None。"""
+    """该域元数据：**该包的有效域表**优先（含 depends 的扩展包），未知域 → 再看框架知道的全集。
+
+    ★ 2026-09-23 第 4 批：域声明可以住在扩展包里（域跟消费端走），所以「这个域的 schema 是哪个文件」
+    不能只看引擎默认集 —— `known_domains()` 兜一层，词典与校验在**没打开包**时也解析得出
+    maps / instances / drop_pools 的 schema（那几份 schema 文件仍在框架 `schemas/`）。
+    """
     if domains is None:
         domains, _w = effective_domains(pkg_dir)
-    return (domains or {}).get(dom)
+    d = (domains or {}).get(dom)
+    if d is None:
+        d = known_domains().get(dom)
+    return d
 
 
 def domain_path(pkg_dir: str, dom: str, domains: dict | None = None) -> str:
@@ -466,7 +513,8 @@ def _write_domains_decl(pkg_dir: str, doms) -> str:
     「框架哪天改了内置默认集，我的域集就跟着变」。等值声明不产 warning
     （`effective_domains()` 只对**真改了东西**的同名域告警），所以对既有行为零影响。
     """
-    decl = {d: dict(BUILTIN_DEFAULT_DOMAINS[d]) for d in doms if d in BUILTIN_DEFAULT_DOMAINS}
+    _known = known_domains()          # 含扩展包带来的域（域跟消费端走：maps/instances/drop_pools…）
+    decl = {d: dict(_known[d]) for d in doms if d in _known}
     p = domains_decl_path(pkg_dir)
     os.makedirs(os.path.dirname(p), exist_ok=True)
     write_json(p, decl)
@@ -485,9 +533,12 @@ def create_package(pkg_id: str, name: str, desc: str = "",
     # ★ 2026-09-13 B2b：脚手架只认**内置（引擎）域** —— 内容域的元数据（kind/schema/primary）
     #   归内容包，框架不认识（真源在包）。传进来的未知域不建空壳、也不静默丢：
     #   原样回报 `unknown_domains`，让调用方去写包内 `<pkg>/editor/domains.json`。
+    # 框架**知道**的域全集（引擎默认集 + 自带扩展包域）—— 建包时选得到 maps/instances/drop_pools…
+    # 真源仍在包：下面 `_write_domains_decl()` 会把选中域的声明落进包自己的 editor/domains.json。
+    _known = known_domains()
     want = list(domains) if domains else list(DOMAINS)
-    doms = [d for d in want if d in DOMAINS]
-    unknown = [d for d in want if d not in DOMAINS]
+    doms = [d for d in want if d in _known]
+    unknown = [d for d in want if d not in _known]
     for d in doms:
         write_json(domain_path(pkg_dir, d), {})
     _write_domains_decl(pkg_dir, doms)          # 包自带域声明（真源在包，内置那份只是回退）

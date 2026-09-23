@@ -203,7 +203,14 @@ def test_pkg_wiki():
                   encoding="utf-8", newline="\n") as f:
             f.write(f"# 包内指南\n\n{term}：这一页只存在于游戏包里。\n\n"
                     "回[框架首页](../README.md)，或看[与框架同名的参考页](../reference/effect-rules.md)。\n")
-        # 包词汇表：`effect_rules` 是**引擎域**（内置），不必再声明域就能带 wiki 深链
+        # ★ 2026-09-23 第 4 批：`effect_rules` 随消费端搬进扩展包（ext_combat），引擎默认集不再兜底
+        #   ⇒ 这个合成包要**自己声明**它，词汇表才会被编辑器认到。
+        with open(os.path.join(pkg, "editor", "domains.json"), "w",
+                  encoding="utf-8", newline="\n") as f:
+            json.dump({"effect_rules": {"label": "声明表", "kind": "rules",
+                                        "schema": "effect_rules.schema.json",
+                                        "primary": "effect_rule", "icon": "📜"}}, f, ensure_ascii=False)
+        # 包词汇表：带上 wiki 深链
         with open(os.path.join(pkg, "editor", "glossary", "effect_rules.json"), "w",
                   encoding="utf-8", newline="\n") as f:
             json.dump({"fields": {"cap": {"zh": "包·叠层上限", "note": "包内文档出处",

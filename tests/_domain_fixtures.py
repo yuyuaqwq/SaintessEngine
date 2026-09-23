@@ -67,17 +67,46 @@ def orlandia_decl() -> dict:
         return json.load(f)
 
 
+# 5 个「随消费端搬进扩展包」的域（2026-09-23 第 4 批：域跟消费端走）
+# effect_rules / passive_proc → ext_combat   maps / instances → ext_world   drop_pools → ext_loot
+# 引擎默认集已不含它们；合成包要它们时同样**由包自己声明**（schema 仍走框架 schemas/ 的回退副本）。
+EXT_DOMAINS = {
+    "effect_rules": {"label": "声明表", "kind": "rules", "schema": "effect_rules.schema.json",
+                     "primary": "effect_rule", "icon": "📜"},
+    "passive_proc": {"label": "被动声明", "kind": "rules", "schema": "passive_proc.schema.json",
+                     "primary": "passive_proc", "icon": "🌀"},
+    "maps": {"label": "地图", "kind": "data", "schema": "maps.schema.json",
+             "primary": "map", "icon": "🗺"},
+    "instances": {"label": "副本", "kind": "data", "schema": "instances.schema.json",
+                  "primary": "instance", "icon": "🏯"},
+    "drop_pools": {"label": "掉落池", "kind": "data", "schema": "drop_pools.schema.json",
+                   "primary": "pool", "icon": "🎁"},
+}
+
+
 def meta_of(dom: str) -> dict:
-    """域元数据：内容域（本模块那份）→ 真包声明 → 内置引擎域。未知域 → KeyError。"""
+    """域元数据：内容域 → **扩展包域** → 真包声明 → 内置引擎域。未知域 → KeyError。"""
     if dom in CONTENT_DOMAINS:
         return dict(CONTENT_DOMAINS[dom])
+    if dom in EXT_DOMAINS:
+        return dict(EXT_DOMAINS[dom])
     decl = orlandia_decl()
     if dom in decl:
         return dict(decl[dom])
-    from editor import packages as PK                     # 延迟导入，避免测试启动顺序问题
+    from editor import packages as PK
     if dom in PK.DOMAINS:
         return dict(PK.DOMAINS[dom])
-    raise KeyError(f"未知域：{dom}（不在内容域表 / 真包声明 / 内置引擎域里）")
+    raise KeyError(f"未知域：{dom}（不在内容域表 / 扩展包域表 / 真包声明 / 内置引擎域里）")
+
+
+def all_domains() -> dict:
+    """**框架侧域表全貌**：引擎默认集（通用件 3 个）+ 扩展包域（5 个）+ 内容域（11 个）。
+
+    测试造包与断言用它 —— `PK.DOMAINS` 是**引擎默认集**（第 4 批后只剩命令/文案/流水 3 个），
+    真实有效域表看 `PK.effective_domains(pkg)`（引擎默认集 → 扩展包 → 数据包）。
+    """
+    from editor import packages as PK
+    return {**PK.builtin_default_domains(), **EXT_DOMAINS, **CONTENT_DOMAINS}
 
 
 def declare(pkg_dir: str, *doms, extra: dict | None = None) -> dict:

@@ -19,7 +19,7 @@
 
 ★ B2b 口径：内置默认集 19 → 8（引擎域：effect_rules / passive_proc / commands / texts /
   tlogs / maps / drop_pools / instances）；被移出的 11 个内容域改由包声明，框架侧零字面量。
-  本文件里凡是 `PK.DOMAINS` 的地方都按**动态数量**比（不写死 19/8）—— 下次再增减也不假红。
+  本文件里凡是 `FX.all_domains()` 的地方都按**动态数量**比（不写死 19/8）—— 下次再增减也不假红。
 
 跑法：python tests/test_editor_package_domains.py
 退出码：0 = 全过；1 = 有失败。
@@ -215,7 +215,7 @@ def main():
           len(warns_o) == 1 and "commands" in warns_o[0] and "覆盖" in warns_o[0]
           and "label" in warns_o[0], warns_o)
     check("内置 DOMAINS 那份**没被改**（框架自己的表还在）",
-          PK.DOMAINS["commands"]["label"] == "指令")
+          FX.all_domains()["commands"]["label"] == "指令")
     check("覆盖后 schema 仍可取（继承来的）",
           bool(VD.load_schema("commands", pkg_over)))
     check("覆盖不影响别的包（pkg_plain 看到的还是内置 label）",
@@ -271,7 +271,7 @@ def main():
     check(f"orlandia 里属于内置那份的 {len(PK.DOMAINS)} 域**必填五字段**逐字段等于内置（内容不变的搬迁）",
           _pkg_over == _built_over,
           {k: (PK.DOMAINS.get(k), e_o.get(k)) for k in set(PK.DOMAINS) | set(e_o)
-           if k in PK.DOMAINS and _pkg_over.get(k) != _built_over.get(k)})
+           if k in FX.all_domains() and _pkg_over.get(k) != _built_over.get(k)})
     _bad_opt = {k: {f: v.get(f) for f in ("owner", "tier") if f in v}
                 for k, v in e_o.items() if k in PK.DOMAINS
                 and (v.get("owner") not in (None, "package", "engine")
@@ -305,21 +305,19 @@ def main():
 
     # ── 4b. ★ 反证「内容域的真源只在包」（B2b）：框架侧零字面量 + 拿掉声明就真没有
     print("\n【4b. 反证：内置集 == 8 引擎域；内容域只在包里（拿掉声明就真没有）】")
-    ENGINE_DOMAINS = {"effect_rules", "passive_proc", "commands", "texts", "tlogs",
-                      "maps", "drop_pools", "instances"}
-    check(f"内置集逐名 == 8 个引擎域（防悄悄塞回内容域）",
+    # ★ 2026-09-23 第 4 批：只剩通用件自己的三张表（其余随消费端搬进扩展包）
+    ENGINE_DOMAINS = {"commands", "texts", "tlogs"}
+    check(f"内置集逐名 == 3 个引擎域（防悄悄塞回内容域 / 游戏级形状）",
           set(PK.DOMAINS) == ENGINE_DOMAINS, sorted(set(PK.DOMAINS) ^ ENGINE_DOMAINS))
     # 每个引擎域都要能**指到引擎侧消费端代码**（源码里真实存在的符号）——
     # 判定表见 packages.py 的逐条注释；这里做的是「证据仍在那」的机器复核。
     _ENGINE_EVIDENCE = {
-        "effect_rules": ("saintess_engine/config.py", "def get_effect_rules"),
-        "passive_proc": ("extends/ext_combat/battle/effect_triggers.py", "def fire("),
+        # 只有**通用件自己**的表留在引擎默认集里；每个都要能指到引擎侧消费端代码。
+        # （effect_rules / passive_proc / maps / drop_pools / instances 的证据现在在扩展包里 ——
+        #  消费端搬哪儿，域跟到哪儿，2026-09-23 第 4 批）
         "commands": ("saintess_engine/command/registry.py", "class CommandRegistry"),
         "texts": ("saintess_engine/text/template.py", "class TextTable"),
         "tlogs": ("saintess_engine/tlog/record.py", "class KindTable"),
-        "maps": ("extends/ext_world/space/graph.py", "class Space"),
-        "drop_pools": ("extends/ext_loot/loot/pool.py", "class LootTable"),
-        "instances": ("extends/ext_world/run/progress.py", "class Progress"),
     }
     _miss = [(d, f, sym) for d, (f, sym) in _ENGINE_EVIDENCE.items()
              if sym not in open(os.path.join(ROOT, f), encoding="utf-8").read()]
@@ -342,9 +340,12 @@ def main():
     _clear_caches()
     try:
         e_nd, w_nd = PK.effective_domains(_copy)
-        check(f"拿掉包内 domains.json → 有效域表 == 内置 {len(PK.DOMAINS)}",
-              set(e_nd) == set(PK.DOMAINS),
-              f"{len(e_nd)} {sorted(e_nd)[:4]}")
+        # ★ 2026-09-23 第 4 批：orlandia 的 game.json 里 depends 了扩展包 ⇒ 即使拿掉它自己的声明，
+        #   那 5 个「跟消费端走」的域仍由**扩展包**带来（这正是分层要的效果）。
+        _expect_nd = set(PK.DOMAINS) | set(FX.EXT_DOMAINS)
+        check(f"拿掉包内 domains.json → 有效域表 == 引擎默认集 {len(PK.DOMAINS)} + 扩展包域 {len(FX.EXT_DOMAINS)}",
+              set(e_nd) == _expect_nd,
+              f"{len(e_nd)} {sorted(set(e_nd) ^ _expect_nd)}")
         check("内容域在拿掉声明后**真的没有了**（不是换了个来源）",
               not (_content & set(e_nd)) and not (_content & set(PK.DOMAINS)))
         check("拿掉声明后 items / skills 谁都不认识（domain_path → KeyError，不 500）",
@@ -381,10 +382,12 @@ def main():
               and doms["talent_trees"].get("primary") == "talent_tree")
         check("新域 has_schema=True（包内 schema 被认到）",
               doms["talent_trees"].get("has_schema") is True)
+        # ★ 2026-09-23 第 4 批：拿真正的**引擎默认域**举例（drop_pools 已随消费端搬进 ext_loot，
+        #   它现在是扩展包带来的域，不再是「内置回退」）。
         check("域注册表里内置（引擎）域仍在，且标 from_package=False（是回退/内置，不是包声明）",
-              doms["drop_pools"]["label"] == "掉落池"
-              and doms["drop_pools"]["from_package"] is False
-              and doms["drop_pools"]["has_schema"] is True)
+              doms["texts"]["label"] == "文案"
+              and doms["texts"]["from_package"] is False
+              and doms["texts"]["has_schema"] is True)
 
         st, j = req(base, "GET", "/api/domains?pkg=pkg_over")
         doms2 = {d["id"]: d for d in (j.get("domains") or [])}

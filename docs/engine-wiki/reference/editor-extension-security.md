@@ -40,7 +40,7 @@
 | **前端 JS** | ——（包**不往页面塞任何 JS**） | 编辑器自己的手写前端：第 5 档 + 白名单渲染器 | —— | ✅ 已落地；树的文本一律 `textContent`（`web/app.js` 有明注） |
 
 > **现状怎么核（2026-09-14 复核）**：层 3 **批 1（纯声明）已落地** —— `editor/render.py` / `editor/render_decl.py`
-> + `GET /api/package/<id>/render`（`server.py:428`）+ 前端第 5 档 + 三门禁；它**不执行任何包代码**
+> + `GET /api/package/<id>/render`（`server.py:431`）+ 前端第 5 档 + 三门禁；它**不执行任何包代码**
 > （批 1 那两个文件里 `subprocess` / `eval(` / `exec(` 计数 = 0）、也零引擎 import（见 §4 第 4 条）。
 > **批 2（白名单派生值）也已落地**：`editor/render_worker.py`（875 行）的沙箱子进程 —— 一次性 /
 > import 白名单 / 超时 / 输出上限，跑的是**框架**白名单纯函数，**不跑包代码**；起进程的调用只在
@@ -93,8 +93,8 @@
 页面 JS 只要发一条 `PUT /api/package/<id>/d/<dom>/<key>` 就能改盘上的包文件：
 
 * 前端拼路径与发请求：`web/app.js` 的 `dPath`（`:204`）、保存（`:1416` / `:1476`）；
-* 服务端：`server.py:705-721`（`_mutate` 的 PUT 分支）先跑 schema + 引用校验，过了再调
-  `PK.put_entry`（`packages.py:665`）→ `write_json`（`packages.py:392`）落盘；`_mutate` 里**没有** Origin / CSRF 校验。
+* 服务端：`server.py:708-724`（`_mutate` 的 PUT 分支）先跑 schema + 引用校验，过了再调
+  `PK.put_entry`（`packages.py:716`）→ `write_json`（`packages.py:439`）落盘；`_mutate` 里**没有** Origin / CSRF 校验。
 
 ⇒ **包的 JS 一旦进页面，等于把「写盘」这项能力交给包**：它不需要攻击编辑器进程，只要用页面的身份发请求
 就能改数据、导出整包、再导入别的包（`web/app.js:463` 导出 / `:491` 导入）。同源是浏览器里唯一真正有效的
@@ -228,7 +228,7 @@
    之后 `sys.modules` 不许出现 `saintess_engine*`（`tests/test_editor_play.py:131` 的 `test_zero_engine_import`），
    反证是**子进程侧**才许 import 引擎；**层 3 批 1 已加同款断言**（`tests/test_editor_layer3_render_decl.py` 的硬断言段：AST 不 import 引擎、`import editor.render` 后 `sys.modules` 零 `saintess_engine*`）。
    ⚠️ 口径注意：说的是**试跑 / 试玩 / 渲染这些链路自身**，不是"整个 `server.py` 进程" ——
-   `server.py:71` 经 `editor/packages.py` 的 `install_engine`（`packages.py:537`）本来就会碰到引擎装配。
+   `server.py:71` 经 `editor/packages.py` 的 `install_engine`（`packages.py:588`）本来就会碰到引擎装配。
 
 ---
 

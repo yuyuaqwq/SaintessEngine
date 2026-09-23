@@ -1,0 +1,9 @@
+{
+  "drop_pools": {
+    "label": "掉落池",
+    "kind": "data",
+    "schema": "drop_pools.schema.json",
+    "primary": "pool",
+    "icon": "🎁"
+  }
+}

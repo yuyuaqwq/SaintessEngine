@@ -84,7 +84,11 @@ QUEST_SCHEMA = {"$schema": "https://json-schema.org/draft/2020-12/schema",
 NEW_DOMS = {"my_pools": {"label": "自定池", "kind": "rules", "icon": "🎁"},
             "my_quests": {"label": "任务", "kind": "data", "icon": "📜",
                           "schema": "schemas/my_quests.schema.json", "primary": "my_quest"},
-            "my_dungeons": {"label": "副本", "kind": "data", "icon": "🏯"}}
+            "my_dungeons": {"label": "副本", "kind": "data", "icon": "🏯"},
+            # ★ 2026-09-23 第 4 批：本门禁要测「域专属视图分派」（drop_pools → 池预览 /
+            #   instances → 进度视图），而这些域随消费端搬进了扩展包、引擎默认集不再兜底
+            #   ⇒ 合成包自己声明它们。
+            **{k: dict(v) for k, v in FX.EXT_DOMAINS.items()}}
 
 DECLARED_REL = {
     "$version": 1,
@@ -116,7 +120,9 @@ def make_pkg(root, pid, *, decl=None, relations=None, views=None, data=None,
     if isinstance(decl, str):
         decl_out = decl                                  # 原始字节（坏 JSON 用例）
     else:
-        decl_out = {**content_decl, **(decl or {})}
+        # ★ 2026-09-23 第 4 批：`decl_out` 是写进包内的**整份**声明 ⇒ 要带上 NEW_DOMS
+        #   （含随消费端搬进扩展包的 maps / drop_pools / instances —— 本门禁正拿它们测视图分派）。
+        decl_out = {**content_decl, **NEW_DOMS, **(decl or {})}
     PK.save_manifest(pkg, {"id": pid, "name": pid, "desc": "第 2 层门禁", "engine": ">=0.1",
                            "domains": domains if domains is not None else
                            list(PK.DOMAINS) + list(NEW_DOMS) + list(content_decl),
@@ -135,7 +141,7 @@ def make_pkg(root, pid, *, decl=None, relations=None, views=None, data=None,
         with open(os.path.join(pkg, "schemas", name), "w", encoding="utf-8", newline="\n") as f:
             json.dump(doc, f, ensure_ascii=False, indent=2)
     for dom, doc in (data or {}).items():
-        kind = (NEW_DOMS.get(dom) or PK.DOMAINS.get(dom) or content_decl.get(dom)
+        kind = (NEW_DOMS.get(dom) or FX.all_domains().get(dom) or content_decl.get(dom)
                 or {}).get("kind") or "data"
         sub = "rules" if kind == "rules" else "data"
         PK.write_json(os.path.join(pkg, "content", sub, f"{dom}.json"), doc)

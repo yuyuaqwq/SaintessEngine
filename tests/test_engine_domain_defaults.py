@@ -35,6 +35,7 @@ os.environ.setdefault("GWEN_GAME_DB",
 os.environ.setdefault("GWEN_TEST_MODE", "1")
 sys.path.insert(0, FW_ROOT)
 
+import _domain_fixtures as FX             # noqa: E402  （域表全貌：引擎默认集 + 扩展包域 + 内容域）
 from editor import packages as PK                    # noqa: E402
 from saintess_engine import domains as D             # noqa: E402
 from saintess_engine import records as R             # noqa: E402
@@ -48,12 +49,17 @@ from _check import bind_check  # noqa: E402  P0-1 断言助手单源：tests/_ch
 
 check = bind_check(globals(), "PASS", "FAIL", "FAILURES")
 
-#: 引擎默认集 = 8 个「引擎侧真有消费端代码」的形状（内容域不许内置）
-ENGINE_DOMAINS = ("effect_rules", "passive_proc", "commands", "texts", "tlogs",
-                  "maps", "drop_pools", "instances")
+#: 引擎默认集 = 3 个「**通用件自己**真有消费端代码」的表（内容域、游戏级形状都不许内置）。
+#: ★ 2026-09-23 第 4 批：`effect_rules` / `passive_proc` / `maps` / `drop_pools` / `instances`
+#:   的消费端（battle / space / run / loot）搬进扩展包后，这 5 个域**跟着消费端**搬进
+#:   `extends/<包>/domains.json`，不再由引擎默认集兜底。
+ENGINE_DOMAINS = ("commands", "texts", "tlogs")
 
 _SKILL = {"label": "技能", "kind": "data", "schema": None, "primary": None, "icon": "⚔️"}
 _INSTANCES = {"a1": {"name": "副本一"}, "a2": {"name": "副本二"}}
+# instances 随消费端搬进扩展包（2026-09-23 第 4 批）⇒ 合成包自己声明它
+_INST_meta = {"label": "副本", "kind": "data", "schema": "instances.schema.json",
+              "primary": "instance", "icon": "🏯"}
 
 
 def _mkpkg(root, name, decl, files=()):
@@ -92,7 +98,7 @@ def main() -> int:
 
     # ──────────────────────────────────────────── A. 合并规则唯一源
     print("\n【A. 合并规则（merge_decls / decl_switch）】")
-    check("引擎默认集逐名 == 8 个引擎域",
+    check("引擎默认集逐名 == 3 个引擎域（通用件自己的表）",
           tuple(D.BUILTIN_DEFAULT_DOMAINS) == ENGINE_DOMAINS,
           sorted(D.BUILTIN_DEFAULT_DOMAINS))
     check("编辑器那份与引擎那份是**同一个对象**（常量已下移，不是两份拷贝）",
@@ -100,14 +106,14 @@ def main() -> int:
     check("编辑器 DOMAINS 别名仍指向它（历史调用点零改动）",
           PK.DOMAINS is D.BUILTIN_DEFAULT_DOMAINS)
     _c = D.builtin_default_domains()
-    _c.pop("instances", None)
+    _c.pop("commands", None)
     check("builtin_default_domains() 返回副本（改它不动常量）",
-          "instances" in D.BUILTIN_DEFAULT_DOMAINS)
+          "commands" in D.BUILTIN_DEFAULT_DOMAINS)
 
     merged = D.merge_decls({"skills": _SKILL, "instances": {"label": "我的副本",
                                                             "kind": "data"}})
     check("顺序 = 引擎默认集序 + 包新增域（追加末尾）",
-          tuple(merged) == ENGINE_DOMAINS + ("skills",), tuple(merged))
+          tuple(merged) == ENGINE_DOMAINS + ("skills", "instances"), tuple(merged))
     check("同名域整体以包为准（不做字段级补缺）",
           merged["instances"] == {"label": "我的副本", "kind": "data"}, merged["instances"])
     check("包新增域原样并入", merged["skills"] == _SKILL)
@@ -133,12 +139,12 @@ def main() -> int:
 
     # ──────────────────────────────────────────── B. 装载口装配点
     print("\n【B. 装配点：声明只在引擎默认集里，装载口照样可用】")
-    pkg = _mkpkg(gd, "engine_side", {"skills": _SKILL},
+    pkg = _mkpkg(gd, "engine_side", {"skills": _SKILL, "instances": dict(_INST_meta)},
                  [("data", "instances", _INSTANCES),
                   ("data", "skills", {"s1": {"name": "技能一"}})])
     tbl = R.read_domain_decl(pkg)
-    check("read_domain_decl 的有效域表 = 包声明 ∪ 引擎默认集（9 个）",
-          set(tbl) == set(ENGINE_DOMAINS) | {"skills"}, sorted(tbl))
+    check("read_domain_decl 的有效域表 = 包声明 ∪ 引擎默认集（3 通用 + 包声明 2）",
+          set(tbl) == set(ENGINE_DOMAINS) | {"skills", "instances"}, sorted(tbl))
     check("同名域仍以包为准（skills 用包那份）", tbl["skills"] == _SKILL)
     ok, err = _raises(lambda: R.records_from_domain(pkg, "instances"))
     check("★ 声明只在内置集里 → records_from_domain 可装载（不再断链）", not ok, err)
@@ -203,9 +209,10 @@ def main() -> int:
         check("真包：装载口对 instances 真能装载（count>0）",
               len(R.records_from_domain(real, "instances").all()) > 0)
     eff2, _w2 = PK.effective_domains(pkg)
-    check("同型包（instances 声明只在引擎侧）：两面同样看待它",
+    check("同型包（instances 由包自己声明）：编辑器与装载口同样看待它",
           set(eff2) == set(R.read_domain_decl(pkg))
-          and PK.domain_source(pkg, "instances") == "builtin"
+          # ★ 2026-09-23 第 4 批：instances 不再由引擎默认集兜底 ⇒ 来源是**包声明**
+          and PK.domain_source(pkg, "instances") == "package"
           and R.resolve_domain(pkg, "instances").replace("\\", "/") == "content/data",
           sorted(set(eff2) ^ set(R.read_domain_decl(pkg))))
 
