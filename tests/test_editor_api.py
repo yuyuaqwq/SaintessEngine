@@ -58,8 +58,10 @@ def main():
     st, j = req(base, "GET", "/api/domains")
     check("GET /api/domains 200", st == 200 and j.get("ok"), f"{st} {j}")
     # ★ B2b：不带包 = **框架内置（引擎域）**那份 —— 19 → 8；内容域 tab 由包声明带出来
+    # ★ 2026-09-23 第 4 批：引擎内置域集从 8 收到 3（commands/texts/tlogs），
+    #   其余 5 个「跟消费端走」进了扩展包。不带包时 = 内置那份，**条数就是常量本身的条数**。
     check(f"内置域齐全（{len(j.get('domains') or [])} 个 == 内置 {len(PK.DOMAINS)}）",
-          len(j.get("domains") or []) == len(PK.DOMAINS) >= 8)
+          len(j.get("domains") or []) == len(PK.DOMAINS))
     r = urllib.request.urlopen(base + "/", timeout=10)
     html = r.read().decode("utf-8")
     # 单页应用外壳：域栏（工作台导航）+ 命令面板 + 样式表接线
@@ -93,7 +95,7 @@ def main():
              f"sys.path.insert(0, {ROOT!r})\n"
              f"sys.path.insert(0, {pkg_dir!r})\n"
              "import content.apply as A\n"
-             "A.install_engine()\n"
+             "A.install()\n"
              "import saintess_engine.config as C\n"
              "print(json.dumps({'rules': len(C.get_effect_rules() or {})}))\n")
     pr = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, timeout=180)

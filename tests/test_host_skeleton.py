@@ -285,7 +285,7 @@ def test_minimal_adapter() -> None:
     # ★ V3（2026-09-16）：CTB 时间模型（行动耗时公式形状 + 基准值）已下沉到内容侧，
     #   引擎 `schedule.py` 不再内置任何默认 ⇒ 未装配即 fail-closed（EngineNotConfigured）。
     #   故与 D 段一致：跑战斗前由宿主侧触发包的 `install_engine()`（内容侧挂 hook 的装配点）。
-    pkg.install_engine()
+    pkg.install()
     out = host.run_battle(dict(scen.player), scen.enemies, event_state=scen.event_state, seed=SEED)
     src = open(os.path.abspath(_fake_adapter_class.__code__.co_filename), encoding="utf-8").read()
     body = src[src.index("def _fake_adapter_class"):src.index("def test_minimal_adapter")]
@@ -329,22 +329,23 @@ def _collect(battle_module, pkg, bridged, scen, seed):
 def test_two_host_parity() -> None:
     print("\n=== D. 两宿主一致性（骨架侧半）：骨架 vs content/bridge.py 直连 ===")
     import saintess_engine as engine
+    import ext_combat as _battle_mod   # ★ 2026-09-23：Battle 从引擎搬进扩展包
     skel = importlib.import_module("main")
     scen = skel.Scenario.from_dict(scenario())
     # ★ W2a：包声明了 `bind` ⇒ `load_stack` 必须给 inject（否则 PackageError，这是引擎的牙）
     pkg = skel.load_stack(PKG, inject=_pkg_inject())
-    pkg.install_engine()
+    pkg.install()
 
     store: dict = {}
     adapter = _fake_adapter_class(store)({})
     host = skel.Host(adapter, PKG, scenario=scen, seed=SEED, inject=_pkg_inject())
-    host.pkg = pkg
+    host.stack = pkg
     skeleton_out = host.run_battle(dict(scen.player), scen.enemies,
                                    event_state=scen.event_state, seed=SEED)
     skeleton = {"result": skeleton_out.result, "hits": [h["dmg"] for h in skeleton_out.hits],
                 "damage": skeleton_out.damage, "events": skeleton_out.events,
                 "log_len": len(skeleton_out.log)}
-    direct = _collect(engine, pkg, scen.player, scen, SEED)
+    direct = _collect(_battle_mod, pkg, scen.player, scen, SEED)
     note("骨架：damage=%d hits=%d events=%d log=%d"
          % (skeleton["damage"], len(skeleton["hits"]), len(skeleton["events"]), skeleton["log_len"]))
     note("直连：damage=%d hits=%d events=%d log=%d"

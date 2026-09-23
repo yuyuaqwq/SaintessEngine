@@ -39,7 +39,7 @@
 
     ① 引擎根 → sys.path（**只在**给了 `host_root` 时才额外挂插件根，见下「对拍通路」）
     ② `GWEN_GAME_DB` → 独立库（缺省 <db_dir>/play.db；绝不碰真仓任何库）
-    ③ `saintess_engine.host.load_stack(pkg_dir, inject=…)` + `install_engine()`（引擎官方包
+    ③ `saintess_engine.host.load_stack(pkg_dir, inject=…)` + `install()`（引擎官方包
        加载器）—— ★ W2a：包声明了 `bind`，注入面（库路径/时钟/日志/流水 sink）从这里给
     ④ `PlayHost(Host)` 覆写 `build_env`：把 `env.state["shell"]` 换成壳
        —— 包内实现体经它做宿主取件（`_uid/_player/_strip_cmd/_page_items/_tip/_broadcast`…）
@@ -441,7 +441,7 @@ def run(payload: dict) -> int:
             return 0
         from saintess_engine.package import load_stack   # 包对象（审计/摘要用；与 Host.boot 同一个）
         primary = load_stack(pkg_dir, inject=inject)
-        primary.install_engine()
+        primary.install()
     except Exception:
         emit({"ok": False, "stage": "load", "message": "游戏包装配失败",
               "traceback": traceback.format_exc()})
