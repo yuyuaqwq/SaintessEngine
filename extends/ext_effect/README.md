@@ -24,20 +24,28 @@ text = execute_poi("world:campfire", ctx)      # 未注册的键 → None（调�
 
 ## 注入面（本包**只**读这三组）
 
-| 注入 | 用途 | 缺了会怎样 |
-|---|---|---|
-| `ctx.host` | 写库五动词（更新玩家 / 发物品 / 事件状态读写的两向 / 对话标记） | `AttributeError`（fail-loud） |
-| `ctx.dom` | 材料表 · 两个文案池 · 图纸与装备生成器 · 副本名单视图 | 同上 |
-| `ctx.text` / `ctx.static` | 文案渲染（句子在数据包的文案表里，本包一个字都不写） | 同上 |
+| 半边 | 注入 | 用途 | 缺了会怎样 |
+|---|---|---|---|
+| POI | `ctx.host` | 写库五动词（更新玩家 / 发物品 / 事件状态读写的两向 / 对话标记） | `AttributeError`（fail-loud） |
+| POI | `ctx.dom` | 材料表 · 两个文案池 · 图纸与装备生成器 · 副本名单视图 | 同上 |
+| POI | `ctx.text` / `ctx.static` | 文案渲染（句子在数据包的文案表里，本包一个字都不写） | 同上（访问即炸） |
+| 药水 | `potion_effects.bind(text=…, static=…, items=…, rules=…, neg_keys=…)` | 文案渲染 + 三张域表（`items` / `effect_rules` / `purify_neg_keys`） | **取用即报错**（未绑定代理 / `_resolve()` 校验） |
+
+药水侧为什么是**模块级**而不是 ctx：handler 签名是 `(battle, player, value)`（没有 ctx），
+73 个渲染点分散在 36 个 handler 里 —— 模块级句柄才能让那 73 个调用点一字不改
+（数据包侧同款先例 = `content/obs.py::bind(log=…)`）。装配点唯一：
+数据包 `content/apply.py::install_engine()` → `content/effects/__init__.py::bind_effects()`。
 
 ## 从哪来 / 边界
 
-2026-09-24（B7a）：`content/effects/poi_effects.py`（520 行）搬入本包。搬之前先把它的
-**3 处包内耦合**换成注入面（`from .. import catalog_items / catalog_b143 / texts`
-→ `ctx.dom.MATERIALS` / `ctx.dom.CAMPFIRE_FOOD_POOL` / `ctx.dom.HERB_POOL` /
-`ctx.text` / `ctx.static`），共 43 个取件点逐点同名等价替换（函数体逻辑一字未动）。
+2026-09-24（B7a + B7b）：数据包 `content/effects/` 两个半边先后搬入本包 ——
 
-* **药水效果半边**（`potion_effects.py`，811 行）**仍在数据包内**：它的 handler 签名没有 ctx，
-  要先加模块级注入口才能搬（B7b）。
-* 消费端 = 数据包 `content/combat_cmds.py::_handle_poi`（它构造 `PoiContext`、
-  给 `dom` 替身 `_PoiDom` 与 `text`/`static`）。
+* **B7a** `poi_effects.py`（520 行）：搬前先把它 3 处包内耦合换成注入面
+  （`from .. import catalog_items / catalog_b143 / texts` → `ctx.dom.MATERIALS` /
+  `ctx.dom.CAMPFIRE_FOOD_POOL` / `ctx.dom.HERB_POOL` / `ctx.text` / `ctx.static`），
+  43 个取件点逐点同名等价替换（函数体逻辑一字未动）。
+* **B7b** `potion_effects.py`（865 行）：同样先换注入面（`_T` 代理 + `bind()` 的三张表 +
+  `DEFAULTS` 就地刷新），73 个渲染点与 36 个 handler 零改动。
+
+消费端 = 数据包 `content/combat_cmds.py::_handle_poi`（POI）与
+`content/mech/item_use.py` / `content/effects/__init__.py`（药水）。

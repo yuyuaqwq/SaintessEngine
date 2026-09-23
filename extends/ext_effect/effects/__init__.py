@@ -1,24 +1,30 @@
 # -*- coding: utf-8 -*-
-"""`ext_effect.effects` —— **场景交互效果层**（POI）。
+"""`ext_effect.effects` —— **场景交互效果层（POI）+ 药水效果层**。
 
 **本层零包内依赖**：不 import 数据包（`content.*`）也不 import 其它扩展包。
-它只要求调用方在 `PoiContext` 上给三组注入句柄：
+它需要的一切都由调用方**注入**：
 
-| 注入 | 是什么 | 真源（数据包侧） |
+| 半边 | 注入面 | 真源（数据包侧） |
 |---|---|---|
-| `ctx.host` | 写库五动词对象（`update_player` / `add_item` / `set_event_state` / `get_event_state` / `set_talk_flag`） | 宿主的库 |
-| `ctx.dom` | 内容域访问（`MATERIALS` · `CAMPFIRE_FOOD_POOL` · `HERB_POOL` · `pools(name)` · `resolve` · `display` · `roll_blueprint` · `generate_equip` · `living_members` · `set_alive`） | 数据包的域 / 门面 |
-| `ctx.text` / `ctx.static` | 文案渲染（带槽位 / 不带槽位） | 数据包的文案表 |
+| POI（`poi_effects.py`） | `PoiContext(host=…, dom=…, text=…, static=…)`（**逐次**注入，ctx 随调用走） | 宿主的库 / 数据包域门面 / 文案表 |
+| 药水（`potion_effects.py`） | `potion_effects.bind(text=…, static=…, items=…, rules=…, neg_keys=…)`（**装配期一次**，模块级句柄） | 文案表 · `items` 域 · `effect_rules` 域 · `purify_neg_keys` 域 |
 
-不传 = `AttributeError`（fail-loud）：这三组是这层仅有的「读」出口，缺了必须当场报出来。
+为什么药水侧只能挂模块级：它的 handler 签名是 `(battle, player, value)`（没有 ctx），
+73 个渲染点分散在 36 个 handler 里 —— 模块级句柄才能让那 73 个调用点**一字不改**
+（包内同款先例 = 数据包的 `content/obs.py::bind(log=…)`）。
 
-**药水效果半边**（`potion_effects.py`）仍在数据包内 —— 它的 handler 签名没有 ctx
-（`(battle, player, value)`），要先给它做一个**模块级注入口**才能搬（登记为 B7b）。
+不注入就取用 = **当场报错**（fail-loud：文案句柄 `_T` 是未绑定代理；`DEFAULTS` 走 `_resolve()`
+时校验），绝不静默给空串 / 空表。
+
+装配点（唯一）：数据包 `content/apply.py::install_engine()` →
+`content/effects/__init__.py::bind_effects()`。
 """
 from __future__ import annotations
 
 from .poi_effects import POI_EFFECTS, PoiContext, execute_poi, register
+from .potion_effects import DEFAULTS as POTION_DEFAULTS, POTION_EFFECTS
 
 __all__ = [
     "POI_EFFECTS", "PoiContext", "execute_poi", "register",
+    "POTION_EFFECTS", "POTION_DEFAULTS",
 ]

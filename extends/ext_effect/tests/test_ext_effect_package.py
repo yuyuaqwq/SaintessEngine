@@ -140,7 +140,52 @@ def main() -> int:
     check("传了 static ⇒ 原样返回", _mk(static=sentinel).static is sentinel, None)
     check("传了 host / dom ⇒ 原样可用", _mk(host=sentinel, dom=sentinel).dom is sentinel, None)
 
-    # ------------------------------------------------------------ 4. 可换游戏（零数据包依赖）
+    # ------------------------------------------------------------ 5. 药水半边（B7b）：模块级注入面
+    from ext_effect.effects import potion_effects as PE
+
+    check("POTION_EFFECTS 注册表非空（36 键药水效果）",
+          isinstance(PE.POTION_EFFECTS, dict) and len(PE.POTION_EFFECTS) >= 30,
+          len(PE.POTION_EFFECTS))
+
+    def _raises(fn) -> str:
+        try:
+            fn()
+        except Exception as exc:                                  # noqa: BLE001
+            return "%s: %s" % (type(exc).__name__, exc)
+        return ""
+
+    check("★ 未 bind 时文案句柄**取用即报错**（fail-loud，不给空串）",
+          bool(_raises(lambda: PE._T.text("potion.任意"))),
+          _raises(lambda: PE._T.text("potion.任意")))
+    check("★ 未 bind 时 `_resolve()` 报错（不给空表 → 不静默失效）",
+          bool(_raises(lambda: PE._resolve(None, "rage"))),
+          _raises(lambda: PE._resolve(None, "rage")))
+    check("★ 未 bind 时域读口报错（items / rules / neg_keys 三处同款）",
+          all(_raises(fn) for fn in (PE._items_domain, PE._effect_rules,
+                                     PE._purify_neg_keys)), None)
+
+    _d_obj = PE.DEFAULTS                                    # 记住对象身份（下面验「就地刷新」）
+    PE.bind(text=lambda k, **s: "T:" + k,
+            static=lambda k: "S:" + k,
+            items={"__demo_item__": {"effect": "heal_up", "effect_data": {"pct": 5}}},
+            rules={"rage": {"name": "怒气", "cap": 10}},
+            neg_keys={"purify_neg_keys": {"keys": ["poison", "burn"]}})
+    check("★ bind 后 DEFAULTS **就地刷新**（同一 dict 对象 ⇒ `from … import DEFAULTS` 的消费方也看得到新值）",
+          PE.DEFAULTS is _d_obj and bool(PE.DEFAULTS), (PE.DEFAULTS is _d_obj, len(PE.DEFAULTS)))
+    check("bind 后文案渲染走**注入的**函数（不是第二份文案表）",
+          PE._T.text("k1", n=1) == "T:k1" and PE._T.static("k2") == "S:k2",
+          (PE._T.text("k1"), PE._T.static("k2")))
+    check("bind 后域读口返回注入值（items / rules）",
+          "__demo_item__" in PE._items_domain() and PE._effect_rules().get("rage", {}).get("cap") == 10,
+          None)
+    check("bind 后 `_purify_neg_keys()` 序 = 注入表内序（净化回显按此序 join）",
+          PE._purify_neg_keys() == ("poison", "burn"), PE._purify_neg_keys())
+    check("坏形状的 neg_keys ⇒ bind 当场报错（拒绝静默空表）",
+          bool(_raises(lambda: PE.bind(text=lambda *a, **k: "", static=lambda *a, **k: "",
+                                       items={}, rules={},
+                                       neg_keys={"purify_neg_keys": {"keys": []}}))), None)
+
+    # ------------------------------------------------------------ 6. 可换游戏（零数据包依赖）
     bad = []
     for path in pack_sources():
         with open(path, encoding="utf-8") as f:
