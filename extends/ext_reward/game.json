@@ -1,0 +1,9 @@
+{
+  "id": "ext_reward",
+  "kind": "extension",
+  "name": "流水采集与奖励发放形状",
+  "desc": "游戏级能力包：战斗流水**采集半边**（BattleTLog：事件/人类行动 → 流水，靠引擎观察者通道）+ 奖励发放半边。零包内依赖 —— 只吃引擎 `saintess_engine.tlog`；数据包 depends 它即可用。",
+  "engine": ">=0.1",
+  "entry": "apply.py",
+  "created": "2026-09-24"
+}

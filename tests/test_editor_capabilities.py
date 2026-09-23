@@ -32,7 +32,8 @@ from editor import capabilities as CAP  # noqa: E402
 
 ORL = os.path.join(ROOT, "games", "orlandia")
 ALL = ["ext_combat", "ext_world", "ext_life", "ext_economy",
-       "ext_social", "ext_loot", "ext_dialogue", "ext_quest"]
+       "ext_social", "ext_loot", "ext_dialogue", "ext_quest",
+       "ext_reward"]        # ★ 2026-09-24 B4a：+ext_reward（流水采集半边抽包）
 
 
 def section(t):
@@ -43,7 +44,7 @@ def main():
     section("1. 真包上试算：域表随 depends 变（走唯一源）")
     base = CAP.effects(ORL)
     ids = sorted(e["id"] for e in base["extensions"])
-    check("扫到 8 个扩展包", ids == sorted(ALL), ids)
+    check("扫到 9 个扩展包", ids == sorted(ALL), ids)
     check("orlandia 全装（depends 与磁盘一致）",
           sorted(base["enabled"]) == sorted(ALL), base["enabled"])
     check("有效域 = 106", base["trial"]["domains_before"] == 106,
