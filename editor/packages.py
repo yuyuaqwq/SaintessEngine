@@ -316,6 +316,10 @@ def domain_source(pkg_dir, dom: str):
         return "package"
     if use_builtin and dom in BUILTIN_DEFAULT_DOMAINS:
         return "builtin"
+    if use_builtin:
+        for _d in D.ext_domain_decls(pkg_dir):
+            if dom in _d:
+                return "extension"             # 来自 depends 的扩展包声明（域跟消费端走）
 
     return None
 

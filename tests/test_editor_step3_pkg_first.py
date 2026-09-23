@@ -173,19 +173,21 @@ def main():
             eff, warns = PK.effective_domains(orl)
             check("内置默认集置空 → 共享常量确实为空（置空生效）",
                   PK.DOMAINS == {} and PK.BUILTIN_DEFAULT_DOMAINS == {})
-            # ★ 2026-09-23 第 4 批：orlandia depends 了扩展包 ⇒ 域表 = 扩展包带来的（在前）
-            #   ∪ 包声明的 106 个（同名以包声明为准）⇒ **集合**与声明一致、数量一致；
-            #   次序上扩展包那 5 个排在前（它们是按 depends 序先合并进来的）。
-            check(f"orlandia 仍列出**完整**域表（{n_orl} 个 = 包内声明那份，不靠框架常量）",
-                  len(eff) == n_orl and set(eff) == set(decl)
-                  and all(k in decl for k in eff), f"{len(eff)} vs {n_orl}")
-            check("每一域逐字段 == 包内声明文件（不是框架那份）", eff == decl,
-                  {k: (decl.get(k), eff.get(k)) for k in set(decl) | set(eff)
-                   if decl.get(k) != eff.get(k)})
-            check("每一域都标记为 package 来源（内置那份不参与）",
-                  all(PK.domain_source(orl, d) == "package" for d in eff))
+            # ★ 2026-09-23 第 4 批：orlandia depends 了扩展包 ⇒ 域表 = 扩展包带来的 5 个（在前）
+            #   ∪ 包自己声明的 {n_orl} 个（同名以包声明为准）。★ 奥兰迪亚现在**不再**重复声明
+            #   那 8 条（3 个通用表 + 5 个游戏级形状）—— 分层就是干这个的：包只写它自己的内容域。
+            _ext_only = set(eff) - set(decl)
+            check(f"orlandia 仍列出**完整**域表（{n_orl} 个包内声明 + {len(_ext_only)} 个扩展包带来的）",
+                  set(decl) <= set(eff) and _ext_only <= set(FX.EXT_DOMAINS),
+                  f"{len(eff)} vs {n_orl}；多出 {sorted(_ext_only)}")
+            check("包内声明的那部分逐字段 == 声明文件（不是框架那份）",
+                  all(eff[k] == decl[k] for k in decl),
+                  {k: (decl.get(k), eff.get(k)) for k in decl if decl.get(k) != eff.get(k)})
+            check("来源标注对得上（包声明的 → package；扩展包带来的 → extension）",
+                  all(PK.domain_source(orl, d) == "package" for d in decl)
+                  and all(PK.domain_source(orl, d) == "extension" for d in _ext_only))
             check("0 告警（等值搬迁 + 无冲突）", warns == [], warns)
-            check(f"包概览 {n_orl} 域 / 全 ok", _overview_ok(orl))
+            check(f"包概览 {len(eff)} 域 / 全 ok", _overview_ok(orl))
             check("条目列表可用（pets 非空）", PK.list_entries(orl, "pets")["count"] > 0,
                   PK.list_entries(orl, "pets")["count"])
             check("域状态 ok（校验链路不依赖框架常量）",
@@ -197,7 +199,7 @@ def main():
             check("全部域的 schema 都解析到包内那份（无一处落到框架回退）",
                   all(os.path.normpath(PK.schema_path(orl, d) or "").startswith(
                       os.path.normpath(os.path.join(orl, "schemas")))
-                      for d in eff if decl[d]["schema"]), _nonpkg_schemas(orl, eff))
+                      for d in eff if eff[d].get("schema")), _nonpkg_schemas(orl, eff))
             PK.put_entry(orl, "skills", "sk_step3_probe", {"name": "步3探针", "kind": "冲击",
                                                            "exprs": ["atk*1.0"]})
             check("能写新条目（守卫技能域，写的是真文件）",
@@ -211,8 +213,8 @@ def main():
             ids = [d["id"] for d in (j.get("domains") or [])]
             # ★ 2026-09-23 第 4 批：orlandia depends 了扩展包 ⇒ 域表 = 扩展包带来的 5 个（在前）
             #   ∪ 包自己声明的 106 个（同名以包声明为准，位置保持首次插入）。
-            check("域注册表 200 且含全部包声明域（扩展包域在前，其余按包声明序）",
-                  st == 200 and set(ids) == set(decl_of(orl)), f"{st} {len(ids)}")
+            check("域注册表 200 且含全部包声明域（外加扩展包带来的那几个）",
+                  st == 200 and set(decl_of(orl)) <= set(ids), f"{st} {len(ids)}")
             _ext_ids = set(FX.EXT_DOMAINS)
             check("域注册表里包声明与扩展包带的域都标了来源（from_package）",
                   all(d["from_package"] for d in j["domains"] if d["id"] in decl_of(orl))
@@ -223,8 +225,8 @@ def main():
                   st == 200 and (j.get("domains") or []) == [], f"{st} {len(j.get('domains') or [])}")
             st, j = req(base, "GET", "/api/package/orlandia")
             od = {d["id"]: d for d in (j.get("domains") or [])}
-            check("包概览 200 / 域表齐全 / 逐域有 status",
-                  st == 200 and len(od) == len(decl_of(orl))
+            check("包概览 200 / 域表齐全（= 有效域表）/ 逐域有 status",
+                  st == 200 and len(od) == len(PK.effective_domains(orl)[0])
                   and all("ok" in v for v in od.values()), f"{st} {len(od)}")
             st, j = req(base, "GET", "/api/package/orlandia/d/items?limit=1")
             check("条目列表 200（分页仍好使）", st == 200 and j.get("count", 0) > 0, f"{st}")
@@ -432,8 +434,9 @@ def main():
 
 
 def _overview_ok(pkg_dir) -> bool:
+    """概览列出的域数 == **有效域表**（含 depends 的扩展包带来的域，2026-09-23 第 4 批）且全 ok。"""
     ov = PK.package_overview(pkg_dir)
-    want = len(decl_of(pkg_dir))
+    want = len(PK.effective_domains(pkg_dir)[0])
     return len(ov["domains"]) == want and all(d.get("ok") for d in ov["domains"])
 
 
