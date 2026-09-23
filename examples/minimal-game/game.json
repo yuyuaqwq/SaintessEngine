@@ -16,6 +16,7 @@
   "created": "2026-09-13",
   "depends": [
     "ext_combat",
-    "ext_economy"
+    "ext_economy",
+    "ext_quest"
   ]
 }
