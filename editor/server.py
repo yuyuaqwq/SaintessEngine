@@ -525,7 +525,9 @@ class H(BaseHTTPRequestHandler):
             q = parse_qs(getattr(self, "_query", ""))
             _raw = ",".join(q.get("disable") or [])
             _disable = [x.strip() for x in _raw.split(",") if x.strip()]
-            return self._send(200, CAP.effects(d, disable=_disable))
+            # `?fresh=1` = 引用扫描不吃内容戳缓存（逃生口；见 capabilities.refs_all）
+            _fresh = (q.get("fresh") or ["0"])[0] not in ("", "0", "false", "False")
+            return self._send(200, CAP.effects(d, disable=_disable, fresh=_fresh))
         if len(parts) == 3 and parts[0] == "package" and parts[2] == "views":
             d = PK.resolve_package(parts[1], GAMES_DIR)
             if not d:
@@ -1058,6 +1060,12 @@ def _warm_caches():
                 pass
             try:
                 AC.inventory(d)                                     # 动作清单（自带内容戳缓存）
+            except Exception:                                   # noqa: BLE001
+                pass
+            try:
+                # ★ 2026-09-24：能力开关（扩展包清单 + 引用代价）。冷态 2.8s（修前 36s）——
+                #   它要扫一遍包内 .py 统计各扩展包的引用处数；预热后首次点「包清单」即时可用。
+                CAP.effects(d)
             except Exception:                                   # noqa: BLE001
                 pass
     except Exception:                                           # noqa: BLE001

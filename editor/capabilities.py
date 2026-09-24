@@ -104,12 +104,11 @@ def describe(pkg_dir: str, ext_id: str, root: str) -> dict:
     }
 
 
-def refs_of(pkg_dir: str, ext_id: str) -> dict:
-    """数据包里 import 这个扩展包的位置（**关掉它真正会断的地方**）。
+_REF_CACHE: dict = {}          # pkg_dir → ((戳, 目标集), {ext_id: {count, files, top}})
 
-    只扫静态 import（`import ext_x` / `from ext_x… import`），按文件归组。
-    """
-    hits: list = []
+
+def _scan_files(pkg_dir: str):
+    """本包会被扫的 .py（`_SCAN_DIRS` 下，跳 `__pycache__`，按名排序保证可复现）。"""
     for sub in _SCAN_DIRS:
         base = os.path.join(pkg_dir, sub)
         if not os.path.isdir(base):
@@ -118,31 +117,92 @@ def refs_of(pkg_dir: str, ext_id: str) -> dict:
             if "__pycache__" in dp:
                 continue
             for f in sorted(fn):
-                if not f.endswith(".py"):
-                    continue
-                p = os.path.join(dp, f)
-                try:
-                    tree = ast.parse(io.open(p, encoding="utf-8", errors="ignore").read())
-                except (SyntaxError, OSError):
-                    continue
-                for node in ast.walk(tree):
-                    mod = None
-                    if isinstance(node, ast.ImportFrom) and node.module:
-                        mod = node.module
-                    elif isinstance(node, ast.Import):
-                        for a in node.names:
-                            if a.name.split(".")[0] == ext_id:
-                                hits.append((os.path.relpath(p, pkg_dir).replace(os.sep, "/"),
-                                             getattr(node, "lineno", 0)))
-                                break
-                    if mod and mod.split(".")[0] == ext_id:
-                        hits.append((os.path.relpath(p, pkg_dir).replace(os.sep, "/"),
-                                     getattr(node, "lineno", 0)))
-    by_file: dict = {}
-    for rel, ln in hits:
-        by_file.setdefault(rel, []).append(ln)
-    return {"count": len(hits), "files": by_file,
-            "top": sorted(by_file.items(), key=lambda kv: -len(kv[1]))[:8]}
+                if f.endswith(".py"):
+                    yield os.path.join(dp, f)
+
+
+def content_stamp(pkg_dir: str) -> tuple:
+    """内容戳 =（被扫 `.py` 的个数, 最新 mtime）—— 增 / 删 / 改任一文件都会变。
+
+    用**内容戳**而不是「带项目就不缓存」：改了文件即失效（编辑即刻可见），没改即复用。
+    """
+    n = 0
+    latest = 0.0
+    for p in _scan_files(pkg_dir):
+        n += 1
+        try:
+            mt = os.path.getmtime(p)
+        except OSError:
+            continue
+        if mt > latest:
+            latest = mt
+    return (n, round(latest, 3))
+
+
+def clear_cache(pkg_dir: str | None = None) -> None:
+    """清引用缓存（`?fresh=1` 的逃生口；不给就全清）。"""
+    if pkg_dir is None:
+        _REF_CACHE.clear()
+    else:
+        _REF_CACHE.pop(os.path.abspath(pkg_dir), None)
+
+
+def refs_all(pkg_dir: str, ext_ids=None, fresh: bool = False) -> dict:
+    """`{ext_id: {count, files, top}}` —— **一次解析**同时统计所有目标包，按内容戳缓存。
+
+    ★ 2026-09-24 性能修复：老实现 `refs_of` 每调一次就把整个包 AST 解析一遍，而
+    `/capabilities` 对 10 个扩展包各调一次 ⇒ 实测单包 1.6s × 10（接口冷 36s / 热 32s）。
+    现在：① 一次遍历统计全部目标包（10× → 1×）；② 结果按**内容戳**缓存。
+
+    ★ 缓存只有**一档（按包）**，且存的是**全量扫描结果** —— 调用方要哪几个包只是**过滤**，
+    不会因为「目标集不同」把彼此顶掉（那是「来回切就慢」的老坑）。
+    `ext_ids` 不给 ⇒ 返回本包已知的全部扩展包；`fresh=True` ⇒ 先清缓存再扫。
+    """
+    pkg_key = os.path.abspath(pkg_dir)
+    if fresh:
+        clear_cache(pkg_key)
+    stamp = content_stamp(pkg_dir)
+    cached = _REF_CACHE.get(pkg_key)
+    if cached is None or cached[0] != stamp:
+        # 扫哪些包 = 本包已知的扩展包 ∪ 调用方点名要的（点名要的一定扫，哪怕 extends 里没有）
+        targets = set(ext_roots(pkg_dir))
+        targets |= {str(x) for x in (ext_ids or [])}
+        table: dict = {ext: {} for ext in targets}
+        for p in _scan_files(pkg_dir):
+            try:
+                tree = ast.parse(io.open(p, encoding="utf-8", errors="ignore").read())
+            except (SyntaxError, OSError):
+                continue
+            rel = os.path.relpath(p, pkg_dir).replace(os.sep, "/")
+            for node in ast.walk(tree):
+                mods = []
+                if isinstance(node, ast.ImportFrom) and node.module:
+                    mods.append(node.module)
+                elif isinstance(node, ast.Import):
+                    mods.extend(a.name for a in node.names)
+                for mod in mods:
+                    root = mod.split(".")[0]
+                    if root in targets:
+                        table[root].setdefault(rel, []).append(getattr(node, "lineno", 0))
+        out: dict = {}
+        for ext_id, by_file in table.items():
+            out[ext_id] = {"count": sum(len(v) for v in by_file.values()), "files": by_file,
+                           "top": sorted(by_file.items(), key=lambda kv: -len(kv[1]))[:8]}
+        cached = (stamp, out)
+        _REF_CACHE[pkg_key] = cached
+
+    if ext_ids is None:
+        return cached[1]
+    empty = {"count": 0, "files": {}, "top": []}
+    return {str(e): cached[1].get(str(e), dict(empty)) for e in ext_ids}
+
+
+def refs_of(pkg_dir: str, ext_id: str) -> dict:
+    """单个扩展包的引用（**返回形状与旧实现逐键一致**：`count` / `files` / `top`）。
+
+    数据包里 import 这个扩展包的位置（**关掉它真正会断的地方**）；只认静态 import。
+    """
+    return refs_all(pkg_dir, [ext_id]).get(ext_id, {"count": 0, "files": {}, "top": []})
 
 
 def _pkg_decls(pkg_dir: str) -> dict:
@@ -153,10 +213,11 @@ def _pkg_decls(pkg_dir: str) -> dict:
     return d
 
 
-def effects(pkg_dir: str, disable=None) -> dict:
+def effects(pkg_dir: str, disable=None, fresh: bool = False) -> dict:
     """**试算**：把 `disable` 里的扩展包当作没装，看域表与各包状态怎么变。
 
     不写任何文件；域表一律走 `layered_decls()`（唯一源）。
+    `fresh=True` ⇒ 引用扫描不吃缓存（`?fresh=1` 逃生口）。
     """
     roots = ext_roots(pkg_dir)
     manifest = PK.load_manifest(pkg_dir) or {}
@@ -168,11 +229,14 @@ def effects(pkg_dir: str, disable=None) -> dict:
     full_meta = layered_decls(pkg_dir, decl)
     now_list = sorted(d for d in known if d in roots)
 
+    # ★ 2026-09-24：一次扫描统计**所有**扩展包的引用（原来每包各扫一遍整包 ⇒ 10× 代价）
+    refs_table = refs_all(pkg_dir, roots.keys(), fresh=fresh)
+
     rows = []
     for ext_id in sorted(roots):
         info = describe(pkg_dir, ext_id, roots[ext_id])
         info["enabled"] = ext_id in known
-        refs = refs_of(pkg_dir, ext_id)
+        refs = refs_table.get(ext_id) or {"count": 0, "files": {}, "top": []}
         info["refs"] = refs["count"]
         info["ref_files"] = refs["top"]           # [(文件, [行号…])] 前 8 个
         info["ref_all"] = sorted(refs["files"])   # 全部文件名（算「关掉会断哪些文件」）

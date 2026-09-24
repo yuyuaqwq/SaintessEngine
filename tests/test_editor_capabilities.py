@@ -14,6 +14,7 @@
 为什么值得一道门禁：开关这东西的错法都是**静默**的 —— 域表少算了两个域、
 引用数算成 0、勾选状态没跟着 depends 走，界面上都「看起来正常」。
 """
+import io
 import os
 import subprocess
 import sys
@@ -102,6 +103,42 @@ def main():
         last = [x for x in (r.stdout or "").splitlines() if "结果" in x]
         check("前端渲染 12 项全过（%s）" % (last[-1].strip() if last else "?"),
               r.returncode == 0, (r.stdout or "")[-400:] + (r.stderr or "")[-300:])
+
+    section("5. 引用扫描：单趟 + 内容戳缓存（2026-09-24 性能修复）")
+    import tempfile, time as _time
+    ids = sorted(r["id"] for r in base["extensions"])
+    one = CAP.refs_of(ORL, "ext_combat")
+    allr = CAP.refs_all(ORL, ids, fresh=True)
+    check("单趟结果 == 逐包结果（count 全等）",
+          sorted(allr[i]["count"] for i in ids) == sorted(
+              CAP.refs_of(ORL, i)["count"] for i in ids),
+          {i: (allr[i]["count"], CAP.refs_of(ORL, i)["count"]) for i in ids})
+    check("refs_of 与 refs_all 同源（同一个 count）", allr["ext_combat"]["count"] == one["count"],
+          (allr["ext_combat"]["count"], one["count"]))
+    check("返回形状与旧实现一致（count / files / top 三键）",
+          set(one) == {"count", "files", "top"}, sorted(one))
+
+    t0 = _time.perf_counter()
+    CAP.refs_all(ORL, ids)
+    t1 = _time.perf_counter()
+    warm_ms = (t1 - t0) * 1000
+    check("缓存命中：整包引用扫描热态 < 200ms（修复前 16s 级）", warm_ms < 200, "%.0f ms" % warm_ms)
+
+    # 内容戳：临时小包里改一个文件 ⇒ 结果必须跟着变（不能拿旧缓存骗人）
+    with tempfile.TemporaryDirectory() as tmp:
+        os.makedirs(os.path.join(tmp, "content"))
+        with io.open(os.path.join(tmp, "content", "a.py"), "w", encoding="utf-8") as fh:
+            fh.write("import os\n")
+        s1 = CAP.refs_all(tmp, ["ext_demo"])
+        check("临时包：初扫 0 命中", s1["ext_demo"]["count"] == 0, s1)
+        st1 = CAP.content_stamp(tmp)
+        with io.open(os.path.join(tmp, "content", "b.py"), "w", encoding="utf-8") as fh:
+            fh.write("from ext_demo.battle import x\nimport ext_demo\n")
+        st2 = CAP.content_stamp(tmp)
+        check("内容戳随文件增删变（(文件数, mtime) 不同）", st1 != st2, (st1, st2))
+        s2 = CAP.refs_all(tmp, ["ext_demo"])
+        check("临时包：新增文件后自动重扫到 2 处", s2["ext_demo"]["count"] == 2, s2)
+    CAP.clear_cache()
 
     print("\n" + "=" * 56)
     _f = globals().get("FAILURES") or []
