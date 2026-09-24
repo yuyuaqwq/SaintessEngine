@@ -3,6 +3,9 @@
 游戏级**能力**包（`kind: extension`）：把「条件怎么登记、怎么判、怎么兜底」这套形状
 提供给任何数据包用。它不提供**内容**：判定函数、环境词表、声明表全部由数据包给。
 
+形状清单（一个形状一步）：`cond/registry.py` 条件注册表 · `cond/envs.py` 环境位图 ·
+`rule/engine.py` 规则触发 · `earn/shape.py` 逐条求值（上下文外壳 + 参数化条件 + 求值器）。
+
 ## 装它
 
 ```python
@@ -87,9 +90,40 @@ fire(gid, qq_id, player, cur_map, "explore_done", {"event": "empty"})
 （对外面一字未改：`fire` / `_get_counter` / `_is_time` / `RULES` 全在，消费者
 `combat_cmds` / `settlement` / `facade` 的 wire 与测试打桩点零改动）。
 
+## 逐条求值形状（`ext_achieve.earn`）
+
+「一族条目（每条一个 id）逐条判是否达成」这台机器（搬自数据包 `title_conds.py`）。
+
+```python
+from ext_achieve.earn import EvalCtx, ParamCond, bind, earned_flags
+
+bind(db=db)                      # 注入读口（= ctx._db() 的返回物；未装配就取用 ⇒ 当场报错）
+ctx = EvalCtx(gid, qid, player, stats, rep, quests, hooks={...})   # 字段/位置序 = 形状契约
+fallback = ParamCond("pro_", ("gather", ...), lambda ctx, key: ctx._db().get_prof_level(...))
+flags = earned_flags(TABLE, ctx, CONDITIONS, fallback)             # 同长同序 · fallback 可省
+```
+
+| 形状 | 口径 |
+|---|---|
+| `EvalCtx` | 字段 + 钩子表（`hook(name, …)`：有则转给、没有回 `None`）+ 注入读口 `_db()` |
+| `ParamCond` | `<前缀><类别><数字>` ⇒ 「该类别等级 ≥ 数字」；前缀/类别集合/读取器都是内容侧给的 |
+| `earned_flags` | 注册表命中 ⇒ 判定函数；否则兜底匹配 ⇒ 调它；都不中 ⇒ `False`（未知 id 安全降级） |
+
+两条硬口径：判定函数的返回值**原样收进来**（不做 `bool` 归一）；条目 `dict` 缺 `"id"` ⇒
+`KeyError`（与原地 `t["id"]` 同口径，不静默降级）。
+
+## 从哪来（B2-S3：逐条求值形状）
+
+2026-09-24 **B2-S3**（B2 批第三步）：`content/title_conds.py` 的**上下文外壳**（`TitleCtx`）、
+**逐条判循环**、**参数化条件**（`check_pro_title` 的 `pro_<prof><lv>`）三样进 `earn/shape.py`；
+数据包侧只留 `_t_*` 判定函数、`pro_` 前缀与副业类别集合、称号表的喂入，并转出旧名
+（`TitleCtx` / `check_pro_title`）与新出口 `earned_titles(ctx)`。
+两个消费者 `content/economy_cmds.py::_earned_titles` 与 `content/stat_bonus.py` 的**重复循环**
+因此合成一处（各自只留「喂 ctx」一行）。
+
 ## 后续（同一批的余下几步）
 
-`S2` ✅ **已完成 2026-09-24（B2b）** —— 规则触发形状（本包 `rule/`）。余
-`S3` 条件注册表 + 称号求值 · `S4` 账本 / 领取 / 点数 ·
-`S5` 收口（数据包只剩「注册 + 注入 + 数据」）。
+`S2` ✅ 已完成 2026-09-24（B2b）—— 规则触发形状（本包 `rule/`）。
+`S3` ✅ 已完成 2026-09-24 —— 逐条求值形状（本包 `earn/`）。余
+`S4` 账本 / 领取 / 点数 · `S5` 收口（数据包只剩「注册 + 注入 + 数据」）。
 每步独立提交、独立验收（本包门禁 + 数据包全量 + 引擎全量 + 试玩摘要 sha 不变）。

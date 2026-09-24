@@ -488,8 +488,114 @@ def t7_rule():
         check("★ 未装配就 match_cond ⇒ 取件点当场报错", True)
 
 
+def t8_earn():
+    print("\n[8] 逐条求值形状：上下文外壳 / 参数化条件 / 求值器 / 注入面 fail-loud")
+    import ext_achieve.earn as E
+
+    def _boom(fn):
+        try:
+            fn()
+        except Exception as exc:                      # noqa: BLE001
+            return type(exc).__name__
+        return "<没报错>"
+
+    # -- ① 上下文外壳：位置参数序 / 字段名 / 缺省归一 / 钩子
+    ctx = E.EvalCtx("g", "q", {"cnt": 3}, {"k": 1}, {"f": 2}, {"side": {}},
+                    hooks={"ping": lambda a, b: a + b})
+    check("EvalCtx 位置参数序 (group_id, qq_id, player, stats, rep, quests, hooks) 生效",
+          (ctx.group_id, ctx.qq_id, ctx._focus, ctx.stats, ctx.rep, ctx.quests)
+          == ("g", "q", {"cnt": 3}, {"k": 1}, {"f": 2}, {"side": {}}),
+          repr((ctx.group_id, ctx.qq_id, ctx._focus, ctx.stats, ctx.rep, ctx.quests)))
+    blank = E.EvalCtx("g", "q", None, None, None, None)
+    check("EvalCtx 缺省归一：player/stats/rep/quests/hooks ⇒ 各自 {}",
+          blank._focus == {} and blank.stats == {} and blank.rep == {}
+          and blank.quests == {} and blank.hooks == {},
+          repr((blank._focus, blank.stats, blank.rep, blank.quests, blank.hooks)))
+    check("hook() 有则转给（实参原样透传）", ctx.hook("ping", 1, 2) == 3, repr(ctx.hook("ping", 1, 2)))
+    check("hook() 没有 ⇒ None（不抛）", ctx.hook("nope") is None)
+
+    # -- ② 注入面（fail-loud + 同一对象 + 可清空）
+    check("★ 未 bind 就取读口 ⇒ 当场报错（不返回空壳）",
+          _boom(blank._db) == "RuntimeError", _boom(blank._db))
+    box = {"read": True}
+    E.bind(db=box)
+    check("bind 后 _db() 返回**同一对象**（不复制、不包壳）",
+          E.EvalCtx("g", "q", {}, {}, {}, {})._db() is box)
+    E.bind(db=None)
+    check("bind(None) 清空 ⇒ 回到未装配态（取用照旧报错）",
+          _boom(blank._db) == "RuntimeError", _boom(blank._db))
+
+    # -- ③ 参数化条件：解析 / 类别集合 / 边界 / 兜底
+    seen = []
+    cond = E.ParamCond("pro_", ("gather", "mining"),
+                       lambda c, k: seen.append((c, k)) or {"gather": 3, "mining": 1}.get(k, 0))
+    check("ParamCond.parse：前缀 + 类别 + 数字 ⇒ (类别, 阈值)",
+          cond.parse("pro_gather3") == ("gather", 3), repr(cond.parse("pro_gather3")))
+    check("parse：前缀不匹配 ⇒ None（不抛）",
+          cond.parse("gather3") is None and cond.parse("prox_gather3") is None)
+    check("parse：类别不在注入集合里 ⇒ None（集合是内容侧的活）",
+          cond.parse("pro_fishing3") is None and not cond.matches("pro_fishing3"))
+    check("parse：形状不是「前缀+小写字母+数字」⇒ None（大小写敏感 / 尾部残留）",
+          cond.parse("pro_Gather3") is None and cond.parse("pro_gather3x") is None
+          and cond.parse("pro_gather") is None)
+    check("parse：非字符串 / None ⇒ None（不抛）",
+          cond.parse(None) is None and cond.parse(3) is None)
+    check("check：阈值边界 —— 等级 == 阈值 达标 / 差 1 不达标",
+          cond.check("pro_gather3", blank) is True and cond.check("pro_mining2", blank) is False)
+    check("check：本条件不管的 id ⇒ False（不抛）",
+          cond.check("ach_whatever", blank) is False and cond.check(7, blank) is False)
+    check("check：等级读取器拿到 (ctx, 类别) 两参（形状不自己读存档）",
+          seen[-1][0] is blank and seen[-1][1] in ("gather", "mining"), repr(seen[-1]))
+    check("ParamCond 构造校验：空前缀 ⇒ ValueError", _boom(lambda: E.ParamCond("", (), lambda c, k: 0)) == "ValueError")
+    check("ParamCond 构造校验：level_of 不可调用 ⇒ TypeError",
+          _boom(lambda: E.ParamCond("pro_", (), "x")) == "TypeError")
+
+    # -- ④ 逐条求值器：注册表命中 / 参数化兜底 / 未知 ⇒ False / 同长同序
+    class Reg:
+        """最小注册表替身（形状只要求 `get(name) -> fn | None`）。"""
+
+        def __init__(self, table):
+            self._t = table
+
+        def get(self, name):
+            return self._t.get(name)
+
+    class Ctl:
+        """判定函数替身：记调用次数，返回调用方给的值（可非 bool）。"""
+
+        def __init__(self, value):
+            self.value = value
+            self.calls = 0
+
+        def __call__(self, ctx):
+            self.calls += 1
+            return self.value
+
+    hit = Ctl("raw-value")            # ★ 返回值原样收（不做 bool 归一）
+    raw = Ctl(None)
+    reg = Reg({"k_hit": hit, "k_raw": raw})
+    fall = E.ParamCond("pro_", ("gather",), lambda c, k: 5)
+    table = [{"id": "k_hit"}, {"id": "pro_gather2"}, {"id": "pro_gather9"},
+             {"id": "pro_unknown1"}, {"id": "k_raw"}, {"id": "nope"}]
+    out = E.earned_flags(table, blank, reg, fall)
+    check("earned_flags：同长同序（命中 / 兜底达标 / 兜底不达标 / 兜底不管 / 命中 / 都没有）",
+          out == ["raw-value", True, False, False, None, False], repr(out))
+    check("★ 判定函数返回值**原样收进来**（不做 bool 归一：None 就是 None）",
+          out[4] is None and out[0] == "raw-value")
+    check("注册表命中时不问兜底（两条路互斥，各调一次）",
+          hit.calls == 1 and raw.calls == 1, (hit.calls, raw.calls))
+    check("字符串条目也收（`dict` 取 \"id\" / 其余原样即 id）",
+          E.earned_flags(["k_hit"], blank, reg, fall) == ["raw-value"])
+    check("fallback=None ⇒ 只剩注册表那条路（未命中一律 False）",
+          E.earned_flags(table, blank, reg, None) == ["raw-value", False, False, False, None, False])
+    check("`dict` 缺 \"id\" ⇒ KeyError（与原地 `t[\"id\"]` 同口径，不静默降级）",
+          _boom(lambda: E.earned_flags([{}], blank, reg, fall)) == "KeyError")
+    check("空条目表 ⇒ 空结果（同长同序的退化情形）",
+          E.earned_flags([], blank, reg, fall) == [])
+
+
 def main():
-    print("== ext_achieve 门禁：包契约 / 条件注册表 / 环境位图 / 规则触发 / 零内容知识 ==")
+    print("== ext_achieve 门禁：包契约 / 条件注册表 / 环境位图 / 规则触发 / 逐条求值 / 零内容知识 ==")
     t1_contract()
     t2_registry()
     t3_register_specs()
@@ -497,6 +603,7 @@ def main():
     t5_zero_knowledge()
     t6_teeth()
     t7_rule()
+    t8_earn()
     print("\n===== 结果：通过 %d / %d =====" % (passed, passed + failed))
     return 1 if failed else 0
 
