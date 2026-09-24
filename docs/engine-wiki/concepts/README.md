@@ -40,6 +40,7 @@ flowchart TD
 | [effects.md](effects.md) | `effects[key] = {...}` 的条目形态与「声明决定行为」 | 你要让引擎"认识"一个新状态 |
 | [ctb-schedule.md](ctb-schedule.md) | 绝对时刻制、行动耗时（**公式归内容侧装配**）、周期结算 | 你要做速度/加速/减速/持续伤害 |
 | [config-injection.md](config-injection.md) | 15 个 hook、`strict` 两档、未装配的三种后果 | 你第一次接引擎 / 排查"没生效" |
+| [acts.md](acts.md) | 动作序列形状：动词登记 / 声明序执行 / 短路 / 装配期 fail-closed | 你要把「一组动作」从代码搬进声明 |
 
 ## 三条贯穿全书的设计公理
 

@@ -205,6 +205,7 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
 | | [concepts/effects.md](concepts/effects.md) | 效果容器条目形态与 `EFFECT_RULES` 全谱 |
 | | [concepts/ctb-schedule.md](concepts/ctb-schedule.md) | CTB 时间轴与绝对时刻制 |
 | | [concepts/config-injection.md](concepts/config-injection.md) | 引擎/游戏边界：为什么引擎不 import 游戏 |
+| | [concepts/acts.md](concepts/acts.md) | 动作序列形状：动词登记 / 声明序执行 / 短路 / 装配期 fail-closed |
 | **指南** | [guides/write-a-mechanic.md](guides/write-a-mechanic.md) | 写一个机制动作（注册/参数/judge/装配钩子） |
 | | [guides/add-a-resource.md](guides/add-a-resource.md) | 加一个职业资源（cap / channels / `when` / `per_dt`） |
 | | [guides/add-a-passive.md](guides/add-a-passive.md) | 加一个被动 proc（声明 + 事件选型 + 测试） |
