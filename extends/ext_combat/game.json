@@ -8,5 +8,7 @@
   "created": "2026-09-23",
   "provides": {
     "battle": "ext_combat.battle.battle:Battle"
-  }
+  },
+  "version": "0.1.0",
+  "author": "鱼鱼"
 }

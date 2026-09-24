@@ -2026,14 +2026,19 @@ function renderSettingsForm() {
     <label>显示名<input id="pkName" value="${esc(m.name || '')}"></label>
     <label>简介<input id="pkDesc" value="${esc(m.desc || '')}"></label>
     <label>引擎版本要求<input id="pkEngine" value="${esc(m.engine || '')}"></label>
+    <label>版本<input id="pkVer" value="${esc(m.version || '')}" placeholder="0.1.0"></label>
+    <label>作者<input id="pkAuthor" value="${esc(m.author || '')}" placeholder="谁写的"></label>
     <section class="cap-block" id="capBlock">
       <header class="cap-head">
         <b>能力开关</b><span class="cap-sum" id="capSum">读取中…</span>
       </header>
       <p class="cap-hint">这些是<b>扩展包</b>——引擎里只留通用件，战斗 / 任务 / 掉落 / 对话这些都在包里。
         勾掉 = 不写进 <code>depends</code>，这个包就不装了。取消勾选会<b>实时试算</b>代价（不写盘，
-        点「保存包清单」才落盘）。</p>
-      <div class="cap-list" id="capList"></div>
+        点「保存包清单」才落盘）。<b>点一行看详情</b>（↑↓ 换行）。</p>
+      <div class="cap-split">
+        <div class="cap-list" id="capList"></div>
+        <aside class="cap-detail" id="capDetail"></aside>
+      </div>
       <div class="cap-trial hidden" id="capTrial"></div>
     </section>`;
   renderCapabilities();
@@ -2043,27 +2048,96 @@ function renderSettingsForm() {
    后端：GET /api/package/<id>/capabilities[?disable=a,b]（只读试算）
    实关：勾选状态进 manifest.depends，走已有的「保存包清单」落盘。 */
 let CAP = null;                       // 最近一次 /capabilities 响应
+let CAP_SEL = null;                   // 当前选中的扩展包 id（详情面板用）
 
 async function renderCapabilities() {
   const r = await api('GET', `/api/package/${encodeURIComponent(S.pkgId)}/capabilities`);
-  if (!r.ok || !r.json) { $('capList').innerHTML = '<div class="cap-empty">读不到扩展包清单</div>'; return; }
+  if (!r.ok || !r.json) { $('capList').innerHTML = '<div class="cap-empty">读不到扩展包清单</div>'; $('capDetail').innerHTML = ''; return; }
   CAP = r.json;
+  if (!CAP.extensions.some((e) => e.id === CAP_SEL)) {
+    const prefer = CAP.extensions.find((e) => e.enabled) || CAP.extensions[0];
+    CAP_SEL = prefer ? prefer.id : null;
+  }
   $('capList').innerHTML = CAP.extensions.map((e) => `
-    <label class="cap-row" data-ext="${esc(e.id)}" title="${esc(e.desc || '')}">
+    <div class="cap-row${e.enabled ? '' : ' off'}${e.id === CAP_SEL ? ' selected' : ''}"
+         data-ext="${esc(e.id)}" tabindex="0" role="button"
+         aria-pressed="${e.id === CAP_SEL ? 'true' : 'false'}"
+         title="点击看详情 · 勾选框决定装不装">
       <input type="checkbox" class="cap-cb" data-ext="${esc(e.id)}" ${e.enabled ? 'checked' : ''}>
-      <span class="cap-name">${esc(e.id)}</span>
-      <span class="cap-mods">${esc(e.modules.join(' · ') || '(单文件)')}</span>
+      <span class="cap-name">${esc(e.name || e.id)}</span>
+      <span class="cap-mod">${esc(e.id)}</span>
+      ${e.version ? `<span class="cap-ver">v${esc(e.version)}</span>` : ''}
       <span class="cap-refs ${refClass(e.refs)}">${e.refs} 处引用</span>
       ${e.provides.length ? `<span class="chip">${esc(e.provides.join('/'))}</span>` : ''}
       <span class="cap-drop">${e.loses_domains.length ? '失去 ' + esc(e.loses_domains.join(' · ')) : ''}</span>
-    </label>`).join('');
+    </div>`).join('');
+  $('capList').querySelectorAll('.cap-row').forEach((row) => {
+    row.addEventListener('click', (ev) => {
+      if (ev.target && ev.target.classList && ev.target.classList.contains('cap-cb')) return;
+      capSelect(row.dataset.ext);
+    });
+    row.addEventListener('focus', () => capSelect(row.dataset.ext));
+    row.addEventListener('keydown', (ev) => {
+      if (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp') return;
+      ev.preventDefault();
+      const rows = Array.from($('capList').querySelectorAll('.cap-row'));
+      const i = rows.indexOf(row);
+      const nxt = rows[ev.key === 'ArrowDown' ? i + 1 : i - 1];
+      if (nxt) nxt.focus();
+    });
+  });
   $('capList').querySelectorAll('.cap-cb').forEach((cb) => {
     cb.addEventListener('change', () => {
       cb.closest('.cap-row').classList.toggle('off', !cb.checked);
       capTrialSoon();
     });
+    cb.addEventListener('click', () => capSelect(cb.dataset.ext));
   });
+  capSelect(CAP_SEL);
   capSummary();
+}
+
+/* ── 选中一条 → 右侧详情（作者 / 版本 / 描述 / 能力 / 代价）───────────── */
+function capSelect(extId) {
+  if (!CAP || !extId) return;
+  CAP_SEL = extId;
+  $('capList').querySelectorAll('.cap-row').forEach((row) => {
+    const on = row.dataset.ext === extId;
+    row.classList.toggle('selected', on);
+    row.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  const e = CAP.extensions.find((x) => x.id === extId);
+  const box = $('capDetail');
+  if (!e) { box.innerHTML = ''; return; }
+  const kv = (k, v) => (v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : '');
+  const chips = (arr) => arr.map((x) => `<span class="chip">${esc(x)}</span>`).join('');
+  const refs = e.ref_files && e.ref_files.length
+    ? `<details><summary>引用位置（前 ${e.ref_files.length} 个文件）</summary><pre>${esc(
+        e.ref_files.map(([f, ln]) => `${f}:${(ln || []).join(',')}`).join('\n'))}</pre></details>`
+    : '';
+  box.innerHTML = `
+    <header class="cap-det-head">
+      <b>${esc(e.name || e.id)}</b>
+      <span class="cap-det-state ${e.enabled ? 'on' : 'off'}">${e.enabled ? '已装' : '未装'}</span>
+    </header>
+    <dl class="cap-det-grid">
+      ${kv('id', e.id)}
+      ${kv('版本', e.version ? 'v' + e.version : '（未声明）')}
+      ${kv('作者', e.author || '（未声明）')}
+      ${kv('类型', e.kind)}
+      ${kv('引擎要求', e.engine)}
+      ${kv('入口', e.entry)}
+      ${kv('建档', e.created)}
+      ${kv('规模', `${e.modules.length} 个模块 · ${e.lines} 行`)}
+      ${kv('引用', `${e.refs} 处${e.refs ? '（关掉会断）' : ''}`)}
+    </dl>
+    ${e.desc ? `<p class="cap-det-desc">${esc(e.desc)}</p>` : '<p class="cap-det-desc cap-det-none">（清单里没有简介）</p>'}
+    ${e.domains.length ? `<div class="cap-det-sec"><span class="cap-det-k">提供的域</span><div class="cap-det-chips">${chips(e.domains)}</div></div>` : ''}
+    ${e.provides.length ? `<div class="cap-det-sec"><span class="cap-det-k">提供的能力</span><div class="cap-det-chips">${chips(e.provides)}</div></div>` : ''}
+    ${e.depends.length ? `<div class="cap-det-sec"><span class="cap-det-k">依赖</span><div class="cap-det-chips">${chips(e.depends)}</div></div>` : ''}
+    ${e.modules.length ? `<div class="cap-det-sec"><span class="cap-det-k">模块</span><div class="cap-det-chips">${chips(e.modules)}</div></div>` : ''}
+    ${e.loses_domains.length ? `<div class="cap-det-sec"><span class="cap-det-k">关掉会失去</span><div class="cap-det-chips">${chips(e.loses_domains)}</div></div>` : ''}
+    ${refs}`;
 }
 
 //: 引用数分档着色 —— 0 处是「关掉只少能力」，上百处是「关掉包基本跑不起来」
@@ -2126,6 +2200,7 @@ async function capTrial() {
 async function savePkg() {
   const m = Object.assign({}, (S.pkg && S.pkg.manifest) || {}, {
     name: $('pkName').value, desc: $('pkDesc').value, engine: $('pkEngine').value,
+    version: $('pkVer').value, author: $('pkAuthor').value,
   });
   // ★ 能力开关：勾选框的当前状态就是新的 depends（顺序沿用后端给的稳定序）
   if (CAP) {

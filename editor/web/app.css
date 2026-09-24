@@ -1204,6 +1204,32 @@ fieldset.cat>.cat-legend{
 .cap-refs.bad{color:var(--err)}
 .cap-refs.ok{color:var(--fg-3)}
 .cap-drop{flex-basis:100%;font-size:11px;color:var(--fg-3);padding-left:22px}
+/* ★ 2026-09-24：扩展包可选中 + 右侧详情（清单元数据：作者/版本/描述/能力） */
+.cap-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(272px,340px);gap:var(--sp4);align-items:start}
+@media (max-width:1080px){.cap-split{grid-template-columns:minmax(0,1fr)}}
+.cap-row{outline:none}
+.cap-row.selected{background:var(--accent-soft);border-color:var(--accent)}
+.cap-row:focus-visible{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.cap-mod{font-family:var(--mono);font-size:10.5px;color:var(--fg-3)}
+.cap-ver{font-family:var(--mono);font-size:10.5px;color:var(--fg-2);background:var(--bg-3);border-radius:var(--r-sm);padding:1px 5px}
+.cap-detail{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r);padding:var(--sp4);font-size:11.5px;color:var(--fg-1);position:sticky;top:var(--sp4);max-height:70vh;overflow:auto}
+.cap-detail:empty{display:none}
+.cap-det-head{display:flex;align-items:center;justify-content:space-between;gap:var(--sp3);margin-bottom:var(--sp3)}
+.cap-det-head b{font-size:13px;color:var(--fg-0)}
+.cap-det-state{font-size:10.5px;font-family:var(--mono);padding:1px 6px;border-radius:var(--r-sm);background:var(--bg-3);color:var(--fg-2)}
+.cap-det-state.on{color:var(--ok);background:var(--ok-soft)}
+.cap-det-state.off{color:var(--fg-3)}
+.cap-det-grid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px var(--sp3);margin:0;font-family:var(--mono);font-size:11px}
+.cap-det-grid dt{color:var(--fg-3)}
+.cap-det-grid dd{margin:0;color:var(--fg-0);word-break:break-all}
+.cap-det-desc{margin:var(--sp4) 0 0;line-height:1.7;color:var(--fg-1);white-space:pre-wrap}
+.cap-det-desc.cap-det-none{color:var(--fg-3);font-style:italic}
+.cap-det-sec{margin-top:var(--sp3);display:flex;gap:var(--sp3);align-items:baseline;flex-wrap:wrap}
+.cap-det-k{font-size:10.5px;color:var(--fg-3);font-family:var(--mono);flex:none;min-width:5.5em}
+.cap-det-chips{display:flex;flex-wrap:wrap;gap:4px}
+.cap-detail details{margin-top:var(--sp4);font-size:11px;color:var(--fg-2)}
+.cap-detail details summary{cursor:pointer;color:var(--fg-1)}
+.cap-detail pre{margin:var(--sp2) 0 0;max-height:180px;overflow:auto;font-family:var(--mono);font-size:10.5px;color:var(--fg-2);white-space:pre-wrap}
 .cap-trial{margin-top:var(--sp4)}
 .cap-warn{font-size:11.5px;line-height:1.7;padding:var(--sp4);border-radius:var(--r);border:1px solid var(--line);background:var(--bg-1);color:var(--fg-1)}
 .cap-warn.warn{border-color:var(--warn-soft);background:var(--warn-dim)}

@@ -18,5 +18,7 @@
   "created": "2026-09-11 10:37:01",
   "depends": [
     "ext_combat"
-  ]
+  ],
+  "version": "0.1.0",
+  "author": "鱼鱼"
 }

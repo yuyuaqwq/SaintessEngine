@@ -846,7 +846,8 @@ class H(BaseHTTPRequestHandler):
                     if not isinstance(m, dict):
                         return self._err(400, "请求体需为 {\"manifest\": {...}}")
                     cur = PK.load_manifest(d)
-                    cur.update({k: m[k] for k in ("name", "desc", "engine") if k in m})
+                    cur.update({k: m[k] for k in ("name", "desc", "engine", "version", "author")
+                                if k in m})
                     PK.save_manifest(d, cur)
                     return self._send(200, {"ok": True, "manifest": cur})
                 # /api/package/<id>/validate

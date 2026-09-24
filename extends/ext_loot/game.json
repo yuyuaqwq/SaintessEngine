@@ -5,5 +5,7 @@
   "desc": "游戏级能力包：加权抽取原语 + 掉落池与策略注册表（LootTable：roll / expand / audit）+ 有序档位阶梯（TierTable / count_for）+ 槽位挂载（draw_slots）+ 计数保底（pity_force / pity_advance）。纯形状库 —— 池里的内容、档位取值、引用前缀、随机源全由数据包给。",
   "engine": ">=0.1",
   "entry": "apply.py",
-  "created": "2026-09-23"
+  "created": "2026-09-23",
+  "version": "0.1.0",
+  "author": "鱼鱼"
 }

@@ -89,6 +89,13 @@ def describe(pkg_dir: str, ext_id: str, root: str) -> dict:
         "id": ext_id,
         "name": str(m.get("name") or ext_id),
         "desc": str(m.get("desc") or ""),
+        # ★ 2026-09-24：清单元数据（详情面板要用；缺失给空串，不编造）
+        "kind": str(m.get("kind") or "game"),
+        "version": str(m.get("version") or ""),
+        "author": str(m.get("author") or ""),
+        "engine": str(m.get("engine") or ""),
+        "entry": str(m.get("entry") or ""),
+        "created": str(m.get("created") or ""),
         "modules": mods,
         "lines": lines,
         "domains": sorted(decl.keys()),
