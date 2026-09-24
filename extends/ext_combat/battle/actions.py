@@ -543,7 +543,6 @@ def _skill_seg_damage(battle, actor, target, st, est, info, lv,
         # expr 段：type 由 kind 推导（物理→phys、真伤→true、其余 magi）
         kind = info.get("kind", "")
         seg_type = "true" if kind == _kind("true") else ("phys" if kind == _kind("phys") else "magi")
-        st["_player_lv"] = int(actor.get("level", 1) or 1)
         st["_skill_lv"] = lv
         # expr 已内嵌技能成长 → 剔除 skill_power_mult（basic 无成长 → 恒 1.0，无影响）
         spm = _GC.formulas().skill_power_mult(lv, info) or 1.0
@@ -559,18 +558,21 @@ def _skill_seg_damage(battle, actor, target, st, est, info, lv,
             dmg = int(dmg * 1.3)
         return dmg, magi
     # 非 formula/非 expr：按 kind 兜底（对齐旧非 formula 路径）
+    # ★ 等级从 **actor** 取（同构模型：玩家与怪一视同仁）—— 历史遗留 `st["_player_lv"]`
+    #   已删：它只在 expr 分支被写，非 expr 分支没人写 ⇒ 怪当攻击者时 level=None 直接抛。
+    _lv = int(actor.get("level", 1) or 1)
     kind = info.get("kind", "")
     power = float(info.get("power", 1.0) or 1.0)
     if kind == _kind("true"):
         return _GC.formulas().calc_damage(int((st.get("atk", 0) * power + skill_flat)), 0, seg_crit,
-                                           dmg_type="true", level=st.get("_player_lv")), 0
+                                           dmg_type="true", level=_lv), 0
     if kind == _kind("phys"):
         return _GC.formulas().calc_damage(int((st.get("atk", 0) * power + skill_flat)), est.get("def", 0),
                                            seg_crit, pene_pct=pp_phys, pene_flat=pf_phys, dmg_type="phys",
-                                           level=st.get("_player_lv")), 0
+                                           level=_lv), 0
     return _GC.formulas().calc_damage(int((st.get("matk", 0) * power + skill_flat)), est.get("mdef", 0),
                                        seg_crit, pene_pct=pp_magi, pene_flat=pf_magi, dmg_type="magi",
-                                       level=st.get("_player_lv")), 0
+                                       level=_lv), 0
 
 
 def _deal_hit(battle, actor: dict, target: dict, dmg: int,
@@ -745,7 +747,6 @@ def _heal_amount(st: dict, actor: dict, info: dict, lv: int) -> int:
         try:
             from saintess_engine.expr import compile_expr, eval_expr, build_vars
             st2 = dict(st)
-            st2["_player_lv"] = int(actor.get("level", 1) or 1)
             st2["_skill_lv"] = lv
             st2["max_hp"] = actor.get("max_hp", 0)
             _vars = build_vars(st2, player_lv=int(actor.get("level", 1) or 1),

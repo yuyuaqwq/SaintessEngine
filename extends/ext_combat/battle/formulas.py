@@ -384,7 +384,7 @@ def skill_expr_preview(info: dict | None, level: int, stats: dict | None = None)
         if not _expr:
             return 0.0
     try:
-        _vars = build_vars(stats or {}, player_lv=int((stats or {}).get("_player_lv", 0) or 0),
+        _vars = build_vars(stats or {}, player_lv=int((stats or {}).get("level", 0) or 0),
                            skill_lv=lv)
         return float(eval_expr(compile_expr(_expr), _vars))
     except Exception:
@@ -491,9 +491,9 @@ def resolve_formula(formula, stats, target_def, target_mdef, is_crit=False,
 
     返回 (总伤害, 魔法段伤害) —— magi 段单独返回供吸血/魔免分账。
     """
-    # ★ E1b：槽位 `damage` 的声明链要用 level 算 k_def。本函数一直在读 stats["_player_lv"]
-    #   （下面 build_vars 那处），提上来一份给 calc_damage 用；缺键 ⇒ 0（未绑定时无人读它）。
-    _lv = int((stats or {}).get("_player_lv", 0) or 0)
+    # ★ E1b：槽位 `damage` 的声明链要用 level 算 k_def。等级真源 = stats["level"]
+    #   （`stats.actor_stats` 统一从 actor 取，玩家与怪一视同仁；缺键 ⇒ 0，未绑定时无人读它）。
+    _lv = int((stats or {}).get("level", 0) or 0)
     total = 0
     magi_part = 0
     if not formula:
@@ -513,7 +513,7 @@ def resolve_formula(formula, stats, target_def, target_mdef, is_crit=False,
         if _expr:
             try:
                 from saintess_engine.expr import compile_expr, eval_expr, build_vars
-                _vars = build_vars(stats, player_lv=int(stats.get("_player_lv", 0) or 0),
+                _vars = build_vars(stats, player_lv=int(stats.get("level", 0) or 0),
                                    skill_lv=int(stats.get("_skill_lv", 0) or 0),
                                    target_max_hp=target_max_hp,
                                    base=float(seg.get("flat", 0) or 0))

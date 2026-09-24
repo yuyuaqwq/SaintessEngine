@@ -29,6 +29,11 @@ def actor_stats(battle, actor: dict) -> dict:
         st = _player_base_stats(battle, actor)
     else:
         st = _monster_base_stats(actor)
+    # ★ 等级统一：面板（声明链算 k_def）要读它，而**玩家与怪一视同仁** ——
+    #   真源就是 actor["level"]（同构模型：引擎里只有一种实体）。
+    #   历史遗留 `_player_lv` 已删：它是旧引擎的「玩家专属」名，怪也走它 = 名不副实；
+    #   且它只在 expr 分支被写、非 expr 分支没人写（实测：怪当攻击者时 level=None 直接抛）。
+    st.setdefault("level", int(actor.get("level", 1) or 1))
     # 效果折算（V 系列统一：遍历 effects 容器，读 EFFECT_RULES 表）
     #   - 面板快照型（buff：条目含 stat/op/mult/value 折算，origin act_buff）
     #   - 叠层声明型（state：EFFECT_RULES[key].panel/stat_scale × stacks）
