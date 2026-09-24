@@ -4,7 +4,8 @@
 提供给任何数据包用。它不提供**内容**：判定函数、环境词表、声明表全部由数据包给。
 
 形状清单（一个形状一步）：`cond/registry.py` 条件注册表 · `cond/envs.py` 环境位图 ·
-`rule/engine.py` 规则触发 · `earn/shape.py` 逐条求值（上下文外壳 + 参数化条件 + 求值器）。
+`rule/engine.py` 规则触发 · `earn/shape.py` 逐条求值（上下文外壳 + 参数化条件 + 求值器）·
+`ledger/shape.py` 账本（解锁遍历 / 领取 / 标签名 / 点数）。
 
 ## 装它
 
@@ -121,9 +122,40 @@ flags = earned_flags(TABLE, ctx, CONDITIONS, fallback)             # 同长同�
 两个消费者 `content/economy_cmds.py::_earned_titles` 与 `content/stat_bonus.py` 的**重复循环**
 因此合成一处（各自只留「喂 ctx」一行）。
 
+## 账本形状（`ext_achieve.ledger`）
+
+「一条账本怎么遍历、怎么领、怎么算」这台机器（搬自数据包 `content/achievements.py`）。
+
+```python
+from ext_achieve.ledger import bind, check, claim, labels, points
+
+bind(entries=lambda: TABLE,        # 条目表（也收 list 本身：对象共享，就地改即刻生效）
+     ledger_of=…, mark=…,          # 账本读口（归一到 {id, claimed, progress}）/ 落库口
+     player_of=…, stats_of=…, profs_of=…, save_player=…,   # 玩家与统计读写
+     cond_of=…,                    # 单条判据（内容侧注册表的总入口）
+     clear_of=…, weight_of=…, label_of=…,   # 通关记录键 / 点数权重 / 标签名
+     name_of=…, line_of=…, reward_of=…,     # 显示名 / 回执行 / 奖励三条支路
+     phrase=…,                     # 文案槽位 → 文案（真源在数据包）
+     machine=…, enrich=…, payout=…, grant=…, levelup=…)   # 三态机 / 加成 / 记账 / 发放 / 升级
+
+check(gid, qid, player, extra)     # → 本次新解锁条目（副本，带奖励摘要；不自动发放）
+claim(gid, qid)                    # → (lines, err)：三态机筛档位 → 汇总 → 发放 → 结算 → 落库
+labels(qid); points(qid)           # 已解锁条目的标签名（源表序）/ 点数合计
+```
+
+| 口径 | 说明 |
+|---|---|
+| 条目表字段 | `id` / `cond` 是**形状契约**；奖励三条支路走 `reward_of` 现取（三个键名是数据包 schema） |
+| 落库口径 | 解锁 = `(progress=1, claimed=0)` 待领取；领取 = `(1, 1)`；无物可领的待领项直接落成已领 |
+| 幂等 | 「可领」判定走注入的三态机（`claim` 只在 READY 态记入），重复领取 ⇒ 空回执 + 提示 |
+| 降级 | 形状**不吞异常**：读库/落库失败的兜底（记日志 + 回一句文案）留给调用方 |
+| 文案 | 形状只传**槽位名 + 实参**（`reward_exp` / `claim_head` / `none` …），键名与措辞在数据包 |
+
 ## 后续（同一批的余下几步）
 
 `S2` ✅ 已完成 2026-09-24（B2b）—— 规则触发形状（本包 `rule/`）。
-`S3` ✅ 已完成 2026-09-24 —— 逐条求值形状（本包 `earn/`）。余
-`S4` 账本 / 领取 / 点数 · `S5` 收口（数据包只剩「注册 + 注入 + 数据」）。
+`S3` ✅ 已完成 2026-09-24 —— 逐条求值形状（本包 `earn/`）。
+`S4` ✅ 已完成 2026-09-24 —— 账本形状（本包 `ledger/`：四函数进包、二十句柄注入、
+数据包侧只剩「注入面 + 条件注册 + 统计读口 + 四函数薄壳」）。余
+`S5` 收口（数据包只剩「注册 + 注入 + 数据」）。
 每步独立提交、独立验收（本包门禁 + 数据包全量 + 引擎全量 + 试玩摘要 sha 不变）。

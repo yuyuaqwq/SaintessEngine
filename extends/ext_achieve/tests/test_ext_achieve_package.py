@@ -10,6 +10,7 @@
   ① **包契约**：`game.json` 字段齐 · `apply.install_engine()` 可调且真的不装任何东西 ·
      门面把 `cond` 的子模块与公开符号转出去。
   ② **形状语义**：`Registry` 的登记/覆盖/兜底/fail-loud 逐条对着原地口径 · `register_specs`
+     · `ledger` 的账本形状（解锁遍历 / 领取汇总与幂等 / 标签名与点数 / 二十句柄 fail-loud）。
      整表装配（坏一条 ⇒ 一条都不登记）· `envs_of` 位图 · `EnvCtx.env` 缺项 False。
      · `rule` 的 `match_cond` 逐字段判定 / `fire` 触发序列（命中即止 · 计数 gte 触发并清零 ·
      chance 边界 · 七个句柄全注入 · 未装配 fail-loud）。
@@ -594,8 +595,264 @@ def t8_earn():
           E.earned_flags([], blank, reg, fall) == [])
 
 
+
+def t9_ledger():
+    print("\n[9] 账本形状：装配面 / 解锁遍历 / 领取账目与幂等 / 标签名与点数")
+    import importlib
+
+    import ext_achieve.ledger as L
+    import ext_achieve.ledger.shape as _shape
+
+    EXT = importlib.import_module("ext_achieve")
+    check("`ext_achieve.ledger` 是同一模块对象", EXT.ledger is L)
+    check("门面转出 bind / check / claim / labels / points",
+          all(hasattr(L, s) for s in ("bind", "check", "claim", "labels", "points")))
+    check("`from ext_achieve.ledger import …` 可用（__all__ 齐）",
+          all(x in L.__all__ for x in ("bind", "check", "claim", "labels", "points")))
+
+    print("  -- 未装配 fail-loud（本段是本进程第一次取用）")
+    for name, args in (("labels", ("q",)), ("points", ("q",)),
+                       ("check", ("g", "q")), ("claim", ("g", "q"))):
+        try:
+            getattr(L, name)(*args)
+            check("★ 未装配就 %s ⇒ 当场报错（fail-loud）" % name, False)
+        except RuntimeError:
+            check("★ 未装配就 %s ⇒ 当场报错（fail-loud）" % name, True)
+
+    print("  -- 装配面：缺 / 多 / 非可调用")
+    try:
+        L.bind(entries=[])
+        check("bind 缺句柄 ⇒ TypeError（不给「某条路静默不走」的降级）", False)
+    except TypeError:
+        check("bind 缺句柄 ⇒ TypeError（不给「某条路静默不走」的降级）", True)
+
+    TABLE = [
+        {"id": "a1", "cond": {}, "name": "甲", "label": "衔甲", "weight": 1,
+         "reward": {"exp": 10, "gold": 5, "items": {"k1": 2, "k2": 1}}},
+        {"id": "a2", "cond": {}, "name": "乙", "label": "衔乙", "weight": 1,
+         "reward": {"exp": 3}},
+        {"id": "a3", "cond": {}, "name": "丙", "label": None, "weight": 2, "reward": {}},
+    ]
+    ROWS = []
+    MARKS = []
+    GRANTS = []
+    SAVED = []
+    PLAYER = {"qq_id": "", "exp": 100, "level": 3}
+    FAIL_MARK = set()
+    GIVE_ITEMS = True
+    LEVEL_LOGS = ["升到 Lv.4"]
+    DB_FAIL = False
+
+    class _Machine:
+        """三态机替身（`TierBoard` 口径）：READY（达成 / 未领 / 有物可领）才可领，幂等。"""
+
+        def __init__(self, unlocked, claimed):
+            self.unlocked = set(unlocked)
+            self.claimed = set(claimed)
+
+        def claim(self, entry):
+            key = entry["id"]
+            if key not in self.unlocked or key in self.claimed:
+                return False
+            rw = entry.get("reward") or {}
+            if not (rw.get("exp", 0) or rw.get("gold", 0) or rw.get("items")):
+                return False
+            self.claimed.add(key)
+            return True
+
+    def _mark(gid, qid, key, progress, claimed):
+        if key in FAIL_MARK:
+            raise RuntimeError("落库失败（替身）")
+        MARKS.append((gid, qid, key, progress, claimed))
+        for row in ROWS:                      # 替身真写回（幂等要靠它）
+            if row["id"] == key:
+                row["claimed"] = claimed
+                row["progress"] = progress
+
+    def _grant(gid, qid, items, lines):
+        GRANTS.append(dict(items))
+        if not GIVE_ITEMS:
+            return lines + ["发失败:%s" % ",".join(sorted(items))], False
+        return lines + ["发:%s" % ",".join(sorted(items))], True
+
+    def _boom_read(g, q):
+        raise OSError("读库失败（替身）")
+
+    def _handles(**over):
+        base = dict(
+            entries=lambda: TABLE,
+            ledger_of=lambda g, q: (_boom_read(g, q) if DB_FAIL else [dict(r) for r in ROWS]),
+            mark=_mark,
+            player_of=lambda g, q: dict(PLAYER) if PLAYER else None,
+            stats_of=lambda g, q: {"k": 1},
+            profs_of=lambda g, q: {"p": 1},
+            save_player=lambda g, q, p: SAVED.append(dict(p)),
+            cond_of=lambda player, stats, profs, extra, cond, gid: bool(extra.get("allow", True)),
+            clear_of=lambda key: key[5:] if key.startswith("mark_") else None,
+            weight_of=lambda a: a["weight"],
+            label_of=lambda a: a.get("label"),
+            name_of=lambda k: "物:" + k,
+            line_of=lambda a: "行:" + a["name"],
+            reward_of=lambda a: (a["reward"].get("exp", 0), a["reward"].get("gold", 0),
+                                 a["reward"].get("items")),
+            phrase=lambda slot, **slots: "[%s|%s]" % (slot, ",".join(sorted(slots))),
+            machine=lambda unlocked, claimed: _Machine(unlocked, claimed),
+            enrich=lambda g, q, p: dict(p, buff=1),
+            grant=_grant,
+            levelup=lambda g, q, p: (list(LEVEL_LOGS), dict(p, level=p.get("level", 1) + 1)),
+            payout=lambda g, q, p, exp, currency: dict(p, exp=p.get("exp", 0) + exp,
+                                                      money=p.get("money", 0) + currency),
+        )
+        base.update(over)
+        return base
+
+    L.bind(**_handles())
+    try:
+        L.bind(**dict(_handles(), 未知=1))
+        check("bind 收到未知句柄 ⇒ TypeError（拼错名字不静默）", False)
+    except TypeError:
+        check("bind 收到未知句柄 ⇒ TypeError（拼错名字不静默）", True)
+    try:
+        L.bind(**dict(_handles(), mark="不是函数"))
+        check("句柄必须可调用（字符串 ⇒ TypeError）", False)
+    except TypeError:
+        check("句柄必须可调用（字符串 ⇒ TypeError）", True)
+
+    print("  -- 标签名 / 点数：源表序 · 无标签跳过 · 读口异常 ⇒ 空集")
+    check("全部未解锁 ⇒ 空列表", L.labels("q") == [] and L.points("q") == 0)
+    ROWS[:] = [{"id": "a1", "claimed": 0, "progress": 1},
+               {"id": "a3", "claimed": 0, "progress": 1}]
+    check("★ 源表序 + 无标签条目跳过", L.labels("q") == ["衔甲"], str(L.labels("q")))
+    check("★ 点数 = 逐条注入权重之和（1 + 2）", L.points("q") == 3, str(L.points("q")))
+    DB_FAIL = True
+    check("读口异常 ⇒ 标签名空列表 / 点数 0（宽松口径，与真源同款）",
+          L.labels("q") == [] and L.points("q") == 0)
+    DB_FAIL = False
+
+    print("  -- 解锁遍历：判据 / 落库 / 副本与奖励摘要 / inst_ids")
+    ROWS[:] = []
+    extra = {"inst_id": "d9"}
+    new = L.check("g", "q", {"exp": 0, "qq_id": ""}, extra)
+    check("全表未解锁且判据成立 ⇒ 三条都解锁（源表序）",
+          [a["id"] for a in new] == ["a1", "a2", "a3"], str([a["id"] for a in new]))
+    check("★ 落库口径 = (1, 0)（done、待领取）",
+          MARKS[:3] == [("g", "q", "a1", 1, 0), ("g", "q", "a2", 1, 0), ("g", "q", "a3", 1, 0)],
+          str(MARKS[:3]))
+    check("★ 返回的是**副本**（原表未被写入摘要字段）",
+          "_reward_txt" not in TABLE[0] and bool(new[0]["_reward_txt"]), str(sorted(TABLE[0])))
+    check("奖励摘要：经验 + 币 + 物品名×数 + 领取提示",
+          new[0]["_reward_txt"]
+          == "[reward_exp|exp]、[reward_currency|amount]、物:k1×2、物:k2×1[claim_hint|]",
+          new[0]["_reward_txt"])
+    check("无可发之物的条目 ⇒ 摘要为空串", new[2]["_reward_txt"] == "")
+    check("★ extra 被补上 inst_ids（账本里的通关记录 + 本次事件自带的）",
+          extra["inst_ids"] == {"d9"}, str(extra.get("inst_ids")))
+
+    ROWS[:] = [{"id": "a1", "claimed": 0, "progress": 1}]
+    MARKS[:] = []
+    new2 = L.check("g", "q", None, {})
+    check("已解锁的跳过（不再返回）",
+          [a["id"] for a in new2] == ["a2", "a3"], str([a["id"] for a in new2]))
+    check("player 缺省 ⇒ 走 player_of 现取（能拿到玩家）", bool(new2) and MARKS[0][2] == "a2")
+
+    player = {"exp": 0}
+    MARKS[:] = []
+    L.check("g", "q", player, {"allow": False})
+    check("判据不成立 ⇒ 一条都不解锁、不落库且仍补 qq_id",
+          player.get("qq_id") == "q" and MARKS == [], str(MARKS))
+
+    PLAYER = None
+    check("取不到玩家 ⇒ 空结果（不抛）", L.check("g", "q") == [])
+    PLAYER = {"qq_id": "q", "exp": 100, "level": 3}
+
+    ROWS[:] = []
+    FAIL_MARK.add("a2")
+    MARKS[:] = []
+    new3 = L.check("g", "q", {"qq_id": "q"})
+    FAIL_MARK.clear()
+    check("★ 某条落库失败 ⇒ 跳过该条、继续判后面的（a2 不在结果里）",
+          [a["id"] for a in new3] == ["a1", "a3"], str([a["id"] for a in new3]))
+
+    ROWS[:] = [{"id": "mark_d3", "claimed": 0, "progress": 1}]
+    extra3 = {"inst_id": "d9"}
+    L.check("g", "q", {"qq_id": "q"}, extra3)
+    check("★ clear_of 认出来的通关记录 + 本次事件 id 一起进 inst_ids",
+          extra3["inst_ids"] == {"d3", "d9"}, str(extra3["inst_ids"]))
+
+    print("  -- 领取：账目汇总 / 发放 / 升级结算 / 幂等")
+    ROWS[:] = [{"id": "a1", "claimed": 0, "progress": 1},
+               {"id": "a2", "claimed": 0, "progress": 1}]
+    MARKS[:] = []
+    GRANTS[:] = []
+    SAVED[:] = []
+    PLAYER = {"qq_id": "q", "exp": 100, "level": 3}
+    lines, err = L.claim("g", "q")
+    check("回执首行 = 汇总（经验 + 币接在同一行）；err 为空串",
+          err == "" and lines[0] == "[claim_head|exp][claim_currency|amount]",
+          str(lines[:2]))
+    check("★ 物品一次汇总发放（k1×2 + k2×1）", GRANTS == [{"k1": 2, "k2": 1}], str(GRANTS))
+    check("发放行插在物品表头之后",
+          "发:k1,k2" in lines and lines.index("发:k1,k2") > lines.index("[items_head|]"),
+          str(lines))
+    check("★ 两类奖励记进玩家记录（exp 100+13 / money 5）",
+          bool(SAVED) and SAVED[0]["exp"] == 113 and SAVED[0]["money"] == 5, str(SAVED[:1]))
+    check("★ 升级结算结果也落库（level 3 → 4）", SAVED[0]["level"] == 4, str(SAVED[:1]))
+    check("升级日志接在回执尾部（空行分隔）",
+          lines[-1] == "升到 Lv.4" and "" in lines, str(lines))
+    check("回执里每条可领档位一行",
+          [x for x in lines if x.startswith("行:")] == ["行:甲", "行:乙"], str(lines))
+    check("★ 领取后当场落成 (1, 1)（done + 已领）",
+          [m for m in MARKS if m[2] in ("a1", "a2")]
+          == [("g", "q", "a1", 1, 1), ("g", "q", "a2", 1, 1)], str(MARKS))
+    MARKS[:] = []
+    lines2, err2 = L.claim("g", "q")
+    check("★ 幂等：已经全领过 ⇒ 空回执 + 「没有可领」提示，零落库",
+          lines2 == [] and err2 == "[none|]" and MARKS == [],
+          "%r %r %r" % (lines2, err2, MARKS))
+
+    ROWS[:] = []
+    check("没有待领项 ⇒ 同款提示（不进展）", L.claim("g", "q") == ([], "[none|]"))
+
+    ROWS[:] = [{"id": "a3", "claimed": 0, "progress": 2}]
+    MARKS[:] = []
+    check("★ 待领但**无物可领** ⇒ 落成 (progress, 已领) + 提示，不发不升",
+          L.claim("g", "q") == ([], "[none|]") and MARKS == [("g", "q", "a3", 2, 1)],
+          str(MARKS))
+
+    ROWS[:] = [{"id": "a1", "claimed": 0, "progress": 1}]
+    PLAYER = None
+    check("取不到玩家 ⇒ 提示先注册（不落库）", L.claim("g", "q") == ([], "[need_register|]"))
+    PLAYER = {"qq_id": "q", "exp": 0, "level": 1}
+
+    ROWS[:] = [{"id": "a1", "claimed": 0, "progress": 1}]
+    GIVE_ITEMS = False
+    lines3, _ = L.claim("g", "q")
+    GIVE_ITEMS = True
+    check("★ 物品发放报假 ⇒ 半截行照出 + 补一行「部分失败」，经验/币照发",
+          "[items_partial_fail|]" in lines3
+          and any(x.startswith("发失败:") for x in lines3)
+          and SAVED and SAVED[-1]["exp"] == 10, str(lines3))
+
+    ROWS[:] = [{"id": "a1", "claimed": 0, "progress": 1}]
+    DB_FAIL = True
+    try:
+        L.claim("g", "q")
+        check("★ 形状不吞异常（读库失败 ⇒ 抛给调用方定降级）", False)
+    except OSError:
+        check("★ 形状不吞异常（读库失败 ⇒ 抛给调用方定降级）", True)
+    DB_FAIL = False
+
+    print("  -- 收尾：reload 回未装配态（与 t4 / t7 同法）")
+    fresh = importlib.reload(_shape)
+    check("reload 后回到未装配态", fresh._INJ is None)
+    try:
+        fresh.labels("q")
+        check("★ 未装配就取用 ⇒ 当场报错（本段收尾后再验一次）", False)
+    except RuntimeError:
+        check("★ 未装配就取用 ⇒ 当场报错（本段收尾后再验一次）", True)
+
 def main():
-    print("== ext_achieve 门禁：包契约 / 条件注册表 / 环境位图 / 规则触发 / 逐条求值 / 零内容知识 ==")
+    print("== ext_achieve 门禁：包契约 / 条件注册表 / 环境位图 / 规则触发 / 逐条求值 / 账本 / 零内容知识 ==")
     t1_contract()
     t2_registry()
     t3_register_specs()
@@ -604,6 +861,7 @@ def main():
     t6_teeth()
     t7_rule()
     t8_earn()
+    t9_ledger()
     print("\n===== 结果：通过 %d / %d =====" % (passed, passed + failed))
     return 1 if failed else 0
 
