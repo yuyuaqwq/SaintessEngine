@@ -11,6 +11,8 @@
      门面把 `cond` 的子模块与公开符号转出去。
   ② **形状语义**：`Registry` 的登记/覆盖/兜底/fail-loud 逐条对着原地口径 · `register_specs`
      整表装配（坏一条 ⇒ 一条都不登记）· `envs_of` 位图 · `EnvCtx.env` 缺项 False。
+     · `rule` 的 `match_cond` 逐字段判定 / `fire` 触发序列（命中即止 · 计数 gte 触发并清零 ·
+     chance 边界 · 七个句柄全注入 · 未装配 fail-loud）。
   ③ **零内容知识**：本包源码**不 import 任何数据包**（AST 扫 Import/ImportFrom）·
      代码常量里**没有内容侧取值**（AST 扫字符串字面量，跳过 docstring；注释本就不在 AST 里）。
   ④ **有牙**：把「带内容词 / 带数据包 import」的伪造源码喂给同一套扫描器 ⇒ 必须点名
@@ -289,14 +291,212 @@ def t6_teeth():
     check("引擎导入不误伤", not bi5 and not bw5, "%r %r" % (bi5, bw5))
 
 
+def t7_rule():
+    print("\n[7] 规则触发形状：绑定面 / 条件判定逐字段 / 计数与概率 / 触发序列")
+    import importlib
+
+    import ext_achieve.rule as R
+    import ext_achieve.rule.engine as _eng
+
+    EXT = importlib.import_module("ext_achieve")
+    check("`ext_achieve.rule` 是同一模块对象", EXT.rule is R)
+    check("门面转出 bind / fire / match_cond",
+          all(hasattr(EXT.rule, s) for s in ("bind", "fire", "match_cond")))
+    check("`from ext_achieve.rule import …` 可用（__all__ 齐）",
+          all(x in R.__all__ for x in ("bind", "fire", "match_cond")))
+
+    counters = {}
+    items = {("g", "q"): {"demo_mat": 2}}
+    flags = {("g", "q"): {"talk_demo": True}}
+    fired = []
+
+    def _fire_event(template, params, gid, qid, player, cur_map, hooks):
+        fired.append((template, params, gid, qid, hooks))
+        return "现场措辞"
+
+    RULES = [
+        {"id": "r_off", "trigger": "t", "enabled": False,
+         "action": {"template": "should_never_run"}},
+        {"id": "r_hit", "trigger": "t", "cond": {"event": "empty"},
+         "action": {"template": "tmpl_hit", "params": {"k": 1}}},
+    ]
+    R.bind(rules=lambda: RULES,
+           is_time=lambda span: span == "day",
+           counter_get=lambda g, q, k: counters.get((g, q, k), 0),
+           counter_set=lambda g, q, k, v: counters.__setitem__((g, q, k), v),
+           count_item=lambda g, q, i: items.get((g, q), {}).get(i, 0),
+           talk_flag=lambda g, q, f: bool(flags.get((g, q), {}).get(f)),
+           fire_event=_fire_event)
+
+    print("  -- 条件判定逐字段（字段名 = 形状契约）")
+    mc = R.match_cond
+    m_ab = {"id": "a", "type": "field"}
+    check("cond 为 None ⇒ 恒真", mc(None, "g", "q", {}, {}, {}) is True)
+    check("cond 为 {} ⇒ 恒真", mc({}, "g", "q", {}, {}, {}) is True)
+    check("map（list）命中 / 不命中",
+          mc({"map": ["a", "b"]}, "g", "q", {}, m_ab, {}) is True
+          and mc({"map": ["b"]}, "g", "q", {}, m_ab, {}) is False)
+    check("map（单值）命中 / 不命中",
+          mc({"map": "a"}, "g", "q", {}, m_ab, {}) is True
+          and mc({"map": "b"}, "g", "q", {}, m_ab, {}) is False)
+    check("map_type（list / 单值）",
+          mc({"map_type": ["field"]}, "g", "q", {}, m_ab, {}) is True
+          and mc({"map_type": "town"}, "g", "q", {}, m_ab, {}) is False)
+    check("cur_map 为 None ⇒ 地图字段判不命中（不炸）",
+          mc({"map": "a"}, "g", "q", {}, None, {}) is False)
+    check("★ time 走注入的 is_time（形状里没有钟点边界）",
+          mc({"time": "day"}, "g", "q", {}, m_ab, {}) is True
+          and mc({"time": "deep_night"}, "g", "q", {}, m_ab, {}) is False)
+    check("level_min / level_max",
+          mc({"level_min": 5, "level_max": 10}, "g", "q", {"level": 5}, m_ab, {}) is True
+          and mc({"level_min": 6}, "g", "q", {"level": 5}, m_ab, {}) is False
+          and mc({"level_max": 4}, "g", "q", {"level": 5}, m_ab, {}) is False)
+    check("item 走注入的 count_item（单值 / list）",
+          mc({"item": "demo_mat"}, "g", "q", {}, m_ab, {}) is True
+          and mc({"item": "nope"}, "g", "q", {}, m_ab, {}) is False
+          and mc({"item": ["nope", "demo_mat"]}, "g", "q", {}, m_ab, {}) is True)
+    check("flag 走注入的 talk_flag",
+          mc({"flag": "talk_demo"}, "g", "q", {}, m_ab, {}) is True
+          and mc({"flag": "talk_none"}, "g", "q", {}, m_ab, {}) is False)
+    check("event（单值 / list）",
+          mc({"event": "empty"}, "g", "q", {}, m_ab, {"event": "empty"}) is True
+          and mc({"event": ["empty", "battle"]}, "g", "q", {}, m_ab, {"event": "battle"}) is True
+          and mc({"event": "battle"}, "g", "q", {}, m_ab, {"event": "empty"}) is False)
+    check("enemy_tag：boss / elite 特征",
+          mc({"enemy_tag": "boss"}, "g", "q", {}, m_ab,
+             {"enemy": {"name": "某", "is_boss": True}}) is True
+          and mc({"enemy_tag": "elite"}, "g", "q", {}, m_ab,
+                 {"enemy": {"name": "某", "is_elite": True}}) is True
+          and mc({"enemy_tag": "boss"}, "g", "q", {}, m_ab,
+                 {"enemy": {"name": "某"}}) is False)
+    check("enemy_tag：名称 / id / tags 子串 + list 任一",
+          mc({"enemy_tag": "史"}, "g", "q", {}, m_ab, {"enemy": {"name": "史莱姆"}}) is True
+          and mc({"enemy_tag": ["nope", "e_x"]}, "g", "q", {}, m_ab,
+                 {"enemy": {"id": "e_x"}}) is True
+          and mc({"enemy_tag": "zz"}, "g", "q", {}, m_ab, {"enemy": {"name": "史莱姆"}}) is False)
+    check("hp_pct_max（残血）",
+          mc({"hp_pct_max": 0.3}, "g", "q", {"hp": 20, "max_hp": 100}, m_ab, {}) is True
+          and mc({"hp_pct_max": 0.3}, "g", "q", {"hp": 80, "max_hp": 100}, m_ab, {}) is False)
+    check("random_chance 边界：0 ⇒ 必不满足 / 1 ⇒ 必满足",
+          mc({"random_chance": 0}, "g", "q", {}, m_ab, {}) is False
+          and mc({"random_chance": 1}, "g", "q", {}, m_ab, {}) is True)
+
+    print("  -- 触发序列：命中即止 / 计数 / 概率 / 执行器透传")
+    fired[:] = []
+    txt = R.fire("g", "q", {}, m_ab, "t", {"event": "empty"})
+    check("命中 ⇒ 执行 action 并返回执行器文本", txt == "现场措辞", repr(txt))
+    check("enabled=False 的规则被跳过（执行器收到的是命中那条）",
+          fired == [("tmpl_hit", {"k": 1}, "g", "q", None)], str(fired))
+    check("hooks 原样透传（默认 None）",
+          R.fire("g", "q", {}, m_ab, "t", {"event": "empty"}, {"h": 1}) == "现场措辞"
+          and fired[-1][4] == {"h": 1}, str(fired[-1]))
+    fired[:] = []
+    check("无命中 ⇒ 空串且不执行", R.fire("g", "q", {}, m_ab, "t", {"event": "battle"}) == ""
+          and fired == [])
+    check("trigger 不同的规则不上钩", R.fire("g", "q", {}, m_ab, "other", {"event": "empty"}) == "")
+
+    call_log = []
+
+    def _fe2(template, params, gid, qid, player, cur_map, hooks):
+        call_log.append(template)
+        return "" if template == "tmpl_blank" else "got:" + template
+
+    R.bind(rules=[
+        {"id": "r_notpl", "trigger": "s", "action": {"params": {}}},
+        {"id": "r_blank", "trigger": "s", "action": {"template": "tmpl_blank"}},
+        {"id": "r_first", "trigger": "s", "action": {"template": "tmpl_first"}},
+        {"id": "r_second", "trigger": "s", "action": {"template": "tmpl_second"}},
+    ], is_time=lambda span: True,
+        counter_get=lambda g, q, k: counters.get((g, q, k), 0),
+        counter_set=lambda g, q, k, v: counters.__setitem__((g, q, k), v),
+        count_item=lambda g, q, i: 0,
+        talk_flag=lambda g, q, f: False,
+        fire_event=_fe2)
+    call_log[:] = []
+    out = R.fire("g", "q", {}, m_ab, "s", {})
+    check("无 template 的条目跳过；执行器返回空串继续往后找；★ 命中即止",
+          out == "got:tmpl_first" and call_log == ["tmpl_blank", "tmpl_first"], str(call_log))
+
+    counters.clear()
+    R.bind(rules=[{"id": "r_cnt", "trigger": "c", "count": {"key": "k1", "gte": 3},
+                   "cond": {"event": "empty"}, "action": {"template": "tmpl_cnt"}}],
+           is_time=lambda span: True,
+           counter_get=lambda g, q, k: counters.get((g, q, k), 0),
+           counter_set=lambda g, q, k, v: counters.__setitem__((g, q, k), v),
+           count_item=lambda g, q, i: 0, talk_flag=lambda g, q, f: False,
+           fire_event=lambda t, p, g, q, pl, m, h: "got:" + t)
+    o1 = R.fire("g", "q", {}, m_ab, "c", {"event": "empty"})
+    o2 = R.fire("g", "q", {}, m_ab, "c", {"event": "empty"})
+    check("计数：第 1/2 次不触发，计数 1 → 2",
+          o1 == "" and o2 == "" and counters[("g", "q", "k1")] == 2, str(counters))
+    o3 = R.fire("g", "q", {}, m_ab, "c", {"event": "empty"})
+    check("计数：第 3 次触发并清零",
+          o3 == "got:tmpl_cnt" and counters[("g", "q", "k1")] == 0, str(counters))
+    R.fire("g", "q", {}, m_ab, "c", {"event": "empty"})
+    R.fire("g", "q", {}, m_ab, "c", {"event": "battle"})
+    check("计数：条件中断 ⇒ 清零（读→算→写，逐字同原地）",
+          counters[("g", "q", "k1")] == 0, str(counters))
+    check("计数规则不走 chance 分支（cond 不命中 ⇒ 不触发）",
+          R.fire("g", "q", {}, m_ab, "c", {"event": "battle"}) == "")
+
+    R.bind(rules=[{"id": "r_c0", "trigger": "p", "chance": 0,
+                   "action": {"template": "tmpl_c0"}},
+                  {"id": "r_c1", "trigger": "q1", "chance": 1,
+                   "action": {"template": "tmpl_c1"}}],
+           is_time=lambda span: True,
+           counter_get=lambda g, q, k: 0, counter_set=lambda g, q, k, v: None,
+           count_item=lambda g, q, i: 0, talk_flag=lambda g, q, f: False,
+           fire_event=lambda t, p, g, q, pl, m, h: "got:" + t)
+    check("chance=0 ⇒ 不触发", R.fire("g", "q", {}, m_ab, "p", {}) == "")
+    check("chance=1 ⇒ 触发", R.fire("g", "q", {}, m_ab, "q1", {}) == "got:tmpl_c1")
+
+    print("  -- 注入面：形参校验 / 对象共享 / 未装配 fail-loud")
+    try:
+        R.bind(rules=123, is_time=lambda s: True, counter_get=lambda *a: 0,
+               counter_set=lambda *a: None, count_item=lambda *a: 0,
+               talk_flag=lambda *a: False, fire_event=lambda *a: "")
+        check("rules 只收容器 / 零参可调用（数字 ⇒ TypeError）", False)
+    except TypeError:
+        check("rules 只收容器 / 零参可调用（数字 ⇒ TypeError）", True)
+    try:
+        R.bind(rules=[], is_time="x", counter_get=lambda *a: 0, counter_set=lambda *a: None,
+               count_item=lambda *a: 0, talk_flag=lambda *a: False, fire_event=lambda *a: "")
+        check("句柄必须可调用（字符串 ⇒ TypeError）", False)
+    except TypeError:
+        check("句柄必须可调用（字符串 ⇒ TypeError）", True)
+
+    shared = [{"id": "r_live", "trigger": "L", "action": {"template": "tmpl_live"}}]
+    R.bind(rules=shared, is_time=lambda span: True, counter_get=lambda *a: 0,
+           counter_set=lambda *a: None, count_item=lambda *a: 0,
+           talk_flag=lambda *a: False, fire_event=lambda *a: "live")
+    first = R.fire("g", "q", {}, m_ab, "L", {})
+    shared.append({"id": "r_live2", "trigger": "L2", "action": {"template": "tmpl_live2"}})
+    check("rules 收 list 本身 ⇒ 就地改表即刻生效（同一份对象）",
+          first == "live" and R.fire("g", "q", {}, m_ab, "L2", {}) == "live")
+
+    fresh = importlib.reload(_eng)
+    check("reload 后回到未装配态（本段收尾；与 t4 同法）", fresh._INJ is None)
+    try:
+        fresh.fire("g", "q", {}, m_ab, "t", {})
+        check("★ 未装配就 fire ⇒ 当场报错（不返回空串）", False)
+    except RuntimeError:
+        check("★ 未装配就 fire ⇒ 当场报错（不返回空串）", True)
+    try:
+        fresh.match_cond({"time": "day"}, "g", "q", {}, m_ab, {})
+        check("★ 未装配就 match_cond ⇒ 取件点当场报错", False)
+    except RuntimeError:
+        check("★ 未装配就 match_cond ⇒ 取件点当场报错", True)
+
+
 def main():
-    print("== ext_achieve 门禁：包契约 / 条件注册表 / 环境位图 / 零内容知识 ==")
+    print("== ext_achieve 门禁：包契约 / 条件注册表 / 环境位图 / 规则触发 / 零内容知识 ==")
     t1_contract()
     t2_registry()
     t3_register_specs()
     t4_envs()
     t5_zero_knowledge()
     t6_teeth()
+    t7_rule()
     print("\n===== 结果：通过 %d / %d =====" % (passed, passed + failed))
     return 1 if failed else 0
 
