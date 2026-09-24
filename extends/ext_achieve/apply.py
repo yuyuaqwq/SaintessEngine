@@ -15,7 +15,7 @@
     from ext_achieve.earn import EvalCtx, ParamCond, bind, earned_flags
     from ext_achieve.ledger import bind, check, claim, labels, points
 
-★ 装配纪律（与 `ext_effect` 的注入面同一套）：**未装配即取用当场报错** ——
+★ 装配纪律（本包三块形状 `cond` / `rule` / `earn` / `ledger` 同一套）：**未装配即取用当场报错** ——
 不许出现「空表 ⇒ 静默全 False」这种把「装配忘了」伪装成「判定不满足」的降级。
 """
 from __future__ import annotations

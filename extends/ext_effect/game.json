@@ -1,9 +1,0 @@
-{
-  "id": "ext_effect",
-  "kind": "extension",
-  "name": "场景交互效果层（POI）",
-  "desc": "游戏级能力包：场景交互点（POI）效果层 —— `POI_EFFECTS` 注册表 + `PoiContext` + `execute_poi`。**零包内依赖**：写库句柄、内容域访问、文案渲染全部由调用方注入（`ctx.host` / `ctx.dom` / `ctx.text` / `ctx.static`），数据包 depends 它即可用。",
-  "engine": ">=0.1",
-  "entry": "apply.py",
-  "created": "2026-09-24"
-}

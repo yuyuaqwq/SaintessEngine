@@ -34,7 +34,6 @@ ORL = os.path.join(ROOT, "games", "orlandia")
 ALL = ["ext_combat", "ext_world", "ext_life", "ext_economy",
        "ext_social", "ext_loot", "ext_dialogue", "ext_quest",
        "ext_reward",        # ★ 2026-09-24 B4a：流水采集半边抽包
-       "ext_effect",        # ★ 2026-09-24 B7a：场景交互效果层（POI）抽包
        "ext_achieve"]       # ★ 2026-09-24 B2a：条件注册表 / 环境位图形状抽包
 
 
@@ -46,7 +45,7 @@ def main():
     section("1. 真包上试算：域表随 depends 变（走唯一源）")
     base = CAP.effects(ORL)
     ids = sorted(e["id"] for e in base["extensions"])
-    check("扫到 11 个扩展包", ids == sorted(ALL), ids)
+    check("扫到 10 个扩展包", ids == sorted(ALL), ids)
     check("orlandia 全装（depends 与磁盘一致）",
           sorted(base["enabled"]) == sorted(ALL), base["enabled"])
     check("有效域 = 106", base["trial"]["domains_before"] == 106,

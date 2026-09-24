@@ -46,7 +46,7 @@
   `games/my_game` = 演示包）。**一个进程只允许一个数据包**：指令路由 / 动作注册表 / 文案表 /
   时钟都是进程级单例，两个数据包会互撞 —— 要同时跑两款游戏就开两个进程
 
-### 引擎自带的 11 个扩展包（18 个原语模块搬出后的新家 + 抽包工程新增）
+### 引擎自带的 10 个扩展包（18 个原语模块搬出后的新家 + 抽包工程新增）
 
 | 扩展包 | 从引擎搬出去的模块 | 它提供什么 |
 |---|---|---|
@@ -59,7 +59,6 @@
 | `extends/ext_loot/` | `loot/` | 掉落池 / 档位阶梯 / 槽位挂载 |
 | `extends/ext_dialogue/` | `dialogue/` | 对话树与会话游标 |
 | `extends/ext_reward/` | ——（2026-09-24 B4a 从**数据包**抽入） | 战斗流水采集半边（`tlog_collect.BattleTLog`：事件 → 流水，靠引擎观察者通道） |
-| `extends/ext_effect/` | ——（2026-09-24 B7a 从**数据包**抽入） | 场景交互效果层（`POI_EFFECTS` 注册表 + `PoiContext` + `execute_poi`；注入面 = `ctx.host/dom/text/static`） |
 | `extends/ext_achieve/` | ——（2026-09-24 B2a/B2b 从**数据包**抽入） | 条件判定与规则触发的通用形状：`cond.registry` 条件注册表（未知名按默认键兜底 · 声明表整表装配）+ `cond.envs` 环境位图（`EnvCtx` · 词表由调用方注入）+ `rule.engine` 规则触发（`match_cond` 条件判定 / `fire` 触发序列 · 规则表与时段/计数/背包/旗标/模板执行七个句柄全由调用方注入） + `earn.shape` 逐条求值形状（上下文外壳 `EvalCtx` 带钩子表与注入读口 / 参数化条件 `ParamCond` / `earned_flags` 逐条判：注册表命中 → 判定函数、否则参数化兜底、都不中 False） |
 
 ### 包栈：三层怎么装起来
