@@ -31,16 +31,17 @@
 **依赖方向严格单向：数据包 → 扩展包 → 引擎**（门禁 `tests/test_layering.py` 机器钉死）。
 反方向一律报错：扩展包 `depends` 数据包 = `PackageError`，依赖成环 = `PackageError`。
 
-- 引擎目录：`saintess_engine/`（**18** 个子包 + **6** 个顶层模块；共 **63** 个 `.py` / **12 325** 行）
+- 引擎目录：`saintess_engine/`（**19** 个子包 + **6** 个顶层模块；共 **64** 个 `.py` / **12 582** 行）
   —— 数字由 `tests/test_editor_wiki.py` 逐项对照磁盘锁定，改模块结构必同步（否则门禁红）
 - 引擎侧的模块（与 `saintess_engine/__init__.py` 里的「模块布局」同一份口径，全部平级）：
   - **基础** `config`（注入面）· `domains`（引擎默认域集 + 合并规则）· `package`（包栈加载器）
   - **通用原语** `expr/`（表达式求值）· `formula/`（声明式公式表）· `conditions/` · `bonus/` ·
-    `grant/` · `gates/`（数值预算门禁）· `wire/` · `_validators/`
+    `grant/` · `acts/`（动作序列执行器：动词注册表 + 按序执行 + 装配期 fail-closed）·
+    `gates/`（数值预算门禁）· `wire/` · `_validators/`
   - **运行时** `store/` · `command/` · `events/` · `clock/` · `container/` · `text/` · `session/` ·
     `log/` · `tlog/` · `records/`
   - **宿主** `host/`（包加载 / 会话循环 / 命令通道 / 战斗驱动半边）
-- 扩展包目录 `extends/`：引擎自带 **11** 个（见下表）。装法永远是一句话 ——
+- 扩展包目录 `extends/`：引擎自带 **10** 个（见下表）。装法永远是一句话 ——
   数据包 `game.json` 里 `"depends": ["ext_xxx"]`，包栈按拓扑序装（被依赖者在前）
 - 数据包目录 `games/`：一款游戏一个包（`games/orlandia` = 《奥兰迪亚》导出包，
   `games/my_game` = 演示包）。**一个进程只允许一个数据包**：指令路由 / 动作注册表 / 文案表 /

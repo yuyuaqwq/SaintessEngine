@@ -8,7 +8,7 @@
             package     包栈加载器（数据包 + 扩展包 · 依赖解析 / 拓扑加载 / 域分层）
   通用原语  expr/       表达式求值器（数值公式自定义）
             formula/    声明式公式表
-            conditions/ 条件形状    bonus/ grant/ gates/ wire/ _validators/
+            conditions/ 条件形状    bonus/ grant/ acts/  动作序列    gates/ wire/ _validators/
   运行时    store/      玩家与世界的存储    command/  指令注册与路由
             events/     事件总线           clock/     时钟    container/ 容器
             text/       文案表（代码只传槽位）  session/ 会话    log/ tlog/  日志与流水
