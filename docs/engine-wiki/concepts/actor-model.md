@@ -12,7 +12,7 @@
 同构化的收益：
 
 - 一个机制动作对玩家和怪同时生效，不需要「怪也能用」的额外适配
-- `add_actor()` 加援军/召唤物时不需要给调度器注册新类型（`battle.py:252`）
+- `add_actor()` 加援军/召唤物时不需要给调度器注册新类型（`battle.py:255`）
 - 序列化不需要按类型分派（`serialize._serialize_actor` 对任何 actor 一视同仁，`serialize.py:51`）
 
 代价：**身份信息全靠字段**。要表达「这是 Boss」就写 `is_boss=True` 或 `role="boss"`
@@ -59,7 +59,7 @@
 | `ct` | float | **下次可行动时刻**（绝对时刻，见 [ctb-schedule.md](ctb-schedule.md)） |
 | `poi_buff` | any | 透传字段，引擎不读 |
 | `triggers` | `{事件名: [效果 dict]}` | 事件声明（见 [event-bus.md](event-bus.md)） |
-| `act_count` | int | 个体行动计数，`actor_auto` 每动 +1（`battle.py:439`） |
+| `act_count` | int | 个体行动计数，`actor_auto` 每动 +1（`battle.py:442`） |
 | `dot_next` / `dot_jumps` | `{key: 数值}` | 周期结算的运行期辅助（`schedule.py:468-469` 惰性建） |
 
 **为什么 `shields` / `cooldown` 不进 `effects`**：它们**不是状态**。
@@ -76,7 +76,7 @@
 | `equipment` | 装备 dict，透传给 `panel_fn` |
 | `skills` | 技能 key 列表（构造 Battle 时索引进 `_skill_index`） |
 | `learned_skills` | 已学技能列表（**引擎不读**，是给你的装配器扫的，如《奥兰迪亚》的 `_learned_mech_skills`） |
-| `auto_act` | 自动行动配置（`actor_auto` 读它，`battle.py:388`） |
+| `auto_act` | 自动行动配置（`actor_auto` 读它，`battle.py:391`） |
 | `ai` | 通用怪 AI 决策数据（`ai.normalize_ai` / `resolve_ai_move` 读） |
 | `_skill_index` | 技能名/index → 技能 dict。**不进存档**（`serialize._STRIP_KEYS`，`serialize.py:31`） |
 
@@ -134,7 +134,7 @@ class ActCtx:                       # actors.py:19
 `sides = {阵营名: [actor, ...]}`（普通 dict，没有封装类）。设计原因：**动态遍历**。
 调度（`schedule._next_player_due` / `_next_auto_due`）、序列化（`serialize.to_state`）、
 事件广播（`fire` 遍历全部 sides）都在运行期直接遍历它，所以 `add_actor` 不需要
-通知任何人（`battle.py:262-264`）。
+通知任何人（`battle.py:265-267`）。
 
 阵营敌对关系由 `hostile_sides`（`actors.py:195`）决定：优先读 `battle.hostile_map[side]`，
 没有则「除自己外的全部阵营」。**引擎不预设玩家/怪身份**。

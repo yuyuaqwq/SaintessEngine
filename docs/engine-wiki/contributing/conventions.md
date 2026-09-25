@@ -37,7 +37,7 @@ if pct <= 0:
 
 | 允许 | 形式 | 例 |
 |---|---|---|
-| **别名指向同一对象** | `new = old` | `cap_of = _cap_of`（`effects.py:84`）、`EFFECT_HANDLERS = ACTION_HANDLERS`（`effects.py:93`） |
+| **别名指向同一对象** | `new = old` | `cap_of = _cap_of`（`effects.py:84`）、`norm_stack = _norm_stack`（`effects.py:83`） |
 | **兼容 shim 委托到新实现** | 一个函数体只有一次转发调用 | 引擎侧已不留这类 shim —— 旧的 `config.load_game_defaults` 随拆仓从引擎删净（`saintess_engine/config.py` 里 `strict` 附近有原话：框架不认识「默认配置」是什么）；拆仓前它有 52 个测试调用点 |
 
 不允许：把旧逻辑复制一份留在原地、在引擎读源路径上做「旧字段也读一下」的回落。
@@ -52,7 +52,7 @@ if pct <= 0:
 ## 3. 落地只能走 `landing`
 
 **任何模块自己扣 `hp` 都是 bug。** 引擎自己的 DOT 也走 `landing.deal_damage`
-（`schedule.py:605`）。自己的动词也必须走：
+（`schedule.py:617`）。自己的动词也必须走：
 
 ```python
 from saintess_engine.landing import deal_damage, heal_actor

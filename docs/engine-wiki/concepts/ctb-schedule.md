@@ -75,7 +75,7 @@ def action_time(spd, base=None):                     # schedule.py:95
 不是裸 `actor["spd"]`。播种（`battle._seed_ct_one`，`battle.py:115`）、
 行动后推进（`schedule._after_act`，`schedule.py:417`）、`next_ct`（`schedule.py:293`）
 三处一致。原因：玩家 actor 的裸 `spd` 可能是 0（面板要从职业/装备算），
-用裸值会让排序崩（`battle.py:130-132` 注释）。
+用裸值会让排序崩（`battle.py:133-135` 注释）。
 
 ## 三个时刻相关函数
 
@@ -129,7 +129,7 @@ now=1.12  │  （下次 human_act 前，命令层会 advance → 推到怪的 1
 如果没有配置 `human_controlled`，`advance` 会一路跑完所有自动行动 ——
 这正是 `auto_run` 能「全自动打完」的原因。
 
-> ⚠️ **`human_act` 不检查 ct**：它拿到 caster 就直接 `act()`（`battle.py:275-295`），
+> ⚠️ **`human_act` 不检查 ct**：它拿到 caster 就直接 `act()`（`battle.py:278-298`），
 > 没有「你的 ct 还没到」这层校验。**时机由命令层负责** —— 正确用法是
 > 「先 `advance()` 拿到它返回的 who，再用 `human_act(actor=who)` 让那个人出手」。
 > 直接连点 `human_act` 等于给玩家无限行动权。
@@ -172,9 +172,9 @@ fire(battle, "time_advance", {"dt": dt, "now": battle._now}, logs)   # ③ 广�
 3. **周期跳**：见 [effects.md](effects.md) 的「周期结算」节
 
 `damage` 方向的周期跳在落地前会先 `fire("dot_calc", {"target", "dot_key", "dmg", "mult"})`
-（`schedule.py:627`，**不带 `actor` 键** → 广播给所有人，因为施毒者不在承伤者身上；
+（`schedule.py:633`，**不带 `actor` 键** → 广播给所有人，因为施毒者不在承伤者身上；
 效果侧用 `ctx["dot_key"]` 自己过滤）。落地后 `fire("dot_tick", {"actor", "target", "key", "dmg"})`
-（`schedule.py:616`）。
+（`schedule.py:628`）。
 
 ## 行动耗时表（`action_base_of`，`schedule.py:309`）
 
@@ -192,11 +192,11 @@ fire(battle, "time_advance", {"dt": dt, "now": battle._now}, logs)   # ③ 广�
 
 ⚠️ 自定义行动（`use_item` 等）**不会被 `action_base_of` 识别**——它们走
 `Battle.action_override` 回调返回的耗时：返回 `str`（内置动作名）按上表缩放，
-返回**数字**则当作绝对秒直接落 `ct`（`battle.py:304-313`）。
+返回**数字**则当作绝对秒直接落 `ct`（`battle.py:307-316`）。
 
 ## 控制效果如何与时间轴互动
 
-被控（`mode="skip"`）时的语义是「**行动浪费**」（`battle.py:496-505`）：
+被控（`mode="skip"`）时的语义是「**行动浪费**」（`battle.py:499-508`）：
 
 ```
 被控 actor 轮到行动 → 打日志 → 从 effects 删掉控制条目
@@ -205,13 +205,13 @@ fire(battle, "time_advance", {"dt": dt, "now": battle._now}, logs)   # ③ 广�
                     → return，不结算行动       ← 调用方照样推 ct
 ```
 
-「照样推 ct」由调用方完成：`actor_auto`（`battle.py:434-436`）或 `human_act`
-（`battle.py:304-318`）在 `act()` 返回后都调 `_after_act`。所以控制不是「冻结时间」，
+「照样推 ct」由调用方完成：`actor_auto`（`battle.py:437-439`）或 `human_act`
+（`battle.py:307-321`）在 `act()` 返回后都调 `_after_act`。所以控制不是「冻结时间」，
 而是「这次行动白费」——这是 CTB 类游戏的标准语义。
 
 `mode="no_skill"`（沉默）不跳行动，只把 `attack` 换成 `skill` 清掉技能名
-（`battle.py:489-494`），耗时按 `attack` 计（`human_act` 里 `ctx.action` 已被改写，
-`battle.py:302-303` 注释）。
+（`battle.py:492-497`），耗时按 `attack` 计（`human_act` 里 `ctx.action` 已被改写，
+`battle.py:305-306` 注释）。
 
 ## 序列化与时钟
 

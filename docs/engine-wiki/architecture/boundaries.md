@@ -154,8 +154,8 @@
 | R6 | `actions.py:802` → `game.engine.skill_buff_turns` | 反向边 |
 | R7 | `actions.py:788` → `game.core.constants` | 死 import |
 | R8 | `actions.py:849` → `game.engine.skill_mech_val` | 反向边 |
-| R9 | `battle.py:137` → `game.engine`（技能表查询） | 反向边 |
-| R10 | `battle.py:138` → `game.content.MONSTER_SKILLS` | 内容表直读 |
+| R9 | `battle.py:140` → `game.engine`（技能表查询） | 反向边 |
+| R10 | `battle.py:141` → `game.content.MONSTER_SKILLS` | 内容表直读 |
 | R11 | `stats.py:15` → `game.engine.player_final_stats` | **最重的一条**（玩家面板全算） |
 | R12 | `config.py:35` → `game.data.battle_rules` | 位置不合规（装配逻辑落在引擎包内） |
 | R13 | `stats.py:96` → 字面量 `"战士"` | 内容名侵入 |
@@ -189,7 +189,7 @@
 | B4 | `schedule._settle_time_effects` 里 `pct_boss` / `boss_pct_mult` / `is_boss` / `role == "boss"` / `is_elite` | `schedule.py:515,275-285` | 「Boss」这个内容概念进了包（作为数据字段处理，尚可接受，但它是**唯一**被包认识的身份标签） | `extends/ext_combat/battle/schedule.py` |
 | B5 | `effects.act_apply` 里 `if holder.get("is_boss") or holder.get("role") == "boss"` | `effects.py:385` | 同上（控制时长减半） | `extends/ext_combat/battle/effects.py` |
 | B6 | `effects._mech_to_effect` 的 `_is_stack_resource` 判据关键词含 `debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct` | `effects.py:279-283` | 这些字段**没有消费者**（`debuff_scale` 已于 2026-09-11 接线），但它们的**存在与否改变分派结果** —— 声明了 `debuff_scale` 会意外让 mech 走叠层路径 | `extends/ext_combat/battle/effects.py` |
-| B7 | `battle.py` 里 `"player"` 阵营名硬编码 | `battle.py:656`（`_check_side_end`）、`:170`（`focus`） | 你的游戏若不叫 `player` 就得改这个包或用 `hostile_map` 绕过 | `extends/ext_combat/battle/battle.py` |
+| B7 | `battle.py` 里 `"player"` 阵营名硬编码 | `battle.py:659`（`_check_side_end`）、`:170`（`focus`） | 你的游戏若不叫 `player` 就得改这个包或用 `hostile_map` 绕过 | `extends/ext_combat/battle/battle.py` |
 | B8 | `B6` 的反面：`stats._monster_base_stats` 的 `crit` 兜底 0.05 与 `make_actor` 播种 0.0 不一致 | `stats.py:146` vs `actors.py:100` | 同一种 actor 在不同路径下暴击率不同 | `extends/ext_combat/battle/stats.py` vs `battle/actors.py` |
 
 **结论（三层后，边界瑕疵分成两类）**：

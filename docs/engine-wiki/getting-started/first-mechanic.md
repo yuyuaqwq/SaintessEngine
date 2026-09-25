@@ -37,8 +37,7 @@ def pact_heal(battle, caster, target, params, logs):
         logs.append(f"🩸 血契：{holder.get('name')} 回复 {real} 点生命")
 ```
 
-`register_action`（`effects.py:97`）就是个装饰器，往 `ACTION_HANDLERS`（`effects.py:90`）
-里塞一条。`EFFECT_HANDLERS` 是同一张表的旧别名（`effects.py:93`）。
+`register_action`（`effects.py:96`）就是个装饰器，往 `ACTION_HANDLERS`（`effects.py:90`）里塞一条。
 
 ## ② 写名词声明：同名名词 → 动词序列
 

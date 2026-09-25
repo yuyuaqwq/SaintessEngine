@@ -125,7 +125,10 @@ class Battle:
             from . import stats as S
             _spd = S.actor_spd(self, actor)
         except Exception as _e:
-            _diag(battle, "_seed_ct_one", _e)          # 审计 P-44：不再静默（行为不变）
+            # ★ 2026-09-25（E1 修）：本方法是 Battle 的方法，`self` 才是那一场 battle ——
+            #   原先写 `_diag(battle, …)`，而本作用域里没有 `battle` 这个名字 ⇒ 一旦走到这里
+            #   抛 NameError（诊断自己把容错路径炸了）。`diag(battle=self)` 记进本场诊断。
+            _diag(self, "_seed_ct_one", _e)          # 审计 P-44：不再静默（行为不变）
             pass
         actor["ct"] = _ict(_spd)
 
@@ -615,7 +618,7 @@ class Battle:
             from .effect_triggers import fire as _fire
             _fire(self, "battle_start", {}, logs)
         except Exception as _e:
-            _diag(battle, "_ensure_battle_started · 事件源", _e)          # 审计 P-44：不再静默（行为不变）
+            _diag(self, "_ensure_battle_started · 事件源", _e)          # 审计 P-44/E1 修：self 才是本场 battle
             pass  # 事件源异常不阻断开战
 
     def _on_actor_dead(self, actor: dict, logs: Optional[list] = None):
@@ -634,7 +637,7 @@ class Battle:
                 from .effect_triggers import fire as _fire
                 _fire(self, "on_death", {"actor": actor, "target": actor}, logs)
             except Exception as _e:
-                _diag(battle, "_on_actor_dead", _e)          # 审计 P-44：不再静默（行为不变）
+                _diag(self, "_on_actor_dead", _e)          # 审计 P-44/E1 修：self 才是本场 battle
                 pass
 
     def _check_side_end(self) -> bool:

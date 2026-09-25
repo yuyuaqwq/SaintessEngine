@@ -395,7 +395,11 @@ def skill_expr_preview(info: dict | None, level: int, stats: dict | None = None)
                         try:
                             _total += eval_expr(compile_expr(_se), _vars) * float(_seg.get("mult", 1.0) or 1.0)
                         except Exception as _e:
-                            _diag(battle, "skill_expr_preview", _e)          # 审计 P-44：不再静默（行为不变）
+                            # ★ 2026-09-25（E1 修）：本函数是**纯计算 helper**（参数里没有 battle），
+                            #   原先写 `_diag(battle, …)` ⇒ 作用域里没有 `battle` ⇒ 走到这里抛
+                            #   NameError（把「不再静默」变成「炸在诊断上」）。diag 的契约允许
+                            #   `battle=None`（只落引擎日志，不进某一场的诊断表）—— 这正是它的用途。
+                            _diag(None, "skill_expr_preview", _e)          # 审计 P-44：不再静默（行为不变）
                             pass
             return _total
         if not _expr:

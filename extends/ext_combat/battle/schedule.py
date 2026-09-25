@@ -527,7 +527,13 @@ def _settle_time_effects(battle, logs: list):
                                     pct = min(pct, _cap)
                                 dmg = max(1, int(a.get("max_hp", 1) * pct * n))
                             elif pct_cur > 0:
-                                if _boss_like and period.get("pct_cur_boss"):
+                                # ★ 2026-09-25（E3 刀1 修）：这里原先还读 `_boss_like` ——
+                                #   那个名字在同一次改造里已改成 `_trait_like`（且定义被删），
+                                #   于是「按当前生命% 掉血」的 DoT（如 `blood_trace`）一跳就抛
+                                #   `NameError: name '_boss_like' is not defined`，而这条分支
+                                #   外面没有 except ⇒ 异常直接冒到 `advance()`（战斗推进崩）。
+                                #   `pct_cur_boss` 与 `pct_boss` 同口径：都看**内容侧标签名单**。
+                                if _trait_like and period.get("pct_cur_boss"):
                                     pct_cur = float(period["pct_cur_boss"])
                                 dmg = max(1, int(a.get("hp", 0) * pct_cur * n))
                             else:

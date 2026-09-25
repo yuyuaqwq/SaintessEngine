@@ -41,8 +41,8 @@ actor["effects"] = {
 | 字段 | 谁写 | 谁读 | 含义 |
 |---|---|---|---|
 | `stacks` | `act_apply`（`effects.py:433/429`）/ `act_consume` / 周期 gain | `_cap_of` clamp、`stats` 折算、`schedule` 周期跳、`_apply_death_guard` | 层数。**允许 float**（小数刻度，如信仰每刻 −0.7） |
-| `expire` | `act_apply` | `schedule._settle_time_effects`（`schedule.py:417-421`）、`Battle.act` 控制过期兜底（`battle.py:469-471`）、`actions._consume_hit_buffs` | **绝对时刻**；`None` = 永不到期 |
-| `mode` | `act_apply` 控制分支 | `Battle.act` 控制消费（`battle.py:478-505`） | `"skip"` = 整跳行动 / `"no_skill"` = 技能转普攻 |
+| `expire` | `act_apply` | `schedule._settle_time_effects`（`schedule.py:417-421`）、`Battle.act` 控制过期兜底（`battle.py:472-474`）、`actions._consume_hit_buffs` | **绝对时刻**；`None` = 永不到期 |
+| `mode` | `act_apply` 控制分支 | `Battle.act` 控制消费（`battle.py:481-508`） | `"skip"` = 整跳行动 / `"no_skill"` = 技能转普攻 |
 | `v` | `act_apply` value 型 | **无引擎消费者**（☞ 见下） | 值型数值（如减伤 0.45） |
 | `stat` / `op` / `mult` | `act_apply` 快照分支 | `stats._apply_effects`（`stats.py:69-80`） | 面板增益快照 |
 | `hit` | `act_apply` hit 子键 | `actions._consume_hit_buffs`（`actions.py:478`） | 出手消费型（`dmg_mult` / `guaranteed_crit` / `bonus_atk_pct`） |
@@ -75,7 +75,7 @@ actor["effects"] = {
 
 **为什么需要 float**：资源可以有非整数速率（信仰每刻 −0.7、磐核每刻 +0.4）。
 `apply` 的叠层分支读 `float()`（`effects.py:426`）、`consume` 读 `float()`
-（`effects.py:526`）、`schedule` 的 gain 分支 `round(..., 6)`（`schedule.py:672`）。
+（`effects.py:526`）、`schedule` 的 gain 分支 `round(..., 6)`（`schedule.py:684`）。
 读侧全用 `float()` 保真，写侧统一过 `norm_stack` 保持「int 资源看起来还是 int」。
 
 ## cap 的唯一收敛点
@@ -96,7 +96,7 @@ def _cap_of(actor, key):                       # effects.py:62，S2 公开别名
 - `bonus` 为负数时按 0 处理（`max(0, bonus)`）——**只增不减**
 
 读它的地方（都是叠层 clamp）：`act_apply` 叠层分支（`effects.py:422`）、
-`schedule` 周期 gain 分支（`schedule.py:669`，且**表声明可被 `period.cap` 覆盖**）。
+`schedule` 周期 gain 分支（`schedule.py:681`，且**表声明可被 `period.cap` 覆盖**）。
 内容侧的渠道攒取也走它（`class_mech_proc.py` 的 `class_res_channel_gain`）。
 
 ## 周期结算（`period`）
@@ -108,7 +108,7 @@ def _cap_of(actor, key):                       # effects.py:62，S2 公开别名
    （`schedule.py:501-504`，对齐旧引擎的「首跳延迟」）
 2. **到点补跳**：`while now >= dot_next[key]`，一次最多补 20 跳（`guard < 20`）防死循环
 3. **`dir` 四向**：`damage`（掉血）/ `heal`（回血 + 可选 mana_pct）/ `mana`（回蓝）/ `gain`（给自身叠层加/减，**静默**、clamp `[0, cap]`）
-4. **`turns` 限跳**：跳够 `turns` 次就清层（计数器 `dot_jumps`，`schedule.py:673-679`）
+4. **`turns` 限跳**：跳够 `turns` 次就清层（计数器 `dot_jumps`，`schedule.py:679-685`）
 5. **`dir="gain"` 不需要 `stacks > 0`**：0 层也要回（游侠精力耗到 0 若被拦将永远回不了，
    `schedule.py:491-494` 注释）
 6. **boss 档**：`is_boss` 或 `role == "boss"` 时读 `pct_boss` / `pct_cur_boss`

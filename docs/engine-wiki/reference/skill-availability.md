@@ -97,11 +97,11 @@ weighted：when 命中的 move 先过滤，再按 weight 重抽（过滤后池�
 
 ## 5. 运行期换招：`refresh_skill_index`
 
-`_skill_index` 只在 **Battle 构造期**与 `add_actor` 建一次（`battle.py:252` / `:174`）。
+`_skill_index` 只在 **Battle 构造期**与 `add_actor` 建一次（`battle.py:255` / `:174`）。
 剧本导演 / 机制在运行期 append `actor["skills"]`（转阶段换招）后，**索引会落后**：
 
 - 症状：阶段新招解析不到 → `auto_act` / AI 选它 = 空放（掉一次出手）
-- 修法：引擎在决策前调 `refresh_skill_index(actor)`（`battle.py:170`），
+- 修法：引擎在决策前调 `refresh_skill_index(actor)`（`battle.py:173`），
   幂等且快路径（技能数一致则直接返回）；
   取用点 = `human_act`（`:261`）与 `actor_auto`（`:352` 前后）
 

@@ -527,6 +527,9 @@ def _apply_heal_mods(target: dict, amount: int, logs: list, text=None) -> int:
                 logs.append(render_via(holder, "battle.landing.heal_wound", "🩸 重伤：治疗量 -{pct}%！",
                                     pct=int(cut2 * 100)))
     except Exception as _e:
-        _diag(battle, "_apply_heal_mods", _e)          # 审计 P-44：不再静默（行为不变）
+        # ★ 2026-09-25（E1 修）：本函数签名里**没有 battle**（见上方文档串：「本函数拿不到
+        #   `battle` ⇒ 用只读持有者 `_TextHolder(text)` 过文案口」），原先写 `_diag(battle, …)`
+        #   ⇒ 走到这里抛 NameError。按 diag 契约传 None（只落引擎日志）。
+        _diag(None, "_apply_heal_mods", _e)          # 审计 P-44：不再静默（行为不变）
         pass
     return max(0, heal)
