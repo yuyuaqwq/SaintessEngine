@@ -99,7 +99,7 @@ def map_event(old_ev):
 |---|---|---|---|
 | `triggers` 参数 | `{"type": "we_xxx", "pct": 0.2}` | 你自己的族动作 | 一次性/有条件的效果 |
 | `actor["bonus"]["panel"]` | 面板增幅 dict | `stats._player_base_stats` 把它传给 `panel_fn`（`stats.py:95-109`） | 常驻面板增幅 |
-| `actor["bonus"]["cap"]` | `{资源key: +N}` | `effects._cap_of`（`effects.py:74`） | 资源上限词条 |
+| `actor["bonus"]["cap"]` | `{资源key: +N}` | `effects._cap_of`（`effects.py:75`） | 资源上限词条 |
 | `actor["bonus"]["cost"]` | `{mp_pct, mp_flat, res, when}` | `actions._skill_pay_of`（`actions.py:272`） | 消耗折扣词条 |
 
 `bonus.panel` 的形态由**你的** `panel_fn` 决定（引擎只是把它当不透明 dict 透传）。
@@ -159,7 +159,7 @@ def equip_affix_bleed(actor):
         {"type": "affix_bleed_hit"})
 ```
 
-`chance: 0.2` 由 `apply_effects` 的通用 roll 消费（`effects.py:184-190`），
+`chance: 0.2` 由 `apply_effects` 的通用 roll 消费（`effects.py:185-191`），
 不需要你写 roll 代码。`op="add"` + `key` 走叠层，cap 由规则表的 `cap: 3` 管。
 
 ## 面板词条（常驻增幅）

@@ -137,11 +137,10 @@ def match_cond(cond: dict, group_id, qq_id, player: dict, cur_map: dict, evt: di
     # 敌人特征
     if "enemy_tag" in cond:
         enemy = evt.get("enemy") or {}
-        tags = []
-        if enemy.get("is_boss"):
-            tags.append("boss")
-        if enemy.get("is_elite"):
-            tags.append("elite")
+        # ★ 2026-09-25（审计 E3）：原先这里把 `is_boss` / `is_elite` 两个**游戏字段**映射成
+        #   "boss" / "elite" 两个**游戏标签** —— 引擎替内容做了命名 ✗。现在标签由内容侧写在
+        #   `enemy["traits"]`（或 `enemy["tags"]`）上，引擎**原样透传**，判定交给规则声明。
+        tags = [t for t in (enemy.get("traits") or [])]
         tags.append(enemy.get("name", ""))
         tags.append(enemy.get("id", ""))
         tags += [t for t in (enemy.get("tags") or [])]

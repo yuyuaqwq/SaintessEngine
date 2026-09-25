@@ -31,6 +31,7 @@ from typing import Optional
 from saintess_engine import config as _cfg
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from .actors import actor_alive
+from . import traits                    # 内容侧标签判定（引擎不认标签叫什么 · 审计 E3）
 from .effects import _cap_of as _stack_cap_of
 from saintess_engine.text import render_via
 
@@ -507,17 +508,18 @@ def _settle_time_effects(battle, logs: list):
                             _dpct = entry.get("pct")
                             if _dpct is not None:
                                 pct = float(_dpct)
-                            _boss_like = bool(a.get("is_boss") or a.get("role") == "boss"
-                                              or a.get("is_elite"))
+                            # 目标身上带哪些标签才吃这档折扣：名单由该周期的声明给
+                            #   （`period["trait_tags"]`），引擎不认标签叫什么（审计 E3）
+                            _trait_like = traits.has_any(a, period.get("trait_tags") or ())
                             # ★ N-B13 DOT 混合公式系数（先读，供下方兜底分支判断）
                             _atk_c = float(period.get("atk", 0) or 0)
                             _matk_c = float(period.get("matk", 0) or 0)
                             if pct > 0:
                                 # boss 档：条目级 `pct_boss`（精确值）优先；否则用数据给的
                                 #   `boss_pct_mult`（折扣系数）——两者取一，**不叠乘**（防双重折扣）
-                                if _boss_like and period.get("pct_boss"):
+                                if _trait_like and period.get("pct_boss"):
                                     pct = float(period["pct_boss"])
-                                elif _boss_like and period.get("boss_pct_mult"):
+                                elif _trait_like and period.get("boss_pct_mult"):
                                     pct = pct * float(period["boss_pct_mult"])
                                 # 单层上限：每层每刻 ≤ max_hp × pct_cap（防极端叠层爆炸）
                                 _cap = float(period.get("pct_cap", 0) or 0)

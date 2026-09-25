@@ -66,7 +66,7 @@ for _also in (cfg.get("also") or []):
 ```
 
 写入：`bonus.cap[cap_key] += add`（`add` 取 `passive.add` 或 `cfg.add`，**只累加正数**，
-`:2008-2018`）。消费者是扩展包 `effects._cap_of`（`extends/ext_combat/battle/effects.py:74`）。
+`:2008-2018`）。消费者是扩展包 `effects._cap_of`（`extends/ext_combat/battle/effects.py:75`）。
 
 ⚠️ `cap_key` 缺省 = `proc` 名本身（`:2010`）。所以 `proc` 名 ≠ 资源 key 时必须写 `cap_key`。
 

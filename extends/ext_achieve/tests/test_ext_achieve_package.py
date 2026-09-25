@@ -365,9 +365,9 @@ def t7_rule():
           and mc({"event": "battle"}, "g", "q", {}, m_ab, {"event": "empty"}) is False)
     check("enemy_tag：boss / elite 特征",
           mc({"enemy_tag": "boss"}, "g", "q", {}, m_ab,
-             {"enemy": {"name": "某", "is_boss": True}}) is True
+             {"enemy": {"name": "某", "traits": ["boss"]}}) is True
           and mc({"enemy_tag": "elite"}, "g", "q", {}, m_ab,
-                 {"enemy": {"name": "某", "is_elite": True}}) is True
+                 {"enemy": {"name": "某", "traits": ["elite"]}}) is True
           and mc({"enemy_tag": "boss"}, "g", "q", {}, m_ab,
                  {"enemy": {"name": "某"}}) is False)
     check("enemy_tag：名称 / id / tags 子串 + list 任一",

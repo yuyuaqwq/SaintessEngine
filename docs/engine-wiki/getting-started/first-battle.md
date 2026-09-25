@@ -91,7 +91,7 @@ b = Battle(btype="monster", sides={"player": [hero], "enemy": [wolf]})
 2. `hostile_map` 缺省 → 之后由 `hostile_sides()` 推「除自己外全部阵营」（`actors.py:195`）
 3. 建技能索引 `actor["_skill_index"]`（`_index_skills` → `_index_one_actor`，`battle.py:195/117`）
 4. **播种初始 ct**（`_seed_ct_one`，`battle.py:115`）：`ct = action_time(聚合 spd)`
-   —— 快者先手、开局第一动也按速度排（`schedule.initial_ct`，`schedule.py:43`）
+   —— 快者先手、开局第一动也按速度排（`schedule.initial_ct`，`schedule.py:44`）
 
 `sides` 的键名由你定；引擎唯一硬编码的约定是 **`"player"`** 这个键名
 （`_check_side_end` 里 `alive[0] == "player"` → `result="victory"`，`battle.py:656`）。
@@ -119,7 +119,7 @@ print("\n".join(logs))
 
 `who` 是这套引擎对「多人同时在场」的答案：`human_act` 内部先 `act()`，
 再 `_after_act` 推 caster 的 `ct`，然后 `advance()` 一路推进自动 actor，
-直到撞上**下一个 ct 最小的人控 actor**（`schedule.advance`，`schedule.py:284`）。
+直到撞上**下一个 ct 最小的人控 actor**（`schedule.advance`，`schedule.py:285`）。
 单玩家场景 `who` 通常仍是自己。
 
 内部调用链（详见 [../architecture/data-flow.md](../architecture/data-flow.md)）：

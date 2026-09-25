@@ -78,7 +78,7 @@ clock · command · container · domains · events · expr · host · log · ses
 | `actions` | `heal_amount` | `_heal_amount` |
 | `actions` | `skill_pay_of` | `_skill_pay_of` |
 
-（这五个符号都在扩展包 `ext_combat` 里；别名赋值处：`effects.py:82-83`、`battle.py:30`、
+（这五个符号都在扩展包 `ext_combat` 里；别名赋值处：`effects.py:83-84`、`battle.py:30`、
 `battle/actions.py:325`、`battle/actions.py:798`）
 
 ## 2. `Battle`（扩展包 `ext_combat` · `battle.py:34`）
@@ -452,14 +452,14 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 
 | 名称 | 位置 | 状态 |
 |---|---|---|
-| `schedule.next_ct` | `schedule.py:47` | 有定义、无调用方 |
+| `schedule.next_ct` | `schedule.py:48` | 有定义、无调用方 |
 | `state_effects.stat_scale_of` | `state_effects.py:18` | 仅测试引用 |
 | `formation.reachable_units` | `formation/__init__.py:28` | 零外部引用 |
 | `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
 | ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 不实现） |
 | `config.set_hook` | `config.py:131` | 零外部引用（都走 `mount`） |
-| `effects.resolve_actions` | `effects.py:136` | 零外部引用（`effects` 内部调用） |
+| `effects.resolve_actions` | `effects.py:137` | 零外部引用（`effects` 内部调用） |
 | `ai.eval_when` | `ai.py:158` | 零外部引用（`resolve_ai_move` 内部调） |
 | ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |
 | ~~`Battle.DEFAULT_CT_WAIT`~~ | — | **已删**（2026-09-11） |

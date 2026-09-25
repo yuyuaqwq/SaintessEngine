@@ -135,7 +135,7 @@ def make_actor(
         # 外部扩展区（引擎绝不读；职业/机制自定义状态放这里，命名空间自管）
         "ext": {},
     }
-    # 携带的额外字段（rank/reach/role/is_boss/exp/gold/drops 等数据标签或旧怪字段）
+    # 携带的额外字段（rank/reach/role/traits/exp/gold/drops 等数据标签或旧怪字段；★ 引擎只看 `traits` 判定标签，见 traits.py）
     for k, v in stats.items():
         if k not in actor:
             actor[k] = v

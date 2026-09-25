@@ -25,6 +25,7 @@ from __future__ import annotations
 from typing import Callable, Optional
 
 from .state_effects import state_def
+from . import traits                    # 内容侧标签判定（引擎不认标签叫什么 · 审计 E3）
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from saintess_engine.text import render_via
 
@@ -372,8 +373,10 @@ def act_apply(battle, caster, target, params, logs):
                                 name=holder.get('name', '目标'),
                                 key=key))
             return
-        # Boss 控制减半（对齐旧 _boss_ctrl_dur）
-        if holder.get("is_boss") or holder.get("role") == "boss":
+        # 控制时长对**带某些标签的目标**减半：标签名单由该状态的规则声明
+        #   （`state_def(key)["ctrl_half_traits"]`），引擎不认标签叫什么（审计 E3）。
+        _half = (state_def(key) or {}).get("ctrl_half_traits") or ()
+        if traits.has_any(holder, _half):
             turns = max(1, turns // 2)
         now = _now_of(battle)
         ef = holder.setdefault("effects", {})

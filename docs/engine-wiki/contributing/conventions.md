@@ -37,7 +37,7 @@ if pct <= 0:
 
 | 允许 | 形式 | 例 |
 |---|---|---|
-| **别名指向同一对象** | `new = old` | `cap_of = _cap_of`（`effects.py:83`）、`EFFECT_HANDLERS = ACTION_HANDLERS`（`effects.py:92`） |
+| **别名指向同一对象** | `new = old` | `cap_of = _cap_of`（`effects.py:84`）、`EFFECT_HANDLERS = ACTION_HANDLERS`（`effects.py:93`） |
 | **兼容 shim 委托到新实现** | 一个函数体只有一次转发调用 | 引擎侧已不留这类 shim —— 旧的 `config.load_game_defaults` 随拆仓从引擎删净（`saintess_engine/config.py` 里 `strict` 附近有原话：框架不认识「默认配置」是什么）；拆仓前它有 52 个测试调用点 |
 
 不允许：把旧逻辑复制一份留在原地、在引擎读源路径上做「旧字段也读一下」的回落。
@@ -52,7 +52,7 @@ if pct <= 0:
 ## 3. 落地只能走 `landing`
 
 **任何模块自己扣 `hp` 都是 bug。** 引擎自己的 DOT 也走 `landing.deal_damage`
-（`schedule.py:603`）。自己的动词也必须走：
+（`schedule.py:605`）。自己的动词也必须走：
 
 ```python
 from saintess_engine.landing import deal_damage, heal_actor
@@ -90,7 +90,7 @@ from saintess_engine.landing import deal_damage, heal_actor
 ## 6. 容错铁律：异常不阻断战斗
 
 事件源、观察者、单个 handler 的异常都 `continue` / 吞掉（`effect_triggers.py:109-120`、
-`effects.py:175-179`）。这是**有意为之**：一场战斗不能因为一个效果写错就崩。
+`effects.py:176-180`）。这是**有意为之**：一场战斗不能因为一个效果写错就崩。
 
 代价是你必须自己写测试；并且**不要**用裸 `except: pass` 掩盖你自己的逻辑错误 ——
 引擎的容错是为了「别人的错不连累我」，不是为了「我的错没人看见」。
@@ -104,7 +104,7 @@ from saintess_engine.landing import deal_damage, heal_actor
 # v181.M-R2：dir=gain（资源自然回）不依赖现有层数——0 层也要回
 # （游侠 energy 耗到 0 若被 n<=0 拦截将永远回不了，卡死）
 ```
-（`schedule.py:486-487`）
+（`schedule.py:487-488`）
 
 ```python
 # 事件主体过滤（N9 修正）：ctx.actor = 该事件的主体 actor——只处理主体 actor

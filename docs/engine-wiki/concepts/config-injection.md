@@ -45,10 +45,10 @@
 | `kinds` | dict | `config.kind_of`（`config.py:271`）→ `actions._kind` | `""`（kind 比较全不成立） |
 | `mech_cfg_fn` | `fn(name) -> dict` | `config.mech_cfg` → `support/battle_bars._battle_cfg` | `{}` |
 | `bar_prefix_fn` | `fn() -> str` | `config.bar_prefix` → `support/battle_bars._state_prefix` | `""` |
-| `time_model_fn` | `fn(spd, base) -> float` | `schedule.action_time` / `initial_ct` / `next_ct` / `_after_act`（`schedule.py:42`；调用点 `:92` / `:103` / `:108` / `:225`） | **抛 `EngineNotConfigured`**（点名 hook；CTB 时间模型**不许**有默认公式） |
-| `action_base_fn` | `fn(action) -> float` | `schedule.action_base_of`（`schedule.py:117`） | **抛 `EngineNotConfigured`**（行动类别 → 基准耗时数值归内容侧） |
-| `recover_model_fn` | `fn(spd, base) -> float` | `schedule.recover_time` → `next_ct` / `_after_act`（`schedule.py:134`） | **抛 `EngineNotConfigured`**（同 `time_model_fn`；「没有第二段」= 内容侧显式声明 0） |
-| `recover_base_fn` | `fn(action) -> float` | `schedule.recover_base_of`（`schedule.py:126`） | **抛 `EngineNotConfigured`**（行动类别 → 第二段基准耗时数值归内容侧） |
+| `time_model_fn` | `fn(spd, base) -> float` | `schedule.action_time` / `initial_ct` / `next_ct` / `_after_act`（`schedule.py:43`；调用点 `:92` / `:103` / `:108` / `:225`） | **抛 `EngineNotConfigured`**（点名 hook；CTB 时间模型**不许**有默认公式） |
+| `action_base_fn` | `fn(action) -> float` | `schedule.action_base_of`（`schedule.py:118`） | **抛 `EngineNotConfigured`**（行动类别 → 基准耗时数值归内容侧） |
+| `recover_model_fn` | `fn(spd, base) -> float` | `schedule.recover_time` → `next_ct` / `_after_act`（`schedule.py:135`） | **抛 `EngineNotConfigured`**（同 `time_model_fn`；「没有第二段」= 内容侧显式声明 0） |
+| `recover_base_fn` | `fn(action) -> float` | `schedule.recover_base_of`（`schedule.py:127`） | **抛 `EngineNotConfigured`**（行动类别 → 第二段基准耗时数值归内容侧） |
 
 **怎么记**：`formulas` 决定「数怎么算」，`f*_fn` 给它参数表，
 `panel_fn` 决定「玩家面板怎么来」，`skill_lookup` / `monster_skill_fn` / `basic_skill_fn`

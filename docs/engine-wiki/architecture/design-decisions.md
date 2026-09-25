@@ -21,7 +21,7 @@
 **痕迹**：
 - `actors.py:1-9` 的模块 docstring 原文：「引擎逻辑只用字段值，不按字段猜身份」
 - `Battle.focus()`：只认 `human_controlled`（`battle.py:211-220`）
-- `schedule._next_player_due` / `_next_auto_due`：按同一个 bool 分流（`schedule.py:331/128`）
+- `schedule._next_player_due` / `_next_auto_due`：按同一个 bool 分流（`schedule.py:332/128`）
 - `Battle.add_actor` 注释：「不认识随从/召唤/亡灵/援军，只做注册 + 索引 + 排程」（`battle.py:262`）
 - `Battle.find_actor(uid)`：承伤/治疗转移的查找口（只读，不猜身份）（`battle.py:205`）
 
@@ -108,7 +108,7 @@
 （`taken_calc` 的 `mult`）。
 
 **痕迹**：`landing.py:8-13` 原文（「为什么必须统一收口」）；
-`effects.act_damage` 也只做「读参数 → 调 `landing.deal_damage`」（`effects.py:675-702`）。
+`effects.act_damage` 也只做「读参数 → 调 `landing.deal_damage`」（`effects.py:678-705`）。
 
 ---
 

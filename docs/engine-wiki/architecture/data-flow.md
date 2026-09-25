@@ -23,15 +23,15 @@
        │    ├─ fire("act_done")                                 battle.py:586   ⚡
        │    └─ _check_side_end()                                battle.py:650
        └─ 若未结束且 action ∈ {attack, skill, defend} 或 override 被消费：
-            ├─ schedule._after_act(battle, caster, action)      schedule.py:361  推 ct
+            ├─ schedule._after_act(battle, caster, action)      schedule.py:362  推 ct
             └─ Battle.advance(logs)                             battle.py:332
-                 └─ schedule.advance（推时钟 + 自动 actor 行动）  schedule.py:284
+                 └─ schedule.advance（推时钟 + 自动 actor 行动）  schedule.py:285
 ```
 
 ## 展开 1：`advance` 的循环
 
 ```
-schedule.advance(battle, logs, max_steps=200)                     schedule.py:284
+schedule.advance(battle, logs, max_steps=200)                     schedule.py:285
   while battle.result is None and guard < 200:
     fp   = _next_player_due(battle)     # ct 最小的 human_controlled 存活者   :113
     auto = _next_auto_due(battle)       # ct 最小的自动 actor                :128
@@ -45,23 +45,23 @@ schedule.advance(battle, logs, max_steps=200)                     schedule.py:28
         battle.actor_auto(actor)                                       battle.py:357
 ```
 
-`_advance_time(battle, dt, logs)`（`schedule.py:375`）内部：
+`_advance_time(battle, dt, logs)`（`schedule.py:376`）内部：
 
 ```
 battle._now += dt
-_settle_time_effects(battle, logs)                                  schedule.py:284
+_settle_time_effects(battle, logs)                                  schedule.py:285
    ├─ for 每个存活 actor:
-   │    ├─ effects 到期 → pop + ⚡ buff_expire                        schedule.py:407
-   │    ├─ shields 到期（expire_at <= now）→ pop                      schedule.py:457-467
+   │    ├─ effects 到期 → pop + ⚡ buff_expire                        schedule.py:408
+   │    ├─ shields 到期（expire_at <= now）→ pop                      schedule.py:458-468
    │    └─ 周期跳（period）:
-   │         首次 → dot_next[key] = now + interval（不跳）             schedule.py:500-503
+   │         首次 → dot_next[key] = now + interval（不跳）             schedule.py:501-504
    │         到点 → while now >= dot_next（最多 20 跳）:
    │             dir=damage → ⚡ dot_calc → landing.deal_damage → ⚡ dot_tick   :285/:292/:297
    │             dir=heal   → landing.heal_actor（+ mana_pct）        :301-320
    │             dir=mana   → 直接加 mp                                :321-330
    │             dir=gain   → effects[key].stacks ±= amount（clamp，静默） :331-350
    │             限时（turns）→ 跳够清层                                :351-359
-fire("time_advance", {"dt": dt, "now": battle._now})                schedule.py:407 ⚡
+fire("time_advance", {"dt": dt, "now": battle._now})                schedule.py:408 ⚡
 ```
 
 ## 展开 2：`do_attack` → `do_skill` → 伤害管线

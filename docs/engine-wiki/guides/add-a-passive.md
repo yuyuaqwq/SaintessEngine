@@ -107,7 +107,7 @@ ctrl · ctrl_any · res · left_key · left_init · cost_field · buff_key
 
 | `domain` | 写哪里 | 引擎消费者 | 数值来源 |
 |---|---|---|---|
-| `cap` | `actor["bonus"]["cap"][cap_key] += add` | `effects._cap_of`（`effects.py:74`） | `passive.add` 或 `cfg.add`，**只累加正数** |
+| `cap` | `actor["bonus"]["cap"][cap_key] += add` | `effects._cap_of`（`effects.py:75`） | `passive.add` 或 `cfg.add`，**只累加正数** |
 | `cost` | `actor["bonus"]["cost"]`（`mp_pct` / `when[].mp_pct`） | `actions._skill_pay_of`（`actions.py:272`） | `passive.mp_mult`（如 0.5 = 打五折） |
 
 `cap` 域**不 continue**：声明里同时有 `event` 时（如 `soul_mark_cap` / `poison_cap_up`）
@@ -194,7 +194,7 @@ apply_game_content(actor)              # ← 内容侧单一入口（游戏仓�
 ## 三个高频坑
 
 1. **动作名 vs 名词**：`triggers` 里的 `type` 字段是**动词名**（`action`），
-   **不经 `EFFECT_ACTIONS` 翻译**（`effects.py:200-204`）。写名词会静默 no-op。
+   **不经 `EFFECT_ACTIONS` 翻译**（`effects.py:201-205`）。写名词会静默 no-op。
 2. **未知 judge kind = fail-closed**：`passive_taken_reduce` 对未知 kind 直接 `return`
    （`class_mech_proc.py:1001-1002`）。加新 kind 必须同时改动作。
 3. **表未声明的 proc = 静默跳过**：`cfg` 找不到就 `continue`（`class_mech_proc.py:2004-2006`），

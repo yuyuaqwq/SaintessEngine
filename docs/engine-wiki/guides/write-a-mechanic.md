@@ -25,12 +25,12 @@ N3 之后战斗包（`ext_combat`）只留 8 个动词，其余全走扩展注�
 ## 动作签名与四条铁律
 
 ```python
-@register_action("my_verb")                    # effects.py:96
+@register_action("my_verb")                    # effects.py:97
 def my_verb(battle, caster, target, params, logs):
     ...
 ```
 
-签名固定 `fn(battle, caster, target, params, logs)`（`effects.py:92`）。
+签名固定 `fn(battle, caster, target, params, logs)`（`effects.py:93`）。
 四条铁律：
 
 1. **落地一定走 `landing`**
@@ -39,15 +39,15 @@ def my_verb(battle, caster, target, params, logs):
    - 自己 `target["hp"] -= dmg` 会丢掉护盾吸收、死亡判定、濒死保护、`on_taken`/`on_kill` 事件
 2. **缺字段 = 无行为**（零默认值）。所有参数用 `params.get(...)`，判 `<= 0` 就 `return`。
    不要写 `params.get("pct", 0.1)` 这种「贴心默认」——参考实现（游戏仓内容侧）里所有扩展动作都没这么干
-3. **异常不要抛**：`apply_effects` 会吞掉异常并跳过该动作（`effects.py:175-179`），
+3. **异常不要抛**：`apply_effects` 会吞掉异常并跳过该动作（`effects.py:176-180`），
    但如果你**希望**异常可见（开发期），就让它抛出来再自己看日志 —— 别用裸 `except: pass`
    把错误吃掉
 4. **日志就是 `logs.append(...)`**。引擎没有日志等级；格式惯例是 `emoji + 一句话`，
-   数值用 `effects._fmt_stack`（`effects.py:40`）处理 int/float 观感
+   数值用 `effects._fmt_stack`（`effects.py:41`）处理 int/float 观感
 
 ## 参数从哪里来：`params` 的三层合并
 
-`apply_effects` 在调你的动词前做了合并（`_merge_params`，`effects.py:156`）：
+`apply_effects` 在调你的动词前做了合并（`_merge_params`，`effects.py:157`）：
 
 ```
 params = dict(效果 dict)                      ← 声明方写的一切
@@ -69,7 +69,7 @@ for k, v in 映射动作.items():
 
 | 来源 | 说明 |
 |---|---|
-| `eff["chance"]` | `apply_effects` 的通用概率 roll（`effects.py:184-190`）。`None` = 恒触发；`0.4` = 40% 才执行 |
+| `eff["chance"]` | `apply_effects` 的通用概率 roll（`effects.py:185-191`）。`None` = 恒触发；`0.4` = 40% 才执行 |
 | `_owner` | 事件总线注入的**声明者**（`effect_triggers.py:103-106`）。`params.get("_owner")` 拿宿主 —— 「谁带的这个装备」用它 |
 
 事件数值（`dmg` / `heal` / `amount` / `is_crit` / `overflow` / `source`）**不在 params 里**，
@@ -91,7 +91,7 @@ attacker = ctx.get("source")
 | `dmg_calc` | 攻击方总伤 | ×mult 增伤 | `actions.py:436-443` |
 | `taken_calc` | 承伤前 | ×mult 减伤（<1）或增伤（>1） | `landing.py:81-92` |
 | `heal_calc` | 治疗量落地前 | ×mult 治疗增幅 | `actions.py:674-744` |
-| `dot_calc` | DOT 每跳 | ×mult DOT 增伤 | `schedule.py:583-599` |
+| `dot_calc` | DOT 每跳 | ×mult DOT 增伤 | `schedule.py:585-601` |
 
 写法（实测可用的最小骨架）：
 

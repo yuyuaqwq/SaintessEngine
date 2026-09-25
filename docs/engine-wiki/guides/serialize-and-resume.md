@@ -68,10 +68,10 @@ _STRIP_KEYS = {"_skill_index"}      # serialize.py:31 —— 运行时索引，�
 | 字段 | 来源 | 说明 |
 |---|---|---|
 | `_content_applied` | 内容侧 `apply_game_content` 的幂等标记（`game/content_rules/apply.py:81`） | 会落盘（原文自记：游戏仓侧拆仓计划的收口步 S9 若要清掉需改引擎 `serialize.py`） |
-| `dot_next` / `dot_jumps` | 引擎周期结算辅助（`schedule.py:467-468`） | 落盘是**续战能对上**的原因，别手删 |
+| `dot_next` / `dot_jumps` | 引擎周期结算辅助（`schedule.py:468-469`） | 落盘是**续战能对上**的原因，别手删 |
 | `_dmg_taken_mult` | 上层直写（例 `commands/boss_script.py:684`） | 承伤乘区（`landing.py:94-101` 读） |
 | `act_count` | `actor_auto` 每动 +1（`battle.py:439`） | AI `round_mod` 谓词读它 |
-| `reduce_left` | `effects.act_apply`（`effects.py:476`） | ⚠️ 无消费者 |
+| `reduce_left` | `effects.act_apply`（`effects.py:479`） | ⚠️ 无消费者 |
 
 ## 恢复时的三个隐式决定
 
