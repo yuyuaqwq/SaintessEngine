@@ -4,7 +4,7 @@
 按 docs/archive/REFACTOR_v181P4_FULL_PLAN.md 7.3 stats.py：
 - actor 有 class_name → E.player_final_stats（玩家职业公式：装备/等级/转职全算）
 - 纯怪（无 class_name）→ 直接读 actor 字段 + 简单 buff 修正（对齐旧 _enemy_stats）
-- 战斗内聚合面板 = 基础 + buffs 修正（buffs 键 → 属性加成）
+- 战斗内聚合面板 = 基础 + effects 条目折算（快照/叠层两种，见 _apply_effects）
 
 ⚠️ 旧 _player_stats 有极多战斗侧被动/符文/条件消费（v64 被动/词条/内容机制等）。
    N1 只做无被动场景对齐；被动/条件消费随 N2/N3 逐步迁移（每个消费点单独对齐）。
@@ -48,8 +48,8 @@ def _apply_effects(st: dict, actor: dict) -> dict:
     - panel（静态整体增益）：按 panel.stat/op/mult 快照数值折算
     - stat_scale（每层增益）：stacks × 每层系数（资源/叠层 buff）
     - 无面板声明（纯状态/控制/周期/免疫）不折算面板
-    兼容过渡：原 buffs 快照字段（stat/op/mult 直接内嵌条目）也读
-    （EFFECT_ACTIONS 迁移前旧动作产物）——见数据表迁移 V5。
+    条目内嵌 stat/op/mult 是**活路径**（不是兼容壳）：act_apply 参数直传 与
+    EFFECT_RULES[key].panel 声明两条都读 —— 依据见 E5-3 核实（内容侧 10+ 处写入方）。
     """
     ef = actor.get("effects") or {}
     if not isinstance(ef, dict) or not ef:
@@ -94,7 +94,7 @@ def _player_base_stats(battle, actor: dict) -> dict:
     title_bonus/bonus 容器（v181.M-bonus 统一数值容器；N5b4-4 鱼鱼拍板 per-actor 通用
     容器）：actor 自带 bonus.panel（外部面板数值增幅聚合，core/stat_bonus.py）优先——
     PVP 双方各带各的、随 actor 落盘；
-    缺省回落 battle.title_bonus（野外单玩家整场一份，N10 前过渡）。空 dict 回落兜底。
+    缺省回落 battle.title_bonus（野外单玩家整场一份；N10 前过渡语义，两路都活 —— E5-3）。
     未装配（无内容）→ strict 抛 EngineNotConfigured，否则空面板（见 R8）。
     """
     _tb = ((actor.get("bonus") or {}).get("panel")
