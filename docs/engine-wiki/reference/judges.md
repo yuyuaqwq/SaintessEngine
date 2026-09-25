@@ -142,7 +142,7 @@ def _has_effect_ok(actor, judge):          # class_mech_proc.py:2120
 ## 成本判据（第三个独立谓词集）
 
 `bonus.cost` 的 `when` 走的是**引擎侧**的 `_cost_judge_hit`
-（`actions.py:209-226`），只认 3 个键，且语义完全不同：
+（`actions.py:210-227`），只认 3 个键，且语义完全不同：
 
 | 键 | 判据 |
 |---|---|
@@ -159,7 +159,7 @@ def _has_effect_ok(actor, judge):          # class_mech_proc.py:2120
 |---|---|---|---|---|
 | 动作 `judge` | 声明表 + 动作 | `{"kind": ..., 参数}` | 各动作内联 / `_res_ge_ok` / `_has_effect_ok` | `params["judge"]` |
 | 渠道 `when` | `EFFECT_RULES[key].channels.*` | `[{"judge": {...}}, ...]` | `_when_ok`（`class_mech_proc.py:2134`） | `params["when"]` |
-| 成本 `when` | `actor.bonus.cost` | `[{"mp_pct":..., "judge": {...}}]` | `_cost_judge_hit`（`actions.py:252`） | 技能的 `info` |
+| 成本 `when` | `actor.bonus.cost` | `[{"mp_pct":..., "judge": {...}}]` | `_cost_judge_hit`（`actions.py:253`） | 技能的 `info` |
 
 ⚠️ 渠道 `when` 的 `res_ge` 阈值在 **when 条目自身**；
 其余 `res_ge` 阈值都在 **params**（技能 passive dict）。这是最容易写错的一处。

@@ -150,7 +150,7 @@ grep -rho 'register_action("[^"]*")' game/services/*.py | sort -u | wc -l
 "stealth":        [{"action": "apply", "key": "stealth",       "hit": {"guaranteed_crit": True}}],
 ```
 
-`hit` 子键由 `actions._consume_hit_buffs` 消费（`actions.py:480-522`），
+`hit` 子键由 `actions._consume_hit_buffs` 消费（`actions.py:486-528`），
 出手时**消费并删除**该条目。
 
 ### 战斗核心（治疗 / 置值 / 打断 / 减伤 / 盾 / 净化）

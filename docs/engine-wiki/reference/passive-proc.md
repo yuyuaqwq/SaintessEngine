@@ -89,7 +89,7 @@ for _also in (cfg.get("also") or []):
 | 无 `when` 且 `mp_mult > 0` | `bonus.cost["mp_pct"] += passive.mp_mult` |
 
 ⚠️ 只读 `passive.mp_mult` 一个字段（**不读 `mp_flat` / `res`**）。消费者是扩展包
-`actions._skill_pay_of`（`extends/ext_combat/battle/actions.py:285`）。
+`actions._skill_pay_of`（`extends/ext_combat/battle/actions.py:286`）。
 `cost` 域因为无 `event`，下方 `if not d.get("type"): continue` 自然拦截（`:2063-2064`）。
 
 ## `agg`：聚合族

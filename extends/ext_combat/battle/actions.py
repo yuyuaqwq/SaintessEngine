@@ -14,6 +14,7 @@ import random
 from typing import Optional
 
 from saintess_engine import config as _cfg
+from saintess_engine import _validators as _V                       # 引擎侧共用守卫（E6 接线）
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from . import game_config as _GC
 from . import stats as S
@@ -366,7 +367,12 @@ def _deal_aoe(battle, actor: dict, target: dict, info: dict, total: int) -> list
         enemies.extend(battle.sides.get(_sn) or [])
     if not enemies:
         return logs
-    attacker = {"reach": int(info.get("reach") or 3), "uid": "aoe"}
+    # ★ E6（2026-09-25）：原先写 `int(info.get("reach") or 3)` —— 技能里把射程写成
+    # `"near"` 这类形状会抛**裸 ValueError**（栈里看不出是哪条技能）。改走引擎守卫
+    # `_validators.layer_of`：文案点名这条技能，形状/下界都在一处守。
+    _reach = _V.layer_of(info.get("reach"), "AOE 技能射程 reach（%s）"
+                         % (info.get("name") or info.get("key") or "未命名"), default=3)
+    attacker = {"reach": _reach, "uid": "aoe"}
     try:
         targets = _fm.select_aoe_targets(attacker, enemies, scope)
     except Exception as _e:

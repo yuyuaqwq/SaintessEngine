@@ -531,12 +531,20 @@ class Battle:
                 pre_logs = [self._t("battle.core.unknown_action",
                                     "未知行动类型：{action}", action=action)]
         # ---- 登记待发行动（T0）：第一段耗时由回执 / 行动类别决定（形状与数值全在内容侧）----
-        from .schedule import pending_begin
+        from .schedule import pending_begin, segment_plan_of
         _consumed = bool(getattr(ctx, "_override_consumed", False))
-        pending_begin(self, ctx,
-                      cast=(getattr(ctx, "_override_cast", None) if _consumed else action),
-                      recover=(getattr(ctx, "_override_recover", None) if _consumed else None),
-                      pre_logs=pre_logs)
+        if _consumed:
+            # 内容层自定义动作：override 回执给的耗时声明
+            _cast, _recover = (getattr(ctx, "_override_cast", None),
+                               getattr(ctx, "_override_recover", None))
+        else:
+            # ★ E6（2026-09-25）：**内置动作**（attack / skill / defend / flee）也能
+            # 「按这一次行动」声明两段耗时 —— 问内容侧 `segment_plan_fn`
+            # （不配 = 不存在 ⇒ 落回行动类别基准路径：cast = 本次行动类别、第二段不声明，逐字不变）
+            _plan = segment_plan_of(self, actor, action, ctx.info)
+            _cast, _recover = ((action, None) if _plan is None
+                               else (_plan["cast"], _plan["recover"]))
+        pending_begin(self, ctx, cast=_cast, recover=_recover, pre_logs=pre_logs)
         logs.append(self._t("battle.schedule.cast_begin", "🌀 {name} 开始出招…",
                             name=actor.get('name', '目标')))
         return logs, bool(self.result)

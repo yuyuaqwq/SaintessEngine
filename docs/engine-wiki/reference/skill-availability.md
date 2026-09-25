@@ -14,17 +14,17 @@
 
 ---
 
-## 1. 判据链（`actions.do_skill` 顺序，`actions.py:63`）
+## 1. 判据链（`actions.do_skill` 顺序，`actions.py:64`）
 
 | # | 判据 | 实现 | 不满足时 |
 |---|------|------|----------|
 | 1 | 技能可**解析** | `ActCtx.__post_init__` 查 `actor["_skill_index"]`（**无全局兜底**） | `info={}` → 空动作，白耗一回合 |
-| 2 | **冷却** | `_skill_usable` → `_cd_left_of`（`actions.py:142` / `:121`） | 拦截文案 + 不扣费 / 不写冷却 |
+| 2 | **冷却** | `_skill_usable` → `_cd_left_of`（`actions.py:143` / `:121`） | 拦截文案 + 不扣费 / 不写冷却 |
 | 3 | **魔力 / 核心资源** | `_skill_pay_of`（`actions.py:272`）折算后比对 `mp` / `effects[key].stacks` | 拦截文案（同 2） |
 | 4 | kind 分派执行 | `_do_heal` / `_do_buff` / 伤害管线 | — |
 
 判据 2、3 **只对「学习过该技能的 actor」有意义**，但冷却检查**对全部 actor 生效**
-（怪也有 `cooldown` 表）——调用点不再以 `class_name` 为门槛（`actions.py:83`）：
+（怪也有 `cooldown` 表）——调用点不再以 `class_name` 为门槛（`actions.py:84`）：
 
 ```python
 # ---- 1. 技能可用性校验（冷却：全 actor 一视同仁；资源：职业 actor）----
@@ -45,10 +45,10 @@ if not _skill_usable(battle, actor, info, logs):
 | 环节 | 约定 |
 |------|------|
 | **声明** | 技能表 `"cd": 12`，单位**刻**（CTB 刻度）。`0` / 缺省 = 无冷却 |
-| **写入** | `actor["cooldown"][info["name"]] = battle._now + cd`（`actions.py:104`） |
+| **写入** | `actor["cooldown"][info["name"]] = battle._now + cd`（`actions.py:105`） |
 | **key** | **技能显示名**（`info["name"]`，不是技能 key）——内容改名会让旧条目失配（无害：自然到期） |
 | **读取** | `_cd_left_of` = `due - battle._now`；`<= 0` 视为就绪，顺手 `pop` 到期条目（惰性清理，防表无限增长） |
-| **修正** | `cd_mult`：态内冷却加速，取多态**最速**（`min`），`max(1, …)` 保底 1 刻（`actions.py:90-101`） |
+| **修正** | `cd_mult`：态内冷却加速，取多态**最速**（`min`），`max(1, …)` 保底 1 刻（`actions.py:91-102`） |
 | **展示** | `combat.py:1684-1686` 技能列表按声明值显示 `冷却 N 刻`（静态展示，非剩余值） |
 
 **绝对时刻制**（v152 `CTB_EVENT_QUEUE_REFACTOR` 起）：值 = 施放时刻 + cd，
@@ -60,7 +60,7 @@ if not _skill_usable(battle, actor, info, logs):
 
 | 位置 | 角色 | 行为 |
 |------|------|------|
-| 引擎 `do_skill`（`actions.py:63` 定义 / `:78` 调用） | **唯一强制点** | 拦下并返回 `⏳ 【X】冷却中：还需 N.N 刻！`；不扣费、不写冷却 |
+| 引擎 `do_skill`（`actions.py:64` 定义 / `:78` 调用） | **唯一强制点** | 拦下并返回 `⏳ 【X】冷却中：还需 N.N 刻！`；不扣费、不写冷却 |
 | AI 决策器 `ai._skill_castable`（`ai.py:121`） | **静默判据** | 不可执行 → 跳过该 move（不产生玩家文案） |
 | 命令层 `combat.py`（`:1335-1355`） | **体验预检** | 冷却中直接回话，**不扣体力、不耗回合**（对齐同区 `魔力不足` 的既有做法） |
 

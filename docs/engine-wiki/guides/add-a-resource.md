@@ -126,12 +126,12 @@ info["res_cost"] = {"guard_core": 3}     # 施放时扣 3 层
 
 引擎原生消费（**这是引擎唯一直接认的资源字段**）：
 
-- 预检：`_skill_usable`（`actions.py:142`）——条目存在且 `stacks < 需求` → 拦截 + 写日志
+- 预检：`_skill_usable`（`actions.py:143`）——条目存在且 `stacks < 需求` → 拦截 + 写日志
   「⚡ 核心资源不足：需要 X key，当前 Y！」
-- 扣费：`_spend_skill_cost`（`actions.py:195`）——`stacks = norm_stack(max(0, cur - rv))`
+- 扣费：`_spend_skill_cost`（`actions.py:196`）——`stacks = norm_stack(max(0, cur - rv))`
 
 ⚠️ **一个重要的历史行为**：`res_cost` 只在 `actor.effects` **已经有该 key 条目**时才拦截
-（`actions.py:187-190` 的 `continue`）。没条目 = 不拦（保持历史行为）。
+（`actions.py:188-191` 的 `continue`）。没条目 = 不拦（保持历史行为）。
 所以「资源渠道没接通」时技能是**免费**的，不是被拦。原型期友善，生产期是漏洞。
 
 ### ② `MECH_CASH` 兑现（层数换伤害 + 清层）
@@ -153,7 +153,7 @@ mode 全谱 → [../reference/mech-cash.md](../reference/mech-cash.md)。
 ### ③ `consume_all`（清零）
 
 ```python
-info["consume_all"] = {"key": "arcane"}    # actions.py:220-223：直接 ef.pop
+info["consume_all"] = {"key": "arcane"}    # actions.py:221-224：直接 ef.pop
 ```
 
 ## 自然回复 / 衰减
@@ -163,11 +163,11 @@ info["consume_all"] = {"key": "arcane"}    # actions.py:220-223：直接 ef.pop
 "period": {"dir": "gain", "interval": 1.0, "amount": -0.7}  # 每刻 -0.7（允许负值）
 ```
 
-- 引擎侧消费者：`schedule._settle_time_effects` 的 `gain` 分支（`schedule.py:671-690`）
-- **静默**（不刷日志，`schedule.py:678-679` 注释）
+- 引擎侧消费者：`schedule._settle_time_effects` 的 `gain` 分支（`schedule.py:712-731`）
+- **静默**（不刷日志，`schedule.py:719-720` 注释）
 - clamp 到 `[0, cap]`，cap 取 `period.cap` 或 `_cap_of`（表声明 + `bonus.cap`）
 - 负数也走（信仰清醒档衰减），但**下限 0**，不会归负
-- `dir="gain"` **不要求 `stacks > 0`** —— 0 层也要能回（`schedule.py:492-495`）
+- `dir="gain"` **不要求 `stacks > 0`** —— 0 层也要能回（`schedule.py:578-581`）
 
 ## 开局满额
 

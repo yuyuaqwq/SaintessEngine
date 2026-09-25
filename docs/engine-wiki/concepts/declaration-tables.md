@@ -105,9 +105,9 @@ hit（dict）                           →  {stacks:1, expire, hit}      出手
 | `debuff_scale` | ✅ **引擎消费**（`landing.deal_damage`，2026-09-11 接线）：Σ(每层系数 × stacks) → 承伤 ×(1+Σ)，与 `stat_scale` 对称。`hunt_mark`/`soul_mark`/`curse` 的「每层承伤 +N%」现生效；`target["_dmg_taken_mult"]`（`landing.py`）仍是无状态来源的固定乘区 |
 | `panel` | `effects.act_apply` 快照分支（`effects.py:471-483`） |
 | `consume.mode` | `effects.act_apply` 控制分支（`effects.py:359-362`）+ `Battle.act` 的控制消费（`battle.py:484-511`） |
-| `period` | `schedule._settle_time_effects`（`schedule.py:480-488`） |
+| `period` | `schedule._settle_time_effects`（`schedule.py:566-574`） |
 | `cleanse` / `period` / `on=="target"` | `effects.act_cleanse`（`effects.py:631-640`） |
-| `cd_mult` | `actions.do_skill` 冷却设置（`actions.py:90-98`，取多态最小） |
+| `cd_mult` | `actions.do_skill` 冷却设置（`actions.py:91-99`，取多态最小） |
 | `negative` | **内容侧**负面种数计数（`class_mech_proc.py:767`），引擎不读 |
 
 ## `MECH_CASH` / `PASSIVE_PROC`：内容侧约定，不是引擎 API

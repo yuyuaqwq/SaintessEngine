@@ -175,6 +175,24 @@ def get_hook(name: str):
     return value
 
 
+def optional_hook(name: str):
+    """读一个**可选** hook：不配 ⇒ `None`（**不问** `strict`）。
+
+    ★ 与 `get_hook` 的分工（E6 · 2026-09-25 新增）：
+      · `get_hook` = **必需**通道 —— strict 模式下没装配要当场现形（点名缺哪个 hook）；
+      · `optional_hook` = **可选**通道 —— 「不配」是合法状态（这款游戏不用这条声明，
+        引擎连问都不问、不记日志、不抛），例如 `segment_plan_fn`：
+        不配 = 不声明「两段耗时」，落回既有行动类别基准路径。
+      可选通道若也走 strict，strict 模式（开发/测试建议开）就会因为「没用到的可选件」
+      到处抛 —— 那是把「可选」当「必需」判。故本读口**只看存不存在**。
+    """
+    value = _HOOKS.get(name)
+    if value is None and _hook_provider is not None:
+        _lazy_bootstrap()
+        value = _HOOKS.get(name)
+    return value
+
+
 def _lazy_bootstrap() -> None:
     """触发内容侧惰性装配（防重入；装配失败静默，交由 strict/兜底决定）。"""
     global _hook_provider_running

@@ -162,11 +162,55 @@ def _spd_of(battle, actor: dict) -> int:
         return int(actor.get("spd", 0) or 0)
 
 
-def _segment_seconds(battle, actor: dict, decl) -> float:
-    """一段耗时（游戏秒）——`decl` = str（行动类别，过内容侧形状）/ 数字（绝对秒）。"""
-    if isinstance(decl, str) or decl is None:
-        return action_time(_spd_of(battle, actor), action_base_of(decl or DEFAULT_ACTION))
-    return max(0.0, float(decl))
+def _segment_seconds(battle, actor: dict, decl, label: str = "第一段耗时") -> float:
+    """一段耗时（游戏秒）—— 四形态（**守卫 `_validators.segment_of` 守门**，坏形状当场抛）：
+
+    | `decl` | 语义 |
+    |---|---|
+    | `None` | 按 `DEFAULT_ACTION` 类别（调用方没声明这一段） |
+    | `str` | **行动类别名** → 过内容侧时间模型（吃速度） |
+    | 数字 | **绝对秒**（绕过速度/施法急速模型） |
+    | `{"base": n}` | **基准秒** → 过内容侧时间模型（吃速度） |
+
+    ★ E6（2026-09-25）：原先只有 str / 数字两档 —— `{"base": n}` 是文档里写明的合法形态，
+      却会掉进 `float(dict)` 抛 `TypeError`；而坏形状（列表 / 负秒 / `{"base":"x"}`）也没有
+      点名调用方。现在一律先过守卫（点名 `label`），再按形态取秒数。
+    """
+    from saintess_engine import _validators as _V
+    decl = _V.segment_of(decl, label)
+    if decl is None:
+        decl = DEFAULT_ACTION
+    if isinstance(decl, str):
+        return action_time(_spd_of(battle, actor), action_base_of(decl))
+    if isinstance(decl, dict):
+        return action_time(_spd_of(battle, actor), float(decl["base"]))
+    return max(0.0, float(decl))              # 绝对秒：不过时间模型
+
+
+def segment_plan_of(battle, actor: dict, action, entry) -> Optional[dict]:
+    """`segment_plan_fn` 读口 —— 问内容侧「**这一次行动**的两段耗时」（E6 接线）。
+
+    回执形状 `{"cast": <段声明>, "recover": <段声明>}`（各自过 `segment_of` 守卫）。
+
+    · **不配 = 不存在**：`optional_hook` 读口不配即 `None` ⇒ 引擎连问都不问，
+      调用方落回既有「行动类别基准」路径（逐字不变）；
+    · 配了但返回空 / `None` ⇒ 同样 `None`（内容侧用「这次不声明」表达回落）；
+    · 回执里只声明了一段也合法（另一段为 `None` ⇒ 走该段的默认）。
+    """
+    from saintess_engine import config as _cfg
+    from saintess_engine import _validators as _V
+    fn = _cfg.optional_hook("segment_plan_fn")
+    if fn is None:
+        return None
+    plan = fn(actor, action, entry)
+    if not plan:
+        return None
+    # ★ 标签用 ASCII：`extends/ext_combat/battle/` 的 `return` 路径里有条门禁
+    # （`tests/test_battle_text_inject.py` §4）扫「中文串常量」——玩家可见文案必须走文案表，
+    # 而这里只是**开发者可见**的校验标签（cast 段位名），用点号键更利于 grep。
+    _l1, _l2 = "segment_plan_fn.cast", "segment_plan_fn.recover"
+    return {"cast": _V.segment_of(plan.get("cast"), _l1),
+            "recover": _V.segment_of(plan.get("recover"), _l2)}
 
 
 def pending_of(actor) -> Optional[dict]:
@@ -201,7 +245,8 @@ def pending_begin(battle, ctx, cast=None, recover=None, pre_logs=None) -> dict:
         "target_side": ctx.target_side,
         "scope": ctx.scope,
         "info": ctx.info,
-        "cast_done_at": float(battle._now) + _segment_seconds(battle, actor, cast),
+        "cast_done_at": float(battle._now) + _segment_seconds(
+            battle, actor, cast, "待发行动的第一段耗时（cast）"),
         "cast_base": cast,
         "recover_base": recover,
         "unstoppable": bool(getattr(ctx, "unstoppable", False)),

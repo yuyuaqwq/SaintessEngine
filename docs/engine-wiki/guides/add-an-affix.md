@@ -84,11 +84,11 @@ def map_event(old_ev):
 （`game/services/battle_equip_proc.py:47-51`）
 
 **为什么 `hit` 要展开成两个事件**：引擎把「普攻命中」(`attack_hit`) 与「技能命中」
-(`skill_hit`) 分成两个事件（`actions.py:488` 按 `info["_basic"]` 选）。
+(`skill_hit`) 分成两个事件（`actions.py:494` 按 `info["_basic"]` 选）。
 你的数据表只写「命中」时，得同时挂两个。
 
 **为什么 `enemy_act` 映射到 `act_done`**：`act_done` 是**不带 subject 的广播事件**
-（`ctx["acted"]` 才是行动者，`battle.py:588-593`），所以「敌方行动后我叠减速」
+（`ctx["acted"]` 才是行动者，`battle.py:596-601`），所以「敌方行动后我叠减速」
 这类特效要在动作里**自己判敌我**（例：`we_act_done_slow`）。
 
 ## 词条的三种数值通道
@@ -117,7 +117,7 @@ actor["bonus"]["cost"] = {
 }
 ```
 
-读取与折算在 `_skill_pay_of`（`actions.py:272-307`），两条硬规则（`actions.py:242-248` 注释）：
+读取与折算在 `_skill_pay_of`（`actions.py:272-307`），两条硬规则（`actions.py:243-249` 注释）：
 
 ```
 pay = max(1, floor(声明 × (1 - Σpct)) - Σflat)
@@ -126,7 +126,7 @@ pay = max(1, floor(声明 × (1 - Σpct)) - Σflat)
 - **折扣只减不增**；声明消耗 >0 的技能**保底扣 1**（不许白嫖）
 - `floor` 向下取整（玩家受益方向）；无折扣 → 返回值与声明完全一致（行为零变化）
 
-`when` 的判据由 `_cost_judge_hit`（`actions.py:252`）实现，支持三个谓词：
+`when` 的判据由 `_cost_judge_hit`（`actions.py:253`）实现，支持三个谓词：
 `element`（技能有元素）、`mech_prefix`（技能 mech 前缀）、
 `name_contains`（技能显示名含子串）。多个谓词是 **OR**；空 judge = 恒命中。
 

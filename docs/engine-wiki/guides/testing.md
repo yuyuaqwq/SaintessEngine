@@ -117,7 +117,7 @@ check("4.2 补跳 3 次（180 伤）", hp1 - e["hp"] == 180)
 
 真实同款见 `tests/test_battle_n4_schedule.py` 的 `test_dot_interval_n74`。
 注意断言里「补跳」的期望值 —— 一次 `_settle_time_effects` 最多补 20 跳
-（`schedule.py:505` 的 `guard < 20`）。
+（`schedule.py:591` 的 `guard < 20`）。
 
 ### 招式 3：断言 `triggers` 装配结果，而不是行为
 

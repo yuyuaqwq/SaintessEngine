@@ -79,7 +79,7 @@ clock · command · container · domains · events · expr · host · log · ses
 | `actions` | `skill_pay_of` | `_skill_pay_of` |
 
 （这五个符号都在扩展包 `ext_combat` 里；别名赋值处：`effects.py:86-87`、`battle.py:30`、
-`battle/actions.py:326`、`battle/actions.py:801`）
+`battle/actions.py:327`、`battle/actions.py:807`）
 
 ## 2. `Battle`（扩展包 `ext_combat` · `battle.py:34`）
 
@@ -165,16 +165,16 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 | 方法 | 位置 | 内容层引用数（全仓 grep） |
 |---|---|---|
 | `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:115/117/151` | 仅包内 |
-| `_do_defend` / `_do_flee` | `battle.py:604/458` | 仅包内 |
-| `_ensure_battle_started` | `battle.py:620` | 仅包内 |
-| `_on_actor_dead(actor, logs=None)` | `battle.py:637` | `landing._apply_damage` 调（`landing.py:401`） |
-| `_check_side_end` | `battle.py:657` | 仅包内 |
+| `_do_defend` / `_do_flee` | `battle.py:612/458` | 仅包内 |
+| `_ensure_battle_started` | `battle.py:628` | 仅包内 |
+| `_on_actor_dead(actor, logs=None)` | `battle.py:645` | `landing._apply_damage` 调（`landing.py:401`） |
+| `_check_side_end` | `battle.py:665` | 仅包内 |
 
 ### 序列化
 
 ```python
-to_state() -> dict                    # battle.py:684 → serialize.to_state
-Battle.from_state(st, *, text=None)   # battle.py:680（classmethod）→ serialize.from_state
+to_state() -> dict                    # battle.py:692 → serialize.to_state
+Battle.from_state(st, *, text=None)   # battle.py:688（classmethod）→ serialize.from_state
 ```
 
 ## 3. 模块级公开函数（除 `config.py` 外都在扩展包 `ext_combat`）
@@ -239,8 +239,8 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 | `recover_base_of(action) -> float` | `:129` | **转发内容侧第二段基准表**（`recover_base_fn`）；未知类别回落 `DEFAULT_ACTION` |
 | `advance(battle, logs, max_steps=200) -> ("player", actor) \| ("over", None)` | `:285` | 推进到下一个决策点 |
 | `_after_act(battle, actor, action)` | `:362` | 行动后推 ct |
-| `_advance_time(battle, dt, logs)` | `:376` | 加时钟 → 结算 → 广播 `time_advance` |
-| `_settle_time_effects(battle, logs)` | `:415` | effects 到期 / shields 到期 / 周期跳 |
+| `_advance_time(battle, dt, logs)` | `:421` | 加时钟 → 结算 → 广播 `time_advance` |
+| `_settle_time_effects(battle, logs)` | `:456` | effects 到期 / shields 到期 / 周期跳 |
 
 常量：`DEFAULT_ACTION = "attack"`（`:32`，通用类别键：未知动作类别回落到它那一项）。
 **包内已无** `CAST_ATK` / `CAST_SKILL` / `CAST_DEFEND` / `SPD_REF` 等时间/基准常量 ——
@@ -390,7 +390,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 | `front_rank(units)` | `:20` |
 | `reachable_units(attacker, units)` | `:28`（⚠️ 无外部引用） |
 | `select_target(attacker, units, threat=None, exclude_uid=None, threat_mode="front")` | `:34` |
-| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一消费者：`actions._deal_aoe`，`battle/actions.py:378`） |
+| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一消费者：`actions._deal_aoe`，`battle/actions.py:384`） |
 | `pick_by_policy(policy, units, threat=None, fallback=None)` | `:122` |
 | `compact(units)` | `:161` |
 | `numbered_units(units)` | `:191` |
