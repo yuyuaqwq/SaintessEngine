@@ -104,9 +104,6 @@ class EventBus(WarnMixin):
         self._registry[event].append(
             (subscriber, self.blank_line_default if blank_line is None else bool(blank_line)))
 
-    # 兼容常见命名（register 与 on 同义）
-    register = on
-
     def unsubscribe(self, event: str, subscriber: Callable) -> int:
         """移除某订阅方（返回移除条数）—— 测试/动态装配用。"""
         subs = self._registry.get(event)

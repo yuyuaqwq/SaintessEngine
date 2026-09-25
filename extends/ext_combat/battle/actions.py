@@ -790,7 +790,7 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
     """增益技能结算（对齐旧 _skill_buff 主线）。
 
     effect → actor.buffs 写入（key → 持续刻数）。复杂 effect（护盾/团队广播/
-    元素转换等）查 EFFECT_HANDLERS（N3 完整迁入），此处内置最小集：
+    元素转换等）查 ACTION_HANDLERS（N3 完整迁入），此处内置最小集：
     - 通用属性 buff：effect 名直接作为 buff key
     - team_keys 映射（xx_all → xx_up）
     - shield_self 护盾

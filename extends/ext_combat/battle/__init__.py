@@ -6,7 +6,7 @@
   battle      战斗编排（构造 / act / human_act / actor_auto / 结果判定）
   actions     行动结算链（技能施放判据、命中、伤害注入）
   landing     伤害/治疗落地（闪避 / 格挡 / 护盾 / 免伤 / 元素）
-  effects     效果叠层 + 动作注册表（EFFECT_HANDLERS）
+  effects     效果叠层 + 动作注册表（ACTION_HANDLERS）
   schedule    CTB 时间轴与推进器
   ai          通用怪决策器（条件表 / 权重 utility）
   stats       面板合成（公式经 config 注入）

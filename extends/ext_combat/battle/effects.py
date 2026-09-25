@@ -86,8 +86,6 @@ cap_of = _cap_of
 # ============================================================
 
 ACTION_HANDLERS: dict = {}
-# 兼容旧名（迁移期 EFFECT_HANDLERS 仍可用，指向同一表）
-EFFECT_HANDLERS: dict = ACTION_HANDLERS
 
 # 签名：fn(battle, caster, target, params, logs)
 ActionHandler = Callable
