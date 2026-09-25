@@ -267,16 +267,16 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 
 ### `config.py`
 
-见 [../concepts/config-injection.md](../concepts/config-injection.md) 的 17 hook 表。
+见 [../concepts/config-injection.md](../concepts/config-injection.md) 的 22 hook 表。
 公开面（引擎侧只剩「注入面 + 严格模式」这几个）：
-`EngineNotConfigured`（`:20`）· `strict`（`:95`）· `set_config`（`:106`）· `get_config`（`:115`）·
-`register_hook_provider`（`:124`）· `set_hook`（`:134`）· `mount`（`:147`）· `get_hook`（`:153`）·
-`unconfigured(name, default)`（`:184`）。
+`EngineNotConfigured`（`:20`）· `strict`（`:103`）· `set_config`（`:114`）· `get_config`（`:123`）·
+`register_hook_provider`（`:132`）· `set_hook`（`:142`）· `mount`（`:155`）· `get_hook`（`:161`）·
+`unconfigured(name, default)`（`:192`）。
 ★ 原先那一串「游戏配置取件面」（`load_game_rules` / `get_effect_rules` / `state_def` /
 `formulas()` / `kind_of` / `monster_skill_of` …）**已随第 7 批搬进扩展包** —— 现在住
 `ext_combat.battle.game_config`（包内写 `from ext_combat.battle import game_config`）。
 2026-09-25 校准：本段原先把这批已搬走的名字留着并带着旧行号，按源码逐条重写。
-`_NullFormulas`（`:191`）是模块级私有属性（未装配时的中性公式面）。
+`_NullFormulas`（`:199`）是模块级私有属性（未装配时的中性公式面）。
 
 ### `effect_triggers.py`
 
@@ -364,18 +364,22 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 
 ### `expr/__init__.py` — 安全表达式解释器（**引擎件**）
 
-| 函数 | 位置 |
+| 函数 / 名字 | 位置 |
 |---|---|
-| `compile_expr(expr) -> code` | `:48` |
-| `eval_expr(code, vars_=None) -> float` | `:148` |
-| `build_vars(stats, player_lv=0, skill_lv=0, target_max_hp=..., base=...)` | `:192` |
-| `expr_or(value, fallback)` | `:221`（⚠️ 无外部引用） |
-| `translate_expr(expr)` | `:248` |
-| `ExprError` | `:44` |
-| `VARIABLE_WHITELIST` | `:20` |
+| `compile_expr(expr) -> code` | `:143` |
+| `eval_expr(code, vars_=None) -> float` | `:249` |
+| `build_vars(stats, player_lv=0, skill_lv=0, target_max_hp=..., base=...)` | `:326` |
+| `expr_or(value, fallback)` | `:347`（⚠️ 无外部引用） |
+| `translate_expr(expr)` | `:366` |
+| `declared_vars()` · `variable_names()` · `labels_of()` | `:84` · `:111` · `:356` |
+| `_DEFAULT_EXPR_VARS` | `:45` |
+| `ExprError` | `:139` |
 
-无第三方依赖：手写 tokenizer + 调度场（`_TOKEN_RE` `:25`、`_PREC` `:34`）。
-变量白名单在 `VARIABLE_WHITELIST`。中文变量名别名表 `_VAR_CN`（`:231`）。
+无第三方依赖：手写 tokenizer + 调度场（`_TOKEN_RE` `:116`、`_PREC` `:125`）。
+★ **变量表归内容侧声明**（E4 · 2026-09-25）：引擎只留两个读口 —— `declared_vars()`
+（有哪些变量 / 各自的取值来源 `stat`·`input`·`const` / 显示名，中文名也在表里，旧 `_VAR_CN` 已并入）
+与 `variable_names()`；表由 `config.mount(expr_vars_fn=...)` 声明，不装配则整表取
+`_DEFAULT_EXPR_VARS`（= 历史那一份，逐条相同 ⇒ 一字不变）。旧名 `VARIABLE_WHITELIST` 已删。
 
 ### `formation/` — 站位 / 射程纯函数（扩展包 `ext_combat`，`from ext_combat import formation`）
 
@@ -458,7 +462,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 | `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
 | ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 不实现） |
-| `config.set_hook` | `config.py:131` | 零外部引用（都走 `mount`） |
+| `config.set_hook` | `config.py:139` | 零外部引用（都走 `mount`） |
 | `effects.resolve_actions` | `effects.py:140` | 零外部引用（`effects` 内部调用） |
 | `ai.eval_when` | `ai.py:159` | 零外部引用（`resolve_ai_move` 内部调） |
 | ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |

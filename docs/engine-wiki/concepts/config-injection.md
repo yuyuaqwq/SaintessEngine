@@ -25,7 +25,7 @@
 > 门禁是**方向**的保证，不是「引擎绝对不用游戏东西」的保证。
 > 引擎仍然读 `actor` 上的数据字段（那是运行期数据，不是 import）。
 
-## 17 个 hook
+## 22 个 hook
 
 `_HOOKS`（`config.py:30-71`）白名单，`mount(**hooks)` / `set_hook(name, value)` 写，
 `get_hook(name)` 读。
@@ -46,9 +46,14 @@
 | `mech_cfg_fn` | `fn(name) -> dict` | `config.mech_cfg` → `support/battle_bars._battle_cfg` | `{}` |
 | `bar_prefix_fn` | `fn() -> str` | `config.bar_prefix` → `support/battle_bars._state_prefix` | `""` |
 | `time_model_fn` | `fn(spd, base) -> float` | `schedule.action_time` / `initial_ct` / `next_ct` / `_after_act`（`schedule.py:43`；调用点 `:92` / `:103` / `:108` / `:225`） | **抛 `EngineNotConfigured`**（点名 hook；CTB 时间模型**不许**有默认公式） |
+| `formula_table_fn` | `fn() -> FormulaTable` | E1 声明式公式表（`formula/`）的读口 | 不配 = 不存在 ⇒ 既有 `_cfg.formulas()` 调用点全走原路，行为逐字节不变 |
+| `formula_bindings_fn` | `fn(slot: str) -> str\|None` | E1b 语义槽位 → 声明 id 的绑定（`formulas._damage_binding`） | 不配 = 不存在 ⇒ 所有读口一字不动（走原公式） |
+| `panel_layers_fn` | `fn(stack_id) -> dict\|None` | E2 面板栈供体（`ext_combat.panel.PanelStack`）；`battle/stats.py` | 不配 = 不存在 ⇒ `stats` 原路调 `panel_fn`，既有包行为逐字节不变 |
+| `segment_plan_fn` | `fn(actor, action, entry) -> dict\|None` | E5 两段耗时的声明供体（回执 `{cast, recover}`） | 不配 = 不存在 ⇒ 引擎**连问都不问**，落回「行动类别基准」路径 |
 | `action_base_fn` | `fn(action) -> float` | `schedule.action_base_of`（`schedule.py:118`） | **抛 `EngineNotConfigured`**（行动类别 → 基准耗时数值归内容侧） |
 | `recover_model_fn` | `fn(spd, base) -> float` | `schedule.recover_time` → `next_ct` / `_after_act`（`schedule.py:135`） | **抛 `EngineNotConfigured`**（同 `time_model_fn`；「没有第二段」= 内容侧显式声明 0） |
 | `recover_base_fn` | `fn(action) -> float` | `schedule.recover_base_of`（`schedule.py:127`） | **抛 `EngineNotConfigured`**（行动类别 → 第二段基准耗时数值归内容侧） |
+| `expr_vars_fn` | `fn() -> dict` | ★ E4（2026-09-25）表达式**变量表**读口 `expr.declared_vars()`（→ `build_vars` / `labels_of` / `translate_expr`） | 不装配 ⇒ 用引擎默认表 `_DEFAULT_EXPR_VARS`（= 历史那一份，逐条相同 ⇒ 一字不变）；**装了却给不出可用表 ⇒ 抛 `EngineNotConfigured`**（不静默退回默认表） |
 
 **怎么记**：`formulas` 决定「数怎么算」，`f*_fn` 给它参数表，
 `panel_fn` 决定「玩家面板怎么来」，`skill_lookup` / `monster_skill_fn` / `basic_skill_fn`
@@ -65,7 +70,7 @@
 [../concepts/ctb-schedule.md](ctb-schedule.md)），「没有第二段」由**内容侧显式声明 0** 表达
 （对应 `recover_time()` 返回 `0.0`，加法结果逐位不变），**不由引擎兜底**。
 
-> ⚠️ **未知名被静默忽略**：`set_hook`（`config.py:131`）里 `if name in _HOOKS`
+> ⚠️ **未知名被静默忽略**：`set_hook`（`config.py:139`）里 `if name in _HOOKS`
 > 没有 else。写错 hook 名不报错。开发期用 `strict=True`。
 
 ## 两张规则表：`set_config`
@@ -74,15 +79,15 @@
 config.set_config("effect_actions", EFFECT_ACTIONS)   # 名词 → 动词序列
 config.set_config("effect_rules",   EFFECT_RULES)     # key → 行为规则
 # 或者一次给一个模块（读它的 EFFECT_ACTIONS / EFFECT_RULES 属性）
-config.load_game_rules(my_rules_module)               # config.py:112
+config.load_game_rules(my_rules_module)               # config.py:120
 ```
 
 读取端（**S2 公开 API**）：
 
 | 函数 | 位置 | 语义 |
 |---|---|---|
-| `get_effect_actions()` | `config.py:127` | 默认 `{}` |
-| `get_effect_rules()` | `config.py:141` | 默认 `{}` |
+| `get_effect_actions()` | `config.py:135` | 默认 `{}` |
+| `get_effect_rules()` | `config.py:149` | 默认 `{}` |
 | `state_def(key)` | `config.py:146`（`state_effects.py:13` 的实体） | `get_effect_rules().get(key) or {}` |
 
 ## 三档行为：零装配 / 部分装配 / strict
@@ -93,10 +98,10 @@ config.load_game_rules(my_rules_module)               # config.py:112
 |---|---|
 | **什么 hook 都没装** | 一切「静默降级为 0」。`human_act` 返回 `[]`，双方 hp 不变，**不抛异常** |
 | **装了 `formulas` 但没装 `formula_skeleton_fn` / `skill_flat_fn`** | 伤害链内部抛 `KeyError: 'skill_growth'` / `TypeError: float() ... NoneType` —— **硬崩**，而且栈不指向 hook 名 |
-| **`config.strict = True`** | `get_hook` 对未装配 hook 抛 `EngineNotConfigured`（`config.py:161`），错误信息直接点名缺哪个 hook |
+| **`config.strict = True`** | `get_hook` 对未装配 hook 抛 `EngineNotConfigured`（`config.py:169`），错误信息直接点名缺哪个 hook |
 
 ```python
-config.strict = True    # 开发/测试环境建议打开（config.py:92）
+config.strict = True    # 开发/测试环境建议打开（config.py:100）
 ```
 
 原文说明（`config.py:87-91`）：`False`（默认）与历史行为一致——未装配给中性兜底不炸；
@@ -140,10 +145,10 @@ config.load_game_rules(my_rules_module)
 ### ③ 惰性装配（`register_hook_provider`）
 
 ```python
-config.register_hook_provider(my_lazy_mount)   # config.py:130
+config.register_hook_provider(my_lazy_mount)   # config.py:132
 ```
 
-引擎首次访问某个未装配 hook 时调用一次（`_lazy_bootstrap`，`config.py:167`，带防重入）。
+引擎首次访问某个未装配 hook 时调用一次（`_lazy_bootstrap`，`config.py:175`，带防重入）。
 游戏仓 `dragonfall`（《奥兰迪亚》）内容侧就是这么接的：它的装配入口收敛到
 `game/content_rules/apply.py` 的 `ensure_engine_configured()`（幂等；旧
 `load_game_defaults` 的收敛点），hook 与规则表经 `game/bootstrap.py`
@@ -183,7 +188,7 @@ def _skeleton():                        # formulas.py:84
 
 ## 相关
 
-- 15 个 hook 的逐项签名与未装配行为 → [../reference/api.md](../reference/api.md)
+- 22 个 hook 的逐项签名与未装配行为 → [../reference/api.md](../reference/api.md)
 - 两张规则表的字段级 schema → [../reference/effect-rules.md](../reference/effect-rules.md) ·
   [../reference/effect-actions.md](../reference/effect-actions.md)
 - 边界的物理形态与迁移方案 → [../architecture/boundaries.md](../architecture/boundaries.md)

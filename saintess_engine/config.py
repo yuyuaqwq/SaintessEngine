@@ -85,6 +85,14 @@ _HOOKS = {
     "recover_model_fn": None,
     # 行动类别 → 第二段基准耗时 fn(action) -> float（「无第二段」= 内容侧显式声明 0.0）
     "recover_base_fn": None,
+    # ★ E4（2026-09-25）：表达式**变量表**供体（`saintess_engine.expr`）。
+    #   形状 = fn() -> dict；键 = 变量名（表达式里直接写的名字），值 = 一条声明
+    #   {"label": 显示名（可省）, "source": 取值来源}；来源三类通用原语：
+    #   stat（属性快照）/ input（`build_vars` 的具名入参，可带 else 回落）/ const。
+    #   不配 = 不存在 ⇒ 引擎沿用自带默认表（= 历史那一份，逐条相同）⇒ 行为一字不变。
+    #   ★ 配了却给不出可用表（None/空/条目缺 source）⇒ 抛 EngineNotConfigured，
+    #     不静默退回默认表（写错的声明不许无声无息）。
+    "expr_vars_fn": None,
 }
 
 # R8：无挂载静默降级开关。

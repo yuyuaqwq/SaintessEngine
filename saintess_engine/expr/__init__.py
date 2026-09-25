@@ -10,17 +10,108 @@
 - 括号 ( )
 - 一元负号 -x
 - 数字字面量（含小数）
-- 变量引用（白名单，见 VARIABLE_WHITELIST）
+- 变量引用
 
 安全：白名单 tokenizer（只认数字/变量/操作符/括号），不 eval 用户输入。
+
+变量表（★ E4 2026-09-25：引擎**只留读口**，表本身归内容侧声明）
+- 引擎侧只有两个读口：`declared_vars()`（问「有哪些变量、各自的值从哪来、显示名叫什么」）
+  与 `variable_names()`（问「有哪些变量名」）。表由内容侧经 `config` 的 `expr_vars_fn` 声明
+  （装配写法 `config.mount(expr_vars_fn=lambda: {...})`）。
+- 未声明 ⇒ 沿用本模块的**默认表** `_DEFAULT_EXPR_VARS`（= 引擎历史那一份，逐条相同
+  ⇒ 不装配时行为一字不变）。
+- 声明口装了却给不出可用表 ⇒ 抛 `EngineNotConfigured`（fail-closed；**不**静默退回默认表）。
 """
 import re
 
-# 可用变量白名单（引擎注入值；未知变量 → 0）
-VARIABLE_WHITELIST = {
-    "atk", "matk", "def", "mdef", "max_hp", "hp", "spd", "crit",
-    "player_lv", "skill_lv", "crit_mult", "target_max_hp", "base",
+from ..config import EngineNotConfigured
+from .. import config as _cfg
+
+# ---------- 变量表：内容侧声明（★ E4）+ 默认表 ----------
+#
+# 声明口：`config.mount(expr_vars_fn=lambda: <表>)`（hook 名在 `config._HOOKS` 名单里）
+#   形状 = `fn() -> dict`；键 = 变量名（表达式里直接写这个名字），值 = 一条声明：
+#     {"label": <显示名（`translate_expr` 中文翻译用；可省，省了就保持变量名原样）>,
+#      "source": <取值来源（必给）>}
+#   取值来源三类 —— 引擎提供的**通用原语**（不含任何游戏语义）：
+#     {"from": "stat",  "key": <k>}     ← 属性快照 `stats[k]`（缺 → 0）
+#     {"from": "input", "key": <k>}     ← `build_vars` 的具名入参（键名 = 它的参数名）
+#         可选 "else": <source>          ← 该入参为 None 时改读这条
+#     {"from": "const", "value": <v>}   ← 固定值
+#
+#: 默认变量表：**引擎历史那一份**（旧 `VARIABLE_WHITELIST` 的 13 个名字 × 旧 `_VAR_CN`
+#: 的显示名，逐条搬成同一张表；`crit_mult` 的 1.5 原写死在 `build_vars` 里）。内容侧一声明
+#: 就**整表替换** —— 引擎不认识「某款游戏该有哪些变量」，只认识「去哪问这张表」。
+_DEFAULT_EXPR_VARS = {
+    "atk": {"label": "攻击", "source": {"from": "stat", "key": "atk"}},
+    "matk": {"label": "魔法攻击", "source": {"from": "stat", "key": "matk"}},
+    "def": {"label": "防御", "source": {"from": "stat", "key": "def"}},
+    "mdef": {"label": "魔法防御", "source": {"from": "stat", "key": "mdef"}},
+    "max_hp": {"label": "最大生命", "source": {"from": "stat", "key": "max_hp"}},
+    "hp": {"label": "当前生命", "source": {"from": "stat", "key": "hp"}},
+    "spd": {"label": "速度", "source": {"from": "stat", "key": "spd"}},
+    "crit": {"label": "暴击", "source": {"from": "stat", "key": "crit"}},
+    "player_lv": {"label": "玩家等级", "source": {"from": "input", "key": "player_lv"}},
+    "skill_lv": {"label": "技能等级", "source": {"from": "input", "key": "skill_lv"}},
+    "crit_mult": {"label": "暴击倍率", "source": {"from": "const", "value": 1.5}},
+    "target_max_hp": {"label": "目标最大生命",
+                      "source": {"from": "input", "key": "target_max_hp",
+                                 "else": {"from": "stat", "key": "max_hp"}}},
+    "base": {"label": "基础值", "source": {"from": "input", "key": "base"}},
 }
+
+
+#: 取值来源的**全部**合法类别（引擎提供的通用原语，均不含游戏语义）
+_SOURCE_KINDS = ("stat", "input", "const")
+
+
+def _validate_source(source, var_name: str, path: str) -> None:
+    """校验一条来源声明；不合法 ⇒ 抛 `EngineNotConfigured`（fail-closed）。
+
+    校验在**读表时**做（不是用到才做）：一个没被任何表达式引用的坏条目也要当场现形 ——
+    否则它会静静躺在表里，等某天有人写了引用它的公式才炸。
+    """
+    kind = source.get("from") if isinstance(source, dict) else None
+    if kind not in _SOURCE_KINDS:
+        raise EngineNotConfigured(
+            "expr_vars_fn 变量 %r 的 %s 来源类别 %r 引擎不认（只认 %s）—— "
+            "形状见 saintess_engine.expr 模块头"
+            % (var_name, path, kind, " / ".join(_SOURCE_KINDS)))
+    if source.get("else") is not None:
+        _validate_source(source["else"], var_name, path + ".else")
+
+
+def declared_vars() -> dict:
+    """**当前生效**的变量表（内容侧声明优先；未声明 ⇒ 默认表 `_DEFAULT_EXPR_VARS`）。
+
+    引擎唯一的变量表读口：「有哪些变量、值从哪来、显示名叫什么」全在表里，表由内容侧给
+    （`config.mount(expr_vars_fn=...)`，形状见模块头）。
+
+    ★ fail-closed：装了声明口却给不出可用表（`None` / 空 / 不是 dict / 有条目缺 `source` /
+      来源类别不认）⇒ 抛 `EngineNotConfigured`，**不**静默退回默认表（写错的声明不许无声无息）。
+      注：这是**「没声明」（走默认表，与历史逐字一致）**与**「声明了但坏」（抛）**两态的分界。
+    """
+    fn = _cfg.get_hook("expr_vars_fn")
+    if fn is None:
+        return _DEFAULT_EXPR_VARS
+    table = fn()
+    if not isinstance(table, dict) or not table:
+        raise EngineNotConfigured(
+            "expr_vars_fn 声明无效：要是**非空 dict**（键 = 变量名，"
+            "值 = {'label': …, 'source': …}）—— 形状见 saintess_engine.expr 模块头")
+    for _name, _spec in table.items():
+        if not isinstance(_spec, dict) or not isinstance(_spec.get("source"), dict):
+            raise EngineNotConfigured(
+                "expr_vars_fn 变量 %r 的声明缺 `source`（取值来源）—— "
+                "形状见 saintess_engine.expr 模块头" % (_name,))
+        _validate_source(_spec["source"], _name, "source")
+    return table
+
+
+def variable_names() -> tuple:
+    """当前生效的**变量名**（按声明顺序）—— 旧 `VARIABLE_WHITELIST` 的读口。"""
+    return tuple(declared_vars())
+
 
 _TOKEN_RE = re.compile(r"""
     \s*(?:
@@ -208,33 +299,49 @@ def eval_expr(code, vars_: dict | None = None) -> float:
 
 # ---------- 内置变量解析辅助（战斗/结算层用） ----------
 
+def _value_of(source: dict, stats: dict, inputs: dict) -> float:
+    """按**来源声明**取一个变量的值（三类通用原语，见模块头）。
+
+    未知来源类别 ⇒ 抛 `EngineNotConfigured`（fail-closed：不静默当 0，
+    否则声明里写错一个来源名就会「变量恒 0」而没人发现）。
+    """
+    kind = (source or {}).get("from")
+    if kind == "stat":
+        return float(stats.get(source.get("key"), 0) or 0)
+    if kind == "input":
+        val = inputs.get(source.get("key"))
+        if val is None:
+            _else = source.get("else")
+            if _else is None:
+                return 0.0
+            return _value_of(_else, stats, inputs)
+        return float(val or 0)
+    if kind == "const":
+        return float(source.get("value") or 0)
+    raise EngineNotConfigured(
+        "表达式变量取值来源 %r 引擎不认（只认 stat / input / const）—— "
+        "形状见 saintess_engine.expr 模块头" % (kind,))
+
+
 def build_vars(stats: dict, player_lv: int = 0, skill_lv: int = 0,
                target_max_hp: float | None = None, base: float = 0.0) -> dict:
     """从属性快照构建表达式变量 dict。
 
-    stats: 属性 dict（atk/matk/def/mdef/max_hp/hp/spd/crit…）
-    player_lv: 玩家等级
-    skill_lv: 技能等级
-    target_max_hp: 目标最大生命（敌方，可选）
-    base: 技能基础值（skill_flat 注入后，可选）
+    ★ E4：键集合**不再写死** —— 按**当前生效的变量表**（`declared_vars()`，内容侧声明；
+      未声明 ⇒ 默认表 = 历史那一份）逐条按声明的来源取值 ⇒ 换一张表 = 换一套变量，
+      引擎代码零改动。
+
+    stats: 属性 dict（供 `{"from": "stat", "key": ...}` 读）
+    四个具名入参（供 `{"from": "input", "key": ...}` 读，键名 = 本函数参数名）：
+      player_lv: 玩家等级 / skill_lv: 技能等级 /
+      target_max_hp: 目标最大生命（敌方，可选；None = 没给 ⇒ 可声明 `else` 回落）/
+      base: 技能基础值（skill_flat 注入后，可选）
     """
     s = stats or {}
-    vars_ = {
-        "atk": float(s.get("atk", 0) or 0),
-        "matk": float(s.get("matk", 0) or 0),
-        "def": float(s.get("def", 0) or 0),
-        "mdef": float(s.get("mdef", 0) or 0),
-        "max_hp": float(s.get("max_hp", 0) or 0),
-        "hp": float(s.get("hp", 0) or 0),
-        "spd": float(s.get("spd", 0) or 0),
-        "crit": float(s.get("crit", 0) or 0),
-        "player_lv": float(player_lv or 0),
-        "skill_lv": float(skill_lv or 0),
-        "crit_mult": 1.5,
-        "target_max_hp": float(target_max_hp or 0) if target_max_hp is not None else float(s.get("max_hp", 0) or 0),
-        "base": float(base or 0),
-    }
-    return vars_
+    inputs = {"player_lv": player_lv, "skill_lv": skill_lv,
+              "target_max_hp": target_max_hp, "base": base}
+    return {_n: _value_of(_sp.get("source"), s, inputs)
+            for _n, _sp in declared_vars().items()}
 
 
 def expr_or(value, fallback):
@@ -246,22 +353,14 @@ def expr_or(value, fallback):
 
 # ---------- 表达式 → 中文公式翻译（技能详情展示用） ----------
 
-# 变量名 → 中文名（v160 技能详情展示；顺序无关，最具体的放前面避免子串误替换）
-_VAR_CN = {
-    "player_lv": "玩家等级",
-    "skill_lv": "技能等级",
-    "target_max_hp": "目标最大生命",
-    "crit_mult": "暴击倍率",
-    "max_hp": "最大生命",
-    "matk": "魔法攻击",
-    "mdef": "魔法防御",
-    "atk": "攻击",
-    "def": "防御",
-    "spd": "速度",
-    "crit": "暴击",
-    "hp": "当前生命",
-    "base": "基础值",
-}
+def labels_of() -> dict:
+    """变量名 → **显示名**（只含当前变量表里**声明了 `label`** 的那些）。
+
+    显示名属内容：引擎不认识「某个变量该显示成什么中文」——表由内容侧声明（见模块头）。
+    未声明 ⇒ 默认表里那一份（历史显示名，逐条相同）。
+    """
+    return {_n: _sp["label"] for _n, _sp in declared_vars().items()
+            if _sp.get("label")}
 
 
 def translate_expr(expr: str) -> str:
@@ -270,17 +369,18 @@ def translate_expr(expr: str) -> str:
     例：'(atk*0.8 + player_lv*5) * (1 + skill_lv*0.1)'
       → '(攻击×0.8 + 玩家等级×5) × (1 + 技能等级×0.1)'
 
-    - 变量名替换为中文（最长词优先，避免 player_lv 被 lv 之类误切）
+    - 变量名替换为**当前变量表里声明的显示名**（最长词优先，避免 player_lv 被 lv 之类误切）
     - * → ×、/ → ÷（只替换非注释部分；表达式不含注释，直接全量替换）
-    - 未知变量保持原样（不 panic）
+    - 表里没 label / 不在表里的变量保持原样（不 panic）
     """
     if not expr:
         return ""
     out = str(expr)
-    # 变量替换：按中文名长度降序（player_lv > skill_lv > max_hp > hp），
+    # 变量替换：按**变量名长度**降序（player_lv > skill_lv > max_hp > hp），
     # 用正则 \b 词边界避免 'atk' 误中 'matk' 等子串。
     import re as _re
-    for _var in sorted(_VAR_CN, key=len, reverse=True):
-        out = _re.sub(rf"\b{_var}\b", _VAR_CN[_var], out)
+    _labels = labels_of()
+    for _var in sorted(_labels, key=len, reverse=True):
+        out = _re.sub(rf"\b{_var}\b", _labels[_var], out)
     out = out.replace("*", "×").replace("/", "÷")
     return out
