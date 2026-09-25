@@ -11,8 +11,9 @@
     · mapping `{事件名: [载荷, …]}` —— **主形态**（E5-4 实测：8 个内容文件构造编译器、
       23 处调用点用此形态；键就是引擎事件名）
     · list `[{"event": 事件名, "action": 动词, …}]` 或 `[Declaration(事件名, 载荷)]`
-  旧事件名 → 引擎事件名的翻译（`map_event`）**只剩 2 个内容文件**在用（equip / food_proc）；
-  它没被删的原因与收口路径见文末「E5-4 登记」。
+  两种形态的行键都**必须是引擎事件名**：旧事件名 → 引擎事件名的翻译是内容协议，
+  放在内容侧展开（2026-09-26「E5-4 收口 2c」起本模块**不再收** `map_event` 注入面）；
+  收口经过见文末「E5-4 登记」。
   宿主容器：`actor[host_key]`（默认契约词 `triggers`），与 `fire()` 的读法对齐。
 
 对外：`Declaration` / `Compiler`（`compile` / `validate` / `unknown_name` / `mount` /
@@ -27,7 +28,7 @@
    `prepend`（未命中前插桶首 = 执行序；命中不重排）。前插与就地浅盖是执行序 / 参数语义，不可统一。
 ③ `_owner` 两处注入：挂载期（`owner` + `owner_key`，`setdefault` 幂等）与消费期（`fire()` 兜底）。
    两处都留：挂载期那份让装配后、开战前的读者也能拿到归属；消费期那份是兜底。
-④ 事件名校验只有「有旧名迁移的那一层」需要：编译器把校验统一给到全部调用点，且**只告警不改行为**。
+④ 事件名校验统一给到全部调用点（含内容侧做过旧名迁移的那一层），且**只告警不改行为**。
 ⑤ 未知事件名：告警 + 放行，不抛。fail-closed 会当场炸掉整场装配（外层逐步吞异常更糟）。
    与消费端 `fire()` 的「静默忽略」配套（生产端留痕 + 消费端静默）。
 ⑥ `compile` 不排序事件桶（dict 插入序）；但桶内**列表序**是执行序，必须保序。
@@ -49,7 +50,7 @@
 明确不做
 ========
 · 数据行 → 载荷的翻译（`_translate_*` 族）—— 取值，留内容侧
-· 旧事件名迁移表（12 键 / 5 键）—— 内容协议，注入 `map_event`
+· 旧事件名迁移表（12 键 / 5 键）—— 内容协议，内容侧自己展开（**引擎无注入面**）
 · `EVENTS` 的定义改造与 `fire()` / `apply_effects` 的改造 —— 消费端已在位，一字节不动
 · 效果动词实现（各族 `we_*` / `team_*` / 乘区动词 …）—— 取值，留内容侧
 · 「倍率回落撤声明」这类业务语义 —— 编译器只提供 `purge`，语义留在内容侧
@@ -57,29 +58,28 @@
 · 与 `conditions` 的 fail-closed 校验合并 —— 两者校验对象与失败语义都不同
 
 
-E5-4 登记（2026-09-26 · 撤回收口，不是「已删」）
-================================================
-E5 批次原计划「迁内容 → 删 `map_event`（参数 + 校验 + 注释 + wiki 一起清）」，**实测撤回**：
+E5-4 登记（2026-09-26 · **已收口**：`map_event` 注入面删除）
+=========================================================
+E5 批次原计划「迁内容 → 删 `map_event`（参数 + 校验 + 注释 + wiki 一起清）」，2026-09-26 一度
+**撤回**（前提失准 + 冻结线卡点），随后按五步收口到位：
 
-① 前提失准：批次材料写「现状 4 个内容文件用 mapping + 旧名」，实测注入 `map_event` 的
-   只有 **2 个**（`content/mech/equip.py` / `content/mech/food_proc.py`）；mapping 形态本身
-   是 **8 个文件 / 23 处调用点**的主形态（键已是引擎事件名）—— 「删 mapping 形态」不成立。
-② 真正卡点是**冻结线**：包内 `tests/test_u1d2_triggers_frozen.py` / `test_u1d2_triggers_extra_frozen.py`
-   （U1-D2 迁移门禁）把这一层当**不变量**钉住 —— 12 段冻结文本含 `equip.map_event`、
-   `equip._known_engine_events`、`food_proc._map_event`（CLASS=E：frozen 必须 == live）；
-   判据 [6] 断言 `_EVENT_MAP` / `_UNKNOWN_EVENTS` / `_known_engine_events` 三名字仍在；
-   7,020 格网格的 oracle 正是「旧实现（frozen 切片 exec）≡ 新实现」，另有「旧名映射 34 格」。
-③ 于是「把旧名在生产端迁成引擎名」会把该 oracle 从**语义上**打红：迁移本身就让旧名映射消失，
-   旧 ≡ 新的判据不再成立 —— 这不是重钉一个 sha 能解决的，得先**宣告该线检出阶段结束**、
-   重划 SEGMENTS / E-C 分类 / 网格口径，再动内容。
-   （生成器 `tests/_u1d2_triggers_gen.py` 当前 `--check` 自检①即失败：base 走 git 兜底取到
-   `e4dccb4e`，切片 ≠ 活实现 ⇒ `--emit-aux` 也不可用，须先修 base 解析。）
+① 前提纠偏：注入 `map_event` 的只有 **2 个**内容文件（`content/mech/equip.py` /
+   `content/mech/food_proc.py`）；mapping 形态本身是 **8 个文件 / 23 处调用点**的主形态
+   （键已是引擎事件名）—— 该删的是**注入面**，不是 mapping 形态。
+② 冻结线先退场：包内 `tests/test_u1d2_triggers_frozen.py` / `test_u1d2_triggers_extra_frozen.py`
+   把这一层当不变量钉住 ⇒ 先宣告 `equip.map_event` 段退出冻结（SEGMENTS 12→11、E 栏 6→5、
+   旧名网格改「表声明锚定」），动内容之前先把线划出来。
+③ 内容侧收口（包 `448d990`）：old→engine 展开搬进内容侧单点（翻译器出口 / 装配路径），
+   未知名告警改挂 `Compiler(on_unknown=…)`（反静默失效保住）—— 包内产品码再无一处
+   `map_event=` 注入。
+④ 引擎侧删面（本批）：`map_event` 形参 + 类型校验 + `_map_event` 槽 + `_targets()` 展开口
+   一并删除；`_payloads()` 的 mapping 桶值校验**保留**（mapping 行表是主形态，与旧名无关）。
+⑤ 重生成门禁：包侧生成器重采 aux（引擎侧 aux 读活引擎）＋两处补丁/断言签名跟新形参。
 
-⇒ 正确顺序（另开一批）：① 修生成器 base 解析 → ② 宣告 `map_event` 段退出冻结
-（SEGMENTS 12→11 / E 栏 6→5 / 网格口径改写 + 登记）→ ③ 迁内容（old→engine 的展开写死在
-翻译器返回值里）→ ④ 删本文件的 `map_event` 参数与 `_targets` / `_payloads` 旧名分支 → ⑤ 重生成门禁。
-**在此之前别单独删这一层**：包侧 `test_battle_n9_equip.py` / `test_u1d2_triggers_extra_frozen.py`
-会同时红，且看不出是本批引入还是历史漂移。
+⟹ 收口后**唯一**的旧名通道 = `翻译器（写旧名） → 内容侧展开 → 本模块（只收引擎名）`。
+删面的判据不是「少一个功能」，而是**单一真源**：旧名映射的真源在内容侧（数据表
+`content/data/equip_event_map.json` + 翻译器出口），引擎侧不再有第二个入口，
+也就不会再出现「两边口径各自漂移」这类连环账。
 """
 from .effect_triggers import EVENTS
 
@@ -145,10 +145,10 @@ class Compiler:
     引擎零取值：事件名、去重键、写策略、载荷、未知名策略全部由调用方给。
     """
 
-    __slots__ = ("_events", "_map_event", "_key_of", "_on_unknown",
+    __slots__ = ("_events", "_key_of", "_on_unknown",
                  "_host_key", "_owner_key", "_event_key", "_action_key")
 
-    def __init__(self, *, events=None, map_event=None, key_of=None, on_unknown=None,
+    def __init__(self, *, events=None, key_of=None, on_unknown=None,
                  host_key="triggers", owner_key=None, event_key="event",
                  action_key="action"):
         if events is None:
@@ -161,13 +161,10 @@ class Compiler:
                 if not isinstance(one, str) or not one:
                     raise TypeError("events 每一项必须是非空 str")
             self._events = frozenset(got)             # 给空序列 = 不做未知名校验
-        if map_event is not None and not callable(map_event):
-            raise TypeError("map_event 必须可调用或 None")
         if key_of is not None and not callable(key_of):
             raise TypeError("key_of 必须可调用或 None")
         if on_unknown is not None and not callable(on_unknown):
             raise TypeError("on_unknown 必须可调用或 None")
-        self._map_event = map_event
         self._key_of = key_of
         self._on_unknown = on_unknown
         self._host_key = _name(host_key, "host_key")
@@ -208,35 +205,18 @@ class Compiler:
             return False
         return event not in self._events
 
-    # ---- 行表展开（保序：外层行表序 → map_event 元组序 → 桶内追加序）------
-    def _targets(self, me, old_ev):
-        if me is None:
-            got = (old_ev,)
-        else:
-            got = me(old_ev)
-            if isinstance(got, str) or not hasattr(got, "__iter__"):
-                raise TypeError("map_event 必须返回字符串序列")
-            got = tuple(got)
-        for one in got:
-            if not isinstance(one, str) or not one:
-                raise TypeError("map_event 返回的每一项必须是非空 str")
-        return got
-
-    def _payloads(self, payloads, old_ev):
+    # ---- 行表展开（保序：外层行表序 → 桶内追加序）------------------------
+    def _payloads(self, payloads, event):
         if isinstance(payloads, (list, tuple)):
             return payloads
-        raise TypeError(f"mapping 形态的桶值必须是 list/tuple：{old_ev!r}")
+        raise TypeError(f"mapping 形态的桶值必须是 list/tuple：{event!r}")
 
-    def _pairs(self, rows, map_event):
+    def _pairs(self, rows):
         """行表 → `(事件名, 载荷, Declaration|None)` 保序流。"""
-        me = self._map_event if map_event is None else map_event
         if isinstance(rows, dict):
-            for old_ev, payloads in rows.items():
-                targets = self._targets(me, old_ev)
-                items = self._payloads(payloads, old_ev)
-                for target in targets:
-                    for payload in items:
-                        yield target, payload, None
+            for event, payloads in rows.items():
+                for payload in self._payloads(payloads, event):
+                    yield event, payload, None
             return
         if isinstance(rows, (list, tuple)):
             for row in rows:
@@ -253,7 +233,7 @@ class Compiler:
         raise TypeError("rows 必须是 mapping 或行序列")
 
     # ---- 编译 / 校验（纯函数；不碰宿主）----------------------------------
-    def compile(self, rows, *, map_event=None, allow_unknown=False):
+    def compile(self, rows, *, allow_unknown=False):
         """行表 → `{事件名: [载荷, …]}`。**两种输入形态**；载荷原对象、桶内保序。
 
         `allow_unknown=False`（默认）：每个未知名经 `on_unknown` 告警一次（保序去重），
@@ -261,7 +241,7 @@ class Compiler:
         """
         out = {}
         names = []
-        for event, payload, _decl in self._pairs(rows, map_event):
+        for event, payload, _decl in self._pairs(rows):
             out.setdefault(event, []).append(payload)
             if not allow_unknown and self.unknown_name(event) and event not in names:
                 names.append(event)
@@ -270,10 +250,10 @@ class Compiler:
                 self._on_unknown(one)
         return out
 
-    def validate(self, rows, *, map_event=None):
+    def validate(self, rows):
         """行表 → 未知名清单（**保序去重**、**不抛**；每个未知名 `on_unknown` 调一次）。"""
         names = []
-        for event, _payload, _decl in self._pairs(rows, map_event):
+        for event, _payload, _decl in self._pairs(rows):
             if self.unknown_name(event) and event not in names:
                 names.append(event)
         for one in names:
@@ -312,7 +292,7 @@ class Compiler:
                 return idx
         return -1
 
-    def mount(self, actor, rows, *, map_event=None, owner=None, merge=None):
+    def mount(self, actor, rows, *, owner=None, merge=None):
         """把 `compile(rows)` 挂进 `actor[host_key]`，返回**新挂条数**（幂等命中的不计）。
 
         · `key_of` 缺省 / 返回 `None` / 载荷非 mapping → **不去重**（一律落格）
@@ -326,7 +306,7 @@ class Compiler:
             raise ValueError(f"merge 未登记：{merge!r}")
         added = 0
         host = None
-        for event, payload, decl in self._pairs(rows, map_event):
+        for event, payload, decl in self._pairs(rows):
             if host is None:
                 host = actor.get(self._host_key)
                 if host is None:
@@ -427,15 +407,15 @@ class Compiler:
         return host
 
 
-def compile_rows(rows, *, compiler, map_event=None):
+def compile_rows(rows, *, compiler):
     """`Compiler.compile` 的模块级入口（供只需编译、不挂载的调用点）。"""
     if not isinstance(compiler, Compiler):
         raise TypeError("compiler 必须是 Compiler")
-    return compiler.compile(rows, map_event=map_event)
+    return compiler.compile(rows)
 
 
-def mount(actor, rows, *, compiler, map_event=None, owner=None, merge=None):
+def mount(actor, rows, *, compiler, owner=None, merge=None):
     """`Compiler.mount` 的模块级入口（供只挂载、不持实例的调用点）。"""
     if not isinstance(compiler, Compiler):
         raise TypeError("compiler 必须是 Compiler")
-    return compiler.mount(actor, rows, map_event=map_event, owner=owner, merge=merge)
+    return compiler.mount(actor, rows, owner=owner, merge=merge)

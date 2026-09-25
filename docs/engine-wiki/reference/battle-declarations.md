@@ -11,6 +11,9 @@
 > 事件名取自战斗包的事件全集（`EVENTS`，见 `extends/ext_combat/battle/effect_triggers.py:53`），
 > 去重键 / 写策略 / 未知名策略 / 载荷全部由调用方给，**引擎零游戏知识**。
 > **不进 battle 门面**：内容侧走子模块直取（`from ext_combat.battle.declarations import Compiler`）。
+>
+> ★ **2026-09-26（E5-4 收口 2c）**：`Compiler` 的 `map_event` 注入面**已删**。旧事件名 →
+> 引擎事件名的翻译是**内容协议**，在内容侧展开（翻译器出口 / 装配路径）；编译器只收引擎事件名。
 
 ## 为什么有它
 
@@ -33,10 +36,9 @@
 from ext_combat.battle.declarations import Compiler, Declaration, compile_rows, mount
 from ext_combat.battle.effect_triggers import EVENTS          # 战斗包事件全集（可默认取）
 
-# ① 注入面（形状层零默认取值：旧名迁移 / 去重键 / 未知名策略 / 归属字段都由内容侧给）
+# ① 注入面（形状层零默认取值：去重键 / 未知名策略 / 归属字段都由内容侧给）
 _DECL = Compiler(
     events=EVENTS,                       # 缺省即 EVENTS；给空序列 = 不做未知名校验
-    map_event=<旧名 → 新名元组>,          # mapping 形态才用（list 形态直取事件名）
     key_of=<载荷 → 去重键>,               # 缺省 None = 不去重
     on_unknown=<未知名回调>,              # 只告警不改行为；缺省不回调
     host_key="triggers",                 # 宿主容器键（契约词）
@@ -46,7 +48,7 @@ _DECL = Compiler(
 )
 
 # ② 两输入形态：mapping（现状数据形态）与 list（行 mapping 或 Declaration）
-out = _DECL.compile({"旧名": [载荷, ...]})          # → {事件名: [载荷, ...]}（载荷原对象）
+out = _DECL.compile({"事件名": [载荷, ...]})         # → {事件名: [载荷, ...]}（载荷原对象）
 out = _DECL.compile([{"event": <事件名>, "action": <动词>, ...}])
 _DECL.validate(rows)                                # → 未知名清单（保序去重、不抛）
 
@@ -63,7 +65,7 @@ _DECL.purge(actor, event=<事件名>, match=lambda d: d.get("action") == <动词
 |---|---|---|
 | 宿主容器 | `host_key`（默认 `triggers`） | 缺失 → 懒建；已存在非 mapping → `TypeError`（fail-closed） |
 | 事件名 | 战斗包事件全集 `EVENTS`（`extends/ext_combat/battle/effect_triggers.py`，可注入替换） | **取值**：引擎只做成员判定；未知 → 告警 + 放行 |
-| mapping 行 | `{旧事件名: [载荷, …]}` | 桶值必须是 `list`/`tuple`；旧名经 `map_event` 展开（保序） |
+| mapping 行 | `{事件名: [载荷, …]}` | 桶值必须是 `list`/`tuple`；行键**就是引擎事件名**（旧名迁移属内容协议，内容侧先行展开） |
 | list 行 | `event_key` / `action_key`（默认 `event` / `action`） | 行原对象即载荷；其余键原样搬；`action_key` **不用于分发** |
 | 载荷 | ——（**完全不透明、原对象**） | 引擎不读它的键、不拷贝它；非 mapping 载荷一律不去重 |
 | 去重键 | `key_of(载荷)` | 缺省 `None` = 不去重；命中后的处理由 `merge` 定 |
@@ -76,10 +78,10 @@ _DECL.purge(actor, event=<事件名>, match=lambda d: d.get("action") == <动词
 | ① | 去重键**五种** | `key_of` 回调：`(动词,目标态)` / `目标态` / `动词` / `类型` / 无（`None`）。键的语义是「同一效果的身份由什么决定」，统一一个键 = 改行为 |
 | ② | 写策略**四种** | `merge`：`replace`（命中就地浅盖）/ `keep`（命中保留既有）/ `append`（命中留旧再追加）/ `prepend`（未命中前插桶首 = 执行序；命中不重排） |
 | ③ | 归属**两处注入** | 挂载期（`owner` + `owner_key`，`setdefault` 幂等）与消费期（`fire()` 兜底）都留；两处都是 `setdefault`，挂载期那份会被消费期跳过 |
-| ④ | 事件名校验**只在迁移层** | 编译器把校验统一给到全部调用点；带旧名迁移的那层可继续用 `map_event` 自己告警（去重缓存仍留内容侧） |
+| ④ | 事件名校验**统一给到全部调用点** | 编译器只告警不改行为；内容侧做过旧名迁移的那层同样经它留痕（去重缓存留内容侧） |
 | ⑤ | 未知名：**告警 + 放行，不抛** | `on_unknown` 注入；`validate` 返回清单；`compile` 默认告警一次/未知名但**照常入桶**。fail-closed 会炸掉整场装配 |
 | ⑥ | `compile` **不排序事件桶** | 桶键 = 行表插入序；桶内**列表序**是执行序，保序不丢 |
-| ⑦ | **两输入形态并存** | mapping 是现状数据形态（改它 = 改数据表）；list 是更通用的新形态。list 形态**不走** `map_event` |
+| ⑦ | **两输入形态并存** | mapping 是现状数据形态（改它 = 改数据表）；list 是更通用的新形态。**两种形态的行键都是引擎事件名** |
 | ⑧ | `action_key` 只用于**去重键与读取**，不用于分发 | 分发（`type` 优先还是 `action` 优先）是 `effects` 的事；编译器只提供 `action_of` |
 
 ## 为什么不改 `fire()`
@@ -102,7 +104,7 @@ _DECL.purge(actor, event=<事件名>, match=lambda d: d.get("action") == <动词
 ## 明确不做
 
 * ❌ 数据行 → 载荷的翻译（各族翻译器）—— 取值，留内容侧
-* ❌ 旧事件名迁移表 —— 内容协议，注入 `map_event`
+* ❌ 旧事件名迁移表 —— 内容协议，内容侧自己展开（**引擎无注入面**）
 * ❌ `EVENTS` 的定义改造、`fire()` / `apply_effects` 的改造 —— 消费端已在位
 * ❌ 效果动词实现 —— 取值，留内容侧
 * ❌ 业务语义（哪种情形该撤声明、倍率回落等）—— 编译器只给 `purge`
@@ -115,8 +117,8 @@ _DECL.purge(actor, event=<事件名>, match=lambda d: d.get("action") == <动词
 * **构造 O(1)**：`Compiler` 只校验注入面 + 存引用；不遍历行表、不建索引、不缓存。
 * **two 输入形态等价**：同一逻辑声明，mapping / list 行 mapping / `Declaration` 行三形态落出同构容器。
 * **载荷原对象**：`mount` 后桶里就是传入的那个对象（不拷贝、不包壳）。
-* **顺序即语义**：外层行表序 → `map_event` 元组序 → 桶内追加序；`prepend` 是执行序。
-* **异常不吞**：`map_event` / `key_of` 回调自身抛出的异常原样上抛（「不抛」只指**未知名**不抛）。
+* **顺序即语义**：外层行表序 → 桶内追加序；`prepend` 是执行序。（旧名一拆二的展开序在内容侧）
+* **异常不吞**：`key_of` / `on_unknown` 回调自身抛出的异常原样上抛（「不抛」只指**未知名**不抛）。
 * **fail-closed**：注入面缺角色键 / 类型不对当场抛；行缺登记键 → `KeyError`；宿主键处非 mapping → `TypeError`。
 * **不建多余键**：`mount` 空行表不建宿主键；`purge` 撤空桶默认**保留**空列表（`drop_empty=True` 才删键）。
 * **零取值**：代码路径字符串常量里没有任何游戏取值词（`ast` 扫描钉住）；`EVENTS` 只经 import。

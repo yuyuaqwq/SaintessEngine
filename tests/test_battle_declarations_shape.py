@@ -6,7 +6,7 @@
 退出码：0 = 全绿；1 = 有失败（结尾打印 `结果：通过 X / 共 Y` + 失败清单）。
 
 覆盖（照 `U1-D2_BATCHES.md` §3 的 L3 判据 1–10 + `U1-D2_DESIGN.md` §4 的字段级形状 + §4.3 的 8 条口径分歧）：
-  ① **两输入形态**：mapping 形态 4 种现状（旧名一拆二 / 逐键幂等 + owner 注入 / 就地浅盖 / 撤回）
+  ① **两输入形态**：mapping 形态 4 种现状（同载荷进多桶 / 逐键幂等 + owner 注入 / 就地浅盖 / 撤回）
      + list 形态 2 种（行 mapping / `Declaration` 行）。
   ② **网格**：两输入形态 × 5 种 `key_of` × 4 种 `merge` 逐格等价（核心 40 格）
      + 声明行子形态 × 同样 5×4（追加 40 格）= **80 格**（脚本实测计数）。
@@ -87,26 +87,24 @@ def _payloads(event=EV_A):
 def t_two_forms():
     print("\n[1] 两输入形态：mapping 4 种现状 + list 2 种")
 
-    # ①-a equip 现状：旧名一拆二（hit → 两事件），载荷原对象，不去重
-    def _split(ev):
-        return {"old_hit": (EV_A, EV_B)}.get(ev, (ev,))
-
-    co = _mk(map_event=_split, key_of=lambda d: None)
+    # ①-a equip 现状：同一载荷对象进多个事件桶
+    #   ★ 2026-09-26 E5-4 收口 2c：旧名 → 引擎名的展开（`hit` → `attack_hit`+`skill_hit`）
+    #   已迁到**内容侧**（翻译器出口 / 装配路径），引擎侧收到的行键**就是引擎事件名**。
+    co = _mk(key_of=lambda d: None)
     pl = {"action": "we_x", "v": 1}
-    out = co.compile({"old_hit": [pl]})
-    check("mapping/equip：旧名一拆二 → 两个桶", sorted(out) == sorted([EV_A, EV_B]), sorted(out))
-    check("mapping/equip：两个桶都是同一载荷原对象",
+    out = co.compile({EV_A: [pl], EV_B: [pl]})
+    check("mapping：同一载荷对象进两个桶", sorted(out) == sorted([EV_A, EV_B]), sorted(out))
+    check("mapping：两个桶都是同一载荷原对象",
           out[EV_A][0] is pl and out[EV_B][0] is pl)
-    check("mapping/equip：未登记旧名直通（同名一桶）",
-          co.compile({"old_solo": [pl]}) == {"old_solo": [pl]})
+    check("mapping：未登记名直通（同名一桶）",
+          co.compile({"zz_solo": [pl]}) == {"zz_solo": [pl]})
 
     # ①-b food 现状：逐键幂等 + 挂载期 owner 注入
-    co = _mk(map_event=lambda ev: {"old_hit": (EV_A,)}.get(ev, (ev,)),
-             key_of=lambda d: d.get("key"), owner_key=OWNER_FIELD)
+    co = _mk(key_of=lambda d: d.get("key"), owner_key=OWNER_FIELD)
     actor = {"hp": 1}
     food = {"action": "we_y", "key": "food_z"}
-    n1 = co.mount(actor, {"old_hit": [food]}, owner=actor)
-    n2 = co.mount(actor, {"old_hit": [food]}, owner=actor)
+    n1 = co.mount(actor, {EV_A: [food]}, owner=actor)
+    n2 = co.mount(actor, {EV_A: [food]}, owner=actor)
     check("mapping/food：首次挂 1 条、重复挂 0 条（逐键幂等）",
           (n1, n2) == (1, 0), (n1, n2))
     check("mapping/food：桶长恒 1（命中走 merge 默认）",
@@ -321,10 +319,11 @@ def t_validate():
     co = _mk(on_unknown=seen.append)
     names = co.validate({EV_A: _payloads(), "zzz_one": [{"action": "x"}],
                          "zzz_one_copy": [{"action": "x2"}], "zzz_two": [{"action": "y"}]})
-    # 保序去重：把两个不同旧名都迁到同一个未知名，验证清单只出现一次
-    co_map = _mk(map_event=lambda ev: {"old1": ("zzz_same",),
-                                       "old2": ("zzz_same", "zzz_two")}.get(ev, (ev,)))
-    names_ok = co_map.validate({"old1": [{"action": "a"}], "old2": [{"action": "b"}]})
+    # 保序去重：同一个未知名出现在两行（list 形态）→ 清单只出现一次
+    #   ★ 2c：mapping 形态的键天然唯一，改由 list 行表给重复名（口径更直接）
+    names_ok = _mk().validate([{"event": "zzz_same", "action": "a"},
+                               {"event": "zzz_same", "action": "b"},
+                               {"event": "zzz_two", "action": "c"}])
     check("validate：保序去重（同未知名只出现一次）",
           names_ok == ["zzz_same", "zzz_two"], names_ok)
     check("validate：清单里恰是未知名（已登记名不进清单）",
@@ -357,11 +356,12 @@ def t_validate():
     check("compile(allow_unknown=True)：不告警，但照常入桶",
           seen == [] and out == {"zzz_one": [{"action": "x"}]}, (seen, out))
 
-    def _boom(_ev):
-        raise RuntimeError("map-boom")
+    def _boom(_item):
+        raise RuntimeError("key-boom")
 
-    hit, exc = raises(RuntimeError, _mk(map_event=_boom).validate, {"x": []})
-    check("★ 异常不吞：map_event 自身抛错原样上抛（「不抛」只指未知名不抛）",
+    hit, exc = raises(RuntimeError, _mk(key_of=_boom).mount, {"hp": 1},
+                      {EV_A: [{"key": "k"}]})
+    check("★ 异常不吞：key_of 回调自身抛错原样上抛（「不抛」只指未知名不抛）",
           hit and isinstance(exc, RuntimeError), f"{exc!r}")
 
 
@@ -478,7 +478,8 @@ def t_declaration_and_injection():
         ("★ events 是字符串 → TypeError（防逐字符）", lambda: Compiler(events="abc")),
         ("★ events 含非字符串 → TypeError", lambda: Compiler(events=(1,))),
         ("★ events 非序列 → TypeError", lambda: Compiler(events=0)),
-        ("★ map_event 不可调用 → TypeError", lambda: Compiler(map_event=1)),
+        ("★ `map_event` 注入面已删（E5-4 收口 2c：旧名迁移全在内容侧）",
+         lambda: Compiler(map_event=1)),
         ("★ key_of 不可调用 → TypeError", lambda: Compiler(key_of=1)),
         ("★ on_unknown 不可调用 → TypeError", lambda: Compiler(on_unknown=1)),
         ("★ host_key 空串 → ValueError", lambda: Compiler(host_key="")),
@@ -509,10 +510,6 @@ def t_declaration_and_injection():
         ("★ rows 项非 Declaration / dict → TypeError", lambda: co.compile([5])),
         ("★ 行缺登记键 → KeyError", lambda: co.compile([{"action": "a"}])),
         ("★ mapping 桶值非 list/tuple → TypeError", lambda: co.compile({EV_A: 5})),
-        ("★ map_event 返回字符串本身 → TypeError（防逐字符）",
-         lambda: _mk(map_event=lambda ev: "abc").compile({"x": []})),
-        ("★ map_event 返回非字符串项 → TypeError",
-         lambda: _mk(map_event=lambda ev: (1,)).compile({"x": []})),
         ("★ actor 非 dict → TypeError", lambda: co.mount("nope", {})),
         ("★ 宿主键处非 dict 容器 → TypeError",
          lambda: co.mount({"triggers": 5}, {EV_A: [{"action": "a"}]})),
@@ -617,9 +614,9 @@ def t_divergences():
     check("④ 未知名：告警 + 放行（照常返回桶，不改行为）",
           warns == ["old_unknown"] and out == {"old_unknown": [{"action": "a"}]}, (warns, out))
     warns.clear()
-    out = co.compile({"old_hit": [{"action": "a"}]},
-                     map_event=lambda ev: {"old_hit": (EV_A,)}.get(ev, (ev,)))
-    check("④ 旧名迁移不告警（迁移器把旧名换成了登记名）", warns == [] and list(out) == [EV_A])
+    out = co.compile({"old_hit": [{"action": "a"}]})
+    check("④ 引擎侧不认旧名：`old_hit` 直通成桶名且照常告警（旧名迁移全在内容侧）",
+          warns == ["old_hit"] and list(out) == ["old_hit"], (warns, list(out)))
 
     # ⑤ mapping 与 list 等价（网格在 [2]；此处补一条最小断言）
     co = _mk(key_of=lambda d: d.get("key"))
@@ -628,16 +625,18 @@ def t_divergences():
     co.mount(al, _payloads())
     check("⑤ 两输入形态等价（最小断言）", am["triggers"] == al["triggers"])
 
-    # ⑥ compile 保序：外层行表序 → map_event 元组序 → 桶内追加序
-    co = _mk(map_event=lambda ev: {"old_a": (EV_C, EV_A), "old_b": (EV_B, EV_A)}.get(ev, (ev,)))
-    out = co.compile({"old_b": [{"action": "b"}], "old_a": [{"action": "a"}]})
-    check("⑥ 外层行表序 → 桶键插入序（old_b 的桶先出现）",
-          list(out) == [EV_B, EV_A, EV_C], list(out))
-    co = _mk(map_event=lambda ev: {"old_hit": (EV_C, EV_A)}.get(ev, (ev,)))
-    out = co.compile({"old_hit": [{"action": "p1"}, {"action": "p2"}]})
-    check("⑥ map_event 元组序 → 桶内载荷序（C 在前 A 在后，各 2 条）",
-          [e["action"] for e in out[EV_C]] == ["p1", "p2"]
-          and [e["action"] for e in out[EV_A]] == ["p1", "p2"])
+    # ⑥ compile 保序：外层行表序 → 桶内追加序
+    #   ★ 2c：「`map_event` 元组序」那一段（旧名一拆二的展开序）已迁到内容侧 ——
+    #   引擎侧只剩「外层行表序」+「桶内载荷序」两段，各自仍逐字保序。
+    co = _mk()
+    out = co.compile({EV_B: [{"action": "b"}], EV_A: [{"action": "a"}],
+                      EV_C: [{"action": "c"}]})
+    check("⑥ 外层行表序 → 桶键插入序", list(out) == [EV_B, EV_A, EV_C], list(out))
+    co = _mk()
+    out = co.compile({EV_A: [{"action": "p1"}, {"action": "p2"}], EV_C: [{"action": "q1"}]})
+    check("⑥ 桶内载荷序 = 行内声明序（各桶独立保序）",
+          [e["action"] for e in out[EV_A]] == ["p1", "p2"]
+          and [e["action"] for e in out[EV_C]] == ["q1"], out)
     check("⑥ 事件桶不排序（保持插入序；不重排、不去重）",
           list(co.compile({"zz": [{"action": "x"}], "aa": [{"action": "y"}]})) == ["zz", "aa"])
 
@@ -747,7 +746,7 @@ def t_teeth():
                                                 lambda self, bucket, payload, front:
                                                 bucket.append(payload)), probe_front),
         ("③ validate 恒返回空清单", lambda: _Patch(Compiler, "validate",
-                                                lambda self, rows, map_event=None: []),
+                                                lambda self, rows: []),
          probe_validate),
         ("④ 挂载期忽略 owner", lambda: _Patch(Compiler, "_inject_owner",
                                             lambda self, payload, owner: None), probe_owner),
