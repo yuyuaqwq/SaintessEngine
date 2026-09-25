@@ -8,8 +8,11 @@
 翻译（数据行 → 载荷）、动词分发（`effects`）、触发（`fire()`）都不在它这里。
 
   行表两形态：
-    · mapping `{旧事件名: [载荷, …]}` —— 现状 4 个内容文件用的形态；旧名经 `map_event` 展开
+    · mapping `{事件名: [载荷, …]}` —— **主形态**（E5-4 实测：8 个内容文件构造编译器、
+      23 处调用点用此形态；键就是引擎事件名）
     · list `[{"event": 事件名, "action": 动词, …}]` 或 `[Declaration(事件名, 载荷)]`
+  旧事件名 → 引擎事件名的翻译（`map_event`）**只剩 2 个内容文件**在用（equip / food_proc）；
+  它没被删的原因与收口路径见文末「E5-4 登记」。
   宿主容器：`actor[host_key]`（默认契约词 `triggers`），与 `fire()` 的读法对齐。
 
 对外：`Declaration` / `Compiler`（`compile` / `validate` / `unknown_name` / `mount` /
@@ -52,6 +55,31 @@
 · 「倍率回落撤声明」这类业务语义 —— 编译器只提供 `purge`，语义留在内容侧
 · 动词分发（`type` 优先还是 `action` 优先）—— `effects` 的事
 · 与 `conditions` 的 fail-closed 校验合并 —— 两者校验对象与失败语义都不同
+
+
+E5-4 登记（2026-09-26 · 撤回收口，不是「已删」）
+================================================
+E5 批次原计划「迁内容 → 删 `map_event`（参数 + 校验 + 注释 + wiki 一起清）」，**实测撤回**：
+
+① 前提失准：批次材料写「现状 4 个内容文件用 mapping + 旧名」，实测注入 `map_event` 的
+   只有 **2 个**（`content/mech/equip.py` / `content/mech/food_proc.py`）；mapping 形态本身
+   是 **8 个文件 / 23 处调用点**的主形态（键已是引擎事件名）—— 「删 mapping 形态」不成立。
+② 真正卡点是**冻结线**：包内 `tests/test_u1d2_triggers_frozen.py` / `test_u1d2_triggers_extra_frozen.py`
+   （U1-D2 迁移门禁）把这一层当**不变量**钉住 —— 12 段冻结文本含 `equip.map_event`、
+   `equip._known_engine_events`、`food_proc._map_event`（CLASS=E：frozen 必须 == live）；
+   判据 [6] 断言 `_EVENT_MAP` / `_UNKNOWN_EVENTS` / `_known_engine_events` 三名字仍在；
+   7,020 格网格的 oracle 正是「旧实现（frozen 切片 exec）≡ 新实现」，另有「旧名映射 34 格」。
+③ 于是「把旧名在生产端迁成引擎名」会把该 oracle 从**语义上**打红：迁移本身就让旧名映射消失，
+   旧 ≡ 新的判据不再成立 —— 这不是重钉一个 sha 能解决的，得先**宣告该线检出阶段结束**、
+   重划 SEGMENTS / E-C 分类 / 网格口径，再动内容。
+   （生成器 `tests/_u1d2_triggers_gen.py` 当前 `--check` 自检①即失败：base 走 git 兜底取到
+   `e4dccb4e`，切片 ≠ 活实现 ⇒ `--emit-aux` 也不可用，须先修 base 解析。）
+
+⇒ 正确顺序（另开一批）：① 修生成器 base 解析 → ② 宣告 `map_event` 段退出冻结
+（SEGMENTS 12→11 / E 栏 6→5 / 网格口径改写 + 登记）→ ③ 迁内容（old→engine 的展开写死在
+翻译器返回值里）→ ④ 删本文件的 `map_event` 参数与 `_targets` / `_payloads` 旧名分支 → ⑤ 重生成门禁。
+**在此之前别单独删这一层**：包侧 `test_battle_n9_equip.py` / `test_u1d2_triggers_extra_frozen.py`
+会同时红，且看不出是本批引入还是历史漂移。
 """
 from .effect_triggers import EVENTS
 
