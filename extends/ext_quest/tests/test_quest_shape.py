@@ -877,7 +877,7 @@ _VALUE_WORDS = (
     # ④ C：事件与载荷取值（引擎只认注入的 events 元组与不透明载荷）
     "battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "attack_hit",
     "crit", "on_taken", "on_heal", "on_kill", "on_death", "dot_tick", "dot_calc",
-    "on_act_consume", "on_hit_consume", "buff_expire", "threshold", "dmg_calc",
+    "on_act_consume", "on_hit_consume", "effect_expire", "threshold", "dmg_calc",
     "taken_calc", "heal_calc", "act_done", "phase", "player_low", "pv_broken",
     "interrupt", "time_advance",
     "__end__", "story", "……",

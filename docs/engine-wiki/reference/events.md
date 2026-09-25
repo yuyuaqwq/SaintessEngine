@@ -6,7 +6,7 @@
 ## 元组原文（26 个）
 
 ```python
-EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "attack_hit", "crit", "on_taken", "on_heal", "on_kill", "on_death", "dot_tick", "dot_calc", "on_act_consume", "on_hit_consume", "buff_expire", "threshold", "dmg_calc", "taken_calc", "heal_calc", "act_done", "phase", "player_low", "pv_broken", "interrupt", "time_advance")
+EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "attack_hit", "crit", "on_taken", "on_heal", "on_kill", "on_death", "dot_tick", "dot_calc", "on_act_consume", "on_hit_consume", "effect_expire", "threshold", "dmg_calc", "taken_calc", "heal_calc", "act_done", "phase", "player_low", "pv_broken", "interrupt", "time_advance")
 ```
 
 ⚠️ **必须单行定义** —— 覆盖率工具按行 trace，多行续行会永久漏记
@@ -38,7 +38,7 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 | 13 | `dot_calc` | `schedule.py:659`（同上） | `target`, `dot_key`, `dmg`, `mult` | **无**（广播） | DOT 伤害落地**前**的乘区钩子 |
 | 14 | `on_act_consume` | `battle.py:501`（`act`） | `actor`, `tag` | 行动者 | 被控跳过行动（`mode="skip"`）时 |
 | 15 | `on_hit_consume` | `actions.py:545`（`_consume_hit_buffs`） | `actor`, `key` | 出手者 | 一次性出手 buff 被消费时 |
-| 16 | `buff_expire` | `schedule.py:618`（`_settle_time_effects`） | `actor`, `target`, `key` | 条目持有者 | `effects` 条目到期被删时（原 `buff_expire` 名保留兼容） |
+| 16 | `effect_expire` | `schedule.py:495`（`_settle_time_effects`） | `actor`, `target`, `key` | 条目持有者 | `effects` 条目到期被删时（**E5 改名**：原 `buff_expire`；线上零消费者，纯删名） |
 | 17 | `threshold` | `effects.py:456`（`act_apply` 叠层分支） | `actor`, `key`, `value` | 条目持有者 | 叠层数值变化后（「战意满 10 → 狂暴」类） |
 | 18 | `dmg_calc` | `actions.py:448`（`_single_target_pipeline`） | `actor`, `target`, `dmg`, `is_crit`, `info`, `mult` | 攻击者 | 伤害算出后、落地前（攻击方乘区） |
 | 19 | `taken_calc` | `landing.py:121`（`deal_damage`） | `actor`, `target`, `source`, `dmg`, `mult` | 承伤者 | 承伤修正（承伤方乘区） |
@@ -156,7 +156,7 @@ act()                        → turn_start
 （`actions.py:346-435` + `landing.py:28-162` + `battle.py:452-549`）
 
 另外的时间线事件：`_advance_time` → `_settle_time_effects`
-（`buff_expire` × n → `dot_calc` → `deal_damage` → `dot_tick` × n）→ `time_advance`
+（`effect_expire` × n → `dot_calc` → `deal_damage` → `dot_tick` × n）→ `time_advance`
 （`schedule.py:417-453`）。
 
 ## 相关

@@ -14,7 +14,7 @@
 ctx 语义（插桩点统一约定）：
     caster : 效果的施放方（skill_hit=攻击者；on_kill=击杀者；battle_start=None）
     target : 效果的作用目标（skill_hit=被打者；on_taken=受击者；on_heal=被治疗者）
-    actor  : 事件主体（on_death=死者；dot_tick=受跳者；buff_expire=buff 持有者）
+    actor  : 事件主体（on_death=死者；dot_tick=受跳者；effect_expire=条目持有者）
     info   : 技能 dict（可选）
     dmg/amount/real : 伤害/治疗数值（可选）
 
@@ -31,7 +31,7 @@ ctx 语义（插桩点统一约定）：
 #    on_heal 治疗生效                      on_kill 击杀敌人
 #    on_death 死亡                         dot_tick DOT 每跳
 #    on_act_consume 行动级消费点（控制跳过） on_hit_consume 出手消费点（一次性）
-#    buff_expire buff 到期钩子             threshold 状态阈值（层数变化后）
+#    effect_expire 效果到期钩子             threshold 状态阈值（层数变化后）
 #    dmg_calc 伤害算出后（攻击方乘区）      taken_calc 承伤修正（承伤方乘区）
 #    act_done 行动完成（全员广播——效果侧自判敌我，由效果侧自判敌我的场合用）
 #    phase Boss 阶段转换（N9 上层）        player_low 玩家低血量（N9 上层）
@@ -50,7 +50,7 @@ from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（
 
 # 26 事件全集（必须单行定义——cov 按行 trace，多行续行会永久漏记；
 # 中文语义见模块 docstring）
-EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "attack_hit", "crit", "on_taken", "on_heal", "on_kill", "on_death", "dot_tick", "dot_calc", "on_act_consume", "on_hit_consume", "buff_expire", "threshold", "dmg_calc", "taken_calc", "heal_calc", "act_done", "phase", "player_low", "pv_broken", "interrupt", "time_advance")
+EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "attack_hit", "crit", "on_taken", "on_heal", "on_kill", "on_death", "dot_tick", "dot_calc", "on_act_consume", "on_hit_consume", "effect_expire", "threshold", "dmg_calc", "taken_calc", "heal_calc", "act_done", "phase", "player_low", "pv_broken", "interrupt", "time_advance")
 
 # N9.13 数值修正钩子（伤害/承伤乘区——装配层乘区扩展动作改 _fire_ctx["mult"] 累乘）：
 #   dmg_calc  = 伤害算出后落地前（攻击者视角条件乘区：处决低血增伤/破魔/叠层放大器）

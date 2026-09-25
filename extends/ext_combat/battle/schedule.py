@@ -489,10 +489,10 @@ def _settle_time_effects(battle, logs: list):
                         continue  # 永久/无到期（纯叠层/资源）
                     if now >= float(exp):
                         ef.pop(key, None)
-                        # N8 事件：效果到期钩子（原 buff_expire，保留事件名兼容）
+                        # N8 事件：效果到期钩子（E5 改名 effect_expire ← 旧 buff_expire）
                         try:
                             from .effect_triggers import fire as _fire
-                            _fire(battle, "buff_expire", {"actor": a, "target": a,
+                            _fire(battle, "effect_expire", {"actor": a, "target": a,
                                                           "key": key}, logs)
                         except Exception as _e:
                             _diag(battle, "_settle_time_effects · 事件源", _e)          # 审计 P-44：不再静默（行为不变）

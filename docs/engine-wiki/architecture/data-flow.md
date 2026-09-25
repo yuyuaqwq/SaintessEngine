@@ -51,7 +51,7 @@ schedule.advance(battle, logs, max_steps=200)                     schedule.py:37
 battle._now += dt
 _settle_time_effects(battle, logs)                                  schedule.py:372
    ├─ for 每个存活 actor:
-   │    ├─ effects 到期 → pop + ⚡ buff_expire                        schedule.py:495
+   │    ├─ effects 到期 → pop + ⚡ effect_expire                      schedule.py:495
    │    ├─ shields 到期（expire_at <= now）→ pop                      schedule.py:545-555
    │    └─ 周期跳（period）:
    │         首次 → dot_next[key] = now + interval（不跳）             schedule.py:588-591
@@ -183,7 +183,7 @@ turn_start ─→ act_begin ─→ act_cast ─→ dmg_calc
                                            └→ on_taken（未死）
              ─→ attack_hit ─→ crit（若是暴击）
              ─→ act_done
-             …（advance 期间）… buff_expire / dot_calc / dot_tick / time_advance
+             …（advance 期间）… effect_expire / dot_calc / dot_tick / time_advance
 ```
 
 `caster` 缺省 = 声明者本人（`effect_triggers.py:111`），所以 `on_taken` 里的

@@ -167,7 +167,7 @@ fire(battle, "time_advance", {"dt": dt, "now": battle._now}, logs)   # ③ 广�
 
 `_settle_time_effects`（`schedule.py:372`）三轮：
 
-1. **`effects` 到期**：`expire <= now` → pop，并 `fire("buff_expire", {"actor", "target", "key"})`
+1. **`effects` 到期**：`expire <= now` → pop，并 `fire("effect_expire", {"actor", "target", "key"})`
 2. **`shields` 到期**：`expire_at <= now` → pop（`expire_at is None` = 永久盾不删）
 3. **周期跳**：见 [effects.md](effects.md) 的「周期结算」节
 

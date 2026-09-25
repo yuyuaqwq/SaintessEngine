@@ -128,13 +128,13 @@ battle._fire_ctx = _prev_ctx        # ← 广播后还原，否则同批次后�
 
 | 键 | 语义 |
 |---|---|
-| `actor` | **事件主体**（`on_death`=死者；`dot_tick`=受跳者；`buff_expire`=buff 持有者；`turn_start`/`act_begin`/`act_cast`=行动者；`skill_hit`/`attack_hit`/`crit`/`dmg_calc`=攻击者；`on_taken`/`on_heal`/`taken_calc`/`heal_calc`=承伤者/被治疗者） |
+| `actor` | **事件主体**（`on_death`=死者；`dot_tick`=受跳者；`effect_expire`=条目持有者；`turn_start`/`act_begin`/`act_cast`=行动者；`skill_hit`/`attack_hit`/`crit`/`dmg_calc`=攻击者；`on_taken`/`on_heal`/`taken_calc`/`heal_calc`=承伤者/被治疗者） |
 | `target` | **效果的作用目标**（`skill_hit`=被打者；`on_taken`=受击者；`on_heal`=被治疗者） |
 | `caster` | 效果的施放方。**缺省 = 声明者自己**（`effect_triggers.py:76-78, 105`） |
 | `info` | 技能 dict（可选） |
 | `dmg` / `amount` / `real` / `overflow` | 数值（可选，各事件不同） |
 | `source` | 攻击方（`on_taken` / `taken_calc` / `interrupt` 有） |
-| `key` | 效果 key（`threshold` / `dot_tick` / `buff_expire` 有） |
+| `key` | 效果 key（`threshold` / `dot_tick` / `effect_expire` 有） |
 | `_event` | 引擎填的事件名（`setdefault`，不落盘） |
 | `mult` | 乘区型事件的**可写**乘法系数（初值 1.0） |
 
@@ -165,7 +165,7 @@ actor["triggers"][event]
 
 | | 事件 |
 |---|---|
-| **引擎有 fire 点位（23）** | `battle_start` `turn_start` `act_begin` `act_cast` `skill_hit`※ `attack_hit`※ `crit` `on_taken` `on_heal` `on_kill` `on_death` `dot_tick` `dot_calc` `on_act_consume` `on_hit_consume` `buff_expire` `threshold` `dmg_calc` `taken_calc` `heal_calc` `act_done` `interrupt` `time_advance` |
+| **引擎有 fire 点位（23）** | `battle_start` `turn_start` `act_begin` `act_cast` `skill_hit`※ `attack_hit`※ `crit` `on_taken` `on_heal` `on_kill` `on_death` `dot_tick` `dot_calc` `on_act_consume` `on_hit_consume` `effect_expire` `threshold` `dmg_calc` `taken_calc` `heal_calc` `act_done` `interrupt` `time_advance` |
 | **⚠️ 引擎无点位（3，必须上层驱动）** | `phase` `player_low` `pv_broken` |
 
 ※ `skill_hit` / `attack_hit` 的 fire 点位用变量选事件名（`actions.py:494`：
