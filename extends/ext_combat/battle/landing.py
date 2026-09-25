@@ -252,7 +252,8 @@ def _lv_pressure(battle, source: Optional[dict], target: dict, dmg: int) -> int:
 def _roll_dodge(battle, target: dict, logs: list) -> bool:
     """N10-B6：actor 承伤闪避（对齐旧 battle._roll_dodge 基础段）。
 
-    读 S.actor_stats(target) 的 dodge 面板值（cap 40%——与旧上限一致）。
+    读 S.actor_stats(target) 的 dodge 面板值，上限走**声明表**（`_F.dodge_cap()`，
+    默认 0.40 = 原写死值，见 formulas.py 那条注）。
     引擎零知识：dodge 是面板数值字段，闪避是通用承伤规则。
     闪避成功返回 True（调用方中断本次承伤/免伤）。
     """
@@ -261,7 +262,7 @@ def _roll_dodge(battle, target: dict, logs: list) -> bool:
             return False
         from . import stats as S
         st = S.actor_stats(battle, target)
-        dodge = min(float(st.get("dodge", 0) or 0), 0.40)
+        dodge = min(float(st.get("dodge", 0) or 0), _F.dodge_cap())     # 上限 = 声明值（审计 E2）
         if dodge <= 0:
             return False
         import random

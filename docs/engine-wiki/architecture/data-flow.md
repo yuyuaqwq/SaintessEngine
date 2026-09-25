@@ -145,18 +145,18 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 │ 4. ⚡ fire("taken_calc", {actor: target, dmg, mult: 1.0})   landing.py:81-92 │
 │      → 读回 mult → dmg *= mult                                            │
 │ 5. target["_dmg_taken_mult"] > 1 → dmg *= 它           landing.py:94-101    │
-│ 6. _roll_dodge(battle, target, logs)                   landing.py:262     │
+│ 6. _roll_dodge(battle, target, logs)                   landing.py:263     │
 │      dodge 面板 cap 0.40 → 命中则 return 0（整个伤害免掉）                 │
 │ 7. defending → dmg *= (1 - defend_reduce or 0.5)       landing.py:155-161  │
-│ 8. _apply_taken_reductions(dmg_kind)                   landing.py:278     │
+│ 8. _apply_taken_reductions(dmg_kind)                   landing.py:279     │
 │      phys → phys_reduce cap 0.40；magi → magic_reduce cap 0.40            │
 │      block 概率 cap 0.40 → 减半                                          │
 │ 9. effects 里带 wake_on_hit 的态 → pop（打醒）+ 日志    landing.py:175-188  │
 │10. charging 有 skill → 清 + ⚡ fire("interrupt")        landing.py:201-134  │
-│11. _apply_damage(battle, target, dmg, logs, source)    landing.py:368     │
+│11. _apply_damage(battle, target, dmg, logs, source)    landing.py:369     │
 │      ├─ 护盾吸收（遍历 shields，按 value 扣减，耗尽即 pop）                 │
 │      ├─ hp 扣减                                                          │
-│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:332     │
+│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:333     │
 │      │     effects["death_guard"].stacks > 0 → hp 拉回 guard_hp_pct      │
 │      │     （+heal_pct 额外治疗，走 heal_actor）→ 层 -1                    │
 │      ├─ 仍 <= 0 → Battle._on_actor_dead(...)           battle.py:630       │

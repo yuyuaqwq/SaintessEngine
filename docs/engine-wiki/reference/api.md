@@ -167,7 +167,7 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 | `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:115/117/151` | 仅包内 |
 | `_do_defend` / `_do_flee` | `battle.py:597/458` | 仅包内 |
 | `_ensure_battle_started` | `battle.py:613` | 仅包内 |
-| `_on_actor_dead(actor, logs=None)` | `battle.py:630` | `landing._apply_damage` 调（`landing.py:398`） |
+| `_on_actor_dead(actor, logs=None)` | `battle.py:630` | `landing._apply_damage` 调（`landing.py:399`） |
 | `_check_side_end` | `battle.py:650` | 仅包内 |
 
 ### 序列化
@@ -221,7 +221,7 @@ Battle.from_state(st, *, text=None)   # battle.py:673（classmethod）→ serial
 deal_damage(battle, source, target, amount, logs, dmg_kind="", defend_reduce=None, element="") -> int
 # landing.py:28
 heal_actor(battle, target, amount, logs, source=None, label="") -> int
-# landing.py:434
+# landing.py:435
 ```
 
 两个都是**落地唯一收口**。内部子函数（无外部引用）：`_lv_pressure`（`:146`）、

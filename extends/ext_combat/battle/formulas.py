@@ -60,6 +60,11 @@ _NEUTRAL_SKELETON = {
         "lifesteal_per_lv_divisor": 1,  # 兼防除零（l 缺省 0 → 无成长）
     },
     "skill_learn_cost": {"divisor": 1, "base": 0},
+    # ★ 2026-09-25（审计 E2）：闪避上限原先**硬编码在 landing**（`min(dodge, 0.40)`）——
+    #   平衡数值不该住在引擎里。注意这条**不在「零效应中性段」里**：它的默认值取原写死值
+    #   （0.40，与旧 `_roll_dodge` 上限逐字一致），因为闪避是已装内容依赖的通用承伤规则。
+    #   内容侧要改就声明 `FORMULA_SKELETON["dodge"]["cap"]`（读点 `dodge_cap()`）。
+    "dodge": {"cap": 0.40},
     # ---- V4 中性段（零效应；语义见上）----
     "shield_default_pct": 0.0,
     "block": {"cap": 0.0, "reduce": 0.0},
@@ -144,6 +149,16 @@ def block_cap() -> float:
 def block_reduce() -> float:
     """格挡**命中后减免比例**（`red = max(1, int(dmg × reduce))`）。未装配 → 0.0。"""
     return _skel_sub_num("block", "reduce", 0.0)
+
+
+def dodge_cap() -> float:
+    """闪避**上限**（承伤侧 `min(dodge, cap)`）。
+
+    ★ 2026-09-25（审计 E2）：这个数原先**硬编码在 `landing._roll_dodge`**（`min(dodge, 0.40)`）。
+    搬进声明表之后，内容侧要改自己的闪避上限只需声明 `FORMULA_SKELETON["dodge"]["cap"]`，
+    不必动引擎。默认值 = 原写死值 0.40（未装配时也逐字一致）。
+    """
+    return _skel_sub_num("dodge", "cap", 0.40)
 
 
 def heal_down_per_stack() -> float:

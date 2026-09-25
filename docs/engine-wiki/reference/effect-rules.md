@@ -34,8 +34,8 @@
 | `tag` | str | ⚠️ 包不读 | 旧 CLEANSE_TAGS 时代的标记。`act_apply` 读的是 **params** 的 `tag`（作为 `key` 的兜底，`effects.py:345`），不是 `cfg["tag"]` |
 | `cd_mult` | float | ✅ `actions.do_skill`（`actions.py:90-98`） | 冷却倍率（`0.8` = CD −20%）。多态并存时**取最小**（最速） |
 | `on_threshold` | `{层数: {...}}` | ⚠️ **无消费者** | 「满 N 层触发什么」。`threshold` **事件**有引擎点位（`effects.py:455`），但**这张映射表没被读**。目前要靠内容侧监听 `threshold` 自己实现 |
-| `guard_hp_pct` | float | ✅ `landing._apply_death_guard`（`landing.py:341`） | 濒死保护触发后保底到的最大生命比例（缺省 0.10） |
-| `heal_pct` | float | ✅ 同上（`landing.py:357`） | 濒死保护触发时额外回复的最大生命比例 |
+| `guard_hp_pct` | float | ✅ `landing._apply_death_guard`（`landing.py:342`） | 濒死保护触发后保底到的最大生命比例（缺省 0.10） |
+| `heal_pct` | float | ✅ 同上（`landing.py:358`） | 濒死保护触发时额外回复的最大生命比例 |
 | `wake_on_hit` | bool | ✅ **`ext_combat` 消费**（2026-09-11） | `landing.deal_damage:167-179`：承伤时遍历持有者状态，带该字段的态即被移除。数据侧声明在 `sleep` 上；接线前是 landing 内**硬编码 `"sleep"`**（游戏名词进引擎），现已数据化（引擎只认布尔字段） |
 | `start_full` | bool | ⚠️ 包不读（内容侧装配器读：`class_mech_proc.py:2225`） | 开局满额 |
 | `start_classes` | `[职业 id]` | ⚠️ 包不读（内容侧读：`class_mech_proc.py:1892/2228/2256`） | **归属过滤**。⚠️ 不声明 = 不装配某些内容侧钩子（详见下「归属门」） |

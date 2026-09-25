@@ -16,7 +16,7 @@ if pct <= 0:
     return
 ```
 
-理由（`formulas.py:245-248` 的真实教训）：`skill_power_mult` 曾默认「每级 +10%」，
+理由（`formulas.py:260-263` 的真实教训）：`skill_power_mult` 曾默认「每级 +10%」，
 结果「误伤无 SKILL_UP 配置的怪物技能：按折算等级白吃成长 ×1.4」。
 
 变体约定：
