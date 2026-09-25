@@ -24,11 +24,10 @@ from typing import Optional, Sequence
 
 from ..log import get_logger
 
-from .guards import DEFAULT_BATTLE_HINT, DEFAULT_REGISTER_HINT
 from .paging import page_items, parse_page
 from .router import HandlerHit, PatternSet, find_static, matches_any, run_shortcut
 from .text import strip_command
-from .tips import DEFAULT_TIP, pick_tip
+from .tips import pick_tip
 
 __all__ = ["CommandBase"]
 
@@ -37,9 +36,12 @@ class CommandBase:
     """通用命令基类骨架。子类通过覆盖钩子注入差异。"""
 
     # ---------- 可覆盖：文案 ----------
-    register_hint: str = DEFAULT_REGISTER_HINT
-    battle_none_hint: str = DEFAULT_BATTLE_HINT
-    tip_fallback: Sequence[str] = (DEFAULT_TIP,)
+    #: 守卫拦截句（属内容；★ 2026-09-25 审计 E2b：引擎不再自带文案 ⇒ 空 = 没声明，
+    #: 用到时由 guards 抛 `EngineNotConfigured`，不静默编一句）
+    register_hint: str = ""
+    battle_none_hint: str = ""
+    #: 提示池兜底（内容侧给；不给 ⇒ 不出提示行，见 `tips.pick_tip`）
+    tip_fallback: Sequence[str] = ()
     # 空 = 用日志门面的默认名（`<prefix>.command`）；宿主可给完整名（如自己的 "astrbot"）
     logger_name: str = ""
 

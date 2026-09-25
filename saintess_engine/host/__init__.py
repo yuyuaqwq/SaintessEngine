@@ -33,8 +33,7 @@ from .env import BUILTIN_GUARDS, Env, run_guards
 from .outcome import BattleOutcome, Scenario, StandIns
 from ..package import Package, PackageError, PackageStack, load_stack
 from .shell import ShellBase, ShellEnv, store_half
-from .runtime import (DEFAULTS_HINTS, DEFAULT_BATTLE_HINT, DEFAULT_REGISTER_HINT,
-                      MINIMAL_SAVE_KEYS, Host)
+from .runtime import DEFAULTS_HINTS, MINIMAL_SAVE_KEYS, Host
 
 __all__ = [
     "Host",
@@ -42,5 +41,5 @@ __all__ = [
     "Package", "PackageError", "PackageStack", "load_stack",
     "ShellBase", "ShellEnv", "store_half",
     "Scenario", "BattleOutcome", "StandIns",
-    "DEFAULTS_HINTS", "DEFAULT_REGISTER_HINT", "DEFAULT_BATTLE_HINT", "MINIMAL_SAVE_KEYS",
+    "DEFAULTS_HINTS", "MINIMAL_SAVE_KEYS",
 ]

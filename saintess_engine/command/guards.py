@@ -15,8 +15,21 @@ from typing import Optional
 
 __all__ = ["require_player", "require_battle"]
 
-DEFAULT_REGISTER_HINT = "你还没有角色！"
-DEFAULT_BATTLE_HINT = "你附近没有敌人！"
+# ★ 2026-09-25（审计 E2b）：引擎**不带玩家可见文案**。这两句原先是引擎自带的游戏口气
+#   （「你还没有角色！」这类是内容侧的话），现改为**必须由使用方声明**：
+#   `self.register_hint` / `self.battle_none_hint`（内容侧/宿主给）。没声明 ⇒ 当场抛
+#   `EngineNotConfigured`（fail-closed）——绝不静默给一句引擎自己编的玩家文案。
+from ..config import EngineNotConfigured as _NotConfigured
+
+
+def _hint_of(owner, attr: str, what: str) -> str:
+    """取使用方声明的守卫文案；没声明 = 装配漏了（fail-closed，不当场编一句）。"""
+    text = str(getattr(owner, attr, "") or "")
+    if not text:
+        raise _NotConfigured(
+            "命令守卫文案没声明（%s）：请在命令基类/宿主上声明 `%s` —— "
+            "守卫拦截句属内容侧文案，引擎不带玩家可见文案。" % (what, attr))
+    return text
 
 
 def require_player(hint: Optional[str] = None):
@@ -28,15 +41,15 @@ def require_player(hint: Optional[str] = None):
         @require_player()
         async def move(self, event): ...
 
-    文案优先级：`hint` 参数 > `self.register_hint` > 框架默认。
+    文案优先级：`hint` 参数 > `self.register_hint`（内容侧声明；都没给 ⇒ 抛 `EngineNotConfigured`）。
     """
     def deco(fn):
         @functools.wraps(fn)
         async def wrapper(self, event, *args, **kwargs):
             group_id, qq_id = self._uid(event)
             if not self._player(group_id, qq_id):
-                text = hint if hint is not None else getattr(
-                    self, "register_hint", DEFAULT_REGISTER_HINT)
+                text = hint if hint is not None else _hint_of(
+                    self, "register_hint", "require_player")
                 yield event.plain_result(text)
                 return
             async for item in fn(self, event, *args, **kwargs):
@@ -56,7 +69,7 @@ def require_battle(hint: str = ""):
         async def wrapper(self, event, *args, **kwargs):
             group_id, qq_id = self._uid(event)
             if not self._in_any_battle(group_id, qq_id):
-                base = getattr(self, "battle_none_hint", DEFAULT_BATTLE_HINT)
+                base = _hint_of(self, "battle_none_hint", "require_battle")
                 yield event.plain_result(base + hint)
                 return
             async for item in fn(self, event, *args, **kwargs):

@@ -27,10 +27,12 @@ def pick_tip(pool_map: Mapping[str, Sequence[str]], cat: str, *,
     * 两级回退：`cat` → `common_key` → `fallback`（默认单条兜底文案）
     * 条目自身以 emoji 开头 → 原样返回（不叠前缀）
     * 池为空且无兜底 → 返回空串（调用方据此可跳过该行）
+      ★ 2026-09-25 审计 E2b：原先这里会回退成引擎自带的「看看『帮助』了解更多」（还引用了
+      游戏侧指令名）——现改为**不回退**：内容侧不给提示就不出提示行，引擎不编玩家文案。
     """
     pool = pool_map.get(cat) or pool_map.get(common_key) or ()
     if not pool:
-        pool = tuple(fallback) if fallback else (DEFAULT_TIP,)
+        pool = tuple(fallback) if fallback else ()
     if not pool:
         return ""
     t = random.choice(list(pool))
@@ -38,5 +40,3 @@ def pick_tip(pool_map: Mapping[str, Sequence[str]], cat: str, *,
         return str(t)
     return prefix + str(t)
 
-
-DEFAULT_TIP = "看看『帮助』了解更多"

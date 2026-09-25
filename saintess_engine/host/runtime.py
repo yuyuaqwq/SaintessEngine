@@ -22,6 +22,8 @@
 """
 from __future__ import annotations
 
+from ..config import EngineNotConfigured as _NotConfigured
+
 import asyncio
 import inspect
 import random
@@ -35,9 +37,9 @@ from .outcome import BattleOutcome, Scenario, StandIns
 from ..package import Package, PackageError, PackageStack, load_stack
 
 #: 默认「没有角色档」的拦截文案（中性，**不是**游戏文案；宿主/包可覆盖）
-DEFAULT_REGISTER_HINT = "未找到你的角色档 —— 请先创建角色。"
+#: ★ 2026-09-25 审计 E2b：引擎不再自带守卫文案（原默认值已搬去宿主声明）
 #: 默认「不在战斗中」的拦截文案（同上）
-DEFAULT_BATTLE_HINT = "你现在不在战斗中。"
+
 
 #: 新玩家初始档的宿主侧最小键（真正的初始档属内容：包给了 `initial_save` 就用包里的）
 MINIMAL_SAVE_KEYS = ("uid", "name", "level")
@@ -62,14 +64,15 @@ class Host:
     prefix      : 宿主自己的管理命令前缀（缺省 `/`）
     seed        : 固定随机种子（同种子可复现同一场；None = 走适配器 `rng` 钩子/系统随机）
     id_key      : 玩家档里「平台身份」那个键名（**平台相关 → 由调用方给**，缺省 `uid`）
-    register_hint / battle_hint : 内置守卫的拦截文案（属内容；此处只给中性默认）
+    register_hint / battle_hint : 内置守卫的拦截文案（**属内容，必须由宿主声明**；★ E2b 之后
+                                  引擎不带默认文案 —— 没声明时守卫当场抛 `EngineNotConfigured`）
     battle_check: `(uid, group_id) -> bool`，「在不在战斗中」的查询（宿主给；不给则 `battle` 守卫不拦）
     texts_domain: 包内文案域名（缺省 `texts`；读不到 → `Env.texts=None`，包内自行兜底）
     """
 
     def __init__(self, adapter, package_dir, *, scenario=None, prefix="/", seed=None,
                  idle_sleep=0.05, echo_battle=True, tlog_limit=500, id_key="uid",
-                 register_hint=DEFAULT_REGISTER_HINT, battle_hint=DEFAULT_BATTLE_HINT,
+                 register_hint="", battle_hint="",
                  battle_check=None, texts_domain="texts", inject=None, async_runner=None,
                  ext_paths=None):
         self.adapter = adapter
@@ -209,7 +212,9 @@ class Host:
     def _guard_player(self, env: Env):
         """玩家档必须存在（否则拦截，文案由调用方给）。"""
         if not env.player:
-            return self.register_hint or DEFAULT_REGISTER_HINT
+            if not self.register_hint:
+                raise _NotConfigured("宿主守卫文案没声明：给 `Host(register_hint=...)`（属内容）")
+            return self.register_hint
         return None
 
     def _guard_battle(self, env: Env):
@@ -220,7 +225,11 @@ class Host:
             ok = bool(self.battle_check(env.uid, env.group_id))
         except Exception:                                        # noqa: BLE001
             ok = False
-        return None if ok else (self.battle_hint or DEFAULT_BATTLE_HINT)
+        if ok:
+            return None
+        if not self.battle_hint:
+            raise _NotConfigured("宿主守卫文案没声明：给 `Host(battle_hint=...)`（属内容）")
+        return self.battle_hint
 
     def build_env(self, key: str, spec, ctx: dict, player: dict, *, raw=None) -> Env:
         """构造一条消息的执行环境（字段契约见 `Env`）。"""
