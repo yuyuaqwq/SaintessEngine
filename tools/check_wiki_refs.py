@@ -166,7 +166,7 @@ def _related(txt: str, names) -> bool:
 def main() -> int:
     fixed_hint_only = "--fix-hint" in sys.argv
     fix = "--fix" in sys.argv
-    fix_bare = "--fix-bare" in sys.argv
+    fix_bare = "--fix-bare" in sys.argv or "--fix-bare-all" in sys.argv
     #: `--fix-bare-all`：连「语义存疑」那一档的纯行号也改到**该符号的定义行**
     #   （api.md 的符号表第二列就是「符号在文件里的位置」⇒ 定义行是对的落点）。
     fix_bare_all = "--fix-bare-all" in sys.argv
@@ -310,9 +310,12 @@ def main() -> int:
                     # 检查器无法自动确认语义，一律阻断会造成 19 处噪声 → 门禁被无视。
                     if not txt.strip():
                         name = names[0]
-                        drifts.append((wrel, ln, f"{base}:{n}", name, "—(越界/空行)", text.strip()[:90]))
-                        if fix and bname in FIX_ALLOW:
-                            pass
+                        # 建议值 = 候选符号里离原行号最近的定义行（`--fix` 时按它改写）
+                        sug = min((syms[nm][0][0] for nm in names), key=lambda x: abs(x - n))
+                        drifts.append((wrel, ln, f"{base}:{n}", name,
+                                       f"—(越界/空行) 建议 :{sug}", text.strip()[:90]))
+                        if fix and bname in FIX_ALLOW and sug != n:
+                            fixups.setdefault(wpath, []).append((m.group(0), f"{base}:{sug}"))
                         continue
                     unverified.append((wrel, ln, f"{base}:{n}", names[0], txt.strip()[:70]))
                     continue

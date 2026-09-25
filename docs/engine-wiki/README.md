@@ -183,7 +183,7 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
 | **单 effects 容器** | 增益/减益/DOT/控制/标记/资源全部是 `actor.effects[key]` 一个容器 | `effects.py` 的 `act_apply` | `ext_combat` |
 | **事件总线** | 26 个引擎事件名（`EVENTS`）+ `fire()`；效果声明挂 `actor.triggers` | `effect_triggers.py:53/57` | `ext_combat` |
 | **声明表驱动** | 效果行为查 `EFFECT_RULES`；名词→动词查 `EFFECT_ACTIONS` | `game/data/battle_rules.py`（游戏仓侧） | `ext_combat`（表在数据包） |
-| **动词注册制** | 8 个引擎动词 + `register_action` 任意扩展（内容侧已扩到 70+） | `effects.py:97` | `ext_combat` |
+| **动词注册制** | 8 个引擎动词 + `register_action` 任意扩展（内容侧已扩到 70+） | `effects.py:100` | `ext_combat` |
 | **CTB 绝对时刻制** | `ct` = 下次可行动时刻；耗时多少由**内容侧装配**（引擎零公式） | `schedule.py:95` + `time_model_fn` | `ext_combat` |
 | **零默认值** | 未声明即无行为（`strict=False` 静默 / `strict=True` 抛错两档） | `config.py:92` | 引擎 |
 | **存档/续战** | sides-only JSON，`to_state` / `from_state`，旧档字段迁移 | `serialize.py:34/59` | `ext_combat` |

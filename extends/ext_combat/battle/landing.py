@@ -53,7 +53,8 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
         if _guid:
             try:
                 _guard = battle.find_actor(_guid)
-            except Exception:
+            except Exception as _e:
+                _diag(battle, "deal_damage", _e)          # 审计 P-44 余量：不再静默（行为不变）
                 _guard = None
             if (_guard is not None and _guard is not target
                     and int(_guard.get("hp", 0) or 0) > 0):
@@ -62,7 +63,8 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
                 if _hook is not None:
                     try:
                         _ok = bool(_hook(battle, target, _guard, amount, dmg_kind))
-                    except Exception:
+                    except Exception as _e:
+                        _diag(battle, "deal_damage", _e)          # 审计 P-44 余量：不再静默（行为不变）
                         _ok = False
                 if _ok:
                     logs.append(render_via(battle, "battle.landing.guard_cover", "🛡️ 【{guard}】替【{target}】挡下了这一击！",
@@ -438,7 +440,8 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
         if _sid:
             try:
                 _share = battle.find_actor(_sid)
-            except Exception:
+            except Exception as _e:
+                _diag(battle, "heal_actor", _e)          # 审计 P-44 余量：不再静默（行为不变）
                 _share = None
             if _share is not None and _share is not target:
                 _ok = True
@@ -446,7 +449,8 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
                 if _hook is not None:
                     try:
                         _ok = bool(_hook(battle, target, _share, amount, label))
-                    except Exception:
+                    except Exception as _e:
+                        _diag(battle, "heal_actor", _e)          # 审计 P-44 余量：不再静默（行为不变）
                         _ok = False
                 if _ok:
                     logs.append(render_via(battle, "battle.landing.heal_shared", "✨ 治疗由【{name}】分担",

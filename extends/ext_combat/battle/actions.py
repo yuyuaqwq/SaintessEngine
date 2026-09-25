@@ -307,7 +307,8 @@ def _skill_pay_of(actor: dict, info: dict) -> dict:
     for _rk, _rv in ((info or {}).get("res_cost") or {}).items():
         try:
             _d = float(_rv or 0)
-        except Exception:
+        except Exception as _e:
+            _diag(None, "_skill_pay_of", _e)          # 审计 P-44 余量：不再静默（行为不变）
             _d = 0.0
         if _d > 0:
             _disc = float(res_disc.get(str(_rk), 0.0) or 0.0)
@@ -368,7 +369,8 @@ def _deal_aoe(battle, actor: dict, target: dict, info: dict, total: int) -> list
     attacker = {"reach": int(info.get("reach") or 3), "uid": "aoe"}
     try:
         targets = _fm.select_aoe_targets(attacker, enemies, scope)
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_deal_aoe", _e)          # 审计 P-44 余量：不再静默（行为不变）
         targets = enemies
     if not targets:
         return logs
@@ -619,7 +621,8 @@ def _mortal_wound_mult(battle, actor: dict) -> float:
             if now >= float(exp):
                 return 1.0
         return 0.5
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_mortal_wound_mult", _e)          # 审计 P-44 余量：不再静默（行为不变）
         return 1.0
 
 

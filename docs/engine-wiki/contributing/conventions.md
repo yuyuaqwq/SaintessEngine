@@ -16,7 +16,7 @@ if pct <= 0:
     return
 ```
 
-理由（`formulas.py:260-263` 的真实教训）：`skill_power_mult` 曾默认「每级 +10%」，
+理由（`formulas.py:263-266` 的真实教训）：`skill_power_mult` 曾默认「每级 +10%」，
 结果「误伤无 SKILL_UP 配置的怪物技能：按折算等级白吃成长 ×1.4」。
 
 变体约定：
@@ -37,7 +37,7 @@ if pct <= 0:
 
 | 允许 | 形式 | 例 |
 |---|---|---|
-| **别名指向同一对象** | `new = old` | `cap_of = _cap_of`（`effects.py:84`）、`norm_stack = _norm_stack`（`effects.py:83`） |
+| **别名指向同一对象** | `new = old` | `cap_of = _cap_of`（`effects.py:87`）、`norm_stack = _norm_stack`（`effects.py:86`） |
 | **兼容 shim 委托到新实现** | 一个函数体只有一次转发调用 | 引擎侧已不留这类 shim —— 旧的 `config.load_game_defaults` 随拆仓从引擎删净（`saintess_engine/config.py` 里 `strict` 附近有原话：框架不认识「默认配置」是什么）；拆仓前它有 52 个测试调用点 |
 
 不允许：把旧逻辑复制一份留在原地、在引擎读源路径上做「旧字段也读一下」的回落。
@@ -52,7 +52,7 @@ if pct <= 0:
 ## 3. 落地只能走 `landing`
 
 **任何模块自己扣 `hp` 都是 bug。** 引擎自己的 DOT 也走 `landing.deal_damage`
-（`schedule.py:617`）。自己的动词也必须走：
+（`schedule.py:619`）。自己的动词也必须走：
 
 ```python
 from saintess_engine.landing import deal_damage, heal_actor
@@ -90,7 +90,7 @@ from saintess_engine.landing import deal_damage, heal_actor
 ## 6. 容错铁律：异常不阻断战斗
 
 事件源、观察者、单个 handler 的异常都 `continue` / 吞掉（`effect_triggers.py:109-120`、
-`effects.py:176-180`）。这是**有意为之**：一场战斗不能因为一个效果写错就崩。
+`effects.py:179-183`）。这是**有意为之**：一场战斗不能因为一个效果写错就崩。
 
 代价是你必须自己写测试；并且**不要**用裸 `except: pass` 掩盖你自己的逻辑错误 ——
 引擎的容错是为了「别人的错不连累我」，不是为了「我的错没人看见」。
@@ -104,7 +104,7 @@ from saintess_engine.landing import deal_damage, heal_actor
 # v181.M-R2：dir=gain（资源自然回）不依赖现有层数——0 层也要回
 # （游侠 energy 耗到 0 若被 n<=0 拦截将永远回不了，卡死）
 ```
-（`schedule.py:487-488`）
+（`schedule.py:488-489`）
 
 ```python
 # 事件主体过滤（N9 修正）：ctx.actor = 该事件的主体 actor——只处理主体 actor
@@ -115,7 +115,7 @@ from saintess_engine.landing import deal_damage, heal_actor
 要写的四类内容：
 
 1. **拒绝过的方案**及原因（例：`actions._deal_aoe` 里解释为何不迁旧 AOE 反推算法，
-   `actions.py:311-313`）
+   `actions.py:312-314`）
 2. **顺序依赖**（例：旋律基础叠层必须排 `act_cast` 首位，游戏仓 `game/services/class_mech_proc.py:2291-2293`）
 3. **缺口**（例：游戏仓 `game/data/battle_rules.py:218-224` 的「⚠️ 缺口（不硬凑）」段）
 4. **数值权威来源**（例：「desc 权威：30%/20%」，游戏仓 `game/data/battle_rules.py:768`）

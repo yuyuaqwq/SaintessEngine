@@ -158,7 +158,8 @@ class Battle:
                     # saintess_engine 此前只查玩家源 → 怪技能索引空 → 技能静默空放）
                     try:
                         info = _GC.monster_skill_of(sk)
-                    except Exception:
+                    except Exception as _e:
+                        _diag(self, "_index_one_actor", _e)          # 审计 P-44 余量：不再静默（行为不变）
                         info = None
                 if info:
                     idx[info.get("name", sk)] = info
@@ -315,7 +316,8 @@ class Battle:
                     try:
                         caster["ct"] = (float(self._now) + max(0.0, float(_cast))
                                         + max(0.0, float(_rec or 0.0)))
-                    except Exception:
+                    except Exception as _e:
+                        _diag(self, "human_act", _e)          # 审计 P-44 余量：不再静默（行为不变）
                         _after_act(self, caster, "attack")
             else:
                 _after_act(self, caster, ctx.action)
@@ -422,7 +424,8 @@ class Battle:
         if ctx_target is None and self.target_picker is not None:
             try:
                 ctx_target = self.target_picker(self, caster) or None
-            except Exception:
+            except Exception as _e:
+                _diag(self, "actor_auto", _e)          # 审计 P-44 余量：不再静默（行为不变）
                 ctx_target = None
         # hint 一次性消费（picker 未识别也清，防残留到下一帧）
         caster.pop("_target_hint", None)
@@ -520,7 +523,8 @@ class Battle:
                         ctx._override_cast = _ov_cast        # str("defend"/"skill"/"attack") 或数字秒或 None
                         ctx._override_recover = _ov_recover  # 第二段：同形
                         ctx._override_consumed = True
-                except Exception:
+                except Exception as _e:
+                    _diag(self, "act", _e)          # 审计 P-44 余量：不再静默（行为不变）
                     pre_logs = [self._t("battle.core.unknown_action",
                                         "未知行动类型：{action}", action=action)]
             if not getattr(ctx, "_override_consumed", False):

@@ -6,7 +6,7 @@
 
 `EFFECT_ACTIONS` = 「游戏名词 → 引擎动词动作序列」的翻译表。它**不是引擎文件**；
 扩展包通过 `config.set_config("effect_actions", ...)` / `load_game_rules(module)` 读它，
-读点在 `effects.resolve_actions`（`extends/ext_combat/battle/effects.py:137`）。
+读点在 `effects.resolve_actions`（`extends/ext_combat/battle/effects.py:140`）。
 
 ## 表格格式
 
@@ -17,19 +17,19 @@ EFFECT_ACTIONS = {
 }
 ```
 
-解析规则（`effects.resolve_actions`，`effects.py:136-151`）：
+解析规则（`effects.resolve_actions`，`effects.py:139-154`）：
 
 | 表里的形态 | 返回 |
 |---|---|
 | `list` | 原样返回 |
 | `dict` | `[dict(mapped)]` |
 | 没有该键，但名字是已注册动词 | `[{"action": <名字>}]`（动词直通） |
-| 都没有 | `[]` → 调用方 `continue`（**静默 no-op**，`effects.py:197-198`） |
+| 都没有 | `[]` → 调用方 `continue`（**静默 no-op**，`effects.py:200-201`） |
 
-参数合并（`_merge_params`，`effects.py:154-163`）：**调用方显式参数优先**，
+参数合并（`_merge_params`，`effects.py:157-166`）：**调用方显式参数优先**，
 映射里的值只补 `缺失/None`。`action` 键本身不参与合并。
 
-`eff["chance"]`（概率）由 `apply_effects` 消费（`effects.py:185-191`），与映射无关。
+`eff["chance"]`（概率）由 `apply_effects` 消费（`effects.py:188-194`），与映射无关。
 
 ## 扩展包自带动词全集（8 个）
 
@@ -37,14 +37,14 @@ EFFECT_ACTIONS = {
 
 | 动词 | 注册行 | 参数要点 |
 |---|---|---|
-| `apply` | `effects.py:337` | 五形态按参数分流：`mode`→控制 / `op=add\|set`+无 `stat`→叠层 / `value`\|`pct_from_mech_val`→值型 / `stat`+`mult`→面板快照 / `hit`→出手消费 / 无→纯状态 |
-| `consume` | `effects.py:527` | `key` + `amount`（不足则**不扣**并写提示，`effects.py:524-526`） |
-| `shield` | `effects.py:560` | `key`（缺省 `"buff"`）/ `value` \| `pct` \| 缺省 20% max_hp / `turns`（缺省 3；`>=999` 或 `forever` = 永久）/ `halve` |
-| `cleanse` | `effects.py:611` | 遍历目标 `effects`，按 `EFFECT_RULES[key]` 的 `period`（**`dir="gain"` 的资源回除外**）\| `on=="target"` \| `cleanse` 三判据清 |
-| `cleanse_all` | `effects.py:645` | 同上，`target or caster` |
-| `heal` | `effects.py:653` | `pct`（max_hp 比例）/ `missing_pct`（已损比例）/ `value`；`info.hp_pct` 兜底 |
-| `interrupt` | `effects.py:692` | 清 `target["charging"]`，fire `interrupt` |
-| `damage` | `effects.py:721` | `value` / `pct`（`pct_max_hp` 别名）/ `kind`；`on=target`（缺省）或 `on=caster`（自伤/反伤） |
+| `apply` | `effects.py:340` | 五形态按参数分流：`mode`→控制 / `op=add\|set`+无 `stat`→叠层 / `value`\|`pct_from_mech_val`→值型 / `stat`+`mult`→面板快照 / `hit`→出手消费 / 无→纯状态 |
+| `consume` | `effects.py:530` | `key` + `amount`（不足则**不扣**并写提示，`effects.py:527-529`） |
+| `shield` | `effects.py:563` | `key`（缺省 `"buff"`）/ `value` \| `pct` \| 缺省 20% max_hp / `turns`（缺省 3；`>=999` 或 `forever` = 永久）/ `halve` |
+| `cleanse` | `effects.py:614` | 遍历目标 `effects`，按 `EFFECT_RULES[key]` 的 `period`（**`dir="gain"` 的资源回除外**）\| `on=="target"` \| `cleanse` 三判据清 |
+| `cleanse_all` | `effects.py:648` | 同上，`target or caster` |
+| `heal` | `effects.py:656` | `pct`（max_hp 比例）/ `missing_pct`（已损比例）/ `value`；`info.hp_pct` 兜底 |
+| `interrupt` | `effects.py:695` | 清 `target["charging"]`，fire `interrupt` |
+| `damage` | `effects.py:724` | `value` / `pct`（`pct_max_hp` 别名）/ `kind`；`on=target`（缺省）或 `on=caster`（自伤/反伤） |
 
 已删除的旧动词（V4 收敛）：`control` / `buff` / `state_add` / `state_spend` / `state_set`
 → 并入 `apply` / `consume`。**表里再出现这些名字 = 静默 no-op**（原文警告见 `effects.py:17-18`）。
@@ -91,7 +91,7 @@ grep -rho 'register_action("[^"]*")' game/services/*.py | sort -u | wc -l
 ```
 
 注意 `stun` 等的 `turns` 由**动作参数**给（技能显式 `cc_turns` 可覆盖 —— 见下「技能数据侧」），
-`mode` 走 `EFFECT_RULES[key].consume.mode` 查表（`effects.py:356-359`）。
+`mode` 走 `EFFECT_RULES[key].consume.mode` 查表（`effects.py:359-362`）。
 
 > ### ⚠️ 自己加控制名词时的三个静默失效点（第三方第一版必踩）
 >
@@ -100,8 +100,8 @@ grep -rho 'register_action("[^"]*")' game/services/*.py | sort -u | wc -l
 > | 漏了什么 | 引擎行为 | 代码 |
 > |---|---|---|
 > | `key`（或 `tag` / `mech`）全缺 | `if not key: return` → 效果**完全不施加** | `effects.py:318-311` |
-> | `turns` ≤ 0 / 不写 | 控制分支 `if turns <= 0: return` → **不施加**（`turns` 不会被默认值兜底） | `effects.py:305-307` |
-> | `on` 不写 | 缺省值是 **`"caster"`**（`params.get("on", "caster")`）→ **把控制挂到自己身上**（晕自己） | `effects.py:354, 300` |
+> | `turns` ≤ 0 / 不写 | 控制分支 `if turns <= 0: return` → **不施加**（`turns` 不会被默认值兜底） | `effects.py:308-310` |
+> | `on` 不写 | 缺省值是 **`"caster"`**（`params.get("on", "caster")`）→ **把控制挂到自己身上**（晕自己） | `effects.py:357, 300` |
 >
 > 正确写法 = 三个都给：
 >
@@ -150,7 +150,7 @@ grep -rho 'register_action("[^"]*")' game/services/*.py | sort -u | wc -l
 "stealth":        [{"action": "apply", "key": "stealth",       "hit": {"guaranteed_crit": True}}],
 ```
 
-`hit` 子键由 `actions._consume_hit_buffs` 消费（`actions.py:478-520`），
+`hit` 子键由 `actions._consume_hit_buffs` 消费（`actions.py:480-522`），
 出手时**消费并删除**该条目。
 
 ### 战斗核心（治疗 / 置值 / 打断 / 减伤 / 盾 / 净化）
@@ -169,8 +169,8 @@ grep -rho 'register_action("[^"]*")' game/services/*.py | sort -u | wc -l
 ```
 
 ⚠️ **参数故意缺省**：`stacks_set` 没给 `key`（靠调用方 `mech`/`tag` 兜底，
-`effects.py:346`）；`heal_self` 没给 `pct`（靠 `info.hp_pct`，`effects.py:674`）；
-`shield` 没给 `value`（缺省取 `max_hp × 20%`，`effects.py:581`）。
+`effects.py:349`）；`heal_self` 没给 `pct`（靠 `info.hp_pct`，`effects.py:677`）；
+`shield` 没给 `value`（缺省取 `max_hp × 20%`，`effects.py:584`）。
 这些是「零默认值 + 调用方优先」的取舍：**能省的都省，但缺了就是无行为**。
 
 ### 三个映射到内容侧扩展动词
@@ -187,7 +187,7 @@ grep -rho 'register_action("[^"]*")' game/services/*.py | sort -u | wc -l
 ## 技能数据侧：`mech` 字段的分派（另一条翻译路）
 
 技能 dict 的 `mech` / `mech2` 不查 `EFFECT_ACTIONS` 的常规路径，而是先过
-`effects.effects_from_skill`（`effects.py:219`）→ `_mech_to_effect`（`effects.py:238`）：
+`effects.effects_from_skill`（`effects.py:222`）→ `_mech_to_effect`（`effects.py:241`）：
 
 ```python
 cfg = state_def(mech)                      # 查 EFFECT_RULES
@@ -202,7 +202,7 @@ if info.get("cc_turns"):     _eff["turns"] = int(info["cc_turns"])   # 显式刻
 if info.get("mech_chance") is not None: _eff["chance"] = float(...)  # 概率
 ```
 
-`_is_stack_resource` 的判据（`effects.py:244-259`）：
+`_is_stack_resource` 的判据（`effects.py:247-262`）：
 
 ```python
 for f in ("stat_scale", "debuff_scale", "period", "dot",
@@ -215,7 +215,7 @@ return False
 **这个判据决定了「技能 mech 走叠层还是走名词」**，是加新 mech 时最容易踩的一点：
 你的 key 一旦有 `stat_scale`，它就再也不会走 `EFFECT_ACTIONS`。
 
-`cc_turns` 的注释值得逐字读（`effects.py:260-264`）：
+`cc_turns` 的注释值得逐字读（`effects.py:263-267`）：
 
 > 技能显式 `cc_turns` 才带 `turns`（覆盖 `EFFECT_ACTIONS` 默认刻数）；缺省不写 `turns`
 > —— 否则恒 `turns=0` 覆盖默认致控制 0 刻不施加（盾击·誓「眩晕 1 刻」bug）

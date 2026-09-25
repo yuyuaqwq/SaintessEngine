@@ -25,21 +25,21 @@ N3 之后战斗包（`ext_combat`）只留 8 个动词，其余全走扩展注�
 ## 动作签名与四条铁律
 
 ```python
-@register_action("my_verb")                    # effects.py:97
+@register_action("my_verb")                    # effects.py:100
 def my_verb(battle, caster, target, params, logs):
     ...
 ```
 
-签名固定 `fn(battle, caster, target, params, logs)`（`effects.py:93`）。
+签名固定 `fn(battle, caster, target, params, logs)`（`effects.py:96`）。
 四条铁律：
 
 1. **落地一定走 `landing`**
    - 伤害：`landing.deal_damage(battle, source, target, amount, logs, dmg_kind=..., defend_reduce=..., element=...)`（`landing.py:28`）
-   - 治疗：`landing.heal_actor(battle, target, amount, logs, source=None, label="")`（`landing.py:435`）
+   - 治疗：`landing.heal_actor(battle, target, amount, logs, source=None, label="")`（`landing.py:437`）
    - 自己 `target["hp"] -= dmg` 会丢掉护盾吸收、死亡判定、濒死保护、`on_taken`/`on_kill` 事件
 2. **缺字段 = 无行为**（零默认值）。所有参数用 `params.get(...)`，判 `<= 0` 就 `return`。
    不要写 `params.get("pct", 0.1)` 这种「贴心默认」——参考实现（游戏仓内容侧）里所有扩展动作都没这么干
-3. **异常不要抛**：`apply_effects` 会吞掉异常并跳过该动作（`effects.py:176-180`），
+3. **异常不要抛**：`apply_effects` 会吞掉异常并跳过该动作（`effects.py:179-183`），
    但如果你**希望**异常可见（开发期），就让它抛出来再自己看日志 —— 别用裸 `except: pass`
    把错误吃掉
 4. **日志就是 `logs.append(...)`**。引擎没有日志等级；格式惯例是 `emoji + 一句话`，
@@ -47,7 +47,7 @@ def my_verb(battle, caster, target, params, logs):
 
 ## 参数从哪里来：`params` 的三层合并
 
-`apply_effects` 在调你的动词前做了合并（`_merge_params`，`effects.py:157`）：
+`apply_effects` 在调你的动词前做了合并（`_merge_params`，`effects.py:160`）：
 
 ```
 params = dict(效果 dict)                      ← 声明方写的一切
@@ -69,7 +69,7 @@ for k, v in 映射动作.items():
 
 | 来源 | 说明 |
 |---|---|
-| `eff["chance"]` | `apply_effects` 的通用概率 roll（`effects.py:185-191`）。`None` = 恒触发；`0.4` = 40% 才执行 |
+| `eff["chance"]` | `apply_effects` 的通用概率 roll（`effects.py:188-194`）。`None` = 恒触发；`0.4` = 40% 才执行 |
 | `_owner` | 事件总线注入的**声明者**（`effect_triggers.py:103-106`）。`params.get("_owner")` 拿宿主 —— 「谁带的这个装备」用它 |
 
 事件数值（`dmg` / `heal` / `amount` / `is_crit` / `overflow` / `source`）**不在 params 里**，
@@ -88,10 +88,10 @@ attacker = ctx.get("source")
 
 | 事件 | 谁读回 | 语义 | 包内点位（`extends/ext_combat/battle/`） |
 |---|---|---|---|
-| `dmg_calc` | 攻击方总伤 | ×mult 增伤 | `actions.py:436-443` |
-| `taken_calc` | 承伤前 | ×mult 减伤（<1）或增伤（>1） | `landing.py:81-92` |
-| `heal_calc` | 治疗量落地前 | ×mult 治疗增幅 | `actions.py:674-744` |
-| `dot_calc` | DOT 每跳 | ×mult DOT 增伤 | `schedule.py:597-613` |
+| `dmg_calc` | 攻击方总伤 | ×mult 增伤 | `actions.py:438-445` |
+| `taken_calc` | 承伤前 | ×mult 减伤（<1）或增伤（>1） | `landing.py:83-94` |
+| `heal_calc` | 治疗量落地前 | ×mult 治疗增幅 | `actions.py:677-747` |
+| `dot_calc` | DOT 每跳 | ×mult DOT 增伤 | `schedule.py:599-615` |
 
 写法（实测可用的最小骨架）：
 
@@ -110,9 +110,9 @@ def my_cond_mult(battle, caster, target, params, logs):
 
 三条注意：
 
-- `ctx["mult"]` 初值由引擎置 1.0（`actions.py:439`），**累乘**多个源
+- `ctx["mult"]` 初值由引擎置 1.0（`actions.py:441`），**累乘**多个源
 - `_fire_ctx` 是**单槽覆盖式**：只在你自己那次 `fire` 的同步栈里有效
-- 乘区在 `dmg_calc` 里改的是**已经算完的总伤**（多段之和，`actions.py:427-430` 之后）
+- 乘区在 `dmg_calc` 里改的是**已经算完的总伤**（多段之和，`actions.py:429-432` 之后）
 
 ## judge 谓词：把判据写成数据
 
@@ -148,7 +148,7 @@ def my_cond_mult(battle, caster, target, params, logs):
 |---|---|---|
 | 开战前（按已学技能/已装备） | 命令层开战仪式调你的装配函数，写 `actor["triggers"]` | `apply_class_mech(actor)`（`class_mech_proc.py:2201`） |
 | 战斗中途（某个效果生效时） | 在动词里直接改 `triggers`（会立刻生效，因为 fire 每次都现读） | 内容侧「进入守护姿态时挂反击 trigger」 |
-| 一次性行动 | `Battle.action_override`（`battle.py:521`） | `use_item` 类自定义行动 |
+| 一次性行动 | `Battle.action_override`（`battle.py:524`） | `use_item` 类自定义行动 |
 
 装配器的最简形态（实测跑通）：
 

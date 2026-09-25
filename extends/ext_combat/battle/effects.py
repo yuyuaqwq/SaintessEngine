@@ -41,7 +41,8 @@ def _fmt_stack(v):
     """stacks 文案/日志显示：整值去 .0（float 为增量能力，玩家整数观感）。"""
     try:
         f = float(v)
-    except Exception:
+    except Exception as _e:
+        _diag(None, "_fmt_stack", _e)          # 审计 P-44 余量：不再静默（行为不变）
         return v
     return int(f) if f.is_integer() else f
 
@@ -51,7 +52,8 @@ def _norm_stack(v):
     二进制定点尾差，如 10-0.7 → 9.3）。"""
     try:
         f = float(v)
-    except Exception:
+    except Exception as _e:
+        _diag(None, "_norm_stack", _e)          # 审计 P-44 余量：不再静默（行为不变）
         return v
     if f.is_integer():
         return int(f)
@@ -73,7 +75,8 @@ def _cap_of(actor, key: str) -> int:
     try:
         cb = ((actor or {}).get("bonus") or {}).get("cap") or {}
         bonus = int(cb.get(key, 0) or 0)
-    except Exception:
+    except Exception as _e:
+        _diag(None, "_cap_of", _e)          # 审计 P-44 余量：不再静默（行为不变）
         bonus = 0
     return base + max(0, bonus)
 

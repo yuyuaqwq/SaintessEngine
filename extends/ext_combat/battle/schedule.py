@@ -157,7 +157,8 @@ def _spd_of(battle, actor: dict) -> int:
     try:
         from . import stats as S
         return int(S.actor_spd(battle, actor))
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_spd_of", _e)          # 审计 P-44 余量：不再静默（行为不变）
         return int(actor.get("spd", 0) or 0)
 
 
@@ -569,7 +570,8 @@ def _settle_time_effects(battle, logs: list):
                                     if isinstance(_adapt, dict):
                                         _res += float(_adapt.get(key, 0) or 0)
                                     _res = min(float(_rcap), _res)
-                                except Exception:
+                                except Exception as _e:
+                                    _diag(battle, "_settle_time_effects", _e)          # 审计 P-44 余量：不再静默（行为不变）
                                     _res = 0.0
                                 if _res > 0:
                                     dmg = max(1, int(dmg * (1.0 - _res)))

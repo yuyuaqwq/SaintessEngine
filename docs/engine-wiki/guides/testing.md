@@ -81,7 +81,7 @@ if __name__ == "__main__":
 | **边界不越界** | 「叠 20 次后 `stacks == cap`」 | cap 是 clamp 行为，写错会数值崩坏 |
 | **缺口不倒退** | 「未装配时 `human_act` 返回 `[]` 且不抛异常」 | 保护「零默认值」语义本身 |
 
-第三条尤其重要：`_cap_of` 在**没有声明 `cap` 时返回 999999**（`effects.py:71`）——
+第三条尤其重要：`_cap_of` 在**没有声明 `cap` 时返回 999999**（`effects.py:73`）——
 「我明明写了 cap 为什么还涨到 20」的答案通常是 key 写错了。
 
 ## 测机制时的三个实用招式
@@ -117,7 +117,7 @@ check("4.2 补跳 3 次（180 伤）", hp1 - e["hp"] == 180)
 
 真实同款见 `tests/test_battle_n4_schedule.py` 的 `test_dot_interval_n74`。
 注意断言里「补跳」的期望值 —— 一次 `_settle_time_effects` 最多补 20 跳
-（`schedule.py:504` 的 `guard < 20`）。
+（`schedule.py:505` 的 `guard < 20`）。
 
 ### 招式 3：断言 `triggers` 装配结果，而不是行为
 

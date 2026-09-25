@@ -18,8 +18,8 @@ register_action       config.set_config           actor["triggers"]
 
 - `battle` 是战斗实例；`logs` 是 list，直接 `append` 就是玩家看到的日志
 - **不要自己扣血/加血** —— 落地必须走 `landing.heal_actor` / `landing.deal_damage`
-  （`landing.py:435` / `:23`）。绕过落地会丢掉护盾、死亡判定、濒死保护、`on_heal` 事件
-- 抛异常会被 `apply_effects` 吞掉并跳过该动作（`effects.py:176-180`），不会中断战斗
+  （`landing.py:437` / `:23`）。绕过落地会丢掉护盾、死亡判定、濒死保护、`on_heal` 事件
+- 抛异常会被 `apply_effects` 吞掉并跳过该动作（`effects.py:179-183`），不会中断战斗
 
 ```python
 from saintess_engine import register_action
@@ -37,7 +37,7 @@ def pact_heal(battle, caster, target, params, logs):
         logs.append(f"🩸 血契：{holder.get('name')} 回复 {real} 点生命")
 ```
 
-`register_action`（`effects.py:96`）就是个装饰器，往 `ACTION_HANDLERS`（`effects.py:90`）里塞一条。
+`register_action`（`effects.py:99`）就是个装饰器，往 `ACTION_HANDLERS`（`effects.py:93`）里塞一条。
 
 ## ② 写名词声明：同名名词 → 动词序列
 
@@ -54,16 +54,16 @@ config.set_config("effect_actions", {
 })
 ```
 
-翻译规则（`effects.resolve_actions`，`effects.py:137`）：
+翻译规则（`effects.resolve_actions`，`effects.py:140`）：
 
 | 表里写什么 | 引擎怎么处理 |
 |---|---|
 | `"名词": [{"action": "动词", ...参数}]` | 逐个执行；`action` 之外的键是**映射默认参数** |
 | `"名词": {"action": "动词", ...}` | 等价于单元素列表 |
 | 表里没有该名词，但名字本身是已注册动词 | 按动词直通执行 `{"action": <名词>}` |
-| 表里没有、也不是动词 | **静默跳过**（`effects.py:197-198` `continue`） ← 最常见的「我的效果没生效」原因 |
+| 表里没有、也不是动词 | **静默跳过**（`effects.py:200-201` `continue`） ← 最常见的「我的效果没生效」原因 |
 
-参数合并语义（`_merge_params`，`effects.py:157`）：**调用方显式给的参数优先**，
+参数合并语义（`_merge_params`，`effects.py:160`）：**调用方显式给的参数优先**，
 映射默认只在该参数缺失/为 None 时补位。所以同一名词被不同技能引用时，
 技能数据可以覆盖 `pct`。
 
@@ -81,7 +81,7 @@ def equip_blood_pact(actor):
 引擎在固定点位 `fire(事件名, ctx, logs)`，总线遍历所有存活 actor 找 `triggers[事件名]`，
 逐个交给 `apply_effects` 翻译执行（`effect_triggers.fire`，`effect_triggers.py:63`）。
 
-`attack_hit` 的触发点在 `_single_target_pipeline` 尾部（`actions.py:486`）：
+`attack_hit` 的触发点在 `_single_target_pipeline` 尾部（`actions.py:488`）：
 **普攻命中且伤害管线跑完之后**，`ctx = {"actor": 攻击者, "target": 挨打者, "info": 技能, "dmg": 总伤}`。
 
 ## 跑起来
@@ -123,9 +123,9 @@ hero hp: 65
 ## 名词也可以直接挂在技能数据上
 
 上面走的是「事件触发」路子。另一条路是**技能数据驱动**：技能 dict 里的 `mech`
-字段经 `effects_from_skill`（`effects.py:219`）转成 effect 列表，在命中后由
-`_apply_hit_effects`（`actions.py:523`）执行。分派判据见 `_mech_to_effect`
-（`effects.py:238`）——「叠层资源型」走 `apply op=add`，否则保留名词走 `EFFECT_ACTIONS`。
+字段经 `effects_from_skill`（`effects.py:222`）转成 effect 列表，在命中后由
+`_apply_hit_effects`（`actions.py:525`）执行。分派判据见 `_mech_to_effect`
+（`effects.py:241`）——「叠层资源型」走 `apply op=add`，否则保留名词走 `EFFECT_ACTIONS`。
 
 更完整的机制写法（judge 谓词 / 乘区钩子 / 计数器）见
 [../guides/write-a-mechanic.md](../guides/write-a-mechanic.md)。

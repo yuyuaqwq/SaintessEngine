@@ -119,7 +119,8 @@ def _skel_num(key: str, default: float) -> float:
     """骨架表**顶层**数值读取（缺键/坏值 → default）。"""
     try:
         return float(_skeleton().get(key, default))
-    except Exception:                                        # noqa: BLE001
+    except Exception as _e:                                        # noqa: BLE001
+        _diag(None, "_skel_num", _e)          # 审计 P-44 余量：不再静默（行为不变）
         return float(default)
 
 
@@ -128,7 +129,8 @@ def _skel_sub_num(group: str, key: str, default: float) -> float:
     try:
         grp = _skeleton().get(group) or {}
         return float(grp.get(key, default))
-    except Exception:                                        # noqa: BLE001
+    except Exception as _e:                                        # noqa: BLE001
+        _diag(None, "_skel_sub_num", _e)          # 审计 P-44 余量：不再静默（行为不变）
         return float(default)
 
 
@@ -202,7 +204,8 @@ def skill_max_level_default() -> int:
     """
     try:
         return int(_skel_num("skill_max_level", 5))
-    except Exception:                                        # noqa: BLE001
+    except Exception as _e:                                        # noqa: BLE001
+        _diag(None, "skill_max_level_default", _e)          # 审计 P-44 余量：不再静默（行为不变）
         return 5
 
 
@@ -408,7 +411,8 @@ def skill_expr_preview(info: dict | None, level: int, stats: dict | None = None)
         _vars = build_vars(stats or {}, player_lv=int((stats or {}).get("level", 0) or 0),
                            skill_lv=lv)
         return float(eval_expr(compile_expr(_expr), _vars))
-    except Exception:
+    except Exception as _e:
+        _diag(None, "skill_expr_preview", _e)          # 审计 P-44 余量：不再静默（行为不变）
         return 0.0
 
 
@@ -479,7 +483,8 @@ def calc_damage(atk, def_, is_crit=False, variance=0.15, pierce=False, pene_pct=
             flat = max(int(pene_flat), 0)
             if pct > 0 or flat > 0:
                 eff_def = max(0, int(def_ * (1 - pct)) - flat)
-        except Exception:
+        except Exception as _e:
+            _diag(None, "calc_damage", _e)          # 审计 P-44 余量：不再静默（行为不变）
             eff_def = def_
         # v104 M02 P2：atk+def_ 为 0 时直接返回伤害下限 1，防 ZeroDivisionError
         if atk + eff_def <= 0:
@@ -541,7 +546,8 @@ def resolve_formula(formula, stats, target_def, target_mdef, is_crit=False,
                 _code = compile_expr(_expr)
                 _val = eval_expr(_code, _vars) * mult
                 base = int(_val)
-            except Exception:
+            except Exception as _e:
+                _diag(None, "resolve_formula", _e)          # 审计 P-44 余量：不再静默（行为不变）
                 base = 0
         else:
             fstat = seg.get("stat", "atk")
@@ -592,5 +598,6 @@ def skill_mp_pay_of(actor_or_player: dict, info: dict) -> int:
     try:
         from .actions import skill_pay_of
         return int(skill_pay_of(actor_or_player or {}, info or {}).get("mp") or 0)
-    except Exception:
+    except Exception as _e:
+        _diag(None, "skill_mp_pay_of", _e)          # 审计 P-44 余量：不再静默（行为不变）
         return int((info or {}).get("mp", 0) or 0)

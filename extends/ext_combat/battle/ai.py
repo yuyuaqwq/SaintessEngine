@@ -49,7 +49,8 @@ def normalize_ai(actor: dict) -> dict:
                 continue
             try:
                 wv = float(w)
-            except Exception:
+            except Exception as _e:
+                _diag(None, "normalize_ai", _e)          # 审计 P-44 余量：不再静默（行为不变）
                 wv = 1.0
             moves.append({"when": {}, "then": {"type": "skill", "skill": sk},
                           "weight": max(0.0, wv)})
@@ -221,7 +222,8 @@ def resolve_ai_move(battle, actor: dict):
             return None
         try:
             weights = [max(0.0, float(w)) for w, _ in pool]
-        except Exception:
+        except Exception as _e:
+            _diag(battle, "resolve_ai_move", _e)          # 审计 P-44 余量：不再静默（行为不变）
             weights = None
         if weights is not None and sum(weights) > 0:
             chosen = _rnd.choices([m for _, m in pool], weights=weights, k=1)[0]
