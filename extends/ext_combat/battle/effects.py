@@ -340,11 +340,11 @@ def act_apply(battle, caster, target, params, logs):
       - hit dict：出手消费型。effects[key] = {stacks, expire, hit}。
       - 其余：纯状态（免疫/标记/一次性），只记到期。
     on=caster(缺省)/target 决定作用对象；turns 决定到期（快照型需要，叠层型忽略）。
-    key 由 params.key/tag/mech 提供（V4 后统一 key；兼容旧 tag 调用）。
+    key 由 params.key 提供（V4 后统一 key；旧 tag/mech 回落已删——无 key 即 no-op）。
     """
     from .battle import _now_of
     on = params.get("on", "caster")
-    key = params.get("key") or params.get("tag") or params.get("mech")
+    key = params.get("key")
     if not key:
         return
     # ---------- 控制型（原 act_control：固定打 target，不回落 caster）----------
@@ -524,7 +524,7 @@ def act_consume(battle, caster, target, params, logs):
     holder = caster if on == "caster" else (target or caster)
     if not holder:
         return
-    key = params.get("key") or params.get("mech")
+    key = params.get("key")
     # v181.M-R2e B3：cur float 读（消费 float 层保真——小数衰减后 9.3 扣 3 → 6.3）
     amount = float(params.get("amount", params.get("stacks", 0)) or 0)
     if not key or amount <= 0:
