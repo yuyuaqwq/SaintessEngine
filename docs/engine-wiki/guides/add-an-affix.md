@@ -84,11 +84,11 @@ def map_event(old_ev):
 （`game/services/battle_equip_proc.py:47-51`）
 
 **为什么 `hit` 要展开成两个事件**：引擎把「普攻命中」(`attack_hit`) 与「技能命中」
-(`skill_hit`) 分成两个事件（`actions.py:467` 按 `info["_basic"]` 选）。
+(`skill_hit`) 分成两个事件（`actions.py:486` 按 `info["_basic"]` 选）。
 你的数据表只写「命中」时，得同时挂两个。
 
 **为什么 `enemy_act` 映射到 `act_done`**：`act_done` 是**不带 subject 的广播事件**
-（`ctx["acted"]` 才是行动者，`battle.py:566-571`），所以「敌方行动后我叠减速」
+（`ctx["acted"]` 才是行动者，`battle.py:581-586`），所以「敌方行动后我叠减速」
 这类特效要在动作里**自己判敌我**（例：`we_act_done_slow`）。
 
 ## 词条的三种数值通道
@@ -99,7 +99,7 @@ def map_event(old_ev):
 |---|---|---|---|
 | `triggers` 参数 | `{"type": "we_xxx", "pct": 0.2}` | 你自己的族动作 | 一次性/有条件的效果 |
 | `actor["bonus"]["panel"]` | 面板增幅 dict | `stats._player_base_stats` 把它传给 `panel_fn`（`stats.py:95-109`） | 常驻面板增幅 |
-| `actor["bonus"]["cap"]` | `{资源key: +N}` | `effects._cap_of`（`effects.py:72`） | 资源上限词条 |
+| `actor["bonus"]["cap"]` | `{资源key: +N}` | `effects._cap_of`（`effects.py:74`） | 资源上限词条 |
 | `actor["bonus"]["cost"]` | `{mp_pct, mp_flat, res, when}` | `actions._skill_pay_of`（`actions.py:272`） | 消耗折扣词条 |
 
 `bonus.panel` 的形态由**你的** `panel_fn` 决定（引擎只是把它当不透明 dict 透传）。
@@ -117,7 +117,7 @@ actor["bonus"]["cost"] = {
 }
 ```
 
-读取与折算在 `_skill_pay_of`（`actions.py:272-307`），两条硬规则（`actions.py:234-240` 注释）：
+读取与折算在 `_skill_pay_of`（`actions.py:272-307`），两条硬规则（`actions.py:242-248` 注释）：
 
 ```
 pay = max(1, floor(声明 × (1 - Σpct)) - Σflat)

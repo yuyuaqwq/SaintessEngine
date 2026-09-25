@@ -31,6 +31,7 @@ V4（2026-09-16）—— 最后 7 处「写死在引擎的游戏数值」下沉�
 import random
 
 from saintess_engine import config as _cfg
+from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 
 
 # 未装配时的中性骨架参数（与 _NullFormulas 同语义：零效应，不产生额外数值）。
@@ -378,7 +379,8 @@ def skill_expr_preview(info: dict | None, level: int, stats: dict | None = None)
                     if _se:
                         try:
                             _total += eval_expr(compile_expr(_se), _vars) * float(_seg.get("mult", 1.0) or 1.0)
-                        except Exception:
+                        except Exception as _e:
+                            _diag(battle, "skill_expr_preview", _e)          # 审计 P-44：不再静默（行为不变）
                             pass
             return _total
         if not _expr:

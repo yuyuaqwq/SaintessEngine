@@ -29,6 +29,7 @@ from __future__ import annotations
 from typing import Optional
 
 from saintess_engine import config as _cfg
+from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from .actors import actor_alive
 from .effects import _cap_of as _stack_cap_of
 from saintess_engine.text import render_via
@@ -404,7 +405,8 @@ def _advance_time(battle, dt: float, logs: list):
     try:
         from .effect_triggers import fire as _fire
         _fire(battle, "time_advance", {"dt": float(dt), "now": float(battle._now)}, logs)
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_advance_time · 时钟事件", _e)          # 审计 P-44：不再静默（行为不变）
         pass  # 时钟事件异常不阻断推进（容错铁律）
 
 
@@ -445,7 +447,8 @@ def _settle_time_effects(battle, logs: list):
                             from .effect_triggers import fire as _fire
                             _fire(battle, "buff_expire", {"actor": a, "target": a,
                                                           "key": key}, logs)
-                        except Exception:
+                        except Exception as _e:
+                            _diag(battle, "_settle_time_effects · 事件源", _e)          # 审计 P-44：不再静默（行为不变）
                             pass  # 事件源异常不阻断结算
             # ---------- 2) shields 到期（独立容器）----------
             sh = a.get("shields")
@@ -583,7 +586,8 @@ def _settle_time_effects(battle, logs: list):
                                 _m = 1.0 if _raw_m is None else float(_raw_m)
                                 if _m != 1.0:
                                     dmg = max(1, int(dmg * _m))
-                            except Exception:
+                            except Exception as _e:
+                                _diag(battle, "_settle_time_effects · 修正钩子", _e)          # 审计 P-44：不再静默（行为不变）
                                 pass  # 修正钩子异常不阻断 DOT 落地
                             # N-B10 伤害类型透传（2026-09-11 接线）：period.dmg_type 原先是
                             #   死字段（声明了没人读）——真伤 DOT 与普通 DOT 落地完全同路。
@@ -604,7 +608,8 @@ def _settle_time_effects(battle, logs: list):
                                 from .effect_triggers import fire as _fire
                                 _fire(battle, "dot_tick", {"actor": a, "target": a,
                                                            "key": key, "dmg": dmg}, logs)
-                            except Exception:
+                            except Exception as _e:
+                                _diag(battle, "_settle_time_effects", _e)          # 审计 P-44：不再静默（行为不变）
                                 pass
                         elif direction == "heal":
                             from .landing import heal_actor as _heal_actor

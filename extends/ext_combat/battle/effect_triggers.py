@@ -46,6 +46,7 @@ interrupt = 23；扫描脚本见 docs/engine-wiki/_selfcheck.md §6）。
 from __future__ import annotations
 
 from .actors import actor_alive
+from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 
 # 26 事件全集（必须单行定义——cov 按行 trace，多行续行会永久漏记；
 # 中文语义见模块 docstring）
@@ -114,7 +115,8 @@ def fire(battle, event: str, ctx: dict, logs: list) -> None:
                         eff_list.append(_e)
                 apply_effects(battle, caster if caster is not None else a,
                               target, eff_list, logs)
-            except Exception:
+            except Exception as _e:
+                _diag(battle, "fire", _e)   # 审计 P-44：不再静默（行为不变）
                 # 单个源异常不阻断其他源/战斗（引擎容错）
                 continue
     # 战斗级观察者（N5b4-5E）：fire 尾部通知外部（命令层记账/团队广播/存活同步）。
@@ -123,7 +125,8 @@ def fire(battle, event: str, ctx: dict, logs: list) -> None:
     if _obs is not None:
         try:
             _obs(battle, event, ctx, logs)
-        except Exception:
+        except Exception as _e:
+            _diag(battle, "fire", _e)          # 审计 P-44：不再静默（行为不变）
             pass
     # `_fire_ctx` 保持指向**本次** ctx（不恢复 _prev_ctx）——兼容既有读法
     #（大量内容侧代码/测试在 fire 之后读 `battle._fire_ctx` 取乘区结果）。

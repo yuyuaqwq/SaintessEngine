@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Optional
 
 from .actors import ActCtx, actor_alive, actor_dead
+from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from . import actions
 from . import game_config as _GC
 from saintess_engine.text import render_or as _render_or
@@ -123,7 +124,8 @@ class Battle:
         try:
             from . import stats as S
             _spd = S.actor_spd(self, actor)
-        except Exception:
+        except Exception as _e:
+            _diag(battle, "_seed_ct_one", _e)          # 审计 P-44：不再静默（行为不变）
             pass
         actor["ct"] = _ict(_spd)
 
@@ -158,7 +160,8 @@ class Battle:
                 if info:
                     idx[info.get("name", sk)] = info
                     idx[sk] = info
-        except Exception:
+        except Exception as _e:
+            _diag(None, "_index_one_actor · 索引失败", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # 索引失败不阻断（N1 普攻直接 resolve_basic_skill）
 
     def refresh_skill_index(self, actor: dict) -> None:
@@ -181,7 +184,8 @@ class Battle:
                 if sk not in idx:
                     self._index_one_actor(actor)
                     return
-        except Exception:
+        except Exception as _e:
+            _diag(None, "refresh_skill_index · 索引失败", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # 索引失败不阻断（_index_one_actor 内部同语义容错）
 
     def _index_skills(self):
@@ -367,7 +371,8 @@ class Battle:
                     from .schedule import _after_act
                     _after_act(self, caster, "attack")
                     return _hook_logs, False
-            except Exception:
+            except Exception as _e:
+                _diag(None, "actor_auto · 导演", _e)          # 审计 P-44：不再静默（行为不变）
                 pass  # 导演异常不阻断怪行动（回落默认行动）
         # 决策前刷新技能索引（导演帧刚可能 add_skills 换招 → 索引落后于 actor.skills；
         # 必须在下面读 auto_act / resolve_ai_move 之前——ActCtx.__post_init__ 只解析一次）
@@ -396,7 +401,8 @@ class Battle:
                     # 无 picker/未知 hint → 回落默认仇恨目标，尾部清理防残留
                     if _mv.get("target_hint"):
                         caster["_target_hint"] = _mv["target_hint"]
-            except Exception:
+            except Exception as _e:
+                _diag(None, "actor_auto · 无 picker/未知 hint → 回落默", _e)          # 审计 P-44：不再静默（行为不变）
                 pass
         # 2026-09-11 ★可执行性兜底：显式 auto_act 指定了此刻放不出的技能（冷却中/
         # 资源不足/索引不到）→ 回落普攻，避免白耗一回合（与 ai 决策器过滤同一判据；
@@ -407,7 +413,8 @@ class Battle:
                 if not _skill_castable(self, caster, str(skill_name or "")):
                     action = "attack"
                     skill_name = None
-            except Exception:
+            except Exception as _e:
+                _diag(None, "actor_auto", _e)          # 审计 P-44：不再静默（行为不变）
                 pass
         if ctx_target is None and self.target_picker is not None:
             try:
@@ -569,7 +576,8 @@ class Battle:
         try:
             from .effect_triggers import fire as _fire
             _fire(self, "act_done", {"acted": actor}, logs)
-        except Exception:
+        except Exception as _e:
+            _diag(None, "_dispatch_pending · 事件源", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # 事件源异常不阻断行动结算
         # 胜负判定（死亡可能已触发）
         self._check_side_end()
@@ -606,7 +614,8 @@ class Battle:
         try:
             from .effect_triggers import fire as _fire
             _fire(self, "battle_start", {}, logs)
-        except Exception:
+        except Exception as _e:
+            _diag(battle, "_ensure_battle_started · 事件源", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # 事件源异常不阻断开战
 
     def _on_actor_dead(self, actor: dict, logs: Optional[list] = None):
@@ -624,7 +633,8 @@ class Battle:
             try:
                 from .effect_triggers import fire as _fire
                 _fire(self, "on_death", {"actor": actor, "target": actor}, logs)
-            except Exception:
+            except Exception as _e:
+                _diag(battle, "_on_actor_dead", _e)          # 审计 P-44：不再静默（行为不变）
                 pass
 
     def _check_side_end(self) -> bool:

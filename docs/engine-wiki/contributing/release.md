@@ -56,7 +56,7 @@
   - `landing` / `stats` 里的固定效果 key（`death_guard` · `heal_amp_pct` · `heal_down` ·
     `_anti_heal_pct` · `sleep`）
   - `effects.act_apply` 里的 `if key == "reduce"`
-  - `battle._check_side_end` 里的 `"player"` 阵营名（`battle.py:646`）
+  - `battle._check_side_end` 里的 `"player"` 阵营名（`battle.py:656`）
   （完整表见 [../architecture/boundaries.md](../architecture/boundaries.md) 的「边界瑕疵」）
 - [ ] **缺失消费方的声明清理**（`on_threshold` /
       `tag` / `period.type` / `period.per_layer` / `period.dmg_type`）——

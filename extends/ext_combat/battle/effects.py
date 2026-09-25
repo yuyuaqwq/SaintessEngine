@@ -25,6 +25,7 @@ from __future__ import annotations
 from typing import Callable, Optional
 
 from .state_effects import state_def
+from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from saintess_engine.text import render_via
 
 # ============================================================
@@ -184,7 +185,8 @@ def apply_effects(battle, caster: dict, target: Optional[dict],
             try:
                 if _rr.random() >= float(_ch):
                     continue
-            except Exception:
+            except Exception as _e:
+                _diag(battle, "apply_effects", _e)          # 审计 P-44：不再静默（行为不变）
                 pass
         actions = resolve_actions(etype)
         if not actions and etype not in ACTION_HANDLERS:
@@ -198,7 +200,8 @@ def apply_effects(battle, caster: dict, target: Optional[dict],
             if handler:
                 try:
                     handler(battle, caster, target, params, logs)
-                except Exception:
+                except Exception as _e:
+                    _diag(battle, "apply_effects", _e)   # 审计 P-44：不再静默（行为不变）
                     # 单个 handler 异常不阻断后续（引擎容错）
                     continue
 
@@ -259,7 +262,8 @@ def _mech_to_effect(mech: str, mval: int, info: dict) -> dict:
     if _ch is not None:
         try:
             _eff["chance"] = float(_ch)
-        except Exception:
+        except Exception as _e:
+            _diag(None, "_mech_to_effect", _e)          # 审计 P-44：不再静默（行为不变）
             pass
     return _eff
 
@@ -318,7 +322,8 @@ def note_dot_source(battle, holder, key: str, caster) -> None:
         st = _S.actor_stats(battle, caster) if battle is not None else (caster or {})
         entry["src"] = {"atk": int(st.get("atk", 0) or 0),
                         "matk": int(st.get("matk", 0) or 0)}
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "note_dot_source · 快照失败", _e)          # 审计 P-44：不再静默（行为不变）
         pass  # 快照失败不阻断施加（tick 端按 0 段处理）
 
 
@@ -400,7 +405,8 @@ def act_apply(battle, caster, target, params, logs):
                                     name=holder.get('name', '目标'),
                                     key=key))
                 return
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "act_apply · 免疫查询", _e)          # 审计 P-44：不再静默（行为不变）
         pass  # 免疫查询异常不阻断施加
     ef = holder.setdefault("effects", {})
     now = _now_of(battle)
@@ -438,7 +444,8 @@ def act_apply(battle, caster, target, params, logs):
         try:
             from .effect_triggers import fire as _fire
             _fire(battle, "threshold", {"actor": holder, "key": key, "value": n}, logs)
-        except Exception:
+        except Exception as _e:
+            _diag(battle, "act_apply", _e)          # 审计 P-44：不再静默（行为不变）
             pass
         return
     # ---------- 快照型（原 act_buff）----------
@@ -694,7 +701,8 @@ def act_interrupt(battle, caster, target, params, logs):
         from .effect_triggers import fire as _fire
         _fire(battle, "interrupt", {"actor": actor, "target": actor,
                                     "source": caster}, logs)
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "act_interrupt", _e)          # 审计 P-44：不再静默（行为不变）
         pass
 
 

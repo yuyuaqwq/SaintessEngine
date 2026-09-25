@@ -20,10 +20,10 @@
 
 **痕迹**：
 - `actors.py:1-9` 的模块 docstring 原文：「引擎逻辑只用字段值，不按字段猜身份」
-- `Battle.focus()`：只认 `human_controlled`（`battle.py:203-212`）
-- `schedule._next_player_due` / `_next_auto_due`：按同一个 bool 分流（`schedule.py:329/128`）
-- `Battle.add_actor` 注释：「不认识随从/召唤/亡灵/援军，只做注册 + 索引 + 排程」（`battle.py:254`）
-- `Battle.find_actor(uid)`：承伤/治疗转移的查找口（只读，不猜身份）（`battle.py:197`）
+- `Battle.focus()`：只认 `human_controlled`（`battle.py:211-220`）
+- `schedule._next_player_due` / `_next_auto_due`：按同一个 bool 分流（`schedule.py:331/128`）
+- `Battle.add_actor` 注释：「不认识随从/召唤/亡灵/援军，只做注册 + 索引 + 排程」（`battle.py:262`）
+- `Battle.find_actor(uid)`：承伤/治疗转移的查找口（只读，不猜身份）（`battle.py:205`）
 
 ---
 
@@ -76,7 +76,7 @@
 **背景**：兜底默认值（「没有配置就按每级 +10%」）会让**写错的配置看起来正常工作**。
 引擎里有一处历史教训被写进注释：`formulas.skill_power_mult` 删掉了「默认每级 +10%」，
 原因是「曾误伤无 SKILL_UP 配置的怪物技能：按折算等级白吃成长 ×1.4」
-（`formulas.py:243-246`）。
+（`formulas.py:245-248`）。
 
 **选择**：缺字段 = 不做事。所有扩展动作都是 `params.get(...)` + 判 `<= 0` 就 `return`。
 `config.strict=True` 时未装配的 hook 直接抛 `EngineNotConfigured`。
@@ -89,7 +89,7 @@
 
 **痕迹**：
 - `config.py:87-91` 的 R8 说明：「静默降级」两档语义
-- `formulas.py:95` 原文：「『零默认值』：无挂载 → 空 dict = 无成长配置」
+- `formulas.py:96` 原文：「『零默认值』：无挂载 → 空 dict = 无成长配置」
 - 内容侧 `_merge_agg_entry` 的注释：「缺字段 = 无此行为（零默认值铁律）」
 
 ---
@@ -108,7 +108,7 @@
 （`taken_calc` 的 `mult`）。
 
 **痕迹**：`landing.py:8-13` 原文（「为什么必须统一收口」）；
-`effects.act_damage` 也只做「读参数 → 调 `landing.deal_damage`」（`effects.py:662-689`）。
+`effects.act_damage` 也只做「读参数 → 调 `landing.deal_damage`」（`effects.py:675-702`）。
 
 ---
 
@@ -183,10 +183,10 @@ actor 的 `triggers = {事件名: [效果声明]}` 决定响应什么。
 - 「谁属于哪个阵营」有两处真相（`actor["side"]` 与 `battle.sides` 的键），
   于是需要 `actor_side_of`（`actors.py:180`）来定权威（sides 优先，字段兜底）
 
-**收益**：`add_actor` 不需要通知任何人（`battle.py:254-256` 注释：
+**收益**：`add_actor` 不需要通知任何人（`battle.py:262-264` 注释：
 「sides 是普通 dict，调度与序列化均动态遍历 sides，故新 actor 自动参与行动与存档」）。
 
-**痕迹**：`Battle.__init__` 里 `self.sides` 的构造（`battle.py:75-78`）。
+**痕迹**：`Battle.__init__` 里 `self.sides` 的构造（`battle.py:77-80`）。
 
 ---
 
@@ -201,10 +201,10 @@ Boss 剧本导演。这些都需要游戏知识。
 **代价**：
 - **它们不落盘**：`from_state` 只恢复 `btype/sides/title_bonus/hostile_map`，
   恢复后必须自己重挂（文案表 `text=` 同理：可选关键字参数，恢复时重新传入）（[../guides/serialize-and-resume.md](../guides/serialize-and-resume.md)）
-- 异常被吞掉（`script_hook` 异常 → 回落默认行动，`battle.py:344-345`），
+- 异常被吞掉（`script_hook` 异常 → 回落默认行动，`battle.py:348-349`），
   钩子写错不容易发现
 
-**痕迹**：`battle.py:42-63` 的三段注释；
+**痕迹**：`battle.py:44-65` 的三段注释；
 `actor_auto` 里的调用顺序（script_hook → auto_act → ai → 普攻）。
 
 ---

@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import Optional
 
 from . import formulas as _F
+from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from saintess_engine.text import render_via
 
 # ============================================================
@@ -104,7 +105,8 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
                 dmg = max(1, dmg - red)
                 logs.append(render_via(battle, "battle.landing.resist_reduce", "🛡️ 元素抗性减免 {red} 点伤害！",
                                     red=red))
-        except Exception:
+        except Exception as _e:
+            _diag(battle, "deal_damage · 免疫/弱点/抗性", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # 免疫/弱点/抗性异常不阻断落地
     # N9.13 数值修正钩子：taken_calc（承伤者视角减伤乘区）——装配层乘区扩展动作
     # 改 battle._fire_ctx["mult"]（沸血全减伤/death_dance 减伤等条件减伤）
@@ -119,14 +121,16 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
         _m = 1.0 if _raw_m is None else float(_raw_m)
         if _m != 1.0:
             dmg = max(1, int(dmg * _m))
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "deal_damage · 修正钩子", _e)          # 审计 P-44：不再静默（行为不变）
         pass  # 修正钩子异常不阻断落地
     # N7.5a 承伤乘区（易伤：被打更疼）——target["_dmg_taken_mult"]>1 生效
     try:
         _dtm = float(target.get("_dmg_taken_mult", 0) or 0)
         if _dtm > 1.0:
             dmg = max(1, int(dmg * _dtm))
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "deal_damage", _e)          # 审计 P-44：不再静默（行为不变）
         pass
     # N-B9 状态承伤放大（2026-09-11 接线）：持有者身上**状态声明的「每层承伤 +N%」**——
     #   对称 `stat_scale`（stats.py 那边的每层面板折算，一个改面板、一个改承伤）。
@@ -147,7 +151,8 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
                 _bscale += float(_sc) * _n
         if _bscale > 0:
             dmg = max(1, int(dmg * (1.0 + _bscale)))
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "deal_damage · 状态乘区", _e)          # 审计 P-44：不再静默（行为不变）
         pass  # 状态乘区异常不阻断落地
     # N10-B6 闪避（actor 承伤 roll）：dodge 面板值 cap40%，闪避成功 → 本次承伤免伤。
     # 引擎零知识：dodge 是面板数值字段；乘算合成上限与旧 _roll_dodge 对齐。
@@ -155,7 +160,8 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     try:
         if _roll_dodge(battle, target, logs):
             return 0
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "deal_damage · 闪避", _e)          # 审计 P-44：不再静默（行为不变）
         pass  # 闪避异常不阻断战斗
     # defending 减伤（防御姿态；N10-B2 v178 E6 方向性防御：攻击技能自带 defend_reduce
     # 覆盖默认 0.5——如风暴之眼 0.8 = 防御挡 80% 只受 20%）
@@ -172,7 +178,8 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     if dmg_kind and dmg > 0:
         try:
             dmg = _apply_taken_reductions(battle, target, dmg, dmg_kind, logs)
-        except Exception:
+        except Exception as _e:
+            _diag(battle, "deal_damage · 免伤", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # 免伤异常不阻断落地
     # N-B12 「受击打醒」数据化（2026-09-11 接线）：原实现**硬编码 key="sleep"**
     #   ——游戏名词进了引擎（违反「引擎零内容知识」），而数据侧的 `wake_on_hit: True`
@@ -187,7 +194,8 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
                 if isinstance(_ef_wake.get(_wk), dict) and (_sdef_w(_wk) or {}).get("wake_on_hit"):
                     _ef_wake.pop(_wk, None)
                     logs.append(render_via(battle, "battle.landing.woken", "💥 目标被攻击惊醒！"))
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "deal_damage · 打醒", _e)          # 审计 P-44：不再静默（行为不变）
         pass  # 打醒异常不阻断落地
     # 出招窗口的打断**不**由「受到主动伤害」触发（T15 §0 D15 第 2 条）：普通伤害照常
     # 结算，只是不取消前摇；控制类效果由内容侧挂引擎 `interrupt` 动作显式打断
@@ -202,7 +210,8 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             from .effect_triggers import fire as _fire
             _fire(battle, "on_taken", {"actor": target, "target": target,
                                        "source": source, "dmg": real}, logs)
-        except Exception:
+        except Exception as _e:
+            _diag(battle, "deal_damage · 事件源", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # 事件源异常不阻断落地
     return real
 
@@ -234,7 +243,8 @@ def _lv_pressure(battle, source: Optional[dict], target: dict, dmg: int) -> int:
             return max(1, int(dmg * max(0.30, mult)))
         elif diff < 0:
             return max(1, int(dmg * (1.02 ** min(-diff, 50))))
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_lv_pressure", _e)          # 审计 P-44：不再静默（行为不变）
         pass
     return dmg
 
@@ -259,7 +269,8 @@ def _roll_dodge(battle, target: dict, logs: list) -> bool:
             logs.append(render_via(battle, "battle.landing.dodged", "💨 {name} 闪避了攻击！",
                                 name=target.get('name', '目标')))
             return True
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_roll_dodge", _e)          # 审计 P-44：不再静默（行为不变）
         pass
     return False
 
@@ -300,7 +311,8 @@ def _apply_taken_reductions(battle, target: dict, dmg: int, dmg_kind: str,
                 dmg = max(1, dmg - red)
                 logs.append(render_via(battle, "battle.landing.block_reduce", "🛡️ 格挡！减免 {red} 点伤害！",
                                     red=red))
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_apply_taken_reductions", _e)          # 审计 P-44：不再静默（行为不变）
         pass
     return max(1, dmg)
 
@@ -335,7 +347,8 @@ def _apply_death_guard(battle, target: dict, logs: list) -> bool:
         logs.append(render_via(battle, "battle.landing.death_guard", "✨ {name} 濒死意志触发，保住了性命！",
                             name=target.get('name', '目标')))
         return True
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_apply_death_guard", _e)          # 审计 P-44：不再静默（行为不变）
         return False
 
 
@@ -390,7 +403,8 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
                 from .effect_triggers import fire as _fire
                 _fire(battle, "on_kill", {"actor": source,
                                           "target": target, "dmg": _real}, logs)
-            except Exception:
+            except Exception as _e:
+                _diag(battle, "_apply_damage · 事件源", _e)          # 审计 P-44：不再静默（行为不变）
                 pass  # 事件源异常不阻断落地
     else:
         logs.append(render_via(battle, "battle.landing.damage", "💥 {name} 受到 {dmg} 点伤害！",
@@ -460,7 +474,8 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
             _fire(battle, "on_heal", {"actor": target, "target": target,
                                       "source": source, "amount": _real,
                                       "overflow": _overflow}, logs)
-        except Exception:
+        except Exception as _e:
+            _diag(battle, "heal_actor · 事件源", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # 事件源异常不阻断落地
     return _real
 
@@ -510,6 +525,7 @@ def _apply_heal_mods(target: dict, amount: int, logs: list, text=None) -> int:
                 heal = max(0, int(heal * (1 - cut2)))
                 logs.append(render_via(holder, "battle.landing.heal_wound", "🩸 重伤：治疗量 -{pct}%！",
                                     pct=int(cut2 * 100)))
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_apply_heal_mods", _e)          # 审计 P-44：不再静默（行为不变）
         pass
     return max(0, heal)

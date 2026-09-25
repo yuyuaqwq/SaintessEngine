@@ -6,7 +6,7 @@
 把 `actor["triggers"][event]` 里的效果声明交给效果系统执行。
 **事件名是引擎协议（封闭集合 `EVENTS`），事件里挂什么是你的游戏名词。**
 
-入口：`effect_triggers.fire`（`effect_triggers.py:61`）；事件名全集：`EVENTS`（`effect_triggers.py:52`）。
+入口：`effect_triggers.fire`（`effect_triggers.py:63`）；事件名全集：`EVENTS`（`effect_triggers.py:53`）。
 
 ## 为什么要有事件总线
 
@@ -27,7 +27,7 @@
 if not event or event not in EVENTS:
     return                       # 静默忽略，不抛
 ```
-（`effect_triggers.py:64-65`）
+（`effect_triggers.py:66-67`）
 
 写错事件名不会报错，只是永不触发。`EVENTS` 是**单行元组**，原因是覆盖率工具按行 trace，
 多行续行会永久漏记（`effect_triggers.py:46-47` 注释）。
@@ -38,7 +38,7 @@ if not event or event not in EVENTS:
 if logs is None or not getattr(battle, "sides", None):
     return
 ```
-（`effect_triggers.py:66-68`）
+（`effect_triggers.py:67-69`）
 
 `logs` 可以是空 list，但不能是 `None`。没有 `sides` 的「非战斗上下文」里调用是安全的空转。
 
@@ -54,7 +54,7 @@ for acts in battle.sides.values():
         if not actor_alive(a) and a is not subject:
             continue
 ```
-（`effect_triggers.py:81` 与 `:83-90`）
+（`effect_triggers.py:83` 与 `:83-90`）
 
 **为什么**：如果不过滤，同阵营其他人身上挂的装备特效会被全局广播误触发。
 `None` = 无主体事件（典型：`battle_start` 全体触发）。
@@ -64,7 +64,7 @@ for acts in battle.sides.values():
 - **主体死亡也执行**：`on_death` 的死者自己的声明照样跑（死亡遗言类效果）。
   判据是 `a is subject` 那一支。
 - **有些事件故意不带 `actor`**：`act_done` 只放 `ctx["acted"]`，让效果侧自己判敌我
-  （`battle.py:566-568` 注释：`randuin`/`ice_vein` 靠它监听「敌对 actor 行动」叠减速）。
+  （`battle.py:581-583` 注释：`randuin`/`ice_vein` 靠它监听「敌对 actor 行动」叠减速）。
 
 ### 4. `_owner` 注入
 
@@ -84,7 +84,7 @@ _e2 = dict(_e); _e2.setdefault("_owner", a)
 ctx.setdefault("_event", event)
 battle._fire_ctx = ctx
 ```
-（`effect_triggers.py:85-86`）
+（`effect_triggers.py:87-88`）
 
 这是**乘区型扩展动作改数值的通道**：内容侧动作把 `battle._fire_ctx["mult"]` 乘一下，
 引擎在该事件的 fire 返回后读回：
@@ -95,10 +95,10 @@ _m = float((getattr(battle, "_fire_ctx", {}) or {}).get("mult", 1.0) or 1.0)
 if _m != 1.0:
     total = max(1, int(total * _m))
 ```
-（`actions.py:422-428`，同款出现在 `landing.py:79-90` 的 `taken_calc`、
-`actions.py:651-715` 的 `heal_calc`、`schedule.py:577-591` 的 `dot_calc`）
+（`actions.py:436-443`，同款出现在 `landing.py:81-92` 的 `taken_calc`、
+`actions.py:674-744` 的 `heal_calc`、`schedule.py:583-599` 的 `dot_calc`）
 
-⚠️ **它是单槽、覆盖式、不落盘**（`effect_triggers.py:83-84` 注释）：
+⚠️ **它是单槽、覆盖式、不落盘**（`effect_triggers.py:85-86` 注释）：
 单线程同步 fire 所以成立；**别在异步/多线程里依赖它**。`dot_calc` 广播后
 `_fire_ctx` 会被后续 fire 覆盖——所以读 `mult` 必须**紧跟在自己的 fire 之后**。
 
@@ -119,8 +119,8 @@ battle._fire_ctx = _prev_ctx        # ← 广播后还原，否则同批次后�
 
 ### 6. 容错：全链路吞异常
 
-- 单个 actor 的声明异常 → `continue`，其他源照跑（`effect_triggers.py:107-109`）
-- 战斗级观察者 `on_event` 异常 → 吞（`effect_triggers.py:116-117`）
+- 单个 actor 的声明异常 → `continue`，其他源照跑（`effect_triggers.py:109-111`）
+- 战斗级观察者 `on_event` 异常 → 吞（`effect_triggers.py:117-118`）
 
 ## ctx 约定
 
@@ -130,7 +130,7 @@ battle._fire_ctx = _prev_ctx        # ← 广播后还原，否则同批次后�
 |---|---|
 | `actor` | **事件主体**（`on_death`=死者；`dot_tick`=受跳者；`buff_expire`=buff 持有者；`turn_start`/`act_begin`/`act_cast`=行动者；`skill_hit`/`attack_hit`/`crit`/`dmg_calc`=攻击者；`on_taken`/`on_heal`/`taken_calc`/`heal_calc`=承伤者/被治疗者） |
 | `target` | **效果的作用目标**（`skill_hit`=被打者；`on_taken`=受击者；`on_heal`=被治疗者） |
-| `caster` | 效果的施放方。**缺省 = 声明者自己**（`effect_triggers.py:74-76, 105`） |
+| `caster` | 效果的施放方。**缺省 = 声明者自己**（`effect_triggers.py:76-78, 105`） |
 | `info` | 技能 dict（可选） |
 | `dmg` / `amount` / `real` / `overflow` | 数值（可选，各事件不同） |
 | `source` | 攻击方（`on_taken` / `taken_calc` / `interrupt` 有） |
@@ -140,7 +140,7 @@ battle._fire_ctx = _prev_ctx        # ← 广播后还原，否则同批次后�
 
 **关键推理**：「caster 缺省 = 声明者自己」使「受击自我强化」这类效果不需要显式施放方。
 `fire` 调用时是 `apply_effects(battle, caster if caster is not None else a, target, ...)`
-（`effect_triggers.py:109`）——`a` 就是声明者。
+（`effect_triggers.py:111`）——`a` 就是声明者。
 
 各事件的完整 ctx 字段表 → [../reference/events.md](../reference/events.md)。
 
@@ -156,7 +156,7 @@ actor["triggers"][event]
    → ACTIONS_HANDLERS[动词](battle, caster, target, params, logs)
 ```
 
-`apply_effects`（`effects.py:166`）里的两条通用规则：
+`apply_effects`（`effects.py:167`）里的两条通用规则：
 
 1. **概率 roll**：`eff["chance"]` 存在时 `random() >= chance` 就跳过（`effects.py:184-190`）
 2. **参数合并**：`_merge_params` 让调用方参数优先于映射默认（`effects.py:154-163`）
@@ -168,7 +168,7 @@ actor["triggers"][event]
 | **引擎有 fire 点位（23）** | `battle_start` `turn_start` `act_begin` `act_cast` `skill_hit`※ `attack_hit`※ `crit` `on_taken` `on_heal` `on_kill` `on_death` `dot_tick` `dot_calc` `on_act_consume` `on_hit_consume` `buff_expire` `threshold` `dmg_calc` `taken_calc` `heal_calc` `act_done` `interrupt` `time_advance` |
 | **⚠️ 引擎无点位（3，必须上层驱动）** | `phase` `player_low` `pv_broken` |
 
-※ `skill_hit` / `attack_hit` 的 fire 点位用变量选事件名（`actions.py:467`：
+※ `skill_hit` / `attack_hit` 的 fire 点位用变量选事件名（`actions.py:486`：
 `ev = "attack_hit" if info.get("_basic") else "skill_hit"`），静态 grep 不到字面量。
 
 精确点位（`文件:行号`）与每个事件的 ctx 字段见 [../reference/events.md](../reference/events.md)。

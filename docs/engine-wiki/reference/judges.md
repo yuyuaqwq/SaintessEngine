@@ -142,7 +142,7 @@ def _has_effect_ok(actor, judge):          # class_mech_proc.py:2120
 ## 成本判据（第三个独立谓词集）
 
 `bonus.cost` 的 `when` 走的是**引擎侧**的 `_cost_judge_hit`
-（`actions.py:205-222`），只认 3 个键，且语义完全不同：
+（`actions.py:209-226`），只认 3 个键，且语义完全不同：
 
 | 键 | 判据 |
 |---|---|

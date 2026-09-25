@@ -8,7 +8,7 @@
 > （`compile` / `validate` / `unknown_name` / `mount` / `purge` / `events_of`）
 > + `compile_rows` / `mount`（模块级入口）。
 > 一句话：**把「行表 → `{事件名: [载荷, …]}` → 幂等写进宿主容器」抽成扩展包形状**；
-> 事件名取自战斗包的事件全集（`EVENTS`，见 `extends/ext_combat/battle/effect_triggers.py:52`），
+> 事件名取自战斗包的事件全集（`EVENTS`，见 `extends/ext_combat/battle/effect_triggers.py:53`），
 > 去重键 / 写策略 / 未知名策略 / 载荷全部由调用方给，**引擎零游戏知识**。
 > **不进 battle 门面**：内容侧走子模块直取（`from ext_combat.battle.declarations import Compiler`）。
 

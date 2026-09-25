@@ -66,7 +66,7 @@ for _also in (cfg.get("also") or []):
 ```
 
 写入：`bonus.cap[cap_key] += add`（`add` 取 `passive.add` 或 `cfg.add`，**只累加正数**，
-`:2008-2018`）。消费者是扩展包 `effects._cap_of`（`extends/ext_combat/battle/effects.py:72`）。
+`:2008-2018`）。消费者是扩展包 `effects._cap_of`（`extends/ext_combat/battle/effects.py:74`）。
 
 ⚠️ `cap_key` 缺省 = `proc` 名本身（`:2010`）。所以 `proc` 名 ≠ 资源 key 时必须写 `cap_key`。
 
@@ -89,7 +89,7 @@ for _also in (cfg.get("also") or []):
 | 无 `when` 且 `mp_mult > 0` | `bonus.cost["mp_pct"] += passive.mp_mult` |
 
 ⚠️ 只读 `passive.mp_mult` 一个字段（**不读 `mp_flat` / `res`**）。消费者是扩展包
-`actions._skill_pay_of`（`extends/ext_combat/battle/actions.py:273`）。
+`actions._skill_pay_of`（`extends/ext_combat/battle/actions.py:285`）。
 `cost` 域因为无 `event`，下方 `if not d.get("type"): continue` 自然拦截（`:2063-2064`）。
 
 ## `agg`：聚合族

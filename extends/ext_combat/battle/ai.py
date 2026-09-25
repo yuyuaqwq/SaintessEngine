@@ -20,6 +20,7 @@
   缺省 when={}                恒真
 """
 from __future__ import annotations
+from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 
 
 # ============================================================
@@ -59,7 +60,8 @@ def normalize_ai(actor: dict) -> dict:
     if chance is not None:
         try:
             new_ai["skill_chance"] = float(chance)
-        except Exception:
+        except Exception as _e:
+            _diag(None, "normalize_ai", _e)          # 审计 P-44：不再静默（行为不变）
             pass
     actor["ai"] = new_ai
     return new_ai
@@ -132,7 +134,8 @@ def _skill_castable(battle, actor: dict, skill_ref: str) -> bool:
     try:
         from .actions import _skill_usable
         return bool(_skill_usable(battle, actor, info, None))
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_skill_castable", _e)          # 审计 P-44：不再静默（行为不变）
         return False
 
 
@@ -166,7 +169,8 @@ def eval_when(battle, actor: dict, when: dict) -> bool:
             elif k == "round_mod":
                 try:
                     n, r = int(v[0]), int(v[1])
-                except Exception:
+                except Exception as _e:
+                    _diag(battle, "eval_when", _e)          # 审计 P-44：不再静默（行为不变）
                     return False
                 if not (int(actor.get("act_count", 0) or 0) % n == r):
                     return False
@@ -176,7 +180,8 @@ def eval_when(battle, actor: dict, when: dict) -> bool:
             else:
                 return False  # 未知谓词 → 不命中（宁缺毋滥，防拼写漂移）
         return True
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "eval_when", _e)          # 审计 P-44：不再静默（行为不变）
         return False
 
 

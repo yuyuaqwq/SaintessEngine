@@ -14,6 +14,7 @@ import random
 from typing import Optional
 
 from saintess_engine import config as _cfg
+from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from . import game_config as _GC
 from . import stats as S
 from .actors import actor_alive
@@ -39,7 +40,8 @@ def resolve_basic_skill(class_name: Optional[str]) -> dict:
         bs = fn(class_name) if fn is not None else None
         if isinstance(bs, dict) and bs.get("name") and (bs.get("exprs") or bs.get("formula")):
             return dict(bs)
-    except Exception:
+    except Exception as _e:
+        _diag(None, "resolve_basic_skill", _e)          # 审计 P-44：不再静默（行为不变）
         pass
     fb = _cfg.get_hook("basic_fallback")
     if isinstance(fb, dict) and fb:
@@ -97,14 +99,16 @@ def do_skill(battle, ctx) -> list:
                         _cdm = min(_cdm, float(_cm))
             if _cdm < 1.0:
                 cd = max(1, int(cd * _cdm))
-        except Exception:
+        except Exception as _e:
+            _diag(battle, "do_skill · cd 修正", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # cd 修正异常不阻断
         actor.setdefault("cooldown", {})[info.get("name", ctx.skill_name or "?")] = _now_of(battle) + cd
     # ---- N8 事件：施放瞬间（扣费/冷却后、结算前；主体=施法者）----
     try:
         from .effect_triggers import fire as _fire
         _fire(battle, "act_cast", {"actor": actor, "target": ctx.target, "info": info}, logs)
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "do_skill", _e)          # 审计 P-44：不再静默（行为不变）
         pass
     # ---- 4. kind 分派 ----
     if kind == _kind("heal"):
@@ -246,7 +250,8 @@ def _bonus_cost_of(actor: dict) -> dict:
     try:
         _c = ((actor or {}).get("bonus") or {}).get("cost")
         return _c if isinstance(_c, dict) else {}
-    except Exception:
+    except Exception as _e:
+        _diag(None, "_bonus_cost_of", _e)          # 审计 P-44：不再静默（行为不变）
         return {}
 
 
@@ -265,7 +270,8 @@ def _cost_judge_hit(judge, info: dict) -> bool:
         for _kw in (judge.get("name_contains") or []):
             if _kw and _kw in _nm:
                 return True
-    except Exception:
+    except Exception as _e:
+        _diag(None, "_cost_judge_hit", _e)          # 审计 P-44：不再静默（行为不变）
         return False
     return False
 
@@ -284,7 +290,8 @@ def _skill_pay_of(actor: dict, info: dict) -> dict:
     try:
         for _k, _v in (cost.get("res") or {}).items():
             res_disc[str(_k)] = float(_v or 0)
-    except Exception:
+    except Exception as _e:
+        _diag(None, "_skill_pay_of", _e)          # 审计 P-44：不再静默（行为不变）
         pass
     for _w in (cost.get("when") or []):
         if not isinstance(_w, dict) or not _cost_judge_hit(_w.get("judge"), info):
@@ -431,7 +438,8 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
         _m = 1.0 if _raw_m is None else float(_raw_m)
         if _m != 1.0:
             total = max(1, int(total * _m))
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_single_target_pipeline · 修正钩子", _e)          # 审计 P-44：不再静默（行为不变）
         pass  # 修正钩子异常不阻断战斗
     if total <= 0:
         return logs
@@ -444,7 +452,8 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
         try:
             _settle_lifesteal(battle, actor, total, info.get("kind", ""), logs,
                               magi_part=magi_part, skill_info=info, skill_lv=lv)
-        except Exception:
+        except Exception as _e:
+            _diag(battle, "_single_target_pipeline · 吸血结算", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # 吸血结算异常不阻断战斗（落地已发生）
     # N9.8 出手附伤（trinity thunder 段等）：主伤害落完后按 atk × pct 结算一段
     # 独立附加伤害（参数化零名词——数值/标签全来自 buff hit 子键声明）。
@@ -471,7 +480,8 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
         if is_crit:
             _fire(battle, "crit", {"actor": actor, "target": target,
                                    "info": info, "dmg": total}, logs)
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_single_target_pipeline · 事件源", _e)          # 审计 P-44：不再静默（行为不变）
         pass  # 事件源异常不阻断战斗
     return logs
 
@@ -515,7 +525,8 @@ def _consume_hit_buffs(battle, actor: dict, logs: list) -> dict:
         try:
             from .effect_triggers import fire as _fire
             _fire(battle, "on_hit_consume", {"actor": actor, "key": key}, logs)
-        except Exception:
+        except Exception as _e:
+            _diag(battle, "_consume_hit_buffs", _e)          # 审计 P-44：不再静默（行为不变）
             pass
         ef.pop(key, None)
     return out
@@ -653,7 +664,8 @@ def _settle_lifesteal(battle, actor: dict, dmg_total: int, kind: str, logs: list
             try:
                 spct = _GC.formulas().skill_lifesteal_pct(skill_info, skill_lv)
                 heal += int(dmg_total * min(float(spct), 0.30))
-            except Exception:
+            except Exception as _e:
+                _diag(battle, "_settle_lifesteal", _e)          # 审计 P-44：不再静默（行为不变）
                 pass
         if heal <= 0:
             return
@@ -663,7 +675,8 @@ def _settle_lifesteal(battle, actor: dict, dmg_total: int, kind: str, logs: list
         heal_actor(battle, actor, heal, logs)
         logs.append(render_via(battle, "battle.actions.lifesteal", "🩸 吸血：回复 {heal} 点生命！",
                             heal=heal))
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_settle_lifesteal · 吸血", _e)          # 审计 P-44：不再静默（行为不变）
         pass  # 吸血异常不阻断战斗（伤害已落地）
 
 
@@ -696,7 +709,8 @@ def _do_heal(battle, ctx, actor, info, logs) -> list:
         hpv = min(float(st.get("heal_power", 0) or 0), 0.5)
         if hpv > 0:
             heal = int(heal * (1 + hpv))
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_do_heal", _e)          # 审计 P-44：不再静默（行为不变）
         pass
     # v181.M-R2e B2：heal_calc 乘区钩子（对齐 dmg_calc N9.13 模式）——装配层乘区
     # 扩展动作改 battle._fire_ctx["mult"] 累乘（内容侧按资源档位挂 heal_mult 等乘区）。
@@ -713,7 +727,8 @@ def _do_heal(battle, ctx, actor, info, logs) -> list:
         _m = 1.0 if _raw_m is None else float(_raw_m)
         if _m != 1.0:
             heal = max(1, int(heal * _m))
-    except Exception:
+    except Exception as _e:
+        _diag(battle, "_do_heal · 修正钩子", _e)          # 审计 P-44：不再静默（行为不变）
         pass  # 修正钩子异常不阻断战斗
     if heal <= 0:
         return logs
@@ -770,7 +785,8 @@ def _heal_amount(st: dict, actor: dict, info: dict, lv: int) -> int:
                     else:
                         hv += st.get("matk", 0) * fmult + fflat
             return int(hv)
-        except Exception:
+        except Exception as _e:
+            _diag(None, "_heal_amount", _e)          # 审计 P-44：不再静默（行为不变）
             return 0
     if info.get("hp_pct"):
         return int(actor.get("max_hp", 0) * float(info.get("hp_pct", 0)) * _GC.formulas().skill_power_mult(lv, info))
@@ -857,7 +873,8 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
                     if tgt is not None:
                         break
             _ae(battle, actor, tgt, _efs(info, lv), logs)
-        except Exception:
+        except Exception as _e:
+            _diag(battle, "_do_buff · mech 落地", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # mech 落地异常不阻断增益
     logs.append(render_via(battle, "battle.actions.skill_cast", "你施展【{name}】！",
                         name=info.get('name', ctx.skill_name or '技能')))

@@ -70,7 +70,7 @@
 
 ## 判据在参数：`apply` 的五种形态
 
-这是理解声明系统最关键的一节。`act_apply`（`effects.py:327`）按**参数**分流：
+这是理解声明系统最关键的一节。`act_apply`（`effects.py:336`）按**参数**分流：
 
 ```
 params 里有什么                         →  写出的条目形态
@@ -86,10 +86,10 @@ hit（dict）                           →  {stacks:1, expire, hit}      出手
 以上都没有                             →  {stacks:1, expire}           纯状态
 ```
 
-（`effects.py:348-473`，逐支的注释与日志文案都在那一段）
+（`effects.py:352-479`，逐支的注释与日志文案都在那一段）
 
 `op="add"` 与 `op="mul"` 的区别是**有没有 `stat`**：面板增益的 `op` 是面板算子且必带
-`stat`，所以走快照分支（`effects.py:409-412` 注释）。
+`stat`，所以走快照分支（`effects.py:420-423` 注释）。
 
 ## `EFFECT_RULES`：任何 key 都可以有规则，也可以没有
 
@@ -100,13 +100,13 @@ hit（dict）                           →  {stacks:1, expire, hit}      出手
 
 | 字段 | 谁读它 |
 |---|---|
-| `cap` | `effects._cap_of`（`effects.py:59`）← 叠层 clamp 的**唯一收敛点** |
+| `cap` | `effects._cap_of`（`effects.py:61`）← 叠层 clamp 的**唯一收敛点** |
 | `stat_scale` | `stats._apply_effects`（`stats.py:60`）面板折算 |
 | `debuff_scale` | ✅ **引擎消费**（`landing.deal_damage`，2026-09-11 接线）：Σ(每层系数 × stacks) → 承伤 ×(1+Σ)，与 `stat_scale` 对称。`hunt_mark`/`soul_mark`/`curse` 的「每层承伤 +N%」现生效；`target["_dmg_taken_mult"]`（`landing.py`）仍是无状态来源的固定乘区 |
-| `panel` | `effects.act_apply` 快照分支（`effects.py:459-471`） |
-| `consume.mode` | `effects.act_apply` 控制分支（`effects.py:351-354`）+ `Battle.act` 的控制消费（`battle.py:464-491`） |
-| `period` | `schedule._settle_time_effects`（`schedule.py:475-483`） |
-| `cleanse` / `period` / `on=="target"` | `effects.act_cleanse`（`effects.py:612-621`） |
+| `panel` | `effects.act_apply` 快照分支（`effects.py:465-477`） |
+| `consume.mode` | `effects.act_apply` 控制分支（`effects.py:355-358`）+ `Battle.act` 的控制消费（`battle.py:478-505`） |
+| `period` | `schedule._settle_time_effects`（`schedule.py:478-486`） |
+| `cleanse` / `period` / `on=="target"` | `effects.act_cleanse`（`effects.py:625-634`） |
 | `cd_mult` | `actions.do_skill` 冷却设置（`actions.py:90-98`，取多态最小） |
 | `negative` | **内容侧**负面种数计数（`class_mech_proc.py:767`），引擎不读 |
 
@@ -134,12 +134,12 @@ trig.setdefault("dmg_calc", []).append(
 
 | 路径 | 谁翻译 | 什么时候 |
 |---|---|---|
-| 技能 `effect` 字段 / `mech` 字段 | `apply_effects`（`effects.py:166`） | 命中后 / 施放时 |
+| 技能 `effect` 字段 / `mech` 字段 | `apply_effects`（`effects.py:167`） | 命中后 / 施放时 |
 | `actor["triggers"][事件]` 里的 dict | 同上（`fire` → `apply_effects`） | 事件点位 |
 | `triggers` 里的 dict 的 `action` 字段 | **跳过名词翻译**，直通 `ACTIONS_HANDLERS` | 同上 |
 
 第三条是内容侧扩展动作的入口：`{"action": "passive_dmg_mult", ...}` 不会去查
-`EFFECT_ACTIONS`（`effects.py:198-202`：`act_name = act.get("action") or etype`，
+`EFFECT_ACTIONS`（`effects.py:200-204`：`act_name = act.get("action") or etype`，
 然后直接取 handler）。所以「事件挂点」写的是**动词名**，「技能数据」写的是**名词名**。
 
 ## 相关
