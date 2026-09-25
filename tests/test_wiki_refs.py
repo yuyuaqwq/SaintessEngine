@@ -36,7 +36,10 @@
   的文件（如 `class_mech_proc.py`、`battle_rules.py`、`game/content_rules/apply.py`）；
   那些不在框架仓，属预期。带路径的引用按**尾部路径**解析，不退化到 basename
   （否则 `game/content_rules/apply.py` 会被糊到框架仓的示例包 → 误报越界）。
-- 纯行号无符号线索的引用跳过（无法判定，不猜）。
+- 纯行号无符号线索的引用跳过（无法判定，不猜）。**但**带「本小节标题写了文件名」
+  （`### `effects.py``）+ 表格行里有符号名 的引用**不跳**：2026-09-25 起补了第二档，
+  用标题补上下文后照 `file.py:NNN` 同判（硬失效=空行/越界 → 阻断）。补这一档前
+  实测 67 行里 17 行早已指向空行，而门禁一直绿（真盲区）。
 """
 import os
 import subprocess

@@ -130,6 +130,11 @@ def main(argv=None) -> int:
     store = SQLiteStore(args.db)
     adapter = CLIAdapter(store, seed=args.seed, echo_tlog=not args.quiet)
     host = Host(adapter, args.package, scenario=scenario, seed=args.seed,
+                # ★ 2026-09-25（引擎 E2b 起）：引擎**不再自带**守卫拦截文案 —— 这两句属内容，
+                #   必须由宿主声明。不声明、而命令又用了内置 `player` / `battle` 守卫 ⇒
+                #   真触发时抛 `EngineNotConfigured`（骨架这里给的是中性示例句，接自己的游戏时换掉）。
+                register_hint="未找到你的角色档 —— 请先创建角色。",
+                battle_hint="你现在不在战斗中。",
                 example_command=args.example_command or None, echo_battle=not args.quiet)
     pkg = host.boot()
     print("== 宿主骨架 · CLI ==", flush=True)

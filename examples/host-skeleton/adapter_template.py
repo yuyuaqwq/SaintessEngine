@@ -10,7 +10,10 @@
     from adapter_template import PlatformAdapter          # 你的实现
     from store_sqlite import SQLiteStore
     host = Host(PlatformAdapter(bot=..., store=SQLiteStore("players.db")),
-                package_dir="<包目录>", scenario=..., seed=None)
+                package_dir="<包目录>", scenario=..., seed=None,
+                # ★ E2b 起引擎不带守卫文案：这两句必须由宿主声明（属内容，写你自己的口气）
+                register_hint="未找到你的角色档 —— 请先创建角色。",
+                battle_hint="你现在不在战斗中。")
     host.boot(); host.serve_forever()                     # 或在你的事件回调里调 host.handle(ctx)
 
 平台给的常见差异（都在适配器里吸收，骨架不感知）

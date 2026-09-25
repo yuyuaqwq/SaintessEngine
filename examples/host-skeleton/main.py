@@ -300,6 +300,10 @@ def demo_bind_package(root: str, *, inject=None) -> dict:
     package_dir = write_bind_demo_package(root)
     adapter = _DemoAdapter()
     host = Host(adapter, package_dir, inject=inject,           # ← inject 透传给引擎 Host
+                # ★ E2b 起引擎不带守卫文案：宿主必须声明（属内容）。合成包没声明内置守卫，
+                #   这里给中性示例句；接自己的游戏时换成你自己的口气。
+                register_hint="未找到你的角色档 —— 请先创建角色。",
+                battle_hint="你现在不在战斗中。",
                 example_command=_DISABLE_EXAMPLE)              # 让合成包自己的处理器接管
     pkg = host.boot()
     host.handle({"uid": "demo-1", "group_id": None, "text": DEMO_COMMAND, "raw": DEMO_COMMAND})

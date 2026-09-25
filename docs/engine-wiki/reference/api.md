@@ -186,14 +186,14 @@ Battle.from_state(st, *, text=None)   # battle.py:676（classmethod）→ serial
 
 | 函数 | 位置 | 语义 |
 |---|---|---|
-| `make_actor(uid, name, side, kind="monster", human_controlled=False, class_name=None, level=1, equipment=None, skills=None, learned_skills=None, auto_act=None, **stats)` | `:58` | 造同构 actor；额外键透传；播种全部战斗状态键 |
-| `ActCtx(caster, action="attack", skill_name=None, info=None, target=None, target_side=None, scope="single")` | `:19` | 行动上下文 dataclass |
-| `actor_alive(actor)` / `actor_dead(actor)` | `:151` / `:156` | `hp > 0` |
-| `effects_of(actor)` | `:160` | 读 `effects` 容器（非 dict → `{}`） |
-| `actor_ext(actor)` | `:168` | 读 `ext`（惰性播种） |
-| `actor_side_of(battle, actor)` | `:178` | 查阵营（以 `battle.sides` 权威，`actor.side` 兜底） |
-| `hostile_sides(battle, side)` | `:193` | 敌对阵营名列表（**S2 公开 API**） |
-| `hostile_actors(battle, side)` | `:206` | 敌对阵营存活 actor |
+| `make_actor(uid, name, side, kind="monster", human_controlled=False, class_name=None, level=1, equipment=None, skills=None, learned_skills=None, auto_act=None, **stats)` | `:60` | 造同构 actor；额外键透传；播种全部战斗状态键 |
+| `ActCtx(caster, action="attack", skill_name=None, info=None, target=None, target_side=None, scope="single")` | `:20` | 行动上下文 dataclass |
+| `actor_alive(actor)` / `actor_dead(actor)` | `:153` / `:158` | `hp > 0` |
+| `effects_of(actor)` | `:162` | 读 `effects` 容器（非 dict → `{}`） |
+| `actor_ext(actor)` | `:170` | 读 `ext`（惰性播种） |
+| `actor_side_of(battle, actor)` | `:180` | 查阵营（以 `battle.sides` 权威，`actor.side` 兜底） |
+| `hostile_sides(battle, side)` | `:195` | 敌对阵营名列表（**S2 公开 API**） |
+| `hostile_actors(battle, side)` | `:208` | 敌对阵营存活 actor |
 
 ### `effects.py`
 
@@ -201,18 +201,18 @@ Battle.from_state(st, *, text=None)   # battle.py:676（classmethod）→ serial
 |---|---|---|
 | `ACTION_HANDLERS` | `:90` | 动词注册表（dict，全局单表） |
 | `register_action(key)` | `:96` | 装饰器：注册动词 |
-| `resolve_actions(name)` | `:107` | 名词 → 动作列表（查 `EFFECT_ACTIONS`；找不到按动词处理；都没有 → `[]`） |
-| `apply_effects(battle, caster, target, effects, logs)` | `:137` | **执行效果列表**（含 chance roll + 参数合并） |
-| `apply_action(battle, caster, target, action, params, logs)` | `:180` | 便捷包装 |
-| `effects_from_skill(info, lv, caster_side_is_player=True)` | `:188` | 技能 `mech`/`mech2` → effect 列表（第三个参数**函数体从未使用**） |
-| `norm_stack` / `cap_of` | `:80` / `:81` | 见门面表 |
-| 动词 `act_apply` | `:269` | `apply` |
-| 动词 `act_consume` | `:406` | `consume` |
-| 动词 `act_shield` | `:433` | `shield` |
-| 动词 `act_cleanse` / `act_cleanse_all` | `:479` / `:507` | `cleanse` / `cleanse_all` |
-| 动词 `act_heal` | `:515` | `heal` |
-| 动词 `act_interrupt` | `:552` | `interrupt` |
-| 动词 `act_damage` | `:570` | `damage` |
+| `resolve_actions(name)` | `:136` | 名词 → 动作列表（查 `EFFECT_ACTIONS`；找不到按动词处理；都没有 → `[]`） |
+| `apply_effects(battle, caster, target, effects, logs)` | `:166` | **执行效果列表**（含 chance roll + 参数合并） |
+| `apply_action(battle, caster, target, action, params, logs)` | `:211` | 便捷包装 |
+| `effects_from_skill(info, lv, caster_side_is_player=True)` | `:219` | 技能 `mech`/`mech2` → effect 列表（第三个参数**函数体从未使用**） |
+| `norm_stack` / `cap_of` | `:83` / `:81` | 见门面表 |
+| 动词 `act_apply` | `:332` | `apply` |
+| 动词 `act_consume` | `:520` | `consume` |
+| 动词 `act_shield` | `:553` | `shield` |
+| 动词 `act_cleanse` / `act_cleanse_all` | `:604` / `:507` | `cleanse` / `cleanse_all` |
+| 动词 `act_heal` | `:646` | `heal` |
+| 动词 `act_interrupt` | `:685` | `interrupt` |
+| 动词 `act_damage` | `:713` | `damage` |
 
 ### `landing.py`
 
@@ -223,24 +223,24 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 # landing.py:435
 ```
 
-两个都是**落地唯一收口**。内部子函数（无外部引用）：`_lv_pressure`（`:146`）、
-`_roll_dodge`（`:178`）、`_apply_taken_reductions`（`:202`）、`_apply_death_guard`（`:237`）、
-`_apply_damage`（`:270`）、`_apply_heal_mods`（`:367`）。
+两个都是**落地唯一收口**。内部子函数（无外部引用）：`_lv_pressure`（`:219`）、
+`_roll_dodge`（`:252`）、`_apply_taken_reductions`（`:202`）、`_apply_death_guard`（`:237`）、
+`_apply_damage`（`:356`）、`_apply_heal_mods`（`:367`）。
 
 ### `schedule.py`
 
 | 符号 | 位置 | 语义 |
 |---|---|---|
-| `action_time(spd, base=None) -> float` | `:92` | **转发内容侧时间模型**（`time_model_fn`）；`base=None` → 默认行动类别的基准耗时 |
-| `initial_ct(spd, base=None) -> float` | `:70` | 开局第一动等待 = `action_time` |
-| `next_ct(battle, actor, base=None) -> float` | `:75` | ⚠️ **无调用方**（实际推进走 `_after_act`） |
+| `action_time(spd, base=None) -> float` | `:94` | **转发内容侧时间模型**（`time_model_fn`）；`base=None` → 默认行动类别的基准耗时 |
+| `initial_ct(spd, base=None) -> float` | `:94` | 开局第一动等待 = `action_time` |
+| `next_ct(battle, actor, base=None) -> float` | `:110` | ⚠️ **无调用方**（实际推进走 `_after_act`） |
 | `action_base_of(action) -> float` | `:120` | **转发内容侧基准表**（`action_base_fn`）；未知类别回落 `DEFAULT_ACTION` |
 | `recover_time(spd, base=None) -> float` | `:137` | **转发内容侧第二段时间模型**（`recover_model_fn`）；`base=None` → 默认行动类别的第二段基准 |
 | `recover_base_of(action) -> float` | `:129` | **转发内容侧第二段基准表**（`recover_base_fn`）；未知类别回落 `DEFAULT_ACTION` |
-| `advance(battle, logs, max_steps=200) -> ("player", actor) \| ("over", None)` | `:100` | 推进到下一个决策点 |
-| `_after_act(battle, actor, action)` | `:172` | 行动后推 ct |
-| `_advance_time(battle, dt, logs)` | `:185` | 加时钟 → 结算 → 广播 `time_advance` |
-| `_settle_time_effects(battle, logs)` | `:204` | effects 到期 / shields 到期 / 周期跳 |
+| `advance(battle, logs, max_steps=200) -> ("player", actor) \| ("over", None)` | `:284` | 推进到下一个决策点 |
+| `_after_act(battle, actor, action)` | `:361` | 行动后推 ct |
+| `_advance_time(battle, dt, logs)` | `:375` | 加时钟 → 结算 → 广播 `time_advance` |
+| `_settle_time_effects(battle, logs)` | `:414` | effects 到期 / shields 到期 / 周期跳 |
 
 常量：`DEFAULT_ACTION = "attack"`（`:32`，通用类别键：未知动作类别回落到它那一项）。
 **包内已无** `CAST_ATK` / `CAST_SKILL` / `CAST_DEFEND` / `SPD_REF` 等时间/基准常量 ——
@@ -268,20 +268,20 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 ### `config.py`
 
 见 [../concepts/config-injection.md](../concepts/config-injection.md) 的 17 hook 表。
-公开函数：`EngineNotConfigured`（`:20`）· `set_config`（`:83`）· `load_game_rules`（`:89`）·
-`register_defaults_loader`（`:95`）· `register_hook_provider`（`:101`）·
+公开函数：`EngineNotConfigured`（`:20`）· `set_config`（`:83`）· `load_game_rules`（`:106`）·
+`register_defaults_loader`（`:124`）· `register_hook_provider`（`:101`）·
 `load_game_defaults`（`:107`，兼容 shim）· `get_effect_actions`（`:119`）·
-`get_effect_rules`（`:124`）· `state_def`（`:129`）· `set_hook`（`:142`）· `mount`（`:148`）·
-`get_hook`（`:154`）· `unconfigured(name, default)`（`:185`）· `formulas()`（`:244`）·
+`get_effect_rules`（`:124`）· `state_def`（`:134`）· `set_hook`（`:142`）· `mount`（`:148`）·
+`get_hook`（`:154`）· `unconfigured(name, default)`（`:185`）· `formulas()`（`:184`）·
 `kind_of(name)`（`:254`）· `skill_info_of`（`:262`）· `skill_by_key`（`:270`）·
 `monster_skill_of`（`:278`）· `mech_cfg`（`:286`）· `bar_prefix`（`:294`）。
-`strict`（`:71`）与 `_NullFormulas`（`:191`）是模块级属性。
+`strict`（`:95`）与 `_NullFormulas`（`:191`）是模块级属性。
 
 ### `effect_triggers.py`
 
 ```python
 EVENTS: tuple        # effect_triggers.py:53 —— 26 个事件名
-fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
+fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 ```
 
 `fire` 的完整语义（subject 过滤 / `_owner` 注入 / `_fire_ctx` / 容错）见
@@ -300,10 +300,10 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 | 函数 | 位置 | 语义 |
 |---|---|---|
 | `to_state(battle)` | `:36` | Battle → dict |
-| `from_state(st)` | `:59` | dict → Battle |
-| `state_to_json(state)` | `:117` | `json.dumps(..., ensure_ascii=False, default=str)` |
-| `json_to_state(raw)` | `:121` | `json.loads` |
-| `_STRIP_KEYS` | `:33` | `{"_skill_index"}` |
+| `from_state(st)` | `:57` | dict → Battle |
+| `state_to_json(state)` | `:122` | `json.dumps(..., ensure_ascii=False, default=str)` |
+| `json_to_state(raw)` | `:126` | `json.loads` |
+| `_STRIP_KEYS` | `:31` | `{"_skill_index"}` |
 
 ### `actions.py`
 
@@ -328,9 +328,9 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 
 | 函数 | 位置 | 语义 |
 |---|---|---|
-| `normalize_ai(actor)` | `:27` | 旧格式 `{weights, skill_chance}` → 新格式，写回 `actor["ai"]` |
-| `eval_when(battle, actor, when)` | `:116` | 守卫谓词（AND） |
-| `resolve_ai_move(battle, actor)` | `:151` | 选动作（`priority` / `weighted`），返回 `then` 或 `None`（回落） |
+| `normalize_ai(actor)` | `:30` | 旧格式 `{weights, skill_chance}` → 新格式，写回 `actor["ai"]` |
+| `eval_when(battle, actor, when)` | `:155` | 守卫谓词（AND） |
+| `resolve_ai_move(battle, actor)` | `:192` | 选动作（`priority` / `weighted`），返回 `then` 或 `None`（回落） |
 
 守卫谓词全集：`self_hp_lt` · `self_hp_gt` · `hostile_lowest_hp_lt` · `round_mod: [N, R]` ·
 `cd_ok`。**未知谓词 → `False`**（`ai.py:181`，防拼写漂移）。`when={}` 恒真。

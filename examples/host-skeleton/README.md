@@ -59,7 +59,10 @@ python examples/host-skeleton/adapter_cli.py \
 **一个 dict** 把包运行期要用的宿主对象交进来：
 
 ```python
-host = Host(adapter, package_dir, inject={"store": my_store})   # 或 load_stack(root, inject=...)
+host = Host(adapter, package_dir, inject={"store": my_store},   # 或 load_stack(root, inject=...)
+            # ★ 引擎 E2b 起**不再自带**守卫拦截文案 ⇒ 宿主必须声明这两句（属内容）：
+            register_hint="未找到你的角色档 —— 请先创建角色。",
+            battle_hint="你现在不在战斗中。")
 ```
 
 * **加载期**：引擎在 import 包命令模块（`content/commands.py`）**之前**调 `bind_host(**inject)`
@@ -109,7 +112,10 @@ host = Host(adapter, package_dir, inject={"store": my_store})   # 或 load_stack
 2. **抄三函数**：照 `adapter_template.py` 填 `recv` / `load_player` / `save_player` / `say`
    （平台差异都在适配器里吸收：@ 标记、群/私聊、时间戳、原始事件）。
 3. **存档**：直接 `from store_sqlite import SQLiteStore`，或换成你的存储（形状仍是普通 dict）。
-4. **起宿主**：`host = Host(adapter, pkg_dir, seed=...); host.boot(); host.serve_forever()`；
+4. **起宿主**：`host = Host(adapter, pkg_dir, seed=..., register_hint=..., battle_hint=...)`；
+   ★ 那两个 `*_hint` 必须给（引擎 E2b 起不带玩家可见文案，命令用到内置 `player`/`battle`
+   守卫时缺声明会抛 `EngineNotConfigured` —— 见 §三 的用法与 `adapter_template.py`）。
+   `host.boot(); host.serve_forever()`；
    也可以在你自己的事件回调里直接调 `host.handle(ctx)`（一条消息一次）。
 5. **验证**：`python tests/test_host_skeleton.py` + `python tests/test_host_contract.py`，看是否全绿。
 

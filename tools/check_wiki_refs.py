@@ -8,10 +8,16 @@
 用法：
     python tools/check_wiki_refs.py            # 全量报告
     python tools/check_wiki_refs.py --fix-hint # 只列有建议值的
+    python tools/check_wiki_refs.py --fix-bare # 只修「纯行号」档的硬失效（空行/越界）
+    python tools/check_wiki_refs.py --fix-bare-all # 连「语义存疑」档的纯行号也改到符号定义行
 退出码：0 = 无 drift；1 = 有 drift（可接 CI）。
 
 判据边界（有意保守）：
 - 只对「文档行里出现符号名」的引用做判定；纯行号无符号名 → 跳过（无法判定）。
+- **纯行号档（2026-09-25 补）**：表格里 `| `符号` | `:123` | … |` 这种写法不带文件名，
+  文件名写在**本小节标题**上（`### `effects.py``）⇒ 用标题补上下文后同样参与判定
+  （硬失效=空行/越界 → 阻断；其余 → 语义存疑）。补这一档前实测 67 行里 17 行早已失效
+  而门禁全绿。
 - 支持 `def`/`class`/赋值 三类符号；同名多处 → 取离引用行最近的一处。
 - 文件按 basename 解析，同名多份（engine 与 content 都有 skills.py 等）用 basename
   索引 + 目录偏好（saintess_engine/ 优先），找不到 → 报 unresolved 而不猜。
@@ -35,6 +41,12 @@ WIKI = os.path.join(ROOT, "docs", "engine-wiki")
 FIX_ALLOW = set()
 
 REF_RE = re.compile(r"([\w/]+\.py):(\d+)(?:-(\d+))?")
+# ★ 2026-09-25 补的**第二档**：表格里有大量「纯行号」写法（`| `符号` | `:123` | 语义 |`），
+#   文件名不写在引用里、而是写在**本小节的标题**上（`### `effects.py``）。旧版工具只认
+#   `file.py:NNN` ⇒ 这一档整片判不到（实测 125 行；其中 97 行指向空行/越界 = 早就失效了，
+#   而门禁一直绿）。现在：用标题里的文件名补齐上下文，硬失效（空行/越界）同样算 drift。
+SECTION_RE = re.compile(r"^#{2,4}\s+`?([\w./]+\.py)`?\s*$")
+BARE_RE = re.compile(r"(?<![\w/.\-]):(\d{1,5})(?![0-9])")
 # 跨仓标记：wiki 里在引用前写「游戏仓」/「游戏侧」即声明该文件不在框架仓
 CROSSREPO_RE = re.compile(r"(游戏仓|游戏侧)")
 
@@ -154,14 +166,20 @@ def _related(txt: str, names) -> bool:
 def main() -> int:
     fixed_hint_only = "--fix-hint" in sys.argv
     fix = "--fix" in sys.argv
+    fix_bare = "--fix-bare" in sys.argv
+    #: `--fix-bare-all`：连「语义存疑」那一档的纯行号也改到**该符号的定义行**
+    #   （api.md 的符号表第二列就是「符号在文件里的位置」⇒ 定义行是对的落点）。
+    fix_bare_all = "--fix-bare-all" in sys.argv
     # --fix 只在「本次改动过的引擎文件」上自动改写（避免误改判不准的老引用）
     allow = [a.split("=", 1)[1] for a in sys.argv if a.startswith("--fix-files=")]
     global FIX_ALLOW
     FIX_ALLOW = set(allow[0].split(",")) if allow else set()
     fixups = {}
+    bare_fixups = {}     # {(wpath, 行号): [(旧片段, 新片段), ...]} —— 纯行号档的定点改写
     index = _build_index()
     symcache = {}
     drifts, unresolved, unverified, checked = [], [], [], 0
+    bare_checked, bare_unverified = 0, []
     crossrepo = []   # 显式标注「游戏仓」的引用：本仓解析不到属预期，只提示
     for root, dirs, fs in os.walk(WIKI):
         for f in sorted(fs):
@@ -169,7 +187,63 @@ def main() -> int:
                 continue
             wpath = os.path.join(root, f)
             wrel = os.path.relpath(wpath, WIKI).replace(os.sep, "/")
+            cur_bare = None          # 本小节标题里写的文件名（供「纯行号」引用补上下文）
             for ln, text in enumerate(open(wpath, encoding="utf-8").read().splitlines(), 1):
+                msec = SECTION_RE.match(text.strip())
+                if msec:
+                    cur_bare = msec.group(1)
+                if not REF_RE.search(text):
+                    # ---- 第二档：纯行号（`| `符号` | `:NNN` | …`），文件名看小节标题 ----
+                    if cur_bare:
+                        bname = os.path.basename(cur_bare)
+                        cands = index.get(bname)
+                        tgt = None
+                        if cands:
+                            if "/" in cur_bare:
+                                tail = cur_bare.lstrip("./").replace("\\", "/")
+                                for c in cands:
+                                    if c.replace("\\", "/").endswith(tail):
+                                        tgt = c
+                                        break
+                            else:
+                                tgt = cands[0]
+                        if tgt:
+                            if tgt not in symcache:
+                                symcache[tgt] = _symbol_spans(tgt)
+                            syms = symcache[tgt]
+                            names = []
+                            for mm in CAND_IDENT_RE.finditer(text):
+                                nm = mm.group(1).split(".")[-1]
+                                if nm in syms:
+                                    names.append(nm)
+                            for mm in CAND_CALL_RE.finditer(text):
+                                if mm.group(1) in syms:
+                                    names.append(mm.group(1))
+                            # 一行可能有多个纯行号（如 `| `norm_stack` / `cap_of` | `:80` / `:81` |`）
+                            for bm in (BARE_RE.finditer(text) if names else ()):
+                                bare_checked += 1
+                                n = int(bm.group(1))
+                                txt = _line_text(tgt, n)
+                                if not txt.strip():
+                                    # 硬失效（= 旧档 ① 同判据：空行/越界，零假阳性）
+                                    sug = min((syms[nm][0][0] for nm in names), key=lambda x: abs(x - n))
+                                    drifts.append((wrel, ln, f"{cur_bare}:{n}", names[0],
+                                                   f"—(越界/空行) 建议 :{sug}", text.strip()[:90]))
+                                    if fix_bare and sug:
+                                        bare_fixups.setdefault((wpath, ln), []).append(
+                                            (":%d" % n, ":%d" % sug))
+                                elif any(lo <= n <= hi for nm in names for lo, hi in syms[nm]) \
+                                        or _related(txt, names):
+                                    pass
+                                else:
+                                    sug = min((syms[nm][0][0] for nm in names),
+                                              key=lambda x: abs(x - n))
+                                    if fix_bare_all and sug:
+                                        bare_fixups.setdefault((wpath, ln), []).append(
+                                            (":%d" % n, ":%d" % sug))
+                                    bare_unverified.append((wrel, ln, f"{cur_bare}:{n}", names[0],
+                                                            txt.strip()[:70]))
+                    continue
                 for m in REF_RE.finditer(text):
                     base, n = m.group(1), int(m.group(2))
                     end = int(m.group(3)) if m.group(3) else n
@@ -242,8 +316,10 @@ def main() -> int:
                         continue
                     unverified.append((wrel, ln, f"{base}:{n}", names[0], txt.strip()[:70]))
                     continue
-    print(f"wiki 行号引用自检：可判定 {checked} 处 → drift {len(drifts)} 处"
-          f"；语义存疑 {len(unverified)} 处；跨仓 {len(crossrepo)} 处；未解析 {len(unresolved)} 处")
+    print(f"wiki 行号引用自检：可判定 {checked} 处（另纯行号档 {bare_checked} 处） → "
+          f"drift {len(drifts)} 处"
+          f"；语义存疑 {len(unverified)} + {len(bare_unverified)} 处；"
+          f"跨仓 {len(crossrepo)} 处；未解析 {len(unresolved)} 处")
     if unresolved:
         print("\n-- 未解析文件（basename 不在仓库，且非已知游戏仓路径 → 建议核对） --")
         for r in unresolved[:15]:
@@ -259,13 +335,30 @@ def main() -> int:
         for wrel, ln, base, n in crossrepo:
             print(f"  {wrel}:{ln} → {base}:{n}")
 
-    if unverified:
+    if unverified or bare_unverified:
         print(f"\n-- 语义存疑（行号有效，但检查器无法自动判定它是否在讲该符号）"
-              f"{len(unverified)} 处 --")
+              f"{len(unverified) + len(bare_unverified)} 处 --")
         for u in unverified[:20]:
             print(f"  {u[0]}:{u[1]}  {u[2]}  该行: {u[4]}")
-        if len(unverified) > 20:
-            print(f"  … 另 {len(unverified) - 20} 处")
+        for u in bare_unverified[:20]:
+            print(f"  {u[0]}:{u[1]}  {u[2]}(纯行号)  该行: {u[4]}")
+        total_u = len(unverified) + len(bare_unverified)
+        if total_u > 20:
+            print(f"  … 另 {total_u - 20} 处")
+    if bare_fixups:
+        total = 0
+        for (wpath, ln), subs in sorted(bare_fixups.items()):
+            t = open(wpath, encoding="utf-8").read()
+            lines = t.split("\n")
+            line = lines[ln - 1]
+            for old, new in subs:
+                if old in line and (":%s" % new.lstrip(":")) not in line:
+                    line = line.replace(old, new, 1)
+                    total += 1
+            lines[ln - 1] = line
+            open(wpath, "w", encoding="utf-8", newline="").write("\n".join(lines))
+        print(f"\n-- --fix-bare/--fix-bare-all 已改写 {total} 处纯行号"
+              f"（硬失效必改；「语义存疑」档仅在给 --fix-bare-all 时改到符号定义行）--")
     if fixups:
         total = 0
         for wpath, subs in fixups.items():
