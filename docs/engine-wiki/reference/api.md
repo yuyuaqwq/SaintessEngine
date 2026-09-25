@@ -364,18 +364,22 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 
 ### `expr/__init__.py` — 安全表达式解释器（**引擎件**）
 
-| 函数 | 位置 |
+| 函数 / 名字 | 位置 |
 |---|---|
-| `compile_expr(expr) -> code` | `:48` |
-| `eval_expr(code, vars_=None) -> float` | `:148` |
-| `build_vars(stats, player_lv=0, skill_lv=0, target_max_hp=..., base=...)` | `:192` |
-| `expr_or(value, fallback)` | `:221`（⚠️ 无外部引用） |
-| `translate_expr(expr)` | `:248` |
-| `ExprError` | `:44` |
-| `VARIABLE_WHITELIST` | `:20` |
+| `compile_expr(expr) -> code` | `:143` |
+| `eval_expr(code, vars_=None) -> float` | `:249` |
+| `build_vars(stats, player_lv=0, skill_lv=0, target_max_hp=..., base=...)` | `:326` |
+| `expr_or(value, fallback)` | `:347`（⚠️ 无外部引用） |
+| `translate_expr(expr)` | `:366` |
+| `declared_vars()` · `variable_names()` · `labels_of()` | `:84` · `:111` · `:356` |
+| `_DEFAULT_EXPR_VARS` | `:45` |
+| `ExprError` | `:139` |
 
-无第三方依赖：手写 tokenizer + 调度场（`_TOKEN_RE` `:25`、`_PREC` `:34`）。
-变量白名单在 `VARIABLE_WHITELIST`。中文变量名别名表 `_VAR_CN`（`:231`）。
+无第三方依赖：手写 tokenizer + 调度场（`_TOKEN_RE` `:116`、`_PREC` `:125`）。
+★ E4（2026-09-25）：**变量表**（变量名 / 取值来源 / 显示名）由内容侧经 hook `expr_vars_fn`
+声明（形状见 [../concepts/config-injection.md](../concepts/config-injection.md)）；引擎侧只留读口
+`declared_vars()` / `variable_names()` / `labels_of()`，未声明 ⇒ 默认表 `_DEFAULT_EXPR_VARS`
+（= 引擎历史那一份，逐条相同 ⇒ 行为一字不变）。
 
 ### `formation/` — 站位 / 射程纯函数（扩展包 `ext_combat`，`from ext_combat import formation`）
 
@@ -455,10 +459,10 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :57
 | `schedule.next_ct` | `schedule.py:47` | 有定义、无调用方 |
 | `state_effects.stat_scale_of` | `state_effects.py:18` | 仅测试引用 |
 | `formation.reachable_units` | `formation/__init__.py:28` | 零外部引用 |
-| `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |
+| `expr.expr_or` | `expr/__init__.py:347` | 零外部引用 |
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
 | ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 不实现） |
-| `config.set_hook` | `config.py:131` | 零外部引用（都走 `mount`） |
+| `config.set_hook` | `config.py:139` | 零外部引用（都走 `mount`） |
 | `effects.resolve_actions` | `effects.py:136` | 零外部引用（`effects` 内部调用） |
 | `ai.eval_when` | `ai.py:158` | 零外部引用（`resolve_ai_move` 内部调） |
 | ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |

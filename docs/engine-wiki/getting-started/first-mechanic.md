@@ -44,7 +44,7 @@ def pact_heal(battle, caster, target, params, logs):
 
 游戏数据/技能表里写的是**名词**（`"blood_pact"`），引擎靠 `EFFECT_ACTIONS`
 把它翻译成**动词动作列表**。用 `config.set_config("effect_actions", {...})` 挂表
-（`config.py:103`）。
+（`config.py:111`）。
 
 ```python
 from saintess_engine import config
