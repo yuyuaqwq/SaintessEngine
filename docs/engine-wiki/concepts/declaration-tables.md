@@ -70,7 +70,7 @@
 
 ## 判据在参数：`apply` 的五种形态
 
-这是理解声明系统最关键的一节。`act_apply`（`effects.py:340`）按**参数**分流：
+这是理解声明系统最关键的一节。`act_apply`（`effects.py:335`）按**参数**分流：
 
 ```
 params 里有什么                         →  写出的条目形态
@@ -86,10 +86,10 @@ hit（dict）                           →  {stacks:1, expire, hit}      出手
 以上都没有                             →  {stacks:1, expire}           纯状态
 ```
 
-（`effects.py:356-485`，逐支的注释与日志文案都在那一段）
+（`effects.py:351-480`，逐支的注释与日志文案都在那一段）
 
 `op="add"` 与 `op="mul"` 的区别是**有没有 `stat`**：面板增益的 `op` 是面板算子且必带
-`stat`，所以走快照分支（`effects.py:426-429` 注释）。
+`stat`，所以走快照分支（`effects.py:421-424` 注释）。
 
 ## `EFFECT_RULES`：任何 key 都可以有规则，也可以没有
 
@@ -103,10 +103,10 @@ hit（dict）                           →  {stacks:1, expire, hit}      出手
 | `cap` | `effects._cap_of`（`effects.py:64`）← 叠层 clamp 的**唯一收敛点** |
 | `stat_scale` | `stats._apply_effects`（`stats.py:60`）面板折算 |
 | `debuff_scale` | ✅ **引擎消费**（`landing.deal_damage`，2026-09-11 接线）：Σ(每层系数 × stacks) → 承伤 ×(1+Σ)，与 `stat_scale` 对称。`hunt_mark`/`soul_mark`/`curse` 的「每层承伤 +N%」现生效；`target["_dmg_taken_mult"]`（`landing.py`）仍是无状态来源的固定乘区 |
-| `panel` | `effects.act_apply` 快照分支（`effects.py:471-483`） |
-| `consume.mode` | `effects.act_apply` 控制分支（`effects.py:359-362`）+ `Battle.act` 的控制消费（`battle.py:484-511`） |
+| `panel` | `effects.act_apply` 快照分支（`effects.py:466-478`） |
+| `consume.mode` | `effects.act_apply` 控制分支（`effects.py:354-357`）+ `Battle.act` 的控制消费（`battle.py:484-511`） |
 | `period` | `schedule._settle_time_effects`（`schedule.py:566-574`） |
-| `cleanse` / `period` / `on=="target"` | `effects.act_cleanse`（`effects.py:631-640`） |
+| `cleanse` / `period` / `on=="target"` | `effects.act_cleanse`（`effects.py:626-635`） |
 | `cd_mult` | `actions.do_skill` 冷却设置（`actions.py:91-99`，取多态最小） |
 | `negative` | **内容侧**负面种数计数（`class_mech_proc.py:767`），引擎不读 |
 

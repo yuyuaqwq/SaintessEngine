@@ -39,7 +39,7 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 | 14 | `on_act_consume` | `battle.py:501`（`act`） | `actor`, `tag` | 行动者 | 被控跳过行动（`mode="skip"`）时 |
 | 15 | `on_hit_consume` | `actions.py:545`（`_consume_hit_buffs`） | `actor`, `key` | 出手者 | 一次性出手 buff 被消费时 |
 | 16 | `buff_expire` | `schedule.py:618`（`_settle_time_effects`） | `actor`, `target`, `key` | 条目持有者 | `effects` 条目到期被删时（原 `buff_expire` 名保留兼容） |
-| 17 | `threshold` | `effects.py:461`（`act_apply` 叠层分支） | `actor`, `key`, `value` | 条目持有者 | 叠层数值变化后（「战意满 10 → 狂暴」类） |
+| 17 | `threshold` | `effects.py:456`（`act_apply` 叠层分支） | `actor`, `key`, `value` | 条目持有者 | 叠层数值变化后（「战意满 10 → 狂暴」类） |
 | 18 | `dmg_calc` | `actions.py:448`（`_single_target_pipeline`） | `actor`, `target`, `dmg`, `is_crit`, `info`, `mult` | 攻击者 | 伤害算出后、落地前（攻击方乘区） |
 | 19 | `taken_calc` | `landing.py:121`（`deal_damage`） | `actor`, `target`, `source`, `dmg`, `mult` | 承伤者 | 承伤修正（承伤方乘区） |
 | 20 | `heal_calc` | `actions.py:745`（`_do_heal`） | `actor`, `target`, `heal`, `info`, `mult` | 施法者 | 治疗量算出后、落地前 |
@@ -47,7 +47,7 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 | 22 | `phase` | ⚠️ **无引擎点位** | — | — | Boss 阶段转换（上层驱动） |
 | 23 | `player_low` | ⚠️ **无引擎点位** | — | — | 玩家低血量（上层驱动） |
 | 24 | `pv_broken` | ⚠️ **无引擎点位** | — | — | 破防（上层驱动） |
-| 25 | `interrupt` | `landing.py:210`（伤害打断蓄力）/ `effects.py:703`（`act_interrupt` 动词） | `actor`, `target`, `source` | 被打断者 | 读条被打断 |
+| 25 | `interrupt` | `landing.py:210`（伤害打断蓄力）/ `effects.py:698`（`act_interrupt` 动词） | `actor`, `target`, `source` | 被打断者 | 读条被打断 |
 | 26 | `time_advance` | `schedule.py:495`（`_advance_time`） | `dt`, `now` | **无**（广播） | 时钟推进（结算**之后**广播） |
 
 ### 关于 `skill_hit` / `attack_hit` 的「静态 grep 不到」

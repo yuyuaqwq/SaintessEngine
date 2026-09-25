@@ -203,16 +203,15 @@ Battle.from_state(st, *, text=None)   # battle.py:688（classmethod）→ serial
 | `register_action(key)` | `:96` | 装饰器：注册动词 |
 | `resolve_actions(name)` | `:139` | 名词 → 动作列表（查 `EFFECT_ACTIONS`；找不到按动词处理；都没有 → `[]`） |
 | `apply_effects(battle, caster, target, effects, logs)` | `:169` | **执行效果列表**（含 chance roll + 参数合并） |
-| `apply_action(battle, caster, target, action, params, logs)` | `:214` | 便捷包装 |
-| `effects_from_skill(info, lv, caster_side_is_player=True)` | `:222` | 技能 `mech`/`mech2` → effect 列表（第三个参数**函数体从未使用**） |
+| `effects_from_skill(info, lv, caster_side_is_player=True)` | `:217` | 技能 `mech`/`mech2` → effect 列表（第三个参数**函数体从未使用**） |
 | `norm_stack` / `cap_of` | `:86` / `:87` | 见门面表 |
-| 动词 `act_apply` | `:335` | `apply` |
-| 动词 `act_consume` | `:520` | `consume` |
-| 动词 `act_shield` | `:556` | `shield` |
-| 动词 `act_cleanse` / `act_cleanse_all` | `:604` / `:607` | `cleanse` / `cleanse_all` |
-| 动词 `act_heal` | `:649` | `heal` |
-| 动词 `act_interrupt` | `:688` | `interrupt` |
-| 动词 `act_damage` | `:716` | `damage` |
+| 动词 `act_apply` | `:330` | `apply` |
+| 动词 `act_consume` | `:518` | `consume` |
+| 动词 `act_shield` | `:551` | `shield` |
+| 动词 `act_cleanse` / `act_cleanse_all` | `:602` / `:636` | `cleanse` / `cleanse_all` |
+| 动词 `act_heal` | `:644` | `heal` |
+| 动词 `act_interrupt` | `:683` | `interrupt` |
+| 动词 `act_damage` | `:711` | `damage` |
 
 ### `landing.py`
 

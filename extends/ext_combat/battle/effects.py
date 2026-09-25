@@ -210,11 +210,6 @@ def apply_effects(battle, caster: dict, target: Optional[dict],
                     continue
 
 
-# 兼容便捷名（旧代码/测试仍可用）
-def apply_action(battle, caster, target, action, params, logs) -> None:
-    apply_effects(battle, caster, target, [dict(action=action, **params)], logs)
-
-
 # ============================================================
 # 兼容层：技能 mech/effect 字段 → 动作/状态列表
 # ============================================================
