@@ -19,7 +19,7 @@ def actor_stats(battle, actor: dict) -> dict:
     """任意 actor 的聚合面板（伤害/防御公式输入）。
 
     内部：
-    - actor 有 class_name → E.player_final_stats + title_bonus + buffs 修正
+    - actor 有 class_name → E.player_final_stats + panel_bonus + buffs 修正
     - 纯怪（无 class_name）→ 直接读 actor 字段 + buffs 修正（对齐旧 _enemy_stats）
     """
     if actor is None:

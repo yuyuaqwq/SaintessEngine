@@ -37,7 +37,7 @@
 | `skill_flat_fn` | `fn() -> dict` | `formulas.skill_flat_value` | `{}` → `float(None)` **TypeError** |
 | `skill_up_fn` | `fn(info) -> dict` | `formulas._skill_up` | `{}` = 无成长配置 |
 | `skill_level_of_fn` | `fn(player, name) -> int` | `formulas.skill_level_of` | 返回 `1`（未升级兜底） |
-| `panel_fn` | `fn(class_name, level, equipment, tier, attributes, evolve_path, title_bonus, race) -> dict` | `stats._player_base_stats`（`stats.py:120-132`） | `{}`（空面板） |
+| `panel_fn` | `fn(class_name, level, equipment, tier, attributes, evolve_path, panel_bonus, race) -> dict` | `stats._player_base_stats`（`stats.py:120-132`） | `{}`（空面板） |
 | `skill_lookup` | 对象（需 `.skill_info(cls, key)` / `.skill_by_key(key)`） | `battle._index_one_actor`（`battle.py:152,137`） | 返回 `None` → 技能索引空 |
 | `monster_skill_fn` | `fn(key) -> dict\|None` | `battle._index_one_actor`（`battle.py:158`） | `None` |
 | `basic_skill_fn` | `fn(class_name) -> dict\|None` | `actions.resolve_basic_skill`（`actions.py:40`） | 回落 `basic_fallback` |

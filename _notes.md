@@ -172,3 +172,57 @@
 
 **已知残余（报备，未动）**：`Battle.__init__` 的 `**kwargs` 仍在（`pet=` / `dmg_mult=`
 等仍被它静默吞）——本批只收 `title_bonus` 这一条，`**kwargs` 的存废另案。
+
+---
+
+## P-1「N10 收口 3」已落（2026-09-26 · 分支 `p1-n10`）：`title_bonus` 全链改名 → `panel_bonus`
+
+**为什么改**：N10 收口 1/2 删掉 battle 级容器与 `**kwargs` 后，剩下的是**同名不同物**：
+`_title_bonus` 这个名指的东西早已不是「称号加成」而是**外部面板增幅**（称号+成就+收藏册，
+v105→v174→N5b4-4 已把模块正名 `stat_bonus`）。本次把「值/键/钩子」四类名字全链收敛到一个名。
+
+**映射（单一真源；token 级替换 + 逐行白名单，96 行落改）**
+
+| 旧 | 新 | 语义 |
+|---|---|---|
+| `saintess_engine/host/shell.py::_title_bonus` | `_panel_bonus` | 外部面板增幅聚合口（真源 `content/stat_bonus.py`） |
+| 包内 `self._title_bonus(gid,qid)`（30 处） | `self._panel_bonus(...)` | 同上 |
+| `player["_title_bonus"]` | `player["_panel_bonus"]` | 运行期玩家 dict 字段（下划线 = 非 DB 列） |
+| 副本 roster 快照 `"title_bonus"` | `"panel_bonus"` | 快照/载荷裸键（与 `class_name`/`hp` 同约定） |
+| `hooks={"title_bonus": …}` / `ctx.hooks.get("title_bonus")` | `"panel_bonus"` | 事件模板钩子键 |
+| `host.title_bonus` / `self.title_bonus`（gm 侧注入属性） | `panel_bonus` | `content/gm.py` |
+| `panel_fn` 第 7 形参（`content/panel.py` / `examples/` / 文档 / 测试 kwarg） | `panel_bonus` | 引擎注入面形参名 |
+| 局部变量 `title_bonus_names` | `titled_bonus_names` | 「带 bonus 的称号名集合」（语义本就如此） |
+
+**不动的（历史/存档契约）**：`stat_bonus` 模块与函数名 · `serialize._deserialize_actor` 的
+actor 级旧键迁移（`stat_bonus`/`title_bonus` → `bonus.panel`）· 冻结文本 `_FROZEN_TEXT` 里的
+旧实现快照 · wiki/`_notes` 的历史叙述。
+
+★ **顺带修掉一个 N10 收口 1 的漏网真缺陷**：`item_templates.py::_battle_cur_max` 原读
+`st.get("title_bonus")` = 引擎旧 `to_state` 那份 **battle 级**副本；收口 1 删键后它静默读成
+`{}` ⇒ **普通战斗的上限重算少了外部增幅**（物品「满血/满蓝」判定会误判）。
+已改为读 actor 自己的容器 `ctx._focus["bonus"]["panel"]`（N5b4-4 唯一容器）。
+
+**门禁**：引擎 `run_all` 96/96 · `ext_reward` 19/19 · wiki `drift 0` · orlandia related 14/14 ·
+consumers 86/86（BASE/NEW 双边）· 8 个冻结门禁全绿（quest **72/72**、store、triggers 89/83、
+wiring 77/66、dialogue、presence 101）· `_u1d2_quest_gen --check` 通过。
+★ 数值不变性：6 场景 + 存档往返 sha **逐字节与改名前一模一样**。
+
+**冻结门禁的「正规推进」（按仓库规矩，非放宽判据）**
+`content/profession_quests.py::settle_daily_quest` 因本次改名由 **E → C**
+（理由写在 `tests/_u1d2_quest_gen.py::CLASS` 注释里：行为逐字不变，只换键名；
+13 064 格冻结网格实测无不一致），并跑 `--emit-live` 刷新 `_PIN["live"]`（只动 2 条 sha）。
+`--check` 需要 base 副本：本次用 git 回溯重建
+（`GWEN_U1D2_BASE_PKG=<临时目录，rev 1be39311，28 段里对上 27/28——与设计基线一致>`）。
+
+★ **部署前置（不写迁移，出 PURGE）**：副本 roster 快照是**入库**的（`battle_state.state`
+里的 `players.<qq_id>`），改名后「在飞的副本局」旧键读不到 ⇒ 部署时先清一次：
+
+```sql
+-- 只清「在飞的副本局」（副本 state 含 players 快照与 inst_id）；野外/PVP 局不受影响
+DELETE FROM battle_state WHERE state LIKE '%"inst_id"%' AND state LIKE '%"title_bonus"%';
+```
+
+★ **部署顺序铁律**：本批引擎与包**必须同批上线**（包先、引擎后）——
+「新包 + 旧引擎」照旧能跑（旧壳仍收旧名与 `**kwargs`），
+「**新引擎 + 旧包**」会 `AttributeError: _title_bonus` / `TypeError: pet=` 当场炸。

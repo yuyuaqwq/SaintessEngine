@@ -209,7 +209,7 @@ class ShellBase(_EngineCommandBase):
     def _stamina_bar(self, player, sep=" "):
         return self._rules().stamina_bar(player, sep)
 
-    def _title_bonus(self, group_id, qq_id):
+    def _panel_bonus(self, group_id, qq_id):
         """外部面板增益聚合（真源 = 包内 `stat_bonus`）。"""
         return self._sub("stat_bonus").stat_bonus(
             group_id, qq_id, self._player(group_id, qq_id) or {})
@@ -217,7 +217,7 @@ class ShellBase(_EngineCommandBase):
     def _rule_fire(self, trigger, group_id, qq_id, player, cur_map, evt=None):
         return self._sub("rule_engine").fire(
             group_id, qq_id, player, cur_map, trigger, evt or {},
-            hooks={"title_bonus": lambda q: self._title_bonus(group_id, q)})
+            hooks={"panel_bonus": lambda q: self._panel_bonus(group_id, q)})
 
     # ---- 摊位标签（逐字 = 原宿主指令壳里的同名静态口）----
     @staticmethod

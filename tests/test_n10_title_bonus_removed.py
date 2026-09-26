@@ -66,14 +66,14 @@ STATS_PY = os.path.join(ROOT, "extends", "ext_combat", "battle", "stats.py")
 
 # ---------------------------------------------------------------- 面板桩
 def _stub_panel_fn(class_name, level, equipment, tier, attributes, evolve_path,
-                   title_bonus, race):
-    """最小 `panel_fn`：基础面板 + 传入的 `title_bonus`（= actor 那份）flat 加值。
+                   panel_bonus, race):
+    """最小 `panel_fn`：基础面板 + 传入的 `panel_bonus`（= actor 那份）flat 加值。
 
     ★ 形参名沿用引擎注入面契约（`config._HOOKS["panel_fn"]` 的注释签名）：内容侧的面板
       公式**本来就叫这个名**，与本任务删掉的「battle 级容器」不是一个东西。
     """
     base = {"max_hp": 500, "atk": 100, "def": 10, "spd": 10, "crit": 0.05}
-    for k, v in (title_bonus or {}).items():
+    for k, v in (panel_bonus or {}).items():
         base[k] = base.get(k, 0) + v
     return base
 

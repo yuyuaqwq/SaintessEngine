@@ -33,7 +33,7 @@ _HOOKS = {
     # skill_level_of / skill_lifesteal_pct / skill_buff_turns / skill_mech_val
     "formulas": None,
     # 玩家职业面板函数：fn(class_name, level, equipment, tier, attributes,
-    #                     evolve_path, title_bonus, race) -> dict
+    #                     evolve_path, panel_bonus, race) -> dict
     "panel_fn": None,
     # 技能表查询对象：.skill_info(class_name, skill_key) / .skill_by_key(key)
     "skill_lookup": None,

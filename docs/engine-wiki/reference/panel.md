@@ -5,7 +5,7 @@
 > 引擎侧只剩通用件，见 `../architecture/boundaries.md`；下文裸文件名与行号都在 `extends/ext_combat/battle/` 下。
 > **可拔插形状**：不配 = 不存在。宿主不装配 `panel_layers_fn` 时，本形状零影响。
 > **为什么建**：`_HOOKS["panel_fn"]` 的**形参就是游戏词汇**
-> （`fn(class_name, level, equipment, tier, evolve_path, title_bonus, race)` —— 实测 8 个位置参数、6/8 是游戏词）
+> （`fn(class_name, level, equipment, tier, evolve_path, panel_bonus, race)` —— 实测 8 个位置参数、6/8 是游戏词）
 > ⇒ 引擎纯度缺陷；且面板聚合本体写在内容侧的 Python 里。
 > 本形状把「有哪些层、每层怎么作用到哪些键」变成**声明**，形状层负责逐键合并 + 钳制 + 归因（原先是引擎里的面板聚合本体，现随包迁出）。
 
