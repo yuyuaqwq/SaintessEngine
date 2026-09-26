@@ -86,9 +86,9 @@ clock · command · container · domains · events · expr · host · log · ses
 ### 构造
 
 ```python
-Battle(btype="monster", sides=None, dmg_mult=1.0, pet=None,
-       st=None, hostile_map=None, target_picker=None, on_event=None,
-       action_override=None, script_hook=None, seed_ct=True, **kwargs)
+Battle(btype="monster", sides=None, hostile_map=None, target_picker=None,
+       on_event=None, action_override=None, script_hook=None, redirect_hook=None,
+       seed_ct=True, text=None)
 ```
 （`battle.py:34-38`）
 
@@ -97,21 +97,26 @@ Battle(btype="monster", sides=None, dmg_mult=1.0, pet=None,
 | `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:239`） |
 | `sides` | `{阵营名: [actor]}`，**唯一入口** | 全包（`ext_combat`） |
 | `hostile_map` | `{side: [敌对 side]}` | `actors.hostile_sides`（`actors.py:202-204`）；缺省 = 除自己外全部阵营 |
-| `dmg_mult` | 全局伤害倍率 | ⚠️ **仅赋值，无消费方**（`battle.py:75`） |
-| `pet` | 宠物数据 | ⚠️ **仅赋值，无消费方**（`battle.py:76`） |
-| `st` | （旧参数） | ⚠️ **仅存在于签名，函数体从未引用** |
 | `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:430-434`） |
 | `on_event` | `callable(battle, event, ctx, logs)`，事件总线尾部观察者 | `effect_triggers.fire`（`effect_triggers.py:117-122`） |
 | `action_override` | `callable(battle, action, actor, skill_name, target) -> (logs, cast)`；接管非内置行动 | `Battle.act`（`battle.py:511-519`） |
 | `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:375-384`） |
+| `redirect_hook` | `callable(battle, victim, guard, amount, dmg_kind) -> bool`；承伤转移是否真由保护者承受 | `landing.deal_damage`（`landing.py:62`）；治疗侧同款见 `heal_redirect_hook`（`landing.py:448`，非构造参数） |
 | `seed_ct` | `True` = 播种初始 ct；`from_state` 传 `False` | `battle.py:95-98` |
-| `**kwargs` | **静默吞掉未知参数** | — |
+| `text` | 文案表（鸭子类型 `render_or(key, default, **slots)`） | `Battle._t`（`battle.py:106`）；不落盘，恢复方重新注入 |
 
 > ⚠️ **N10 收口（2026-09-26）**：构造参数 `title_bonus` 与实例字段 `battle.title_bonus`
 > **已删**（存档里也不再写该键）。外部面板增幅的**唯一**容器是 per-actor
 > `actor["bonus"]["panel"]`（N5b4-4 拍板），由内容侧开战装配写入、随 actor 落盘；
 > `stats._player_base_stats` 只读它，**无 battle 级回落**。
 > 旧档（state 带 `title_bonus` 键）照旧能恢复：未知键被忽略，面板真源本来就在 actor 上。
+>
+> ⚠️ **同一批把 `**kwargs` 也去了**：签名之外的参数此前被 **静默吞掉**，
+> 于是 `Battle(..., title_bonus=…)` / `pet=` / `dmg_mult=` / `st=` 这类「传了但引擎不读」
+> 的实参谁都不报错（v181 世界Boss 的 GM 倍率就是这么静默失效过）。
+> 现在签名即全部 —— 传错名字**当场 TypeError**。原先那几个幽灵参数
+> （`dmg_mult` / `pet` / `st`）从未在本签名里存在过（`**_selfcheck.md` §1.3 记的都是
+> 2026-09-11 删掉的旧字段），本次连同**调用点的实参**一起清掉。
 
 构造期做三件事：拷贝 sides（`:66-69`）→ 建技能索引（`_index_skills`，`:151`）→
 播种 ct（`_seed_ct_one`，`:100`）。

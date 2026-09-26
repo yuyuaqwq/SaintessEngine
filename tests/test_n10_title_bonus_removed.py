@@ -30,6 +30,9 @@
    （`serialize._deserialize_actor` 的 **actor 级旧名迁移** `actor.get("title_bonus")` /
    `actor.pop("title_bonus", None)` 是**另一件事**：那是存档里 actor 自己的旧键，
    与 battle 级容器无关，保留）。
+⑥ **构造签名面（同批收口）**：`Battle.__init__` 不再有 `**kwargs` —— 签名之外的实参
+   **当场 TypeError**。这是把「传了但引擎不读」的静默参（`title_bonus=`/`pet=`/
+   `dmg_mult=`/`st=`）钉死的根因判据：只要 `**kwargs` 回来，静默吞就又成立了。
 
 跑法：`python tests/test_n10_title_bonus_removed.py`；退出码 0 = 全绿 · 1 = 有失败。
 """
@@ -175,6 +178,24 @@ check('`serialize.py` 的 **actor 级**旧名迁移仍在（另一件事，不�
       'actor.get("title_bonus")' in io.open(
           os.path.join(ROOT, "extends", "ext_combat", "battle", "serialize.py"),
           encoding="utf-8").read())
+
+print("\n【5. 构造签名面：无 `**kwargs`，签名之外的实参当场 TypeError】")
+_SIG_NArg = Battle.__init__.__code__.co_argcount     # 只含位置/关键字参数（不含 *args/**kwargs）
+_VARNAMES = Battle.__init__.__code__.co_varnames[:_SIG_NArg]
+check("`Battle.__init__` 形参表无 `kwargs`（`**kwargs` 静默吞已去）",
+      "kwargs" not in Battle.__init__.__code__.co_varnames, str(_VARNAMES))
+for _bad_kw in ({"title_bonus": {"atk": 1}}, {"pet": {}}, {"dmg_mult": 2.0}, {"st": 1}):
+    _name = next(iter(_bad_kw))
+    _hit = None
+    try:
+        Battle("monster", sides={"player": [], "enemy": []}, **_bad_kw)
+    except TypeError as _exc:
+        _hit = str(_exc)
+    check("幽灵参数 %s= 不再被静默吞（当场 TypeError）" % _name,
+          _hit is not None and _name in _hit, "未抛：静默吞回来了")
+check("真参数照旧能传（text= / hostile_map= 不误伤）",
+      Battle("monster", sides={"player": [], "enemy": []},
+             hostile_map={"player": ["enemy"]}, text=None).hostile_map == {"player": ["enemy"]})
 
 print("\n结果：通过 %d / 共 %d" % (passed, passed + failed))
 if failed:

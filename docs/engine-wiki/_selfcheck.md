@@ -110,6 +110,11 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | ~~`Battle.__init__(st=...)`~~ | ~~`battle.py:39`~~ | **已删**（2026-09-11，全仓 0 处传参） |
 | ~~`Battle._cast_ctx` / `_target_ctx`~~ | ~~`battle.py:88-89`~~ | **已删**（2026-09-11） |
 | ~~`Battle._events`~~ | ~~`battle.py:97`~~ | **已删**（2026-09-11） |
+
+> ✅ **2026-09-26 补（N10 收口 2）**：上面三条「调用方在用、引擎没读」的**调用点实参**
+> 也已清干净 —— `Battle.__init__` 的 `**kwargs` 一并删掉（签名即全部），
+> `pet=` / `dmg_mult=` 这类幽灵参数现在**传即 TypeError**；内容侧对应实参全清。
+> 门禁：`tests/test_n10_title_bonus_removed.py` 第 5 节（28/28）。
 | ~~`DEFAULT_CT_WAIT = 2.0`~~ | ~~`battle.py:25`~~ | **已删**（2026-09-11） |
 | ~~`schedule.CAST_ITEM = 1.0`~~ | ~~`schedule.py:29`~~ | **已删**（2026-09-11） |
 | ~~`schedule.HOT_INTERVAL = 1.0`~~ | ~~`schedule.py:36`~~ | **已删**（2026-09-11） |

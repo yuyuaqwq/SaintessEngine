@@ -35,7 +35,7 @@ class Battle:
                  hostile_map: Optional[dict] = None,
                  target_picker=None, on_event=None, action_override=None,
                  script_hook=None, redirect_hook=None, seed_ct: bool = True,
-                 text=None, **kwargs):
+                 text=None):
         """构造战斗。
 
         sides: dict[str, list[actor]] —— 唯一入口。sides["player"] 第一个
