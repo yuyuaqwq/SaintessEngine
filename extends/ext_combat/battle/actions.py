@@ -145,6 +145,38 @@ def _cd_left_of(battle, actor: dict, info: dict) -> float:
     return max(0.0, float(tbl.get(nm, 0) or 0) - now)
 
 
+def _mp_gate_text(gate, battle, actor: dict, info: dict, need_mp: int) -> list:
+    """★ P-51（2026-09-26）「mp 门槛入口」——把内容侧的回执规范成「拦不拦 + 说什么」。
+
+    形状 = 内容侧 hook `mp_gate_fn(battle, actor, info, need_mp)`：
+
+    * `None`                       ⇒ **放行**（不拦、不回）——「这一手可以放」；
+    * 非空 `str` / 非空序列         ⇒ **拦下**，这一段逐字作为回话（挑掉 `None` / 空段）；
+    * 空串 / 空序列 / 别的类型      ⇒ 抛 `EngineNotConfigured`
+      （「声明了就要给得出可判读的结果」——**不静默放过**，也不由引擎替它编一句兜底）。
+
+    引擎**零数值、零玩家文案**：`need_mp` 是内容侧技能表 `mp` 字段经 `_skill_pay_of`
+    折算（含 `bonus.cost` 折扣、floor + 保底 1）后的值 —— 引擎只是把它转述给 hook；
+    比不比、比多少、说什么，全在 hook 里（引擎不认识任何门槛线）。
+    """
+    got = gate(battle, actor, info, need_mp)
+    if got is None:
+        return []
+    if isinstance(got, str):
+        out = [got] if got else []
+    elif isinstance(got, (list, tuple, set, frozenset)):
+        out = [str(x) for x in got if x not in (None, "")]
+    else:
+        raise _cfg.EngineNotConfigured(
+            "mp_gate_fn 的回执形状不对：要 None（放行）或 非空 str/序列（拦下并把这段当回话），"
+            "拿到 %s" % type(got).__name__)
+    if not out:
+        raise _cfg.EngineNotConfigured(
+            "mp_gate_fn 已装配却给不出可判读的回执（空串 / 空序列）—— 拦下就要说得出为什么，"
+            "放行请显式回 None（引擎不替它编一句兜底）。")
+    return out
+
+
 def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
     """技能可用性（冷却 / 核心资源）检查——通用规则，引擎零职业知识。
 
@@ -164,6 +196,10 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
       test_stage5_cooldown.py「再施放被 CD 拦截」）；数值模型 scripts/numeric_lib/player.py:385-387
       按「CD 未结束只能普攻」折算 —— 缺此检查则实机 DPS 比数值模型高 3~5 倍。
     - 范围：**不分身份**（旧引擎在通用技能路径拦截；actor 一视同仁，怪也受同一规则约束）。
+
+    ★ P-51（2026-09-26）：新增一条**可选**的「mp 门槛」入口（内容侧 hook `mp_gate_fn`）——
+      未装配 ⇒ 不拦、不回（与本改动之前逐字节相同）；装配了 ⇒ 拦不拦、说什么全由 hook 定
+      （引擎零数值/零玩家文案，见 `_mp_gate_text`）。
     """
     # ---- 1. 冷却（先于资源：冷却中不重复提示资源文案）----
     left = _cd_left_of(battle, actor, info)
@@ -177,6 +213,18 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
                                 name=info.get('name') or '技能',
                                 left=left))
         return False
+    # ---- 1.5 ★ P-51（2026-09-26）「mp 门槛入口」（内容侧注入 · 引擎零数值/零文案）----
+    #   引擎**不知道「多少算不够」**：判定线与回话全在内容侧 hook（`mp_gate_fn`）。
+    #   未装配 ⇒ 这一整段不存在（不拦、不回 ⇒ 与本改动之前逐字节相同）。
+    #   判据与文案解耦：`logs is None`（AI 静默探测）时照样返回正确判据（与下面核心资源同款）。
+    _gate = _cfg.optional_hook("mp_gate_fn")
+    if _gate is not None:
+        _need_mp = int(_skill_pay_of(actor, info).get("mp") or 0)
+        _say = _mp_gate_text(_gate, battle, actor, info, _need_mp)
+        if _say:
+            if logs is not None:
+                logs.extend(_say)
+            return False
     # ---- 2. 核心资源（仅职业 actor 参与核心资源体系；怪无 res_cost）----
     if not actor.get("class_name"):
         return True

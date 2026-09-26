@@ -102,6 +102,28 @@ _HOOKS = {
     #   ★ 本口走 `optional_hook`（**不**受 `strict` 影响）：fail-closed 由宿主读口自己负责，
     #     否则 strict=False 的默认态就会退回「静默兜底」。
     "route_miss_text_fn": None,
+    # ★ P-51（2026-09-26）「基础回复入口」：按刻（每次时间推进结算）问内容侧
+    #   「这个 actor 这一拍回多少 mp」—— 引擎**零数值、零节奏、零玩家文案**。
+    #   形状 = fn(battle, actor) -> dict | None：
+    #     · `None`                     ⇒ 本拍不回复（引擎什么都不做）；
+    #     · `{"mp": <数>, "text": …}`  ⇒ 回这么多（引擎只做 clamp 到 max_mp 与写回），
+    #       `text`（可省）= 这一拍的回话（str / 序列），逐字进日志。
+    #     · 别的形状 ⇒ 抛 `EngineNotConfigured`（声明了就要给得出可判读的回执）。
+    #   ★ 读口走 `optional_hook`（**不**受 strict 影响）：不配 = 这款游戏没有基础回复
+    #     （引擎连问都不问），不是配置错误。引擎不内置任何回复率 —— 那是编出来的数。
+    "mp_regen_fn": None,
+    # ★ P-51（2026-09-26）「mp 门槛入口」：`actions._skill_usable` 在扣费前问一次
+    #   「这一手放不放」—— 同一条规矩：**引擎不认识任何数值**（多少算不够、比不比，
+    #   全在内容侧），也不带玩家文案。
+    #   形状 = fn(battle, actor, info, need_mp) -> str | 序列[str] | None：
+    #     · `None`         ⇒ **放行**（不拦、不回）；
+    #     · 非空 str / 序列 ⇒ **拦下**（技能不放），这一段逐字作为回话；
+    #     · 空串 / 空序列 / 别的类型 ⇒ 抛 `EngineNotConfigured`（不许静默放过，
+    #       也不由引擎替它编一句兜底）。
+    #   `need_mp` = 内容侧技能表 `mp` 字段经引擎折算（`actions._skill_pay_of`：含
+    #   `bonus.cost` 折扣、floor + 保底 1）后的值 —— 引擎只是转述，不参与判定。
+    #   ★ 读口同样走 `optional_hook`：不配 = 这款游戏不拦 mp（引擎连问都不问）。
+    "mp_gate_fn": None,
 }
 
 # R8：无挂载静默降级开关。

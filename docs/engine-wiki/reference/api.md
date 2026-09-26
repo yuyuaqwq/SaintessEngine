@@ -266,11 +266,11 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 
 ### `config.py`
 
-见 [../concepts/config-injection.md](../concepts/config-injection.md) 的 22 hook 表。
+见 [../concepts/config-injection.md](../concepts/config-injection.md) 的 25 hook 表。
 公开面（引擎侧只剩「注入面 + 严格模式」这几个）：
-`EngineNotConfigured`（`:20`）· `strict`（`:103`）· `set_config`（`:114`）· `get_config`（`:123`）·
-`register_hook_provider`（`:132`）· `set_hook`（`:142`）· `mount`（`:155`）· `get_hook`（`:161`）·
-`unconfigured(name, default)`（`:192`）。
+`EngineNotConfigured`（`:20`）· `strict`（`:134`）· `set_config`（`:145`）· `get_config`（`:154`）·
+`register_hook_provider`（`:163`）· `set_hook`（`:173`）· `mount`（`:186`）· `get_hook`（`:192`）·
+`unconfigured(name, default)`（`:241`）。
 ★ 原先那一串「游戏配置取件面」（`load_game_rules` / `get_effect_rules` / `state_def` /
 `formulas()` / `kind_of` / `monster_skill_of` …）**已随第 7 批搬进扩展包** —— 现在住
 `ext_combat.battle.game_config`（包内写 `from ext_combat.battle import game_config`）。
@@ -389,7 +389,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 | `front_rank(units)` | `:20` |
 | `reachable_units(attacker, units)` | `:28`（⚠️ 无外部引用） |
 | `select_target(attacker, units, threat=None, exclude_uid=None, threat_mode="front")` | `:34` |
-| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一消费者：`actions._deal_aoe`，`battle/actions.py:391`） |
+| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一消费者：`actions._deal_aoe`，`battle/actions.py:404`） |
 | `pick_by_policy(policy, units, threat=None, fallback=None)` | `:122` |
 | `compact(units)` | `:161` |
 | `numbered_units(units)` | `:191` |

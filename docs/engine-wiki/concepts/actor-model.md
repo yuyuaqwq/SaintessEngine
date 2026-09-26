@@ -16,7 +16,7 @@
 - 序列化不需要按类型分派（`serialize._serialize_actor` 对任何 actor 一视同仁，`serialize.py:51`）
 
 代价：**身份信息全靠字段**。要表达「这是 Boss」就写 `is_boss=True` 或 `role="boss"`
-（引擎真读这两个的地方：控制时长减半 `effects.py:383`、DOT 的 `pct_boss` / `boss_pct_mult` 档 `schedule.py:602`、
+（引擎真读这两个的地方：控制时长减半 `effects.py:383`、DOT 的 `pct_boss` / `boss_pct_mult` 档 `schedule.py:658`、
 `is_boss`/`role` 也在部分内容侧判定里被读）。
 
 ## 字段全集
@@ -60,7 +60,7 @@
 | `poi_buff` | any | 透传字段，引擎不读 |
 | `triggers` | `{事件名: [效果 dict]}` | 事件声明（见 [event-bus.md](event-bus.md)） |
 | `act_count` | int | 个体行动计数，`actor_auto` 每动 +1（`battle.py:445`） |
-| `dot_next` / `dot_jumps` | `{key: 数值}` | 周期结算的运行期辅助（`schedule.py:555-556` 惰性建） |
+| `dot_next` / `dot_jumps` | `{key: 数值}` | 周期结算的运行期辅助（`schedule.py:611-612` 惰性建） |
 
 **为什么 `shields` / `cooldown` 不进 `effects`**：它们**不是状态**。
 护盾是「承伤时按值扣减的资源」，冷却键是「还能不能再放」的调度表——

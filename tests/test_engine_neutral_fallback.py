@@ -375,6 +375,148 @@ def test_cast_window_two_phase():
         CFG._hook_provider = provider
         CFG.strict = strict
 
+def test_mp_hooks_p51():
+    """★ P-51（2026-09-26）「mp 两个入口」：基础回复 + 门槛 —— 只加钩子，不填数。
+
+    口径（与 P-54 / 第二段同一条规矩）：
+      · 两个名字**必须在** `config._HOOKS` 里（否则内容侧 `mount` 会被静默丢弃）；
+      · **未装配 ⇒ 与打前逐字节相同**（不拦、不回、不写字段）：本节先钉这一半；
+      · 装配后 ⇒ 新行为可见（拦 / 回 / 回话），且**引擎零数值、零玩家文案**；
+      · 声明了却给不出可判读的回执 ⇒ 抛 `EngineNotConfigured`（不静默放过、不编兜底）。
+    本段挂的是**测试自己的**两个 hook，退出还原。
+    """
+    print("【P-51: mp 基础回复 + mp 门槛两个入口】")
+    from ext_combat.battle import actions as A
+    from ext_combat.battle import schedule as SCH
+
+    _NAMES = ("mp_regen_fn", "mp_gate_fn")
+    saved = {n: CFG._HOOKS.get(n) for n in _NAMES}
+    provider, strict = CFG._hook_provider, CFG.strict
+
+    class _Battle:
+        _now = 10.0
+        sides: dict = {}
+
+    def _actor(mp, max_mp=20, cls="probe_cls"):
+        return {"uid": "p", "name": "甲", "side": "player", "hp": 100, "max_hp": 100,
+                "mp": mp, "max_mp": max_mp, "class_name": cls, "effects": {}}
+
+    def _info(cost=8):
+        return {"name": "盾墙", "kind": "", "mp": cost}
+
+    try:
+        CFG._hook_provider = None
+        CFG.strict = False
+
+        # ---------- ① 两个名字在名单里（不在 ⇒ mount 静默丢弃） ----------
+        check("config._HOOKS 认识两个 mp hook 名",
+              set(_NAMES) <= set(CFG._HOOKS), str(sorted(CFG._HOOKS)))
+
+        # ---------- ② 未装配 ⇒ 不拦（判据与文案都零变化） ----------
+        CFG._HOOKS["mp_gate_fn"] = None
+        bt, a = _Battle(), _actor(0)
+        bt.sides = {"player": [a], "enemy": [{"uid": "e", "hp": 100, "effects": {}}]}
+        lg = []
+        check("未装配：0 mp 放技能**不被拦**（与打前一致）",
+              A._skill_usable(bt, a, _info(8), lg) is True and lg == [], repr(lg))
+        check("未装配：logs=None 的静默探测同样放行（AI 路径）",
+              A._skill_usable(bt, a, _info(8), None) is True)
+
+        # ---------- ③ 未装配 ⇒ 不回（逐字段不动） ----------
+        CFG._HOOKS["mp_regen_fn"] = None
+        lg = []
+        SCH._settle_time_effects(bt, lg)
+        check("未装配：时间推进不回复（mp 逐字不动、日志为空）",
+              a["mp"] == 0 and lg == [], f"mp={a['mp']} logs={lg}")
+
+        # ---------- ④ 装配基础回复 ⇒ 新行为可见（含 clamp / 满血不出话） ----------
+        CFG.mount(mp_regen_fn=lambda battle, actor: {"mp": 3, "text": "你恢复了些许法力。"})
+        lg = []
+        SCH._settle_time_effects(bt, lg)
+        check("装配：按声明回复 3 点 + 逐字用它那句话",
+              a["mp"] == 3 and lg == ["你恢复了些许法力。"], f"mp={a['mp']} logs={lg}")
+        a["mp"], _mx = 19, 20
+        lg = []
+        SCH._settle_time_effects(bt, lg)
+        check("装配：clamp 到 max_mp（19 + 3 → 20）",
+              a["mp"] == 20, f"mp={a['mp']}")
+        lg = []
+        SCH._settle_time_effects(bt, lg)
+        check("装配：已满 ⇒ 不再写值、也不出话（与既有回复段同款）",
+              a["mp"] == 20 and lg == [], f"mp={a['mp']} logs={lg}")
+        CFG.mount(mp_regen_fn=lambda battle, actor: None)
+        a["mp"], lg = 5, []
+        SCH._settle_time_effects(bt, lg)
+        check("装配：回执 None ⇒ 本拍不回复（不写、不响）", a["mp"] == 5 and lg == [])
+        # 引擎零数值反证：回多少完全由内容侧给（同一个 hook 换个数就换个结果）
+        CFG.mount(mp_regen_fn=lambda battle, actor: {"mp": 7})
+        lg = []
+        SCH._settle_time_effects(bt, lg)
+        check("同一场景换声明值 ⇒ 结果跟着变（证明「数」来自内容侧）", a["mp"] == 12)
+        # 没有 mp 字段的 actor（怪 / 第三方包）不被塞新字段（存档面不动）
+        mon = {"uid": "m", "hp": 50, "effects": {}}
+        bt.sides["enemy"] = [mon]
+        SCH._settle_time_effects(bt, [])
+        check("无 mp 字段的 actor 不被写字段（存档面零改动）", "mp" not in mon, str(mon))
+
+        # ---------- ⑤ 装配门槛 ⇒ 蓝不够被拦（且回话来自内容侧） ----------
+        _SEEN = {}
+
+        def _gate(battle, actor, info, need_mp):
+            _SEEN.update({"actor": actor.get("uid"), "need": need_mp,
+                          "name": (info or {}).get("name")})
+            if int(actor.get("mp") or 0) < int(need_mp):
+                return "法力不够，放不出【%s】。" % ((info or {}).get("name") or "技能")
+            return None                                  # None = 放行
+
+        CFG.mount(mp_gate_fn=_gate)
+        a["mp"], lg = 5, []
+        check("装配门槛：mp 不足 ⇒ 拦下（返回 False）",
+              A._skill_usable(bt, a, _info(8), lg) is False, repr(lg))
+        check("装配门槛：回话逐字用内容侧那句",
+              lg == ["法力不够，放不出【盾墙】。"], repr(lg))
+        check("装配门槛：hook 收到 (battle, actor, info, need_mp)（need = 技能表 mp 折算值）",
+              _SEEN == {"actor": "p", "need": 8, "name": "盾墙"}, repr(_SEEN))
+        a["mp"], lg = 8, []
+        check("装配门槛：够（8 ≥ 8）⇒ 照放、不回话",
+              A._skill_usable(bt, a, _info(8), lg) is True and lg == [], repr(lg))
+        # 判据与文案解耦：logs=None（AI 静默探测）仍必须拿到**真判据**
+        a["mp"] = 1
+        check("装配门槛：logs=None 时判据照真（AI 静默探测不再假放行）",
+              A._skill_usable(bt, a, _info(8), None) is False)
+        # 内容侧可以选择「不拦这一手」（回 None）——引擎不替它判
+        CFG.mount(mp_gate_fn=lambda battle, actor, info, need_mp: None)
+        check("装配门槛：内容侧回 None ⇒ 这一手放行（引擎不替它判）",
+              A._skill_usable(bt, a, _info(8), []) is True)
+
+        # ---------- ⑥ 声明了却给不出可判读的回执 ⇒ fail-closed ----------
+        for _i, _bad in enumerate(("", [], lambda *a2: {}, lambda *a2: 0)):
+            CFG.mount(mp_gate_fn=_bad if callable(_bad) else (lambda *a2: _bad))
+            try:
+                A._skill_usable(bt, a, _info(8), [])
+                check("门槛回执不可判读（第 %d 种）⇒ 抛 EngineNotConfigured" % (_i + 1), False, "没抛")
+            except CFG.EngineNotConfigured as exc:
+                check("门槛回执不可判读（第 %d 种）⇒ 抛（点名 hook）" % (_i + 1),
+                      "mp_gate_fn" in str(exc), str(exc)[:70])
+        CFG.mount(mp_regen_fn=lambda battle, actor: "回蓝")
+        try:
+            SCH._settle_time_effects(bt, [])
+            check("回复回执形状不对 ⇒ 抛 EngineNotConfigured", False, "没抛")
+        except CFG.EngineNotConfigured as exc:
+            check("回复回执形状不对 ⇒ 抛（点名 hook）", "mp_regen_fn" in str(exc), str(exc)[:70])
+        CFG.mount(mp_regen_fn=lambda battle, actor: {"mp": "多"})
+        try:
+            SCH._settle_time_effects(bt, [])
+            check("回复量不是数 ⇒ 抛 EngineNotConfigured", False, "没抛")
+        except CFG.EngineNotConfigured as exc:
+            check("回复量不是数 ⇒ 抛（不编默认回复率）", "mp_regen_fn" in str(exc), str(exc)[:70])
+    finally:
+        for n in _NAMES:
+            CFG._HOOKS[n] = saved[n]
+        CFG._hook_provider = provider
+        CFG.strict = strict
+
+
 if __name__ == "__main__":
     import saintess_engine as _b2
     from saintess_engine import config as _c
@@ -390,6 +532,7 @@ if __name__ == "__main__":
     test_configured_path_unchanged()
     test_recover_second_segment()
     test_cast_window_two_phase()
+    test_mp_hooks_p51()
     print(f"\n== 结果：通过 {PASS} / 共 {PASS + FAIL} ==")
     if FAILURES:
         for f in FAILURES:

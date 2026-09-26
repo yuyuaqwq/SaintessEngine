@@ -49,10 +49,10 @@ config.mount(
 | + `formula_skeleton_fn` | 起得了战斗，但 `human_act` 返回 `[]`、目标 hp 不变 —— **静默 0 伤害**（R8 语义） |
 | + `time_model_fn` / `action_base_fn` | ✅ `💥 野狼 受到 34 点伤害！` |
 
-> ⚠️ **坑（建议改进）**：`config.mount(**hooks)`（`config.py:161`）只认 `_HOOKS`
-> （`config.py:30-96`）名单里的 22 个名字，**未知名会被静默忽略**（`set_hook` 里
+> ⚠️ **坑（建议改进）**：`config.mount(**hooks)`（`config.py:186`）只认 `_HOOKS`
+> （`config.py:30-127`）名单里的 25 个名字，**未知名会被静默忽略**（`set_hook` 里
 > `if name in _HOOKS` 没有 else 分支）。写错 hook 名不会报错，只是不生效。
-> 开发期建议打开 `config.strict = True`（`config.py:117`）——未装配的 hook 会抛
+> 开发期建议打开 `config.strict = True`（`config.py:134`）——未装配的 hook 会抛
 > `EngineNotConfigured` 而不是让链深处抛 `TypeError`/`KeyError`。
 > （`time_model_fn` / `action_base_fn` 是**唯一**两条不吃 `strict` 的：它们无论如何都抛。）
 
