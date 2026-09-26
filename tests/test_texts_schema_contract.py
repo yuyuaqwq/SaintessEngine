@@ -287,7 +287,12 @@ def t2_positive(body, tpat):
     #   （`reroll.bound` / `reroll.bound_skip`，键名全 ASCII；包侧走「有意差异登记」）⇒ 3205 → 3207。
     #   ②中文键数锚点仍不变（键名全 ASCII），③标签字已同步。
     #   ⚠ 本行 = 三处锚点里的「①条数」：改锚点必须改**判据里的数字**（只改标签字会假红）。
-    check("包内文案条数锚点 == 3207（条数变了就同步更新本门禁的锚点）", len(body) == 3207, len(body))
+    # ★ 2026-09-26 P-54（路由未命中回话**内容半边** · 包侧 `p54-miss-text` → 包 `bee63ee`）：
+    #   新增 1 键（`route.miss`，键名全 ASCII，新分类「路由回话」；引用面 = 包内
+    #   `content/apply.py::route_miss_text` 装的 `route_miss_text_fn`）⇒ 3207 → 3208。
+    #   ②中文键数锚点**不变**（仍 169：键名全 ASCII）——别跟着 +1（会当场红）；
+    #   ③标签字已同步（本行）。
+    check("包内文案条数锚点 == 3208（条数变了就同步更新本门禁的锚点）", len(body) == 3208, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
