@@ -93,6 +93,15 @@ _HOOKS = {
     #   ★ 配了却给不出可用表（None/空/条目缺 source）⇒ 抛 EngineNotConfigured，
     #     不静默退回默认表（写错的声明不许无声无息）。
     "expr_vars_fn": None,
+    # ★ P-54（2026-09-26）：宿主路由**未命中**任何包内声明时的回话。
+    #   形状 = fn(text: str, prefix: str) -> str | list[str] | tuple[str, ...]。
+    #   原先引擎在 `host/runtime.py` 里内置一句中文（还引用了宿主命令 `<prefix>help`）——
+    #   引擎自带玩家可见文案，且引用了本服可能不存在的命令名。现改为**必须由内容侧声明**：
+    #   不装配（或装了却给不出文本）⇒ `Host.route()` 抛 `EngineNotConfigured`（fail-closed），
+    #   绝不静默给一句引擎自己编的玩家文案（与 guards / tips 的处置同一条规矩）。
+    #   ★ 本口走 `optional_hook`（**不**受 `strict` 影响）：fail-closed 由宿主读口自己负责，
+    #     否则 strict=False 的默认态就会退回「静默兜底」。
+    "route_miss_text_fn": None,
 }
 
 # R8：无挂载静默降级开关。

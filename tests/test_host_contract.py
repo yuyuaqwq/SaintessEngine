@@ -320,6 +320,76 @@ def main() -> int:
     check("battle 守卫没给 battle_check → 不拦",
           run_guards(["battle"], env, builtin=host.builtin_guards()) is None)
 
+    # 【12】路由未命中回话：文案**只能由内容侧声明**（P-54 · 引擎零玩家文案）
+    print("\n【12】路由未命中回话（P-54：声明式 + fail-closed）")
+    from saintess_engine import config as CFG
+
+    def _miss(text):
+        return host.route({"uid": "u-1", "text": text, "group_id": "g-1"},
+                          store.get("u-1") or {}, text)
+
+    _saved_hook = CFG._HOOKS.get("route_miss_text_fn")
+    try:
+        # ① 未装配 ⇒ fail-closed（不静默编一句引擎自己的玩家文案）
+        CFG._HOOKS["route_miss_text_fn"] = None
+        try:
+            _miss("完全没听过的词")
+            check("未声明 ⇒ 抛 EngineNotConfigured", False, "没抛")
+        except CFG.EngineNotConfigured as exc:
+            check("未声明 ⇒ 抛 EngineNotConfigured（点名 hook）",
+                  "route_miss_text_fn" in str(exc), str(exc)[:80])
+        # ② 装了却给不出文本（None / 空）⇒ 同样 fail-closed（声明了就要给得出）
+        for _i, _bad in enumerate((lambda text, prefix: None,
+                                   lambda text, prefix: "",
+                                   lambda text, prefix: [])):
+            CFG.mount(route_miss_text_fn=_bad)
+            try:
+                _miss("完全没听过的词")
+                check("声明了却给不出文本（第 %d 种）⇒ 抛" % (_i + 1), False, "没抛")
+            except CFG.EngineNotConfigured:
+                check("声明了却给不出文本（第 %d 种）⇒ 抛 EngineNotConfigured" % (_i + 1), True)
+        # ③ 声明一句自己的 ⇒ 逐字用它那句；hook 拿到 (text, prefix)
+        seen: dict = {}
+
+        def _hint(text, prefix):
+            seen["text"], seen["prefix"] = text, prefix
+            return "我没听懂「%s」" % text
+
+        CFG.mount(route_miss_text_fn=_hint)
+        check("声明 ⇒ 逐字用内容侧那句", _miss("胡言乱语") == ["我没听懂「胡言乱语」"],
+              repr(_miss("胡言乱语")))
+        check("hook 收到 (text, prefix) = (原文, 宿主前缀)",
+              seen == {"text": "胡言乱语", "prefix": "/"}, repr(seen))
+        CFG.mount(route_miss_text_fn=lambda text, prefix: ["第一段", "第二段", None, ""])
+        check("序列回话照收（None / 空段被剔掉）",
+              _miss("胡言乱语") == ["第一段", "第二段"], repr(_miss("胡言乱语")))
+        # ④ 命中的声明照旧走处理器（未命中这条路不碰正常路由）
+        CFG.mount(route_miss_text_fn=_hint)
+        check("命中的声明仍走处理器（回话不含 hook 那句）",
+              _miss("测试") == ["pong uid=u-1", "counter=2"] and "测试" not in seen.get("text", ""),
+              repr(_miss("测试")))
+        # ⑤ 空文本仍然静默（空输入不是「未命中」，不抛）
+        check("空文本 → 空回话（不抛）", _miss("   ") == [], repr(_miss("   ")))
+        # ⑥ 两态对照（撤改验证）：内容侧**逐字照抄**改前引擎那句 ⇒ 玩家看到的逐字不变
+        #    （改前的输出 = 那句，逐字抄在这里当基准；hooks 一撤就回到 ① 的 fail-closed）
+        _old = "（没有命中包内任何指令声明；输入 %shelp 看宿主命令）"
+        CFG.mount(route_miss_text_fn=lambda text, prefix: _old % prefix)
+        check("两态：逐字声明旧句 ⇒ 输出与改前逐字相同",
+              _miss("胡言乱语") == [_old % "/"], repr(_miss("胡言乱语")))
+        CFG._HOOKS["route_miss_text_fn"] = None
+        try:
+            _miss("胡言乱语")
+            check("两态：撤掉声明 ⇒ 回到 fail-closed（不与旧句混着兜底）", False, "没抛")
+        except CFG.EngineNotConfigured:
+            check("两态：撤掉声明 ⇒ 回到 fail-closed（不与旧句混着兜底）", True)
+    finally:
+        CFG._HOOKS["route_miss_text_fn"] = _saved_hook
+
+    _rt = open(os.path.join(ROOT, "saintess_engine", "host", "runtime.py"),
+               encoding="utf-8").read()
+    check("引擎源码里那句中文兜底**整句消失**（判据盯那句赋值，不盯字符串出现）",
+          "没有命中包内任何指令声明" not in _rt)
+
     print("\n" + "=" * 56)
     if FAILS:
         print("❌ 未过 %d 项：" % len(FAILS))
