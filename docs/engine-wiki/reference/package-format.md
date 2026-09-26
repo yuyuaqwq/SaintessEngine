@@ -447,6 +447,14 @@ def initial_save(uid: str, ctx: dict) -> dict:      # 可选
   `layered_decls`（三层合并）。编辑器 `editor.packages.effective_domains()` 与引擎装载口
   `records.read_domain_decl` **委托的是同一份** ⇒ 域元数据放包内、放扩展包、还是放引擎默认集里，
   两边看到的是**同一份有效域表**（装配点：`saintess_engine/records/__init__.py:590`）。
+* **引擎默认域三件（`commands` / `texts` / `tlogs`）得由包自己落地** —— 这三张表的**消费端都在引擎里**
+  （`command/registry.py` 的 `CommandRegistry` · `text/template.py` 的 `TextTable` · `tlog/record.py` 的
+  `KindTable`，「域跟消费端走」⇒ 它们归 ① 引擎默认集）。包一层文件都不给时两道 fail-closed：
+  装载口先报一条告警（§4.4.1 第二行）；真去读 → `domain_path()` 逐字
+  `域 'commands' 声明的文件在所有层里都不存在（找过：[…]）`。
+  **最小合法形态 = 空表**（三个文件都写 `{}`：无指令 = 零行为 / 空文案表 / 无 kind 声明 = 不校验）；
+  编辑器「新建包」向导（`editor/packages.py` 的 `create_package`）**总是**把这三份建出来 ⇒
+  向导产物过 `probe_stack()` 零告警。新建包怎么落这三张表：`guides/build-a-game-package.md` §③★。
 
 **装载期怎么读**（`PackageStack`；层序 = 拓扑序 + 数据包在最后）：
 
@@ -489,6 +497,9 @@ info = probe_stack(game_dir)      # 工具面同款：info["warnings"]（只多�
 * 告警收集**自己也不抛**：域表本身坏了（坏 JSON / 顶层不是非空映射）时 `domain_decl()` 照旧抛
   `PackageError` —— 那是「谁读域谁 fail-closed」的原路，与告警通道无关。
 * 可复现：`python tests/test_package_stack.py` ⑯~⑱（含反证：同一份包把三张表都建出来 ⇒ 告警消失）。
+* **第二条怎么消**：把三张**空表**建进包（`content/data/{commands,texts,tlogs}.json` 各写 `{}`），
+  或让编辑器「新建包」向导替你建（它总是建）—— 口径、逐字报错与样板见
+  `guides/build-a-game-package.md` §③★。
 
 ### 4.5 指令分层：扩展包也能带命令（2026-09-24 · B1）
 
