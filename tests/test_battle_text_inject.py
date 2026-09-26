@@ -71,7 +71,7 @@ def _setup(text=None):
     ea = make_actor("e1", "房间怪", "enemy", kind="monster",
                     hp=500, max_hp=500, atk=10, spd=5)
     b = Battle(btype="monster", sides={"player": [pa], "enemy": [ea]},
-               title_bonus={}, seed_ct=False, text=text)
+               seed_ct=False, text=text)
     return b, pa, ea
 
 

@@ -32,7 +32,6 @@ now_of = _now_of
 
 class Battle:
     def __init__(self, btype: str = "monster", sides: Optional[dict] = None,
-                 title_bonus: Optional[dict] = None,
                  hostile_map: Optional[dict] = None,
                  target_picker=None, on_event=None, action_override=None,
                  script_hook=None, redirect_hook=None, seed_ct: bool = True,
@@ -64,7 +63,6 @@ class Battle:
           （阶段演出刻，照推 ct 行动浪费）。引擎零游戏知识，只提供前置决策注入点。
         """
         self.btype = btype
-        self.title_bonus = title_bonus or {}
         self.target_picker = target_picker
         self.on_event = on_event
         self.action_override = action_override

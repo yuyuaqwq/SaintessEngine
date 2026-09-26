@@ -92,13 +92,12 @@ def _player_base_stats(battle, actor: dict) -> dict:
     与旧 _player_stats 同）。
 
     title_bonus/bonus 容器（v181.M-bonus 统一数值容器；N5b4-4 鱼鱼拍板 per-actor 通用
-    容器）：actor 自带 bonus.panel（外部面板数值增幅聚合，core/stat_bonus.py）优先——
-    PVP 双方各带各的、随 actor 落盘；
-    缺省回落 battle.title_bonus（野外单玩家整场一份；N10 前过渡语义，两路都活 —— E5-3）。
+    容器）：actor 自带 bonus.panel（外部面板数值增幅聚合，core/stat_bonus.py）——
+    PVP 双方各带各的、随 actor 落盘；**唯一容器**，无 battle 级回落
+    （N10 收口 2026-09-26：旧 `battle.title_bonus` 过渡语义 + 形参已删 —— E5-3）。
     未装配（无内容）→ strict 抛 EngineNotConfigured，否则空面板（见 R8）。
     """
-    _tb = ((actor.get("bonus") or {}).get("panel")
-           or getattr(battle, "title_bonus", None) or {})
+    _tb = (actor.get("bonus") or {}).get("panel") or {}
 
     # ★ E2（2026-09-21）：面板栈**前置分支**。
     #   不装配 `panel_layers_fn` ⇒ `_fn2 is None` ⇒ 直接落到下面原路（**一字不动**）。

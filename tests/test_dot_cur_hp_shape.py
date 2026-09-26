@@ -60,7 +60,7 @@ def scene(traits, period, dt=1.05):
     if traits is not None:
         ea["traits"] = list(traits)
     b = Battle(btype="monster", sides={"player": [pa], "enemy": [ea]},
-               title_bonus={}, seed_ct=False)
+               seed_ct=False)
     ea["effects"]["probe_dot"] = {"stacks": 1, "period": dict(period)}
     SCH._advance_time(b, 0.1, [])              # 登记首跳（now + interval）
     hp0 = int(ea["hp"])

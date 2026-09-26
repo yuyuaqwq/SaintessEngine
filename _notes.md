@@ -126,7 +126,49 @@
 | 项 | 本批状态 | 要拍的是什么 |
 |---|---|---|
 | §6 **P-3 另一半** | 只落了「装载口警告」；语义一字未动 | 「引擎自带空模板 / 数据包自建 / 向导生成」三选一（择一才动逐文件作用域 / 新建包向导） |
-| §6 **P-1** | 只登记，零改动 | 动 `battle.title_bonus` 回落 + `Battle` 签名 / 存档面 ⇒ 公开 API + 老档兼容 |
+| §6 **P-1** | ✅ **本轮已落**（2026-09-26，见下「P-1 N10 收口」段） | 原待拍「动 `battle.title_bonus` 回落 + `Battle` 签名 / 存档面」已由鱼鱼直接派单执行 |
 | 台账 §3 **P-51 数值口径** | 引擎侧两个入口已开齐；**没有填任何数** | 甲（基础回复 + 蓝不够拦，需内容侧声明）/ 乙（撤掉玩家可见的「耗法」）/ 丙（不动）三选一 |
 | 台账 §3 **P-46 残余** | 已核实结论；未动一行 | 要不要连内容侧声明表一起把 `pct_boss` / `boss_pct_mult` / `pct_cur_boss` 改名（跨层 + 触数值面） |
 | 新（本轮发现） | 只报不改 | wiki 7 处（B4/B5 等）仍按「引擎真读 is_boss」描述 ⇒ 建议主线统一改成 traits 口径 |
+
+---
+
+## P-1 「N10 收口」已落（2026-09-26 · 分支 `p1-n10`）
+
+**动的是什么**：battle 级 `title_bonus` 这条过渡语义整体收掉 ——
+`Battle.__init__` 形参 + `self.title_bonus` 字段 · `stats._player_base_stats` 的
+`or getattr(battle, "title_bonus", None)` 半边回落 · `serialize.to_state` 写键 /
+`from_state` 传参。面板增幅**唯一**容器 = per-actor `actor["bonus"]["panel"]`
+（N5b4-4 拍板口径，本次只是把「两路都活」收成一路）。
+
+**★ 数值不变性（实测，两引擎同 seed 逐字节对拍）**：6 个场景各跑 14 动，
+`to_state()` **去掉被删的顶层 `title_bonus` 键后 sha 完全相同**：
+
+| 场景 | 改前 sha(前16) | 改后 | 旧顶层 tb 值 |
+|---|---|---|---|
+| 野外普攻 | `dd80f6920b272f7f` | 同 | `{'hp': 30}` |
+| 野外技能 | `7d69de318c7062c6` | 同 | `{'hp': 30}` |
+| 世界Boss | `5126bc9f8c5e58bb` | 同 | `{'hp': 30}` |
+| PVP | `56d0f24c0c71decb` | 同 | `{}` |
+| 空 tb | `ff68abc8b175823f` | 同 | `{}` |
+| 副本形态 | `0940af13035dd0a4` | 同 | `{}` |
+
+逐动日志、逐 actor `actor_stats` 面板、`result` 全部逐字段相等。
+探针：`_p1_n10_probe.py`（workspace）· 证据 JSON 在 `%LOCALAPPDATA%/Temp/p1n10/`。
+
+**有牙反证**（证明删的是活代码、且该形状在奥兰迪亚不存在）：
+唯一会分叉的形状 = 「actor 无 `bonus.panel` + battle 级非空」实测旧 21 / 新 16（`atk`）；
+而奥兰迪亚**造不出**它 —— `monster_roster` 380 条 / `MONSTER_MODS` 140 条带
+`class_name` **均为 0** ⇒ 敌侧从不进 `_player_base_stats`；两个非空站点
+（`_open_battle` / `hunt_boss`）都把**同一份** tb 写进每个 player actor 的 `bonus.panel`。
+
+**存档面**：旧档（带 `title_bonus` 键）→ 新引擎 `from_state` OK；新档（无键）→
+新引擎 OK；二次往返 sha 稳定（`f3da9df94eff02bd`）。旧引擎读新档走它自己的
+`st.get(...) or {}`（旧引擎未改）。
+
+**门禁**：`tests/run_all.py` 95/95 · `check_wiki_refs` drift 0（remap 位移 147 +
+`--fix-bare` 4 + 人工 6）· orlandia related 14/14 · consumers 86/86 ·
+`_u1d2_triggers_gen.py --check` 自检通过 · 6 个 frozen 门禁 89/83/71/101/66/77 全绿。
+
+**已知残余（报备，未动）**：`Battle.__init__` 的 `**kwargs` 仍在（`pet=` / `dmg_mult=`
+等仍被它静默吞）——本批只收 `title_bonus` 这一条，`**kwargs` 的存废另案。

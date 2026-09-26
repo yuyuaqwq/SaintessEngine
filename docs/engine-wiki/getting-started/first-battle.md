@@ -71,7 +71,7 @@ wolf = make_actor("e1", "野狼", "enemy", kind="monster",
 要点：
 
 - `kind` 只是**数据标签**（`"player"` / `"monster"` / 你自己的词），引擎不按它分支；
-  真正决定「谁是人控」的是 `human_controlled`（`Battle.focus()` 只看它，`battle.py:226`）。
+  真正决定「谁是人控」的是 `human_controlled`（`Battle.focus()` 只看它，`battle.py:224`）。
 - 等级字段统一是 `level`；引擎不认 `lv`（`actors.py:81` 注释明写）。
 - 额外关键字（`rank` / `reach` / `role` / `is_boss` / 你的自定义标签）会**原样透传**进 actor
   （`actors.py:139-145`）。`is_boss` / `role == "boss"` 是引擎真读的两个（控制时长减半、
@@ -85,16 +85,16 @@ wolf = make_actor("e1", "野狼", "enemy", kind="monster",
 b = Battle(btype="monster", sides={"player": [hero], "enemy": [wolf]})
 ```
 
-`Battle.__init__`（`battle.py:35`）做的事，按顺序：
+`Battle.__init__`（`battle.py:34`）做的事，按顺序：
 
-1. 把 `sides` 拷成 `self.sides`（dict，值是 list）—— `battle.py:77-80`
+1. 把 `sides` 拷成 `self.sides`（dict，值是 list）—— `battle.py:75-78`
 2. `hostile_map` 缺省 → 之后由 `hostile_sides()` 推「除自己外全部阵营」（`actors.py:195`）
-3. 建技能索引 `actor["_skill_index"]`（`_index_skills` → `_index_one_actor`，`battle.py:199/117`）
-4. **播种初始 ct**（`_seed_ct_one`，`battle.py:115`）：`ct = action_time(聚合 spd)`
+3. 建技能索引 `actor["_skill_index"]`（`_index_skills` → `_index_one_actor`，`battle.py:197/117`）
+4. **播种初始 ct**（`_seed_ct_one`，`battle.py:113`）：`ct = action_time(聚合 spd)`
    —— 快者先手、开局第一动也按速度排（`schedule.initial_ct`，`schedule.py:44`）
 
 `sides` 的键名由你定；引擎唯一硬编码的约定是 **`"player"`** 这个键名
-（`_check_side_end` 里 `alive[0] == "player"` → `result="victory"`，`battle.py:671`）。
+（`_check_side_end` 里 `alive[0] == "player"` → `result="victory"`，`battle.py:669`）。
 
 ## 3. 打一拳
 
@@ -109,7 +109,7 @@ print("\n".join(logs))
 💥 野狼 受到 34 点伤害！
 ```
 
-`human_act`（`battle.py:279`）的返回是三元组：
+`human_act`（`battle.py:277`）的返回是三元组：
 
 | 位置 | 含义 |
 |---|---|
@@ -133,14 +133,14 @@ human_act → act(ctx) → do_attack → do_skill → _attack_damage_pipeline
 ## 4. 跑到结束
 
 ```python
-b.auto_run([])                       # battle.py:346，全自动跑到 result != None
+b.auto_run([])                       # battle.py:344，全自动跑到 result != None
 print(b.result, b.winner_side)       # victory / player
 ```
 
-- `auto_run` 里人控 actor 也走普攻（`battle.py:352`），适合测试与仿真。
-- 胜负判定在 `_check_side_end`（`battle.py:665`）：存活阵营数 ≤ 1 → 置 `result`；
+- `auto_run` 里人控 actor 也走普攻（`battle.py:350`），适合测试与仿真。
+- 胜负判定在 `_check_side_end`（`battle.py:663`）：存活阵营数 ≤ 1 → 置 `result`；
   `alive[0] == "player"` → `"victory"`，否则 `"defeat"`；全灭 → `"defeat"`。
-- `"fled"` 只由 `Battle._do_flee`（`battle.py:611`）写。
+- `"fled"` 只由 `Battle._do_flee`（`battle.py:609`）写。
 
 ## 5. 读日志 / 读状态
 
@@ -150,7 +150,7 @@ print(b.result, b.winner_side)       # victory / player
 | 通道 | 位置 | 用途 |
 |---|---|---|
 | `Battle.on_event` | 构造参数，`effect_triggers.fire` 尾部调用（`effect_triggers.py:117-122`） | 观察每个事件（记账 / 团队广播 / 存活同步） |
-| `Battle.action_override` | 构造参数，`act()` 里非内置动作时调用（`battle.py:524`） | 接管 `use_item` 之类的自定义行动 |
+| `Battle.action_override` | 构造参数，`act()` 里非内置动作时调用（`battle.py:522`） | 接管 `use_item` 之类的自定义行动 |
 
 `on_event(battle, event, ctx, logs)` 的签名与 ctx 字段见
 [reference/events.md](../reference/events.md)。只读 ctx 或调引擎动词改状态，
@@ -159,12 +159,12 @@ print(b.result, b.winner_side)       # victory / player
 ## 6. 存 / 取
 
 ```python
-state = b.to_state()          # serialize.py:34 —— 纯 JSON 可序列化 dict
-b2 = Battle.from_state(state) # serialize.py:57 —— 重建 sides/actors/时刻/胜负
+state = b.to_state()          # serialize.py:33 —— 纯 JSON 可序列化 dict
+b2 = Battle.from_state(state) # serialize.py:55 —— 重建 sides/actors/时刻/胜负
 ```
 
-注意 `from_state` 会 `seed_ct=False`（`serialize.py:73`）——**不重播初始 ct**，
-且 `_started=True`（`serialize.py:80`）——**不重复 fire `battle_start`**。
+注意 `from_state` 会 `seed_ct=False`（`serialize.py:70`）——**不重播初始 ct**，
+且 `_started=True`（`serialize.py:77`）——**不重复 fire `battle_start`**。
 这两条是续战正确性的关键，详见 [../guides/serialize-and-resume.md](../guides/serialize-and-resume.md)。
 
 ## 7. 加人（召唤 / 援军 / 变身）
@@ -174,7 +174,7 @@ b.add_actor(make_actor("m1", "石像鬼", "enemy", hp=60, max_hp=60, atk=15, spd
             side="enemy", front=True)
 ```
 
-`add_actor(actor, side, front=False)`（`battle.py:256`）：入 sides → 建技能索引 →
+`add_actor(actor, side, front=False)`（`battle.py:254`）：入 sides → 建技能索引 →
 播种 ct。`front=True` 插队首（存活序列第一名，默认 AI 目标先打它）。
 因为 `sides` 是普通 dict 且调度/序列化都动态遍历它，**新 actor 自动参与行动与存档**。
 

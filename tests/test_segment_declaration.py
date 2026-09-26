@@ -61,7 +61,7 @@ def _battle(spd=50):
                     hp=100, max_hp=100, atk=20, spd=spd)
     ea = make_actor("e1", "怪", "enemy", kind="monster", hp=500, max_hp=500, atk=10, spd=5)
     return Battle(btype="monster", sides={"player": [pa], "enemy": [ea]},
-                  title_bonus={}, seed_ct=False), pa
+                  seed_ct=False), pa
 
 
 def _solo(spd=5):
@@ -71,7 +71,7 @@ def _solo(spd=5):
                     hp=100, max_hp=100, atk=20, spd=spd)
     ea = make_actor("e1", "怪", "enemy", kind="monster", hp=500, max_hp=500, atk=10, spd=0)
     return Battle(btype="monster", sides={"player": [pa], "enemy": [ea]},
-                  title_bonus={}, seed_ct=False), pa
+                  seed_ct=False), pa
 
 
 def _raises(fn):

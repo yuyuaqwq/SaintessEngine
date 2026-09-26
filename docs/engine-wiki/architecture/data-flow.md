@@ -6,25 +6,25 @@
 
 ```
 命令层
-  └─ Battle.human_act(action, skill_name, actor, target)        battle.py:279
+  └─ Battle.human_act(action, skill_name, actor, target)        battle.py:277
        ├─ ActCtx(caster, action, skill_name, target, ...)       actors.py:20
-       ├─ Battle.act(ctx)                                       battle.py:452
-       │    ├─ _ensure_battle_started()                         battle.py:628   ⚡ battle_start
-       │    ├─ fire("turn_start")                               battle.py:472   ⚡
-       │    ├─ 控制消费（mode=skip → 早退；no_skill → 技能转普攻） battle.py:484-511 ⚡ on_act_consume
-       │    ├─ fire("act_begin")                                battle.py:513   ⚡
-       │    ├─ _p_acts += 1                                     battle.py:471
+       ├─ Battle.act(ctx)                                       battle.py:450
+       │    ├─ _ensure_battle_started()                         battle.py:626   ⚡ battle_start
+       │    ├─ fire("turn_start")                               battle.py:470   ⚡
+       │    ├─ 控制消费（mode=skip → 早退；no_skill → 技能转普攻） battle.py:482-509 ⚡ on_act_consume
+       │    ├─ fire("act_begin")                                battle.py:511   ⚡
+       │    ├─ _p_acts += 1                                     battle.py:469
        │    ├─ 分派：
        │    │    attack → actions.do_attack                      actions.py:51
        │    │    skill  → actions.do_skill                       actions.py:64
-       │    │    defend → Battle._do_defend                      battle.py:612
-       │    │    flee   → Battle._do_flee                        battle.py:611
-       │    │    其他   → Battle.action_override 注入点           battle.py:524
-       │    ├─ fire("act_done")                                 battle.py:601   ⚡
-       │    └─ _check_side_end()                                battle.py:665
+       │    │    defend → Battle._do_defend                      battle.py:610
+       │    │    flee   → Battle._do_flee                        battle.py:609
+       │    │    其他   → Battle.action_override 注入点           battle.py:522
+       │    ├─ fire("act_done")                                 battle.py:599   ⚡
+       │    └─ _check_side_end()                                battle.py:663
        └─ 若未结束且 action ∈ {attack, skill, defend} 或 override 被消费：
             ├─ schedule._after_act(battle, caster, action)      schedule.py:449  推 ct
-            └─ Battle.advance(logs)                             battle.py:337
+            └─ Battle.advance(logs)                             battle.py:335
                  └─ schedule.advance（推时钟 + 自动 actor 行动）  schedule.py:372
 ```
 
@@ -42,7 +42,7 @@ schedule.advance(battle, logs, max_steps=200)                     schedule.py:37
     else:
         _advance_time(battle, auto[1] - battle._now, logs)
         logs.append("—— {name} 行动 ——")
-        battle.actor_auto(actor)                                       battle.py:362
+        battle.actor_auto(actor)                                       battle.py:360
 ```
 
 `_advance_time(battle, dt, logs)`（`schedule.py:512`）内部：
@@ -159,7 +159,7 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 │      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:335     │
 │      │     effects["death_guard"].stacks > 0 → hp 拉回 guard_hp_pct      │
 │      │     （+heal_pct 额外治疗，走 heal_actor）→ 层 -1                    │
-│      ├─ 仍 <= 0 → Battle._on_actor_dead(...)           battle.py:645       │
+│      ├─ 仍 <= 0 → Battle._on_actor_dead(...)           battle.py:643       │
 │      │       killed_actors.append / 清 defending+charging                 │
 │      │     ⚡ fire("on_death", {actor, target})                            │
 │      │     source 非 None → ⚡ fire("on_kill", {actor: source, ...})       │
@@ -195,8 +195,8 @@ turn_start ─→ act_begin ─→ act_cast ─→ dmg_calc
 |---|---|---|
 | 普攻不是独立的伤害路径 | 它把自己改写成一次 `action="skill"` 的施放 | `actions.py:60-63` |
 | 技能索引进 `_skill_index` 且**失败不阻断** | 索引空 → 技能静默空放 | `battle.py:148-173` |
-| `act_done` 不带 `actor` 键 | 所以它是全员广播；行动者放在 `ctx["acted"]` | `battle.py:596-601` |
-| 被控跳过时 `act()` **提前 return**，`act_done` 不 fire | 推 ct 由调用方做 | `battle.py:502-511` |
+| `act_done` 不带 `actor` 键 | 所以它是全员广播；行动者放在 `ctx["acted"]` | `battle.py:594-599` |
+| 被控跳过时 `act()` **提前 return**，`act_done` 不 fire | 推 ct 由调用方做 | `battle.py:500-509` |
 | `_fire_ctx` 会被嵌套 fire 覆盖 | 需要 save/restore | `game/services/class_mech_proc.py:238-244`（游戏仓侧） |
 
 ## 相关

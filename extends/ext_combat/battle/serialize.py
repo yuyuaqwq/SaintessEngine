@@ -14,7 +14,6 @@ state = {
   "winner_side": str|None,
   "sides": {side名: [actor, ...]},
   "hostile_map": {...},
-  "title_bonus": {...},
   "killed": [...],  # 击杀记录（uid 列表）
   "battle_flags": {...},  # 战斗级一次性标记（后续扩展）
 }
@@ -42,7 +41,6 @@ def to_state(battle: Battle) -> dict:
         "sides": {sn: [_serialize_actor(a) for a in acts]
                   for sn, acts in battle.sides.items()},
         "hostile_map": dict(battle.hostile_map or {}),
-        "title_bonus": dict(battle.title_bonus or {}),
         "killed": [a.get("uid") for a in battle.killed_actors if a.get("uid")],
         "flags": {},
     }
@@ -65,7 +63,6 @@ def from_state(st: dict, *, text=None) -> Battle:
         btype=st.get("type", "monster"),
         sides={sn: [_deserialize_actor(a) for a in acts]
                for sn, acts in (st.get("sides") or {}).items()},
-        title_bonus=st.get("title_bonus") or {},
         hostile_map=st.get("hostile_map") or {},
         # 文案表：不落盘 ⇒ 由恢复方重新注入（未注入 = 兜底模板）
         text=text,
