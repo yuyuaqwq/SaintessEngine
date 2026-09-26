@@ -126,7 +126,7 @@
 | 项 | 本批状态 | 要拍的是什么 |
 |---|---|---|
 | §6 **P-3 另一半** | 只落了「装载口警告」；语义一字未动 | 「引擎自带空模板 / 数据包自建 / 向导生成」三选一（择一才动逐文件作用域 / 新建包向导） |
-| §6 **P-1** | 只登记，零改动 | 动 `battle.title_bonus` 回落 + `Battle` 签名 / 存档面 ⇒ 公开 API + 老档兼容 |
+| §6 **P-1** | ✅ **本轮已落**（2026-09-26，见下「P-1 N10 收口」段） | 原待拍「动 `battle.title_bonus` 回落 + `Battle` 签名 / 存档面」已由鱼鱼直接派单执行 |
 | 台账 §3 **P-51 数值口径** | 引擎侧两个入口已开齐；**没有填任何数** | 甲（基础回复 + 蓝不够拦，需内容侧声明）/ 乙（撤掉玩家可见的「耗法」）/ 丙（不动）三选一 |
 | 台账 §3 **P-46 残余** | 已核实结论；未动一行 | 要不要连内容侧声明表一起把 `pct_boss` / `boss_pct_mult` / `pct_cur_boss` 改名（跨层 + 触数值面） |
 | 新（本轮发现） | 只报不改 | wiki 7 处（B4/B5 等）仍按「引擎真读 is_boss」描述 ⇒ 建议主线统一改成 traits 口径 |
@@ -147,3 +147,99 @@
 | §6 **P-4 药水两处缺陷** | **只修缺陷、不接线**（两侧副本逐字一致） | `e12` / `p4-potion` | 抽包线待拍板 #4 尾补逐字：「★ 2026-09-26 P-4 缺陷已修（`random` 缺失 / `REACTION_TABLE` 未导入，两侧同名同对）；36 handler 的接线仍判停。」 |
 | §6 **P-5 宿主门禁两红** | **本会话不碰**（他的门禁口径 + 宿主脏树） | — | 只登记 |
 | §6 **P-2 / P-6 抽包判停项** | **不动** | — | 只登记 |
+
+---
+
+## P-1 「N10 收口」已落（2026-09-26 · 分支 `p1-n10`）
+
+**动的是什么**：battle 级 `title_bonus` 这条过渡语义整体收掉 ——
+`Battle.__init__` 形参 + `self.title_bonus` 字段 · `stats._player_base_stats` 的
+`or getattr(battle, "title_bonus", None)` 半边回落 · `serialize.to_state` 写键 /
+`from_state` 传参。面板增幅**唯一**容器 = per-actor `actor["bonus"]["panel"]`
+（N5b4-4 拍板口径，本次只是把「两路都活」收成一路）。
+
+**★ 数值不变性（实测，两引擎同 seed 逐字节对拍）**：6 个场景各跑 14 动，
+`to_state()` **去掉被删的顶层 `title_bonus` 键后 sha 完全相同**：
+
+| 场景 | 改前 sha(前16) | 改后 | 旧顶层 tb 值 |
+|---|---|---|---|
+| 野外普攻 | `dd80f6920b272f7f` | 同 | `{'hp': 30}` |
+| 野外技能 | `7d69de318c7062c6` | 同 | `{'hp': 30}` |
+| 世界Boss | `5126bc9f8c5e58bb` | 同 | `{'hp': 30}` |
+| PVP | `56d0f24c0c71decb` | 同 | `{}` |
+| 空 tb | `ff68abc8b175823f` | 同 | `{}` |
+| 副本形态 | `0940af13035dd0a4` | 同 | `{}` |
+
+逐动日志、逐 actor `actor_stats` 面板、`result` 全部逐字段相等。
+探针：`_p1_n10_probe.py`（workspace）· 证据 JSON 在 `%LOCALAPPDATA%/Temp/p1n10/`。
+
+**有牙反证**（证明删的是活代码、且该形状在奥兰迪亚不存在）：
+唯一会分叉的形状 = 「actor 无 `bonus.panel` + battle 级非空」实测旧 21 / 新 16（`atk`）；
+而奥兰迪亚**造不出**它 —— `monster_roster` 380 条 / `MONSTER_MODS` 140 条带
+`class_name` **均为 0** ⇒ 敌侧从不进 `_player_base_stats`；两个非空站点
+（`_open_battle` / `hunt_boss`）都把**同一份** tb 写进每个 player actor 的 `bonus.panel`。
+
+**存档面**：旧档（带 `title_bonus` 键）→ 新引擎 `from_state` OK；新档（无键）→
+新引擎 OK；二次往返 sha 稳定（`f3da9df94eff02bd`）。旧引擎读新档走它自己的
+`st.get(...) or {}`（旧引擎未改）。
+
+**门禁**：`tests/run_all.py` 95/95 · `check_wiki_refs` drift 0（remap 位移 147 +
+`--fix-bare` 4 + 人工 6）· orlandia related 14/14 · consumers 86/86 ·
+`_u1d2_triggers_gen.py --check` 自检通过 · 6 个 frozen 门禁 89/83/71/101/66/77 全绿。
+
+**已知残余（报备，未动）**：`Battle.__init__` 的 `**kwargs` 仍在（`pet=` / `dmg_mult=`
+等仍被它静默吞）——本批只收 `title_bonus` 这一条，`**kwargs` 的存废另案。
+
+---
+
+## P-1「N10 收口 3」已落（2026-09-26 · 分支 `p1-n10`）：`title_bonus` 全链改名 → `panel_bonus`
+
+**为什么改**：N10 收口 1/2 删掉 battle 级容器与 `**kwargs` 后，剩下的是**同名不同物**：
+`_title_bonus` 这个名指的东西早已不是「称号加成」而是**外部面板增幅**（称号+成就+收藏册，
+v105→v174→N5b4-4 已把模块正名 `stat_bonus`）。本次把「值/键/钩子」四类名字全链收敛到一个名。
+
+**映射（单一真源；token 级替换 + 逐行白名单，96 行落改）**
+
+| 旧 | 新 | 语义 |
+|---|---|---|
+| `saintess_engine/host/shell.py::_title_bonus` | `_panel_bonus` | 外部面板增幅聚合口（真源 `content/stat_bonus.py`） |
+| 包内 `self._title_bonus(gid,qid)`（30 处） | `self._panel_bonus(...)` | 同上 |
+| `player["_title_bonus"]` | `player["_panel_bonus"]` | 运行期玩家 dict 字段（下划线 = 非 DB 列） |
+| 副本 roster 快照 `"title_bonus"` | `"panel_bonus"` | 快照/载荷裸键（与 `class_name`/`hp` 同约定） |
+| `hooks={"title_bonus": …}` / `ctx.hooks.get("title_bonus")` | `"panel_bonus"` | 事件模板钩子键 |
+| `host.title_bonus` / `self.title_bonus`（gm 侧注入属性） | `panel_bonus` | `content/gm.py` |
+| `panel_fn` 第 7 形参（`content/panel.py` / `examples/` / 文档 / 测试 kwarg） | `panel_bonus` | 引擎注入面形参名 |
+| 局部变量 `title_bonus_names` | `titled_bonus_names` | 「带 bonus 的称号名集合」（语义本就如此） |
+
+**不动的（历史/存档契约）**：`stat_bonus` 模块与函数名 · `serialize._deserialize_actor` 的
+actor 级旧键迁移（`stat_bonus`/`title_bonus` → `bonus.panel`）· 冻结文本 `_FROZEN_TEXT` 里的
+旧实现快照 · wiki/`_notes` 的历史叙述。
+
+★ **顺带修掉一个 N10 收口 1 的漏网真缺陷**：`item_templates.py::_battle_cur_max` 原读
+`st.get("title_bonus")` = 引擎旧 `to_state` 那份 **battle 级**副本；收口 1 删键后它静默读成
+`{}` ⇒ **普通战斗的上限重算少了外部增幅**（物品「满血/满蓝」判定会误判）。
+已改为读 actor 自己的容器 `ctx._focus["bonus"]["panel"]`（N5b4-4 唯一容器）。
+
+**门禁**：引擎 `run_all` 96/96 · `ext_reward` 19/19 · wiki `drift 0` · orlandia related 14/14 ·
+consumers 86/86（BASE/NEW 双边）· 8 个冻结门禁全绿（quest **72/72**、store、triggers 89/83、
+wiring 77/66、dialogue、presence 101）· `_u1d2_quest_gen --check` 通过。
+★ 数值不变性：6 场景 + 存档往返 sha **逐字节与改名前一模一样**。
+
+**冻结门禁的「正规推进」（按仓库规矩，非放宽判据）**
+`content/profession_quests.py::settle_daily_quest` 因本次改名由 **E → C**
+（理由写在 `tests/_u1d2_quest_gen.py::CLASS` 注释里：行为逐字不变，只换键名；
+13 064 格冻结网格实测无不一致），并跑 `--emit-live` 刷新 `_PIN["live"]`（只动 2 条 sha）。
+`--check` 需要 base 副本：本次用 git 回溯重建
+（`GWEN_U1D2_BASE_PKG=<临时目录，rev 1be39311，28 段里对上 27/28——与设计基线一致>`）。
+
+★ **部署前置（不写迁移，出 PURGE）**：副本 roster 快照是**入库**的（`battle_state.state`
+里的 `players.<qq_id>`），改名后「在飞的副本局」旧键读不到 ⇒ 部署时先清一次：
+
+```sql
+-- 只清「在飞的副本局」（副本 state 含 players 快照与 inst_id）；野外/PVP 局不受影响
+DELETE FROM battle_state WHERE state LIKE '%"inst_id"%' AND state LIKE '%"title_bonus"%';
+```
+
+★ **部署顺序铁律**：本批引擎与包**必须同批上线**（包先、引擎后）——
+「新包 + 旧引擎」照旧能跑（旧壳仍收旧名与 `**kwargs`），
+「**新引擎 + 旧包**」会 `AttributeError: _title_bonus` / `TypeError: pet=` 当场炸。

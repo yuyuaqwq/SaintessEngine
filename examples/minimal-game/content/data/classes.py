@@ -36,8 +36,8 @@ CLASSES = {
 
 
 def class_panel(class_name, level=1, equipment=None, tier=0, attributes=None,
-                evolve_path=0, title_bonus=None, race=None):
-    """引擎 panel_fn 的实现（签名固定；本游戏只用到 class_name / level / title_bonus）。
+                evolve_path=0, panel_bonus=None, race=None):
+    """引擎 panel_fn 的实现（签名固定；本游戏只用到 class_name / level / panel_bonus）。
 
     未知名/空职业 → {}（引擎「零默认值」语义：空面板）。
     """
@@ -58,8 +58,8 @@ def class_panel(class_name, level=1, equipment=None, tier=0, attributes=None,
         "spd": int(base.get("spd", 0)),
         "crit": float(base.get("crit", 0.0)),
     }
-    # title_bonus：引擎整场透传的外部面板增幅 dict（本游戏只做 flat 加值）
-    for k, v in (title_bonus or {}).items():
+    # panel_bonus：引擎整场透传的外部面板增幅 dict（本游戏只做 flat 加值）
+    for k, v in (panel_bonus or {}).items():
         if k in panel and isinstance(v, (int, float)):
             panel[k] = float(panel[k]) + float(v)
     return panel

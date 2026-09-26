@@ -54,8 +54,21 @@ EVENT_KINDS = {
     "on_death": "battle.down",
 }
 REPRO_KEYS = ("class_name", "level", "class_tier", "evolve_path", "attributes",
-              "equipment", "learned_skills", "race", "title_bonus", "hp", "mp",
+              "equipment", "learned_skills", "race", "hp", "mp",
               "max_hp", "max_mp")
+
+#: 面板增幅（= `actor["bonus"]["panel"]` 那一份）在**调用方 player dict** 上的两种容器约定：
+#:   · 运行期玩家 dict → `_panel_bonus`（下划线 = 运行期字段，非 DB 列；`store/players`
+#:     惰性升级、`reward`/`quests` 落）
+#:   · 副本 roster 快照 dict → `panel_bonus`（快照/载荷一律裸键，与 `class_name`/`hp` 同约定；
+#:     `instance_cmds` 写、`item_templates` 读）
+#: 回放只需**一个**规范键 ⇒ `_player_input` 把两者**归一**成 `panel_bonus` 出口，
+#: 读侧（`content/tlog_replay.py`）只认 `panel_bonus` 一个键。
+#: （2026-09-26 修：原先 `REPRO_KEYS` 只列了**旧名** `title_bonus`（快照那支的写法）
+#:  ⇒ 运行期那支 shape 取不到面板增幅，回放出的玩家面板**少了外部增幅**而无人发现。）
+PANEL_KEYS = ("_panel_bonus", "panel_bonus")
+#: 回放载荷里面板增幅的**规范键**（唯一出口名）
+PANEL_OUT_KEY = "panel_bonus"
 
 
 def _uid(a) -> str:
@@ -265,7 +278,17 @@ class BattleTLog:
 
 
 def _player_input(player) -> dict:
-    """玩家构造输入（回放重建用）——只留重建必需键，去掉运行期产物。"""
+    """玩家构造输入（回放重建用）——只留重建必需键，去掉运行期产物。
+
+    面板增幅**归一**到唯一出口键 `PANEL_OUT_KEY`：调用方 player dict 有两种写法
+    （运行期 `_panel_bonus` / 副本快照 `panel_bonus`），这里取到哪支就用哪支，
+    回放侧只认 `panel_bonus`。不归一 = 运行期那支的增幅**静默丢失**（回放面板偏低）。
+    """
     if not isinstance(player, dict):
         return {}
-    return {k: player.get(k) for k in REPRO_KEYS if k in player}
+    out = {k: player.get(k) for k in REPRO_KEYS if k in player}
+    for _k in PANEL_KEYS:
+        if _k in player:
+            out[PANEL_OUT_KEY] = player.get(_k)
+            break
+    return out

@@ -148,7 +148,7 @@ def my_cond_mult(battle, caster, target, params, logs):
 |---|---|---|
 | 开战前（按已学技能/已装备） | 命令层开战仪式调你的装配函数，写 `actor["triggers"]` | `apply_class_mech(actor)`（`class_mech_proc.py:2201`） |
 | 战斗中途（某个效果生效时） | 在动词里直接改 `triggers`（会立刻生效，因为 fire 每次都现读） | 内容侧「进入守护姿态时挂反击 trigger」 |
-| 一次性行动 | `Battle.action_override`（`battle.py:524`） | `use_item` 类自定义行动 |
+| 一次性行动 | `Battle.action_override`（`battle.py:522`） | `use_item` 类自定义行动 |
 
 装配器的最简形态（实测跑通）：
 

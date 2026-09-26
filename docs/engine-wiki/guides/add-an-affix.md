@@ -51,10 +51,10 @@ def we_affix_dot(battle, caster, target, params, logs):
 | 内部叠层用局部 helper | 例 `_add_stacks(actor, key, amount, cap)` 走 `effects[key].stacks` | `game/services/battle_we_procs.py:49-55` |
 
 ⚠️ `actor["ext"]` 有一个**必须知道**的性质：它会**随存档落盘**
-（`serialize._serialize_actor` 不剥 `ext`，只剥 `_skill_index`，`serialize.py:31`）。
+（`serialize._serialize_actor` 不剥 `ext`，只剥 `_skill_index`，`serialize.py:30`）。
 所以「本次战斗的 CD」用 `ext` 是安全的；如果你的 `ext` 里放了不可 JSON 化的东西，
 存档时 `json.dumps` 会抛 —— `serialize.state_to_json` 用了 `default=str` 兜底
-（`serialize.py:123`），结果是静默变成字符串。
+（`serialize.py:120`），结果是静默变成字符串。
 
 ## 事件映射：旧事件名 → 引擎事件名
 
@@ -92,7 +92,7 @@ def map_event(old_ev):
 你的数据表只写「命中」时，得同时挂两个。
 
 **为什么 `enemy_act` 映射到 `act_done`**：`act_done` 是**不带 subject 的广播事件**
-（`ctx["acted"]` 才是行动者，`battle.py:596-601`），所以「敌方行动后我叠减速」
+（`ctx["acted"]` 才是行动者，`battle.py:594-599`），所以「敌方行动后我叠减速」
 这类特效要在动作里**自己判敌我**（例：`we_act_done_slow`）。
 
 ## 词条的三种数值通道
@@ -102,7 +102,7 @@ def map_event(old_ev):
 | 通道 | 写哪里 | 谁消费 | 适合 |
 |---|---|---|---|
 | `triggers` 参数 | `{"type": "we_xxx", "pct": 0.2}` | 你自己的族动作 | 一次性/有条件的效果 |
-| `actor["bonus"]["panel"]` | 面板增幅 dict | `stats._player_base_stats` 把它传给 `panel_fn`（`stats.py:95-109`） | 常驻面板增幅 |
+| `actor["bonus"]["panel"]` | 面板增幅 dict | `stats._player_base_stats` 把它传给 `panel_fn`（`stats.py:99`） | 常驻面板增幅 |
 | `actor["bonus"]["cap"]` | `{资源key: +N}` | `effects._cap_of`（`effects.py:77`） | 资源上限词条 |
 | `actor["bonus"]["cost"]` | `{mp_pct, mp_flat, res, when}` | `actions._skill_pay_of`（`actions.py:279`） | 消耗折扣词条 |
 
@@ -173,9 +173,11 @@ actor.setdefault("bonus", {}).setdefault("panel", {})["my_affix_atk"] = 0.10
 ```
 
 ⚠️ 这是**你**的 `panel_fn` 要认识的格式，不是引擎格式。引擎只做
-`_tb = (actor.bonus.panel or battle.title_bonus or {})` 然后
+`_tb = (actor.get("bonus") or {}).get("panel") or {}` 然后
 `fn(class_name, level, equipment, tier, attributes, evolve_path, _tb, race)`
-（`stats.py:95-109`）。所以词条面板必须和你的面板公式一起设计。
+（`stats.py:99`）。**面板增幅唯一容器 = actor 的 `bonus.panel`** ——
+N10 收口（2026-09-26）已删旧的 battle 级 `title_bonus` 回落，两者不会再互相兜底。
+所以词条面板必须和你的面板公式一起设计。
 
 另一条更省事的路：**用 `effects` 面板快照**。开战时写
 `actor["effects"]["atk_up"] = {"stacks": 1, "expire": None, "stat": "atk", "op": "mul", "mult": 1.1}`

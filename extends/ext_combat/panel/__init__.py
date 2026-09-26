@@ -6,7 +6,7 @@
 ## 这个形状解决什么
 
 现状（**既有债**）：`config._HOOKS["panel_fn"]` 的形参**就是游戏词汇**
-（`fn(class_name, level, equipment, tier, evolve_path, title_bonus, race)`，实测 8 个位置参数、6/8 是游戏词）
+（`fn(class_name, level, equipment, tier, evolve_path, panel_bonus, race)`，实测 8 个位置参数、6/8 是游戏词）
 ⇒ 引擎纯度缺陷；且面板聚合本体写在内容侧的 Python 里（旧包 `content/panel.py` 569 行）。
 
 本形状：内容侧只声明「有哪些层、每层怎么作用到哪些键」，引擎负责**逐键合并 + 钳制 + 归因打印**。
