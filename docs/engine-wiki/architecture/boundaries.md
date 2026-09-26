@@ -149,11 +149,11 @@
 | R1 | `actions.py:16` → `game.engine`（21 处公式调用） | 核心反向边 |
 | R2 | `actions.py:20` → `game.core.constants` | 死 import |
 | R3 | `actions.py:39` → `game.content`（`C.CLASSES` 直读） | 内容表直读 |
-| R4 | `actions.py:359` → `game.core.formation` | 合规（通用纯函数，层级归属错） |
-| R5 | `actions.py:777` → `game.core.formula_expr` | 合规（通用解释器） |
-| R6 | `actions.py:811` → `game.engine.skill_buff_turns` | 反向边 |
-| R7 | `actions.py:797` → `game.core.constants` | 死 import |
-| R8 | `actions.py:858` → `game.engine.skill_mech_val` | 反向边 |
+| R4 | `actions.py:366` → `game.core.formation` | 合规（通用纯函数，层级归属错） |
+| R5 | `actions.py:784` → `game.core.formula_expr` | 合规（通用解释器） |
+| R6 | `actions.py:818` → `game.engine.skill_buff_turns` | 反向边 |
+| R7 | `actions.py:804` → `game.core.constants` | 死 import |
+| R8 | `actions.py:865` → `game.engine.skill_mech_val` | 反向边 |
 | R9 | `battle.py:140` → `game.engine`（技能表查询） | 反向边 |
 | R10 | `battle.py:141` → `game.content.MONSTER_SKILLS` | 内容表直读 |
 | R11 | `stats.py:15` → `game.engine.player_final_stats` | **最重的一条**（玩家面板全算） |
@@ -185,7 +185,7 @@
 |---|---|---|---|---|
 | B1 | ~~`kinds/` 的枚举值写死中文（`PHYS = "物理"` …）~~ **2026-09-13 P4 下沉已消除** | 引擎侧无此模块（词表移居内容侧；引擎只经 `config.kind_of` 注入面读 kind 值） | 原「两套 kind 词表」问题随之下线：引擎侧只此一个注入面，非中文 kind 的游戏不受影响 | ——（已消除） |
 | B2 | `landing._apply_death_guard` / `heal_actor` / `stats` 里硬编码 key：`"death_guard"`、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"` | `landing.py:273,384-407` | 「濒死保护」「禁疗/受疗增幅」三类机制**只认固定 key 名**。要换名只能改这个包（或复用这些名字）。（原「睡眠打醒」硬编码 `"sleep"` —— **2026-09-11 已数据化**为 `wake_on_hit` 字段，不再属本表） | `extends/ext_combat/battle/landing.py`（`stats.py` 同在 `battle/`） |
-| B3 | `effects.act_apply` 里 `if key == "reduce":` 写 `holder["reduce_left"]` | `effects.py:476-477` | 包里出现了内容 key 字面量 | `extends/ext_combat/battle/effects.py` |
+| B3 | `effects.act_apply` 里 `if key == "reduce":` 写 `holder["reduce_left"]` | `effects.py:485-486` | 包里出现了内容 key 字面量 | `extends/ext_combat/battle/effects.py` |
 | B4 | `schedule._settle_time_effects` 里 `pct_boss` / `boss_pct_mult` / `is_boss` / `role == "boss"` / `is_elite` | `schedule.py:602,275-285` | 「Boss」这个内容概念进了包（作为数据字段处理，尚可接受，但它是**唯一**被包认识的身份标签） | `extends/ext_combat/battle/schedule.py` |
 | B5 | `effects.act_apply` 里 `if holder.get("is_boss") or holder.get("role") == "boss"` | `effects.py:383` | 同上（控制时长减半） | `extends/ext_combat/battle/effects.py` |
 | B6 | `effects._mech_to_effect` 的 `_is_stack_resource` 判据关键词含 `debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct` | `effects.py:277-281` | 这些字段**没有消费者**（`debuff_scale` 已于 2026-09-11 接线），但它们的**存在与否改变分派结果** —— 声明了 `debuff_scale` 会意外让 mech 走叠层路径 | `extends/ext_combat/battle/effects.py` |
@@ -302,7 +302,7 @@ def apply_game_content(actor: dict, ctx: dict | None = None) -> dict:   # game/c
 | `game/content_rules/{skills,panel,gameplay}.py` | 技能表 / 面板公式 / 游戏规则（S5 从 `engine.py` 拆出） |
 
 ⚠️ **一个已核实的重要内容侧缺口**：技能数据的 `cond`（条件倍率）在引擎里是死字段 ——
-`actions._do_heal` 里 `cond_mult = 1.0  # N2b 补，恒 1.0 起步`（`actions.py:725`）。
+`actions._do_heal` 里 `cond_mult = 1.0  # N2b 补，恒 1.0 起步`（`actions.py:732`）。
 内容侧用 `battle_cond_procs.py` 把它接回乘区（「**引擎零改动**，走既有装配层扩展动作模式」，
 游戏仓 `battle_cond_procs.py:5-11`）。第三方要 `cond` 就得自己写这个装配器。
 

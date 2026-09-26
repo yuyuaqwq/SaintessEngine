@@ -81,7 +81,7 @@ def equip_blood_pact(actor):
 引擎在固定点位 `fire(事件名, ctx, logs)`，总线遍历所有存活 actor 找 `triggers[事件名]`，
 逐个交给 `apply_effects` 翻译执行（`effect_triggers.fire`，`effect_triggers.py:63`）。
 
-`attack_hit` 的触发点在 `_single_target_pipeline` 尾部（`actions.py:494`）：
+`attack_hit` 的触发点在 `_single_target_pipeline` 尾部（`actions.py:501`）：
 **普攻命中且伤害管线跑完之后**，`ctx = {"actor": 攻击者, "target": 挨打者, "info": 技能, "dmg": 总伤}`。
 
 ## 跑起来
@@ -124,7 +124,7 @@ hero hp: 65
 
 上面走的是「事件触发」路子。另一条路是**技能数据驱动**：技能 dict 里的 `mech`
 字段经 `effects_from_skill`（`effects.py:217`）转成 effect 列表，在命中后由
-`_apply_hit_effects`（`actions.py:531`）执行。分派判据见 `_mech_to_effect`
+`_apply_hit_effects`（`actions.py:538`）执行。分派判据见 `_mech_to_effect`
 （`effects.py:236`）——「叠层资源型」走 `apply op=add`，否则保留名词走 `EFFECT_ACTIONS`。
 
 更完整的机制写法（judge 谓词 / 乘区钩子 / 计数器）见

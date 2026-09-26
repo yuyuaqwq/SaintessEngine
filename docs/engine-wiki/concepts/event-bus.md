@@ -95,8 +95,8 @@ _m = float((getattr(battle, "_fire_ctx", {}) or {}).get("mult", 1.0) or 1.0)
 if _m != 1.0:
     total = max(1, int(total * _m))
 ```
-（`actions.py:444-451`，同款出现在 `landing.py:83-94` 的 `taken_calc`、
-`actions.py:683-753` 的 `heal_calc`、`schedule.py:659-676` 的 `dot_calc`）
+（`actions.py:451-458`，同款出现在 `landing.py:83-94` 的 `taken_calc`、
+`actions.py:690-760` 的 `heal_calc`、`schedule.py:659-676` 的 `dot_calc`）
 
 ⚠️ **它是单槽、覆盖式、不落盘**（`effect_triggers.py:85-86` 注释）：
 单线程同步 fire 所以成立；**别在异步/多线程里依赖它**。`dot_calc` 广播后
@@ -168,7 +168,7 @@ actor["triggers"][event]
 | **引擎有 fire 点位（23）** | `battle_start` `turn_start` `act_begin` `act_cast` `skill_hit`※ `attack_hit`※ `crit` `on_taken` `on_heal` `on_kill` `on_death` `dot_tick` `dot_calc` `on_act_consume` `on_hit_consume` `effect_expire` `threshold` `dmg_calc` `taken_calc` `heal_calc` `act_done` `interrupt` `time_advance` |
 | **⚠️ 引擎无点位（3，必须上层驱动）** | `phase` `player_low` `pv_broken` |
 
-※ `skill_hit` / `attack_hit` 的 fire 点位用变量选事件名（`actions.py:494`：
+※ `skill_hit` / `attack_hit` 的 fire 点位用变量选事件名（`actions.py:501`：
 `ev = "attack_hit" if info.get("_basic") else "skill_hit"`），静态 grep 不到字面量。
 
 精确点位（`文件:行号`）与每个事件的 ctx 字段见 [../reference/events.md](../reference/events.md)。

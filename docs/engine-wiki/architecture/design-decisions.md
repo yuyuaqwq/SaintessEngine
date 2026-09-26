@@ -108,7 +108,7 @@
 （`taken_calc` 的 `mult`）。
 
 **痕迹**：`landing.py:8-13` 原文（「为什么必须统一收口」）；
-`effects.act_damage` 也只做「读参数 → 调 `landing.deal_damage`」（`effects.py:676-703`）。
+`effects.act_damage` 也只做「读参数 → 调 `landing.deal_damage`」（`effects.py:685-712`）。
 
 ---
 

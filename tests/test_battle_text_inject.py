@@ -292,5 +292,105 @@ from ext_combat import from_state as _fs_mod                            # noqa: 
 check("模块级 from_state 同款（text= 关键字透传）",
       _fs_mod(_st7, text=_Stub({"battle.landing.damage": "／表：模块级"})).text is not None)
 
+# ---------------------------------------------------------------- 8. P-59 坏格式符 / 机器键
+print()
+print("【8. P-59：兜底模板零坏格式符（双冒号）+ 默认模板不吐机器键】")
+from saintess_engine.text import safe_format                           # noqa: E402
+from ext_combat.battle.actions import _skill_usable                      # noqa: E402
+from ext_combat.battle.effects import act_apply                          # noqa: E402
+
+#: 判据盯**语义**：只扫「真正交给渲染口的模板实参」（AST 里的字符串常量），
+#: 注释/文档里提「双冒号」不算 —— 否则修完的说明文字自己就会造成假红。
+_BADSPEC = re.compile(r"\{[^{}]*::[^{}]*\}")
+
+
+def _template_args(root):
+    """扫树下 render_via / render_or / `_t` 调用里的字符串实参 → (坏格式符清单, 实参总数)。"""
+    bad, n, nf = [], 0, 0
+    for _dp, _dirs, _fs in os.walk(root):
+        _dirs[:] = [d for d in _dirs if d != "__pycache__"]
+        for _f in sorted(_fs):
+            if not _f.endswith(".py"):
+                continue
+            nf += 1
+            _p = os.path.join(_dp, _f)
+            _tree = ast.parse(open(_p, encoding="utf-8").read(), filename=_p)
+            for _n in ast.walk(_tree):
+                if not isinstance(_n, ast.Call):
+                    continue
+                _fn = _n.func
+                _nm = _fn.attr if isinstance(_fn, ast.Attribute) else (
+                    _fn.id if isinstance(_fn, ast.Name) else "")
+                if _nm not in ("render_via", "render_or", "_t"):
+                    continue
+                for _a in ast.walk(_n):
+                    if isinstance(_a, ast.Constant) and isinstance(_a.value, str) \
+                            and ("{" in _a.value):
+                        n += 1
+                        if _BADSPEC.search(_a.value):
+                            bad.append("%s:%d  %r" % (_p, _n.lineno, _a.value[:70]))
+    return bad, n, nf
+
+
+_bad_all, _nargs, _nfiles = [], 0, 0
+for _root in (os.path.join(FW_ROOT, "extends"), os.path.join(FW_ROOT, "saintess_engine")):
+    _b, _n, _nf = _template_args(_root)
+    _bad_all += _b
+    _nargs += _n
+    _nfiles += _nf
+check("扫描面够大（≥30 个模板实参 / ≥30 个 .py —— 防空转假绿）",
+      _nargs >= 30 and _nfiles >= 30, "实参 %d / 文件 %d" % (_nargs, _nfiles))
+check("★ 引擎侧模板实参零坏格式符（双冒号）", not _bad_all, _bad_all[:4])
+
+# 两态（改前/改后逐字对照）：旧模板 = 坏格式符 ⇒ `safe_format` 原样吐回（玩家看到花括号）；
+# 新模板 = 合法格式符 ⇒ 正常渲染。三处 P-59 各一对。
+_SLOTS = {"name": "盾墙", "left": 1.5, "rv": 3, "cur": 1, "rk": "energy",
+          "key": "reduce", "value": 0.45, "turns": 3}
+for _tag, _old, _new, _want in (
+    ("battle.actions.skill_cd",
+     "⏳ 【{name}】冷却中：还需 {left::.1f} 刻！",
+     "⏳ 【{name}】冷却中：还需 {left:.1f} 刻！",
+     "⏳ 【盾墙】冷却中：还需 1.5 刻！"),
+    ("battle.actions.resource_lack",
+     "⚡ 核心资源不足：需要 {rv::g} {rk}，当前 {cur::g}！",
+     "⚡ 核心资源不足：需要 {rv:g} {rk}，当前 {cur:g}！",
+     "⚡ 核心资源不足：需要 3 energy，当前 1！"),
+    ("battle.effects.shield_pct",
+     "🛡️ {key} {value::.0%}（持续 {turns} 刻）",
+     "🛡️ {value:.0%}（持续 {turns} 刻）",
+     "🛡️ 45%（持续 3 刻）"),
+):
+    check("%s：旧模板（改前）渲染失败 ⇒ 带花括号原样吐回" % _tag,
+          safe_format(_old, _SLOTS) == _old, repr(safe_format(_old, _SLOTS)))
+    check("%s：新模板（改后）⇒ 合法渲染" % _tag,
+          safe_format(_new, _SLOTS) == _want, repr(safe_format(_new, _SLOTS)))
+
+# 走**真调用点**（未注入文案表 ⇒ 用兜底模板）：日志必须逐字正确、且不含机器键。
+class _B59:
+    _now = 10.0
+
+
+_a59 = {"name": "甲", "cooldown": {"盾墙": 11.5}}
+_lg59 = []
+check("冷却分支仍拦下（判据与文案解耦）", _skill_usable(_B59(), _a59, {"name": "盾墙"}, _lg59) is False)
+check("★ 冷却日志逐字 = 合法渲染（不再是坏模板）",
+      _lg59 == ["⏳ 【盾墙】冷却中：还需 1.5 刻！"], _lg59)
+
+_a59b = {"name": "甲", "class_name": "cls_x", "effects": {"energy": {"stacks": 1}}}
+_lg59b = []
+check("资源不足分支仍拦下",
+      _skill_usable(_B59(), _a59b, {"name": "技能", "res_cost": {"energy": 3}}, _lg59b) is False)
+check("★ 资源日志逐字 = 合法渲染（g 格式）",
+      _lg59b == ["⚡ 核心资源不足：需要 3 energy，当前 1！"], _lg59b)
+
+_holder59 = {"name": "甲", "effects": {}}
+_lg59c = []
+act_apply(_B59(), _holder59, _holder59, {"key": "reduce", "value": 0.45, "turns": 3}, _lg59c)
+check("值型效果真落进 effects 容器", isinstance(_holder59["effects"].get("reduce"), dict),
+      repr(_holder59["effects"]))
+check("★ shield_pct 日志逐字 = 合法渲染", _lg59c == ["🛡️ 45%（持续 3 刻）"], _lg59c)
+check("★ 默认模板**不吐机器键**（key 槽位仍照旧下传，供内容侧模板引用）",
+      all("reduce" not in _x for _x in _lg59c), _lg59c)
+
 print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
 sys.exit(1 if failed else 0)

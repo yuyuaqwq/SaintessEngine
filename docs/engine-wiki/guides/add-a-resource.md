@@ -128,10 +128,10 @@ info["res_cost"] = {"guard_core": 3}     # 施放时扣 3 层
 
 - 预检：`_skill_usable`（`actions.py:143`）——条目存在且 `stacks < 需求` → 拦截 + 写日志
   「⚡ 核心资源不足：需要 X key，当前 Y！」
-- 扣费：`_spend_skill_cost`（`actions.py:196`）——`stacks = norm_stack(max(0, cur - rv))`
+- 扣费：`_spend_skill_cost`（`actions.py:203`）——`stacks = norm_stack(max(0, cur - rv))`
 
 ⚠️ **一个重要的历史行为**：`res_cost` 只在 `actor.effects` **已经有该 key 条目**时才拦截
-（`actions.py:188-191` 的 `continue`）。没条目 = 不拦（保持历史行为）。
+（`actions.py:192-195` 的 `continue`）。没条目 = 不拦（保持历史行为）。
 所以「资源渠道没接通」时技能是**免费**的，不是被拦。原型期友善，生产期是漏洞。
 
 ### ② `MECH_CASH` 兑现（层数换伤害 + 清层）
@@ -153,7 +153,7 @@ mode 全谱 → [../reference/mech-cash.md](../reference/mech-cash.md)。
 ### ③ `consume_all`（清零）
 
 ```python
-info["consume_all"] = {"key": "arcane"}    # actions.py:221-224：直接 ef.pop
+info["consume_all"] = {"key": "arcane"}    # actions.py:228-231：直接 ef.pop
 ```
 
 ## 自然回复 / 衰减
