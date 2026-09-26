@@ -498,6 +498,7 @@ class PackageStack:
         self.game = self.packages[-1]
         self.exts = self.packages[:-1]
         self._inject = inject
+        self._warns = None                    # ★ P-3：装载告警缓存（`warnings()` 读它）
 
     # ------------------------------------------------------------ 加载
     def load(self) -> "PackageStack":
@@ -549,9 +550,13 @@ class PackageStack:
 
         每层只读它自己的声明文件；文件**不存在**的层跳过（扩展包可以不带声明）；
         文件在、但坏 JSON / 顶层不是对象 → `PackageError`（不静默）。
+
+        ★ P-3（2026-09-26）：本方法**顺带**收集装载告警（见 `warnings()`）—— 只报，
+          合并与取值路径一字不动（告警收集自己也不许抛、不许影响返回值）。
         """
         from .domains import decl_switch, merge_decls
         layers = []
+        off_builtin: list = []                               # 声明了 `$builtin: false` 的层（包 id）
         use_builtin = True
         for pkg in self.packages:
             path = pkg.domain_decl_path()
@@ -565,11 +570,64 @@ class PackageStack:
             # 任何一层声明关掉它 ⇒ 整个栈就不带默认集（否则包会莫名其妙拿不到引擎默认域）。
             if not ub:
                 use_builtin = False
+                off_builtin.append(pkg.id)
             layers.append(decls)
         out = merge_decls({}, use_builtin=use_builtin)        # ① 引擎默认集（或空）
         for decls in layers:                                  # ② 扩展包（拓扑序）→ ③ 数据包
             out = merge_decls(decls, builtin=out)             #    同名域整体覆盖前层
+        self._warns = self._domain_warnings(out, off_builtin)
         return out
+
+    def _domain_warnings(self, out: dict, off_builtin: list) -> list:
+        """★ P-3（2026-09-26）装载口告警（**只报，不改语义**）：此前两条都是**静默**的。
+
+        ① `$builtin: false`（待拍板 #2 的陷阱）：原先装载口零 warning ⇒ 包作者写了它、
+           有效域表里少了几个引擎默认域，**没有任何提示**（实测：`examples/minimal-game`
+           就是这么写的，`commands` / `texts` / `tlogs` 三域全掉、`domain_path()` 报错）。
+           现在点名「哪一层写了它 + 被跳过的域有哪些」。
+        ② 引擎默认域「在册（声明在有效域表里）但**所有层都没有文件**」（待拍板 #3）：
+           此前只有**有人去读它**时 `domain_path()` 才 fail-closed，装载口一声不响 ⇒
+           新游戏包不自己建这三张表，问题要等到运行期才现形。现在装载时就报出来。
+
+        形态与编辑器侧同构（`editor/packages.py::effective_domains()` 的第二个返回值：
+        可读中文串列表、**只降级不抛**）。本方法**绝不影响**域表与 `domain_path()` 的口径。
+        """
+        from .domains import BUILTIN_DEFAULT_DOMAINS as _BUILTIN
+        warns: list = []
+        if off_builtin:
+            _skipped = [d for d in _BUILTIN if d not in out]
+            warns.append(
+                "包 %s 的域声明写了 `$builtin: false`（不启用引擎默认域集）—— 整个栈都不再带"
+                "引擎默认域；被跳过的域：%s"
+                % ("、".join(off_builtin),
+                   "、".join(_skipped) if _skipped else "（无：引擎默认域都被包自己声明了）"))
+        for dom in _BUILTIN:
+            meta = out.get(dom)
+            kind = meta.get("kind") if isinstance(meta, dict) else None
+            if dom not in out or not isinstance(kind, str) or not kind:
+                continue                                     # 不在册 / 无法派生落点 ⇒ 不属本条
+            try:
+                cands = [pkg.domain_path(dom, kind) for pkg in self.packages]
+            except Exception as _e:                          # noqa: BLE001
+                warns.append("域 %r 的候选落点算不出来（%s: %s）" % (dom, type(_e).__name__, _e))
+                continue
+            if not any(os.path.isfile(p) for p in cands):
+                warns.append(
+                    "引擎默认域 %r 声明的文件在**所有层**里都不存在（找过：%s）—— 该域今天"
+                    "没有数据可读（装载口在有人读它时才 fail-closed）"
+                    % (dom, "、".join(p.replace(os.sep, "/") for p in cands)))
+        return warns
+
+    def warnings(self) -> list:
+        """★ P-3（2026-09-26）这一栈装载时值得说一声的事（可读中文串；**只报不改语义**）。
+
+        现覆盖两条（正文见 `_domain_warnings`）：`$builtin: false` 关掉了引擎默认域、
+        引擎默认域在册但一层文件都没有。`probe_stack()` 也把它带出去（`info["warnings"]`）。
+        读法：`load_stack(...)` / `probe_stack(...)` 之后取一次即可 —— 本方法**不会抛**
+        （收集失败降级成一条告警），也**不参与任何取值/校验**。
+        """
+        self.domain_decl()                                   # 触发一次收集（与域表同一次计算）
+        return list(getattr(self, "_warns", None) or [])
 
     def domain_sources(self, domain: str):
         """该域在各层的候选文件（**按层序，数据包在最后**）→ `[(包, 路径), …]`。"""
@@ -759,12 +817,16 @@ def probe_stack(game_dir: str, *, exts=None, inject=None, install: bool = False)
     不只是「能 import」）；失败同样装进 `errors`，不抛。
 
         {"ok": bool, "stack": PackageStack | None, "errors": [str, …],
-         "plan": [{"kind", "id", "namespace"}, …]}
+         "warnings": [str, …], "plan": [{"kind", "id", "namespace"}, …]}
 
     「不抛」是这类调用方的真实需要（它们要的是一条可读的错误，不是栈）；
     宿主初始化请用 `load_stack()`（那里要的就是抛）。
+
+    ★ P-3（2026-09-26）：加 `"warnings"` 键（**只加不改**）—— 装载告警直通
+      `stack.warnings()`（`$builtin: false` 关掉了引擎默认域 / 引擎默认域一层文件都没有）。
+      告警**不影响** `ok` / `errors`：它照样是「装起来了但值得说一声」。
     """
-    out = {"ok": False, "stack": None, "errors": [], "plan": []}
+    out = {"ok": False, "stack": None, "errors": [], "warnings": [], "plan": []}
     try:
         plan = plan_stack(game_dir, exts=exts)
     except PackageError as e:
@@ -779,6 +841,12 @@ def probe_stack(game_dir: str, *, exts=None, inject=None, install: bool = False)
         if install:
             out["stack"].install()
         out["ok"] = True
+        # ★ P-3：装载告警**不参与** ok/errors（`ok`/`errors` 与打前逐字同口径）——
+        #   域表本身坏了的话，仍是「谁读域谁 fail-closed」，这里只把收集失败报一句。
+        try:
+            out["warnings"] = list(out["stack"].warnings())
+        except Exception as _e:                                # noqa: BLE001
+            out["warnings"].append("装载告警收集失败：%s: %s" % (type(_e).__name__, _e))
     except PackageError as e:
         out["errors"].append(str(e))
     except Exception as e:                                     # noqa: BLE001

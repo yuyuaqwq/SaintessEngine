@@ -45,23 +45,23 @@ schedule.advance(battle, logs, max_steps=200)                     schedule.py:37
         battle.actor_auto(actor)                                       battle.py:362
 ```
 
-`_advance_time(battle, dt, logs)`（`schedule.py:463`）内部：
+`_advance_time(battle, dt, logs)`（`schedule.py:512`）内部：
 
 ```
 battle._now += dt
 _settle_time_effects(battle, logs)                                  schedule.py:372
    ├─ for 每个存活 actor:
-   │    ├─ effects 到期 → pop + ⚡ effect_expire                      schedule.py:495
-   │    ├─ shields 到期（expire_at <= now）→ pop                      schedule.py:545-555
+   │    ├─ effects 到期 → pop + ⚡ effect_expire                      schedule.py:551
+   │    ├─ shields 到期（expire_at <= now）→ pop                      schedule.py:601-611
    │    └─ 周期跳（period）:
-   │         首次 → dot_next[key] = now + interval（不跳）             schedule.py:588-591
+   │         首次 → dot_next[key] = now + interval（不跳）             schedule.py:644-647
    │         到点 → while now >= dot_next（最多 20 跳）:
    │             dir=damage → ⚡ dot_calc → landing.deal_damage → ⚡ dot_tick   :285/:292/:297
    │             dir=heal   → landing.heal_actor（+ mana_pct）        :301-320
    │             dir=mana   → 直接加 mp                                :321-330
    │             dir=gain   → effects[key].stacks ±= amount（clamp，静默） :331-350
    │             限时（turns）→ 跳够清层                                :351-359
-fire("time_advance", {"dt": dt, "now": battle._now})                schedule.py:495 ⚡
+fire("time_advance", {"dt": dt, "now": battle._now})                schedule.py:551 ⚡
 ```
 
 ## 展开 2：`do_attack` → `do_skill` → 伤害管线

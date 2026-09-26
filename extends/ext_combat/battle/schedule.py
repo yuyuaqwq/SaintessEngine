@@ -457,6 +457,55 @@ def _advance_time(battle, dt: float, logs: list):
         pass  # 时钟事件异常不阻断推进（容错铁律）
 
 
+def _apply_base_mp_regen(battle, actor: dict, fn, logs: list) -> None:
+    """★ P-51（2026-09-26）「基础回复入口」——**引擎零数值、零节奏、零玩家文案**。
+
+    形状 = 内容侧 hook `mp_regen_fn(battle, actor) -> dict | None`：
+
+    * `None`                     ⇒ 本拍不回复（什么都不做、不出日志）；
+    * `{"mp": <数>, "text": …}`  ⇒ 回这么多（`int` 化；≤0 ⇒ 不做事）；`text`（可省）=
+      这一拍的回话（`str` / 序列，逐字进 `logs`）——**要说什么由内容侧给**，引擎一个字节不带；
+    * 别的形状 ⇒ 抛 `EngineNotConfigured`（声明了就要给得出可判读的回执）。
+
+    引擎零节奏知识：本函数被调用的时机 = 每次时间推进结算（`_settle_time_effects`，每 actor 一次），
+    「多久回一次 / 回多少」由内容侧自己按 `battle._now` 判定（引擎不认识任何回复率）。
+    ★ 只在 `actor["mp"]` 已存在时写回（与本文件既有回复段同款守卫）——**不给 actor 加新字段**
+      （存档面一字不动）；`max_mp` 只读，同样不新建。
+    """
+    got = fn(battle, actor)
+    if got is None:
+        return
+    if not isinstance(got, dict):
+        raise _cfg.EngineNotConfigured(
+            "mp_regen_fn 的回执形状不对：要 None（本拍不回复）或 "
+            "{\"mp\": <数>, \"text\": <可选回话>}，拿到 %s" % type(got).__name__)
+    if actor.get("mp") is None:
+        return                                   # 没有 mp 的 actor（怪/第三方包）：不动它
+    _raw = got.get("mp")
+    if isinstance(_raw, bool) or not isinstance(_raw, (int, float)):
+        raise _cfg.EngineNotConfigured(
+            "mp_regen_fn 的 \"mp\" 不是数：%r —— 回复量必须由内容侧给一个明确的数"
+            "（引擎不编任何回复率）。" % (_raw,))
+    _gain = int(_raw)
+    if _gain <= 0:
+        return
+    _mx = int(actor.get("max_mp", actor.get("mp", 1)) or 1)
+    _before = int(actor.get("mp", 0) or 0)
+    actor["mp"] = min(_mx, _before + _gain)
+    _real = int(actor["mp"]) - _before
+    if _real <= 0:
+        return                                   # 已满：不写值、不出日志（与既有回复段同款）
+    _text = got.get("text")
+    if _text is None:
+        return
+    if isinstance(_text, str):
+        logs.append(_text)
+    elif isinstance(_text, (list, tuple, set, frozenset)):
+        logs.extend(str(x) for x in _text if x not in (None, ""))
+    else:
+        logs.append(str(_text))
+
+
 def _settle_time_effects(battle, logs: list):
     """时刻推进后的持续效果结算（V 系列统一：遍历 effects 容器）。
 
@@ -469,14 +518,21 @@ def _settle_time_effects(battle, logs: list):
       * 条目自带 period（effects[key]["period"]，动态声明——食物 HOT 的
         dir=heal/mana + value 数值随条目走，EFFECT_RULES 零名词）
       按 interval 绝对时刻循环补跳；turns 限跳清层（旧 dot.turns 语义）
+
+    ★ P-51（2026-09-26）：每个存活 actor 每刻问一次内容侧「基础回复」（`mp_regen_fn`）——
+      未装配 ⇒ 本段完全不存在（与本改动之前逐字节相同）；见 `_apply_base_mp_regen`。
     """
     from .state_effects import all_state_effects
     now = float(getattr(battle, "_now", 0.0) or 0.0)
     table = all_state_effects()
+    # ★ P-51：内容侧的「基础回复」声明（不配 = 这款游戏没有基础回复 ⇒ 连问都不问）
+    _base_regen_fn = _cfg.optional_hook("mp_regen_fn")
     for acts in battle.sides.values():
         for a in acts:
             if not actor_alive(a):
                 continue
+            if _base_regen_fn is not None:
+                _apply_base_mp_regen(battle, a, _base_regen_fn, logs)
             ef = a.get("effects")
             # ---------- 1) effects 到期（buff/控制/免疫/一次性）----------
             if isinstance(ef, dict) and ef:

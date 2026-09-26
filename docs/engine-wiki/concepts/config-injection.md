@@ -25,9 +25,9 @@
 > 门禁是**方向**的保证，不是「引擎绝对不用游戏东西」的保证。
 > 引擎仍然读 `actor` 上的数据字段（那是运行期数据，不是 import）。
 
-## 22 个 hook
+## 25 个 hook
 
-`_HOOKS`（`config.py:30-71`）白名单，`mount(**hooks)` / `set_hook(name, value)` 写，
+`_HOOKS`（`config.py:30-127`）白名单，`mount(**hooks)` / `set_hook(name, value)` 写，
 `get_hook(name)` 读。
 
 | hook | 类型 | 引擎在哪里用 | 不装配的行为 |
@@ -55,6 +55,8 @@
 | `recover_base_fn` | `fn(action) -> float` | `schedule.recover_base_of`（`schedule.py:127`） | **抛 `EngineNotConfigured`**（行动类别 → 第二段基准耗时数值归内容侧） |
 | `expr_vars_fn` | `fn() -> dict` | ★ E4（2026-09-25）表达式**变量表**读口 `expr.declared_vars()`（→ `build_vars` / `labels_of` / `translate_expr`） | 不装配 ⇒ 用引擎默认表 `_DEFAULT_EXPR_VARS`（= 历史那一份，逐条相同 ⇒ 一字不变）；**装了却给不出可用表 ⇒ 抛 `EngineNotConfigured`**（不静默退回默认表） |
 | `route_miss_text_fn` | `fn(text, prefix) -> str \| 序列[str]` | ★ P-54（2026-09-26）宿主路由**未命中任何包内声明**时的回话（`host/runtime.py::Host._miss_reply`） | **抛 `EngineNotConfigured`**（未装配，或装了却给不出文本）；引擎**零玩家文案**，不静默编一句兜底（与 `guards` / `tips` 同一条规矩） |
+| `mp_regen_fn` | `fn(battle, actor) -> dict \| None`（回执 `{"mp": <数>, "text": <可选回话>}`） | ★ P-51（2026-09-26）**基础回复入口**：时间推进结算时按 actor 问一次 `schedule._apply_base_mp_regen`（`schedule.py`） | 不装配 ⇒ 引擎**连问都不问**（本段不存在 ⇒ 与本改动之前逐字节相同）；**引擎零数值/零节奏/零玩家文案**（回复率与句子都在内容侧）；声明了却给不出可判读的回执 ⇒ **抛 `EngineNotConfigured`** |
+| `mp_gate_fn` | `fn(battle, actor, info, need_mp) -> str \| 序列[str] \| None` | ★ P-51（2026-09-26）**mp 门槛入口**：技能可用性预检 `actions._skill_usable`（扣费前问一次） | 不装配 ⇒ **不拦、不回**（与打前逐字节相同）；装配了：回 `None` = 放行、回非空文本 = 拦下并用这段当回话；空/别的类型 ⇒ **抛 `EngineNotConfigured`**。引擎**不认识任何门槛线**（`need_mp` 是内容侧技能表折算值的转述） |
 
 **怎么记**：`formulas` 决定「数怎么算」，`f*_fn` 给它参数表，
 `panel_fn` 决定「玩家面板怎么来」，`skill_lookup` / `monster_skill_fn` / `basic_skill_fn`
@@ -71,7 +73,7 @@
 [../concepts/ctb-schedule.md](ctb-schedule.md)），「没有第二段」由**内容侧显式声明 0** 表达
 （对应 `recover_time()` 返回 `0.0`，加法结果逐位不变），**不由引擎兜底**。
 
-> ⚠️ **未知名被静默忽略**：`set_hook`（`config.py:148`）里 `if name in _HOOKS`
+> ⚠️ **未知名被静默忽略**：`set_hook`（`config.py:173`）里 `if name in _HOOKS`
 > 没有 else。写错 hook 名不报错。开发期用 `strict=True`。
 
 ## 两张规则表：`set_config`
@@ -146,10 +148,10 @@ config.load_game_rules(my_rules_module)
 ### ③ 惰性装配（`register_hook_provider`）
 
 ```python
-config.register_hook_provider(my_lazy_mount)   # config.py:141
+config.register_hook_provider(my_lazy_mount)   # config.py:163
 ```
 
-引擎首次访问某个未装配 hook 时调用一次（`_lazy_bootstrap`，`config.py:184`，带防重入）。
+引擎首次访问某个未装配 hook 时调用一次（`_lazy_bootstrap`，`config.py:227`，带防重入）。
 游戏仓 `dragonfall`（《奥兰迪亚》）内容侧就是这么接的：它的装配入口收敛到
 `game/content_rules/apply.py` 的 `ensure_engine_configured()`（幂等；旧
 `load_game_defaults` 的收敛点），hook 与规则表经 `game/bootstrap.py`
@@ -189,7 +191,7 @@ def _skeleton():                        # formulas.py:84
 
 ## 相关
 
-- 22 个 hook 的逐项签名与未装配行为 → [../reference/api.md](../reference/api.md)
+- 25 个 hook 的逐项签名与未装配行为 → [../reference/api.md](../reference/api.md)
 - 两张规则表的字段级 schema → [../reference/effect-rules.md](../reference/effect-rules.md) ·
   [../reference/effect-actions.md](../reference/effect-actions.md)
 - 边界的物理形态与迁移方案 → [../architecture/boundaries.md](../architecture/boundaries.md)
