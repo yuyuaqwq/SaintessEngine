@@ -99,7 +99,6 @@ check("实例上无 title_bonus 字段", not hasattr(b0, "title_bonus"),
       "hasattr=True（有人在 __init__ 里把它加回来了）")
 check("`Battle.from_state` 重建实例同样无该字段",
       not hasattr(Battle.from_state(b0.to_state()), "title_bonus"))
-_import_ok = True
 
 print("\n【2. 读源面（有牙）：面板只认 actor.bonus.panel】")
 st_a = _S.actor_stats(b0, pa0)
