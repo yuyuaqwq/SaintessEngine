@@ -336,6 +336,7 @@ stack.install()                                              # 逐个 install_en
 stack.ids        # ['ext_combat', 'ext_economy', 'ext_quest', 'minimal-game']  ← 拓扑序，数据包永远最后
 stack.game       # 数据包对象（栈的身份 = 数据包的身份）
 stack.exts       # 扩展包对象列表
+stack.warnings() # ★ P-3（2026-09-26）装载告警（可读中文串；只报不改语义，见 §4.4.1）
 ```
 
 * `exts`：扩展包搜索路径；`None` = §2.4 那三条约定默认，`[]` = 一个都不搜。
@@ -352,6 +353,7 @@ info["ok"]       # bool
 info["errors"]   # [str, …] —— **不抛**：把失败全装进这里
 info["plan"]     # [{"kind", "id", "namespace"}, …] ← 拓扑序（含数据包）
 info["stack"]    # PackageStack | None
+info["warnings"] # [str, …] ★ P-3（2026-09-26，**只加键**）：装载告警（见 §4.4.1）
 ```
 
 * `install=True`：顺带跑 `install_engine()`（「试玩 / 自检」要的是「能装配」，不只是「能 import」）。
@@ -422,7 +424,7 @@ def initial_save(uid: str, ctx: dict) -> dict:      # 可选
 | 域不在任何声明里 / 声明缺 `kind` / 所有层都没该域文件 | `PackageError`（§4.4，「不静默给空表」） |
 | 包声明的域声明文件坏 JSON / 顶层不是非空映射 | `PackageError`（编辑器侧另有「黄条告警 + 回退默认集」的路，见 §十.2） |
 
-可复现：`python tests/test_package_stack.py`（15 项，逐条钉住这一组行为）。
+可复现：`python tests/test_package_stack.py`（23 项，逐条钉住这一组行为）。
 
 ### 4.4 域分层：引擎默认集 → depends 的扩展包 → 包声明
 
@@ -463,6 +465,30 @@ def initial_save(uid: str, ctx: dict) -> dict:      # 可选
 可复现：`python tests/test_package_stack.py` 的 ⑤⑥⑦ 三项（数据包那份整份覆盖扩展包默认值 /
 扩展包独有的域照样读得到 / `domain_layers` 报出层序），以及 `python tests/test_package_stack.py`
 ⑧~⑮ 对应的失败路径。
+
+### 4.4.1 装载告警：`stack.warnings()`（2026-09-26 · P-3）
+
+**只报不改语义**：装载口**新增**一条告警通道；域表合并口径与逐文件作用域**一字不动**。
+下面这两条此前都是**完全静默**的（包作者看不到，问题要等运行期才现形）：
+
+| 告警 | 触发 | 为什么值一条 |
+|---|---|---|
+| 写了 `$builtin: false` | 任何一层的域声明关掉了引擎默认集 | 它**只关掉 ①**（引擎默认集）。实测 `examples/minimal-game` 就是这么写的：有效域表里 `commands` / `texts` / `tlogs` **全掉**，而装载口 `ok=True`、零告警 ⇒ 玩家一敲指令就落「没有命中任何声明」。现在点名「哪一层写的 + 被跳过的域有哪些」 |
+| 引擎默认域「在册但所有层都没有文件」 | 域在有效域表里（可能是引擎默认集兜底进来的），但一层文件都不存在 | 此前只有**有人去读它**时 `domain_path()` 才 fail-closed；新游戏包不自己建这三张表，问题到运行期才现形。现在装载时就报出来（找过的候选路径一并列出） |
+
+```python
+stack = load_stack(game_dir, exts=[ext_dir])
+for w in stack.warnings():        # 可读中文串；**不参与** ok / errors
+    print("装载告警：", w)
+
+info = probe_stack(game_dir)      # 工具面同款：info["warnings"]（只多了这一个键）
+```
+
+* 形态与编辑器侧同构（`editor/packages.py::effective_domains()` 的第二个返回值：可读串列表、
+  **只降级不抛**）；`probe_stack()` 的 `ok` / `errors` 口径**一字没变**。
+* 告警收集**自己也不抛**：域表本身坏了（坏 JSON / 顶层不是非空映射）时 `domain_decl()` 照旧抛
+  `PackageError` —— 那是「谁读域谁 fail-closed」的原路，与告警通道无关。
+* 可复现：`python tests/test_package_stack.py` ⑯~⑱（含反证：同一份包把三张表都建出来 ⇒ 告警消失）。
 
 ### 4.5 指令分层：扩展包也能带命令（2026-09-24 · B1）
 
