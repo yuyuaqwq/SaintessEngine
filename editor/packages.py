@@ -527,7 +527,12 @@ def _write_domains_decl(pkg_dir: str, doms) -> str:
 
 def create_package(pkg_id: str, name: str, desc: str = "",
                    domains=None, games_dir_: str | None = None) -> dict:
-    """脚手架：建一个游戏包（含选中的域 + 域声明 + apply.py + 冒烟测试骨架）。"""
+    """脚手架：建一个游戏包（含选中的域 + 域声明 + apply.py + 冒烟测试骨架）。
+
+    ★ 2026-09-26 P-8：除 `domains` 点名的域之外，**总是**多建**引擎默认域三件**
+      （`commands` / `texts` / `tlogs`，空表）—— 它们默认就在有效域表里，不落地就会让
+      装载口报「在册却一层文件都没有」。产物可直接被 `probe_stack()` → 零告警吃掉。
+    """
     if not _ID_RE.match(pkg_id or ""):
         raise ValueError("包 id 只能小写字母/数字/下划线/连字符，字母开头，2-41 字符")
     root = ensure_games_dir(games_dir_)
@@ -541,6 +546,18 @@ def create_package(pkg_id: str, name: str, desc: str = "",
     # 真源仍在包：下面 `_write_domains_decl()` 会把选中域的声明落进包自己的 editor/domains.json。
     _known = known_domains()
     want = list(domains) if domains else list(DOMAINS)
+    # ★ 2026-09-26 P-8：**引擎默认域三件（commands / texts / tlogs）总是建出来**。
+    #   它们默认就在有效域表里（`use_builtin` 缺省 True ⇒ 引擎默认集那一层兜底着），
+    #   而装载口对「在册却一层文件都没有」是 fail-closed 的（域真被读时 `domain_path()`
+    #   报「声明的文件在所有层里都不存在」，装载时 `stack.warnings()` 先报一条）。
+    #   向导的产物不许一出生就吃告警 ⇒ 除调用方点名的域之外，**总是**补上这三个。
+    #   空表也是合法形态（`commands` 无指令 = 零行为 / `texts` 空表 / `tlogs` 无 kind 声明）
+    #   —— 这是「向导替你建出来」，**不是**引擎替你兜底：引擎侧一行没改。
+    #   读 `DOMAINS` 全局名（= `BUILTIN_DEFAULT_DOMAINS`）⇒ 「把引擎默认集整体置空」的
+    #   反证门禁（monkeypatch）照旧生效。
+    for _d in DOMAINS:
+        if _d not in want:
+            want.append(_d)
     doms = [d for d in want if d in _known]
     unknown = [d for d in want if d not in _known]
     for d in doms:

@@ -12,7 +12,10 @@
     "effect_rules",
     "passive_proc",
     "maps",
-    "drop_pools"
+    "drop_pools",
+    "commands",
+    "texts",
+    "tlogs"
   ],
   "entry": "content/apply.py",
   "created": "2026-09-11 10:37:01",

@@ -11,6 +11,8 @@
   4. 写出的 JSON 能被框架的 `CommandRegistry` / `TextTable` 原样装载并工作
      （编辑器造的数据 = 框架能吃的声明，闭合）
   5. 词典与分组覆盖两域（否则编辑器面板是空白）
+  6. ★ 2026-09-26 P-8：向导产物**直接过装载口** —— 引擎默认域三件（commands / texts / tlogs）
+     的空表由向导建出，`probe_stack()` 零告警；抽掉一份 ⇒ 告警当场回来（有牙）
 """
 import json
 import os
@@ -27,7 +29,9 @@ sys.path.insert(0, os.path.join(FW_ROOT, "editor"))
 import editor.packages as PK            # noqa: E402
 import editor.glossary as G             # noqa: E402
 from saintess_engine.command import CommandRegistry   # noqa: E402
+from saintess_engine.package import probe_stack       # noqa: E402
 from saintess_engine.text import TextTable            # noqa: E402
+from saintess_engine.tlog import KindTable            # noqa: E402
 
 passed = failed = 0
 
@@ -69,6 +73,51 @@ try:
     for d in NEW:
         check(f"{d} 数据文件已建", os.path.exists(PK.domain_path(pkg, d)),
               PK.domain_path(pkg, d))
+
+    # ------------------------------------------------------------ 2b. 向导产物 → 装载口（P-8）
+    # ★ 2026-09-26 P-8：引擎默认域三件（commands / texts / tlogs）**默认就在有效域表里**
+    #   （引擎默认集那一层兜底）⇒ 向导的产物必须把这三张**最小合法表**也建出来，
+    #   否则一装载就吃装载口告警（`PackageStack._domain_warnings()` 第二条）、真读时
+    #   `domain_path()` fail-closed。这里钉住「显式只点两域也一样会补上」「产物直接被
+    #   `probe_stack()` 吃掉且零告警」「空表是零行为不是读不动」，并给一条反证。
+    print("\n【2b. 向导产物 → 装载口直接吃掉（引擎默认域三件）】")
+    THREE = ("commands", "texts", "tlogs")
+    _exts = [os.path.join(FW_ROOT, "extends")]
+    for d in THREE:
+        check(f"显式只点两域时 {d} 也由向导建出", os.path.exists(PK.domain_path(pkg, d)),
+              PK.domain_path(pkg, d))
+    info = probe_stack(pkg, exts=_exts)
+    check("向导产物可被 probe_stack 装载（ok=True）", info.get("ok") is True, info.get("errors"))
+    check("装载告警为空（三张表都在 ⇒ 不报「所有层都没有文件」）",
+          info.get("warnings") == [], info.get("warnings"))
+    check("空指令表可被引擎消费端装载（零行为，不是读不动）",
+          len(CommandRegistry.from_data(PK.read_json(PK.domain_path(pkg, "commands"), {}))) == 0)
+    check("空文案表可装载（零行为）",
+          len(TextTable.from_data(PK.read_json(PK.domain_path(pkg, "texts"), {}))) == 0)
+    check("空流水声明表可装载（零行为）",
+          len(KindTable.from_data(PK.read_json(PK.domain_path(pkg, "tlogs"), {}))) == 0)
+    # 反证（两态）：抽掉一份 ⇒ 装载口当场点名（告警是判别的，不是恒亮）
+    _tp = PK.domain_path(pkg, "tlogs")
+    _saved = PK.read_json(_tp, {})
+    os.remove(_tp)
+    info_neg = probe_stack(pkg, exts=_exts)
+    check("反证：抽掉 tlogs.json ⇒ 装载口当场报「所有层里都不存在」",
+          info_neg.get("ok") is True
+          and sum("所有层" in w for w in (info_neg.get("warnings") or [])) == 1
+          and "tlogs" in " ".join(info_neg.get("warnings") or []),
+          info_neg.get("warnings"))
+    PK.write_json(_tp, _saved)
+    # 编辑器 UI 走的那条路（只 POST id/name ⇒ domains=None）必须同样干净。
+    # （同一进程里数据包命名空间固定是 `content`，第二次装载命中 sys.modules 缓存 ——
+    #   这里要的只是「域落点 + 装载告警」，两者都按**路径**算，与模块缓存无关。）
+    scaf_ui = PK.create_package("probe_pkg_ui", "向导默认包", "", None, games_dir_=root)
+    check("向导默认路径（domains=None，UI 走这条）同样建出三张引擎默认表",
+          all(os.path.exists(PK.domain_path(scaf_ui["dir"], d)) for d in THREE),
+          [d for d in THREE if not os.path.exists(PK.domain_path(scaf_ui["dir"], d))])
+    info_ui = probe_stack(scaf_ui["dir"], exts=_exts)
+    check("向导默认路径产物同样零告警",
+          info_ui.get("ok") is True and info_ui.get("warnings") == [],
+          f"ok={info_ui.get('ok')} warnings={info_ui.get('warnings')}")
 
     # ------------------------------------------------------------ 3. 校验
     print("\n【3. schema 校验：合法过、非法拦】")
