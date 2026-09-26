@@ -24,7 +24,7 @@ actor["effects"] = {
 合并成一个容器后（`actors.py:48-50` 的原文：`V 系列统一：四容器 → 单 effects 容器`）：
 
 - 到期只有一处（`schedule._settle_time_effects`，`schedule.py:479-498`）
-- 净化只有一处（`effects.act_cleanse`，`effects.py:626-635`）
+- 净化只有一处（`effects.act_cleanse`，`effects.py:635-644`）
 - 面板折算只有一处（`stats._apply_effects`，`stats.py:39`）
 - 序列化天然覆盖（`serialize._serialize_actor` 全字段带走，`serialize.py:51`）
 - 「这个效果属于哪一类」不再需要回答——**行为由声明给，不由容器给**
@@ -36,7 +36,7 @@ actor["effects"] = {
 ## 条目字段全谱
 
 条目是 **dict**（引擎只读 dict 形态条目，非 dict 会被跳过 ——
-例 `schedule.py:495`、`stats.py:54`、`effects.py:483`）。
+例 `schedule.py:495`、`stats.py:54`、`effects.py:492`）。
 
 | 字段 | 谁写 | 谁读 | 含义 |
 |---|---|---|---|
@@ -45,14 +45,14 @@ actor["effects"] = {
 | `mode` | `act_apply` 控制分支 | `Battle.act` 控制消费（`battle.py:484-511`） | `"skip"` = 整跳行动 / `"no_skill"` = 技能转普攻 |
 | `v` | `act_apply` value 型 | **无引擎消费者**（☞ 见下） | 值型数值（如减伤 0.45） |
 | `stat` / `op` / `mult` | `act_apply` 快照分支 | `stats._apply_effects`（`stats.py:69-80`） | 面板增益快照 |
-| `hit` | `act_apply` hit 子键 | `actions._consume_hit_buffs`（`actions.py:486`） | 出手消费型（`dmg_mult` / `guaranteed_crit` / `bonus_atk_pct`） |
+| `hit` | `act_apply` hit 子键 | `actions._consume_hit_buffs`（`actions.py:493`） | 出手消费型（`dmg_mult` / `guaranteed_crit` / `bonus_atk_pct`） |
 | `period` | **内容侧**直接写入 | `schedule._settle_time_effects`（`schedule.py:566-574`） | 动态周期声明（条目自带优先，回落表声明） |
 | `value` | 内容侧（`heal_amp_pct` 等） | `landing._apply_heal_mods`（`landing.py:522`） | 附加数值袋（形态自定，消费方自己解释） |
 
 ### `v` 字段的消费缺口
 
-`act_apply` 的值型分支会写 `{"v": 0.45}`（`effects.py:474-476`），并给 `reduce` 额外写
-`holder["reduce_left"]`（`effects.py:472-473`）。但：
+`act_apply` 的值型分支会写 `{"v": 0.45}`（`effects.py:465-467`），并给 `reduce` 额外写
+`holder["reduce_left"]`（`effects.py:468-469`）。但：
 
 - `effects["reduce"]["v"]` **没有消费者**（全仓 grep 见 [_selfcheck.md](../_selfcheck.md)）
 - `actor["reduce_left"]` 也没有消费者
@@ -75,7 +75,7 @@ actor["effects"] = {
 
 **为什么需要 float**：资源可以有非整数速率（信仰每刻 −0.7、磐核每刻 +0.4）。
 `apply` 的叠层分支读 `float()`（`effects.py:424`）、`consume` 读 `float()`
-（`effects.py:524`）、`schedule` 的 gain 分支 `round(..., 6)`（`schedule.py:727`）。
+（`effects.py:533`）、`schedule` 的 gain 分支 `round(..., 6)`（`schedule.py:727`）。
 读侧全用 `float()` 保真，写侧统一过 `norm_stack` 保持「int 资源看起来还是 int」。
 
 ## cap 的唯一收敛点

@@ -79,7 +79,7 @@ clock · command · container · domains · events · expr · host · log · ses
 | `actions` | `skill_pay_of` | `_skill_pay_of` |
 
 （这五个符号都在扩展包 `ext_combat` 里；别名赋值处：`effects.py:86-87`、`battle.py:30`、
-`battle/actions.py:327`、`battle/actions.py:807`）
+`battle/actions.py:334`、`battle/actions.py:814`）
 
 ## 2. `Battle`（扩展包 `ext_combat` · `battle.py:34`）
 
@@ -389,7 +389,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 | `front_rank(units)` | `:20` |
 | `reachable_units(attacker, units)` | `:28`（⚠️ 无外部引用） |
 | `select_target(attacker, units, threat=None, exclude_uid=None, threat_mode="front")` | `:34` |
-| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一消费者：`actions._deal_aoe`，`battle/actions.py:384`） |
+| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一消费者：`actions._deal_aoe`，`battle/actions.py:391`） |
 | `pick_by_policy(policy, units, threat=None, fallback=None)` | `:122` |
 | `compact(units)` | `:161` |
 | `numbered_units(units)` | `:191` |
@@ -461,7 +461,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 | `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
 | ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 不实现） |
-| `config.set_hook` | `config.py:139` | 零外部引用（都走 `mount`） |
+| `config.set_hook` | `config.py:148` | 零外部引用（都走 `mount`） |
 | `effects.resolve_actions` | `effects.py:140` | 零外部引用（`effects` 内部调用） |
 | `ai.eval_when` | `ai.py:159` | 零外部引用（`resolve_ai_move` 内部调） |
 | ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |

@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 from ..config import EngineNotConfigured as _NotConfigured
+from ..config import optional_hook as _optional_hook
 
 import asyncio
 import inspect
@@ -371,7 +372,41 @@ class Host:
             return self.invoke(spec, ctx, player)
         if not text:
             return []
-        return ["（没有命中包内任何指令声明；输入 %shelp 看宿主命令）" % self.prefix]
+        return self._miss_reply(text)
+
+    def _miss_reply(self, text: str) -> list:
+        """未命中任何包内声明时的回话 —— **文案由内容侧经 `config` 注入**（引擎零文案真源）。
+
+        ★ P-54（2026-09-26）：原先这里内置一句中文，且句子里还带着一个本服不一定存在的
+        宿主命令名（`<prefix>help`）—— 引擎既自带玩家文案、又引用了别层的名字。
+        现改为**必需注入**：内容侧在装配期
+        `saintess_engine.config.set_hook("route_miss_text_fn", fn)`，
+        形状 `fn(text, prefix) -> str | list[str] | tuple[str, ...]`。
+
+        未装配 ⇒ 抛 `EngineNotConfigured`；装了却给不出文本（`None` / 空）⇒ 同样抛。
+        **不静默编一句兜底**：面向玩家的话属内容侧，引擎一个字节都不带
+        （与此前 `guards.py` / `tips.py` 的处置同一条规矩，见 E2b 审计）。
+        """
+        fn = _optional_hook("route_miss_text_fn")
+        if fn is None:
+            raise _NotConfigured(
+                "路由未命中的回话没声明：内容侧应 `saintess_engine.config.set_hook("
+                "\"route_miss_text_fn\", fn)`（形状 fn(text, prefix) -> str | 序列）—— "
+                "玩家可见文案属内容侧，引擎不带玩家文案。")
+        got = fn(text, self.prefix)
+        if got is None:
+            out: list = []
+        elif isinstance(got, str):
+            out = [got] if got else []
+        elif isinstance(got, (list, tuple, set, frozenset)):
+            out = [str(x) for x in got if x not in (None, "")]
+        else:
+            out = [str(got)]
+        if not out:
+            raise _NotConfigured(
+                "route_miss_text_fn 已装配却给不出文本（None / 空）—— 声明了就要给得出，"
+                "不许无声无息（引擎不替它编一句兜底）。")
+        return out
 
     def declared_echo(self, spec) -> list:
         """声明回显（**降级说明**：包没给处理器时，把声明本身告诉玩家/开发者）。"""

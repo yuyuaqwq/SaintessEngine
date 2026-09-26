@@ -20,7 +20,7 @@
 |---|------|------|----------|
 | 1 | 技能可**解析** | `ActCtx.__post_init__` 查 `actor["_skill_index"]`（**无全局兜底**） | `info={}` → 空动作，白耗一回合 |
 | 2 | **冷却** | `_skill_usable` → `_cd_left_of`（`actions.py:143` / `:121`） | 拦截文案 + 不扣费 / 不写冷却 |
-| 3 | **魔力 / 核心资源** | `_skill_pay_of`（`actions.py:272`）折算后比对 `mp` / `effects[key].stacks` | 拦截文案（同 2） |
+| 3 | **魔力 / 核心资源** | `_skill_pay_of`（`actions.py:279`）折算后比对 `mp` / `effects[key].stacks` | 拦截文案（同 2） |
 | 4 | kind 分派执行 | `_do_heal` / `_do_buff` / 伤害管线 | — |
 
 判据 2、3 **只对「学习过该技能的 actor」有意义**，但冷却检查**对全部 actor 生效**

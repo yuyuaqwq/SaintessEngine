@@ -108,7 +108,7 @@ ctrl · ctrl_any · res · left_key · left_init · cost_field · buff_key
 | `domain` | 写哪里 | 引擎消费者 | 数值来源 |
 |---|---|---|---|
 | `cap` | `actor["bonus"]["cap"][cap_key] += add` | `effects._cap_of`（`effects.py:77`） | `passive.add` 或 `cfg.add`，**只累加正数** |
-| `cost` | `actor["bonus"]["cost"]`（`mp_pct` / `when[].mp_pct`） | `actions._skill_pay_of`（`actions.py:272`） | `passive.mp_mult`（如 0.5 = 打五折） |
+| `cost` | `actor["bonus"]["cost"]`（`mp_pct` / `when[].mp_pct`） | `actions._skill_pay_of`（`actions.py:279`） | `passive.mp_mult`（如 0.5 = 打五折） |
 
 `cap` 域**不 continue**：声明里同时有 `event` 时（如 `soul_mark_cap` / `poison_cap_up`）
 会继续走事件装配（原文注释「双通道声明 → 不 continue，fall through」，
@@ -136,9 +136,9 @@ ctrl · ctrl_any · res · left_key · left_init · cost_field · buff_key
 
 | 我想... | 用 | 为什么 |
 |---|---|---|
-| 影响**我打出的伤害**（增伤/处决/破魔） | `dmg_calc` | 攻击方视角乘区，`actions.py:444` |
+| 影响**我打出的伤害**（增伤/处决/破魔） | `dmg_calc` | 攻击方视角乘区，`actions.py:451` |
 | 影响**我受到的伤害**（减伤/护盾转化） | `taken_calc` | 承伤方视角乘区，`landing.py:83` |
-| 影响**我造成的治疗**（治疗增幅） | `heal_calc` | 施法者视角乘区，`actions.py:683` |
+| 影响**我造成的治疗**（治疗增幅） | `heal_calc` | 施法者视角乘区，`actions.py:690` |
 | 影响**DOT 每跳伤害** | `dot_calc` | 广播事件（无 subject），用 `ctx["dot_key"]` 过滤 |
 | 命中后做事（叠层/挂条/上控制） | `skill_hit` / `attack_hit` | 主体=攻击者；普攻走 `attack_hit` |
 | 受击后自我强化/反击 | `on_taken` | 主体=受击者，`ctx["source"]` = 攻击者 |

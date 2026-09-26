@@ -169,7 +169,11 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
     left = _cd_left_of(battle, actor, info)
     if left > 0:
         if logs is not None:
-            logs.append(render_via(battle, "battle.actions.skill_cd", "⏳ 【{name}】冷却中：还需 {left::.1f} 刻！",
+            # ★ P-59（2026-09-26）：兜底模板原先那个占位符**多打了一个冒号**（双冒号
+            #   不是合法格式符）—— `safe_format` 渲染失败会把**带花括号的模板原样**吐给
+            #   玩家（这正是内容侧要顶掉这一句的成因）。改成合法格式符后：内容侧没顶掉
+            #   这个 key 时，渲染出来是一句正常的话，而不是坏模板。
+            logs.append(render_via(battle, "battle.actions.skill_cd", "⏳ 【{name}】冷却中：还需 {left:.1f} 刻！",
                                 name=info.get('name') or '技能',
                                 left=left))
         return False
@@ -190,7 +194,10 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
         cur = float(entry.get("stacks", 0) or 0)
         if cur < float(rv or 0):
             if logs is not None:
-                logs.append(render_via(battle, "battle.actions.resource_lack", "⚡ 核心资源不足：需要 {rv::g} {rk}，当前 {cur::g}！",
+                # ★ P-59（2026-09-26）：两个占位符原先各多打了一个冒号（双冒号不是合法
+                #   格式符）⇒ 渲染失败就把带花括号的模板原样吐给玩家。改成合法格式符
+                #   （`g` = 通用数值格式：整数不带小数点、小数保留有效位）。
+                logs.append(render_via(battle, "battle.actions.resource_lack", "⚡ 核心资源不足：需要 {rv:g} {rk}，当前 {cur:g}！",
                                     rv=rv,
                                     rk=rk,
                                     cur=cur))

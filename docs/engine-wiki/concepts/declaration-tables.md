@@ -106,7 +106,7 @@ hit（dict）                           →  {stacks:1, expire, hit}      出手
 | `panel` | `effects.act_apply` 快照分支（`effects.py:466-478`） |
 | `consume.mode` | `effects.act_apply` 控制分支（`effects.py:354-357`）+ `Battle.act` 的控制消费（`battle.py:484-511`） |
 | `period` | `schedule._settle_time_effects`（`schedule.py:566-574`） |
-| `cleanse` / `period` / `on=="target"` | `effects.act_cleanse`（`effects.py:626-635`） |
+| `cleanse` / `period` / `on=="target"` | `effects.act_cleanse`（`effects.py:635-644`） |
 | `cd_mult` | `actions.do_skill` 冷却设置（`actions.py:91-99`，取多态最小） |
 | `negative` | **内容侧**负面种数计数（`class_mech_proc.py:767`），引擎不读 |
 

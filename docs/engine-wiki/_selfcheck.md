@@ -115,13 +115,13 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | ~~`schedule.HOT_INTERVAL = 1.0`~~ | ~~`schedule.py:36`~~ | **已删**（2026-09-11） |
 | `schedule.next_ct` | `schedule.py:48` | 有定义、无调用方（实际推进走 `_after_act`） |
 | `state_effects.stat_scale_of` | `state_effects.py:18` | 仅测试引用 |
-| `actions._aoe_falloff_apply` | `actions.py:562` | **占位实现**（原样返回 logs）。`info["aoe_falloff"]` 在 `actions.py:368` 被读取但随后被丢弃 → AOE falloff 实际未生效 |
+| `actions._aoe_falloff_apply` | `actions.py:569` | **占位实现**（原样返回 logs）。`info["aoe_falloff"]` 在 `actions.py:375` 被读取但随后被丢弃 → AOE falloff 实际未生效 |
 | `formation.reachable_units` | `formation/__init__.py:28` | 零外部引用 |
 | `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |
 | `gauge.charge_*`（6 个） | `gauge/__init__.py:244-321` | **全部零外部引用** —— 蓄力三律无消费者 |
 | `support.battle_bars.bar_should_trigger` / `bar_preserve` | `:164` / `:204` | 仅内部/单点引用（`bar_preserve` 被命令层 Boss 脚本用 1 处） |
 | `effects.effects_from_skill(..., caster_side_is_player=True)` | `effects.py:217` | **第三个参数在函数体里从未使用** |
-| `config.set_hook` | `config.py:139` | 零外部引用（都走 `mount`） |
+| `config.set_hook` | `config.py:148` | 零外部引用（都走 `mount`） |
 | `serialize.to_state` 的 `flags` | `serialize.py:47` | 恒写入 `{}`；**没有读取方**，也没有写入方 |
 | `Battle.auto_run(max_steps=500)` | `battle.py:346` | 全仓调用点**只在 `tests/`**（游戏仓 `test_battle_add_actor.py:159`、游戏仓 `test_battle_bridge.py:154`、游戏仓 `test_battle_bar_procs.py:240` 等），内容侧零调用 —— 实质是**测试/AI 模式辅助**，不是生产路径（生产走 `human_act` + `advance`） |
 
@@ -141,7 +141,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | `actor["_content_applied"]`（bool） | S7 的 `apply_game_content` 幂等标记（游戏仓 `game/content_rules/apply.py:81`）。**会随 actor 全量落进战斗存档 / PVP 状态**（引擎 `serialize._STRIP_KEYS` 只剥 `_skill_index`）。原文自记「无任何数值/读取语义依赖它，S9 若要清掉需改引擎 `serialize.py`」（游戏仓 `apply.py:55-58`） |
 | `actor["dot_next"]` / `actor["dot_jumps"]`（dict） | 引擎周期结算的运行期辅助（`schedule.py:555-556` 惰性建），**同样落盘**。这是「续战能对上」的原因，但字段名与内容无关 |
 | `actor["_dmg_taken_mult"]`（float） | 承伤乘区（`landing.py:96-103` 读）。由上层直写（例 游戏仓 `commands/boss_script.py:684`）；**同样落盘** |
-| `actor["reduce_left"]` / `reduce_all_left` | `effects.act_apply` 写（`effects.py:477`）+ 内容侧 bridge 透传/播种；**无消费者**（见 §1.3） |
+| `actor["reduce_left"]` / `reduce_all_left` | `effects.act_apply` 写（`effects.py:486`）+ 内容侧 bridge 透传/播种；**无消费者**（见 §1.3） |
 | `actor["act_count"]` | `actor_auto` 每动 +1（`battle.py:445`），AI 的 `round_mod` 谓词读它；落盘 |
 
 ## 2. 事件点位
@@ -149,7 +149,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | 事件 | 结论 |
 |---|---|
 | `phase` / `player_low` / `pv_broken` | **在 `EVENTS` 里但引擎零 fire 点位**（设计如此，由上层驱动 —— `effect_triggers.py:38-40`） |
-| `skill_hit` / `attack_hit` | **有点位但静态 grep 不到**：`actions.py:494` 用变量选事件名（`ev = "attack_hit" if info.get("_basic") else "skill_hit"`）。文档若按 grep 结果断言「无点位」会是错的 |
+| `skill_hit` / `attack_hit` | **有点位但静态 grep 不到**：`actions.py:501` 用变量选事件名（`ev = "attack_hit" if info.get("_basic") else "skill_hit"`）。文档若按 grep 结果断言「无点位」会是错的 |
 | `EVENTS` 实际条目数 | **26**（不是 docstring 说的「19 时机」）。引擎插桩自然点位 **23** 个（不是注释说的「16 个」） |
 
 ## 3. `注释 ≠ 代码`（发现了 6 处）
@@ -176,7 +176,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 |---|---|---|
 | B1 | ~~`kinds/` 枚举值写死中文（`PHYS = "物理"` …）~~ **2026-09-13 P4 下沉已消除** | 引擎侧无 `kinds/`（词表移居内容侧，引擎只经 `config.kind_of` 读值） |
 | B2 | 固定效果 key：`"death_guard"`（濒死保护）、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`（受疗修正）。（原含 `"sleep"` 打醒 —— **2026-09-11 已数据化**移除，改读 `wake_on_hit` 字段） | `landing.py:177-190, 248, 384-407` |
-| B3 | `effects.act_apply` 里 `if key == "reduce":` | `effects.py:476` |
+| B3 | `effects.act_apply` 里 `if key == "reduce":` | `effects.py:485` |
 | B4 | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | `effects.py:383` · `schedule.py:602,286` |
 | B5 | `battle.py` 里 `"player"` 阵营名 | `battle.py:190, 515` |
 | B6 | `_is_stack_resource` 的判据关键词含无消费方的字段（`debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct`） | `effects.py:277-281` |

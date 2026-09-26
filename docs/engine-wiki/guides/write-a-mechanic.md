@@ -88,9 +88,9 @@ attacker = ctx.get("source")
 
 | 事件 | 谁读回 | 语义 | 包内点位（`extends/ext_combat/battle/`） |
 |---|---|---|---|
-| `dmg_calc` | 攻击方总伤 | ×mult 增伤 | `actions.py:444-451` |
+| `dmg_calc` | 攻击方总伤 | ×mult 增伤 | `actions.py:451-458` |
 | `taken_calc` | 承伤前 | ×mult 减伤（<1）或增伤（>1） | `landing.py:83-94` |
-| `heal_calc` | 治疗量落地前 | ×mult 治疗增幅 | `actions.py:683-753` |
+| `heal_calc` | 治疗量落地前 | ×mult 治疗增幅 | `actions.py:690-760` |
 | `dot_calc` | DOT 每跳 | ×mult DOT 增伤 | `schedule.py:659-676` |
 
 写法（实测可用的最小骨架）：
@@ -110,9 +110,9 @@ def my_cond_mult(battle, caster, target, params, logs):
 
 三条注意：
 
-- `ctx["mult"]` 初值由引擎置 1.0（`actions.py:447`），**累乘**多个源
+- `ctx["mult"]` 初值由引擎置 1.0（`actions.py:454`），**累乘**多个源
 - `_fire_ctx` 是**单槽覆盖式**：只在你自己那次 `fire` 的同步栈里有效
-- 乘区在 `dmg_calc` 里改的是**已经算完的总伤**（多段之和，`actions.py:435-438` 之后）
+- 乘区在 `dmg_calc` 里改的是**已经算完的总伤**（多段之和，`actions.py:442-445` 之后）
 
 ## judge 谓词：把判据写成数据
 

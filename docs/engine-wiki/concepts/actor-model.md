@@ -98,7 +98,7 @@
 |---|---|---|
 | `bonus.panel` | `stats._player_base_stats`（`stats.py:95`） | 面板增幅 dict，透传给 `panel_fn` |
 | `bonus.cap` | `effects._cap_of`（`effects.py:77`） | `{资源key: 上限增量}`，纯 flat int 加在 `EFFECT_RULES[key].cap` 上 |
-| `bonus.cost` | `actions._bonus_cost_of`（`actions.py:244`） | 技能消耗折扣（`mp_pct`/`mp_flat`/`res` + `when` 判据） |
+| `bonus.cost` | `actions._bonus_cost_of`（`actions.py:251`） | 技能消耗折扣（`mp_pct`/`mp_flat`/`res` + `when` 判据） |
 
 ### 其余透传字段
 

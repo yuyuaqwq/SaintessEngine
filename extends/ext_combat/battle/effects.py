@@ -467,7 +467,16 @@ def act_apply(battle, caster, target, params, logs):
                    "v": max(old_v, float(value))}
         if key == "reduce":
             holder["reduce_left"] = max(int(holder.get("reduce_left", 0) or 0), turns)
-        logs.append(render_via(battle, "battle.effects.shield_pct", "🛡️ {key} {value::.0%}（持续 {turns} 刻）",
+        # ★ P-59（2026-09-26）：这一句原先有两个毛病 ——
+        #   ① 值的占位符多打了一个冒号（双冒号不是合法格式符）⇒ 渲染失败，
+        #      `safe_format` 把带花括号的模板**原样**吐给玩家；
+        #   ② 模板里直接印**机器键**（`effects` 容器里的 key，如 `reduce`）—— 那是数据侧
+        #      的内部标识，不是给玩家看的名字。
+        #   现改：格式符合法；**兜底模板不再引用 `key` 槽位**（引擎默认不吐机器键）。
+        #   `key` 槽位照旧传下去（内容侧声明自己的模板时仍可引用它，见本包
+        #   `content/rules/battle_text.json` 的同类声明）—— 要显示玩家看得懂的名字，
+        #   由内容侧的文案表给（引擎不认识哪个 key 叫什么）。
+        logs.append(render_via(battle, "battle.effects.shield_pct", "🛡️ {value:.0%}（持续 {turns} 刻）",
                             key=key,
                             value=float(value),
                             turns=turns))

@@ -81,7 +81,7 @@ actions.do_skill(battle, ctx)                                       actions.py:6
   1. info 空 → return []
   2. 玩家（有 class_name）→ _skill_usable(...)                       actions.py:143
        └─ res_cost 条目存在且 stacks < 需求 → 拦截 + 日志，return
-  3. _spend_skill_cost(actor, info)                                 actions.py:196
+  3. _spend_skill_cost(actor, info)                                 actions.py:203
        ├─ mp 扣减（pay = _skill_pay_of 折算）
        ├─ res_cost 扣 effects[key].stacks
        └─ consume_all → ef.pop(key)
@@ -94,16 +94,16 @@ actions.do_skill(battle, ctx)                                       actions.py:6
 ```
 
 ```
-actions._attack_damage_pipeline(battle, actor, target, info, lv)    actions.py:329
-  if info["aoe"] → _deal_aoe(...)                                   actions.py:341
+actions._attack_damage_pipeline(battle, actor, target, info, lv)    actions.py:336
+  if info["aoe"] → _deal_aoe(...)                                   actions.py:348
         scope = "all" | info["aoe"]
         enemies = 敌对 side 全部 actor
         targets = support.formation.select_aoe_targets(...)
         for t in targets: _single_target_pipeline(..., _no_lifesteal=True)
-  else → _single_target_pipeline(...)                               actions.py:387
+  else → _single_target_pipeline(...)                               actions.py:394
 
-actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:387
-  1. _consume_hit_buffs(battle, actor, logs)                        actions.py:486
+actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:394
+  1. _consume_hit_buffs(battle, actor, logs)                        actions.py:493
        └─ 遍历 effects 里带 "hit" 子键的条目 → 累积 dmg_mult/guaranteed_crit/bonus_atk_pct
           → ⚡ on_hit_consume → pop 条目
   2. st  = stats.actor_stats(battle, actor)                          stats.py:18
@@ -116,16 +116,16 @@ actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:
        ├─ expr 段：config.formulas().skill_formula_expr → resolve_formula(...)
        └─ 非 expr：config.formulas().calc_damage(atk|matk × power + skill_flat, def|mdef, ...)
   7. total *= _st_mult；total *= hit_buffs.dmg_mult
-  8. ⚡ fire("dmg_calc", {actor, target, dmg, is_crit, info, mult:1.0})  actions.py:444-451
+  8. ⚡ fire("dmg_calc", {actor, target, dmg, is_crit, info, mult:1.0})  actions.py:451-458
        └─ 读回 battle._fire_ctx["mult"] → total *= mult
-  9. _deal_hit(battle, actor, target, total, defend_reduce, element)   actions.py:581
+  9. _deal_hit(battle, actor, target, total, defend_reduce, element)   actions.py:588
        └─ landing.deal_damage(...)                                  landing.py:28
- 10. _settle_lifesteal(...)（非 AOE）                               actions.py:620
+ 10. _settle_lifesteal(...)（非 AOE）                               actions.py:627
        └─ rate = min(lifesteal 类面板, 0.30)，真伤不吸，mortal_wound ×0.5
           → landing.heal_actor → on_heal ⚡
  11. bonus_atk_pct > 0 → 再 _deal_hit 一段附伤
- 12. _apply_hit_effects(...) → effects_from_skill(info, lv) → apply_effects   actions.py:531
- 13. ⚡ fire("attack_hit"|"skill_hit")，然后若是暴击 ⚡ fire("crit")    actions.py:430-474
+ 12. _apply_hit_effects(...) → effects_from_skill(info, lv) → apply_effects   actions.py:538
+ 13. ⚡ fire("attack_hit"|"skill_hit")，然后若是暴击 ⚡ fire("crit")    actions.py:437-481
 ```
 
 ## 展开 3：`landing.deal_damage` 的落地顺序（顺序有语义）
