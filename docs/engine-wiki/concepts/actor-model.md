@@ -15,9 +15,12 @@
 - `add_actor()` 加援军/召唤物时不需要给调度器注册新类型（`battle.py:254`）
 - 序列化不需要按类型分派（`serialize._serialize_actor` 对任何 actor 一视同仁，`serialize.py:49`）
 
-代价：**身份信息全靠字段**。要表达「这是 Boss」就写 `is_boss=True` 或 `role="boss"`
-（引擎真读这两个的地方：控制时长减半 `effects.py:383`、DOT 的 `pct_boss` / `boss_pct_mult` 档 `schedule.py:658`、
-`is_boss`/`role` 也在部分内容侧判定里被读）。
+代价：**身份信息全靠字段**。要表达「这是 Boss」就写 `traits=["boss"]`（标签名随内容侧起，
+引擎**不认识 Boss 这个概念**）—— 引擎只提供 `traits.of(actor)` / `traits.has(actor, name)` /
+`traits.has_any(actor, names)` 三个只读判据，**名单为空 ⇒ 一律 False**（不声明 = 这条规则不适用于任何人）。
+「谁带标签才吃哪条规则」由声明给：控制时长减半看该状态的 `ctrl_half_traits`（`effects.py:376-377`）、
+DOT 折扣档看该周期的 `trait_tags`（`schedule.py:615`）。旧字段 `is_boss` / `role` 引擎**已不再读**
+（2026-09-25 E3 已删）—— 内容侧仍可自己读它们，那是内容侧的事。
 
 ## 字段全集
 
@@ -103,9 +106,12 @@
 ### 其余透传字段
 
 `make_actor(**stats)` 里没被上面消费的任何键都会**原样留在 actor 上**
-（`actors.py:139-141`）。这就是 `rank` / `reach` / `is_boss` / `exp` / `gold` /
+（`actors.py:139-141`）。这就是 `rank` / `reach` / `traits` / `exp` / `gold` /
 `drops` / `element_immune` / `element_weak` / `phys_reduce` / `magic_reduce` 的来路。
 它们由**引擎的具体规则**按键读取，不需要在 `make_actor` 里声明。
+其中**唯一**参与身份判定的是 `traits`（内容侧写的标签数组）—— 引擎只做
+`traits.of` / `traits.has` / `traits.has_any`；`is_boss` / `role` 这类旧身份字段
+**引擎已不再读**（2026-09-25 E3 已删），只由内容侧自己消费。
 
 ## `ActCtx`：一次行动的上下文
 

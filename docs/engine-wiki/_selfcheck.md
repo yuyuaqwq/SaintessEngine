@@ -182,8 +182,8 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | B1 | ~~`kinds/` 枚举值写死中文（`PHYS = "物理"` …）~~ **2026-09-13 P4 下沉已消除** | 引擎侧无 `kinds/`（词表移居内容侧，引擎只经 `config.kind_of` 读值） |
 | B2 | 固定效果 key：`"death_guard"`（濒死保护）、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`（受疗修正）。（原含 `"sleep"` 打醒 —— **2026-09-11 已数据化**移除，改读 `wake_on_hit` 字段） | `landing.py:177-190, 248, 384-407` |
 | B3 | `effects.act_apply` 里 `if key == "reduce":` | `effects.py:485` |
-| B4 | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | `effects.py:383` · `schedule.py:658,286` |
-| B5 | `battle.py` 里 `"player"` 阵营名 | `battle.py:188, 515` |
+| B4 | ~~`is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`）~~ **2026-09-25 E3 已消除**：身份 = 内容侧声明的 `traits`，引擎只做 `traits.of` / `has` / `has_any`（名单为空 ⇒ 一律 False） | `effects.py:376-377` · `schedule.py:615` |
+| B5 | `battle.py` 里 `"player"` 阵营名 | `battle.py:190, 515` |
 | B6 | `_is_stack_resource` 的判据关键词含无消费方的字段（`debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct`） | `effects.py:277-281` |
 
 B6 值得单列说明：这些字段**没有消费者**，但它们**存在与否会改变 `mech` 的分派结果**

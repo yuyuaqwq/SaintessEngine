@@ -186,8 +186,8 @@
 | B1 | ~~`kinds/` 的枚举值写死中文（`PHYS = "物理"` …）~~ **2026-09-13 P4 下沉已消除** | 引擎侧无此模块（词表移居内容侧；引擎只经 `config.kind_of` 注入面读 kind 值） | 原「两套 kind 词表」问题随之下线：引擎侧只此一个注入面，非中文 kind 的游戏不受影响 | ——（已消除） |
 | B2 | `landing._apply_death_guard` / `heal_actor` / `stats` 里硬编码 key：`"death_guard"`、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"` | `landing.py:273,384-407` | 「濒死保护」「禁疗/受疗增幅」三类机制**只认固定 key 名**。要换名只能改这个包（或复用这些名字）。（原「睡眠打醒」硬编码 `"sleep"` —— **2026-09-11 已数据化**为 `wake_on_hit` 字段，不再属本表） | `extends/ext_combat/battle/landing.py`（`stats.py` 同在 `battle/`） |
 | B3 | `effects.act_apply` 里 `if key == "reduce":` 写 `holder["reduce_left"]` | `effects.py:485-486` | 包里出现了内容 key 字面量 | `extends/ext_combat/battle/effects.py` |
-| B4 | `schedule._settle_time_effects` 里 `pct_boss` / `boss_pct_mult` / `is_boss` / `role == "boss"` / `is_elite` | `schedule.py:658,275-285` | 「Boss」这个内容概念进了包（作为数据字段处理，尚可接受，但它是**唯一**被包认识的身份标签） | `extends/ext_combat/battle/schedule.py` |
-| B5 | `effects.act_apply` 里 `if holder.get("is_boss") or holder.get("role") == "boss"` | `effects.py:383` | 同上（控制时长减半） | `extends/ext_combat/battle/effects.py` |
+| B4 | ~~`schedule._settle_time_effects` 里按 `is_boss` / `role == "boss"` / `is_elite` 三个**游戏字段**判身份（旧案）~~ **2026-09-25 E3 已消除** | `schedule.py:615`（现为 `traits.has_any(a, period.get("trait_tags") or ())`） | 引擎不再认识「Boss」：身份 = 内容侧在声明里写的 `traits` 标签，引擎只做 `traits.of` / `has` / `has_any`，**名单为空 ⇒ 一律 False**（引擎零游戏知识）。剩下的 `pct_boss` / `boss_pct_mult` / `pct_cur_boss` 只是**那张声明表自己的字段名**（引擎按名读声明块、不解释语义） | `extends/ext_combat/battle/schedule.py`（判定面 `battle/traits.py`） |
+| B5 | ~~`effects.act_apply` 里 `if holder.get("is_boss") or holder.get("role") == "boss"`（旧案）~~ **2026-09-25 E3 已消除** | `effects.py:376-377`（现为 `traits.has_any(holder, state_def(key)["ctrl_half_traits"])`） | 同上（控制时长减半）：**带哪些标签才减半**由该状态的规则声明给（`ctrl_half_traits`），引擎不认标签叫什么 | `extends/ext_combat/battle/effects.py` |
 | B6 | `effects._mech_to_effect` 的 `_is_stack_resource` 判据关键词含 `debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct` | `effects.py:277-281` | 这些字段**没有消费者**（`debuff_scale` 已于 2026-09-11 接线），但它们的**存在与否改变分派结果** —— 声明了 `debuff_scale` 会意外让 mech 走叠层路径 | `extends/ext_combat/battle/effects.py` |
 | B7 | `battle.py` 里 `"player"` 阵营名硬编码 | `battle.py:669`（`_check_side_end`）、`:170`（`focus`） | 你的游戏若不叫 `player` 就得改这个包或用 `hostile_map` 绕过 | `extends/ext_combat/battle/battle.py` |
 | B8 | `B6` 的反面：`stats._monster_base_stats` 的 `crit` 兜底 0.05 与 `make_actor` 播种 0.0 不一致 | `stats.py:145` vs `actors.py:100` | 同一种 actor 在不同路径下暴击率不同 | `extends/ext_combat/battle/stats.py` vs `battle/actors.py` |
@@ -197,7 +197,7 @@
 | 类 | 现状 |
 |---|---|
 | **引擎** | import 边界干净（机器可验）；**语义边界也干净了** —— 游戏词汇与游戏原语都已搬走，剩下的通用件不认识任何具体游戏。今后要守的是**回流**（门禁 A） |
-| **扩展包** | B2–B8 随模块搬进 `extends/ext_combat/battle/`：**装了战斗包的第三方照样会撞上这些硬编码**（固定 key 名 / Boss 身份标签 / 阵营名 `player` / 暴击兜底不一致）。它们不再是「引擎不通用」的问题，而是「这个包的形状够不够通用」的问题 |
+| **扩展包** | B2 / B3 / B6–B8 随模块搬进 `extends/ext_combat/battle/`：**装了战斗包的第三方照样会撞上这些硬编码**（固定 key 名 / 阵营名 `player` / 暴击兜底不一致）。它们不再是「引擎不通用」的问题，而是「这个包的形状够不够通用」的问题（B4 / B5 的「Boss 身份标签」已于 2026-09-25 E3 改为内容侧 `traits` 声明，见上表） |
 
 处置顺序也随之变了：先按 `tests/test_layering.py` 防回流（引擎侧永远不许再长回游戏原语），
 再谈把 `ext_combat` 里那几处 key 字面量数据化 —— 那是**扩展包自己的**技术债，与引擎通用性无关。

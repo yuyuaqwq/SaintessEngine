@@ -111,8 +111,10 @@ def _cap_of(actor, key):                       # effects.py:64，S2 公开别名
 4. **`turns` 限跳**：跳够 `turns` 次就清层（计数器 `dot_jumps`，`schedule.py:778-784`）
 5. **`dir="gain"` 不需要 `stacks > 0`**：0 层也要回（游侠精力耗到 0 若被拦将永远回不了，
    `schedule.py:634-637` 注释）
-6. **boss 档**：`is_boss` 或 `role == "boss"` 时读 `pct_boss` / `pct_cur_boss`
-   （`schedule.py:658` / `:286`）
+6. **标签档**（原「boss 档」）：目标身上带该周期声明的标签之一时读 `pct_boss` / `pct_cur_boss`
+   （名单 = 声明里的 `trait_tags`，引擎只问 `traits.has_any`，`schedule.py:615` / `:638`）。
+   引擎**不认识「Boss」**：谁是 boss / 精英由内容侧在声明里写标签（`traits`），
+   名单为空 ⇒ 一律 False（这条折扣对谁都不生效，引擎零游戏知识）
 
 ⚠️ `dot_next` / `dot_jumps` 是 actor 上的运行期辅助字段，会**随存档落盘**（不在
 `_STRIP_KEYS` 里）——这是续战行为能对上的原因，但如果你是手写存档要注意它们。

@@ -6,6 +6,11 @@
 > 背景：门禁 `tests/test_engine_purity.py` 只验证 **import 方向**（引擎不 import 游戏数据），
 > 拦不住"语义残留"——比如引擎里出现中文枚举值、写死的效果键名。
 > 那份清单曾是「待确认」，本次逐条取证后**定案**。
+>
+> **2026-09-25 修订（审计 E3 · `d01c1e0`）**：**B4 已撤回** —— 引擎不再认识 `is_boss` / `role == "boss"`
+> 这类身份字段，身份标签改由**内容侧声明**（`actor["traits"]`），引擎只做 `traits.of` / `has` / `has_any`
+> 三个只读判据（判定面 `extends/ext_combat/battle/traits.py`），名单为空 ⇒ 一律 False。
+> 本文其余条目不受影响（B4 行、§三 第 3 项、§四 第 3 条已同步标注）。
 
 ---
 
@@ -18,11 +23,13 @@
 
 | | 引擎领域概念 | 游戏内容名词 |
 |---|---|---|
-| 例子 | `phys`/`magi`、`sides["player"]`、`role == "boss"`、`sleep` 打醒 | `shaken`/`guard_core`/`melody`/`cls_wu_seng` |
+| 例子 | `phys`/`magi`、`sides["player"]`、`sleep` 打醒 | `shaken`/`guard_core`/`melody`/`cls_wu_seng`，以及**身份标签名**（`"boss"` / `"elite"` 等） |
 | 引擎怎么处理 | 可以定义枚举/常量、可以比较 | **只能转发**：从 config 查表，或原样回传给内容侧动作 |
 | 第三方换游戏 | 沿用（或用注入覆盖，见 §三） | 完全不需要知道 |
 
-以下 6 条**全部落在左列**（引擎领域概念），因此定案为**公开契约**，而非"内容知识残留"。
+以下 6 条**当初都落在左列**（引擎领域概念），因此定案为**公开契约**，而非"内容知识残留" ——
+其中 **B4 已于 2026-09-25（审计 E3）撤回**：`"boss"` 这类身份标签名是**右列**（内容侧词汇），
+引擎只做「身上有没有名单里的标签」的判定（**5 条**仍有效）。
 真正的右列内容知识在 2026-09-11 清理中已清零（`gauge.charge_*` 是最后一个：它是《云海猎团》
 弓手/时咒的职业机制，已删除）。
 
@@ -35,7 +42,7 @@
 | **B1** | ~~`kinds/__init__.py:27-34`~~ **（2026-09-13 P4 下沉已消除）** | `SkillKind` 枚举值（中文）**已随 `kinds/` 下沉到内容侧**（游戏仓 `game/data/kinds.py`） | 伤害通道枚举是引擎的**领域模型**。引擎内部**从不裸比较中文**（全仓无第二个裸字面量，已 grep 确认）——一律经 `config.kind_of(name)` 注入面读值。下沉后引擎侧不再持有任何 kind 词表 | 内容侧自带词表（第三方同构：内容包 `content/mech/kinds.py`）；引擎侧契约只剩 `config.kind_of` → §三 injectable |
 | **B2** | `landing.py:117,237,246,251,373-396` | 固定键：`sleep`（受击打醒）、`death_guard`（濒死保护）、`heal_amp_pct` / `heal_down` / `_anti_heal_pct`（受疗修正） | 这 5 个是**战斗物理规则里的固定语义位**（打醒/濒死/禁疗），与"护盾先挡"同级；`state_def()` 本来就查 config 表取参数 | 契约词汇。文档在 `reference/effect-rules.md` 登记；`sleep`/`death_guard` 改 config 查表 → §三 |
 | **B3** | `effects.py:369` | `if key == "reduce":` | 特殊处理"减伤"这一**通道**（区别于普通叠层面板） | 契约词汇（同名 key 在内容侧 `EFFECT_ACTIONS` 也走 reduce 通道） |
-| **B4** | `effects.py:305`、`schedule.py:268,272` | `is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`） | "Boss" 是**通用战斗角色概念**（与 `player` 同级）；值是内容侧数据标签 | 契约词汇。第三方用别的标签 → §三 |
+| **B4** | ~~`effects.py:305`、`schedule.py:268,272`~~ **2026-09-25 审计 E3 已撤回**（现：`effects.py:376-377`、`schedule.py:615`） | ~~`is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`）~~ 现为**声明驱动**：控制态声明 `ctrl_half_traits`、周期声明 `trait_tags`，引擎只调 `traits.of` / `has` / `has_any`（判定面 `extends/ext_combat/battle/traits.py`）；名单为空 ⇒ 一律 False | ~~"Boss" 是**通用战斗角色概念**（与 `player` 同级）~~ **改判**：`"boss"` 是**内容侧标签名**，不是引擎契约词汇 —— `player` 是引擎自己的焦点侧约定（B5），`boss` 不是 | 不再属契约词汇（原「第三方用别的标签 → §三」不成立）：第三方**自己起标签名**并在声明里给名单 |
 | **B5** | `battle.py:170,515` | `sides["player"]` | 引擎需要**一个默认焦点侧**来找命令层焦点 actor（`human_controlled`） | 契约词汇：约定焦点侧名 = `"player"`。多焦点/改名 → §三 `focus_side` |
 | **B6** | `effects.py:249-253` | `_is_stack_resource` 判据关键词含**无消费方**字段（`dot` / `on_threshold` / `guard_hp_pct`；`debuff_scale` 已于 2026-09-11 接线，但仍留在判据列表里） | 这是"死字段但**活判据**"：字段**存在与否会改变分派结果**（有 `debuff_scale` → 走 `apply op=add` 叠层；没有 → 走 `EFFECT_ACTIONS` 名词翻译） | ⚠️ **清理时必须同时考虑分派影响**——内容侧清理这些死字段前，先跑叠层分派回归 |
 
@@ -73,7 +80,7 @@
 |---|---|---|---|
 | 1 | `focus_side` | `Battle(focus_side="player")` 构造参数 + 默认 `"player"`；`_focus_actor` 读它 | S（~5 行） |
 | 2 | `kind_labels` | `config.mount(kind_labels={"PHYS": "物理", ...})`；`kinds` 在 import 时读，缺省 = 现值（零行为变化） | M（enum 需动态构造，注意 `SkillKind` 的 property） |
-| 3 | `boss_roles` | `config.mount(boss_roles=("boss",))`；B4 的两处比较改查表 | S（~6 行） |
+| 3 | ~~`boss_roles`~~ **作废（2026-09-25 审计 E3）** | 不再需要注入点：B4 已改成**声明驱动**（标签名单写在内容侧声明里），第三方本来就用自己一套标签名 | ——（已被 E3 解决，无需开工） |
 | 4 | `builtin_keys` | `sleep`/`death_guard`/`heal_amp_pct`/`heal_down`/`_anti_heal_pct` 经 `config.key(name)` 解析，缺省 = 现值 | M（5 处替换 + 保底） |
 
 > 定这个顺序的理由：`focus_side` 是纯改名，零语义风险；`builtin_keys` 涉及落地主链
@@ -87,6 +94,6 @@
 
 - 数据里的伤害类型用 `物理/魔法/治疗/增益/被动/召唤/真伤/嘲讽`（或经 `kind_meta()` 查表）；
 - 焦点方阵营命名为 `player`；
-- Boss 角色在 actor 上标 `is_boss: true` 或 `role: "boss"`；
+- 身份标签写在 actor 的 `traits` 数组里（标签名随你起，如 `["boss"]`）；控制时长减半 / DOT 折扣档的**名单**由声明给（`ctrl_half_traits` / `trait_tags`），引擎只判「身上有没有名单里的标签」；
 - 用 `sleep` / `death_guard` / `heal_amp_pct` / `heal_down` 表达打醒 / 濒死保护 / 受疗修正；
 - 叠层资源要在 `EFFECT_RULES` 里带 `stat_scale` / `period` / `debuff_scale` 之一（见 B6，它决定分派路径）。
