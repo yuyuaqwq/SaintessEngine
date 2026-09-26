@@ -177,6 +177,37 @@ def _mp_gate_text(gate, battle, actor: dict, info: dict, need_mp: int) -> list:
     return out
 
 
+def _use_gate_text(gate, battle, actor: dict, info: dict) -> list:
+    """★ fxmech（2026-09-26）「通用否决口」——把内容侧的回执规范成「拦不拦 + 说什么」。
+
+    形状 = 内容侧 hook `skill_gate_fn(battle, actor, info)`（与 `_mp_gate_text` 逐条同款）：
+
+    * `None`                   ⇒ **放行**（不拦、不回）——「这一手可以放」；
+    * 非空 `str` / 非空序列     ⇒ **拦下**，这一段逐字作为回话（挑掉 `None` / 空段）；
+    * 空串 / 空序列 / 别的类型  ⇒ 抛 `EngineNotConfigured`
+      （「声明了就要给得出可判读的结果」——**不静默放过**，也不由引擎替它编一句兜底）。
+
+    引擎**零数值、零玩家文案**：内容侧要的 `battle` / `actor` / `info` 原样转述，
+    比什么、比多少、说什么，全在 hook 里（引擎不认识任何门槛）。
+    """
+    got = gate(battle, actor, info)
+    if got is None:
+        return []
+    if isinstance(got, str):
+        out = [got] if got else []
+    elif isinstance(got, (list, tuple, set, frozenset)):
+        out = [str(x) for x in got if x not in (None, "")]
+    else:
+        raise _cfg.EngineNotConfigured(
+            "skill_gate_fn 的回执形状不对：要 None（放行）或 非空 str/序列（拦下并把这段当回话），"
+            "拿到 %s" % type(got).__name__)
+    if not out:
+        raise _cfg.EngineNotConfigured(
+            "skill_gate_fn 已装配却给不出可判读的回执（空串 / 空序列）—— 拦下就要说得出为什么，"
+            "放行请显式回 None（引擎不替它编一句兜底）。")
+    return out
+
+
 def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
     """技能可用性（冷却 / 核心资源）检查——通用规则，引擎零职业知识。
 
@@ -224,6 +255,16 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
         if _say:
             if logs is not None:
                 logs.extend(_say)
+            return False
+    # ---- 1.6 ★ fxmech（2026-09-26）「通用否决口」（内容侧注入 · 引擎零数值/零文案）----
+    #   与 1.5 的 mp 门槛同一位置、同一形状（未装配 ⇒ 这一整段不存在 ⇒ 与接线前逐字节相同）：
+    #   引擎不知道「血线不够不许放」「这一场已经放过」这些规则 —— 全在内容侧 hook。
+    _ugate = _cfg.optional_hook("skill_gate_fn")
+    if _ugate is not None:
+        _usay = _use_gate_text(_ugate, battle, actor, info)
+        if _usay:
+            if logs is not None:
+                logs.extend(_usay)
             return False
     # ---- 2. 核心资源（仅职业 actor 参与核心资源体系；怪无 res_cost）----
     if not actor.get("class_name"):

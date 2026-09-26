@@ -49,10 +49,10 @@ config.mount(
 | + `formula_skeleton_fn` | 起得了战斗，但 `human_act` 返回 `[]`、目标 hp 不变 —— **静默 0 伤害**（R8 语义） |
 | + `time_model_fn` / `action_base_fn` | ✅ `💥 野狼 受到 34 点伤害！` |
 
-> ⚠️ **坑（建议改进）**：`config.mount(**hooks)`（`config.py:186`）只认 `_HOOKS`
+> ⚠️ **坑（建议改进）**：`config.mount(**hooks)`（`config.py:198`）只认 `_HOOKS`
 > （`config.py:30-127`）名单里的 25 个名字，**未知名会被静默忽略**（`set_hook` 里
 > `if name in _HOOKS` 没有 else 分支）。写错 hook 名不会报错，只是不生效。
-> 开发期建议打开 `config.strict = True`（`config.py:134`）——未装配的 hook 会抛
+> 开发期建议打开 `config.strict = True`（`config.py:146`）——未装配的 hook 会抛
 > `EngineNotConfigured` 而不是让链深处抛 `TypeError`/`KeyError`。
 > （`time_model_fn` / `action_base_fn` 是**唯一**两条不吃 `strict` 的：它们无论如何都抛。）
 
@@ -96,7 +96,7 @@ b = Battle(btype="monster", sides={"player": [hero], "enemy": [wolf]})
    —— 快者先手、开局第一动也按速度排（`schedule.initial_ct`，`schedule.py:44`）
 
 `sides` 的键名由你定；引擎唯一硬编码的约定是 **`"player"`** 这个键名
-（`_check_side_end` 里 `alive[0] == "player"` → `result="victory"`，`battle.py:669`）。
+（`_check_side_end` 里 `alive[0] == "player"` → `result="victory"`，`battle.py:684`）。
 
 ## 3. 打一拳
 
@@ -121,7 +121,7 @@ print("\n".join(logs))
 
 `who` 是这套引擎对「多人同时在场」的答案：`human_act` 内部先 `act()`，
 再 `_after_act` 推 caster 的 `ct`，然后 `advance()` 一路推进自动 actor，
-直到撞上**下一个 ct 最小的人控 actor**（`schedule.advance`，`schedule.py:372`）。
+直到撞上**下一个 ct 最小的人控 actor**（`schedule.advance`，`schedule.py:396`）。
 单玩家场景 `who` 通常仍是自己。
 
 内部调用链（详见 [../architecture/data-flow.md](../architecture/data-flow.md)）：
@@ -135,14 +135,14 @@ human_act → act(ctx) → do_attack → do_skill → _attack_damage_pipeline
 ## 4. 跑到结束
 
 ```python
-b.auto_run([])                       # battle.py:344，全自动跑到 result != None
+b.auto_run([])                       # battle.py:347，全自动跑到 result != None
 print(b.result, b.winner_side)       # victory / player
 ```
 
-- `auto_run` 里人控 actor 也走普攻（`battle.py:350`），适合测试与仿真。
-- 胜负判定在 `_check_side_end`（`battle.py:663`）：存活阵营数 ≤ 1 → 置 `result`；
+- `auto_run` 里人控 actor 也走普攻（`battle.py:353`），适合测试与仿真。
+- 胜负判定在 `_check_side_end`（`battle.py:678`）：存活阵营数 ≤ 1 → 置 `result`；
   `alive[0] == "player"` → `"victory"`，否则 `"defeat"`；全灭 → `"defeat"`。
-- `"fled"` 只由 `Battle._do_flee`（`battle.py:609`）写。
+- `"fled"` 只由 `Battle._do_flee`（`battle.py:624`）写。
 
 ## 5. 读日志 / 读状态
 
@@ -152,7 +152,7 @@ print(b.result, b.winner_side)       # victory / player
 | 通道 | 位置 | 用途 |
 |---|---|---|
 | `Battle.on_event` | 构造参数，`effect_triggers.fire` 尾部调用（`effect_triggers.py:117-122`） | 观察每个事件（记账 / 团队广播 / 存活同步） |
-| `Battle.action_override` | 构造参数，`act()` 里非内置动作时调用（`battle.py:522`） | 接管 `use_item` 之类的自定义行动 |
+| `Battle.action_override` | 构造参数，`act()` 里非内置动作时调用（`battle.py:531`） | 接管 `use_item` 之类的自定义行动 |
 
 `on_event(battle, event, ctx, logs)` 的签名与 ctx 字段见
 [reference/events.md](../reference/events.md)。只读 ctx 或调引擎动词改状态，

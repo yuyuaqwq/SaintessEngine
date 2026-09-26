@@ -162,29 +162,47 @@ def _spd_of(battle, actor: dict) -> int:
         return int(actor.get("spd", 0) or 0)
 
 
-def _segment_seconds(battle, actor: dict, decl, label: str = "第一段耗时") -> float:
+def segment_time(battle, actor: dict, decl, kind: str = "cast",
+                 label: Optional[str] = None) -> float:
     """一段耗时（游戏秒）—— 四形态（**守卫 `_validators.segment_of` 守门**，坏形状当场抛）：
 
-    | `decl` | 语义 |
-    |---|---|
-    | `None` | 按 `DEFAULT_ACTION` 类别（调用方没声明这一段） |
-    | `str` | **行动类别名** → 过内容侧时间模型（吃速度） |
-    | 数字 | **绝对秒**（绕过速度/施法急速模型） |
-    | `{"base": n}` | **基准秒** → 过内容侧时间模型（吃速度） |
+    | `decl` | 语义 | 吃速度 | 基准从哪来（**模型由 `kind` 选**） |
+    |---|---|---|---|
+    | `None` | 调用方没声明这一段 | ✅ | `DEFAULT_ACTION` 类别（今天口径，逐字不变） |
+    | `str` | **行动类别名** | ✅ | cast→`action_base_of` · recover→`recover_base_of` |
+    | `{"base": n}` | **基准秒** | ✅ | 同上，模型 = `time_model_fn` / `recover_model_fn` |
+    | 数字 | **绝对秒** | ❌ | 直接返回（绕过速度模型） |
+
+    ★ `kind` 必须分两段、不许共用一个模型：引擎今天就是**两条独立的面**
+      （`time_model_fn` / `recover_model_fn`），第二段允许是**另一个形状**
+      （「第二段不吃速度」那类内容侧选择）—— 共用等于把内容侧的选择权收回引擎。
 
     ★ E6（2026-09-25）：原先只有 str / 数字两档 —— `{"base": n}` 是文档里写明的合法形态，
       却会掉进 `float(dict)` 抛 `TypeError`；而坏形状（列表 / 负秒 / `{"base":"x"}`）也没有
       点名调用方。现在一律先过守卫（点名 `label`），再按形态取秒数。
+
+    ★ fxmech（2026-09-26）：这一段从「只有落地读技能自己的声明」变成**落地与到点同源**
+      —— `pending_begin`（登记/落地）与 `_after_act`（下次能动的时刻）都调它，`kind`
+      决定第一段/第二段各自的模型（见 B4-4 设计案 §一·1.1）。
     """
     from saintess_engine import _validators as _V
-    decl = _V.segment_of(decl, label)
+    decl = _V.segment_of(decl, label or "一段耗时")
     if decl is None:
         decl = DEFAULT_ACTION
+    _rec = str(kind) == "recover"
     if isinstance(decl, str):
-        return action_time(_spd_of(battle, actor), action_base_of(decl))
-    if isinstance(decl, dict):
-        return action_time(_spd_of(battle, actor), float(decl["base"]))
-    return max(0.0, float(decl))              # 绝对秒：不过时间模型
+        _base = recover_base_of(decl) if _rec else action_base_of(decl)
+    elif isinstance(decl, dict):
+        _base = float(decl["base"])
+    else:
+        return max(0.0, float(decl))          # 绝对秒：不过时间模型
+    _spd = _spd_of(battle, actor)
+    return recover_time(_spd, _base) if _rec else action_time(_spd, _base)
+
+
+def _segment_seconds(battle, actor: dict, decl, label: str = "第一段耗时") -> float:
+    """一段耗时（游戏秒）—— **第一段**（`kind="cast"`）的转发（既有调用方签名一字不改）。"""
+    return segment_time(battle, actor, decl, "cast", label)
 
 
 def segment_plan_of(battle, actor: dict, action, entry) -> Optional[dict]:
@@ -238,6 +256,12 @@ def pending_begin(battle, ctx, cast=None, recover=None, pre_logs=None) -> dict:
     槽内全字段 JSON 安全 ⇒ 待发随存档往返（serialize / 宿主回写面零改动）。
     """
     actor = ctx.caster
+    # ★ D2（fxmech · 2026-09-26）：这段 docstring 一直写「`None` = 第一段按 `ctx.action` 类别」，
+    #   实现却落 `DEFAULT_ACTION`（`attack`）—— 两条口径今天没人踩到（`Battle.act` 永远显式传
+    #   `cast=`），但接线后走 `None` 分支就会分叉。这里把**实现对齐到口头契约**：
+    #   `None` ⇒ 本次行动自己的类别（`ctx.action`）。
+    if cast is None:
+        cast = getattr(ctx, "action", None) or DEFAULT_ACTION
     slot = {
         "action": str(ctx.action or DEFAULT_ACTION),
         "skill": ctx.skill_name,
@@ -404,18 +428,35 @@ def _next_auto_due(battle):
     return (best, best_t) if best else None
 
 
-def _after_act(battle, actor: dict, action: str, recover_base: Optional[float] = None):
-    """行动后推进 actor.ct（第一段耗时 + 第二段耗时 + 固定推进）。
+def _after_act(battle, actor: dict, action: str, recover_base: Optional[float] = None,
+               plan=None):
+    """行动后推进 actor.ct（第一段耗时 + 第二段耗时）。
 
-    `recover_base=None` → 第二段基准走内容侧基准表（`action` 那一项）；
-    给了值 → 用它（由 `battle.action_override` 回执的第二段透传，单位与基准表一致）。
+    `plan=(cast_decl, recover_decl)` —— **这一次行动**的两段声明（E5 `segment_plan_fn`
+      回执 · `Battle.act` 在 T0 解析出来存 `ctx._plan`）⇒ 与 `pending_begin` 的落地时刻
+      **同一个函数、同一份声明**算出来（「登记的动作 ≠ 落地的动作」不可能从这条路上长出来）。
+      `None` ⇒ 按 `action` 类别查**各自的表**（今天口径，**逐字不变**）。
+    `recover_base` = 老契约的「**基准值**」（`action_override` 覆盖路径在用）—— 语义一字不改，
+      内部规成 `{"base": x}`（`segment_time` 走 `recover_model_fn(spd, x)` ≡ 今天的
+      `recover_time(spd, x)`）。
     """
-    base = action_base_of(action)
-    _rb = recover_base_of(action) if recover_base is None else float(recover_base)
+    if plan is not None:
+        cast_decl, rec_decl = plan
+        # ★ 一段没声明（`None`）⇒ 那一段落回**本次行动的类别**（不是 DEFAULT_ACTION）：
+        #   E5 未装配时 `Battle.act` 给的正是 `(action, None)`，落 DEFAULT_ACTION 会与
+        #   「不传 plan」那条路（按 `action` 查表）分叉 —— 同为「没接」却算出两个数。
+        if cast_decl is None:
+            cast_decl = action
+        if rec_decl is None:
+            rec_decl = action
+    else:
+        cast_decl = action
+        rec_decl = {"base": float(recover_base)} if recover_base is not None else action
     # 用聚合面板速度（buffs 修正）——actor 裸 spd 字段可能是 0（玩家面板由
     # stats.actor_stats 从 class/equip 聚合），与 next_ct / 待发槽同一口径。
-    spd = _spd_of(battle, actor)
-    actor["ct"] = float(battle._now) + action_time(spd, base) + recover_time(spd, _rb)
+    actor["ct"] = (float(battle._now)
+                   + segment_time(battle, actor, cast_decl, "cast", "行动后推 ct 的第一段（cast）")
+                   + segment_time(battle, actor, rec_decl, "recover", "行动后推 ct 的第二段（recover）"))
 
 
 def _advance_time(battle, dt: float, logs: list):

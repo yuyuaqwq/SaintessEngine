@@ -88,10 +88,10 @@ attacker = ctx.get("source")
 
 | 事件 | 谁读回 | 语义 | 包内点位（`extends/ext_combat/battle/`） |
 |---|---|---|---|
-| `dmg_calc` | 攻击方总伤 | ×mult 增伤 | `actions.py:451-458` |
+| `dmg_calc` | 攻击方总伤 | ×mult 增伤 | `actions.py:492-499` |
 | `taken_calc` | 承伤前 | ×mult 减伤（<1）或增伤（>1） | `landing.py:83-94` |
-| `heal_calc` | 治疗量落地前 | ×mult 治疗增幅 | `actions.py:690-760` |
-| `dot_calc` | DOT 每跳 | ×mult DOT 增伤 | `schedule.py:659-676` |
+| `heal_calc` | 治疗量落地前 | ×mult 治疗增幅 | `actions.py:731-801` |
+| `dot_calc` | DOT 每跳 | ×mult DOT 增伤 | `schedule.py:700-717` |
 
 写法（实测可用的最小骨架）：
 
@@ -110,9 +110,9 @@ def my_cond_mult(battle, caster, target, params, logs):
 
 三条注意：
 
-- `ctx["mult"]` 初值由引擎置 1.0（`actions.py:454`），**累乘**多个源
+- `ctx["mult"]` 初值由引擎置 1.0（`actions.py:495`），**累乘**多个源
 - `_fire_ctx` 是**单槽覆盖式**：只在你自己那次 `fire` 的同步栈里有效
-- 乘区在 `dmg_calc` 里改的是**已经算完的总伤**（多段之和，`actions.py:442-445` 之后）
+- 乘区在 `dmg_calc` 里改的是**已经算完的总伤**（多段之和，`actions.py:483-486` 之后）
 
 ## judge 谓词：把判据写成数据
 
@@ -148,7 +148,7 @@ def my_cond_mult(battle, caster, target, params, logs):
 |---|---|---|
 | 开战前（按已学技能/已装备） | 命令层开战仪式调你的装配函数，写 `actor["triggers"]` | `apply_class_mech(actor)`（`class_mech_proc.py:2201`） |
 | 战斗中途（某个效果生效时） | 在动词里直接改 `triggers`（会立刻生效，因为 fire 每次都现读） | 内容侧「进入守护姿态时挂反击 trigger」 |
-| 一次性行动 | `Battle.action_override`（`battle.py:522`） | `use_item` 类自定义行动 |
+| 一次性行动 | `Battle.action_override`（`battle.py:531`） | `use_item` 类自定义行动 |
 
 装配器的最简形态（实测跑通）：
 

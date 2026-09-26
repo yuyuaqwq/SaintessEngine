@@ -79,7 +79,7 @@ clock · command · container · domains · events · expr · host · log · ses
 | `actions` | `skill_pay_of` | `_skill_pay_of` |
 
 （这五个符号都在扩展包 `ext_combat` 里；别名赋值处：`effects.py:86-87`、`battle.py:30`、
-`battle/actions.py:334`、`battle/actions.py:814`）
+`battle/actions.py:334`、`battle/actions.py:855`）
 
 ## 2. `Battle`（扩展包 `ext_combat` · `battle.py:34`）
 
@@ -97,10 +97,10 @@ Battle(btype="monster", sides=None, hostile_map=None, target_picker=None,
 | `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:239`） |
 | `sides` | `{阵营名: [actor]}`，**唯一入口** | 全包（`ext_combat`） |
 | `hostile_map` | `{side: [敌对 side]}` | `actors.hostile_sides`（`actors.py:202-204`）；缺省 = 除自己外全部阵营 |
-| `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:430-434`） |
+| `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:433-437`） |
 | `on_event` | `callable(battle, event, ctx, logs)`，事件总线尾部观察者 | `effect_triggers.fire`（`effect_triggers.py:117-122`） |
-| `action_override` | `callable(battle, action, actor, skill_name, target) -> (logs, cast)`；接管非内置行动 | `Battle.act`（`battle.py:511-519`） |
-| `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:375-384`） |
+| `action_override` | `callable(battle, action, actor, skill_name, target) -> (logs, cast)`；接管非内置行动 | `Battle.act`（`battle.py:520-528`） |
+| `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:378-387`） |
 | `redirect_hook` | `callable(battle, victim, guard, amount, dmg_kind) -> bool`；承伤转移是否真由保护者承受 | `landing.deal_damage`（`landing.py:62`）；治疗侧同款见 `heal_redirect_hook`（`landing.py:448`，非构造参数） |
 | `seed_ct` | `True` = 播种初始 ct；`from_state` 传 `False` | `battle.py:95-98` |
 | `text` | 文案表（鸭子类型 `render_or(key, default, **slots)`） | `Battle._t`（`battle.py:106`）；不落盘，恢复方重新注入 |
@@ -152,10 +152,10 @@ add_actor(actor: dict, side: str, front: bool = False) -> dict      # battle.py:
 ```python
 human_act(action, skill_name, actor=None, target=None, target_side=None)
     -> (logs: list, ended: bool, who: dict | None)                   # battle.py:277
-advance(logs: list) -> dict | None                                   # battle.py:335
-auto_run(logs: list, max_steps: int = 500) -> None                    # battle.py:344
-actor_auto(actor: dict, ctx_target=None) -> (logs, ended)             # battle.py:360
-act(ctx: ActCtx) -> (logs, ended)                                     # battle.py:450
+advance(logs: list) -> dict | None                                   # battle.py:338
+auto_run(logs: list, max_steps: int = 500) -> None                    # battle.py:347
+actor_auto(actor: dict, ctx_target=None) -> (logs, ended)             # battle.py:363
+act(ctx: ActCtx) -> (logs, ended)                                     # battle.py:459
 ```
 
 - `human_act`：命令层唯一入口。`actor` 缺省用 `focus()`。战斗已结束 → `(["战斗已结束！"], True, None)`。
@@ -175,16 +175,16 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 | 方法 | 位置 | 内容层引用数（全仓 grep） |
 |---|---|---|
 | `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:113/117/151` | 仅包内 |
-| `_do_defend` / `_do_flee` | `battle.py:610/458` | 仅包内 |
-| `_ensure_battle_started` | `battle.py:626` | 仅包内 |
-| `_on_actor_dead(actor, logs=None)` | `battle.py:643` | `landing._apply_damage` 调（`landing.py:401`） |
-| `_check_side_end` | `battle.py:663` | 仅包内 |
+| `_do_defend` / `_do_flee` | `battle.py:625/458` | 仅包内 |
+| `_ensure_battle_started` | `battle.py:641` | 仅包内 |
+| `_on_actor_dead(actor, logs=None)` | `battle.py:658` | `landing._apply_damage` 调（`landing.py:401`） |
+| `_check_side_end` | `battle.py:678` | 仅包内 |
 
 ### 序列化
 
 ```python
-to_state() -> dict                    # battle.py:690 → serialize.to_state
-Battle.from_state(st, *, text=None)   # battle.py:686（classmethod）→ serialize.from_state
+to_state() -> dict                    # battle.py:705 → serialize.to_state
+Battle.from_state(st, *, text=None)   # battle.py:701（classmethod）→ serialize.from_state
 ```
 
 ## 3. 模块级公开函数（除 `config.py` 外都在扩展包 `ext_combat`）
@@ -399,7 +399,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 | `front_rank(units)` | `:20` |
 | `reachable_units(attacker, units)` | `:28`（⚠️ 无外部引用） |
 | `select_target(attacker, units, threat=None, exclude_uid=None, threat_mode="front")` | `:34` |
-| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一消费者：`actions._deal_aoe`，`battle/actions.py:404`） |
+| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一消费者：`actions._deal_aoe`，`battle/actions.py:445`） |
 | `pick_by_policy(policy, units, threat=None, fallback=None)` | `:122` |
 | `compact(units)` | `:161` |
 | `numbered_units(units)` | `:191` |
@@ -471,7 +471,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 | `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
 | ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 不实现） |
-| `config.set_hook` | `config.py:148` | 零外部引用（都走 `mount`） |
+| `config.set_hook` | `config.py:160` | 零外部引用（都走 `mount`） |
 | `effects.resolve_actions` | `effects.py:140` | 零外部引用（`effects` 内部调用） |
 | `ai.eval_when` | `ai.py:159` | 零外部引用（`resolve_ai_move` 内部调） |
 | ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |

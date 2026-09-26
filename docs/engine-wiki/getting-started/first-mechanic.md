@@ -81,7 +81,7 @@ def equip_blood_pact(actor):
 引擎在固定点位 `fire(事件名, ctx, logs)`，总线遍历所有存活 actor 找 `triggers[事件名]`，
 逐个交给 `apply_effects` 翻译执行（`effect_triggers.fire`，`effect_triggers.py:63`）。
 
-`attack_hit` 的触发点在 `_single_target_pipeline` 尾部（`actions.py:501`）：
+`attack_hit` 的触发点在 `_single_target_pipeline` 尾部（`actions.py:542`）：
 **普攻命中且伤害管线跑完之后**，`ctx = {"actor": 攻击者, "target": 挨打者, "info": 技能, "dmg": 总伤}`。
 
 ## 跑起来

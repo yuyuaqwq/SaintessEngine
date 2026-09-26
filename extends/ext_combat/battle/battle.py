@@ -318,7 +318,10 @@ class Battle:
                         _diag(self, "human_act", _e)          # 审计 P-44 余量：不再静默（行为不变）
                         _after_act(self, caster, "attack")
             else:
-                _after_act(self, caster, ctx.action)
+                # ★ fxmech：把 T0 解析好的**同一份**声明传下去（`ctx._plan`）——
+                #   落地（`pending_begin`）与到点（本行）从此同源；未装配 E5 ⇒ `_plan`
+                #   拿不到 ⇒ `plan=None` ⇒ 按 `ctx.action` 类别（今天口径，逐字不变）。
+                _after_act(self, caster, ctx.action, plan=getattr(ctx, "_plan", None))
             logs2 = []
             who = self.advance(logs2)
             logs.extend(logs2)
@@ -437,7 +440,13 @@ class Battle:
         # 行动后推 ct（自动 actor）
         if not ended:
             from .schedule import _after_act
-            _after_act(self, caster, action)
+            # ★ fxmech：透传 T0 那份声明 —— 但**只在 `ctx.action` 没被改写时**用：
+            #   本函数的局部 `action` 是「控制改写前」的值，被沉默的自动 actor 今天按
+            #   「技能 80/50」推 ct（既有偏差，见 B4-4 §三·D1）。加这道守卫 ⇒ 那个偏差
+            #   逐字保留（不顺手修），没被改写的正常路径才吃技能自己的两段。
+            _pl = (getattr(ctx, "_plan", None)
+                   if str(ctx.action) == str(action) else None)
+            _after_act(self, caster, action, plan=_pl)
         return logs, ended
 
     def act(self, ctx: ActCtx) -> tuple:
@@ -539,9 +548,15 @@ class Battle:
             # ★ E6（2026-09-25）：**内置动作**（attack / skill / defend / flee）也能
             # 「按这一次行动」声明两段耗时 —— 问内容侧 `segment_plan_fn`
             # （不配 = 不存在 ⇒ 落回行动类别基准路径：cast = 本次行动类别、第二段不声明，逐字不变）
+            # ★ 普攻那条路（`action == "attack"`）**不喂 entry**：本职业 basic 技能那两段
+            #   （真源 00_重做总纲 §五·六 对 basic 也成立）今天**还没接** —— 开了它，
+            #   难度底线会被顶开（零加点骑士 vs 精英 lv9：0/40 → 33/40），而同一份真源的
+            #   「一次行动（F6）」六列全是**类别 attack** 的账（要让真源先裁口径，见
+            #   fxmech/_notes.md §七 与 B4-4 设计案 §三·D4）⇒ 单独立条，本批不夹带。
             _plan = segment_plan_of(self, actor, action, ctx.info)
             _cast, _recover = ((action, None) if _plan is None
                                else (_plan["cast"], _plan["recover"]))
+            ctx._plan = (_cast, _recover)          # ★ ct 段复用同一份声明（不许各自解析）
         pending_begin(self, ctx, cast=_cast, recover=_recover, pre_logs=pre_logs)
         logs.append(self._t("battle.schedule.cast_begin", "🌀 {name} 开始出招…",
                             name=actor.get('name', '目标')))

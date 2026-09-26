@@ -73,7 +73,7 @@
 [../concepts/ctb-schedule.md](ctb-schedule.md)），「没有第二段」由**内容侧显式声明 0** 表达
 （对应 `recover_time()` 返回 `0.0`，加法结果逐位不变），**不由引擎兜底**。
 
-> ⚠️ **未知名被静默忽略**：`set_hook`（`config.py:173`）里 `if name in _HOOKS`
+> ⚠️ **未知名被静默忽略**：`set_hook`（`config.py:185`）里 `if name in _HOOKS`
 > 没有 else。写错 hook 名不报错。开发期用 `strict=True`。
 
 ## 两张规则表：`set_config`
@@ -82,7 +82,7 @@
 config.set_config("effect_actions", EFFECT_ACTIONS)   # 名词 → 动词序列
 config.set_config("effect_rules",   EFFECT_RULES)     # key → 行为规则
 # 或者一次给一个模块（读它的 EFFECT_ACTIONS / EFFECT_RULES 属性）
-config.load_game_rules(my_rules_module)               # config.py:129
+config.load_game_rules(my_rules_module)               # config.py:141
 ```
 
 读取端（**S2 公开 API**）：
@@ -90,8 +90,8 @@ config.load_game_rules(my_rules_module)               # config.py:129
 | 函数 | 位置 | 语义 |
 |---|---|---|
 | `get_effect_actions()` | `config.py:144` | 默认 `{}` |
-| `get_effect_rules()` | `config.py:158` | 默认 `{}` |
-| `state_def(key)` | `config.py:155`（`state_effects.py:13` 的实体） | `get_effect_rules().get(key) or {}` |
+| `get_effect_rules()` | `config.py:170` | 默认 `{}` |
+| `state_def(key)` | `config.py:167`（`state_effects.py:13` 的实体） | `get_effect_rules().get(key) or {}` |
 
 ## 三档行为：零装配 / 部分装配 / strict
 
@@ -101,7 +101,7 @@ config.load_game_rules(my_rules_module)               # config.py:129
 |---|---|
 | **什么 hook 都没装** | 一切「静默降级为 0」。`human_act` 返回 `[]`，双方 hp 不变，**不抛异常** |
 | **装了 `formulas` 但没装 `formula_skeleton_fn` / `skill_flat_fn`** | 伤害链内部抛 `KeyError: 'skill_growth'` / `TypeError: float() ... NoneType` —— **硬崩**，而且栈不指向 hook 名 |
-| **`config.strict = True`** | `get_hook` 对未装配 hook 抛 `EngineNotConfigured`（`config.py:178`），错误信息直接点名缺哪个 hook |
+| **`config.strict = True`** | `get_hook` 对未装配 hook 抛 `EngineNotConfigured`（`config.py:190`），错误信息直接点名缺哪个 hook |
 
 ```python
 config.strict = True    # 开发/测试环境建议打开（config.py:109）
@@ -148,10 +148,10 @@ config.load_game_rules(my_rules_module)
 ### ③ 惰性装配（`register_hook_provider`）
 
 ```python
-config.register_hook_provider(my_lazy_mount)   # config.py:163
+config.register_hook_provider(my_lazy_mount)   # config.py:175
 ```
 
-引擎首次访问某个未装配 hook 时调用一次（`_lazy_bootstrap`，`config.py:227`，带防重入）。
+引擎首次访问某个未装配 hook 时调用一次（`_lazy_bootstrap`，`config.py:239`，带防重入）。
 游戏仓 `dragonfall`（《奥兰迪亚》）内容侧就是这么接的：它的装配入口收敛到
 `game/content_rules/apply.py` 的 `ensure_engine_configured()`（幂等；旧
 `load_game_defaults` 的收敛点），hook 与规则表经 `game/bootstrap.py`
