@@ -14,7 +14,8 @@
 引擎**不按字段猜身份**。「谁需要真人输入」由 `human_controlled` 一个 bool 决定。
 
 **代价**：
-- 想表达「Boss 特例」时不能加类型分支，只能读数据字段（`is_boss` / `role`）
+- 想表达「Boss 特例」时不能加类型分支，只能读**内容侧声明的身份标签**（`traits`）——
+  引擎只提供 `traits.of` / `traits.has` / `traits.has_any` 三个**只读**判据，**名单为空 ⇒ 一律 False**
 - 面板公式必须对「无 `class_name`」的 actor 也有答案（`stats._monster_base_stats`）
 - 调试时无法从类型看出「这是谁」，得看 `name` / `kind`
 

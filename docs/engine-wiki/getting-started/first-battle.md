@@ -73,9 +73,11 @@ wolf = make_actor("e1", "野狼", "enemy", kind="monster",
 - `kind` 只是**数据标签**（`"player"` / `"monster"` / 你自己的词），引擎不按它分支；
   真正决定「谁是人控」的是 `human_controlled`（`Battle.focus()` 只看它，`battle.py:226`）。
 - 等级字段统一是 `level`；引擎不认 `lv`（`actors.py:81` 注释明写）。
-- 额外关键字（`rank` / `reach` / `role` / `is_boss` / 你的自定义标签）会**原样透传**进 actor
-  （`actors.py:139-145`）。`is_boss` / `role == "boss"` 是引擎真读的两个（控制时长减半、
-  DOT `pct_boss` 档）——见 [reference/effect-rules.md](../reference/effect-rules.md)。
+- 额外关键字（`rank` / `reach` / `traits` / 你的自定义标签）会**原样透传**进 actor
+  （`actors.py:139-145`）。引擎**不认识 Boss 这类身份**：身份由**内容侧声明** —— 在 actor 上写
+  `traits: ["boss"]`（标签名随你起），引擎只用 `traits.of` / `traits.has` / `traits.has_any`
+  判「身上有没有这个标签」，**名单为空 ⇒ 一律 False**（不声明 = 这条规则不适用于任何人）。
+  身份标签的用点（控制时长减半 / DOT 折扣档）见 [reference/effect-rules.md](../reference/effect-rules.md)。
 - 战斗可变状态已被播种：`effects` / `shields` / `cooldown` / `defending` / `charging` / `ct`
   （`_MUTABLE_KEYS`，`actors.py:51`）。
 

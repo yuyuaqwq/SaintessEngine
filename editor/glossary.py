@@ -286,7 +286,7 @@ _EFFECT_RULES = {
     "period.interval": {"zh": "周期间隔", "note": "✅ 单位刻（绝对时刻，不是「每 tick」）。", "ref": ("reference/effect-rules.md", "interval")},
     "period.pct_max_hp": {"zh": "每跳最大生命比例", "note": "✅ damage 向：每层每跳按最大生命掉血。", "ref": ("reference/effect-rules.md", "pct_max_hp")},
     "period.pct_cur_hp": {"zh": "每跳当前生命比例", "note": "✅ damage 向：按**当前**生命掉血。", "ref": ("reference/effect-rules.md", "pct_cur_hp")},
-    "period.pct_boss": {"zh": "Boss 档比例", "note": "✅ Boss（is_boss / role==\"boss\"）覆盖 pct_max_hp。", "ref": ("reference/effect-rules.md", "pct_boss")},
+    "period.pct_boss": {"zh": "Boss 档比例", "note": "✅ 标签档覆盖 pct_max_hp：目标带该周期声明的 `trait_tags` 里任一标签时才生效（引擎不认「Boss」，只问 traits.has_any；名单为空 ⇒ 一律不生效）。pct_boss / boss_pct_mult / pct_cur_boss 是这张声明表自己的字段名。", "ref": ("reference/effect-rules.md", "pct_boss")},
     "period.pct_cur_boss": {"zh": "Boss 档当前生命比例", "note": "✅ Boss 覆盖 pct_cur_hp。", "ref": ("reference/effect-rules.md", "pct_cur_boss")},
     "period.amount": {"zh": "每跳增减量", "note": "✅ 仅 gain 向：每刻加/减层，负值也走（衰减），下限 clamp 0。", "ref": ("reference/effect-rules.md", "amount")},
     "period.type": {"zh": "周期类型", "note": "⚠ **当前无消费者**（参考实现里 bleed 写了 \"flat\"）。", "ref": ("reference/effect-rules.md", "period.type")},
