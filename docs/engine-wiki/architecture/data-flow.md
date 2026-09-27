@@ -6,7 +6,7 @@
 
 ```
 命令层
-  └─ Battle.human_act(action, skill_name, actor, target)        battle.py:282
+  └─ Battle.human_act(action, skill_name, actor, target)        battle.py:283
        ├─ ActCtx(caster, action, skill_name, target, ...)       actors.py:20
        ├─ Battle.act(ctx)                                       battle.py:464
        │    ├─ _ensure_battle_started()                         battle.py:653   ⚡ battle_start
@@ -148,7 +148,7 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 │ 6. _roll_dodge(battle, target, logs)                   landing.py:169（定义 :260） │
 │      dodge 面板 cap 0.40 → 命中则 return 0（整个伤害免掉）                 │
 │      ★ `no_dodge=True` ⇒ 跳过这一掷（内容侧自付那一笔没人能闪 —— 2026-09-27 开的一格开关） │
-│ 7. defending → dmg *= (1 - defend_reduce or 0.5)       landing.py:176-182  │
+│ 7. 防御姿态 → dmg *= (1 - defend_reduce or 0.5) landing.py:178-184          │
 │ 8. _apply_taken_reductions(dmg_kind)                   landing.py:188（定义 :287） │
 │      phys → phys_reduce cap 0.40；magi → magic_reduce cap 0.40            │
 │      block 概率 cap 0.40 → 减半                                          │
@@ -159,11 +159,11 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 │11. _apply_damage(battle, target, dmg, logs, source)    landing.py:212（定义 :364） │
 │      ├─ 护盾吸收（遍历 shields，按 value 扣减，耗尽即 pop）                 │
 │      ├─ hp 扣减                                                          │
-│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:329     │
+│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:331     │
 │      │     effects["death_guard"].stacks > 0 → hp 拉回 guard_hp_pct      │
 │      │     （+heal_pct 额外治疗，走 heal_actor）→ 层 -1                    │
 │      ├─ 仍 <= 0 → Battle._on_actor_dead(...)   landing.py:413（定义 battle.py:661） │
-│      │       killed_actors.append / 清 defending+charging                 │
+│      │       killed_actors.append / 清 charging + 容器窗口（离场）          │
 │      │     ⚡ fire("on_death", {actor, target})                            │
 │      │     source 非 None → ⚡ fire("on_kill", {actor: source, ...})       │
 │      └─ 否则：日志「受到 N 点伤害」                                        │
@@ -172,8 +172,8 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 返回 real（实际扣血）
 ```
 
-⚠️ 第 6 步（闪避）的位置有注释明确说明：**「位置在 defending 前（对齐旧顺序：
-闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）」**（`landing.py:173`）。
+⚠️ 第 6 步（闪避）的位置有注释明确说明：**「位置在防御姿态减伤前（对齐旧顺序：
+闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）」**（`landing.py:168`）。
 改顺序会改变「闪避是否省下防御姿态/是否打断读条」这类语义。
 
 ## 展开 4：事件在链上的位置（一次普攻）

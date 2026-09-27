@@ -540,7 +540,7 @@ class Host:
         if not isinstance(actor, dict):
             return player
         for key in ("hp", "mp", "max_hp", "max_mp", "effects", "shields", "cooldown",
-                    "charging", "defending", "ct", "act_count"):
+                    "charging", "ct", "act_count"):
             if key in actor:
                 player[key] = actor[key]
         return player

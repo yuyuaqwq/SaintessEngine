@@ -246,12 +246,12 @@ def test_cast_window_two_phase():
     ct 公式一字不动 ⇒ **行动序不变**，变的只有**结算时刻**。
     本段挂测试自己的两段 hook（linear：spd=50 ⇒ 第一段 = base；第二段恒 0），退出还原。
     观测点刻意**不依赖伤害公式**（本文件环境未装配公式面）：「落地」以被分派动作的
-    状态效果（`defending`）+ 待发槽 + 文案为准；伤害口径的端到端证据在
+    状态效果（防御姿态 = `effects["defend"]` 窗口条目）+ 待发槽 + 文案为准；伤害口径的端到端证据在
     `examples/minimal-game/tests/test_smoke.py::test_cast_window_delays_damage`（真内容）。
     """
     print("【出招窗口（前摇）两段化】")
     from ext_combat import Battle, make_actor
-    from ext_combat.battle.actors import ActCtx
+    from ext_combat.battle.actors import DEFEND_TAG, ActCtx, window_open
     from ext_combat.battle import schedule as SCH
     from ext_combat.battle import landing as LND
     from ext_combat.battle.effects import act_interrupt
@@ -269,6 +269,10 @@ def test_cast_window_two_phase():
         return Battle(btype="monster", sides={"player": [a], "enemy": [b]},
                       seed_ct=False, **kw)
 
+    def _win(actor) -> bool:
+        """防御姿态 = `effects["defend"]` 窗口条目（收口后唯一真源）。"""
+        return window_open(actor, DEFEND_TAG)
+
     try:
         CFG._hook_provider = None
         CFG.strict = False
@@ -282,17 +286,17 @@ def test_cast_window_two_phase():
         bt = _bt(a, b)
         logs1, _ended = bt.act(ActCtx(caster=a, action="defend"))
         slot = SCH.pending_of(a)
-        check("① T0 只登记：日志是「开始出招」，被分派动作**未**执行（defending=False）",
-              a.get("defending") is not True and any("开始出招" in x for x in logs1),
-              f"defending={a.get('defending')} logs={logs1}")
+        check("① T0 只登记：日志是「开始出招」，被分派动作**未**执行（容器里还没有窗口条目）",
+              not _win(a) and any("开始出招" in x for x in logs1),
+              f"effects={a.get('effects')} logs={logs1}")
         check("① 待发槽：落地时刻 = T0 + 第一段（spd=50 ⇒ 1.0）",
               bool(slot) and abs(float(slot["cast_done_at"]) - 1.0) < 1e-9,
               str(slot))
         lg = []
         SCH._advance_time(bt, 0.5, lg)
-        check("① 未到点不落地（0.5 < 1.0）", a.get("defending") is not True, str(lg))
+        check("① 未到点不落地（0.5 < 1.0）", not _win(a), str(lg))
         SCH._advance_time(bt, 0.5, lg)
-        check("① 到点真落地（防御姿态在 T0+第一段 生效）", a.get("defending") is True, str(lg))
+        check("① 到点真落地（防御姿态在 T0+第一段 生效）", _win(a), str(lg))
         check("① 落地后槽已清（无残留待发）", SCH.pending_of(a) is None)
         check("① 第一段按速度缩放（spd=100 ⇒ 0.5）",
               abs(SCH._segment_seconds(bt, _mk("z", "player", spd=100), "attack") - 0.5) < 1e-9)
@@ -308,7 +312,7 @@ def test_cast_window_two_phase():
         lg2 = []
         SCH._advance_time(bt2, 2.0, lg2)
         check("② 前摇中被打死 ⇒ 该手不落地（槽清、姿态未生效）",
-              SCH.pending_of(a2) is None and a2.get("defending") is not True
+              SCH.pending_of(a2) is None and not _win(a2)
               and LND.__name__ == "ext_combat.battle.landing", str(lg2))
 
         # ---------- ③ interrupt 动作取消该手 ----------
@@ -322,7 +326,7 @@ def test_cast_window_two_phase():
         lg3b = []
         SCH._advance_time(bt3, 2.0, lg3b)
         check("③ 被打断 ⇒ 这一手真的不发生（姿态未生效）",
-              a3.get("defending") is not True, str(lg3b))
+              not _win(a3), str(lg3b))
 
         # ---------- ④ 槽内霸体拒绝打断 ----------
         a4, b4 = _mk("a4", "player", human=True), _mk("b4", "enemy", hp=1000)
@@ -334,7 +338,7 @@ def test_cast_window_two_phase():
               SCH.pending_of(a4) is not None and not lg4, str(lg4))
         lg4b = []
         SCH._advance_time(bt4, 2.0, lg4b)
-        check("④ 霸体者照常落地", a4.get("defending") is True, str(lg4b))
+        check("④ 霸体者照常落地", _win(a4), str(lg4b))
 
         # ---------- ⑤ 子片推进：一次推进跨多个待发时刻 · 广播仍一次 ----------
         a5, b5 = _mk("a5", "player", human=True), _mk("b5", "enemy", hp=1000)
@@ -351,8 +355,8 @@ def test_cast_window_two_phase():
         check("⑤ time_advance 仍**整段广播一次**（子片不重复广播）", seen["n"] == 1,
               f"n={seen['n']}")
         check("⑤ 同刻优先级：待发落地先于该刻到点的行动（两边都已结算）",
-              a5.get("defending") is True and bt5.result == "fled",
-              f"defending={a5.get('defending')} result={bt5.result}")
+              _win(a5) and bt5.result == "fled",
+              f"effects={a5.get('effects')} result={bt5.result}")
 
         # ---------- ⑥ 待发随存档往返（续战中间态可恢复） ----------
         a6, b6 = _mk("a6", "player", human=True), _mk("b6", "enemy", hp=1000)
@@ -367,7 +371,7 @@ def test_cast_window_two_phase():
               f"{s_before} / {s_after}")
         lg7 = []
         SCH._advance_time(bt7, 2.0, lg7)
-        check("⑥ 恢复后照常在 cast_done_at 落地", a7.get("defending") is True,
+        check("⑥ 恢复后照常在 cast_done_at 落地", _win(a7),
               str(lg7))
     finally:
         for n in _NAMES:

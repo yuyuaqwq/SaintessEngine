@@ -129,7 +129,7 @@ now=1.12  │  （下次 human_act 前，命令层会 advance → 推到怪的 1
 如果没有配置 `human_controlled`，`advance` 会一路跑完所有自动行动 ——
 这正是 `auto_run` 能「全自动打完」的原因。
 
-> ⚠️ **`human_act` 不检查 ct**：它拿到 caster 就直接 `act()`（`battle.py:282-302`），
+> ⚠️ **`human_act` 不检查 ct**：它拿到 caster 就直接 `act()`（`battle.py:283-303`），
 > 没有「你的 ct 还没到」这层校验。**时机由命令层负责** —— 正确用法是
 > 「先 `advance()` 拿到它返回的 who，再用 `human_act(actor=who)` 让那个人出手」。
 > 直接连点 `human_act` 等于给玩家无限行动权。

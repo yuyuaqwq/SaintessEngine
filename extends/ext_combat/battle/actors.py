@@ -52,7 +52,6 @@ _MUTABLE_KEYS = {
     "effects": dict,
     "shields": dict,
     "cooldown": dict,
-    "defending": bool,
     "charging": None,
 }
 
@@ -116,7 +115,6 @@ def make_actor(
         # 调度资源（技能下次可用时刻；保留独立——见设计 §2.5）
         "cooldown": dict(stats.get("cooldown") or {}),
         "charging": stats.get("charging"),
-        "defending": bool(stats.get("defending", False)),
         "ct": float(stats.get("ct", 0.0)),
         "poi_buff": stats.get("poi_buff"),
         # 事件触发声明（N8）：{事件名: [效果名词 dict, ...]}——数据桥/上层构造时
@@ -165,6 +163,134 @@ def effects_of(actor: dict) -> dict:
         return {}
     ef = actor.get("effects")
     return ef if isinstance(ef, dict) else {}
+
+
+# ============================================================
+# effects 容器：条目词表 + 唯一写入口 + 查询口（引擎中性词表，零游戏名词）
+# ============================================================
+# actor 的**一切**临时状态都住在这个容器里（`effects[tag] = entry`）：tag 名由内容侧/调用方
+# 自起（引擎只认结构，不认游戏名词）；条目的**生命周期是容器第一类属性** —— 写在条目里、
+# 由统一的消费段执行，**不靠「谁记得清」**（防御姿态那个 bug = 到期没人清）：
+#
+#   | 字段 | 语义 | 谁消费 |
+#   |---|---|---|
+#   | `stacks` | 层数（纯计数/叠层资源） | 各消费点按声明读写 |
+#   | `expire` | **时间到期**：绝对时刻 | `schedule._settle_time_effects`（每个时间片） |
+#   | `until`  | **边界到期**：帧名（如 `own_act`） | 那一帧的通用消费段 `consume_windows` / 离场 `drop_windows` |
+#   | `period` | 周期结算声明（dot/hot/gain…） | `_settle_time_effects` 的周期段 |
+#   | `grants` | **授予标签**：本条目额外代表哪些 tag | 查询口 `has_tag`（层级 = `.` 边界前缀） |
+#   | `mode`   | **控制**语义（skip / no_skill） | `Battle.act` 的控制消费段 + `effects.py` 落地前免疫查询 |
+#   | 其余键    | 数值/来源快照（`value` / `src` / …） | 各自的读点 |
+#
+# ★ 「窗口」= `until` 那一类：从现在起到某个**边界帧**为止有效的临时状态（防御姿态是第一个
+#   实例）。`until` 的取值是**引擎词表**（不是游戏名词）：`own_act` = 「到你自己的这一帧为止」。
+# ★ 为什么窗口不借用 `mode`：`mode` 是**控制效果**的命名空间（`effects.py` 的免疫控制查询点按
+#   `mode != None` 判「控制类」；`Battle.act` 的消费段按 mode=skip/no_skill 执行）—— 窗口条目
+#   借它会被当成控制效果。故另起中性字段，语义单一。
+STACKS_FIELD = "stacks"
+EXPIRE_FIELD = "expire"
+PERIOD_FIELD = "period"
+WINDOW_FIELD = "until"
+GRANTS_FIELD = "grants"
+TAG_SEP = "."                    # 层级分隔：查 `control` 命中 `control.stun`
+
+WINDOW_OWN_ACT = "own_act"       # 边界名：行动者自己的这一帧
+DEFEND_TAG = "defend"            # 引擎内置动作类别 `defend` 的窗口 tag（引擎词，非游戏专名）
+
+
+def open_entry(actor: dict, tag: str, *, stacks: int = 1, expire=None, until: str = None,
+               period: dict = None, grants=None) -> dict:
+    """容器条目的**唯一写入口**（引擎侧）：只落**声明了的**字段（None 不写键）。
+
+    重复写同一个 tag = 覆盖（刷新语义归调用点声明：窗口重开 = 覆盖，与原「再敲一次防御」
+    同口径）。容器缺失当场补（这是**写**路径，不是读兜底）。
+    """
+    ef = actor.get("effects")
+    if not isinstance(ef, dict):
+        ef = actor["effects"] = {}
+    entry: dict = {STACKS_FIELD: int(stacks)}
+    if expire is not None:
+        entry[EXPIRE_FIELD] = expire
+    if until:
+        entry[WINDOW_FIELD] = until
+    if period:
+        entry[PERIOD_FIELD] = period
+    if grants:
+        entry[GRANTS_FIELD] = list(grants)
+    ef[tag] = entry
+    return entry
+
+
+def open_window(actor: dict, tag: str, until: str = WINDOW_OWN_ACT, **kw) -> dict:
+    """开一个**窗口条目**（= `until` 那一类，引擎侧唯一入口）。"""
+    return open_entry(actor, tag, until=until, **kw)
+
+
+def window_open(actor: dict, tag: str) -> bool:
+    """窗口条目是否开着（**读容器一次**；裸 bool 兄弟字段已不存在）。"""
+    return isinstance(effects_of(actor).get(tag), dict)
+
+
+def _frame_match(until, want) -> bool:
+    """边界名匹配：`want` 空 = 任何边界都算。"""
+    if not want:
+        return True
+    return str(until) == str(want)
+
+
+def consume_windows(actor: dict, until: str = WINDOW_OWN_ACT) -> list:
+    """消费「到这一帧为止」的窗口条目（边界帧的**通用**消费段；返回被清掉的 tag）。
+
+    引擎不认哪个 tag 是防御 —— 只认条目自己的边界声明。
+    """
+    ef = effects_of(actor)
+    gone = []
+    for _tag in list(ef.keys()):
+        _e = ef.get(_tag)
+        if isinstance(_e, dict) and _e.get(WINDOW_FIELD) and _frame_match(_e[WINDOW_FIELD], until):
+            ef.pop(_tag, None)
+            gone.append(_tag)
+    return gone
+
+
+def drop_windows(actor: dict) -> list:
+    """actor 离场（死亡）：容器里所有窗口条目作废（按声明清，不认 tag 名）。"""
+    ef = effects_of(actor)
+    gone = []
+    for _tag in list(ef.keys()):
+        _e = ef.get(_tag)
+        if isinstance(_e, dict) and _e.get(WINDOW_FIELD):
+            ef.pop(_tag, None)
+            gone.append(_tag)
+    return gone
+
+
+# ---- 查询口：tag（含层级与授予标签）--------------------------------------
+
+def tags_of(actor: dict) -> set:
+    """actor 身上**当前**的全部 tag（容器 key ∪ 各条目的 `grants`）。"""
+    out = set()
+    for _tag, _e in effects_of(actor).items():
+        out.add(str(_tag))
+        if isinstance(_e, dict):
+            for _g in (_e.get(GRANTS_FIELD) or ()):
+                out.add(str(_g))
+    return out
+
+
+def has_tag(actor: dict, tag: str) -> bool:
+    """actor 身上有没有这个 tag —— **引擎侧唯一查询口**（条目 key + `grants` 一起看）。
+
+    层级：查 `control` 命中 `control.stun`（按 `.` 边界的前缀，父级查得到子级）；
+    `control.stun` 不命中 `control`。引擎零游戏知识：tag 名全由内容侧起，引擎只做匹配。
+    """
+    if not tag:
+        return False
+    _want = str(tag)
+    for _name in tags_of(actor):
+        if _name == _want or _name.startswith(_want + TAG_SEP):
+            return True
+    return False
 
 
 def actor_ext(actor: dict) -> dict:

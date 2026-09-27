@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """跨手状态的两条真源口径（2026-09-27 · 六路真人试玩查出来的两个**跨游戏**缺陷）。
 
-① **防御姿态到期 = 「到你下一次行动之前」**
-   `_do_defend` 只置 `defending=True`，全仓此前**只有死亡**会清它（`battle.py` 的 `_do_defend`
-   置 / `_on_actor_dead` 清，中间没有任何到期点）⇒ 敲一次『防御』这一场剩下的每一手都被减半：
-   骑士/法师/刺客/狂战四路实测复现（第 5 手按一次，第 6~16 手每一下都带 `(格挡后 N 点伤害)`），
-   难度口径在这条上等于不存在。到期点现在落在**行动者自己动手的那一帧**（`Battle.act()` 入口，
-   = 「你下一次行动」）：在那之前（对面打过来的那些手）减伤照旧有效。
+① **防御姿态到期 = 「到你下一次行动之前」**（2026-09-27 立口径 · 同日收口进状态容器）
+   防御姿态**没有自己的字段**：它就是 `effects["defend"]` 一条**窗口条目**
+   （`{"stacks": 1, "expire": None, "until": "own_act"}`，`actors.open_window` 写 / 读一次
+   `actors.window_open` / 到期 `actors.consume_windows`）。
+   收口前的毛病：`_do_defend` 只置一个**裸 bool**，全仓**只有死亡**会清它 ⇒ 敲一次『防御』
+   这一场剩下的每一手都被减半（骑士/法师/刺客/狂战四路实测复现：第 5 手按一次，第 6~16 手
+   每一下都带 `(格挡后 N 点伤害)`），难度口径在这条上等于不存在。到期点 = **行动者自己动手的
+   那一帧**（`Battle.act()` 入口 = 「你下一次行动」）：在那之前（对面打过来的那些手）减伤照旧
+   有效；被控跳过的那一手也算这一次行动已到。
 
 ② **战斗级跨手标记 `battle.flags`**
    内容侧「每场一次 / 每场几层」那类记账要一个**过得了 `to_state`/`from_state` 往返**的格子。
@@ -15,7 +18,8 @@
    都复现，凡「跨手记住点什么」的机制全栽同一坑。
 
 **反证（改的时候手验过，本文件就是把它们钉住）**：
-  · 把 `Battle.act()` 里那行 `actor["defending"] = False` 注掉 ⇒ ① 变红；
+  · 把 `Battle.act()` 里那行 `consume_windows(actor)` 注掉 ⇒ ① 变红；把 `landing.py` 的
+    容器查询改坏 ⇒ 减半当场失效（`Temp/gas-a` 的采集脚本逐字节变红，5 组战斗全挂）；
   · 把 `serialize.to_state` 的 `"flags": dict(battle.flags or {})` 改回 `"flags": {}` ⇒ ② 变红。
 
 跑法：python tests/test_cross_hand_state.py
@@ -29,7 +33,8 @@ os.environ.setdefault("GWEN_GAME_DB", os.path.join(FW_ROOT, "test_cross_hand.db"
 os.environ.setdefault("GWEN_TEST_MODE", "1")
 sys.path.insert(0, FW_ROOT)
 
-from ext_combat.battle.actors import make_actor              # noqa: E402
+from ext_combat.battle.actors import (DEFEND_TAG, make_actor,   # noqa: E402
+                                      window_open)
 from ext_combat.battle.battle import ActCtx, Battle           # noqa: E402
 from ext_combat.battle import landing as LND                  # noqa: E402
 from ext_combat.battle import serialize as SER                # noqa: E402
@@ -64,7 +69,7 @@ def _mk(uid, side, human=False, hp=200):
 
 
 def _bt(a, b):
-    """单人 vs 单人（同一等级 ⇒ 等级压制不参与，减伤只可能来自 defending）。"""
+    """单人 vs 单人（同一等级 ⇒ 等级压制不参与，减伤只可能来自防御姿态窗口条目）。"""
     return Battle(btype="monster", sides={"player": [a], "enemy": [b]}, seed_ct=False)
 
 
@@ -72,10 +77,19 @@ def _bt(a, b):
 # ① 防御姿态的到期口径
 # ============================================================
 print("\n【① 防御姿态：到期 = 你自己下一次行动之前】")
+
+
+def _win(actor) -> bool:
+    """防御姿态 = `effects["defend"]` 窗口条目（收口后唯一真源）。"""
+    return window_open(actor, DEFEND_TAG)
+
+
 a, b = _mk("a1", "player", human=True), _mk("b1", "enemy")
 bt = _bt(a, b)
 bt._do_defend(ActCtx(caster=a, action="defend"))
-check("① 敲『防御』⇒ 姿态置上", a.get("defending") is True, str(a.get("defending")))
+check("① 敲『防御』⇒ 姿态置上（容器窗口条目，边界声明 = own_act）",
+      _win(a) and (a.get("effects") or {}).get(DEFEND_TAG, {}).get("until") == "own_act",
+      str(a.get("effects")))
 
 _lg = []
 _d1 = LND.deal_damage(bt, b, a, 10, _lg)
@@ -84,8 +98,8 @@ check("① 姿态期内挨打 ⇒ 减半（10 → 5）+ 出「格挡后」那一
 
 # 自己动手（= 真源那句「你下一次行动」）
 bt.act(ActCtx(caster=a, action="attack"))
-check("★ 自己下一次行动 ⇒ 姿态**到期**（defending 落回 False）",
-      a.get("defending") is False, str(a.get("defending")))
+check("★ 自己下一次行动 ⇒ 姿态**到期**（窗口条目从容器里消失）",
+      not _win(a), str(a.get("effects")))
 
 _lg2 = []
 _d2 = LND.deal_damage(bt, b, a, 10, _lg2)
@@ -99,15 +113,16 @@ bt2._do_defend(ActCtx(caster=a2, action="defend"))
 a2.setdefault("effects", {})["stun_x"] = {"mode": "skip", "expire": None}
 bt2.act(ActCtx(caster=a2, action="attack"))
 check("① 被控跳过那一手 ⇒ 同样算「下一次行动已到」（姿态到期、控制消费掉）",
-      a2.get("defending") is False and "stun_x" not in (a2.get("effects") or {}),
-      "defending=%s effects=%s" % (a2.get("defending"), list((a2.get("effects") or {}).keys())))
+      (not _win(a2)) and "stun_x" not in (a2.get("effects") or {}),
+      "effects=%s" % list((a2.get("effects") or {}).keys()))
 
-# 反证的一半：死亡那条老路一个字没动（照旧清）
+# 反证的一半：死亡 = 离场 ⇒ 窗口条目作废（走容器声明，不再写裸 bool）
 a3, b3 = _mk("a3", "player", human=True), _mk("b3", "enemy")
 bt3 = _bt(a3, b3)
 bt3._do_defend(ActCtx(caster=a3, action="defend"))
 bt3._on_actor_dead(a3, [])
-check("① 死亡仍照旧清姿态（老路径未改）", a3.get("defending") is False)
+check("① 死亡 ⇒ 窗口条目离场作废（容器声明说了算）",
+      not _win(a3), str(a3.get("effects")))
 
 # ============================================================
 # ② 战斗级跨手标记（battle.flags 过序列化往返）

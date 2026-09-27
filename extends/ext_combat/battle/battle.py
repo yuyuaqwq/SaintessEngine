@@ -14,7 +14,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from .actors import ActCtx, actor_alive, actor_dead
+from .actors import (ActCtx, DEFEND_TAG, actor_alive, actor_dead,
+                     consume_windows, drop_windows, open_window)
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from . import actions
 from . import game_config as _GC
@@ -482,13 +483,13 @@ class Battle:
         #      主体=行动者，只处理其自身声明，旁观者不误触发）----
         from .effect_triggers import fire as _fire
         _fire(self, "turn_start", {"actor": actor}, logs)
-        # ---- ★ 防御姿态到期（2026-09-27 · 口径 = 「到你下一次行动之前」）----
-        #  `_do_defend`（落地段）只置 `defending=True`；此前全仓**只有死亡**会清它 ⇒ 敲一次
-        #  『防御』这一场剩下的每一手都被减半（骑士/法师/刺客/狂战四路实测复现，跨游戏）。
-        #  到期点 = **行动者自己动手的这一帧**（本函数就是「你下一次行动」的入口）：在那之前
-        #  （对面打过来的那些手）减伤照旧有效；被控跳过的那一手也算这一次行动已到。
-        #  写值不删键：actor 字段形状（`actors.make_actor` 那张表）保持不变。
-        actor["defending"] = False
+        # ---- ★ 窗口到期（口径 = 「到你下一次行动之前」）----
+        #  本帧（`Battle.act` T0）就是「你下一次行动」的入口：在那之前（对面打过来的那些手）
+        #  减伤照旧有效；被控跳过的那一手也算这一次行动已到（故本段先于下面的控制消费）。
+        #  收口后：到期不再是「这一处把某个裸 bool 写回 False」，而是**容器条目的边界声明**
+        #  （`effects[tag]["until"] == "own_act"`）在本帧被**通用消费段**消费 —— 引擎不认
+        #  哪个 tag 是防御（`actors.consume_windows`）。
+        consume_windows(actor)
         # ---- 控制消费（统一入口，人类/自动/随从全走这里）----
         # V 系列：控制条目在 effects 容器（effects[tag] = {expire, mode}）
         ef = actor.get("effects") or {}
@@ -628,7 +629,9 @@ class Battle:
 
     def _do_defend(self, ctx: ActCtx) -> list:
         actor = ctx.caster
-        actor["defending"] = True
+        # 写**容器**（唯一真源）：窗口条目 = {"stacks": 1, "until": "own_act"}
+        # 到期点 = 你自己下一次行动的那一帧（`Battle.act` 的通用消费段）。
+        open_window(actor, DEFEND_TAG)
         return [self._t("battle.core.defend",
                         "🛡 {name} 摆出防御姿态，受到的伤害减半！",
                         name=actor.get('name', ''))]
@@ -666,9 +669,11 @@ class Battle:
         """
         if actor not in self.killed_actors:
             self.killed_actors.append(actor)
-        # 死亡 actor 清 defending/charging 状态
-        actor["defending"] = False
+        # 死亡 actor 清 charging 状态（离场）
         actor["charging"] = None
+        # 离场 ⇒ 容器里的**窗口条目**一并作废（按 `until` 声明清，不认 tag 名；原先那格
+        # 「死亡清防御姿态」的裸 bool 写回随收口删除）
+        drop_windows(actor)
         if logs is not None:
             try:
                 from .effect_triggers import fire as _fire

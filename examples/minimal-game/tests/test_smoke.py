@@ -159,7 +159,6 @@ def test_cast_window_delays_damage():
     hero, foe = _fresh(foe_hp=500)
     b = _battle(hero, foe)
     from ext_combat.battle.schedule import pending_of, _advance_time
-    hero["defending"] = False
     logs = []
     b.human_act("attack", None)          # 玩家出手：T0 只登记（advance 后立即算出敌 ct）
     # 直接拿怪的待发做「时刻 → 落地」的证据：先让怪登记一次普攻

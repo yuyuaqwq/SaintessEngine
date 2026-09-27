@@ -132,10 +132,10 @@ Battle(btype="monster", sides=None, hostile_map=None, target_picker=None,
 | 方法 | 位置 | 返回 |
 |---|---|---|
 | `sides_of(side)` | `battle.py:226` | 该阵营 actor 列表（**拷贝**，改它不影响战斗） |
-| `hostile_of(side)` | `battle.py:229` | `actors.hostile_actors` 的结果（敌对存活 actor） |
-| `focus()` | `battle.py:229` | `sides["player"]` 里第一个 `human_controlled` 存活 actor；兜底找 `kind == "player"` 的存活者；无则 `None` |
+| `hostile_of(side)` | `battle.py:226` | `actors.hostile_actors` 的结果（敌对存活 actor） |
+| `focus()` | `battle.py:230` | `sides["player"]` 里第一个 `human_controlled` 存活 actor；兜底找 `kind == "player"` 的存活者；无则 `None` |
 | `alive_actors()` | `battle.py:244` | 全阵营存活 actor |
-| `alive_sides()` | `battle.py:246` | 有存活 actor 的阵营名列表 |
+| `alive_sides()` | `battle.py:247` | 有存活 actor 的阵营名列表 |
 
 ### 运行期注册
 
@@ -151,7 +151,7 @@ add_actor(actor: dict, side: str, front: bool = False) -> dict      # battle.py:
 
 ```python
 human_act(action, skill_name, actor=None, target=None, target_side=None)
-    -> (logs: list, ended: bool, who: dict | None)                   # battle.py:282
+    -> (logs: list, ended: bool, who: dict | None)                   # battle.py:283
 advance(logs: list) -> dict | None                                   # battle.py:343
 auto_run(logs: list, max_steps: int = 500) -> None                    # battle.py:352
 actor_auto(actor: dict, ctx_target=None) -> (logs, ended)             # battle.py:368
@@ -198,7 +198,7 @@ Battle.from_state(st, *, text=None)   # battle.py:713（classmethod）→ serial
 |---|---|---|
 | `make_actor(uid, name, side, kind="monster", human_controlled=False, class_name=None, level=1, equipment=None, skills=None, learned_skills=None, auto_act=None, **stats)` | `:60` | 造同构 actor；额外键透传；播种全部战斗状态键 |
 | `ActCtx(caster, action="attack", skill_name=None, info=None, target=None, target_side=None, scope="single")` | `:20` | 行动上下文 dataclass |
-| `actor_alive(actor)` / `actor_dead(actor)` | `:153` / `:158` | `hp > 0` |
+| `actor_alive(actor)` / `actor_dead(actor)` | `:151` / `:156` | `hp > 0` |
 | `effects_of(actor)` | `:162` | 读 `effects` 容器（非 dict → `{}`） |
 | `actor_ext(actor)` | `:170` | 读 `ext`（惰性播种） |
 | `actor_side_of(battle, actor)` | `:180` | 查阵营（以 `battle.sides` 权威，`actor.side` 兜底） |

@@ -71,15 +71,16 @@ wolf = make_actor("e1", "野狼", "enemy", kind="monster",
 要点：
 
 - `kind` 只是**数据标签**（`"player"` / `"monster"` / 你自己的词），引擎不按它分支；
-  真正决定「谁是人控」的是 `human_controlled`（`Battle.focus()` 只看它，`battle.py:229`）。
+  真正决定「谁是人控」的是 `human_controlled`（`Battle.focus()` 只看它，`battle.py:230`）。
 - 等级字段统一是 `level`；引擎不认 `lv`（`actors.py:81` 注释明写）。
 - 额外关键字（`rank` / `reach` / `traits` / 你的自定义标签）会**原样透传**进 actor
   （`actors.py:139-145`）。引擎**不认识 Boss 这类身份**：身份由**内容侧声明** —— 在 actor 上写
   `traits: ["boss"]`（标签名随你起），引擎只用 `traits.of` / `traits.has` / `traits.has_any`
   判「身上有没有这个标签」，**名单为空 ⇒ 一律 False**（不声明 = 这条规则不适用于任何人）。
   身份标签的用点（控制时长减半 / DOT 折扣档）见 [reference/effect-rules.md](../reference/effect-rules.md)。
-- 战斗可变状态已被播种：`effects` / `shields` / `cooldown` / `defending` / `charging` / `ct`
-  （`_MUTABLE_KEYS`，`actors.py:51`）。
+- 战斗可变状态已被播种：`effects` / `shields` / `cooldown` / `charging` / `ct`
+  （`_MUTABLE_KEYS`，`actors.py:51`）。防御姿态这类**窗口状态**不另开字段 —— 收在 `effects`
+  容器里（条目 `{"stacks": 1, "expire": None, "until": "own_act"}`，`actors.py:194`）。
 
 ## 2. 起战斗：`sides` 是唯一入口
 
@@ -111,7 +112,7 @@ print("\n".join(logs))
 💥 野狼 受到 34 点伤害！
 ```
 
-`human_act`（`battle.py:282`）的返回是三元组：
+`human_act`（`battle.py:283`）的返回是三元组：
 
 | 位置 | 含义 |
 |---|---|

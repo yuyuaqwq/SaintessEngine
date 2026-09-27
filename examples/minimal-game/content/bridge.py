@@ -38,7 +38,7 @@ _OVERRIDE_KEYS = (
     "attributes", "class_tier", "evolve_path", "race",
     # 战斗可变状态（存档续战：接着上次的血量与效果打）
     "hp", "max_hp", "mp", "max_mp", "effects", "shields", "cooldown",
-    "charging", "defending", "ct", "poi_buff",
+    "charging", "ct", "poi_buff",
     # 怪的数据标签 / 行为
     "ai", "auto_act", "rank", "role", "reach", "is_boss", "is_elite",
     "exp", "gold", "drops", "resource_def", "triggers",

@@ -2,7 +2,7 @@
 """v181.P4 saintess_engine 引擎——落地接口层（landing.py）。
 
 所有"造成伤害 / 治疗回血"统一收口在这里：
-- deal_damage：伤害落地（等级压制 → defending 减伤 → 睡眠/蓄力 → 护盾 → 扣血 → 死亡）
+- deal_damage：伤害落地（等级压制 → 防御姿态减伤 → 睡眠/蓄力 → 护盾 → 扣血 → 死亡）
 - heal_actor：治疗落地（禁疗修正 → clamp max_hp）
 
 为什么必须统一收口（鱼鱼架构原则）：伤害/治疗落地是"战斗物理规则"——
@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import Optional
 
 from . import formulas as _F
+from .actors import DEFEND_TAG, window_open      # 状态容器：窗口条目查询（收口后唯一真源）
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from saintess_engine.text import render_via
 
@@ -164,16 +165,17 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
         pass  # 状态乘区异常不阻断落地
     # N10-B6 闪避（actor 承伤 roll）：dodge 面板值 cap40%，闪避成功 → 本次承伤免伤。
     # 引擎零知识：dodge 是面板数值字段；乘算合成上限与旧 _roll_dodge 对齐。
-    # 位置在 defending 前（对齐旧顺序：闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）。
+    # 位置在防御姿态减伤前（对齐旧顺序：闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）。
     try:
         if not no_dodge and _roll_dodge(battle, target, logs):
             return 0
     except Exception as _e:
         _diag(battle, "deal_damage · 闪避", _e)          # 审计 P-44：不再静默（行为不变）
         pass  # 闪避异常不阻断战斗
-    # defending 减伤（防御姿态；N10-B2 v178 E6 方向性防御：攻击技能自带 defend_reduce
-    # 覆盖默认 0.5——如风暴之眼 0.8 = 防御挡 80% 只受 20%）
-    if target.get("defending"):
+    # 防御姿态减伤（N10-B2 v178 E6 方向性防御：攻击技能自带 defend_reduce 覆盖默认
+    # 0.5——如风暴之眼 0.8 = 防御挡 80% 只受 20%）
+    # ★ 状态容器收口：姿态**读容器一次**（`effects["defend"]` 窗口条目；裸 bool 兄弟字段已删）
+    if window_open(target, DEFEND_TAG):
         _dr = 0.5
         if isinstance(defend_reduce, (int, float)) and 0 <= float(defend_reduce) <= 0.95:
             _dr = float(defend_reduce)

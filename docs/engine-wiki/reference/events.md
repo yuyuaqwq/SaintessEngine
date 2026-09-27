@@ -31,7 +31,7 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 | 6 | `attack_hit` | 同上（`info["_basic"]` 为真时选它） | 同上 | 攻击者 | 普攻命中后 |
 | 7 | `crit` | `actions.py:524-522` | `actor`, `target`, `info`, `dmg` | 攻击者 | 暴击命中（`skill_hit`/`attack_hit` 的子集，**紧跟其后**） |
 | 8 | `on_taken` | `landing.py:228`（`deal_damage`） | `actor`, `target`, `source`, `dmg` | 受击者 | 承伤落地后；**死者不触发**（走 `on_death`） |
-| 9 | `on_heal` | `landing.py:505`（`heal_actor`） | `actor`, `target`, `source`, `amount`, `overflow` | 被治疗者 | 实际回血 > 0 时 |
+| 9 | `on_heal` | `landing.py:436`（`heal_actor`） | `actor`, `target`, `source`, `amount`, `overflow` | 被治疗者 | 实际回血 > 0 时 |
 | 10 | `on_kill` | `landing.py:418`（`_apply_damage`） | `actor`, `target`, `dmg` | **击杀者** | 致死伤害落地后；`source is None`（DOT/环境杀）不触发 |
 | 11 | `on_death` | `battle.py:685`（`_on_actor_dead`） | `actor`, `target` | 死者 | 所有死亡路径统一在此；**死者的声明仍会执行**（subject 例外） |
 | 12 | `dot_tick` | `schedule.py:813`（`_settle_time_effects`） | `actor`, `target`, `key`, `dmg` | 受跳者 | DOT 每一跳 |
@@ -139,7 +139,7 @@ act()                        → turn_start
          → dmg_calc  ← 攻击方乘区（有 mult 读回）
          → _deal_hit → deal_damage
                → taken_calc   ← 承伤方乘区
-               → [闪避 roll / defending / 免伤 / 醒睡 / 打断(interrupt)]
+               → [闪避 roll / 防御姿态 / 免伤 / 醒睡 / 打断(interrupt)]
                → _apply_damage（护盾 → 扣血 → death_guard）
                      → on_kill（若致死）
                      → _on_actor_dead → on_death
