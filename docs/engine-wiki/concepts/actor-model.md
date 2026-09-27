@@ -58,7 +58,7 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:656`）。旧字段 `is
 | `shields` | `{key: {"value","expire_at","halve"}}` | 承伤资源，**独立容器**（不是 effects 条目） |
 | `cooldown` | `{技能名: 绝对时刻}` | 调度资源，**独立容器** |
 | `charging` | dict \| None | 蓄力态（被打断时清） |
-| `defending` | bool | 防御姿态（`deal_damage` 里减伤 50%，`landing.py:176`） |
+| `defending` | bool | 防御姿态（`deal_damage` 里减伤 50%，`landing.py:182`） |
 | `ct` | float | **下次可行动时刻**（绝对时刻，见 [ctb-schedule.md](ctb-schedule.md)） |
 | `poi_buff` | any | 透传字段，引擎不读 |
 | `triggers` | `{事件名: [效果 dict]}` | 事件声明（见 [event-bus.md](event-bus.md)） |

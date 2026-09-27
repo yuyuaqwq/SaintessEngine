@@ -145,7 +145,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 |---|---|
 | `actor["_content_applied"]`（bool） | S7 的 `apply_game_content` 幂等标记（游戏仓 `game/content_rules/apply.py:81`）。**会随 actor 全量落进战斗存档 / PVP 状态**（引擎 `serialize._STRIP_KEYS` 只剥 `_skill_index`）。原文自记「无任何数值/读取语义依赖它，S9 若要清掉需改引擎 `serialize.py`」（游戏仓 `apply.py:55-58`） |
 | `actor["dot_next"]` / `actor["dot_jumps"]`（dict） | 引擎周期结算的运行期辅助（`schedule.py:652-653` 惰性建），**同样落盘**。这是「续战能对上」的原因，但字段名与内容无关 |
-| `actor["_dmg_taken_mult"]`（float） | 承伤乘区（`landing.py:96-103` 读）。由上层直写（例 游戏仓 `commands/boss_script.py:684`）；**同样落盘** |
+| `actor["_dmg_taken_mult"]`（float） | 承伤乘区（`landing.py:102-109` 读）。由上层直写（例 游戏仓 `commands/boss_script.py:684`）；**同样落盘** |
 | `actor["reduce_left"]` / `reduce_all_left` | `effects.act_apply` 写（`effects.py:486`）+ 内容侧 bridge 透传/播种；**无消费者**（见 §1.3） |
 | `actor["act_count"]` | `actor_auto` 每动 +1（`battle.py:457`），AI 的 `round_mod` 谓词读它；落盘 |
 
@@ -180,7 +180,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | # | 瑕疵 | 位置 |
 |---|---|---|
 | B1 | ~~`kinds/` 枚举值写死中文（`PHYS = "物理"` …）~~ **2026-09-13 P4 下沉已消除** | 引擎侧无 `kinds/`（词表移居内容侧，引擎只经 `config.kind_of` 读值） |
-| B2 | 固定效果 key：`"death_guard"`（濒死保护）、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`（受疗修正）。（原含 `"sleep"` 打醒 —— **2026-09-11 已数据化**移除，改读 `wake_on_hit` 字段） | `landing.py:177-190, 248, 384-407` |
+| B2 | 固定效果 key：`"death_guard"`（濒死保护）、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`（受疗修正）。（原含 `"sleep"` 打醒 —— **2026-09-11 已数据化**移除，改读 `wake_on_hit` 字段） | `landing.py:183-196, 248, 384-407` |
 | B3 | `effects.act_apply` 里 `if key == "reduce":` | `effects.py:485` |
 | B4 | ~~`is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`）~~ **2026-09-25 E3 已消除**：身份 = 内容侧声明的 `traits`，引擎只做 `traits.of` / `has` / `has_any`（名单为空 ⇒ 一律 False） | `effects.py:376-377` · `schedule.py:656` |
 | B5 | `battle.py` 里 `"player"` 阵营名 | `battle.py:195, 515` |

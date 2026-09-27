@@ -95,7 +95,7 @@ _m = float((getattr(battle, "_fire_ctx", {}) or {}).get("mult", 1.0) or 1.0)
 if _m != 1.0:
     total = max(1, int(total * _m))
 ```
-（`actions.py:492-499`，同款出现在 `landing.py:83-94` 的 `taken_calc`、
+（`actions.py:492-499`，同款出现在 `landing.py:89-100` 的 `taken_calc`、
 `actions.py:731-801` 的 `heal_calc`、`schedule.py:700-717` 的 `dot_calc`）
 
 ⚠️ **它是单槽、覆盖式、不落盘**（`effect_triggers.py:85-86` 注释）：
