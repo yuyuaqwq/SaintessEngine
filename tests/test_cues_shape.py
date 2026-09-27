@@ -237,10 +237,51 @@ try:
     _b2 = Battle(sides={"player": [_me2], "enemy": [_foe2]}, seed_ct=False)
     _lg2: list = []
     L.deal_damage(_b2, _me2, _foe2, 30, _lg2)
-    check("★ 未装配（过渡态）⇒ 落回原路，输出同样逐字不变",
-          _b2.cues is None and _lg2 == ["💨 乙 闪避了攻击！"], "%s / %s" % (_b2.cues, _lg2))
+    check("★ 未装配（内容侧没接 cue）⇒ **不**落回旧路：出一行坏数据 + 记诊断，"
+          "且结算不受影响（伤害仍被挡下）",
+          _b2.cues is None and int(_foe2["hp"]) == 100
+          and _lg2 == ["⚠️ 这条表现没渲染出来（cue 装配/文案缺口，见诊断）"],
+          "%s / hp=%s / %s" % (_b2.cues, _foe2["hp"], _lg2))
+    _d2 = [d for d in getattr(_b2, "diagnostics", []) if d.get("stage") == "cue()"]
+    check("★ 缺口进诊断（点名缺总线 = 可查）", len(_d2) == 1, str(getattr(_b2, "diagnostics", None)))
 finally:
     CFG._HOOKS["formula_skeleton_fn"] = _saved4
+
+# ============================================================
+# 5b. 表现层异常**绝不出结算路径**（Lane-2 实测挖出的洞：点位住在 try/except 里）
+# ============================================================
+print("\n【5b. 表现层异常不许改结算】")
+
+
+class _Boom:
+    """坏文案表：`render_or` 直接抛。"""
+
+    def render_or(self, key, default, /, **slots):
+        raise RuntimeError("文案表炸了")
+
+
+_saved5 = CFG._HOOKS.get("cue_subs_fn")
+_saved6 = CFG._HOOKS.get("formula_skeleton_fn")
+try:
+    CFG._HOOKS["cue_subs_fn"] = lambda: {n: ({"kind": "text", "key": n},) for n in CUE_NAMES}
+    CFG._HOOKS["formula_skeleton_fn"] = lambda: {"dodge": {"cap": 1.0}}
+    _me3 = make_actor("p1", "甲", "player", kind="player", human_controlled=True,
+                      level=5, hp=100, max_hp=100, spd=50)
+    _foe3 = make_actor("e1", "乙", "enemy", kind="monster", level=5,
+                       hp=100, max_hp=100, spd=50, dodge=1.0)
+    _b3 = Battle(sides={"player": [_me3], "enemy": [_foe3]}, text=_Boom(), seed_ct=False)
+    _lg3: list = []
+    _got3 = L.deal_damage(_b3, _me3, _foe3, 30, _lg3)
+    check("★ 文案表抛 ⇒ **闪避判定不受影响**（伤害仍被挡下，结算一字不改）",
+          int(_foe3["hp"]) == 100 and _got3 == 0, "hp=%s dmg=%s" % (_foe3["hp"], _got3))
+    check("★ 文案表抛 ⇒ 仍出一行可读坏数据（不静默丢行，也**不**落回旧模板）",
+          _lg3 == ["⚠️ 这条表现没渲染出来（cue 装配/文案缺口，见诊断）"], str(_lg3))
+    _d3 = [d for d in getattr(_b3, "diagnostics", []) if d.get("stage") == "cue().emit"]
+    check("★ 异常进了诊断通道（不进玩家可见日志 = 不静默）",
+          len(_d3) == 1 and _d3[0].get("kind") == "RuntimeError", str(getattr(_b3, "diagnostics", None)))
+finally:
+    CFG._HOOKS["cue_subs_fn"] = _saved5
+    CFG._HOOKS["formula_skeleton_fn"] = _saved6
 
 # ============================================================
 # 6. 内容侧声明与引擎声明**同源**（示例包的表必须覆盖 CUE_NAMES）

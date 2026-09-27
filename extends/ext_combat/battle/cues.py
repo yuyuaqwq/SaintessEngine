@@ -17,8 +17,11 @@
 """
 from __future__ import annotations
 
+from saintess_engine.config import EngineNotConfigured
 from saintess_engine.cues import build_bus
-from saintess_engine.text import render_via
+from saintess_engine.text import render_or
+
+from .diagnostics import diag as _diag
 
 __all__ = ["CUE_NAMES", "build_cue_bus", "cue", "cue_of"]
 
@@ -44,10 +47,36 @@ def cue_of(battle):
 
 
 def cue(battle, logs: list, name: str, default: str = "", payload=None) -> None:
-    """发一条表现事件（点位迁移后唯一的出口）。"""
+    """发一条表现事件（点位迁移后**唯一**的出口 —— 没有第二条路）。
+
+    口径（单一真源 + fail-closed，不留兼容分支）：
+
+    * **有总线** ⇒ 交订阅者渲染（同步就地 append，顺序 = 声明序）。
+    * **没有总线 / 该 cue 没有订阅者** ⇒ 这是**装配缺口**（内容侧该声明 `cue_subs_fn`）：
+      记诊断 + 出一行可读的坏数据行。**绝不落回引擎旧路**（那条路 = 双源，
+      正是本次迁移要拆掉的东西）；也**绝不静默丢行**。
+    * ★ **表现层出什么事都不许改结算**：`emit` 抛（表坏 / 订阅者抛）同样走
+      「诊断 + 一行坏数据」。为什么必须这样：已迁移的点位（`deal_damage` 的元素
+      免疫/抗性段、`_roll_dodge`）**都住在 `try/except` 里**，异常冒出去会被外层
+      `except` 吞掉，**并且跳过紧随其后的 `return 0` / `return True`**
+      ⇒ 后果不是「少一行」，而是**免疫/闪避判定被跳过、伤害照常落地**（结算被改）。
+      所以「异常要响」在这条路径上的落法 = **诊断通道**（不进玩家可见日志）——
+      内容侧探针本来就钉着「整场战斗 diagnostics 必须为空」，响了就有人管。
+    """
     bus = cue_of(battle)
-    if bus is None:
-        # 过渡态：内容侧还没声明 cue ⇒ 走原路，逐字节等于迁移前的内联渲染
-        logs.append(render_via(battle, name, default, **(payload or {})))
-        return
-    bus.emit(logs, name, default, payload)
+    if bus is not None:
+        try:
+            bus.emit(logs, name, default, payload)
+            return
+        except Exception as _e:                                # noqa: BLE001
+            _diag(battle, "cue().emit", _e)
+    else:
+        _diag(battle, "cue()", EngineNotConfigured(
+            "cue %r 发了但这场战斗没有 cue 总线：内容侧该在 cue_subs_fn 里声明订阅表" % name))
+    _cue_broken_line(logs, name)
+
+
+def _cue_broken_line(logs: list, name: str) -> None:
+    """缺口/异常时的可读坏数据行（**不**经过旧模板 —— 那条路已删）。"""
+    logs.append(render_or(None, "cue.render_failed",
+                          "⚠️ 这条表现没渲染出来（cue 装配/文案缺口，见诊断）", name=name))
