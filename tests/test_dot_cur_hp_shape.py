@@ -46,6 +46,14 @@ from _check import bind_check  # noqa: E402
 
 check = bind_check(globals(), "passed", "failed", "DETAIL")
 
+# ★ B2（2026-09-27）：已迁移点位（`battle.landing.damage` 等）的措辞真源在**内容侧文案表**，
+#   引擎模板已删 ⇒ 合成战斗必须自己注入「订阅表 + 文案表」，否则正常路径也会多一条诊断
+#   （本文件有「这一场零诊断」的判据）。`_cue_text_fixture` = 门禁夹具（**不是真源**）。
+from _cue_text_fixture import TEXT as FIX_TEXT                   # noqa: E402
+from _cue_text_fixture import install as fix_install             # noqa: E402
+
+fix_install()
+
 #: 逐字抄自线上数据 `games/orlandia/content/rules/effect_rules.json` 的 `blood_trace/period`
 #: （`trait_tags` 是拿掉 boss 档折扣那次修补后补上的声明，与 bleed/burn/corros/poison 同款）
 BLOOD_TRACE = {"dir": "damage", "interval": 1.0, "pct_cur_hp": 0.02,
@@ -60,7 +68,7 @@ def scene(traits, period, dt=1.05):
     if traits is not None:
         ea["traits"] = list(traits)
     b = Battle(btype="monster", sides={"player": [pa], "enemy": [ea]},
-               seed_ct=False)
+               seed_ct=False, text=FIX_TEXT)
     ea["effects"]["probe_dot"] = {"stacks": 1, "period": dict(period)}
     SCH._advance_time(b, 0.1, [])              # 登记首跳（now + interval）
     hp0 = int(ea["hp"])

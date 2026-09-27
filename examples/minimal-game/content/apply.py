@@ -3,7 +3,8 @@
 
 两件事，都幂等：
 
-    install_engine()          全局：把公式/面板/技能表/kind 词表/声明表挂进引擎 config
+    install_engine()          全局：把公式/面板/技能表/kind 词表/声明表/文案表/表现订阅
+                              挂进引擎 config（措辞与订阅都归内容侧：引擎不留兜底）
     apply_game_content(actor) 单个 actor：把资源渠道 / 机制 / 被动 proc 翻成 triggers
 
 方向只有一个：**内容 → 引擎**。引擎不 import 本包，也不认识本包的表；
@@ -20,6 +21,7 @@ from .data import classes as C
 from .data import rules as R
 from .data import skills as S
 from .cues import cue_subs as _cue_subs
+from .texts import TEXT as _TEXT     # 本包文案表（玩家可见措辞的唯一真源）
 from .mech import actions as _actions  # noqa: F401  import 即注册本游戏的动词
 
 _MOUNTED = False
@@ -109,6 +111,7 @@ def install_engine() -> None:
         recover_model_fn=_recover_model,                    # 第二段（收招）耗时（本游戏 = 同形状）
         recover_base_fn=_recover_base,                      # 行动类别 → 第二段基准耗时（全 0）
         cue_subs_fn=_cue_subs,                              # 表现事件订阅表（已迁移点位谁渲染）
+        text_table_fn=lambda: _TEXT,                        # 文案表供体（引擎不再持有措辞）
     )
     GC.load_game_rules(R)       # EFFECT_ACTIONS / EFFECT_RULES（新家：ext_combat.battle.game_config）
     _MOUNTED = True

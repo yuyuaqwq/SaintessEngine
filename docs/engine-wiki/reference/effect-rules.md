@@ -8,7 +8,7 @@
 扩展包通过 `config.set_config("effect_rules", ...)` / `load_game_rules(module)` 读它，
 读点在 `state_effects.state_def`（`extends/ext_combat/battle/state_effects.py:13`）。
 
-**无条目 = 空 dict = 纯数值无规则**（`config.state_def`，`config.py:167-173`）——
+**无条目 = 空 dict = 纯数值无规则**（`config.state_def`，`config.py:176-182`）——
 这是合法状态，不是错误。
 
 字段清单来自游戏仓参考实现（`game/data/battle_rules.py`，78 个 key）的**实际使用并集**，
@@ -27,7 +27,7 @@
 | `stat_scale` | `{stat: 每层系数}` | ✅ `stats._apply_effects`（`stats.py:60-67`） | 每层面板修正。`st[stat] *= (1 + n×系数)`；特殊 stat：`dmg_mult`（写 `st["_state_dmg_mult"]`，伤害乘区读它）、`reduce`（写 `st["reduce"]`，⚠️ 见「已知死字段」） |
 | `debuff_scale` | `{stat: 每层系数}` | ✅ **`ext_combat` 消费**（2026-09-11） | `landing.deal_damage` 遍历持有者状态：Σ(系数 × stacks) → 伤害 ×(1+Σ)。与 `stat_scale` 对称；层数上限由数据侧 `cap` 给。另仍是 `effects._is_stack_resource` 的判据关键词（`effects.py:280`，分派用） |
 | `panel` | `{"stat","op","mult"}` | ✅ `effects.act_apply` 快照分支（`effects.py:466-478`） | 静态面板增益的默认值（动作参数缺省时查表）。`op`：`mul`（乘）/ `add`（加）；`op="reduce"` 特殊（见 `stats.py:75-76`） |
-| `consume` | `{"mode": ...}` | ✅ `effects.act_apply`（`effects.py:354-357`）+ `Battle.act`（`battle.py:508-535`） | 控制型条目的消费模式：`"skip"`（整跳行动）/ `"no_skill"`（技能转普攻） |
+| `consume` | `{"mode": ...}` | ✅ `effects.act_apply`（`effects.py:354-357`）+ `Battle.act`（`battle.py:526-553`） | 控制型条目的消费模式：`"skip"`（整跳行动）/ `"no_skill"`（技能转普攻） |
 | `period` | dict | ✅ `schedule._settle_time_effects`（`schedule.py:663-671`） | 周期结算声明（见下） |
 | `cleanse` | bool | ✅ `effects.act_cleanse`（`effects.py:635`） | `True` = 可被净化 |
 | `on` | `"caster"` \| `"target"` | ✅ `effects.act_cleanse`（`effects.py:635`，`on=="target"` 也清）；内容侧 `_mech_to_effect` 判 `on_target`（`effects.py:252`） | 效果的默认作用对象。`"target"` = 对敌标记类 |
@@ -35,8 +35,8 @@
 | `tag` | str | ⚠️ 包不读 | 旧 CLEANSE_TAGS 时代的标记。`act_apply` 读的是 **params** 的 `tag`（作为 `key` 的兜底，`effects.py:344`），不是 `cfg["tag"]` |
 | `cd_mult` | float | ✅ `actions.do_skill`（`actions.py:91-99`） | 冷却倍率（`0.8` = CD −20%）。多态并存时**取最小**（最速） |
 | `on_threshold` | `{层数: {...}}` | ⚠️ **无消费者** | 「满 N 层触发什么」。`threshold` **事件**有引擎点位（`effects.py:456`），但**这张映射表没被读**。目前要靠内容侧监听 `threshold` 自己实现 |
-| `guard_hp_pct` | float | ✅ `landing._apply_death_guard`（`landing.py:351`） | 濒死保护触发后保底到的最大生命比例（缺省 0.10） |
-| `heal_pct` | float | ✅ 同上（`landing.py:367`） | 濒死保护触发时额外回复的最大生命比例 |
+| `guard_hp_pct` | float | ✅ `landing._apply_death_guard`（`landing.py:343`） | 濒死保护触发后保底到的最大生命比例（缺省 0.10） |
+| `heal_pct` | float | ✅ 同上（`landing.py:358`） | 濒死保护触发时额外回复的最大生命比例 |
 | `wake_on_hit` | bool | ✅ **`ext_combat` 消费**（2026-09-11） | `landing.deal_damage:167-179`：承伤时遍历持有者状态，带该字段的态即被移除。数据侧声明在 `sleep` 上；接线前是 landing 内**硬编码 `"sleep"`**（游戏名词进引擎），现已数据化（引擎只认布尔字段） |
 | `start_full` | bool | ⚠️ 包不读（内容侧装配器读：`class_mech_proc.py:2225`） | 开局满额 |
 | `start_classes` | `[职业 id]` | ⚠️ 包不读（内容侧读：`class_mech_proc.py:1892/2228/2256`） | **归属过滤**。⚠️ 不声明 = 不装配某些内容侧钩子（详见下「归属门」） |

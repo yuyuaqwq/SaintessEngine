@@ -19,7 +19,20 @@ from .actors import (ActCtx, DEFEND_TAG, actor_alive, actor_dead,
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from . import actions
 from . import game_config as _GC
+from saintess_engine.config import optional_hook as _optional_hook
 from saintess_engine.text import render_or as _render_or
+
+
+def _text_table_of_content():
+    """内容侧声明的文案表（hook `text_table_fn`）；不配 ⇒ `None`（= 未注入）。
+
+    ★ B2（2026-09-27）：为什么要有这一口 —— 包自己的入口（示例包 `main.py` /
+    冒烟脚本 / 宿主驱动）都会直接 `Battle(...)`，不一定会记得把表传进来；而表**归内容侧**
+    （措辞真源），不该由「谁构造战斗」决定玩家看到哪套措辞。引擎**不内置任何表**，
+    这一口只问内容侧要（不配 = 这款游戏没有表）。
+    """
+    fn = _optional_hook("text_table_fn")
+    return fn() if fn is not None else None
 
 
 def _now_of(battle) -> float:
@@ -58,6 +71,10 @@ class Battle:
           None = 未注入 ⇒ 所有战斗日志用调用点的兜底模板（= 内联文案的原样输出）。
           引擎零文案真源：措辞归内容侧的表，引擎只给 key + 兜底模板 + 槽位；
           未注入与「表缺该 key」两条路径输出**逐字节相同**。
+          ★ B2（2026-09-27）三级取表：**显式 `text=`** > 内容侧 hook `text_table_fn` >
+            未注入。`None` 只表示「显式没给」，不代表战斗没有表 —— 内容侧配了供体就用它。
+          两条路的分工（未迁移 vs 已迁移点位）见 `saintess_engine/text/template.py`：
+            `render_or`（缺 key 用调用点兜底模板）/ `render_required`（缺 key **报错**）。
         script_hook: （N5B5c P1 剧本导演钩子）callable(battle, actor, logs) -> bool。
           自动 actor（actor_auto）行动前调用——命令层 Boss 剧本导演在此检查血量阈值/
           刻计数 → 触发剧本动作（转阶段演出/换招/召唤等）。返回 True = 拦截本刻行动
@@ -71,12 +88,13 @@ class Battle:
         self.redirect_hook = redirect_hook
         self.heal_redirect_hook = None
         # 文案表注入（可选；构造注入，无模块级全局态）
-        self.text = text
+        # ★ B2：显式 `text=` 优先；没给 ⇒ 问内容侧的 `text_table_fn`（不配 = 没有表）。
+        self.text = text if text is not None else _text_table_of_content()
         # 表现层订阅（cue）装配：内容侧没声明 `cue_subs_fn` ⇒ None
-        # （= 「不装配不存在」，已迁移点位落回原路 ⇒ 与接线前逐字节相同）。
+        # （= 「不装配不存在」；已迁移点位那时走「诊断 + 一行可读坏数据」，见 `cues.py`）。
         # 装了 ⇒ 构造期做装配期对账（缺订阅 / 多订阅 / 同 cue 双 text ⇒ 当场抛）。
         from .cues import build_cue_bus as _build_cue_bus
-        self.cues = _build_cue_bus(text)
+        self.cues = _build_cue_bus(self.text)
         # 阵营容器（唯一）
         self.sides: dict = {}
         for sn, acts in (sides or {}).items():

@@ -48,6 +48,15 @@ from _check import bind_check                                    # noqa: E402
 
 check = bind_check(globals(), "PASS", "FAIL", "FAILURES")
 
+# ★ B2（2026-09-27）：已迁移点位（`battle.landing.*` / `battle.landing.blocked_amount`…）
+#   的措辞真源在**内容侧文案表**，引擎模板已删 ⇒ 合成战斗必须自己注入「订阅表 + 文案表」，
+#   否则「格挡后」那一行会是坏数据行（本文件不接任何内容包）。
+#   `_cue_text_fixture` = 门禁夹具（**不是真源**）。
+from _cue_text_fixture import TEXT as FIX_TEXT                   # noqa: E402
+from _cue_text_fixture import install as fix_install             # noqa: E402
+
+fix_install()
+
 # 引擎不内置时间模型（未装配即抛 `EngineNotConfigured` —— fail-closed 是设计）⇒
 # 本测试自带最小一份（照 tests/test_cross_hand_state.py 的挂法）。
 from saintess_engine import config as CFG                         # noqa: E402
@@ -70,7 +79,8 @@ def _mk(uid, side, human=False, hp=200):
 
 
 def _bt(a, b):
-    return Battle(btype="monster", sides={"player": [a], "enemy": [b]}, seed_ct=False)
+    return Battle(btype="monster", sides={"player": [a], "enemy": [b]}, seed_ct=False,
+                  text=FIX_TEXT)
 
 
 # ============================================================

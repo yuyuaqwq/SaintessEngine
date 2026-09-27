@@ -39,6 +39,14 @@ from _check import bind_check                                    # noqa: E402
 
 check = bind_check(globals(), "PASS", "FAIL", "FAILURES")
 
+# ★ B2（2026-09-27）：已迁移点位（含 `battle.landing.woken`「惊醒」那一行）的措辞真源在
+#   **内容侧文案表**，引擎模板已删 ⇒ 合成战斗必须自己注入「订阅表 + 文案表」，
+#   否则那一行是坏数据行（本文件不接任何内容包）。`_cue_text_fixture` = 门禁夹具（不是真源）。
+from _cue_text_fixture import TEXT as FIX_TEXT                    # noqa: E402
+from _cue_text_fixture import install as fix_install              # noqa: E402
+
+fix_install()
+
 from saintess_engine import config as CFG                        # noqa: E402
 
 _saved_slots = CFG._HOOKS.get("tag_slots_fn")
@@ -51,7 +59,8 @@ def _mk(uid, side, **kw):
 
 
 def _bt(a, b):
-    return Battle(btype="monster", sides={"player": [a], "enemy": [b]}, seed_ct=False)
+    return Battle(btype="monster", sides={"player": [a], "enemy": [b]}, seed_ct=False,
+                  text=FIX_TEXT)
 
 
 def _rules(mapping):

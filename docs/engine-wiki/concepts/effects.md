@@ -41,13 +41,13 @@ actor["effects"] = {
 | 字段 | 谁写 | 谁读 | 含义 |
 |---|---|---|---|
 | `stacks` | `act_apply`（`effects.py:431/429`）/ `act_consume` / 周期 gain | `_cap_of` clamp、`stats` 折算、`schedule` 周期跳、`_apply_death_guard` | 层数。**允许 float**（小数刻度，如信仰每刻 −0.7） |
-| `expire` | `act_apply` | `schedule._settle_time_effects`（`schedule.py:545-529`）、`Battle.act` 控制过期兜底（`battle.py:499-501`）、`actions._consume_hit_buffs` | **绝对时刻**；`None` = 永不到期 |
-| `mode` | `act_apply` 控制分支 | `Battle.act` 控制消费（`battle.py:508-535`） | `"skip"` = 整跳行动 / `"no_skill"` = 技能转普攻 |
+| `expire` | `act_apply` | `schedule._settle_time_effects`（`schedule.py:545-529`）、`Battle.act` 控制过期兜底（`battle.py:517-519`）、`actions._consume_hit_buffs` | **绝对时刻**；`None` = 永不到期 |
+| `mode` | `act_apply` 控制分支 | `Battle.act` 控制消费（`battle.py:526-553`） | `"skip"` = 整跳行动 / `"no_skill"` = 技能转普攻 |
 | `v` | `act_apply` value 型 | **无引擎消费者**（☞ 见下） | 值型数值（如减伤 0.45） |
 | `stat` / `op` / `mult` | `act_apply` 快照分支 | `stats._apply_effects`（`stats.py:69-80`） | 面板增益快照 |
 | `hit` | `act_apply` hit 子键 | `actions._consume_hit_buffs`（`actions.py:472`） | 出手消费型（`dmg_mult` / `guaranteed_crit` / `bonus_atk_pct`） |
 | `period` | **内容侧**直接写入 | `schedule._settle_time_effects`（`schedule.py:663-671`） | 动态周期声明（条目自带优先，回落表声明） |
-| `value` | 内容侧（`heal_amp_pct` 等） | `landing._apply_heal_mods`（`landing.py:534`） | 附加数值袋（形态自定，消费方自己解释） |
+| `value` | 内容侧（`heal_amp_pct` 等） | `landing._apply_heal_mods`（`landing.py:515`） | 附加数值袋（形态自定，消费方自己解释） |
 
 ### `v` 字段的消费缺口
 
@@ -62,7 +62,7 @@ actor["effects"] = {
 `stats` 写 `st["reduce"]`……而 `st["reduce"]` 同样不被伤害路径消费
 （`stats.py:65` 只写 → [_selfcheck.md](../_selfcheck.md)）。
 **当前唯一生效的「受击减伤」通道是 `taken_calc` 事件的 `ctx["mult"]` 乘区**
-（`landing.py:90-101`）。
+（`landing.py:89-99`）。
 
 ## 层数数值口径：int 资源 vs float 刻度
 

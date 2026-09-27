@@ -1,0 +1,81 @@
+# -*- coding: utf-8 -*-
+"""★ 门禁夹具（**不是真源**）—— 引擎门禁自用的最小文案表 + cue 订阅表。
+
+为什么放在 `tests/` 下
+----------------------
+引擎门禁大量用「**合成 Battle**」（不接任何内容包）验证引擎行为。B2 起「已迁移点位」的
+措辞真源在**内容侧文案表**（引擎侧模板已删）⇒ 这些用例必须自己注入一张表，
+否则碰到那些行拿到的是「一行坏数据 + 一条诊断」，断言文案的用例会集体变红。
+
+**真源**是各游戏包自己的文案表（如 `examples/minimal-game/content/texts.py`）——
+本文件这 17 条是它们的**副本**，只服务于引擎门禁（不让引擎门禁依赖某个具体内容包的措辞）。
+两份串必须逐字相同（`tests/test_cues_shape.py` 逐字对拍两者）。
+
+跑法：不单独跑 —— 被门禁 import（`from _cue_text_fixture import TEXT, SUBS, install`）。
+"""
+from __future__ import annotations
+
+import os
+import sys
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_ROOT = os.path.dirname(_HERE)
+for _p in (_ROOT, os.path.join(_ROOT, "extends")):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
+from ext_combat.battle.cues import CUE_NAMES                          # noqa: E402
+from saintess_engine.text import TextTable                            # noqa: E402
+
+#: 已迁移点位的逐字文案（key = cue 名 = 文案表 key）
+TEMPLATES = {
+    "battle.landing.dodged": "💨 {name} 闪避了攻击！",
+    "battle.landing.element_immune": "💠 免疫！【{name}】免疫{element}伤害！",
+    "battle.landing.resist_reduce": "🛡️ 元素抗性减免 {red} 点伤害！",
+    "battle.landing.damage": "💥 {name} 受到 {dmg} 点伤害！",
+    "battle.landing.down": "💥 {name} 受到 {dmg} 点伤害，倒下了！",
+    "battle.landing.shield_absorb": "🛡️ {name} 的护盾吸收了 {absorb} 点伤害！",
+    "battle.landing.blocked_amount": "(格挡后 {dmg} 点伤害)",
+    "battle.landing.block_reduce": "🛡️ 格挡！减免 {red} 点伤害！",
+    "battle.landing.phys_immune": "🪨 物理免伤，减免 {red} 点物理伤害！",
+    "battle.landing.magic_resist": "🛡️ 魔法抗性，减免 {red} 点魔法伤害！",
+    "battle.landing.element_weak": "⚡ 弱点！【{name}】弱{element}，受到额外伤害！",
+    "battle.landing.woken": "💥 目标被攻击惊醒！",
+    "battle.landing.guard_cover": "🛡️ 【{guard}】替【{target}】挡下了这一击！",
+    "battle.landing.death_guard": "✨ {name} 濒死意志触发，保住了性命！",
+    "battle.landing.heal_shared": "✨ 治疗由【{name}】分担",
+    "battle.landing.heal_forbid": "🩸 禁疗：治疗量 -{pct}%！",
+    "battle.landing.heal_wound": "🩸 重伤：治疗量 -{pct}%！",
+}
+
+_MISSING = sorted(set(CUE_NAMES) - set(TEMPLATES))
+if _MISSING:
+    raise AssertionError("夹具文案表缺已迁移点位：%s（迁移新点位时同批补这里）" % _MISSING)
+
+#: 夹具文案表（`Battle(text=TEXT)`）
+TEXT = TextTable(TEMPLATES, name="tests-fixture")
+
+
+def subs(names=None) -> dict:
+    """`cue_subs_fn` 供体形状：每个 cue 名一条 `kind=text`（key = cue 名）。"""
+    return {n: ({"kind": "text", "key": n},) for n in (names or CUE_NAMES)}
+
+
+#: 覆盖全部已迁移点位的订阅表
+SUBS = subs()
+
+
+def install(names=None):
+    """把夹具订阅表挂进 `config._HOOKS["cue_subs_fn"]`；返回**还原函数**（用完请调）。"""
+    from saintess_engine import config as CFG
+
+    saved = CFG._HOOKS.get("cue_subs_fn")
+    CFG._HOOKS["cue_subs_fn"] = lambda: subs(names)
+
+    def _restore():
+        CFG._HOOKS["cue_subs_fn"] = saved
+
+    return _restore
+
+
+__all__ = ["SUBS", "TEMPLATES", "TEXT", "install", "subs"]

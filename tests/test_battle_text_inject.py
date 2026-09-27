@@ -1,20 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""门禁：战斗日志「文案口」——`render_via(battle, …)` / `Battle(text=…)`。
+"""门禁：战斗日志「文案口」——`render_via(battle, …)` / `Battle(text=…)` / cue 的文案真源。
 
-为什么需要它（台账 T2）
-----------------------
+为什么需要它（台账 T2 + cue 解耦 B1/B2）
+----------------------------------------
 引擎原先有 61 处玩家可见中文内联在 f-string 里（landing / effects / actions /
-schedule / battle + gauge），与「文案唯一真源在内容包的表」相左。迁移做法 = **构造注入**
-（A 案）：`Battle(..., text=<文案表>)` 可选，调用点只给「key + 兜底模板 + 槽位」；
-模块级结算函数（`gauge.bar_gain` / `gauge.bar_trigger`）拿不到 `Battle`，由动作侧
-经 `text_of(battle)` 把表下传（`text=` 关键字）。
+schedule / battle + gauge），与「文案唯一真源在内容包的表」相左。迁移分两步：
 
-四条不变量：
+  ① **构造注入**（A 案，已完成）：`Battle(..., text=<文案表>)` 可选，调用点只给
+     「key + 兜底模板 + 槽位」；模块级结算函数（`gauge.bar_gain` / `gauge.bar_trigger`）
+     拿不到 `Battle`，由动作侧经 `text_of(battle)` 把表下传（`text=` 关键字）。
+  ② **cue 解耦**（B1/B2，进行中）：**已迁移**点位的措辞搬进内容侧文案表、引擎调用点
+     那句模板**已删** ⇒ 改走 cue（`_cue(...)` 只给「cue 名 + 槽位」）；表里缺该 key
+     ⇒ **报错，不回落**（`render_required`）。某点位是否已迁移：看它是否在 `CUE_NAMES` 里。
+
+五条不变量：
   1. **注入生效（反证）**：给了表 → 输出**随表变**（证明注入不是死代码）。
-  2. **未注入 = 兜底模板**：不传 `text` → 输出**逐字节等于历史内联串**（零回归）。
-  3. **表缺 key 回落**：表里只声明一条 → 其余仍走兜底（渐进迁移语义）。
-  4. **残留扫描**：`extends/ext_combat/battle/*.py` + `gauge/*.py` 的日志实参**零中文**
+  2. **未注入 = 兜底模板**（**仅未迁移点位**）：不传 `text` → 输出**逐字节等于历史内联串**。
+  3. **表缺 key 回落**（**仅未迁移点位**，渐进迁移语义）：表里只声明一条 → 其余仍走兜底。
+  4. **★ 已迁移点位不许有影子真源**：表缺该 key ⇒ 报错 + 一行坏数据（**不回落**任何
+     引擎措辞）。要断言那句真文案时，用 `tests/_cue_text_fixture.py`（门禁夹具，
+     逐字 = 迁移前那句；**不是真源**）。
+  5. **残留扫描**：`extends/ext_combat/battle/*.py` + `gauge/*.py` 的日志实参**零中文**
      （措辞全走「key + 兜底模板 + 槽位」；T2 第 2 轮已把 `gauge/` 两文件纳入本扫描）。
 
 跑法：python tests/test_battle_text_inject.py（exit=0 全绿）
@@ -31,12 +38,18 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 FW_ROOT = os.path.dirname(_HERE)
 if FW_ROOT not in sys.path:
     sys.path.insert(0, FW_ROOT)
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
 
 from ext_combat import Battle                                   # noqa: E402
 from ext_combat.battle import landing                           # noqa: E402
 from ext_combat.battle.actors import ActCtx, make_actor          # noqa: E402
 from ext_combat import gauge as G                                 # noqa: E402
+from saintess_engine.cues import MISS_LINE                       # noqa: E402
 from saintess_engine.text import TextTable, render_or, render_via, text_of  # noqa: E402
+from _cue_text_fixture import TEMPLATES as FIX_TEMPLATES         # noqa: E402
+from _cue_text_fixture import TEXT as FIX_TEXT                    # noqa: E402
+from _cue_text_fixture import install as fix_install              # noqa: E402
 
 passed = failed = 0
 
@@ -51,7 +64,12 @@ GAUGE_DIR = os.path.join(FW_ROOT, "extends", "ext_combat", "gauge")
 
 
 class _Stub:
-    """假文案表（只实现 `render_or`）：返回可辨标记，便于断言「注入真生效」。"""
+    """假文案表（只实现 `render_or`）：返回可辨标记，便于断言「注入真生效」。
+
+    ⚠ 只实现 `render_or` 的替身**答不出**「表里有没有这个 key」⇒ 它推不动**已迁移**
+    点位的渲染（那一路是「必须命中」，见 `render_required`）。要跑已迁移点位请用
+    `TextTable`（或任何有 `__contains__` 的表）。
+    """
 
     def __init__(self, mapping=None):
         self.mapping = dict(mapping or {})
@@ -75,36 +93,33 @@ def _setup(text=None):
     return b, pa, ea
 
 
+def _defend(b):
+    """驱动一行**未迁移**点位（`battle.core.defend`，走 `battle._t` 的渐进迁移口）。"""
+    return b._do_defend(ActCtx(caster=b.sides_of("player")[0], action="defend"))
+
+
 # ---------------------------------------------------------------- 1. 注入生效
 print("【1. 注入生效（反证）：给了表 → 输出随表变】")
 stub = _Stub()
 b, _pa, ea = _setup(text=stub)
-logs = []
-random.seed(7)
-landing.deal_damage(b, None, ea, 7, logs)
-check("注入表被问到 key（battle.landing.damage 在册）",
-      "battle.landing.damage" in stub.asked, stub.asked[:4])
-check("★ 日志取自注入表（不是内联串）", logs == ["[缺]battle.landing.damage"], logs)
-stub2 = _Stub({"battle.landing.damage": "★改过的串★"})
+lg = _defend(b)
+check("注入表被问到 key（battle.core.defend 在册）",
+      "battle.core.defend" in stub.asked, stub.asked[:4])
+check("★ 日志取自注入表（不是内联串）", lg == ["[缺]battle.core.defend"], lg)
+stub2 = _Stub({"battle.core.defend": "★改过的串★"})
 b2, _pa2, ea2 = _setup(text=stub2)
-logs2 = []
-landing.deal_damage(b2, None, ea2, 7, logs2)
-check("★ 表里换一串 → 该行输出必变（注入非死代码）", logs2 == ["★改过的串★"], logs2)
+lg2 = _defend(b2)
+check("★ 表里换一串 → 该行输出必变（注入非死代码）", lg2 == ["★改过的串★"], lg2)
 
 # ---------------------------------------------------------------- 2. 未注入 = 兜底
-print("\n【2. 未注入 = 兜底模板：逐字节等于历史内联串】")
+print("\n【2. 未迁移点位：未注入 = 兜底模板：逐字节等于历史内联串】")
 b3, pa3, ea3 = _setup()
-logs3 = []
-random.seed(7)
-landing.deal_damage(b3, None, ea3, 7, logs3)
-check("伤害行逐字", logs3 == ["💥 房间怪 受到 7 点伤害！"], logs3)
-logs4 = []
-landing.deal_damage(b3, None, ea3, 99999, logs4)
-# ★ 2026-09-27 **口径改动**（判据跟着真源改，不是放宽）：屏上那个数 = **这一击的真伤害**，
-#   不再被剩余血（493）截断 —— 原先「击杀那一手印 25 点、实打 152」是假数，四路试玩取数被坑
-#   （队列 ⛔「致命一击真伤数」）。扣血 / 返回值 / on_kill 的 dmg 一格没动。
-check("倒下行逐字（真伤害，不被剩余血截断）",
-      logs4 == ["💥 房间怪 受到 99999 点伤害，倒下了！"], logs4)
+check("防御行逐字", _defend(b3)
+      == ["🛡 甲 摆出防御姿态，受到的伤害减半！"])
+check("逃跑行逐字", b3._do_flee(ActCtx(caster=pa3, action="flee")) == ["💨 甲 逃跑了！"])
+check("终局行逐字（human_act 已结束）",
+      b3.human_act("defend", None) == (["战斗已结束！"], True, None))
+check("显式 text=None 与不给参数同款", _setup(text=None)[0].text is None)
 random.seed(7)
 _b3b, _p3b, _ea3b = _setup()
 #   ★ 修（2026-09-27 · 那笔提交的**自检漏**）：这一段原写成「新鲜档 + 断言返回 493」——
@@ -132,42 +147,94 @@ finally:
     landing._roll_dodge = _nd_roll
 check("★ 自伤不吃闪避：`no_dodge=True` ⇒ 落满 9 · 反证不传 ⇒ 被闪掉 0",
       _nd_on == 9 and _nd_off == 0, {"on": _nd_on, "off": _nd_off})
-check("防御行逐字", b3._do_defend(ActCtx(caster=pa3, action="defend"))
-      == ["🛡 甲 摆出防御姿态，受到的伤害减半！"])
-check("逃跑行逐字", b3._do_flee(ActCtx(caster=pa3, action="flee")) == ["💨 甲 逃跑了！"])
-check("终局行逐字（human_act 已结束）",
-      b3.human_act("defend", None) == (["战斗已结束！"], True, None))
-check("显式 text=None 与不给参数同款", _setup(text=None)[0].text is None)
-# heal 路径：私有助手 `_apply_heal_mods` 拿不到 battle ⇒ 用只读持有者 `_TextHolder` 过文案口。
-# （T2 第 1 轮此处漏了持有者定义 ⇒ 真 NameError，被包侧 heal/吸血用例抓到；本段钉死不再回归）
-_h1 = make_actor("h1", "木桩", "enemy", kind="monster", hp=50, max_hp=100)
-check("治疗落地返回真实回血（不再 NameError）", landing.heal_actor(b3, _h1, 30, []) == 30)
-check("治疗量 clamp 到 max_hp（50+999 → 100，实回 20）",
-      landing.heal_actor(b3, _h1, 999, []) == 20)
-_h2 = make_actor("h2", "木桩", "enemy", kind="monster", hp=50, max_hp=100)
-_h2.setdefault("effects", {})["heal_down"] = {"stacks": 1}
-_lg = []
-landing.heal_actor(b3, _h2, 30, _lg)
-check("未注入 → 禁疗行 == 兜底模板（历史文案形状）",
-      len(_lg) == 1 and _lg[0].startswith("🩸 禁疗：治疗量 -") and _lg[0].endswith("%！"), _lg)
-b5, _p5, _e5 = _setup(text=_Stub({"battle.landing.heal_forbid": "F"}))
-_h3 = make_actor("h3", "木桩", "enemy", kind="monster", hp=50, max_hp=100)
-_h3.setdefault("effects", {})["heal_down"] = {"stacks": 1}
-_lg2 = []
-landing.heal_actor(b5, _h3, 30, _lg2)
-check("★ 注入表 → 禁疗行取自表（heal 私有助手的文案口也通）", _lg2 == ["F"], _lg2)
+
+# ---------------------------------------------------------------- 2b. ★ B2：已迁移点位
+print("\n【2b. 已迁移点位（cue）：表里缺 key ⇒ 报错不回落；配上表 ⇒ 逐字 = 迁移前那句】")
+_bm, _pm, _em = _setup()                       # 本文件不接内容包 ⇒ 没有 cue 总线
+_em["dodge"] = 0.0
+_lgm = []
+random.seed(7)
+landing.deal_damage(_bm, None, _em, 7, _lgm)
+check("★ 没装 cue 总线 / 没给文案表 ⇒ 一行坏数据（**不**回落引擎模板 —— 引擎已无措辞）",
+      _lgm == [MISS_LINE], _lgm)
+
+_restore_subs = fix_install()                  # 夹具订阅表（覆盖 CUE_NAMES）
+try:
+    _bf, _pf, _ef = _setup(text=FIX_TEXT)
+    check("★ 装了订阅表 ⇒ 这场战斗带总线", _bf.cues is not None)
+    _ef["dodge"] = 0.0
+    _lgf = []
+    random.seed(7)
+    landing.deal_damage(_bf, None, _ef, 7, _lgf)
+    check("★ 伤害行逐字 == 迁移前那句（现在取自内容侧文案表）",
+          _lgf == ["💥 房间怪 受到 7 点伤害！"], _lgf)
+    _lgf2 = []
+    landing.deal_damage(_bf, None, _ef, 99999, _lgf2)
+    check("★ 倒下行逐字（真伤害，不被剩余血截断）",
+          _lgf2 == ["💥 房间怪 受到 99999 点伤害，倒下了！"], _lgf2)
+
+    # 表里那条换成可辨标记 ⇒ 输出必变（证明这行真从内容侧表来）
+    _tbl_mark = TextTable(dict(FIX_TEMPLATES, **{"battle.landing.damage": "／表：伤害行"}))
+    _bmk, _pmk, _emk = _setup(text=_tbl_mark)
+    _emk["dodge"] = 0.0
+    _lgmk = []
+    random.seed(7)
+    landing.deal_damage(_bmk, None, _emk, 7, _lgmk)
+    check("★ 表里换一串 → 伤害行输出必变（措辞真源确实在内容侧表）",
+          _lgmk == ["／表：伤害行"], _lgmk)
+    # 表里少那一条 ⇒ 坏数据行 + 诊断，结算照落（**不**回落）
+    _tbl_part = TextTable({k: v for k, v in FIX_TEMPLATES.items()
+                           if k != "battle.landing.damage"})
+    _bpt, _ppt, _ept = _setup(text=_tbl_part)
+    _ept["dodge"] = 0.0
+    _lgpt = []
+    random.seed(7)
+    _ret_pt = landing.deal_damage(_bpt, None, _ept, 7, _lgpt)
+    check("★ 表缺这条 ⇒ 坏数据行 + 伤害照落（结算不受表现层影响）",
+          _lgpt == [MISS_LINE] and _ret_pt == 7, "%s / %s" % (_lgpt, _ret_pt))
+    _dpt = [d for d in getattr(_bpt, "diagnostics", []) if d.get("stage") == "cue().emit"]
+    check("★ 缺 key 进诊断通道（点名是哪个 cue）",
+          len(_dpt) == 1 and "battle.landing.damage" in _dpt[0].get("msg", ""), str(_dpt))
+
+    # heal 路径：`_apply_heal_mods`（B2 起签名接 `battle`，因为禁疗/重伤两行已迁进 cue）
+    # （T2 第 1 轮此处漏了持有者定义 ⇒ 真 NameError，被包侧 heal/吸血用例抓到；本段钉死不再回归）
+    _h1 = make_actor("h1", "木桩", "enemy", kind="monster", hp=50, max_hp=100)
+    check("治疗落地返回真实回血（不再 NameError）", landing.heal_actor(_bf, _h1, 30, []) == 30)
+    check("治疗量 clamp 到 max_hp（50+999 → 100，实回 20）",
+          landing.heal_actor(_bf, _h1, 999, []) == 20)
+    _h2 = make_actor("h2", "木桩", "enemy", kind="monster", hp=50, max_hp=100)
+    _h2.setdefault("effects", {})["heal_down"] = {"stacks": 1}
+    _lgh = []
+    landing.heal_actor(_bf, _h2, 30, _lgh)
+    check("★ 禁疗行已迁移 ⇒ 措辞取自内容侧表（heal 私有助手的文案口也通）",
+          len(_lgh) == 1 and _lgh[0].startswith("🩸 禁疗：治疗量 -") and _lgh[0].endswith("%！"),
+          _lgh)
+    _tbl_hf = TextTable(dict(FIX_TEMPLATES, **{"battle.landing.heal_forbid": "F"}))
+    _b5, _p5, _e5 = _setup(text=_tbl_hf)
+    _h3 = make_actor("h3", "木桩", "enemy", kind="monster", hp=50, max_hp=100)
+    _h3.setdefault("effects", {})["heal_down"] = {"stacks": 1}
+    _lg2 = []
+    landing.heal_actor(_b5, _h3, 30, _lg2)
+    check("★ 注入表 → 禁疗行取自表", _lg2 == ["F"], _lg2)
+finally:
+    _restore_subs()
+
+# 没有总线时：禁疗行同样只是坏数据行（不落回引擎模板）
+_h4 = make_actor("h4", "木桩", "enemy", kind="monster", hp=50, max_hp=100)
+_h4.setdefault("effects", {})["heal_down"] = {"stacks": 1}
+_lg4 = []
+landing.heal_actor(b3, _h4, 30, _lg4)
+check("★ 没总线 ⇒ 禁疗行是坏数据行（措辞不再由引擎给）",
+      _lg4 == [MISS_LINE], _lg4)
 
 # ---------------------------------------------------------------- 3. 表缺 key 回落
-print("\n【3. 表缺 key → 回落兜底模板（渐进迁移语义）】")
-stub3 = _Stub({"battle.landing.damage": "★只改了伤害行★"})
+print("\n【3. 未迁移点位：表缺 key → 回落兜底模板（渐进迁移语义）】")
+stub3 = _Stub({"battle.core.defend": "★只改了防御行★"})
 b4, _p, ea4 = _setup(text=stub3)
-logs5 = []
-landing.deal_damage(b4, None, ea4, 7, logs5)
-logs6 = []
-landing.deal_damage(b4, None, ea4, 99999, logs6)
-check("声明的 key 走表", logs5 == ["★只改了伤害行★"], logs5)
+check("声明的 key 走表", _defend(b4) == ["★只改了防御行★"], _defend(b4))
 check("未声明的 key 走兜底（无异常、无空串）",
-      logs6 == ["[缺]battle.landing.down"], logs6)
+      b4._do_flee(ActCtx(caster=b4.sides_of("player")[0], action="flee"))
+      == ["[缺]battle.core.fled"], "见上")
 
 # ---------------------------------------------------------------- 4. 残留扫描
 print("\n【4. 残留扫描：battle/ + gauge/ 的日志实参零中文】")
@@ -224,6 +291,8 @@ print("\n【5. 渲染口本体】")
 check("render_via(None, …) = 兜底模板", render_via(None, "k", "x {y}", y=1) == "x 1")
 check("render_via(替身无 text) = 兜底模板",
       render_via(object(), "k", "无槽位") == "无槽位")
+
+
 class _Holder:
     """只带 `text` 一个字段的持有者（= Battle 的注入面形状）。"""
 
@@ -297,7 +366,7 @@ check("text_of(None) / 无 text 替身 → None（未注入）",
 # ---------------------------------------------------------------- 7. 续战/恢复路径
 print()
 print("【7. 续战 / 面板恢复：from_state(text=…) 同口径注入（注入不停在首战）】")
-_b7, _p7, _e7 = _setup(text=_Stub({"battle.landing.damage": "／表：续战伤害"}))
+_b7, _p7, _e7 = _setup(text=_Stub({"battle.core.defend": "／表：续战防御"}))
 _st7 = _b7.to_state()
 check("to_state 不落文案表（表不可 JSON 化；state 顶层与 actor 内都无 text）",
       "text" not in _st7 and all("text" not in a for acts in _st7["sides"].values() for a in acts),
@@ -306,22 +375,35 @@ _sig7 = _insp.signature(Battle.from_state).parameters
 check("★ from_state 的 text 为关键字专属（不留位置参数口子）",
       "text" in _sig7 and _sig7["text"].kind is _insp.Parameter.KEYWORD_ONLY,
       str({_n: str(_pp.kind) for _n, _pp in _sig7.items()}))
-_c7 = Battle.from_state(_st7, text=_Stub({"battle.landing.damage": "／表：续战伤害"}))
-_lg7 = []
-random.seed(7)
-landing.deal_damage(_c7, None, _c7.sides_of("enemy")[0], 3, _lg7)
+_c7 = Battle.from_state(_st7, text=_Stub({"battle.core.defend": "／表：续战防御"}))
 check("★ 恢复带 text= ⇒ 续战日志取自表（注入链不断在 from_state）",
-      _lg7 == ["／表：续战伤害"], _lg7)
+      _defend(_c7) == ["／表：续战防御"], _defend(_c7))
 _c8 = Battle.from_state(_st7)
 check("恢复不传 text ⇒ .text is None（未注入）", _c8.text is None)
 _lg8 = []
 random.seed(7)
+_c8.sides_of("enemy")[0]["dodge"] = 0.0
 landing.deal_damage(_c8, None, _c8.sides_of("enemy")[0], 3, _lg8)
-check("未注入恢复 ⇒ 逐字节 == 兜底模板（历史内联串）",
-      _lg8 == ["💥 房间怪 受到 3 点伤害！"], _lg8)
+check("未注入恢复 ⇒ 已迁移点位是一行坏数据（**不**回落引擎模板）",
+      _lg8 == [MISS_LINE], _lg8)
 from ext_combat import from_state as _fs_mod                            # noqa: E402
 check("模块级 from_state 同款（text= 关键字透传）",
-      _fs_mod(_st7, text=_Stub({"battle.landing.damage": "／表：模块级"})).text is not None)
+      _fs_mod(_st7, text=_Stub({"battle.core.defend": "／表：模块级"})).text is not None)
+
+# ★ 恢复 + 夹具总线/文案表 ⇒ 已迁移点位逐字 = 迁移前那句（注入链一路通到 cue）
+_restore2 = fix_install()
+try:
+    _c9 = Battle.from_state(_st7, text=FIX_TEXT)
+    check("★ 恢复带表 + 装了订阅 ⇒ 恢复出来的战斗也带总线", _c9.cues is not None)
+    _lg9 = []
+    random.seed(7)
+    _e9 = _c9.sides_of("enemy")[0]
+    _e9["dodge"] = 0.0
+    landing.deal_damage(_c9, None, _e9, 3, _lg9)
+    check("★ 续战日志逐字 == 迁移前那句（恢复路径上的 cue 也走内容侧表）",
+          _lg9 == ["💥 房间怪 受到 3 点伤害！"], _lg9)
+finally:
+    _restore2()
 
 # ---------------------------------------------------------------- 8. P-59 坏格式符 / 机器键
 print()
@@ -336,7 +418,7 @@ _BADSPEC = re.compile(r"\{[^{}]*::[^{}]*\}")
 
 
 def _template_args(root):
-    """扫树下 render_via / render_or / `_t` 调用里的字符串实参 → (坏格式符清单, 实参总数)。"""
+    """扫树下 render_via / render_or / `_t` / cue 调用里的字符串实参 → (坏格式符清单, 实参总数)。"""
     bad, n, nf = [], 0, 0
     for _dp, _dirs, _fs in os.walk(root):
         _dirs[:] = [d for d in _dirs if d != "__pycache__"]

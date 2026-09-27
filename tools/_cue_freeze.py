@@ -16,6 +16,11 @@
 `render_via` 与 `self._t` 两条渲染路都从这一口过 ⇒ 都能被数到；且返回
 `safe_format(default, slots)` ⇒ 输出与「未注入」**逐字节相同**（对拍基线 = 不注入）。
 
+★ B2（2026-09-27）：已迁移点位的引擎模板已删、渲染改成「必须命中内容侧文案表」
+（`render_required`）⇒ 计数鸭子表**同批扩展**成「包着内容侧真表」再记账
+（`SpyText(table=…)`：命中取真表那句、未命中才用调用点 `default`）。这条不是判据变化，
+是**采集面跟着渲染口走**；计数口径（这一口被调几次）一字未动。详见 `SpyText` 的文档串。
+
 用法
 ----
     python tools/_cue_freeze.py --before <树> --after <树> [--inject reorder|drop] [--json out.json]
@@ -254,27 +259,50 @@ def _setup_path(tree: str) -> None:
 
 
 class SpyText:
-    """计数鸭子表 —— 口径 = 引擎的 `render_or(text, key, default, **slots)`。
+    """计数鸭子表 —— **包着内容侧真文案表**再记账（口径 = 引擎的渲染口）。
 
     引擎两条渲染路（`Battle._t` 与模块级 `render_via`）都从 `render_or` 走，
     `text` 非 None 就调 `text.render_or(key, default, **slots)` ⇒ 本类即唯一计数点。
-    返回 `safe_format(default, slots)` ⇒ 与「未注入」逐字节相同。
 
-    ⚠️ 口径声明：本尺子的「逐 cue 计数表」= `render_or` 这一口的 key 计数。
-    后续批次若把渲染口换成别的形状（如内容侧直接 `text.render(key, **payload)`），
-    必须**同批扩展本类**（那不是判据变化，是采集面跟着形状走），并在报告里写明。
+    ★ B2（2026-09-27）**采集面扩展**（不是判据变化，是渲染口跟着形状走）：
+    「已迁移」点位的引擎模板已删、渲染改成「**必须命中**内容侧文案表」
+    （`saintess_engine.text.render_required`）⇒ 尺子再拿 `default` 渲染就拿不到真句子了。
+    所以本类改成**内层 = 内容侧真表**（示例包 `content.texts.TEXT`）：
+
+      · `render_or(key, default, **slots)`：内层命中 ⇒ 取内层那句（= 玩家真看到的），
+        没命中（未迁移点位）⇒ 用调用点 `default`（`safe_format`，与「未注入」逐字节相同）；
+      · `__contains__`：转发内层 —— `render_required` 的命中判定走这一口。
+
+    记账口径**不变**（仍是「这一口的 key 被调用几次」）。旧树（无 `content/texts.py`）
+    ⇒ 内层 None ⇒ 只有 `default` 一路（= 旧形状），尺子照样能跑。
     """
 
-    def __init__(self):
+    def __init__(self, table=None):
+        self.table = table                # 内层内容侧文案表（None = 该树还没有它）
         self.counts: dict = {}
         self.rendered: list = []          # [(key, 渲染出的那一行), ...] 按渲染序
 
+    def __contains__(self, key) -> bool:
+        return bool(self.table is not None and key in self.table)
+
     def render_or(self, key, default, /, **slots):
         from saintess_engine.text import safe_format
-        line = safe_format(default, slots)
+        if self.table is not None and key in self.table:
+            line = self.table.render_or(key, default, **slots)
+        else:
+            line = safe_format(default, slots)
         self.counts[key] = self.counts.get(key, 0) + 1
         self.rendered.append((key, line))
         return line
+
+
+def _content_text_table():
+    """示例包的内容侧文案表（SpyText 的内层）。老树没有这个文件 ⇒ None（旧形状）。"""
+    try:
+        from content.texts import TEXT
+    except Exception:                                          # noqa: BLE001
+        return None
+    return TEXT
 
 
 def _norm(value):
@@ -341,7 +369,7 @@ def collect(tree: str, inject: str = "none") -> dict:
     groups = []
     for sc in scenarios():
         random.seed(sc["seed"])
-        spy = SpyText()
+        spy = SpyText(_content_text_table())
 
         def _mk_player(spec):
             cls, uid, name, level, hp = spec

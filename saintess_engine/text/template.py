@@ -22,6 +22,13 @@
 * **不做多语言切换**：本表只管「key → 模板」。要几套语言就建几张表，各自装载。
 * **不做格式化 DSL**：就用 `str.format` 的 `{slot}`；复杂逻辑写在使用方。
 * **不猜**：模板缺槽时保留 `{slot}` 原文而不是填空 —— 让问题可见，别静默丢字。
+
+两个渲染口的分工（★ 2026-09-27 补：「已迁移」点位不许有影子真源）
+----------------------------------------------------------------
+* `render_or`  = **渐进迁移**口：表里没这个 key ⇒ 用调用方现给的 `default`（调用点内联模板）。
+  未迁移的点位走它（措辞暂时还在引擎调用点，逐字节不变）。
+* `render_required` = **已迁移**口：表里没这个 key ⇒ **抛**（引擎手里没有任何模板可回落）。
+  已迁移点位的措辞真源已在内容侧 ⇒ 缺表/缺 key 就是内容侧漏声明，不许静默补齐。
 """
 from __future__ import annotations
 
@@ -31,7 +38,7 @@ from string import Formatter
 from typing import Callable, Iterable, Mapping, Optional
 
 __all__ = ["TextSpec", "TextTable", "safe_format", "extract_params",
-           "render_or", "render_via", "text_of"]
+           "render_or", "render_required", "render_via", "text_hit", "text_of"]
 
 
 class _KeepUnknown(dict):
@@ -70,6 +77,35 @@ def render_or(text, key: str, default: str, /, **slots) -> str:
     if text is None:
         return safe_format(default, slots)
     return text.render_or(key, default, **slots)
+
+
+def text_hit(text, key: str) -> bool:
+    """表里**有没有**这个 key（`render_required` 的 fail-closed 判定）。
+
+    * 表不在（未注入）⇒ `False`；
+    * 表有 `__contains__`（`TextTable` / `Mapping` / 计数鸭子表）⇒ 按它判；
+    * 表**答不出**有没有（只实现了 `render_or` 的手写替身）⇒ `False` ——
+      「答不出」不许当成「有」（那正是静默兜底）。
+    """
+    if text is None:
+        return False
+    try:
+        return bool(key in text)
+    except TypeError:
+        return False
+
+
+def render_required(text, key: str, /, **slots) -> str:
+    """**必须命中**的渲染口（已迁移点位专用）：表不在 / 表里没这个 key ⇒ 抛 `KeyError`。
+
+    为什么要有它：迁移一个点位 = 把那个点位的模板从引擎删掉 ⇒ 引擎手里**没有**任何
+    可回落的措辞（回落 = 影子真源复活，正是解耦要拆掉的东西）。所以这条路上「表缺 key」
+    只能**现形**：调用方（`CueBus`）把 `KeyError` 转成「诊断 + 一行可读坏数据」，
+    既不静默丢行，也不替内容侧编一句。
+    """
+    if not text_hit(text, key):
+        raise KeyError("文案表%s里没有 %r" % ("（未注入）" if text is None else "", key))
+    return render_or(text, key, "", **slots)
 
 
 def text_of(holder):

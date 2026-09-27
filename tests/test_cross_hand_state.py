@@ -47,6 +47,15 @@ from _check import bind_check                                 # noqa: E402
 
 check = bind_check(globals(), "PASS", "FAIL", "FAILURES")
 
+# ★ B2（2026-09-27）：已迁移点位（`battle.landing.*`）的措辞真源在**内容侧文案表**，
+#   引擎调用点那句模板已删 ⇒ 合成战斗必须自己注入「订阅表 + 文案表」，
+#   否则碰到那些行拿到的是「一行坏数据 + 一条诊断」（本文件不接任何内容包）。
+#   `_cue_text_fixture` = 门禁夹具（**不是真源**，逐字 = 迁移前那句）。
+from _cue_text_fixture import TEXT as FIX_TEXT                # noqa: E402
+from _cue_text_fixture import install as fix_install          # noqa: E402
+
+fix_install()          # 脚本式门禁：订阅表挂上就不再摘（跑完即退进程）
+
 # 引擎不内置行动基准数值（未装配即抛 `EngineNotConfigured` —— fail-closed 是设计）⇒
 # 本测试自带最小一份时间模型（照 tests/test_engine_neutral_fallback.py 的挂法）。
 from saintess_engine import config as CFG                      # noqa: E402
@@ -70,7 +79,8 @@ def _mk(uid, side, human=False, hp=200):
 
 def _bt(a, b):
     """单人 vs 单人（同一等级 ⇒ 等级压制不参与，减伤只可能来自防御姿态窗口条目）。"""
-    return Battle(btype="monster", sides={"player": [a], "enemy": [b]}, seed_ct=False)
+    return Battle(btype="monster", sides={"player": [a], "enemy": [b]}, seed_ct=False,
+                  text=FIX_TEXT)
 
 
 # ============================================================

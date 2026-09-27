@@ -19,8 +19,7 @@ from typing import Optional
 from . import formulas as _F
 from .actors import DEFEND_TAG, window_open      # 状态容器：窗口条目查询（收口后唯一真源）
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
-from saintess_engine.text import render_via
-from .cues import cue as _cue          # 已迁移点位走表现事件（未装配 ⇒ 内部落回 render_via）
+from .cues import cue as _cue          # 已迁移点位的唯一出口（措辞 = 内容侧文案表；缺表/缺 key ⇒ 报错）
 
 # ============================================================
 # 伤害落地
@@ -75,9 +74,9 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
                         _diag(battle, "deal_damage", _e)          # 审计 P-44 余量：不再静默（行为不变）
                         _ok = False
                 if _ok:
-                    logs.append(render_via(battle, "battle.landing.guard_cover", "🛡️ 【{guard}】替【{target}】挡下了这一击！",
-                                        guard=_guard.get('name', '守护者'),
-                                        target=target.get('name', '目标')))
+                    _cue(battle, logs, "battle.landing.guard_cover",
+                         {"guard": _guard.get('name', '守护者'),
+                          "target": target.get('name', '目标')})
                     return deal_damage(battle, source, _guard, amount, logs,
                                        dmg_kind=dmg_kind, defend_reduce=defend_reduce,
                                        element=element, _no_redirect=True)
@@ -94,7 +93,6 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             _imm = target.get("element_immune") or []
             if isinstance(_imm, (list, tuple)) and element in _imm:
                 _cue(battle, logs, "battle.landing.element_immune",
-                     "💠 免疫！【{name}】免疫{element}伤害！",
                      {"name": target.get('name', '敌人'), "element": element})
                 return 0
             _wk = target.get("element_weak") or {}
@@ -102,9 +100,8 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
                 _wm = float(_wk.get(element, 1.0) or 1.0)
                 if _wm > 1.0:
                     dmg = max(1, int(dmg * _wm))
-                    logs.append(render_via(battle, "battle.landing.element_weak", "⚡ 弱点！【{name}】弱{element}，受到额外伤害！",
-                                        name=target.get('name', '敌人'),
-                                        element=element))
+                    _cue(battle, logs, "battle.landing.element_weak",
+                         {"name": target.get('name', '敌人'), "element": element})
             # 元素抗性减免（承伤方视角；怪打玩家吃玩家词条抗，玩家打怪怪无键=0 无感）
             from . import stats as _S
             _st_t = _S.actor_stats(battle, target)
@@ -114,7 +111,7 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
                 red = max(1, int(dmg * _ar))
                 dmg = max(1, dmg - red)
                 _cue(battle, logs, "battle.landing.resist_reduce",
-                     "🛡️ 元素抗性减免 {red} 点伤害！", {"red": red})
+                     {"red": red})
         except Exception as _e:
             _diag(battle, "deal_damage · 免疫/弱点/抗性", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # 免疫/弱点/抗性异常不阻断落地
@@ -182,8 +179,7 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             _dr = float(defend_reduce)
         # int 截断对齐旧 landing 默认 0.5 行为（coverage 87 断言口径）
         dmg = max(1, int(dmg * (1.0 - _dr)))
-        logs.append(render_via(battle, "battle.landing.blocked_amount", "(格挡后 {dmg} 点伤害)",
-                            dmg=dmg))
+        _cue(battle, logs, "battle.landing.blocked_amount", {"dmg": dmg})
     # N10-B6 百分比免伤 + 格挡（actor 承伤侧，按 dmg_kind 减免；对齐旧 _damage_actor：
     # 物免/魔免按伤害类型 cap40% → block 格挡减免一半 cap40%）
     if dmg_kind and dmg > 0:
@@ -204,7 +200,7 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             for _wk in list(_ef_wake.keys()):
                 if isinstance(_ef_wake.get(_wk), dict) and (_sdef_w(_wk) or {}).get("wake_on_hit"):
                     _ef_wake.pop(_wk, None)
-                    logs.append(render_via(battle, "battle.landing.woken", "💥 目标被攻击惊醒！"))
+                    _cue(battle, logs, "battle.landing.woken", {})
     except Exception as _e:
         _diag(battle, "deal_damage · 打醒", _e)          # 审计 P-44：不再静默（行为不变）
         pass  # 打醒异常不阻断落地
@@ -278,8 +274,7 @@ def _roll_dodge(battle, target: dict, logs: list) -> bool:
             return False
         import random
         if random.random() < dodge:
-            _cue(battle, logs, "battle.landing.dodged", "💨 {name} 闪避了攻击！",
-                 {"name": target.get('name', '目标')})
+            _cue(battle, logs, "battle.landing.dodged", {"name": target.get('name', '目标')})
             return True
     except Exception as _e:
         _diag(battle, "_roll_dodge", _e)          # 审计 P-44：不再静默（行为不变）
@@ -305,15 +300,13 @@ def _apply_taken_reductions(battle, target: dict, dmg: int, dmg_kind: str,
             if pr > 0:
                 red = max(1, int(dmg * pr))
                 dmg = max(1, dmg - red)
-                logs.append(render_via(battle, "battle.landing.phys_immune", "🪨 物理免伤，减免 {red} 点物理伤害！",
-                                    red=red))
+                _cue(battle, logs, "battle.landing.phys_immune", {"red": red})
         if "magi" in kd and "true" not in kd:
             mr = min(float(st.get("magic_reduce", 0) or 0), 0.4)
             if mr > 0:
                 red = max(1, int(dmg * mr))
                 dmg = max(1, dmg - red)
-                logs.append(render_via(battle, "battle.landing.magic_resist", "🛡️ 魔法抗性，减免 {red} 点魔法伤害！",
-                                    red=red))
+                _cue(battle, logs, "battle.landing.magic_resist", {"red": red})
         if dmg > 0 and "true" not in kd:
             import random
             # V4：0.40（上限）/ 0.5（命中减免）从内容侧骨架表读（原写死字面量）
@@ -321,8 +314,7 @@ def _apply_taken_reductions(battle, target: dict, dmg: int, dmg_kind: str,
             if bc > 0 and random.random() < bc:
                 red = max(1, int(dmg * _F.block_reduce()))
                 dmg = max(1, dmg - red)
-                logs.append(render_via(battle, "battle.landing.block_reduce", "🛡️ 格挡！减免 {red} 点伤害！",
-                                    red=red))
+                _cue(battle, logs, "battle.landing.block_reduce", {"red": red})
     except Exception as _e:
         _diag(battle, "_apply_taken_reductions", _e)          # 审计 P-44：不再静默（行为不变）
         pass
@@ -356,8 +348,7 @@ def _apply_death_guard(battle, target: dict, logs: list) -> bool:
         heal_pct = float(cfg.get("heal_pct") or 0.0)
         if heal_pct > 0 and target.get("hp", 0) < mhp:
             heal_actor(battle, target, int(mhp * heal_pct), logs)
-        logs.append(render_via(battle, "battle.landing.death_guard", "✨ {name} 濒死意志触发，保住了性命！",
-                            name=target.get('name', '目标')))
+        _cue(battle, logs, "battle.landing.death_guard", {"name": target.get('name', '目标')})
         return True
     except Exception as _e:
         _diag(battle, "_apply_death_guard", _e)          # 审计 P-44：不再静默（行为不变）
@@ -382,9 +373,8 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
             absorb = min(sv, remaining)
             sh["value"] = sv - absorb
             remaining -= absorb
-            logs.append(render_via(battle, "battle.landing.shield_absorb", "🛡️ {name} 的护盾吸收了 {absorb} 点伤害！",
-                                name=target.get('name', '目标'),
-                                absorb=absorb))
+            _cue(battle, logs, "battle.landing.shield_absorb",
+                 {"name": target.get('name', '目标'), "absorb": absorb})
             if sh["value"] <= 0:
                 shields.pop(sk, None)
             if remaining <= 0:
@@ -409,9 +399,8 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
             new = int(target.get("hp", 0) or 0)
             _real = old - new
     if new <= 0:
-        logs.append(render_via(battle, "battle.landing.down", "💥 {name} 受到 {dmg} 点伤害，倒下了！",
-                            name=target.get('name', '目标'),
-                            dmg=_shown))
+        _cue(battle, logs, "battle.landing.down",
+             {"name": target.get('name', '目标'), "dmg": _shown})
         if hasattr(battle, "_on_actor_dead"):
             battle._on_actor_dead(target, logs)
         # N8 事件：击杀（主体=击杀者；DOT/环境杀无 on_kill）
@@ -424,9 +413,8 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
                 _diag(battle, "_apply_damage · 事件源", _e)          # 审计 P-44：不再静默（行为不变）
                 pass  # 事件源异常不阻断落地
     else:
-        logs.append(render_via(battle, "battle.landing.damage", "💥 {name} 受到 {dmg} 点伤害！",
-                            name=target.get('name', '目标'),
-                            dmg=_shown))
+        _cue(battle, logs, "battle.landing.damage",
+             {"name": target.get('name', '目标'), "dmg": _shown})
     return _real
 
 
@@ -467,15 +455,15 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
                         _diag(battle, "heal_actor", _e)          # 审计 P-44 余量：不再静默（行为不变）
                         _ok = False
                 if _ok:
-                    logs.append(render_via(battle, "battle.landing.heal_shared", "✨ 治疗由【{name}】分担",
-                                        name=_share.get('name', '分担者')))
+                    _cue(battle, logs, "battle.landing.heal_shared",
+                         {"name": _share.get('name', '分担者')})
                     return heal_actor(battle, _share, amount, logs, source=source,
                                       label=label, _no_redirect=True)
     heal = max(0, int(amount))
     if heal <= 0:
         return 0
     # 禁疗/重伤修正（target 自身状态）
-    heal = _apply_heal_mods(target, heal, logs, battle.text)
+    heal = _apply_heal_mods(battle, target, heal, logs)
     if heal <= 0:
         return 0
     _mx = target.get("max_hp", target.get("hp", 1)) or 1
@@ -499,21 +487,14 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
     return _real
 
 
-class _TextHolder:
-    """只带 `text` 一个字段的持有者：给「拿不到 battle 对象」的私有助手用（零全局态）。"""
-
-    __slots__ = ("text",)
-
-    def __init__(self, text=None):
-        self.text = text
-
-
-def _apply_heal_mods(target: dict, amount: int, logs: list, text=None) -> int:
+def _apply_heal_mods(battle, target: dict, amount: int, logs: list) -> int:
     """受疗/禁疗修正（target 自身效果）。返回修正后治疗量（未 clamp）。
 
-    本函数拿不到 `battle` ⇒ 用只读持有者 `_TextHolder(text)` 过文案口（零全局态）。
+    ★ 2026-09-27（B2）：本函数原先「拿不到 `battle`」（用只读持有者 `_TextHolder(text)`
+    过文案口）。禁疗/重伤两行的措辞已迁进内容侧文案表 ⇒ 表现走 `_cue(battle, …)`
+    （同步就地 append），所以这里必须拿到 `battle` 本身（总线 + 文案表都在它身上）——
+    `_TextHolder` 随之删除（它的存在理由就是「拿不到 battle」）。
     """
-    holder = _TextHolder(text)
     heal = amount
     try:
         ef = target.get("effects") or {}
@@ -533,8 +514,7 @@ def _apply_heal_mods(target: dict, amount: int, logs: list, text=None) -> int:
             if ehd > 0:
                 cut = max(0.0, min(ehd * _F.heal_down_per_stack(), _F.heal_down_cap()))
                 heal = max(0, int(heal * (1 - cut)))
-                logs.append(render_via(holder, "battle.landing.heal_forbid", "🩸 禁疗：治疗量 -{pct}%！",
-                                    pct=int(cut * 100)))
+                _cue(battle, logs, "battle.landing.heal_forbid", {"pct": int(cut * 100)})
         # 重伤（_anti_heal_pct cap 上限；effects 条目 value 内嵌；V4 上限读内容侧骨架表）
         ah_entry = ef.get("_anti_heal_pct")
         if isinstance(ah_entry, dict):
@@ -542,12 +522,10 @@ def _apply_heal_mods(target: dict, amount: int, logs: list, text=None) -> int:
             if aheal > 0:
                 cut2 = max(0.0, min(aheal, _F.anti_heal_cap()))
                 heal = max(0, int(heal * (1 - cut2)))
-                logs.append(render_via(holder, "battle.landing.heal_wound", "🩸 重伤：治疗量 -{pct}%！",
-                                    pct=int(cut2 * 100)))
+                _cue(battle, logs, "battle.landing.heal_wound", {"pct": int(cut2 * 100)})
     except Exception as _e:
-        # ★ 2026-09-25（E1 修）：本函数签名里**没有 battle**（见上方文档串：「本函数拿不到
-        #   `battle` ⇒ 用只读持有者 `_TextHolder(text)` 过文案口」），原先写 `_diag(battle, …)`
-        #   ⇒ 走到这里抛 NameError。按 diag 契约传 None（只落引擎日志）。
-        _diag(None, "_apply_heal_mods", _e)          # 审计 P-44：不再静默（行为不变）
+        # ★ 2026-09-27（B2）：签名改成接 `battle`（表现层要发 cue）⇒ 这里回到正常的
+        #   `_diag(battle, …)`（2026-09-25 那版传 None 是因为当时签名里没有 battle）。
+        _diag(battle, "_apply_heal_mods", _e)          # 审计 P-44：不再静默（行为不变）
         pass
     return max(0, heal)

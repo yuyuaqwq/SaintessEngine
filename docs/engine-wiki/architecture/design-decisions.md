@@ -21,10 +21,10 @@
 
 **痕迹**：
 - `actors.py:1-9` 的模块 docstring 原文：「引擎逻辑只用字段值，不按字段猜身份」
-- `Battle.focus()`：只认 `human_controlled`（`battle.py:223-232`）
+- `Battle.focus()`：只认 `human_controlled`（`battle.py:241-250`）
 - `schedule._next_player_due` / `_next_auto_due`：按同一个 bool 分流（`schedule.py:374/128`）
-- `Battle.add_actor` 注释：「不认识随从/召唤/亡灵/援军，只做注册 + 索引 + 排程」（`battle.py:274`）
-- `Battle.find_actor(uid)`：承伤/治疗转移的查找口（只读，不猜身份）（`battle.py:217`）
+- `Battle.add_actor` 注释：「不认识随从/召唤/亡灵/援军，只做注册 + 索引 + 排程」（`battle.py:292`）
+- `Battle.find_actor(uid)`：承伤/治疗转移的查找口（只读，不猜身份）（`battle.py:235`）
 
 ---
 
@@ -184,10 +184,10 @@ actor 的 `triggers = {事件名: [效果声明]}` 决定响应什么。
 - 「谁属于哪个阵营」有两处真相（`actor["side"]` 与 `battle.sides` 的键），
   于是需要 `actor_side_of`（`actors.py:180`）来定权威（sides 优先，字段兜底）
 
-**收益**：`add_actor` 不需要通知任何人（`battle.py:274-276` 注释：
+**收益**：`add_actor` 不需要通知任何人（`battle.py:292-294` 注释：
 「sides 是普通 dict，调度与序列化均动态遍历 sides，故新 actor 自动参与行动与存档」）。
 
-**痕迹**：`Battle.__init__` 里 `self.sides` 的构造（`battle.py:80-83`）。
+**痕迹**：`Battle.__init__` 里 `self.sides` 的构造（`battle.py:98-101`）。
 
 ---
 
@@ -202,10 +202,10 @@ Boss 剧本导演。这些都需要游戏知识。
 **代价**：
 - **它们不落盘**：`from_state` 只恢复 `btype/sides/hostile_map`，
   恢复后必须自己重挂（文案表 `text=` 同理：可选关键字参数，恢复时重新传入）（[../guides/serialize-and-resume.md](../guides/serialize-and-resume.md)）
-- 异常被吞掉（`script_hook` 异常 → 回落默认行动，`battle.py:364-365`），
+- 异常被吞掉（`script_hook` 异常 → 回落默认行动，`battle.py:382-383`），
   钩子写错不容易发现
 
-**痕迹**：`battle.py:43-64` 的三段注释；
+**痕迹**：`battle.py:56-81` 的三段注释；
 `actor_auto` 里的调用顺序（script_hook → auto_act → ai → 普攻）。
 
 ---
