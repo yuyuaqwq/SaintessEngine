@@ -292,7 +292,12 @@ def t2_positive(body, tpat):
     #   `content/apply.py::route_miss_text` 装的 `route_miss_text_fn`）⇒ 3207 → 3208。
     #   ②中文键数锚点**不变**（仍 169：键名全 ASCII）——别跟着 +1（会当场红）；
     #   ③标签字已同步（本行）。
-    check("包内文案条数锚点 == 3208（条数变了就同步更新本门禁的锚点）", len(body) == 3208, len(body))
+    # ★ 2026-09-27 P-11（内置守卫拦截句**内容半边** · 包侧 `p11-guard-text` → 包 `d98b348`）：
+    #   新增 2 键（`guard.register_missing` / `guard.battle_missing`，键名全 ASCII，新分类
+    #   「守卫回话」；引用面 = 包内 `content/apply.py::guard_text` 装的 `guard_text_fn`）
+    #   ⇒ 3208 → 3210。②中文键数锚点**照样不变**（仍 169）——别跟着 +2（会当场红）；
+    #   ③标签字已同步（本行）。
+    check("包内文案条数锚点 == 3210（条数变了就同步更新本门禁的锚点）", len(body) == 3210, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
