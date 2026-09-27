@@ -28,7 +28,7 @@
     · `log/` · `tlog/` · `records/`
   - **宿主** `host/`（包加载 / 会话循环 / 命令通道 / 战斗驱动半边）
 - 扩展包目录 `extends/`：引擎自带 **10** 个 —— `ext_combat`（CTB / 结算 / 效果 / 面板 / 计量条 /
-  站位）· `ext_quest` · `ext_world` · `ext_life` · `ext_economy` · `ext_social` · `ext_loot` ·
+  站位 / **标签** / **属性写口** / **表现事件 cue**）· `ext_quest` · `ext_world` · `ext_life` · `ext_economy` · `ext_social` · `ext_loot` ·
   `ext_dialogue` · `ext_achieve` · `ext_reward`。装法永远是一句话：数据包 `game.json` 里
   `"depends": ["ext_xxx"]`，包栈按拓扑序装
 - 数据包目录 `games/`：一款游戏一个包（`games/orlandia` = 《奥兰迪亚》导出包 ·
@@ -65,6 +65,46 @@
   `extends/ext_combat/battle/cues.py`（`CUE_NAMES` 声明面）；门禁 `tests/test_cues_shape.py`。
 - 对拍证据：`tools/_cue_freeze.py`（5 组固定战斗逐字节 + 状态 + 逐 cue 计数三通道对拍）·
   `tools/_cue_coverage.py`（覆盖率尺：60 条声明每条至少被真驱动一次）。
+
+## 标签系统：一套查询面（tag · 照 GAS `GameplayTag` 那三件）
+
+在 **`extends/ext_combat/battle/tags.py`**（254 行）+ `traits.py`（身份标签精确面）+
+`state_effects.py`（状态容器）里 —— 引擎只做「名字 → 祖先 / 前缀」的结构运算，**不认识任何游戏名词**。
+
+```text
+授 tag 的三处来源（查询口合成一个面）           查询（父级命中子级）
+  actor["traits"]      内容侧身份标签             has(a, "control")  →  命中 "control.stun"
+  effects 的条目 key   状态本身就是标签            has_exact / has_any / has_all / match
+  条目的 grants        一条状态可授多个 tag        sources_of（排障：这个 tag 谁授的）
+撤销 = 条目被清（到期 / 被消费 / 离场）即随之消失，不另开接口 —— 生命周期跟着状态容器走
+```
+
+- **名字从哪来**：状态声明表（`EFFECT_RULES` 的键）+ 内容侧 `traits` + 引擎**固定词汇表**的**槽位名**
+  （`DEFAULT_SLOTS`）。内容侧想在装配面把某个槽位改成点分名字（`immune_control` → `immune.control`）
+  就声明 `tag_slots_fn`（`saintess_engine.config.mount(tag_slots_fn=…)`）—— 引擎只按槽位取名字。
+- 与旧精确面的关系：**扁平名的精确判定走 `traits`（现行行为一字不动）**，**全来源 + 层级判定走 `tags`**；
+  引擎新读点一律走 `tags`。落点 `7f3ef11`（注册表 + 统一查询面 + 层级 + 槽位名）·
+  `88b7d9a`（声明层级继承 —— 前缀带行为）。
+- 门禁 `tests/test_tags.py`；概念讲解 `docs/engine-wiki/concepts/actor-model.md`。
+
+## 属性写口：`hp` / `mp` / `ct` 只有一个入口
+
+**`extends/ext_combat/battle/attributes.py`** —— 照 GAS `AttributeSet` 的思路，把「改当前值」收成一处：
+
+```python
+attributes.set_current(actor, "hp", v,   reason="…", battle=b)   # 唯一写入口
+attributes.add_current(actor, "mp", -8,  reason="skill_cost", battle=b)
+# 读 / 边界：current() · ceiling() · floor_of()
+```
+
+- 引擎侧 **10 个写点**（调用点共 12 处）全部归口：`actions` 1 · `battle` 2 · `landing` 3 · `schedule` 4
+  —— 各写点手写的 `max(0,…)` / `min(max,…)` 整句消失，钳制规则只剩一处。
+- 预改 / 后改两个钩子是**注入面**：`attr_pre_fn` / `attr_post_fn`（登记进 `config._HOOKS`，
+  **未装配 = 不存在**，一行都不进）；上下文（谁写的、为什么）一路带下去。
+- **fail-closed**：认不出的键 / 非法值 ⇒ 抛，不静默改；等价性实测：改前改后 `logs` sha256 **5/5 逐字节相同**、
+  `to_state()` **0 键差**。机器门禁 `tests/test_attrs_write_port.py` **禁止引擎代码再出现「对 hp/mp/ct
+  下标直接赋值」**（白名单只有 `actions.py` 里一处**报价 dict**，条数恒 1）—— 漏改一处当场红。
+- 落点 `c236e97` + `d374809`。
 
 ## 快速开始
 
