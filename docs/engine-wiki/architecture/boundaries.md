@@ -120,7 +120,7 @@
 
 **本仓实证（PFIX P1，2026-09-15）**：`content/rule_engine.py::_time_check()` 曾写成
 `from .rule_engine import _is_time as fn`（自指到包内自己）⇒
-`tests/test_v97_05_rule_engine.py:35` 的 `RE._is_time = lambda span: span == "day"`
+`tests/test_v97_05_rule_engine.py:35`（**游戏仓**：`games/orlandia/tests/test_v97_05_rule_engine.py`）的 `RE._is_time = lambda span: span == "day"`
 （改写宿主 `game/core/rule_engine.py` —— 它是 `_is_time = _pkg._is_time` 的**拷贝壳**）
 完全不被看见 ⇒ 23:00–05:00 跑该测试**必红**（`rule_explore_ghost` 的 `cond time=deep_night`
 真的命中，chance 0.18 在 `seed(1)` 下触发）。已改成调用时取件

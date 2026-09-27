@@ -268,7 +268,7 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 |---|---|---|
 | `actor_stats(battle, actor) -> dict` | `:19` | **聚合面板**（伤害/速度/暴击都读它） |
 | `actor_max_hp(battle, actor)` | `:136` | 便捷 |
-| `actor_spd(battle, actor)` | `:140` | 便捷（CTB 用） |
+| `actor_spd(battle, actor)` | `:168` | 便捷（CTB 用） |
 | `actor_crit(battle, actor)` | `:144` | 便捷 |
 | `_apply_effects(st, actor)` | `:40` | effects → 面板折算（`stat_scale` + 快照） |
 | `_player_base_stats(battle, actor)` | `:85` | 走 `panel_fn` |

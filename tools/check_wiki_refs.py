@@ -58,6 +58,9 @@ GAME_REPO_FILES = {
     "run_all_tests.py", "run_numeric_tests.py", "conftest.py",
     "battle_rules.py", "class_mech_proc.py", "boss_script.py",
     "combat.py", "economy.py", "content_rules/apply.py",
+    # ★ 2026-09-27：`architecture/boundaries.md` 引的那份宿侧门禁 —— 它住在参考实现的
+    #   数据包里（`games/orlandia/tests/test_v97_05_rule_engine.py`），框架仓不可能有此文件。
+    "test_v97_05_rule_engine.py",
 }
 
 
