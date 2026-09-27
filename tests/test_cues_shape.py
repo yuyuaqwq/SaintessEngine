@@ -479,5 +479,69 @@ for _p, _src in _ENG_SRC.items():
 check("★ 逐字扫描：引擎的 landing/cues/battle 里零条已迁移点位模板串（措辞真删净）",
       not _TMPL_HITS, str(_TMPL_HITS[:6]))
 
+# ============================================================
+# 8. 只读契约「有牙」两态（设计案 §3.5④）
+# ============================================================
+print("\n【8. 只读契约有牙：挂一个「改 actor」的订阅者 ⇒ 两态 to_state 必须不同】")
+#: 目的：证明**冻结尺子的 state 通道**抓得住「订阅者越权改状态」这类改动 ——
+#: 设计 §3.5④ 的原话：「挂一个『改 actor』的订阅者 ⇒ 两态 `to_state` 必须不同 ⇒ 门禁必须红」。
+#: 三态对照（同一场构造 + 同一手结算，只差订阅者干了什么）：
+#:   ① 干净订阅者（只渲染）      ② 只改 payload（引擎给副本 ⇒ 不该影响状态）
+#:   ③ 直接改 actor（越权）      ⇒ 只有 ③ 必须让 state 变 —— 那正是尺子能报出来的那一档。
+_two_state_box: dict = {}
+
+
+def _subs_with(extra):
+    subs = {n: ({"kind": "text", "key": n},) for n in CUE_NAMES}
+    subs["battle.landing.dodged"] = ({"kind": "text", "key": "battle.landing.dodged"},) + extra
+    return subs
+
+
+def _dodged_state(extra_subs):
+    """跑一场「必闪」战斗（发一次 `battle.landing.dodged`）→ 返回 (logs, to_state, 敌 actor)。"""
+    _s2 = CFG._HOOKS.get("cue_subs_fn")
+    _s3 = CFG._HOOKS.get("formula_skeleton_fn")
+    try:
+        CFG._HOOKS["cue_subs_fn"] = lambda: _subs_with(extra_subs)
+        CFG._HOOKS["formula_skeleton_fn"] = lambda: {"dodge": {"cap": 1.0}}
+        me = make_actor("p1", "甲", "player", kind="player", human_controlled=True,
+                        level=5, hp=100, max_hp=100, spd=50)
+        foe = make_actor("e1", "乙", "enemy", kind="monster", level=5,
+                         hp=100, max_hp=100, spd=50, dodge=1.0)
+        _two_state_box["foe"] = foe
+        b = Battle(sides={"player": [me], "enemy": [foe]}, seed_ct=False, text=FIX_TEXT)
+        lg: list = []
+        L.deal_damage(b, me, foe, 30, lg)
+        return lg, b.to_state(), foe
+    finally:
+        CFG._HOOKS["cue_subs_fn"] = _s2
+        CFG._HOOKS["formula_skeleton_fn"] = _s3
+
+
+def _only_payload(p):                      # ② 只改 payload（引擎给的是副本）
+    p["n"] = 999
+    return None
+
+
+def _steal_hp(p):                          # ③ 越权：直接改 actor（订阅者不该有这条能力）
+    _two_state_box["foe"]["hp"] = int(_two_state_box["foe"]["hp"]) - 7
+    return None
+
+
+_lg_clean, _st_clean, _foe_clean = _dodged_state(())
+_lg_pay, _st_pay, _foe_pay = _dodged_state(({"kind": "call", "handler": _only_payload},))
+_lg_dirty, _st_dirty, _foe_dirty = _dodged_state(({"kind": "call", "handler": _steal_hp},))
+
+check("① 干净态：那一行照旧渲染（对照基准）",
+      _lg_clean == ["💨 乙 闪避了攻击！"], str(_lg_clean))
+check("★ ② 只改 payload ⇒ 两态 to_state **相同**（引擎给副本：订阅者碰不到状态）",
+      _st_pay == _st_clean)
+check("★ ③ 直接改 actor ⇒ 两态 to_state **不同**（越权可被 state 通道抓住）",
+      _st_dirty != _st_clean,
+      "干净 hp=%s / 越权 hp=%s" % (_foe_clean["hp"], _foe_dirty["hp"]))
+check("★ ③ 且差的就是被改的那一格（不是别处漂移）",
+      _st_clean["sides"]["enemy"][0]["hp"] != _st_dirty["sides"]["enemy"][0]["hp"]
+      and _st_clean["sides"]["enemy"][0]["uid"] == _st_dirty["sides"]["enemy"][0]["uid"])
+
 print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
 sys.exit(1 if failed else 0)
