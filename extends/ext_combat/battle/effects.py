@@ -11,7 +11,8 @@
   apply     : 统一效果写入（写 actor.effects[key]，按参数分流：mode=控制 /
               op=add|set=叠层 / value=值型 / stat+mult=增益快照 / hit=出手消费 / 纯状态）
   consume   : 主动扣叠层（effects[key].stacks -= amount）
-  shield    : 护盾（独立 shields 容器，value/halve 由数据给）
+  shield    : 护盾（★ 收口第 2 批：不再有独立 shields 容器，改写容器里一条带 value 的
+              条目；是否吸收由内容侧声明 `absorb` 决定）
   cleanse   : 清减益（DOT/标记/控制，遍历 effects 查表）
   heal / damage / interrupt : 落地接口（landing）薄包装
 旧动词 control/buff/state_add/state_spend/state_set 已并入 apply/consume（V4 收敛，
@@ -25,6 +26,7 @@ from __future__ import annotations
 from typing import Callable, Optional
 
 from .state_effects import state_def
+from .actors import open_entry               # 状态容器**唯一写入口**（收口第 2 批：护盾并进来）
 from . import tags                       # 标签机制（注册表 / 统一查询面 / 槽位名）
 from . import traits                    # 内容侧身份标签（精确面 · 引擎不认标签叫什么 · 审计 E3）
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
@@ -473,8 +475,10 @@ def act_apply(battle, caster, target, params, logs):
         ef[key] = {"stacks": 1,
                    "expire": max(float(old.get("expire", 0) or 0) if isinstance(old, dict) else expire, expire),
                    "v": max(old_v, float(value))}
-        if key == "reduce":
-            holder["reduce_left"] = max(int(holder.get("reduce_left", 0) or 0), turns)
+        # ★ 收口第 2 批（2026-09-28）：原先这里还写了一个影子字段
+        #   `holder["reduce_left"]` —— 那是容器里 `expire` 的**第二本账**（引擎内零消费者，
+        #   只被包侧播种表透传 + 面板展示）。读点接上（`landing` 的 `taken_pct` 段）之后
+        #   整键删除：到期只有一个真源 = 条目的 `expire`。
         # ★ P-59（2026-09-26）：这一句原先有两个毛病 ——
         #   ① 值的占位符多打了一个冒号（双冒号不是合法格式符）⇒ 渲染失败，
         #      `safe_format` 把带花括号的模板**原样**吐给玩家；
@@ -553,16 +557,25 @@ def act_consume(battle, caster, target, params, logs):
 
 @register_action("shield")
 def act_shield(battle, caster, target, params, logs):
-    """护盾：写 actor.shields[key]（v181.N7.2 补 expire_at + 同源叠厚）。
+    """护盾：写**容器**里一条带 `value` 的条目（v181.N7.2 的同源叠厚语义逐字保留）。
 
-    结构：shields[key] = {"value": 盾值, "expire_at": now+turns, "halve": bool}
-    - 同源（同 key）：value 累加（叠厚）+ expire_at 取 max（对齐旧 _add_shield）
-    - 异源并存各计各的时长
-    - turns=0/缺省 → 3 刻；turns>=999 → 永久（expire_at=None，不到期删）
-    value/halve/turns 由数据给；value 与 pct 都没有时兜底比例读内容侧骨架表
-    （V4 下沉：`formulas.shield_default_pct()`，未装配 → 0.0 = 不产盾）。
+    ★ 收口第 2 批（2026-09-28）：原先写的是**独立容器**（`shields[key]`，第二本账
+      —— 自己的到期段 / 自己的序列化 / 自己的播种）⇒ 改走
+      `actors.open_entry(actor, key, value=…, expire=…)`。是否「吸收」由**内容侧声明**
+      决定（`EFFECT_RULES[key].absorb`，可落在父级 tag 上一族继承）—— 引擎不认键名。
+
+    同源叠厚（与旧 shields 容器**逐字同语义**）：
+    - 同 key 再敲一次：`value` 累加 + `expire` 取 max
+    - `turns>=999` 或 `forever` ⇒ 永久（`expire` 不写键 ⇒ 到期段不动它）
+    - `turns` 缺省 = 3 刻
+    - value 与 pct 都没有 ⇒ 兜底比例读内容侧骨架表 `formulas.shield_default_pct()`
+      （V4 下沉；未装配 → 0.0 = 不产盾）
+
+    ★ `halve` 死字段一并删除（实测全仓只写不读：`landing` 的吸收循环只读 `value`）。
+      包侧 `boss_script.py` / `gameplay.py` 仍会传它，引擎**不再消费**（不留兼容壳）。
     """
     from .battle import _now_of
+    from .actors import EXPIRE_FIELD, VALUE_FIELD
     holder = caster if params.get("on", "caster") == "caster" else (target or caster)
     if not holder:
         return
@@ -577,24 +590,28 @@ def act_shield(battle, caster, target, params, logs):
         from . import formulas as _F
         value = int(holder.get("max_hp", 1) * _F.shield_default_pct())
     turns = int(params.get("turns", 0) or 0) or 3
-    halve = bool(params.get("halve", False))
     now = _now_of(battle)
     # 永久盾（turns>=999 或显式 forever）
     if params.get("forever") or turns >= 999:
         expire = None
     else:
         expire = now + max(1, turns)
-    sh = holder.setdefault("shields", {})
-    cur = sh.get(key)
-    if cur and isinstance(cur, dict):
-        cur["value"] = int(cur.get("value", 0) or 0) + value          # 同源叠厚（累加）
-        if cur.get("expire_at") is not None:
+    ef = holder.get("effects")
+    if not isinstance(ef, dict):
+        ef = holder["effects"] = {}
+    cur = ef.get(key)
+    if isinstance(cur, dict):
+        # 同源叠厚：value 累加；expire 取 max（旧 shields 逐字口径）。
+        # ⚠️ 旧容器里「已有的永久盾 + 新来的临时盾」保留永久（cur[expire] is None 时
+        #   不覆盖）；反过来「新永久盖掉旧临时」= 变永久 —— 两条都与旧实现一致。
+        cur[VALUE_FIELD] = int(cur.get(VALUE_FIELD, 0) or 0) + value
+        if cur.get(EXPIRE_FIELD) is not None:
             if expire is None:
-                cur["expire_at"] = None                                # 新永久 → 永久
+                cur[EXPIRE_FIELD] = None                              # 新永久 → 永久
             else:
-                cur["expire_at"] = max(float(cur.get("expire_at", 0) or 0), expire)
+                cur[EXPIRE_FIELD] = max(float(cur.get(EXPIRE_FIELD, 0) or 0), expire)
     else:
-        sh[key] = {"value": value, "expire_at": expire, "halve": halve}
+        open_entry(holder, key, stacks=1, value=value, expire=expire)
     _cue(battle, logs, "battle.effects.shield_gain",
          {"name": holder.get('name', '目标'), "value": value})
 

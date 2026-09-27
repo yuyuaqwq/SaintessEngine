@@ -945,18 +945,19 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
                                                   else _GC.formulas().reduce_default_pct())
             _eff_params["value"] = min(max(rp, 0.0), _GC.formulas().reduce_cap())
         # 护盾类：shield_self 盾值 = mech_val/effect_val（skill_mech_val 折算后传 value）
+        # ★ 收口第 2 批（2026-09-28）：原先这里还传 `halve`（True/False）—— 实测全仓
+        #   **只写不读**（landing 的吸收循环只读 value），是纯死字段 ⇒ 参数一并删。
+        #   包侧 `gameplay.py` 的 EFFECT_ACTIONS 仍会带它，引擎不再消费。
         if eff in ("shield_self", "shield_all", "shield") and "shield" in str(eff):
             if eff == "shield_self":
                 mval = _GC.formulas().skill_mech_val(info, lv) or int(info.get("effect_val", 0) or 0)
                 _eff_params["value"] = mval
-                _eff_params["halve"] = False
             else:
                 # V4：`shield_pct` 缺省从内容侧骨架表读（同 shield_default_pct 键；
                 #     未装配 → 0.0 → 下游走 shield 动作兜底，同样读骨架表）
                 _sp = float(_GC.formulas().shield_default_pct())
                 pct = float(info.get("shield_pct", _sp) or _sp)
                 _eff_params["pct"] = pct
-                _eff_params["halve"] = True
         apply_effects(battle, actor, actor, [_eff_params], logs)
     # mech（目标向效果）：增益技也可带 mech——法术反制（silence 沉默目标）/守护姿态
     # （资源类机制常攒给自己：on=caster 不受 target 影响）。走 effects_from_skill 同攻击命中。

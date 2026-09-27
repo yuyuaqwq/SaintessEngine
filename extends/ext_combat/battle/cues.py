@@ -57,6 +57,8 @@ CUE_NAMES = (
     "battle.landing.heal_shared",
     "battle.landing.heal_forbid",
     "battle.landing.heal_wound",
+    # ---- B5（1 条 · 状态容器收口第 2 批：承伤减免读点）----
+    "battle.landing.taken_reduce",
     # ---- B3（25 条 · effects 16 + battle.py 9）----
     "battle.core.no_actor",
     "battle.core.finished",

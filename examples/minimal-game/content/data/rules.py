@@ -62,6 +62,22 @@ EFFECT_RULES = {
         "name": "铁钳拘束",
         "consume": {"mode": "skip"},
     },
+    # ★ 承伤资源（2026-09-28 状态容器收口第 2 批）：护盾不再是独立容器 `actor["shields"]`，
+    #   而是「容器里一条带 `value` 的条目」+ **本表声明 `absorb`** ⇒ 引擎
+    #   `state_effects.absorb_keys(actor)` 认出它这一族，`landing._apply_damage` 逐条扣。
+    #   引擎零游戏名词：它只问「声明了什么」，不认「哪个 key 是盾」——
+    #   删掉 `absorb` 那一行，这条目就**不再吸收**（门禁 tests/test_state_container_r2.py
+    #   的反证钉住这一点）。
+    # 下面两条是 cue 冻结尺（tools/_cue_freeze.py，G4/G5）脚本里用到的键 —— 那份脚本是
+    # **逐字节冻结基线**（改脚本 = 毁基线），所以本包必须按脚本给的键名声明它们。
+    "rig_shield": {
+        "name": "探针护盾",
+        "absorb": True,
+    },
+    "g5_shield": {
+        "name": "探针护盾",
+        "absorb": True,
+    },
 }
 
 # ============================================================

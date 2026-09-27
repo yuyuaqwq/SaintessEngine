@@ -2,7 +2,7 @@
 """v181.P4 saintess_engine 引擎——落地接口层（landing.py）。
 
 所有"造成伤害 / 治疗回血"统一收口在这里：
-- deal_damage：伤害落地（等级压制 → 防御姿态减伤 → 睡眠/蓄力 → 护盾 → 扣血 → 死亡）
+- deal_damage：伤害落地（等级压制 → 防御姿态减伤 → 睡眠/蓄力 → 承伤减免读点 → 护盾 → 扣血 → 死亡）
 - heal_actor：治疗落地（禁疗修正 → clamp max_hp）
 
 为什么必须统一收口（鱼鱼架构原则）：伤害/治疗落地是"战斗物理规则"——
@@ -189,6 +189,20 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
         except Exception as _e:
             _diag(battle, "deal_damage · 免伤", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # 免伤异常不阻断落地
+    # ★ 收口第 2 批（2026-09-28）：**承伤减免读点**（原先这一族只有写、没有读 ——
+    #   技能挂的 `reduce` 一直只落容器、伤害路径压根不读它；`reduce_left` 那个影子
+    #   字段是同一件事的第二本账）。现在引擎只问内容侧一句「哪些条目声明了
+    #   `taken_pct`」，累加它们的 `value`，按**内容侧骨架表** `formulas.reduce_cap()`
+    #   封顶后打折。封顶未装配 = 0.0 ⇒ 折到 0 ⇒ **这一段对没声明的包零行为变化**。
+    try:
+        _red = state_reduce_of(target)
+        if _red > 0:
+            dmg = max(1, int(dmg * (1.0 - _red)))
+            _cue(battle, logs, "battle.landing.taken_reduce",
+                 {"name": target.get('name', '目标'), "pct": int(round(_red * 100))})
+    except Exception as _e:
+        _diag(battle, "deal_damage · 承伤减免读点", _e)          # 审计 P-44：不再静默（行为不变）
+        pass  # 读点异常不阻断落地
     # N-B12 「受击打醒」数据化（2026-09-11 接线）：原实现**硬编码 key="sleep"**
     #   ——游戏名词进了引擎（违反「引擎零内容知识」），而数据侧的 `wake_on_hit: True`
     #   声明**无人读**（死字段）。现改为遍历承伤者 states，读通用字段
@@ -358,28 +372,70 @@ def _apply_death_guard(battle, target: dict, logs: list) -> bool:
         return False
 
 
+def state_reduce_of(actor: dict) -> float:
+    """actor 身上**声明了 `taken_pct`** 的条目累加出的承伤减免比例（已封顶）。
+
+    ★ 收口第 2 批（2026-09-28）：这是「带 value 的状态」这一族的**第二个读点**
+      （第一个是 `absorb` 吸收型）。引擎零游戏名词：它只问内容侧声明了什么，
+      不认「哪个 key 是减伤」——声明不写，这里恒为 0.0 = 不减伤。
+    封顶走**内容侧骨架表** `formulas.reduce_cap()`（未装配 → 0.0 ⇒ 折到 0），
+    与 `actions._do_buff` 写这一族时用的封顶是**同一个 getter**（读写对称）。
+    """
+    from .state_effects import taken_pct_keys
+    keys = taken_pct_keys(actor)
+    if not keys:
+        return 0.0
+    ef = (actor or {}).get("effects") or {}
+    total = 0.0
+    for key in keys:
+        entry = ef.get(key)
+        if not isinstance(entry, dict):
+            continue
+        try:
+            total += float(entry.get("value", 0) or 0)
+        except (TypeError, ValueError) as _e:
+            _diag(None, "state_reduce_of · 坏 value", _e)      # 审计 P-44：不再静默（行为不变）
+    if total <= 0:
+        return 0.0
+    return min(total, _F.reduce_cap())
+
+
 def _apply_damage(battle, target: dict, dmg: int, logs: list,
                   source: Optional[dict] = None) -> int:
     """承伤落地：护盾吸收 → hp 扣减 → 死亡判定。返回实际扣血。
 
     source: 攻击方（击杀事件 on_kill 用；None = DOT/环境无击杀者）
     """
-    # 护盾吸收（shields = {key: {value, halve, expire_at}}）
-    shields = target.get("shields") or {}
-    if shields:
+    # ---- 承伤吸收（收口第 2 批：容器里**声明了 `absorb`** 的条目，逐条扣 `value`）----
+    #   原先是独立容器 `target["shields"]`（第二本账）⇒ 改走状态容器：
+    #   「带 value 的状态」这一族里声明 `absorb` 的那些（`state_effects.absorb_keys`）。
+    #   语义逐条不变：按容器顺序逐条扣、每条发一条 cue、扣完 ≤0 即从容器删、
+    #   剩余伤害继续往下走（`dmg <= 0` 的早返回与「吸收 → 扣血」先后顺序一字不动）。
+    try:
+        from .state_effects import absorb_keys
+        _abs = absorb_keys(target)
+    except Exception as _e:
+        _diag(battle, "deal_damage · 吸收族查询", _e)          # 审计 P-44：不再静默（行为不变）
+        _abs = []
+    if _abs:
+        _ef = target.get("effects")
+        if not isinstance(_ef, dict):
+            _ef = target["effects"] = {}
         remaining = dmg
-        for sk in list(shields.keys()):
-            sh = shields[sk]
-            if not isinstance(sh, dict) or int(sh.get("value", 0) or 0) <= 0:
+        for ak in _abs:
+            entry = _ef.get(ak)
+            if not isinstance(entry, dict):
                 continue
-            sv = int(sh["value"])
+            if int(entry.get("value", 0) or 0) <= 0:
+                continue
+            sv = int(entry["value"])
             absorb = min(sv, remaining)
-            sh["value"] = sv - absorb
+            entry["value"] = sv - absorb
             remaining -= absorb
             _cue(battle, logs, "battle.landing.shield_absorb",
                  {"name": target.get('name', '目标'), "absorb": absorb})
-            if sh["value"] <= 0:
-                shields.pop(sk, None)
+            if entry["value"] <= 0:
+                _ef.pop(ak, None)
             if remaining <= 0:
                 break
         dmg = remaining

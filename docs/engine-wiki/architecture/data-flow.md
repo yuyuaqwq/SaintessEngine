@@ -51,17 +51,17 @@ schedule.advance(battle, logs, max_steps=200)                     schedule.py:39
 battle._now += dt
 _settle_time_effects(battle, logs)                                  schedule.py:397
    ├─ for 每个存活 actor:
-   │    ├─ effects 到期 → pop + ⚡ effect_expire                      schedule.py:598
-   │    ├─ shields 到期（expire_at <= now）→ pop                      schedule.py:648-658
+   │    ├─ effects 到期 → pop + ⚡ effect_expire                      schedule.py:600
+   │    ├─ （原「shields 到期」已删 · 收口第 2 批：护盾并进 effects 后走上面那段）
    │    └─ 周期跳（period）:
-   │         首次 → dot_next[key] = now + interval（不跳）             schedule.py:691-694
+   │         首次 → dot_next[key] = now + interval（不跳）             schedule.py:681-684
    │         到点 → while now >= dot_next（最多 20 跳）:
    │             dir=damage → ⚡ dot_calc → landing.deal_damage → ⚡ dot_tick   :285/:292/:297
    │             dir=heal   → landing.heal_actor（+ mana_pct）        :301-320
    │             dir=mana   → 直接加 mp                                :321-330
    │             dir=gain   → effects[key].stacks ±= amount（clamp，静默） :331-350
    │             限时（turns）→ 跳够清层                                :351-359
-fire("time_advance", {"dt": dt, "now": battle._now})                schedule.py:598 ⚡
+fire("time_advance", {"dt": dt, "now": battle._now})                schedule.py:600 ⚡
 ```
 
 ## 展开 2：`do_attack` → `do_skill` → 伤害管线
@@ -134,7 +134,7 @@ actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:
 landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduce, element)
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ 1. amount <= 0 → 0                                                       │
-│ 2. _lv_pressure(battle, source, target, dmg)          landing.py:234     │
+│ 2. _lv_pressure(battle, source, target, dmg)          landing.py:248     │
 │      btype == "pvp" → 不压；任一方无 level → 不压                          │
 │      低打高：前 3 级 ×0.95，之后 ×0.90，封顶 ×0.30                         │
 │      高打低：每级 ×1.02 连乘（封顶 50 级）                                 │
@@ -152,22 +152,22 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 │ 8. _apply_taken_reductions(dmg_kind)                   landing.py:186（定义 :287） │
 │      phys → phys_reduce cap 0.40；magi → magic_reduce cap 0.40            │
 │      block 概率 cap 0.40 → 减半                                          │
-│ 9. effects 里带 wake_on_hit 的态 → pop（打醒）+ 日志    landing.py:194-203  │
+│ 9. effects 里带 wake_on_hit 的态 → pop（打醒）+ 日志    landing.py:208-217  │
 │10. ★ **这一层不打断前摇**（T15 §0 D15 第 2 条）：普通伤害照常结算、前摇不动；  │
 │      控制类效果由**内容侧**挂引擎 `interrupt` 动作显式打断                  │
-│      （`effects.act_interrupt` —— 引擎不认识「控制」这个词）  landing.py:208-211 │
-│11. _apply_damage(battle, target, dmg, logs, source)    landing.py:210（定义 :364） │
-│      ├─ 护盾吸收（遍历 shields，按 value 扣减，耗尽即 pop）                 │
+│      （`effects.act_interrupt` —— 引擎不认识「控制」这个词）  landing.py:222-225 │
+│11. _apply_damage(battle, target, dmg, logs, source)    landing.py:224（定义 :364） │
+│      ├─ 承伤吸收（遍历容器里**声明 absorb** 的条目，按 value 扣，耗尽即 pop）  │
 │      ├─ hp 扣减                                                          │
-│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:325     │
+│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:339     │
 │      │     effects["death_guard"].stacks > 0 → hp 拉回 guard_hp_pct      │
 │      │     （+heal_pct 额外治疗，走 heal_actor）→ 层 -1                    │
-│      ├─ 仍 <= 0 → Battle._on_actor_dead(...)   landing.py:415（定义 battle.py:684） │
+│      ├─ 仍 <= 0 → Battle._on_actor_dead(...)   landing.py:417（定义 battle.py:684） │
 │      │       killed_actors.append / 清 charging + 容器窗口（离场）          │
 │      │     ⚡ fire("on_death", {actor, target})                            │
 │      │     source 非 None → ⚡ fire("on_kill", {actor: source, ...})       │
 │      └─ 否则：日志「受到 N 点伤害」                                        │
-│12. 未死 → ⚡ fire("on_taken", {actor, target, source, dmg})   landing.py:216 │
+│12. 未死 → ⚡ fire("on_taken", {actor, target, source, dmg})   landing.py:230 │
 └──────────────────────────────────────────────────────────────────────────┘
 返回 real（实际扣血）
 ```

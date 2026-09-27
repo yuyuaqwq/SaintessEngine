@@ -8,7 +8,7 @@
 否则碰到那些行拿到的是「一行坏数据 + 一条诊断」，断言文案的用例会集体变红。
 
 **真源**是各游戏包自己的文案表（如 `examples/minimal-game/content/texts.py`）——
-本文件这 60 条是它们的**副本**，只服务于引擎门禁（不让引擎门禁依赖某个具体内容包的措辞）。
+本文件这 61 条是它们的**副本**，只服务于引擎门禁（不让引擎门禁依赖某个具体内容包的措辞）。
 两份串必须逐字相同（`tests/test_cues_shape.py` 逐字对拍两者）。
 
 跑法：不单独跑 —— 被门禁 import（`from _cue_text_fixture import TEXT, SUBS, install`）。
@@ -46,6 +46,9 @@ TEMPLATES = {
     "battle.landing.heal_shared": "✨ 治疗由【{name}】分担",
     "battle.landing.heal_forbid": "🩸 禁疗：治疗量 -{pct}%！",
     "battle.landing.heal_wound": "🩸 重伤：治疗量 -{pct}%！",
+    # ★ B5（2026-09-28 状态容器收口第 2 批）：承伤减免读点。与示例包
+    #   `content/texts.py` 逐字相同（门禁 `test_cues_shape.py` 会逐字对拍两份）。
+    "battle.landing.taken_reduce": "🛡️ {name} 减免了 {pct}% 承伤！",
     "battle.core.no_actor": "没有可行动的玩家！",
     "battle.core.finished": "战斗已结束！",
     "battle.core.silenced": "🤐 {name} 被沉默，无法使用技能！(只能普攻/防御)",

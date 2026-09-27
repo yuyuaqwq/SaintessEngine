@@ -39,6 +39,10 @@ TEMPLATES = {
     "battle.landing.heal_shared": "✨ 治疗由【{name}】分担",
     "battle.landing.heal_forbid": "🩸 禁疗：治疗量 -{pct}%！",
     "battle.landing.heal_wound": "🩸 重伤：治疗量 -{pct}%！",
+    # ★ B5（2026-09-28 状态容器收口第 2 批）：承伤减免读点（引擎第一次真正读 `taken_pct`
+    #   这一族 —— 原先只有写、没有读）。措辞是新点位（引擎侧从来没有过模板），
+    #   槽位 = 承伤者名 + 实际生效的减免百分比（已按内容侧封顶 clamp）。
+    "battle.landing.taken_reduce": "🛡️ {name} 减免了 {pct}% 承伤！",
     "battle.core.no_actor": "没有可行动的玩家！",
     "battle.core.finished": "战斗已结束！",
     "battle.core.silenced": "🤐 {name} 被沉默，无法使用技能！(只能普攻/防御)",

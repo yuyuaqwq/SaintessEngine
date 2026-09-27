@@ -46,11 +46,13 @@ class ActCtx:
 
 # 播种的战斗可变状态键（全部 actor 同构）
 # V 系列统一：state/buffs/hot/debuffs 四容器 → 单 effects 容器
-#   effects[key] = {"stacks": N, "expire": t|None, ...效果快照字段}
-# shields（承伤资源）/ cooldown（调度）保留独立容器（见设计文档 §2.5）
+#   effects[key] = {"stacks": N, "expire": t|None, "value": 数值|None, ...效果快照字段}
+# ★ 状态容器收口第 2 批（2026-09-28）：护盾不再是一个**独立容器**，它就是容器里
+#   一条**声明了 `absorb` 的带 value 条目**（`state_effects.absorb_keys(actor)` 查）。
+#   承伤资源因此与叠层/周期/到期共用同一条通路（到期 = 条目的 `expire`）。
+# cooldown（调度）/ charging（出招窗口）不是「状态」——它们是**行动记账**，保留独立容器。
 _MUTABLE_KEYS = {
     "effects": dict,
-    "shields": dict,
     "cooldown": dict,
     "charging": None,
 }
@@ -110,9 +112,7 @@ def make_actor(
         #   + 运行时辅助 last_tick/hits_left（schedule/消费点自管，可缺省）
         #   行为/数值/周期/消费全查 EFFECT_RULES[key] 声明（引擎零名词）
         "effects": dict(stats.get("effects") or {}),
-        # 承伤资源（吸收伤害的护盾量值；与效果正交，保留独立——见设计 §2.5）
-        "shields": dict(stats.get("shields") or {}),
-        # 调度资源（技能下次可用时刻；保留独立——见设计 §2.5）
+        # 调度资源（技能下次可用时刻；不是「状态」，是行动记账——保留独立容器）
         "cooldown": dict(stats.get("cooldown") or {}),
         "charging": stats.get("charging"),
         "ct": float(stats.get("ct", 0.0)),
@@ -180,7 +180,17 @@ def effects_of(actor: dict) -> dict:
 #   | `period` | 周期结算声明（dot/hot/gain…） | `_settle_time_effects` 的周期段 |
 #   | `grants` | **授予标签**：本条目额外代表哪些 tag | 查询口 `has_tag`（层级 = `.` 边界前缀） |
 #   | `mode`   | **控制**语义（skip / no_skill） | `Battle.act` 的控制消费段 + `effects.py` 落地前免疫查询 |
-#   | 其余键    | 数值/来源快照（`value` / `src` / …） | 各自的读点 |
+#   | `value`  | **这个状态带的一个数**（护盾量 / 承伤减免比例 …） | 按条目声明的族各取各的：
+#               声明 `absorb` ⇒ `landing._apply_damage` 逐条扣（归零即删）；
+#               声明 `taken_pct` ⇒ `landing.deal_damage` 承伤减免读点（封顶走内容侧
+#               骨架表 `formulas.reduce_cap()`）。**同一个字段，两族两读点** ——
+#               内容侧想加第三种「带数的状态」只要再写一条声明，引擎不用动。 |
+#   | 其余键    | 数值/来源快照（`src` / …） | 各自的读点 |
+#
+# ★ 收口第 2 批（2026-09-28）：承伤资源（护盾）原先是一个**独立容器**（第二本账：
+#   自己的写口 / 自己的到期段 / 自己的序列化 / 自己的播种）⇒ 删掉，改成「容器里一条
+#   声明了 `absorb` 的带 value 条目」。引擎零游戏名词：`absorb` / `taken_pct` 都是**声明键**，
+#   声明写在内容侧 `EFFECT_RULES`（或经 `tags.rule_of` 的层级继承），引擎只问「声明了什么」。
 #
 # ★ 「窗口」= `until` 那一类：从现在起到某个**边界帧**为止有效的临时状态（防御姿态是第一个
 #   实例）。`until` 的取值是**引擎词表**（不是游戏名词）：`own_act` = 「到你自己的这一帧为止」。
@@ -192,6 +202,7 @@ EXPIRE_FIELD = "expire"
 PERIOD_FIELD = "period"
 WINDOW_FIELD = "until"
 GRANTS_FIELD = "grants"
+VALUE_FIELD = "value"
 TAG_SEP = "."                    # 层级分隔：查 `control` 命中 `control.stun`
 
 WINDOW_OWN_ACT = "own_act"       # 边界名：行动者自己的这一帧
@@ -199,16 +210,21 @@ DEFEND_TAG = "defend"            # 引擎内置动作类别 `defend` 的窗口 t
 
 
 def open_entry(actor: dict, tag: str, *, stacks: int = 1, expire=None, until: str = None,
-               period: dict = None, grants=None) -> dict:
+               period: dict = None, grants=None, value=None) -> dict:
     """容器条目的**唯一写入口**（引擎侧）：只落**声明了的**字段（None 不写键）。
 
     重复写同一个 tag = 覆盖（刷新语义归调用点声明：窗口重开 = 覆盖，与原「再敲一次防御」
     同口径）。容器缺失当场补（这是**写**路径，不是读兜底）。
+
+    `value` = 「这个状态带的一个数」（收口第 2 批新增）：护盾量 / 承伤减免比例 都走它，
+    走哪一族由条目**声明**决定（`absorb` / `taken_pct`），引擎不按字段名猜语义。
     """
     ef = actor.get("effects")
     if not isinstance(ef, dict):
         ef = actor["effects"] = {}
     entry: dict = {STACKS_FIELD: int(stacks)}
+    if value is not None:
+        entry[VALUE_FIELD] = value
     if expire is not None:
         entry[EXPIRE_FIELD] = expire
     if until:

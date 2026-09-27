@@ -539,7 +539,7 @@ class Host:
         actor = actors[0] if actors else None
         if not isinstance(actor, dict):
             return player
-        for key in ("hp", "mp", "max_hp", "max_mp", "effects", "shields", "cooldown",
+        for key in ("hp", "mp", "max_hp", "max_mp", "effects", "cooldown",
                     "charging", "ct", "act_count"):
             if key in actor:
                 player[key] = actor[key]

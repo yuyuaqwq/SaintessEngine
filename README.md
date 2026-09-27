@@ -64,7 +64,7 @@
 - 形状与读法：`saintess_engine/cues.py`（总线 / 订阅表 / 三条硬规矩）·
   `extends/ext_combat/battle/cues.py`（`CUE_NAMES` 声明面）；门禁 `tests/test_cues_shape.py`。
 - 对拍证据：`tools/_cue_freeze.py`（5 组固定战斗逐字节 + 状态 + 逐 cue 计数三通道对拍）·
-  `tools/_cue_coverage.py`（覆盖率尺：60 条声明每条至少被真驱动一次）。
+  `tools/_cue_coverage.py`（覆盖率尺：61 条声明每条至少被真驱动一次）。
 
 ## 标签系统：一套查询面（tag · 照 GAS `GameplayTag` 那三件）
 
@@ -168,7 +168,7 @@ text.missing(); text.unused(); text.validate()
 | `check_wiki_refs.py` | wiki 的「文件:行」引用是否越界 / 指向空行（`drift 0`） |
 | `remap_wiki_refs.py` | 改了代码行号后，把 wiki 引用按位移重锚 |
 | `_cue_freeze.py` | **冻结对拍尺子**：5 组固定战斗的 logs sha256 / 逐 cue 计数 / `to_state` 三通道 |
-| `_cue_coverage.py` | **覆盖尺**：60 条 cue 每条至少被真驱动一次（冻结 5 组 + 补驱动） |
+| `_cue_coverage.py` | **覆盖尺**：61 条 cue 每条至少被真驱动一次（冻结 5 组 + 补驱动） |
 | `export_actions.py` | 导出动词/动作清单（内容侧对账用） |
 
 ## 测试

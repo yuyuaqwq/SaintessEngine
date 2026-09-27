@@ -24,45 +24,50 @@ actor["effects"] = {
 合并成一个容器后（`actors.py:48-50` 的原文：`V 系列统一：四容器 → 单 effects 容器`）：
 
 - 到期只有一处（`schedule._settle_time_effects`，`schedule.py:483-502`）
-- 净化只有一处（`effects.act_cleanse`，`effects.py:621-630`）
+- 净化只有一处（`effects.act_cleanse`，`effects.py:638-647`）
 - 面板折算只有一处（`stats._apply_effects`，`stats.py:39`）
 - 序列化天然覆盖（`serialize._serialize_actor` 全字段带走，`serialize.py:51`）
 - 「这个效果属于哪一类」不再需要回答——**行为由声明给，不由容器给**
 
-**唯一例外**：`shields`（承伤资源）与 `cooldown`（调度）**故意留在 containers 之外**
-（`actors.py:114-117`）。理由：它们不是「状态」，把盾塞进 `effects` 会让净化把盾清掉、
-让面板折算把盾值当减伤。见 [actor-model.md](actor-model.md)。
+**唯一例外**：`cooldown`（调度）**故意留在 containers 之外**（行动记账，不是「状态」）。
+**承伤资源（护盾）已并进来**（收口第 2 批 · 2026-09-28）：它就是一条**声明了 `absorb`**
+的带 `value` 条目（`state_effects.absorb_keys` 查，承伤落地逐条扣）。原先的独立容器
+连同它自己的到期段一并删除 —— 到期走本容器那一段。理由与「为什么净化/面板不会误伤它」
+见 [actor-model.md](actor-model.md)。
 
 ## 条目字段全谱
 
 条目是 **dict**（引擎只读 dict 形态条目，非 dict 会被跳过 ——
-例 `schedule.py:595`、`stats.py:54`、`effects.py:490`）。
+例 `schedule.py:597`、`stats.py:54`、`effects.py:494`）。
 
 | 字段 | 谁写 | 谁读 | 含义 |
 |---|---|---|---|
-| `stacks` | `act_apply`（`effects.py:427/429`）/ `act_consume` / 周期 gain | `_cap_of` clamp、`stats` 折算、`schedule` 周期跳、`_apply_death_guard` | 层数。**允许 float**（小数刻度，如信仰每刻 −0.7） |
+| `stacks` | `act_apply`（`effects.py:429/429`）/ `act_consume` / 周期 gain | `_cap_of` clamp、`stats` 折算、`schedule` 周期跳、`_apply_death_guard` | 层数。**允许 float**（小数刻度，如信仰每刻 −0.7） |
 | `expire` | `act_apply` | `schedule._settle_time_effects`（`schedule.py:548-533`）、`Battle.act` 控制过期兜底（`battle.py:517-519`）、`actions._consume_hit_buffs` | **绝对时刻**；`None` = 永不到期 |
 | `mode` | `act_apply` 控制分支 | `Battle.act` 控制消费（`battle.py:526-550`） | `"skip"` = 整跳行动 / `"no_skill"` = 技能转普攻 |
-| `v` | `act_apply` value 型 | **无引擎消费者**（☞ 见下） | 值型数值（如减伤 0.45） |
+| `v` | `act_apply` value 型 | **无引擎消费者**（☞ 见下） | 值型数值（如减伤 0.45）。⚠️ 收口第 2 批新增的承伤减免读点读的是 **`value`**（不是 `v`）—— 见下 |
 | `stat` / `op` / `mult` | `act_apply` 快照分支 | `stats._apply_effects`（`stats.py:69-80`） | 面板增益快照 |
 | `hit` | `act_apply` hit 子键 | `actions._consume_hit_buffs`（`actions.py:474`） | 出手消费型（`dmg_mult` / `guaranteed_crit` / `bonus_atk_pct`） |
-| `period` | **内容侧**直接写入 | `schedule._settle_time_effects`（`schedule.py:666-674`） | 动态周期声明（条目自带优先，回落表声明） |
-| `value` | 内容侧（`heal_amp_pct` 等） | `landing._apply_heal_mods`（`landing.py:517`） | 附加数值袋（形态自定，消费方自己解释） |
+| `period` | **内容侧**直接写入 | `schedule._settle_time_effects`（`schedule.py:656-664`） | 动态周期声明（条目自带优先，回落表声明） |
+| `value` | **内容侧**（`heal_amp_pct` 等）/ `open_entry(..., value=…)` | `landing._apply_heal_mods`（禁疗/重伤）、`landing.state_reduce_of`（**声明 `taken_pct` ⇒ 承伤减免**）、`landing._apply_damage`（**声明 `absorb` ⇒ 承伤资源**） | **「这个状态带的一个数」**。走哪一族由条目的**声明**决定（`absorb` / `taken_pct`），引擎不按字段名猜语义 |
 
-### `v` 字段的消费缺口
+### 承伤减免读点（收口第 2 批 · 2026-09-28）
 
-`act_apply` 的值型分支会写 `{"v": 0.45}`（`effects.py:465-467`），并给 `reduce` 额外写
-`holder["reduce_left"]`（`effects.py:468-469`）。但：
+这一族原先**只有写、没有读**：`act_apply` 的值型分支写 `{"v": 0.45}`，
+另给 `reduce` 额外写一个影子字段 `holder["reduce_left"]`（容器里 `expire` 的**第二本账**，
+引擎内零消费者）—— 全仓 grep 见 [_selfcheck.md](../_selfcheck.md)。收口后：
 
-- `effects["reduce"]["v"]` **没有消费者**（全仓 grep 见 [_selfcheck.md](../_selfcheck.md)）
-- `actor["reduce_left"]` 也没有消费者
+- **读点接上**：`landing.deal_damage` 里紧跟 `_apply_taken_reductions` 之后多一段
+  （`state_reduce_of`）—— 遍历容器，累加**声明了 `taken_pct`** 的条目的 `value`，
+  按内容侧骨架表 `formulas.reduce_cap()` 封顶后 `dmg = max(1, int(dmg × (1-r)))`，
+  并发一条表现事件 `battle.landing.taken_reduce`。
+- **封顶未装配 = 0.0 ⇒ 折到 0** ⇒ 对没声明这一族的包**零行为变化**（「不配 = 不存在」）。
+- **`reduce_left` 整键删除**：到期只有一个真源 = 条目的 `expire`。
+- ⚠️ `v` 字段**仍然没有引擎消费者**（`open_entry(..., value=…)` 写的是 `value` 不是 `v`）。
+  声明这一族请用 `taken_pct` + `value`（新形状），不要指望 `v` 复活。
 
-也就是说 `EFFECT_ACTIONS["reduce"]`（`game/data/battle_rules.py:488`）走完会
-**写一个不会被读的值**。真正生效的减伤是 `stat_scale: {"reduce": ...}` 经
-`stats` 写 `st["reduce"]`……而 `st["reduce"]` 同样不被伤害路径消费
-（`stats.py:65` 只写 → [_selfcheck.md](../_selfcheck.md)）。
-**当前唯一生效的「受击减伤」通道是 `taken_calc` 事件的 `ctx["mult"]` 乘区**
-（`landing.py:90-100`）。
+**另一条仍然生效的「受击减伤」通道**是 `taken_calc` 事件的 `ctx["mult"]` 乘区
+（事件触发器 / 装配层那条，本批没动它）。
 
 ## 层数数值口径：int 资源 vs float 刻度
 
@@ -70,18 +75,18 @@ actor["effects"] = {
 
 | 函数 | 行为 |
 |---|---|
-| `_norm_stack(v)` / `norm_stack`（`effects.py:51`，S2 公开别名 `:80`） | 写回归一：整值 → `int`；小数 → `round(6)`（清 `10-0.7 → 9.3` 的二进制尾差） |
-| `_fmt_stack(v)`（`effects.py:41`） | 日志显示：整值去掉 `.0`（`9.3` 显示成 `9.3`，`10.0` 显示成 `10`） |
+| `_norm_stack(v)` / `norm_stack`（`effects.py:53`，S2 公开别名 `:80`） | 写回归一：整值 → `int`；小数 → `round(6)`（清 `10-0.7 → 9.3` 的二进制尾差） |
+| `_fmt_stack(v)`（`effects.py:43`） | 日志显示：整值去掉 `.0`（`9.3` 显示成 `9.3`，`10.0` 显示成 `10`） |
 
 **为什么需要 float**：资源可以有非整数速率（信仰每刻 −0.7、磐核每刻 +0.4）。
-`apply` 的叠层分支读 `float()`（`effects.py:427`）、`consume` 读 `float()`
-（`effects.py:537`）、`schedule` 的 gain 分支 `round(..., 6)`（`schedule.py:824`）。
+`apply` 的叠层分支读 `float()`（`effects.py:429`）、`consume` 读 `float()`
+（`effects.py:541`）、`schedule` 的 gain 分支 `round(..., 6)`（`schedule.py:814`）。
 读侧全用 `float()` 保真，写侧统一过 `norm_stack` 保持「int 资源看起来还是 int」。
 
 ## cap 的唯一收敛点
 
 ```python
-def _cap_of(actor, key):                       # effects.py:64，S2 公开别名 cap_of
+def _cap_of(actor, key):                       # effects.py:66，S2 公开别名 cap_of
     base = int(state_def(key).get("cap") or 0) or 999999
     if base >= 999999:
         return base
@@ -95,24 +100,24 @@ def _cap_of(actor, key):                       # effects.py:64，S2 公开别名
 - 声明了 → `基础 cap + actor.bonus.cap[key]`（额外上限，被动 proc 的 `domain: "cap"` 写它）
 - `bonus` 为负数时按 0 处理（`max(0, bonus)`）——**只增不减**
 
-读它的地方（都是叠层 clamp）：`act_apply` 叠层分支（`effects.py:416`）、
-`schedule` 周期 gain 分支（`schedule.py:821`，且**表声明可被 `period.cap` 覆盖**）。
+读它的地方（都是叠层 clamp）：`act_apply` 叠层分支（`effects.py:418`）、
+`schedule` 周期 gain 分支（`schedule.py:811`，且**表声明可被 `period.cap` 覆盖**）。
 内容侧的渠道攒取也走它（`class_mech_proc.py` 的 `class_res_channel_gain`）。
 
 ## 周期结算（`period`）
 
 `period` 是「按刻重复发生」的声明，形态见 [../reference/effect-rules.md](../reference/effect-rules.md)。
-引擎的实现要点（`schedule._settle_time_effects`，`schedule.py:663-817`）：
+引擎的实现要点（`schedule._settle_time_effects`，`schedule.py:653-807`）：
 
 1. **首次挂不给跳**：第一次看到某 key 时只登记 `dot_next[key] = now + interval`
-   （`schedule.py:691-694`，对齐旧引擎的「首跳延迟」）
+   （`schedule.py:681-684`，对齐旧引擎的「首跳延迟」）
 2. **到点补跳**：`while now >= dot_next[key]`，一次最多补 20 跳（`guard < 20`）防死循环
 3. **`dir` 四向**：`damage`（掉血）/ `heal`（回血 + 可选 mana_pct）/ `mana`（回蓝）/ `gain`（给自身叠层加/减，**静默**、clamp `[0, cap]`）
-4. **`turns` 限跳**：跳够 `turns` 次就清层（计数器 `dot_jumps`，`schedule.py:819-825`）
+4. **`turns` 限跳**：跳够 `turns` 次就清层（计数器 `dot_jumps`，`schedule.py:809-815`）
 5. **`dir="gain"` 不需要 `stacks > 0`**：0 层也要回（游侠精力耗到 0 若被拦将永远回不了，
-   `schedule.py:681-684` 注释）
+   `schedule.py:671-674` 注释）
 6. **标签档**（原「boss 档」）：目标身上带该周期声明的标签之一时读 `pct_boss` / `pct_cur_boss`
-   （名单 = 声明里的 `trait_tags`，引擎只问 `traits.has_any`，`schedule.py:662` / `:638`）。
+   （名单 = 声明里的 `trait_tags`，引擎只问 `traits.has_any`，`schedule.py:652` / `:638`）。
    引擎**不认识「Boss」**：谁是 boss / 精英由内容侧在声明里写标签（`traits`），
    名单为空 ⇒ 一律 False（这条折扣对谁都不生效，引擎零游戏知识）
 
