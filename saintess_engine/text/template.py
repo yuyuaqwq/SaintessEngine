@@ -23,12 +23,18 @@
 * **不做格式化 DSL**：就用 `str.format` 的 `{slot}`；复杂逻辑写在使用方。
 * **不猜**：模板缺槽时保留 `{slot}` 原文而不是填空 —— 让问题可见，别静默丢字。
 
-两个渲染口的分工（★ 2026-09-27 补：「已迁移」点位不许有影子真源）
-----------------------------------------------------------------
-* `render_or`  = **渐进迁移**口：表里没这个 key ⇒ 用调用方现给的 `default`（调用点内联模板）。
-  未迁移的点位走它（措辞暂时还在引擎调用点，逐字节不变）。
-* `render_required` = **已迁移**口：表里没这个 key ⇒ **抛**（引擎手里没有任何模板可回落）。
-  已迁移点位的措辞真源已在内容侧 ⇒ 缺表/缺 key 就是内容侧漏声明，不许静默补齐。
+两个渲染口的分工（★ 2026-09-27 B2–B4 走完后定稿：引擎侧「措辞」只剩一条路）
+----------------------------------------------------------------------------
+* `render_or(text, key, default, **slots)` = **表优先、缺 key 回落调用点现给的模板**。
+  引擎自己的 60 个玩家可见点位**全部**走 cue（`render_required`）了 ⇒ 这个口现在的使用者是
+  「内容侧/第三方自己的调用点」与鸭子表内部（`render_required` 拿它做真正的渲染）。
+* `render_required(text, key, **slots)` = **必须命中**：表不在 / 表里没这个 key ⇒ **抛**。
+  引擎的 cue 渲染走它 —— 引擎手里没有任何模板可回落（措辞真源在内容侧文案表），
+  缺表/缺 key 就是内容侧漏声明，不许静默补齐。
+
+★ B5（2026-09-27 收口）：`render_via(holder, …)` / `text_of(holder)` 两个「从持有者取表」
+  的辅助已**删除** —— 引擎侧最后一个调用点随 B4 迁进 cue 后就没人用了，留着 = 兼容壳。
+  要在普通函数里拿表，直接 `render_or(text_of_holder, ...)` 或把表自己传进来。
 """
 from __future__ import annotations
 
@@ -38,7 +44,7 @@ from string import Formatter
 from typing import Callable, Iterable, Mapping, Optional
 
 __all__ = ["TextSpec", "TextTable", "safe_format", "extract_params",
-           "render_or", "render_required", "render_via", "text_hit", "text_of"]
+           "render_or", "render_required", "text_hit"]
 
 
 class _KeepUnknown(dict):
@@ -106,26 +112,6 @@ def render_required(text, key: str, /, **slots) -> str:
     if not text_hit(text, key):
         raise KeyError("文案表%s里没有 %r" % ("（未注入）" if text is None else "", key))
     return render_or(text, key, "", **slots)
-
-
-def text_of(holder):
-    """从**持有注入表**的对象取表本身（读 `holder.text`）。
-
-    `None` / 没有 `text` 属性 / 值为 None 一律 = 未注入（`render_or` 收到 None 即兜底）。
-    模块级结算函数（如 `gauge.bar_gain`）拿不到持有者，只能拿到「表」本身 ⇒ 取表口径
-    与 `render_via` 同源一份，调用方不必各写一遍 `getattr(holder, "text", None)`。
-    """
-    return getattr(holder, "text", None)
-
-
-def render_via(holder, key: str, default: str, /, **slots) -> str:
-    """从**持有注入表**的对象取表渲染（读 `holder.text`）。
-
-    `holder` 可以是 `Battle`，也可以是测试替身；没有 `text` 属性（或值为 None）
-    一律按「未注入」处理 ⇒ 兜底模板。引擎零文案真源：措辞归注入表，调用点只给
-    key + 兜底模板 + 槽位。
-    """
-    return render_or(text_of(holder), key, default, **slots)
 
 
 def extract_params(template: str) -> tuple:

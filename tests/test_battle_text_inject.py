@@ -47,7 +47,7 @@ from ext_combat.battle.actions import _skill_usable              # noqa: E402
 from ext_combat.battle.actors import ActCtx, make_actor          # noqa: E402
 from ext_combat import gauge as G                                 # noqa: E402
 from saintess_engine.cues import MISS_LINE                       # noqa: E402
-from saintess_engine.text import TextTable, render_or, render_via, text_of  # noqa: E402
+from saintess_engine.text import TextTable, render_or, safe_format        # noqa: E402
 from _cue_text_fixture import TEMPLATES as FIX_TEMPLATES         # noqa: E402
 from _cue_text_fixture import TEXT as FIX_TEXT                    # noqa: E402
 from _cue_text_fixture import install as fix_install              # noqa: E402
@@ -107,16 +107,12 @@ _PROBE_KEY = "battle.probe.key"
 _PROBE_TPL = "★{n}★"
 
 
-class _ProbeHolder:
-    """只带 `text` 的持有者（= `Battle` 的注入面形状）。"""
-
-    def __init__(self, text):
-        self.text = text
-
-
 def _probe(table, n=1):
-    """直接过文案口（`render_via`）：表非 None 就问表，否则用调用点兜底模板。"""
-    return render_via(_ProbeHolder(table), _PROBE_KEY, _PROBE_TPL, n=n)
+    """直接过文案口（`render_or`）：表非 None 就问表，否则用调用点兜底模板。
+
+    ★ B5：`render_via`（从持有者取表）已删 ⇒ 这里直接把表递进去（同一份语义）。
+    """
+    return render_or(table, _PROBE_KEY, _PROBE_TPL, n=n)
 
 
 # ---------------------------------------------------------------- 1. 注入生效
@@ -308,20 +304,15 @@ for _label, _dir in (("battle", BATTLE_DIR), ("gauge", GAUGE_DIR)):
 check("★ battle/ + gauge/ 日志实参零中文（措辞全走 key + 兜底模板）", not left, left[:4])
 
 print("\n【5. 渲染口本体】")
-check("render_via(None, …) = 兜底模板", render_via(None, "k", "x {y}", y=1) == "x 1")
-check("render_via(替身无 text) = 兜底模板",
-      render_via(object(), "k", "无槽位") == "无槽位")
-
-
-class _Holder:
-    """只带 `text` 一个字段的持有者（= Battle 的注入面形状）。"""
-
-    def __init__(self, text):
-        self.text = text
-
-
-check("render_via 转发到表的 render_or（key/default/slots 原样）",
-      render_via(_Holder(_Stub({"k": "T"})), "k", "D {y}", y=2) == "T")
+# ★ B5（2026-09-27）：`render_via` / `text_of` 已随 B4 删掉（引擎侧最后一个调用点迁进 cue 后
+#   就没人用了 ⇒ 留着是兼容壳）。文案口本体只剩 `render_or`（表优先、缺 key 回落 default）。
+check("render_or(None, …) = 兜底模板（未注入路径）",
+      render_or(None, "k", "x {y}", y=1) == "x 1")
+check("render_or 转发到表的 render_or（key/default/slots 原样）",
+      render_or(_Stub({"k": "T"}), "k", "D {y}", y=2) == "T")
+check("★ `render_via` / `text_of` 确已删除（不留兼容壳）",
+      not hasattr(__import__("saintess_engine.text", fromlist=["x"]), "render_via")
+      and not hasattr(__import__("saintess_engine.text", fromlist=["x"]), "text_of"))
 
 
 # ---------------------------------------------------------------- 6. gauge 文案口
@@ -329,18 +320,14 @@ print()
 print("【5'. 文案口形参位置专属（槽位名可与 key / default / text 同名，不炸）】")
 import inspect as _insp                                                    # noqa: E402
 
-_pv = _insp.signature(render_via).parameters
-check("render_via 前 3 形参位置专属（holder / key / default）",
-      all(_pv[_n].kind is _insp.Parameter.POSITIONAL_ONLY for _n in ("holder", "key", "default")),
-      str({_n: str(_pv[_n].kind) for _n in _pv}))
 _p2 = _insp.signature(render_or).parameters
 check("render_or 前 3 形参位置专属（text / key / default）",
       all(_p2[_n].kind is _insp.Parameter.POSITIONAL_ONLY for _n in ("text", "key", "default")),
       str({_n: str(_p2[_n].kind) for _n in _p2}))
 check("★ 槽位名叫 key 也能渲染（未注入路径）",
-      render_via(None, "k", "X {key} {name}", key="A", name="B") == "X A B")
+      render_or(None, "k", "X {key} {name}", key="A", name="B") == "X A B")
 check("★ 槽位名叫 key 也能渲染（注入表路径：不炸 + 取自表）",
-      render_via(_Holder(_Stub({"k": "T"})), "k", "D", key="A") == "T")
+      render_or(_Stub({"k": "T"}), "k", "D", key="A") == "T")
 check("★ 真 TextTable 同款（key 同名槽位）",
       TextTable({"k": "T {key}"}).render_or("k", "D", key="A") == "T A")
 
@@ -385,19 +372,11 @@ check("配夹具表 → 积蓄行逐字 == 搬运前文案",
 G.bar_def, G.bar_should_trigger, G.bar_trigger = _saved_bar
 
 
-class _Holder1:
-    """只带 `text` 一个字段的持有者（= Battle 的注入面形状）。"""
-
-    def __init__(self, text):
-        self.text = text
-
-
-check("text_of 与 render_via 同源：读同一处 `.text`",
-      text_of(_Holder1(_tbl)) is _tbl
-      and render_via(_Holder1(_tbl), "battle.gauge.gain", "D", bar="b", add=1, val=2, maxcap=3)
-      == "／表：b +1（2/3）")
-check("text_of(None) / 无 text 替身 → None（未注入）",
-      text_of(None) is None and text_of(object()) is None)
+# ★ B5：`text_of` / `render_via` 已删 ⇒ 这两条读数改由 §1/§3（`render_or` 本体）与
+#   §6（gauge 走 cue）覆盖；这里只留一条「表自己拿得住 key」的直读。
+check("表能直读（`TextTable.get` / `in`）—— 需要表的地方直接持有它即可",
+      _tbl.get("battle.gauge.gain") == "／表：{bar} +{add}（{val}/{maxcap}）"
+      and "battle.gauge.gain" in _tbl)
 
 # ---------------------------------------------------------------- 7. 续战/恢复路径
 print()
@@ -444,7 +423,6 @@ finally:
 # ---------------------------------------------------------------- 8. P-59 坏格式符 / 机器键
 print()
 print("【8. P-59：兜底模板零坏格式符（双冒号）+ 默认模板不吐机器键】")
-from saintess_engine.text import safe_format                           # noqa: E402
 from ext_combat.battle.effects import act_apply                          # noqa: E402
 
 #: 判据盯**语义**：只扫「真正交给渲染口的模板实参」（AST 里的字符串常量），
