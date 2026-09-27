@@ -118,6 +118,20 @@ check("★ 但**真扣血**仍钳到剩余血（返回 = 这一击之前那点�
       % _hp_before_kill,
       landing.deal_damage(_b3b, None, _ea3b, 99999, []) == _hp_before_kill
       and _hp_before_kill > 0)
+
+# ★ 2026-09-27（`no_dodge`）：**内容侧自付给自己的那一笔没人能闪** ——
+#   原先 source=None 也照过闪避那一掷 ⇒ 施放者能「闪开自己砍的这一刀」（狂战士自伤偶发不落账，
+#   内容侧那条判据因此偶发红）。这一格是引擎新开的**可选**开关（缺省 = 老行为一字不动）。
+_nd_b, _nd_p, _nd_t = _setup()
+_nd_roll = landing._roll_dodge
+try:
+    landing._roll_dodge = (lambda *a, **k: True)          # 钉住那一掷：这一笔一定「闪开」
+    _nd_on = landing.deal_damage(_nd_b, None, _nd_t, 9, [], no_dodge=True)
+    _nd_off = landing.deal_damage(_nd_b, None, _nd_t, 9, [])
+finally:
+    landing._roll_dodge = _nd_roll
+check("★ 自伤不吃闪避：`no_dodge=True` ⇒ 落满 9 · 反证不传 ⇒ 被闪掉 0",
+      _nd_on == 9 and _nd_off == 0, {"on": _nd_on, "off": _nd_off})
 check("防御行逐字", b3._do_defend(ActCtx(caster=pa3, action="defend"))
       == ["🛡 甲 摆出防御姿态，受到的伤害减半！"])
 check("逃跑行逐字", b3._do_flee(ActCtx(caster=pa3, action="flee")) == ["💨 甲 逃跑了！"])

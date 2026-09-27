@@ -26,13 +26,19 @@ from saintess_engine.text import render_via
 
 def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
                 logs: list, dmg_kind: str = "", defend_reduce: Optional[float] = None,
-                element: str = "", _no_redirect: bool = False) -> int:
+                element: str = "", _no_redirect: bool = False,
+                no_dodge: bool = False) -> int:
     """伤害落地主链。返回实际扣血。
 
     source: 攻击方 actor（等级压制基准；None = 无来源不压制）
     target: 承伤 actor
     amount: 计划伤害（技能公式算好的值）
     dmg_kind: "phys"/"magi"/"true"/""（免伤等按类型消费，后续扩展）
+    no_dodge: True = **这一笔没人能闪**（跳过 `_roll_dodge`；缺省 False = 老行为一字不动）。
+        ★ 2026-09-27：谁需要它 —— **自己付给自己的那几笔**（内容侧的自伤代价，如破势 8% /
+        焚身 35% / 血债）。原先 source=None 照样过闪避那一掷 ⇒ 施放者能「闪开自己砍的这一刀」
+        （实测：狂战士自伤偶发不落账 ⇒ 屏上少一行、档上少扣血，判据偶发红）。**不是**改
+        「无来源」的通用语义（DoT 跳伤那一支仍旧照老规矩过同一掷 —— 改动面只在这一格开关）。
     defend_reduce: 攻击技能自带方向性防御挡伤比例（v178 E6：如风暴之眼 0.8 =
         玩家防御该技能挡 80% 只受 20%）；None/缺省 = 0.5 旧行为（防御伤害减半）。
         引擎零知识：只是读技能数据字段的数字，非名词判断。
@@ -160,7 +166,7 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     # 引擎零知识：dodge 是面板数值字段；乘算合成上限与旧 _roll_dodge 对齐。
     # 位置在 defending 前（对齐旧顺序：闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）。
     try:
-        if _roll_dodge(battle, target, logs):
+        if not no_dodge and _roll_dodge(battle, target, logs):
             return 0
     except Exception as _e:
         _diag(battle, "deal_damage · 闪避", _e)          # 审计 P-44：不再静默（行为不变）
