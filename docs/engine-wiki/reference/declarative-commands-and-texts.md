@@ -44,7 +44,9 @@ t = TextTable({"battle.hit": "命中 {n} 点"})
 t.render("battle.hit", n=5)          # → "命中 5 点"
 t.render("battle.hit", m=1)          # → "命中 {n} 点"（未知槽**原样保留**，不抛）
 t.render("never.defined")            # → "never.defined"（并记入 missing）
-t.render_or("new.key", "新文案 {a}", a=9)   # 渐进迁移：表里没有就用调用方默认串
+t.render_or("new.key", "新文案 {a}", a=9)   # 表里没有就用调用方给的默认串
+#   ★ 2026-09-27（cue 解耦 B4/B5）之后：引擎自己的调用点**不再走这个口**（走表现事件 cue +
+#     `render_required` 必须命中）；`render_or` 留给内容侧 / 第三方自己的调用点。
 t.missing(); t.unused(); t.validate()
 ```
 

@@ -33,8 +33,11 @@ saintess_engine = Battle.from_state(state)   # ← 重建 Battle / sides / actor
 `hostile_map` / `seed_ct=False`（`serialize.py:64-73`）——
 其余构造参数**全部丢失**：`pet` / `dmg_mult` / `target_picker` / `on_event` /
 `action_override` / `script_hook`。这些钩子需要在恢复后**自己重新挂**。
-（`text=`（v186 文案表）是**可选关键字参数**：`Battle.from_state(state, text=table)` 与
-构造注入同口径；不传 = 未注入 ⇒ 战斗日志走调用点兜底模板，逐字节 = 历史内联串。）
+（`text=`（v186 文案表 / B2 起战斗日志的措辞真源）是**可选关键字参数**：
+`Battle.from_state(state, text=table)` 与构造注入同口径。
+★ 2026-09-27（cue 解耦 B4/B5 走完）之后引擎侧 **60 个玩家可见点位全部走 cue**、
+引擎手里**一条兜底模板都不剩** ⇒ `text` 只喂 cue 渲染（`render_required(key)`：**必须命中**）。
+**不传 = 没那张表** ⇒ 每条 cue 落一行坏数据 + 诊断面报警；不存在「回落到调用点内联串」这条路了。）
 
 ```python
 b2 = Battle.from_state(state)
