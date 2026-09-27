@@ -45,6 +45,17 @@ def load_game_rules(module) -> None:
     """从游戏规则模块加载约定字段（`EFFECT_ACTIONS` / `EFFECT_RULES`）。"""
     _cfg.set_config(_T_EFFECT_ACTIONS, getattr(module, "EFFECT_ACTIONS", {}))
     _cfg.set_config(_T_EFFECT_RULES, getattr(module, "EFFECT_RULES", {}))
+    # ★ 状态容器收口（2026-09-28）：声明过的效果名一次性登记进**标签注册表**（`tags`）——
+    #   引擎的标签面从此知道「这个名字是内容侧声明过的」（词表/审计用）。查询本身**不要求**
+    #   先注册（状态条目自己就是标签），登记只失败在「表不是 dict」这类坏回执上 ——
+    #   注册表是审计面，坏回执不值得炸掉装载路径。
+    try:
+        from . import tags as _tags
+        _tags.register_many(get_effect_rules().keys())
+        _tags.register_many(_tags.DEFAULT_SLOTS.values())
+    except AttributeError as _e:
+        from .diagnostics import diag as _diag
+        _diag(None, "load_game_rules · 标签登记", _e)   # 坏回执记诊断（注册表是审计面，不炸装载）
 
 
 def get_effect_actions() -> dict:

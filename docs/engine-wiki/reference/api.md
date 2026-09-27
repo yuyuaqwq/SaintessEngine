@@ -209,11 +209,11 @@ Battle.from_state(st, *, text=None)   # battle.py:713（classmethod）→ serial
 
 | 符号 | 位置 | 语义 |
 |---|---|---|
-| `ACTION_HANDLERS` | `:93` | 动词注册表（dict，全局单表） |
+| `ACTION_HANDLERS` | `:94` | 动词注册表（dict，全局单表） |
 | `register_action(key)` | `:96` | 装饰器：注册动词 |
-| `resolve_actions(name)` | `:139` | 名词 → 动作列表（查 `EFFECT_ACTIONS`；找不到按动词处理；都没有 → `[]`） |
-| `apply_effects(battle, caster, target, effects, logs)` | `:169` | **执行效果列表**（含 chance roll + 参数合并） |
-| `effects_from_skill(info, lv, caster_side_is_player=True)` | `:217` | 技能 `mech`/`mech2` → effect 列表（第三个参数**函数体从未使用**） |
+| `resolve_actions(name)` | `:140` | 名词 → 动作列表（查 `EFFECT_ACTIONS`；找不到按动词处理；都没有 → `[]`） |
+| `apply_effects(battle, caster, target, effects, logs)` | `:170` | **执行效果列表**（含 chance roll + 参数合并） |
+| `effects_from_skill(info, lv, caster_side_is_player=True)` | `:218` | 技能 `mech`/`mech2` → effect 列表（第三个参数**函数体从未使用**） |
 | `norm_stack` / `cap_of` | `:86` / `:87` | 见门面表 |
 | 动词 `act_apply` | `:330` | `apply` |
 | 动词 `act_consume` | `:518` | `consume` |
@@ -471,7 +471,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 | `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
 | ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 不实现） |
-| `config.set_hook` | `config.py:172` | 零外部引用（都走 `mount`） |
+| `config.set_hook` | `config.py:201` | 零外部引用（都走 `mount`） |
 | `effects.resolve_actions` | `effects.py:140` | 零外部引用（`effects` 内部调用） |
 | `ai.eval_when` | `ai.py:159` | 零外部引用（`resolve_ai_move` 内部调） |
 | ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |

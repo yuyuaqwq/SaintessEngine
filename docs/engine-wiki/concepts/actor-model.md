@@ -112,6 +112,22 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:656`）。旧字段 `is
 `traits.of` / `traits.has` / `traits.has_any`；`is_boss` / `role` 这类旧身份字段
 **引擎已不再读**（2026-09-25 E3 已删），只由内容侧自己消费。
 
+## 标签机制（tag registry / 一次查询）
+
+`extends/ext_combat/battle/tags.py` —— 三件东西，引擎零游戏名词：
+
+| 件 | API | 说明 |
+|---|---|---|
+| **注册表** | `register` / `register_many` / `registered` | 内容侧声明过的 tag 名（`EFFECT_RULES` 的键在 `load_game_rules` 时自动登记 + `DEFAULT_SLOTS` 的槽位名）。查询**不要求**先注册（状态条目自己就是标签），注册表是词表/审计面 |
+| **统一面** | `of(actor)` / `sources_of(actor, tag)` | 一个查询面看**三个来源**：`actor["traits"]`（身份标签）∪ `effects` 容器条目 key（状态）∪ 条目 `grants`（一条状态授多个 tag）。撤销 = 条目没了即没了，不另开接口 |
+| **查询** | `has`（层级）/ `has_exact` / `has_any` / `has_all` / `match` | `has(actor, "control")` **父级查得到子级**（命中 `control.stun`，按 `.` 边界；不反向） |
+| **槽位** | `slot("immune_control")` → tag 名 | 引擎固定词汇表的**名字归内容侧声明**（装配面 `tag_slots_fn`）；未装配 = 内建缺省，未知名 ⇒ `KeyError`（fail-closed） |
+
+口径：空 tag / 空名单 ⇒ 一律 `False`（不声明 = 这条规则不适用于任何人）。
+`traits.*` 保留为**精确面**（扁平身份标签，现行行为一字不动）；要层级或全来源就用 `tags.*`。
+已经按槽位收口的两处读点：控制免疫（`effects.py` 的 `immune_control`）、DOT 免疫名单
+（`effects.py` 的 `immune_dots`）。
+
 ## `ActCtx`：一次行动的上下文
 
 ```python

@@ -25,7 +25,8 @@ from __future__ import annotations
 from typing import Callable, Optional
 
 from .state_effects import state_def
-from . import traits                    # 内容侧标签判定（引擎不认标签叫什么 · 审计 E3）
+from . import tags                       # 标签机制（注册表 / 统一查询面 / 槽位名）
+from . import traits                    # 内容侧身份标签（精确面 · 引擎不认标签叫什么 · 审计 E3）
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from saintess_engine.text import render_via
 
@@ -362,11 +363,18 @@ def act_apply(battle, caster, target, params, logs):
         if turns <= 0:
             return
         # N-B7 免疫控制查询点（2026-09-11 接线）：控制类效果（mode != None）落地前
-        # 先查持有者是否带免疫态 —— 引擎只读**态名**（`cc_immune`，属引擎固定词汇表
-        # 契约，不是游戏名词），不认「哪个技能给的免疫」。内容侧写态（含刻数，
-        # 引擎按 expire 自动清理）；态在 = 本次控制不施加（不消耗、不叠层）。
-        _im = (holder.get("effects") or {}).get("cc_immune")
-        if isinstance(_im, dict) and float(_im.get("expire", 0) or 0) > _now_of(battle):
+        # 先查持有者是否带免疫态 —— **名字走标签槽位**（`tags.slot("immune_control")`，
+        # 缺省 `cc_immune`；内容侧可在装配面 `tag_slots_fn` 换成层级名，如 `immune.control`）。
+        # 判定用标签面：**父级查得到子级**（写了 `immune.control.aura` 也吃）⇒ 命中取最晚到期的
+        # 那一条。内容侧写态（含刻数，引擎按 expire 自动清理）；态在 = 本次控制不施加。
+        _im_tag = tags.slot("immune_control")
+        _now0 = _now_of(battle)
+        _im_exp = 0.0
+        for _t, _e in (holder.get("effects") or {}).items():
+            if not isinstance(_e, dict) or not tags.name_match(str(_t), _im_tag):
+                continue
+            _im_exp = max(_im_exp, float(_e.get("expire", 0) or 0))
+        if _im_exp > _now0:
             logs.append(render_via(battle, "battle.effects.immune_control", "🛡️ {name} 免疫控制：{key} 未生效",
                                 name=holder.get('name', '目标'),
                                 key=key))
@@ -391,16 +399,16 @@ def act_apply(battle, caster, target, params, logs):
     if not holder:
         return
     # N-B11 异常免疫查询点（2026-09-11 接线）：DOT 类状态（EFFECT_RULES[key].period.dir
-    #   == "damage"）落地前先查持有者的免疫名单 —— 与上方 `cc_immune` 同款「读态名不认
-    #   来源」：引擎只读**类型名**列表（`immune_dots: ["burn"]`，属引擎固定词汇表契约，
-    #   不是游戏名词），不认「哪个怪天生免毒」。名单在 = 本次不施加（不叠层、不消耗）。
-    #   数据侧缺省（无 immune_dots 键）→ 空名单 → 行为与接线前完全一致。
+    #   == "damage"）落地前先查持有者的免疫名单 —— 与上方控制免疫同款：**名字走标签槽位**
+    #   （`tags.slot("immune_dots")`，缺省 `immune_dots`；装配面可换名），引擎只读**类型名**
+    #   列表（如 `["burn"]`），不认「哪个怪天生免毒」。名单在 = 本次不施加（不叠层、不消耗）。
+    #   数据侧缺省（无该字段）→ 空名单 → 行为与接线前完全一致。
     try:
         _per = (state_def(key) or {}).get("period")
         if isinstance(_per, dict) and str(_per.get("dir") or "") == "damage":
-            _imm = holder.get("immune_dots")
+            _imm = holder.get(tags.slot("immune_dots"))
             if _imm is None:
-                _imm = getattr(battle, "immune_dots", None)
+                _imm = getattr(battle, tags.slot("immune_dots"), None)
             if _imm and key in list(_imm):
                 logs.append(render_via(battle, "battle.effects.immune_debuff", "🚫 {name} 免疫【{key}】，异常未生效",
                                     name=holder.get('name', '目标'),

@@ -159,7 +159,7 @@ actor["triggers"][event]
 `apply_effects`（`effects.py:171`）里的两条通用规则：
 
 1. **概率 roll**：`eff["chance"]` 存在时 `random() >= chance` 就跳过（`effects.py:188-194`）
-2. **参数合并**：`_merge_params` 让调用方参数优先于映射默认（`effects.py:157-166`）
+2. **参数合并**：`_merge_params` 让调用方参数优先于映射默认（`effects.py:158-167`）
 
 ## 引擎自然点位速查（26 个事件里哪些引擎会自己喊）
 

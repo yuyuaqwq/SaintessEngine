@@ -265,32 +265,22 @@ def drop_windows(actor: dict) -> list:
     return gone
 
 
-# ---- 查询口：tag（含层级与授予标签）--------------------------------------
+# ---- 查询口：tag（薄壳 —— 实现全在 `tags` 模块：注册表 + 统一面 + 层级）------
 
 def tags_of(actor: dict) -> set:
-    """actor 身上**当前**的全部 tag（容器 key ∪ 各条目的 `grants`）。"""
-    out = set()
-    for _tag, _e in effects_of(actor).items():
-        out.add(str(_tag))
-        if isinstance(_e, dict):
-            for _g in (_e.get(GRANTS_FIELD) or ()):
-                out.add(str(_g))
-    return out
+    """actor 身上**当前**的全部 tag（= `tags.of`：traits ∪ 容器 key ∪ 条目 `grants`）。"""
+    from . import tags as _T
+    return set(_T.of(actor))
 
 
 def has_tag(actor: dict, tag: str) -> bool:
-    """actor 身上有没有这个 tag —— **引擎侧唯一查询口**（条目 key + `grants` 一起看）。
+    """actor 身上有没有这个 tag（= `tags.has`）—— **引擎侧唯一查询口**。
 
     层级：查 `control` 命中 `control.stun`（按 `.` 边界的前缀，父级查得到子级）；
-    `control.stun` 不命中 `control`。引擎零游戏知识：tag 名全由内容侧起，引擎只做匹配。
+    `control.stun` 不命中 `control`。引擎零游戏知识：tag 名全由内容侧起。
     """
-    if not tag:
-        return False
-    _want = str(tag)
-    for _name in tags_of(actor):
-        if _name == _want or _name.startswith(_want + TAG_SEP):
-            return True
-    return False
+    from . import tags as _T
+    return _T.has(actor, tag)
 
 
 def actor_ext(actor: dict) -> dict:

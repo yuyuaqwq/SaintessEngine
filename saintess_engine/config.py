@@ -58,6 +58,10 @@ _HOOKS = {
     "skill_up_fn": None,
     # 技能等级查询 fn(player, skill_name) -> int（内容侧 content_rules.skills.skill_level_of）
     "skill_level_of_fn": None,
+    # ---- 标签机制（battle/tags.py）：引擎固定词汇表的**槽位 → tag 名**声明 ----
+    # fn() -> {槽位: tag}；缺省见 `battle/tags.DEFAULT_SLOTS`（如 immune_control → cc_immune）。
+    # 内容侧要换名/挂层级（如 `immune.control`）就挂这个；引擎只按槽位取名字，不认游戏名词。
+    "tag_slots_fn": None,
     # ---- CTB 时间模型注入面：`battle/schedule.py` 的读点（引擎零公式/零数值）----
     # 时间模型 fn(spd, base) -> float（一次行动耗时，游戏秒；形状与参数全在内容侧）
     "time_model_fn": None,

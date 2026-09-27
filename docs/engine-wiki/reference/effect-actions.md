@@ -17,7 +17,7 @@ EFFECT_ACTIONS = {
 }
 ```
 
-解析规则（`effects.resolve_actions`，`effects.py:139-154`）：
+解析规则（`effects.resolve_actions`，`effects.py:140-155`）：
 
 | 表里的形态 | 返回 |
 |---|---|
@@ -26,7 +26,7 @@ EFFECT_ACTIONS = {
 | 没有该键，但名字是已注册动词 | `[{"action": <名字>}]`（动词直通） |
 | 都没有 | `[]` → 调用方 `continue`（**静默 no-op**，`effects.py:200-201`） |
 
-参数合并（`_merge_params`，`effects.py:157-166`）：**调用方显式参数优先**，
+参数合并（`_merge_params`，`effects.py:158-167`）：**调用方显式参数优先**，
 映射里的值只补 `缺失/None`。`action` 键本身不参与合并。
 
 `eff["chance"]`（概率）由 `apply_effects` 消费（`effects.py:188-194`），与映射无关。
@@ -187,7 +187,7 @@ grep -rho 'register_action("[^"]*")' game/services/*.py | sort -u | wc -l
 ## 技能数据侧：`mech` 字段的分派（另一条翻译路）
 
 技能 dict 的 `mech` / `mech2` 不查 `EFFECT_ACTIONS` 的常规路径，而是先过
-`effects.effects_from_skill`（`effects.py:217`）→ `_mech_to_effect`（`effects.py:236`）：
+`effects.effects_from_skill`（`effects.py:218`）→ `_mech_to_effect`（`effects.py:237`）：
 
 ```python
 cfg = state_def(mech)                      # 查 EFFECT_RULES

@@ -37,7 +37,7 @@ def pact_heal(battle, caster, target, params, logs):
         logs.append(f"🩸 血契：{holder.get('name')} 回复 {real} 点生命")
 ```
 
-`register_action`（`effects.py:99`）就是个装饰器，往 `ACTION_HANDLERS`（`effects.py:93`）里塞一条。
+`register_action`（`effects.py:100`）就是个装饰器，往 `ACTION_HANDLERS`（`effects.py:94`）里塞一条。
 
 ## ② 写名词声明：同名名词 → 动词序列
 
@@ -123,7 +123,7 @@ hero hp: 65
 ## 名词也可以直接挂在技能数据上
 
 上面走的是「事件触发」路子。另一条路是**技能数据驱动**：技能 dict 里的 `mech`
-字段经 `effects_from_skill`（`effects.py:217`）转成 effect 列表，在命中后由
+字段经 `effects_from_skill`（`effects.py:218`）转成 effect 列表，在命中后由
 `_apply_hit_effects`（`actions.py:538`）执行。分派判据见 `_mech_to_effect`
 （`effects.py:236`）——「叠层资源型」走 `apply op=add`，否则保留名词走 `EFFECT_ACTIONS`。
 
