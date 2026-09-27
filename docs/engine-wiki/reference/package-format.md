@@ -443,6 +443,12 @@ def initial_save(uid: str, ctx: dict) -> dict:      # 可选
   「哪个字段写坏了」）。
 * `{"$builtin": false}`（写在包声明里）**只关掉 ①**：它说的是「不要引擎默认集兜底」，
   与「我依赖的扩展包带来的域」无关 —— 后者照旧生效。
+  ★ **但它是「全栈」作用域，不是「逐层」**（上面那句「只关掉①」说的是**关掉哪一层**，
+  容易读成「只影响写它的那一层」—— **不是**）：`PackageStack.domain_decl()` 逐层
+  `decl_switch` 后共用**一个** `use_builtin` 布尔 ⇒ **任何一层**（数据包**或扩展包**）
+  写了它，**整栈**都不带 `commands` / `texts` / `tlogs`。装载口会点名「哪一层写的 +
+  被跳过的域」（见下文「装载告警」一节）；不点名就换两条路之一：把那三张空表自建进包里，
+  或把 `$builtin` 这个键**删掉**（键缺失 = 引擎默认集照常兜底，是默认形态）。
 * **合并规则只有一份**：`saintess_engine/domains.py:147` 的 `merge_decls`（单层合并）与同模块的
   `layered_decls`（三层合并）。编辑器 `editor.packages.effective_domains()` 与引擎装载口
   `records.read_domain_decl` **委托的是同一份** ⇒ 域元数据放包内、放扩展包、还是放引擎默认集里，
@@ -718,7 +724,10 @@ effective_domains(pkg) = ① 引擎默认集 → ② 该包 depends 的扩展包
     ⇒ 域元数据放包内、放扩展包、还是放引擎默认集里，两边看到的是**同一份有效域表**
     （2026-09-20 T1 双向迁移演习的「一处装配点」：`saintess_engine/records/__init__.py:590`）
   · {"$builtin": false}：显式声明「本包的域就这些，不要引擎默认集兜底」（examples/minimal-game
-    用的就是它）；注意它**只关 ①**，② 是「我依赖的包」带来的，照旧生效
+    用的就是它）；注意它**只关 ①**，② 是「我依赖的包」带来的，照旧生效 ——
+    ★ 但作用域是**整栈**（任何一层写了它，整栈都不带①）：`domain_decl()` 里 `use_builtin`
+    是全栈共用的一个布尔。写了它就要自建 commands/texts/tlogs 三张空表（否则真去读时
+    `PackageError`），或干脆**删掉这个键**（键缺失 = 默认形态 = 引擎默认集照常兜底）
   · 坏声明（坏 JSON / 缺 kind / kind 非法 / schema 越界 / 域 id 越界）→ 该条（或整份）忽略 +
     黄条告警 + 回退默认集，**绝不 500**（「列表里有它、点开 500」是不允许的）
   · schema 解析：<pkg>/schemas/<声明值> → <pkg>/<声明值> → 框架 schemas/<声明值> → 不校验

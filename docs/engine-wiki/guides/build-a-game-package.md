@@ -120,8 +120,13 @@ PackageError: 域 'commands' 声明的文件在所有层里都不存在（找过
               '<你包>/content/data/commands.json'])
 ```
 
-③ **`{"$builtin": false}` 是「层作用域」开关** —— 它**只关掉①引擎默认集那一层**，不清空下面各层
-  （你 `depends` 的扩展包带来的域照旧生效）：
+③ **`{"$builtin": false}` 是「**全栈**作用域」开关** —— 它是**整栈总闸，不是逐层**：
+  你 `depends` 的扩展包带来的域照旧生效（② 不受它影响），但**任何一层**（数据包**或扩展包**）
+  写了它，**整个包栈**都不再带引擎默认集 `commands` / `texts` / `tlogs`：
+  引擎装载口 `PackageStack.domain_decl()` 里 `use_builtin` 是**整栈一个布尔**（先置 `False`
+  就再也回不来），不是「只关掉写它的那一层」。
+  ⚠️ 文档此前把它写成「层作用域 / 只关掉①」是**错的**（`domains.py::layered_decls` 的旧
+  docstring 也有同一处措辞）—— 实测那只是**单包**视角下的巧合，见下面的「为什么两处都这么写」。
 
 ```text
 写了它 ⇒ commands/texts/tlogs 不再在册：「所有层都没有文件」那条告警也就不亮了
@@ -130,6 +135,11 @@ PackageError: 域 'commands' 声明的文件在所有层里都不存在（找过
         PackageError: 域 'commands' 既不在任何包的声明里、也不在引擎默认集里
                       —— 声明缺项，拒绝装载（不静默给空表）
 ```
+
+★ 为什么文档/注释一度写成「只关①那一层」：那是**单包**口径（`layered_decls(pkg, decls,
+use_builtin=False)` 只看见一个包的声明，此时「关掉①」与「关掉整栈」恰好同解）。
+一旦**多个包**进同一个栈（`PackageStack.domain_decl()` 逐层 `decl_switch` 后用一个共享的
+`use_builtin`），两者就分道扬镳了 —— 所以**别拿单包口径的措辞去解释整栈行为**。
 
 ⇒ 结论：**要么自建这三张空表（推荐，最省事），要么 `$builtin: false` + 自建你自己的**
 指令 / 文案 / 流水表并在 `editor/domains.json` 里声明它们。两条路都一样：**文件与声明都得在包里。**

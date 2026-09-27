@@ -134,6 +134,13 @@ def layered_decls(pkg_root: str = "", pkg_decls: dict | None = None, *,
 
     `use_builtin=False`（包声明里写 `\"$builtin\": false`）**只关掉 ①**：
     它说的是「不要引擎默认集兜底」，与「我依赖的扩展包带来的域」无关 —— 后者照旧生效。
+
+    ★ **作用域提醒（2026-09-28）**：本函数是**单包**口径（只拼一个包的声明），此时
+    「关掉①」与「关掉整栈」恰好同解，**看不出差别**。**多包栈**里就不是这样了 ——
+    `PackageStack.domain_decl()` 逐层 `decl_switch` 后共用**一个** `use_builtin` 布尔，
+    **任何一层**写了 `$builtin: false` ⇒ **整栈**都不带引擎默认集。所以**别把本函数
+    的「只关①」措辞读成「只影响写它的那一层」**：`$builtin` 是**全栈**总闸，不是逐层开关。
+    （整栈那条另有装载告警点名，见 `package.py::_domain_warnings` ①；本函数**不产告警**。）
     """
     base = BUILTIN_DEFAULT_DOMAINS if builtin is None else builtin
     out = merge_decls({}, builtin=base, use_builtin=use_builtin)
