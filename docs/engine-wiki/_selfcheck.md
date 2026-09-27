@@ -126,7 +126,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | `gauge.charge_*`（6 个） | `gauge/__init__.py:244-321` | **全部零外部引用** —— 蓄力三律无消费者 |
 | `support.battle_bars.bar_should_trigger` / `bar_preserve` | `:164` / `:204` | 仅内部/单点引用（`bar_preserve` 被命令层 Boss 脚本用 1 处） |
 | `effects.effects_from_skill(..., caster_side_is_player=True)` | `effects.py:217` | **第三个参数在函数体里从未使用** |
-| `config.set_hook` | `config.py:160` | 零外部引用（都走 `mount`） |
+| `config.set_hook` | `config.py:172` | 零外部引用（都走 `mount`） |
 | ~~`serialize.to_state` 的 `flags`~~ | ~~`serialize.py:45`~~ | ✅ **已接线（2026-09-27）**：原先恒写 `{}`、无读无写 ⇒ 已改成 `Battle.flags` 的一等字段，`to_state` 写出（`serialize.py:47`）、`from_state` 读回（`:`79）—— 内容侧「每场一次 / 每场几层」那类**战斗级跨手记账**就挂它（挂 `Battle` 上的临时属性过不了每手往返 ⇒ 每手清零，见 `tests/test_cross_hand_state.py` ② 与它的反证那条）。这一行从「写了白写」名单里销号。 |
 | `Battle.auto_run(max_steps=500)` | `battle.py:352` | 全仓调用点**只在 `tests/`**（游戏仓 `test_battle_add_actor.py:159`、游戏仓 `test_battle_bridge.py:154`、游戏仓 `test_battle_bar_procs.py:240` 等），内容侧零调用 —— 实质是**测试/AI 模式辅助**，不是生产路径（生产走 `human_act` + `advance`） |
 

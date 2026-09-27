@@ -45,6 +45,13 @@ from ..package import Package, PackageError, PackageStack, load_stack
 #: 新玩家初始档的宿主侧最小键（真正的初始档属内容：包给了 `initial_save` 就用包里的）
 MINIMAL_SAVE_KEYS = ("uid", "name", "level")
 
+#: ★ P-11（2026-09-27）内置守卫拦截句的**中性键名全集**（引擎拥有键名，句子归内容侧）。
+#:   `player` 守卫 → 键 0 · `battle` 守卫 → 键 1；宿主在 `Host(register_hint=…, battle_hint=…)`
+#:   上**传这两个键**（不传句子），内容侧装 `config` 的 `guard_text_fn` 按自己的文案表渲染。
+#:   ★ 键名是注入面契约的一部分：宿主传的键必须在这个全集里（否则当场抛），
+#:     这样宿主面就写不出**包专属**的文案键（那等于把包知识搬回宿主）。
+GUARD_KEYS = ("guard.register_missing", "guard.battle_missing")
+
 DEFAULTS_HINTS = {
     "clock": "time.time()",
     "rng": "系统随机（不可复现）",
@@ -65,8 +72,12 @@ class Host:
     prefix      : 宿主自己的管理命令前缀（缺省 `/`）
     seed        : 固定随机种子（同种子可复现同一场；None = 走适配器 `rng` 钩子/系统随机）
     id_key      : 玩家档里「平台身份」那个键名（**平台相关 → 由调用方给**，缺省 `uid`）
-    register_hint / battle_hint : 内置守卫的拦截文案（**属内容，必须由宿主声明**；★ E2b 之后
-                                  引擎不带默认文案 —— 没声明时守卫当场抛 `EngineNotConfigured`）
+    register_hint / battle_hint : 内置守卫的拦截**键**（★ P-11 · 2026-09-27）：宿主只传**中性键**
+                                  （`GUARD_KEYS`；如 `guard.register_missing` / `guard.battle_missing`），
+                                  句子由内容侧装 `config` 的 `guard_text_fn` 按自己的文案表渲染
+                                  —— 宿主面因此**零游戏词**。没装那个口的老宿主可直接传句子
+                                  （旧口径，逐字节不变）。都没声明 ⇒ 守卫当场抛 `EngineNotConfigured`。
+                                  （★ E2b 起引擎不带默认文案 —— 引擎一个字节的玩家文案都没有）
     battle_check: `(uid, group_id) -> bool`，「在不在战斗中」的查询（宿主给；不给则 `battle` 守卫不拦）
     texts_domain: 包内文案域名（缺省 `texts`；读不到 → `Env.texts=None`，包内自行兜底）
     """
@@ -210,12 +221,52 @@ class Host:
         """引擎认识的**内置守卫实现**（名固定：`player` / `battle`）。"""
         return {"player": self._guard_player, "battle": self._guard_battle}
 
+    def _guard_text(self, key_default: str, declared: str, attr: str) -> str:
+        """内置守卫的拦截句 —— **句子归内容侧**（引擎一个字节的玩家文案都不带）。
+
+        ★ P-11（2026-09-27）：宿主在 `Host(register_hint=…, battle_hint=…)` 上传的是
+        **中性键名**（`GUARD_KEYS`），句子由内容侧装 `config` 的 `guard_text_fn`
+        （形状 `fn(key) -> str | None`）按自己的文案表（例：texts 槽位）渲染。
+        三态（都是 fail-closed，**绝不静默编一句**）：
+
+          ① 装了 `guard_text_fn` ⇒ 那个值**当键**用：
+             键不在 `GUARD_KEYS` 全集 ⇒ 抛（宿主写了个引擎不认识/包专属的键）；
+             键在集合里但答不上来（None / 空 / 非 str）⇒ 抛（声明了就要给得出）。
+          ② 没装本口 + 值不是中性键 ⇒ **当字面量**（旧口径：宿主直接给句子 ——
+             与接线前逐字节相同；示例宿主 / 合成包不受影响）。
+          ③ 没装本口 + 值就是中性键 ⇒ 抛（「给的是键却没人配句子」= 装漏了；
+             把键名当玩家文案投出去比抛更糟）。
+        """
+        fn = _optional_hook("guard_text_fn")
+        key = str(declared or key_default)
+        if fn is not None:
+            if key not in GUARD_KEYS:
+                raise _NotConfigured(
+                    "守卫键 %r 不在引擎的中性键全集里（%s）—— 宿主只许传这几个中性名，"
+                    "句子由内容侧按自己的文案表渲染。" % (key, ", ".join(GUARD_KEYS)))
+            got = fn(key)
+            if isinstance(got, str) and got:
+                return got
+            raise _NotConfigured(
+                "guard_text_fn 已装配却给不出文本（键 %r → %r）—— 内容侧要按自己的文案表"
+                "渲染这一句，不许无声无息（引擎不替它编兜底）。" % (key, got))
+        if not declared:
+            raise _NotConfigured(
+                "宿主守卫文案没声明：给 `Host(%s=...)` —— 传**中性键**（如 %r，内容侧装 "
+                "`guard_text_fn`）或直接传句子（没装本口的宿主）。" % (attr, key_default))
+        if declared in GUARD_KEYS:
+            raise _NotConfigured(
+                "宿主给的是守卫键 %r，但没人装 `guard_text_fn`（内容侧装配期应 "
+                "`config.mount(guard_text_fn=...)`）—— 引擎不带玩家文案，也不把键名当句子投出去。"
+                % (declared,))
+        return declared
+
     def _guard_player(self, env: Env):
-        """玩家档必须存在（否则拦截，文案由调用方给）。"""
+        """玩家档必须存在（否则拦截，文案见 `_guard_text`）。"""
         if not env.player:
             if not self.register_hint:
                 raise _NotConfigured("宿主守卫文案没声明：给 `Host(register_hint=...)`（属内容）")
-            return self.register_hint
+            return self._guard_text(GUARD_KEYS[0], self.register_hint, "register_hint")
         return None
 
     def _guard_battle(self, env: Env):
@@ -230,7 +281,7 @@ class Host:
             return None
         if not self.battle_hint:
             raise _NotConfigured("宿主守卫文案没声明：给 `Host(battle_hint=...)`（属内容）")
-        return self.battle_hint
+        return self._guard_text(GUARD_KEYS[1], self.battle_hint, "battle_hint")
 
     def build_env(self, key: str, spec, ctx: dict, player: dict, *, raw=None) -> Env:
         """构造一条消息的执行环境（字段契约见 `Env`）。"""

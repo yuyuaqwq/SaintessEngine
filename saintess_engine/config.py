@@ -136,6 +136,18 @@ _HOOKS = {
     #   ★ 读口同样走 `optional_hook`：不配 = 这款游戏没有通用否决 ⇒ 这一整段不存在
     #     （不拦、不回，与接线前逐字节相同）。
     "skill_gate_fn": None,
+    # ★ P-11（2026-09-27）：**内置守卫**（`player` / `battle`）拦截句的读口 —— 那一句
+    #   原先由宿主直接写在 `Host(register_hint=…, battle_hint=…)` 上（宿主面因此带着游戏词）。
+    #   形状 = fn(key: str) -> str | None；`key` = 引擎给的**中性键名**（全集在
+    #   `host/runtime.py::GUARD_KEYS`：`guard.register_missing` / `guard.battle_missing`），
+    #   句子由内容侧按自己的文案表渲染（例：texts 槽位）。
+    #   · 装了本口：宿主传的那两个值**当键**用（宿主只传键 ⇒ 宿主面零游戏词）；
+    #     键不在中性全集里 ⇒ 抛；答不上来（None / 空 / 非 str）⇒ 抛。
+    #   · 没装：值当**字面量**（旧口径 —— 与接线前逐字节相同，示例宿主 / 合成包不受影响）；
+    #     但值恰好是引擎自带的中性键 ⇒ 抛（「给的是键却没人配句子」= 装漏了，
+    #     绝不把键名当玩家文案投出去）。
+    #   ★ 读口走 `optional_hook`（**不**受 strict 影响）：fail-closed 由 `Host` 那三态自己负责。
+    "guard_text_fn": None,
 }
 
 # R8：无挂载静默降级开关。

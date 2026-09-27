@@ -278,9 +278,9 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 
 见 [../concepts/config-injection.md](../concepts/config-injection.md) 的 25 hook 表。
 公开面（引擎侧只剩「注入面 + 严格模式」这几个）：
-`EngineNotConfigured`（`:20`）· `strict`（`:146`）· `set_config`（`:157`）· `get_config`（`:166`）·
-`register_hook_provider`（`:175`）· `set_hook`（`:185`）· `mount`（`:198`）· `get_hook`（`:204`）·
-`unconfigured(name, default)`（`:253`）。
+`EngineNotConfigured`（`:20`）· `strict`（`:158`）· `set_config`（`:169`）· `get_config`（`:178`）·
+`register_hook_provider`（`:187`）· `set_hook`（`:197`）· `mount`（`:210`）· `get_hook`（`:216`）·
+`unconfigured(name, default)`（`:265`）。
 ★ 原先那一串「游戏配置取件面」（`load_game_rules` / `get_effect_rules` / `state_def` /
 `formulas()` / `kind_of` / `monster_skill_of` …）**已随第 7 批搬进扩展包** —— 现在住
 `ext_combat.battle.game_config`（包内写 `from ext_combat.battle import game_config`）。
@@ -471,7 +471,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 | `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
 | ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 不实现） |
-| `config.set_hook` | `config.py:160` | 零外部引用（都走 `mount`） |
+| `config.set_hook` | `config.py:172` | 零外部引用（都走 `mount`） |
 | `effects.resolve_actions` | `effects.py:140` | 零外部引用（`effects` 内部调用） |
 | `ai.eval_when` | `ai.py:159` | 零外部引用（`resolve_ai_move` 内部调） |
 | ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |

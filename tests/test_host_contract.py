@@ -385,8 +385,99 @@ def main() -> int:
     finally:
         CFG._HOOKS["route_miss_text_fn"] = _saved_hook
 
+    # 【13】内置守卫拦截句：宿主只传**中性键**，句子由内容侧声明（P-11 · 2026-09-27）
+    print("\n【13】守卫拦截句读口 `guard_text_fn`（P-11：宿主传键 · 内容侧渲染 · 三态 fail-closed）")
+    from saintess_engine.host.runtime import GUARD_KEYS as _GK
+
+    check("中性键全集 = 2 个，且都是 ASCII 中性名（引擎只认识这几个名字）",
+          tuple(_GK) == ("guard.register_missing", "guard.battle_missing")
+          and all(k == k.encode("ascii", "ignore").decode() for k in _GK), repr(_GK))
+
+    _saved_g = CFG._HOOKS.get("guard_text_fn")
+    _saved_reg, _saved_bat, _saved_bc = host.register_hint, host.battle_hint, host.battle_check
+    try:
+        host.register_hint, host.battle_hint = _GK[0], _GK[1]     # 宿主只传键（P-11 口径）
+        host.battle_check = lambda uid, gid: False                # 强制「不在战斗中」
+        env_empty = Env(uid="u-x", player={}, text="x")
+        env_have = Env(uid="u-1", player={"uid": "u-1"}, text="x")
+
+        # ① 装了读口：键被原样问过去，句子逐字用内容侧渲染的结果
+        seen: dict = {}
+        _TBL = {_GK[0]: "S-REG", _GK[1]: "S-BAT"}
+
+        def _gt(key):
+            seen["key"] = key
+            return _TBL.get(key)
+
+        CFG.mount(guard_text_fn=_gt)
+        seen.clear()
+        check("宿主的键被**原样**问过去（player）",
+              host.builtin_guards()["player"](env_empty) == "S-REG" and seen.get("key") == _GK[0],
+              repr(seen))
+        check("宿主的键被**原样**问过去（battle）",
+              host.builtin_guards()["battle"](env_have) == "S-BAT" and seen.get("key") == _GK[1],
+              repr(seen))
+        check("走 run_guards 的同一条路也拿到内容侧那句",
+              run_guards(["player"], env_empty, builtin=host.builtin_guards()) == "S-REG")
+        check("有档 ⇒ 不拦（读口只管拦截句，不参与放行判定）",
+              host.builtin_guards()["player"](env_have) is None)
+
+        # ② 宿主传了引擎不认识的键 ⇒ 当场抛（宿主面不许写包专属键名）
+        host.register_hint = "SYS_GUARD_REGISTER"
+        try:
+            host.builtin_guards()["player"](env_empty)
+            check("宿主传包专属键 ⇒ 抛", False, "没抛")
+        except CFG.EngineNotConfigured as exc:
+            check("宿主传包专属键 ⇒ 抛（点名那个键）", "SYS_GUARD_REGISTER" in str(exc), str(exc)[:70])
+        finally:
+            host.register_hint = _GK[0]
+
+        # ③ 装了却给不出文本（None / 空 / 非 str）⇒ 同样 fail-closed
+        for _i, _bad in enumerate((lambda key: None, lambda key: "", lambda key: 123)):
+            CFG.mount(guard_text_fn=_bad)
+            try:
+                host.builtin_guards()["player"](env_empty)
+                check("装了却给不出文本（第 %d 种）⇒ 抛" % (_i + 1), False, "没抛")
+            except CFG.EngineNotConfigured:
+                check("装了却给不出文本（第 %d 种）⇒ 抛 EngineNotConfigured" % (_i + 1), True)
+
+        # ④ 三态 · 没装读口：字面量照旧（与接线前逐字节相同）——「不配 = 不存在」
+        CFG._HOOKS["guard_text_fn"] = None
+        host.register_hint, host.battle_hint = "旧句子-A", "旧句子-B"
+        check("没装读口 + 宿主给字面量 ⇒ 逐字照旧（老宿主零变化）",
+              host.builtin_guards()["player"](env_empty) == "旧句子-A"
+              and host.builtin_guards()["battle"](env_have) == "旧句子-B")
+        # ⑤ 三态 · 没装读口 + 宿主给的是中性键 ⇒ 抛（绝不把键名当句子投出去）
+        host.register_hint, host.battle_hint = _GK[0], _GK[1]
+        for _nm in ("player", "battle"):
+            try:
+                host.builtin_guards()[_nm](env_empty if _nm == "player" else env_have)
+                check("没装读口却收到键（%s）⇒ 抛" % _nm, False, "没抛")
+            except CFG.EngineNotConfigured as exc:
+                check("没装读口却收到键（%s）⇒ 抛（点名 guard_text_fn）" % _nm,
+                      "guard_text_fn" in str(exc), str(exc)[:70])
+        # ⑥ 两态：装回去 ⇒ 逐字回到内容侧那句（撤改没留后遗症）
+        CFG.mount(guard_text_fn=_gt)
+        check("两态：装回读口 ⇒ 逐字回到内容侧那句",
+              host.builtin_guards()["player"](env_empty) == "S-REG"
+              and host.builtin_guards()["battle"](env_have) == "S-BAT")
+        # ⑦ 没声明（键和句子都没给）⇒ 抛（原有口径不变）
+        host.register_hint = ""
+        try:
+            host.builtin_guards()["player"](env_empty)
+            check("宿主的键都没给 ⇒ 抛", False, "没抛")
+        except CFG.EngineNotConfigured:
+            check("宿主的键都没给 ⇒ 抛 EngineNotConfigured（原有口径不变）", True)
+    finally:
+        CFG._HOOKS["guard_text_fn"] = _saved_g
+        host.register_hint, host.battle_hint, host.battle_check = _saved_reg, _saved_bat, _saved_bc
+
     _rt = open(os.path.join(ROOT, "saintess_engine", "host", "runtime.py"),
                encoding="utf-8").read()
+    check("引擎源码里那两句玩家文案**一个字都不在**（句子真源在内容侧）",
+          "未找到你的角色档" not in _rt and "你现在不在战斗中" not in _rt)
+    check("引擎源码里只有中性键名（`guard.register_missing` / `guard.battle_missing`）",
+          "guard.register_missing" in _rt and "guard.battle_missing" in _rt)
     check("引擎源码里那句中文兜底**整句消失**（判据盯那句赋值，不盯字符串出现）",
           "没有命中包内任何指令声明" not in _rt)
 
