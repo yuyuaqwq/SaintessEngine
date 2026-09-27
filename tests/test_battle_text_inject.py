@@ -105,9 +105,19 @@ landing.deal_damage(b3, None, ea3, 99999, logs4)
 #   （队列 ⛔「致命一击真伤数」）。扣血 / 返回值 / on_kill 的 dmg 一格没动。
 check("倒下行逐字（真伤害，不被剩余血截断）",
       logs4 == ["💥 房间怪 受到 99999 点伤害，倒下了！"], logs4)
+random.seed(7)
 _b3b, _p3b, _ea3b = _setup()
-check("★ 但**真扣血**仍钳到剩余血（返回 = 493，两只口径别混）",
-      landing.deal_damage(_b3b, None, _ea3b, 99999, []) == 493)
+#   ★ 修（2026-09-27 · 那笔提交的**自检漏**）：这一段原写成「新鲜档 + 断言返回 493」——
+#     493 是**上面那一段**打完 7 点之后的残血，新鲜档的怪是 500 ⇒ 这条判据**天生红**
+#     （引擎全量 97 文件里唯一那条红就是它）。两处一起收：① 期望值从**这一击之前的血**现算，
+#     不写死数（写死就会随 fixture 飘）；② `dodge` 钉 0 + `random.seed(7)` —— 本门禁不测闪避，
+#     别让「命中 / 被闪」的掷硬币决定这条判据（同 `flaky-triage` 那条纪律）。
+_ea3b["dodge"] = 0.0
+_hp_before_kill = int(_ea3b.get("hp") or 0)
+check("★ 但**真扣血**仍钳到剩余血（返回 = 这一击之前那点血 = %d，两只口径别混）"
+      % _hp_before_kill,
+      landing.deal_damage(_b3b, None, _ea3b, 99999, []) == _hp_before_kill
+      and _hp_before_kill > 0)
 check("防御行逐字", b3._do_defend(ActCtx(caster=pa3, action="defend"))
       == ["🛡 甲 摆出防御姿态，受到的伤害减半！"])
 check("逃跑行逐字", b3._do_flee(ActCtx(caster=pa3, action="flee")) == ["💨 甲 逃跑了！"])
