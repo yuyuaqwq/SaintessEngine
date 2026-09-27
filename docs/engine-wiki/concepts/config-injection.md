@@ -39,8 +39,8 @@
 | `skill_level_of_fn` | `fn(player, name) -> int` | `formulas.skill_level_of` | 返回 `1`（未升级兜底） |
 | `tag_slots_fn` | `fn() -> {槽位: tag}` | `tags.slot()`（`tags.py:152`） | 用引擎固定词汇表的缺省名（`tags.DEFAULT_SLOTS`，如 `immune_control` → `cc_immune`） |
 | `panel_fn` | `fn(class_name, level, equipment, tier, attributes, evolve_path, panel_bonus, race) -> dict` | `stats._player_base_stats`（`stats.py:120-132`） | `{}`（空面板） |
-| `skill_lookup` | 对象（需 `.skill_info(cls, key)` / `.skill_by_key(key)`） | `battle._index_one_actor`（`battle.py:175,137`） | 返回 `None` → 技能索引空 |
-| `monster_skill_fn` | `fn(key) -> dict\|None` | `battle._index_one_actor`（`battle.py:181`） | `None` |
+| `skill_lookup` | 对象（需 `.skill_info(cls, key)` / `.skill_by_key(key)`） | `battle._index_one_actor`（`battle.py:167,137`） | 返回 `None` → 技能索引空 |
+| `monster_skill_fn` | `fn(key) -> dict\|None` | `battle._index_one_actor`（`battle.py:173`） | `None` |
 | `basic_skill_fn` | `fn(class_name) -> dict\|None` | `actions.resolve_basic_skill`（`actions.py:40`） | 回落 `basic_fallback` |
 | `basic_fallback` | dict | 同上（`actions.py:48`） | 结构化兜底 `{"name": "", "kind": "", "exprs": ["atk*1.0"]}` |
 | `kinds` | dict | `config.kind_of`（`config.py:292`）→ `actions._kind` | `""`（kind 比较全不成立） |

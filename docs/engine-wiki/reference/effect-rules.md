@@ -27,10 +27,10 @@
 | `stat_scale` | `{stat: 每层系数}` | ✅ `stats._apply_effects`（`stats.py:60-67`） | 每层面板修正。`st[stat] *= (1 + n×系数)`；特殊 stat：`dmg_mult`（写 `st["_state_dmg_mult"]`，伤害乘区读它）、`reduce`（写 `st["reduce"]`，⚠️ 见「已知死字段」） |
 | `debuff_scale` | `{stat: 每层系数}` | ✅ **`ext_combat` 消费**（2026-09-11） | `landing.deal_damage` 遍历持有者状态：Σ(系数 × stacks) → 伤害 ×(1+Σ)。与 `stat_scale` 对称；层数上限由数据侧 `cap` 给。另仍是 `effects._is_stack_resource` 的判据关键词（`effects.py:280`，分派用） |
 | `panel` | `{"stat","op","mult"}` | ✅ `effects.act_apply` 快照分支（`effects.py:466-478`） | 静态面板增益的默认值（动作参数缺省时查表）。`op`：`mul`（乘）/ `add`（加）；`op="reduce"` 特殊（见 `stats.py:75-76`） |
-| `consume` | `{"mode": ...}` | ✅ `effects.act_apply`（`effects.py:354-357`）+ `Battle.act`（`battle.py:526-553`） | 控制型条目的消费模式：`"skip"`（整跳行动）/ `"no_skill"`（技能转普攻） |
+| `consume` | `{"mode": ...}` | ✅ `effects.act_apply`（`effects.py:354-357`）+ `Battle.act`（`battle.py:522-546`） | 控制型条目的消费模式：`"skip"`（整跳行动）/ `"no_skill"`（技能转普攻） |
 | `period` | dict | ✅ `schedule._settle_time_effects`（`schedule.py:663-671`） | 周期结算声明（见下） |
-| `cleanse` | bool | ✅ `effects.act_cleanse`（`effects.py:635`） | `True` = 可被净化 |
-| `on` | `"caster"` \| `"target"` | ✅ `effects.act_cleanse`（`effects.py:635`，`on=="target"` 也清）；内容侧 `_mech_to_effect` 判 `on_target`（`effects.py:252`） | 效果的默认作用对象。`"target"` = 对敌标记类 |
+| `cleanse` | bool | ✅ `effects.act_cleanse`（`effects.py:621`） | `True` = 可被净化 |
+| `on` | `"caster"` \| `"target"` | ✅ `effects.act_cleanse`（`effects.py:621`，`on=="target"` 也清）；内容侧 `_mech_to_effect` 判 `on_target`（`effects.py:252`） | 效果的默认作用对象。`"target"` = 对敌标记类 |
 | `negative` | bool | ⚠️ 包不读 | 「负面」标记。内容侧用它数「负面种数」（`class_mech_proc.py:767`，`target_debuff_kinds` judge） |
 | `tag` | str | ⚠️ 包不读 | 旧 CLEANSE_TAGS 时代的标记。`act_apply` 读的是 **params** 的 `tag`（作为 `key` 的兜底，`effects.py:344`），不是 `cfg["tag"]` |
 | `cd_mult` | float | ✅ `actions.do_skill`（`actions.py:91-99`） | 冷却倍率（`0.8` = CD −20%）。多态并存时**取最小**（最速） |

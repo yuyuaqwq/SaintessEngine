@@ -19,8 +19,8 @@ from .actors import (ActCtx, DEFEND_TAG, actor_alive, actor_dead,
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from . import actions
 from . import game_config as _GC
+from .cues import cue as _cue          # 已迁移点位走表现事件（措辞真源 = 内容侧文案表）
 from saintess_engine.config import optional_hook as _optional_hook
-from saintess_engine.text import render_or as _render_or
 
 
 def _text_table_of_content():
@@ -125,14 +125,6 @@ class Battle:
             for _acts in self.sides.values():
                 for _a in _acts:
                     self._seed_ct_one(_a)
-
-    def _t(self, key: str, default: str, /, **slots) -> str:
-        """战斗日志文案口：注入表有该 key 就用表，否则用调用点兜底模板。
-
-        `default` 是**兜底模板**（`{slot}` 占位）—— 未注入时与旧内联 f-string 逐字同款；
-        模块级函数（landing / effects / actions / schedule / gauge）走 `render_via(battle, …)`。
-        """
-        return _render_or(self.text, key, default, **slots)
 
     # ============================================================
     # 构造辅助
@@ -315,9 +307,13 @@ class Battle:
         """
         caster = actor or self.focus()
         if caster is None:
-            return [self._t("battle.core.no_actor", "没有可行动的玩家！")], False, None
+            _no_actor: list = []
+            _cue(self, _no_actor, "battle.core.no_actor", {})
+            return _no_actor, False, None
         if self.result:
-            return [self._t("battle.core.finished", "战斗已结束！")], True, None
+            _finished: list = []
+            _cue(self, _finished, "battle.core.finished", {})
+            return _finished, True, None
         # 决策前刷新技能索引（运行期换招/获得技能后索引可能落后于 actor.skills；
         # 必须在 ActCtx 构造前——ActCtx.__post_init__ 是技能 dict 的唯一解析时机）
         self.refresh_skill_index(caster)
@@ -529,16 +525,13 @@ class Battle:
                 ef.pop(tag, None)
                 continue
             if mode == "no_skill" and ctx.action == "skill":
-                logs.append(self._t("battle.core.silenced",
-                                    "🤐 {name} 被沉默，无法使用技能！(只能普攻/防御)",
-                                    name=actor.get('name', '目标')))
+                _cue(self, logs, "battle.core.silenced", {"name": actor.get('name', '目标')})
                 ctx.action = "attack"
                 ctx.skill_name = None
                 continue
             if mode == "skip":
-                logs.append(self._t("battle.core.controlled",
-                                    "💫 {name} 被【{tag}】控制，无法行动！",
-                                    name=actor.get('name', '目标'), tag=tag))
+                _cue(self, logs, "battle.core.controlled",
+                     {"name": actor.get('name', '目标'), "tag": tag})
                 ef.pop(tag, None)
                 # N8 事件：行动级消费点（控制跳过）
                 _fire(self, "on_act_consume", {"actor": actor, "tag": tag}, logs)
@@ -568,11 +561,11 @@ class Battle:
                         ctx._override_consumed = True
                 except Exception as _e:
                     _diag(self, "act", _e)          # 审计 P-44 余量：不再静默（行为不变）
-                    pre_logs = [self._t("battle.core.unknown_action",
-                                        "未知行动类型：{action}", action=action)]
+                    pre_logs = []
+                    _cue(self, pre_logs, "battle.core.unknown_action", {"action": action})
             if not getattr(ctx, "_override_consumed", False):
-                pre_logs = [self._t("battle.core.unknown_action",
-                                    "未知行动类型：{action}", action=action)]
+                pre_logs = []
+                _cue(self, pre_logs, "battle.core.unknown_action", {"action": action})
         # ---- 登记待发行动（T0）：第一段耗时由回执 / 行动类别决定（形状与数值全在内容侧）----
         from .schedule import pending_begin, segment_plan_of
         _consumed = bool(getattr(ctx, "_override_consumed", False))
@@ -594,8 +587,7 @@ class Battle:
                                else (_plan["cast"], _plan["recover"]))
             ctx._plan = (_cast, _recover)          # ★ ct 段复用同一份声明（不许各自解析）
         pending_begin(self, ctx, cast=_cast, recover=_recover, pre_logs=pre_logs)
-        logs.append(self._t("battle.schedule.cast_begin", "🌀 {name} 开始出招…",
-                            name=actor.get('name', '目标')))
+        _cue(self, logs, "battle.schedule.cast_begin", {"name": actor.get('name', '目标')})
         return logs, bool(self.result)
 
     def _dispatch_pending(self, actor: dict, slot: dict, logs: list):
@@ -655,14 +647,15 @@ class Battle:
         # 写**容器**（唯一真源）：窗口条目 = {"stacks": 1, "until": "own_act"}
         # 到期点 = 你自己下一次行动的那一帧（`Battle.act` 的通用消费段）。
         open_window(actor, DEFEND_TAG)
-        return [self._t("battle.core.defend",
-                        "🛡 {name} 摆出防御姿态，受到的伤害减半！",
-                        name=actor.get('name', ''))]
+        _lines: list = []
+        _cue(self, _lines, "battle.core.defend", {"name": actor.get('name', '')})
+        return _lines
 
     def _do_flee(self, ctx: ActCtx) -> list:
         self.result = "fled"
-        return [self._t("battle.core.fled", "💨 {name} 逃跑了！",
-                        name=ctx.caster.get('name', ''))]
+        _lines: list = []
+        _cue(self, _lines, "battle.core.fled", {"name": ctx.caster.get('name', '')})
+        return _lines
 
     # ============================================================
     # 死亡/胜负

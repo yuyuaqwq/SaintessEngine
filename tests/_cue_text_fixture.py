@@ -8,7 +8,7 @@
 否则碰到那些行拿到的是「一行坏数据 + 一条诊断」，断言文案的用例会集体变红。
 
 **真源**是各游戏包自己的文案表（如 `examples/minimal-game/content/texts.py`）——
-本文件这 17 条是它们的**副本**，只服务于引擎门禁（不让引擎门禁依赖某个具体内容包的措辞）。
+本文件这 42 条是它们的**副本**，只服务于引擎门禁（不让引擎门禁依赖某个具体内容包的措辞）。
 两份串必须逐字相同（`tests/test_cues_shape.py` 逐字对拍两者）。
 
 跑法：不单独跑 —— 被门禁 import（`from _cue_text_fixture import TEXT, SUBS, install`）。
@@ -46,6 +46,31 @@ TEMPLATES = {
     "battle.landing.heal_shared": "✨ 治疗由【{name}】分担",
     "battle.landing.heal_forbid": "🩸 禁疗：治疗量 -{pct}%！",
     "battle.landing.heal_wound": "🩸 重伤：治疗量 -{pct}%！",
+    "battle.core.no_actor": "没有可行动的玩家！",
+    "battle.core.finished": "战斗已结束！",
+    "battle.core.silenced": "🤐 {name} 被沉默，无法使用技能！(只能普攻/防御)",
+    "battle.core.controlled": "💫 {name} 被【{tag}】控制，无法行动！",
+    "battle.core.unknown_action": "未知行动类型：{action}",
+    "battle.schedule.cast_begin": "🌀 {name} 开始出招…",
+    "battle.core.defend": "🛡 {name} 摆出防御姿态，受到的伤害减半！",
+    "battle.core.fled": "💨 {name} 逃跑了！",
+    "battle.effects.immune_control": "🛡️ {name} 免疫控制：{key} 未生效",
+    "battle.effects.stack_applied": "💫 {name} 被【{key}】{turns} 刻！",
+    "battle.effects.immune_debuff": "🚫 {name} 免疫【{key}】，异常未生效",
+    "battle.effects.stack_set": "✦ {key} 置为 {n}",
+    "battle.effects.shield_pct": "🛡️ {value:.0%}（持续 {turns} 刻）",
+    "battle.effects.buff_boost": "✦ {key} 提升（{op}×{mult}，持续 {turns} 刻）",
+    "battle.effects.on_hit_ready": "✦ {key} 出手效果就绪（{turns} 刻内生效）",
+    "battle.effects.stack_active": "✦ {key}（持续 {turns} 刻）",
+    "battle.effects.stack_short": "⚠️ {key} 不足（需 {amount}，当前 {cur}）",
+    "battle.effects.stack_spent": "✦ 消耗 {amount} 点 {key}（剩余 {left}）",
+    "battle.effects.shield_gain": "🛡️ {name} 获得护盾 {value} 点！",
+    "battle.effects.cleansed": "✨ 净化了 {names}！",
+    "battle.effects.cleanse_none": "✨ 净化（无减益可解）",
+    "battle.effects.healed": "✨ {name} 恢复了 {heal} 点生命！",
+    "battle.effects.cast_broken": "💥 {name} 的出招被打断了！",
+    "battle.effects.damaged": "💥 {name} 受到 {dmg} 点伤害！",
+    "battle.effects.stack_add": "✦ {key} {n}{cap}（+{amount}）",
 }
 
 _MISSING = sorted(set(CUE_NAMES) - set(TEMPLATES))

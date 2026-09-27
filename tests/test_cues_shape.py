@@ -377,7 +377,7 @@ check("★ 引擎 CUE_NAMES 全部被示例包声明（缺一条 ⇒ 装配期�
 check("示例包不多声明引擎不认的名字（拼写漂移现形）",
       not [k for k in _EX_CUES.SUBS if k not in CUE_NAMES], str(sorted(_EX_CUES.SUBS)))
 check("CUE_NAMES 无重复（同名即接口）", len(set(CUE_NAMES)) == len(CUE_NAMES), str(CUE_NAMES))
-check("★ CUE_NAMES = B1 的 3 条 + B2 的 14 条 = 17", len(CUE_NAMES) == 17, str(len(CUE_NAMES)))
+check("★ CUE_NAMES = B1 的 3 条 + B2 的 14 条 + B3 的 25 条 = 42", len(CUE_NAMES) == 42, str(len(CUE_NAMES)))
 check("★ 示例包文案表与订阅表同源（订阅键集 = 文案 key 集）",
       set(_EX_CUES.SUBS) == set(_EX_TEXTS.TEMPLATES), str(sorted(_EX_TEXTS.TEMPLATES)))
 check("★ 门禁夹具与示例包文案表**逐字**相同（夹具只是副本，不是第二真源）",

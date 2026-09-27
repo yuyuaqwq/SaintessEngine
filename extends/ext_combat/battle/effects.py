@@ -28,7 +28,7 @@ from .state_effects import state_def
 from . import tags                       # 标签机制（注册表 / 统一查询面 / 槽位名）
 from . import traits                    # 内容侧身份标签（精确面 · 引擎不认标签叫什么 · 审计 E3）
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
-from saintess_engine.text import render_via
+from .cues import cue as _cue            # 已迁移点位走表现事件（措辞真源 = 内容侧文案表）
 
 # ============================================================
 # stacks 数值口径（v181.M-R2e B3：effects float 通用层）
@@ -375,9 +375,8 @@ def act_apply(battle, caster, target, params, logs):
                 continue
             _im_exp = max(_im_exp, float(_e.get("expire", 0) or 0))
         if _im_exp > _now0:
-            logs.append(render_via(battle, "battle.effects.immune_control", "🛡️ {name} 免疫控制：{key} 未生效",
-                                name=holder.get('name', '目标'),
-                                key=key))
+            _cue(battle, logs, "battle.effects.immune_control",
+                 {"name": holder.get('name', '目标'), "key": key})
             return
         # 控制时长对**带某些标签的目标**减半：标签名单由该状态的规则声明
         #   （`state_def(key)["ctrl_half_traits"]`），引擎不认标签叫什么（审计 E3）。
@@ -389,10 +388,8 @@ def act_apply(battle, caster, target, params, logs):
         old = ef.get(key)
         old_exp = float(old.get("expire", 0) or 0) if isinstance(old, dict) else 0.0
         ef[key] = {"expire": max(old_exp, now + turns), "mode": mode, "stacks": 1}
-        logs.append(render_via(battle, "battle.effects.stack_applied", "💫 {name} 被【{key}】{turns} 刻！",
-                            name=holder.get('name', '目标'),
-                            key=key,
-                            turns=turns))
+        _cue(battle, logs, "battle.effects.stack_applied",
+             {"name": holder.get('name', '目标'), "key": key, "turns": turns})
         return
     # 叠层型 / 快照型（原 act_state_add/set/buff）：holder 按 on 定位
     holder = caster if on == "caster" else (target or caster)
@@ -410,9 +407,8 @@ def act_apply(battle, caster, target, params, logs):
             if _imm is None:
                 _imm = getattr(battle, tags.slot("immune_dots"), None)
             if _imm and key in list(_imm):
-                logs.append(render_via(battle, "battle.effects.immune_debuff", "🚫 {name} 免疫【{key}】，异常未生效",
-                                    name=holder.get('name', '目标'),
-                                    key=key))
+                _cue(battle, logs, "battle.effects.immune_debuff",
+                     {"name": holder.get('name', '目标'), "key": key})
                 return
     except Exception as _e:
         _diag(battle, "act_apply · 免疫查询", _e)          # 审计 P-44：不再静默（行为不变）
@@ -444,11 +440,15 @@ def act_apply(battle, caster, target, params, logs):
         note_dot_source(battle, holder, key, caster)
         if op == "add":
             cap_txt = f"/{cap}" if cap < 999999 else ""
-            logs.append(f"✦ {key} {_fmt_stack(n)}{cap_txt}（+{_fmt_stack(amount)}）")
+            # ★ B3（2026-09-27）：这一行原先**未键化**（裸 f-string，含全角括号与 emoji ⇒
+            #   恰好从「实参里扫汉字」那条旧判据的缝里溜过去）。现同批补 key（第 62 个点位），
+            #   模板逐字搬进内容侧文案表：`✦ {key} {n}{cap}（+{amount}）`。
+            _cue(battle, logs, "battle.effects.stack_add",
+                 {"key": key, "n": _fmt_stack(n), "cap": cap_txt,
+                  "amount": _fmt_stack(amount)})
         else:
-            logs.append(render_via(battle, "battle.effects.stack_set", "✦ {key} 置为 {n}",
-                                key=key,
-                                n=_fmt_stack(n)))
+            _cue(battle, logs, "battle.effects.stack_set",
+                 {"key": key, "n": _fmt_stack(n)})
         # N8 事件：状态阈值（层数变化后广播——"某资源满 10 → 触发某形态"由上层声明匹配）
         try:
             from .effect_triggers import fire as _fire
@@ -484,10 +484,8 @@ def act_apply(battle, caster, target, params, logs):
         #   `key` 槽位照旧传下去（内容侧声明自己的模板时仍可引用它，见本包
         #   `content/rules/battle_text.json` 的同类声明）—— 要显示玩家看得懂的名字，
         #   由内容侧的文案表给（引擎不认识哪个 key 叫什么）。
-        logs.append(render_via(battle, "battle.effects.shield_pct", "🛡️ {value:.0%}（持续 {turns} 刻）",
-                            key=key,
-                            value=float(value),
-                            turns=turns))
+        _cue(battle, logs, "battle.effects.shield_pct",
+             {"key": key, "value": float(value), "turns": turns})
         return
     # 增益：参数 stat/op/mult（EFFECT_ACTIONS 静态配置已入 EFFECT_RULES[key].panel，
     # V5 后动作瘦身 key-only——参数缺省查表；动态装配层仍参数直传覆盖）→ 快照进条目
@@ -504,11 +502,8 @@ def act_apply(battle, caster, target, params, logs):
         ef[key] = {"stacks": 1,
                    "expire": max(old_exp, expire),
                    "stat": stat, "op": o or "mul", "mult": float(mult)}
-        logs.append(render_via(battle, "battle.effects.buff_boost", "✦ {key} 提升（{op}×{mult}，持续 {turns} 刻）",
-                            key=key,
-                            op=o or 'mul',
-                            mult=mult,
-                            turns=turns))
+        _cue(battle, logs, "battle.effects.buff_boost",
+             {"key": key, "op": o or 'mul', "mult": mult, "turns": turns})
         return
     # 无 stat 的纯状态 buff（免疫/一次性/标记等）：只记录到期，不折算面板
     note_dot_source(battle, holder, key, caster)
@@ -519,13 +514,9 @@ def act_apply(battle, caster, target, params, logs):
     # N7.3 出手消费型：hit 子键声明出手效果（dmg_mult 增伤 / guaranteed_crit 必暴）
     if isinstance(hit_params, dict):
         entry["hit"] = dict(hit_params)
-        logs.append(render_via(battle, "battle.effects.on_hit_ready", "✦ {key} 出手效果就绪（{turns} 刻内生效）",
-                            key=key,
-                            turns=turns))
+        _cue(battle, logs, "battle.effects.on_hit_ready", {"key": key, "turns": turns})
     else:
-        logs.append(render_via(battle, "battle.effects.stack_active", "✦ {key}（持续 {turns} 刻）",
-                            key=key,
-                            turns=turns))
+        _cue(battle, logs, "battle.effects.stack_active", {"key": key, "turns": turns})
     ef[key] = entry
 
 
@@ -550,18 +541,14 @@ def act_consume(battle, caster, target, params, logs):
     entry = ef.get(key)
     cur = float(entry.get("stacks", 0) or 0) if isinstance(entry, dict) else 0.0
     if cur < amount:
-        logs.append(render_via(battle, "battle.effects.stack_short", "⚠️ {key} 不足（需 {amount}，当前 {cur}）",
-                            key=key,
-                            amount=_fmt_stack(amount),
-                            cur=_fmt_stack(cur)))
+        _cue(battle, logs, "battle.effects.stack_short",
+             {"key": key, "amount": _fmt_stack(amount), "cur": _fmt_stack(cur)})
         return
     if not isinstance(entry, dict):
         entry = ef[key] = {}
     entry["stacks"] = _norm_stack(max(0.0, cur - amount))
-    logs.append(render_via(battle, "battle.effects.stack_spent", "✦ 消耗 {amount} 点 {key}（剩余 {left}）",
-                        amount=_fmt_stack(amount),
-                        key=key,
-                        left=_fmt_stack(cur - amount)))
+    _cue(battle, logs, "battle.effects.stack_spent",
+         {"amount": _fmt_stack(amount), "key": key, "left": _fmt_stack(cur - amount)})
 
 
 @register_action("shield")
@@ -608,9 +595,8 @@ def act_shield(battle, caster, target, params, logs):
                 cur["expire_at"] = max(float(cur.get("expire_at", 0) or 0), expire)
     else:
         sh[key] = {"value": value, "expire_at": expire, "halve": halve}
-    logs.append(render_via(battle, "battle.effects.shield_gain", "🛡️ {name} 获得护盾 {value} 点！",
-                        name=holder.get('name', '目标'),
-                        value=value))
+    _cue(battle, logs, "battle.effects.shield_gain",
+         {"name": holder.get('name', '目标'), "value": value})
 
 
 # ---- cleanse：净化 ----
@@ -643,10 +629,9 @@ def act_cleanse(battle, caster, target, params, logs):
             rem.append(k)
             ef.pop(k, None)
     if rem:
-        logs.append(render_via(battle, "battle.effects.cleansed", "✨ 净化了 {names}！",
-                            names='、'.join(rem)))
+        _cue(battle, logs, "battle.effects.cleansed", {"names": '、'.join(rem)})
     else:
-        logs.append(render_via(battle, "battle.effects.cleanse_none", "✨ 净化（无减益可解）"))
+        _cue(battle, logs, "battle.effects.cleanse_none", {})
 
 
 @register_action("cleanse_all")
@@ -691,9 +676,8 @@ def act_heal(battle, caster, target, params, logs):
         return
     real = heal_actor(battle, holder, value, logs)
     if real > 0:
-        logs.append(render_via(battle, "battle.effects.healed", "✨ {name} 恢复了 {heal} 点生命！",
-                            name=holder.get('name', '目标'),
-                            heal=real))
+        _cue(battle, logs, "battle.effects.healed",
+             {"name": holder.get('name', '目标'), "heal": real})
 
 
 @register_action("interrupt")
@@ -712,8 +696,7 @@ def act_interrupt(battle, caster, target, params, logs):
     if slot.get("unstoppable"):
         return
     actor["charging"] = None
-    logs.append(render_via(battle, "battle.effects.cast_broken", "💥 {name} 的出招被打断了！",
-                        name=actor.get('name', '目标')))
+    _cue(battle, logs, "battle.effects.cast_broken", {"name": actor.get('name', '目标')})
     # N5B5c P5：打断事件（on_interrupt 剧本联动：出招被断 → 反噬/易伤）
     try:
         from .effect_triggers import fire as _fire
@@ -751,6 +734,5 @@ def act_damage(battle, caster, target, params, logs):
     dmg_kind = str(params.get("kind", "") or "")
     real = deal_damage(battle, caster, holder, value, logs, dmg_kind=dmg_kind)
     if real > 0:
-        logs.append(render_via(battle, "battle.effects.damaged", "💥 {name} 受到 {dmg} 点伤害！",
-                            name=holder.get('name', '目标'),
-                            dmg=real))
+        _cue(battle, logs, "battle.effects.damaged",
+             {"name": holder.get('name', '目标'), "dmg": real})

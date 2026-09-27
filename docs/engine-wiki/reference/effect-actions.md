@@ -37,14 +37,14 @@ EFFECT_ACTIONS = {
 
 | 动词 | 注册行 | 参数要点 |
 |---|---|---|
-| `apply` | `effects.py:335` | 五形态按参数分流：`mode`→控制 / `op=add\|set`+无 `stat`→叠层 / `value`\|`pct_from_mech_val`→值型 / `stat`+`mult`→面板快照 / `hit`→出手消费 / 无→纯状态 |
-| `consume` | `effects.py:534` | `key` + `amount`（不足则**不扣**并写提示，`effects.py:531-533`） |
-| `shield` | `effects.py:567` | `key`（缺省 `"buff"`）/ `value` \| `pct` \| 缺省 20% max_hp / `turns`（缺省 3；`>=999` 或 `forever` = 永久）/ `halve` |
-| `cleanse` | `effects.py:618` | 遍历目标 `effects`，按 `EFFECT_RULES[key]` 的 `period`（**`dir="gain"` 的资源回除外**）\| `on=="target"` \| `cleanse` 三判据清 |
-| `cleanse_all` | `effects.py:652` | 同上，`target or caster` |
-| `heal` | `effects.py:660` | `pct`（max_hp 比例）/ `missing_pct`（已损比例）/ `value`；`info.hp_pct` 兜底 |
-| `interrupt` | `effects.py:699` | 清 `target["charging"]`，fire `interrupt` |
-| `damage` | `effects.py:728` | `value` / `pct`（`pct_max_hp` 别名）/ `kind`；`on=target`（缺省）或 `on=caster`（自伤/反伤） |
+| `apply` | `effects.py:331` | 五形态按参数分流：`mode`→控制 / `op=add\|set`+无 `stat`→叠层 / `value`\|`pct_from_mech_val`→值型 / `stat`+`mult`→面板快照 / `hit`→出手消费 / 无→纯状态 |
+| `consume` | `effects.py:526` | `key` + `amount`（不足则**不扣**并写提示，`effects.py:543-546`） |
+| `shield` | `effects.py:555` | `key`（缺省 `"buff"`）/ `value` \| `pct` \| 缺省 20% max_hp / `turns`（缺省 3；`>=999` 或 `forever` = 永久）/ `halve` |
+| `cleanse` | `effects.py:605` | 遍历目标 `effects`，按 `EFFECT_RULES[key]` 的 `period`（**`dir="gain"` 的资源回除外**）\| `on=="target"` \| `cleanse` 三判据清 |
+| `cleanse_all` | `effects.py:638` | 同上，`target or caster` |
+| `heal` | `effects.py:646` | `pct`（max_hp 比例）/ `missing_pct`（已损比例）/ `value`；`info.hp_pct` 兜底 |
+| `interrupt` | `effects.py:684` | 清 `target["charging"]`，fire `interrupt` |
+| `damage` | `effects.py:711` | `value` / `pct`（`pct_max_hp` 别名）/ `kind`；`on=target`（缺省）或 `on=caster`（自伤/反伤） |
 
 已删除的旧动词（V4 收敛）：`control` / `buff` / `state_add` / `state_spend` / `state_set`
 → 并入 `apply` / `consume`。**表里再出现这些名字 = 静默 no-op**（原文警告见 `effects.py:17-18`）。
@@ -169,8 +169,8 @@ grep -rho 'register_action("[^"]*")' game/services/*.py | sort -u | wc -l
 ```
 
 ⚠️ **参数故意缺省**：`stacks_set` 没给 `key`（靠调用方 `mech`/`tag` 兜底，
-`effects.py:344`）；`heal_self` 没给 `pct`（靠 `info.hp_pct`，`effects.py:681`）；
-`shield` 没给 `value`（缺省取 `max_hp × 20%`，`effects.py:588`）。
+`effects.py:344`）；`heal_self` 没给 `pct`（靠 `info.hp_pct`，`effects.py:666`）；
+`shield` 没给 `value`（缺省取 `max_hp × 20%`，`effects.py:575`）。
 这些是「零默认值 + 调用方优先」的取舍：**能省的都省，但缺了就是无行为**。
 
 ### 三个映射到内容侧扩展动词

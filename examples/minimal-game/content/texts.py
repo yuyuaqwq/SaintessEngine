@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """《铆炉回声》文案表 —— 本包**唯一**的玩家可见措辞真源。
 
-为什么要有它（cue 解耦 B1 / B2）
---------------------------------
+为什么要有它（cue 解耦 B1 / B2 / B3）
+------------------------------------
 引擎不再自己拼句：结算只发「表现事件」（cue），措辞从本表按 key 取。已迁移点位的
-模板**已从引擎删掉**（B1 的 3 条 + B2 的 14 条 = 落地接口层的 17 条 `battle.landing.*`）
+模板**已从引擎删掉**（B1 的 3 条 + B2 的 landing 核心 14 条 + B3 的 effects 16 / battle.py 9
+= **42 条**：`battle.landing.*` · `battle.effects.*` · `battle.core.*` · `battle.schedule.cast_begin`）
 —— 本表缺一条 ⇒ 那条表现**渲染不出来**（引擎记诊断 + 出一行可读坏数据），
 **不会有**任何引擎兜底（回落 = 影子真源，正是解耦要拆掉的东西）。
 
@@ -17,7 +18,8 @@ from __future__ import annotations
 from saintess_engine.text import TextTable
 
 #: key（= cue 名）→ 逐字模板。★ 从引擎调用点**逐字**搬来（一个字符都不许漂）：
-#: 搬运脚本按 `battle.landing.*` 的原样字符串生成，不手抄。
+#: B1/B2 的 17 条由搬运脚本按 `battle.landing.*` 的原样字符串生成；
+#: B3 的 25 条同理（含一处原先**未键化**的裸 f-string，现补 key `battle.effects.stack_add`）。
 TEMPLATES = {
     "battle.landing.dodged": "💨 {name} 闪避了攻击！",
     "battle.landing.element_immune": "💠 免疫！【{name}】免疫{element}伤害！",
@@ -36,6 +38,31 @@ TEMPLATES = {
     "battle.landing.heal_shared": "✨ 治疗由【{name}】分担",
     "battle.landing.heal_forbid": "🩸 禁疗：治疗量 -{pct}%！",
     "battle.landing.heal_wound": "🩸 重伤：治疗量 -{pct}%！",
+    "battle.core.no_actor": "没有可行动的玩家！",
+    "battle.core.finished": "战斗已结束！",
+    "battle.core.silenced": "🤐 {name} 被沉默，无法使用技能！(只能普攻/防御)",
+    "battle.core.controlled": "💫 {name} 被【{tag}】控制，无法行动！",
+    "battle.core.unknown_action": "未知行动类型：{action}",
+    "battle.schedule.cast_begin": "🌀 {name} 开始出招…",
+    "battle.core.defend": "🛡 {name} 摆出防御姿态，受到的伤害减半！",
+    "battle.core.fled": "💨 {name} 逃跑了！",
+    "battle.effects.immune_control": "🛡️ {name} 免疫控制：{key} 未生效",
+    "battle.effects.stack_applied": "💫 {name} 被【{key}】{turns} 刻！",
+    "battle.effects.immune_debuff": "🚫 {name} 免疫【{key}】，异常未生效",
+    "battle.effects.stack_set": "✦ {key} 置为 {n}",
+    "battle.effects.shield_pct": "🛡️ {value:.0%}（持续 {turns} 刻）",
+    "battle.effects.buff_boost": "✦ {key} 提升（{op}×{mult}，持续 {turns} 刻）",
+    "battle.effects.on_hit_ready": "✦ {key} 出手效果就绪（{turns} 刻内生效）",
+    "battle.effects.stack_active": "✦ {key}（持续 {turns} 刻）",
+    "battle.effects.stack_short": "⚠️ {key} 不足（需 {amount}，当前 {cur}）",
+    "battle.effects.stack_spent": "✦ 消耗 {amount} 点 {key}（剩余 {left}）",
+    "battle.effects.shield_gain": "🛡️ {name} 获得护盾 {value} 点！",
+    "battle.effects.cleansed": "✨ 净化了 {names}！",
+    "battle.effects.cleanse_none": "✨ 净化（无减益可解）",
+    "battle.effects.healed": "✨ {name} 恢复了 {heal} 点生命！",
+    "battle.effects.cast_broken": "💥 {name} 的出招被打断了！",
+    "battle.effects.damaged": "💥 {name} 受到 {dmg} 点伤害！",
+    "battle.effects.stack_add": "✦ {key} {n}{cap}（+{amount}）",
 }
 
 

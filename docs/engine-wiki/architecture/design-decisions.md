@@ -21,10 +21,10 @@
 
 **痕迹**：
 - `actors.py:1-9` 的模块 docstring 原文：「引擎逻辑只用字段值，不按字段猜身份」
-- `Battle.focus()`：只认 `human_controlled`（`battle.py:241-250`）
+- `Battle.focus()`：只认 `human_controlled`（`battle.py:233-242`）
 - `schedule._next_player_due` / `_next_auto_due`：按同一个 bool 分流（`schedule.py:374/128`）
 - `Battle.add_actor` 注释：「不认识随从/召唤/亡灵/援军，只做注册 + 索引 + 排程」（`battle.py:292`）
-- `Battle.find_actor(uid)`：承伤/治疗转移的查找口（只读，不猜身份）（`battle.py:235`）
+- `Battle.find_actor(uid)`：承伤/治疗转移的查找口（只读，不猜身份）（`battle.py:227`）
 
 ---
 
@@ -109,7 +109,7 @@
 （`taken_calc` 的 `mult`）。
 
 **痕迹**：`landing.py:8-13` 原文（「为什么必须统一收口」）；
-`effects.act_damage` 也只做「读参数 → 调 `landing.deal_damage`」（`effects.py:685-712`）。
+`effects.act_damage` 也只做「读参数 → 调 `landing.deal_damage`」（`effects.py:670-696`）。
 
 ---
 
@@ -202,7 +202,7 @@ Boss 剧本导演。这些都需要游戏知识。
 **代价**：
 - **它们不落盘**：`from_state` 只恢复 `btype/sides/hostile_map`，
   恢复后必须自己重挂（文案表 `text=` 同理：可选关键字参数，恢复时重新传入）（[../guides/serialize-and-resume.md](../guides/serialize-and-resume.md)）
-- 异常被吞掉（`script_hook` 异常 → 回落默认行动，`battle.py:382-383`），
+- 异常被吞掉（`script_hook` 异常 → 回落默认行动，`battle.py:378-379`），
   钩子写错不容易发现
 
 **痕迹**：`battle.py:56-81` 的三段注释；

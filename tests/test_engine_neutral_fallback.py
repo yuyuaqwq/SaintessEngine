@@ -40,6 +40,15 @@ _HOOK_NAMES = ("formula_skeleton_fn", "skill_flat_fn", "skill_up_fn", "skill_lev
 
 from _check import bind_check  # noqa: E402  P0-1 断言助手单源：tests/_check.py
 
+# ★ B3（2026-09-27）：已迁移点位（`battle.schedule.cast_begin` / `battle.effects.cast_broken`…）
+#   的措辞真源在**内容侧文案表**，引擎模板已删 ⇒ 合成战斗必须自己注入「订阅表 + 文案表」，
+#   否则碰到那些行拿到的是「一行坏数据 + 一条诊断」（本文件不接任何内容包）。
+#   `_cue_text_fixture` = 门禁夹具（**不是真源**，逐字 = 迁移前那句）。
+from _cue_text_fixture import TEXT as FIX_TEXT  # noqa: E402
+from _cue_text_fixture import install as fix_install  # noqa: E402
+
+fix_install()
+
 check = bind_check(globals(), "PASS", "FAIL", "FAILURES")
 
 
@@ -267,7 +276,7 @@ def test_cast_window_two_phase():
 
     def _bt(a, b, **kw):
         return Battle(btype="monster", sides={"player": [a], "enemy": [b]},
-                      seed_ct=False, **kw)
+                      seed_ct=False, text=FIX_TEXT, **kw)
 
     def _win(actor) -> bool:
         """防御姿态 = `effects["defend"]` 窗口条目（收口后唯一真源）。"""
@@ -344,6 +353,7 @@ def test_cast_window_two_phase():
         a5, b5 = _mk("a5", "player", human=True), _mk("b5", "enemy", hp=1000)
         seen = {"n": 0}
         bt5 = Battle(btype="monster", sides={"player": [a5], "enemy": [b5]}, seed_ct=False,
+                     text=FIX_TEXT,
                      on_event=lambda _b, evt, _c, _l: seen.__setitem__("n", seen["n"] + 1)
                      if evt == "time_advance" else None)
         bt5.act(ActCtx(caster=a5, action="defend"))       # 落地 0 → 1.0

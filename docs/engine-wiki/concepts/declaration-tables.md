@@ -89,7 +89,7 @@ hit（dict）                           →  {stacks:1, expire, hit}      出手
 （`effects.py:351-480`，逐支的注释与日志文案都在那一段）
 
 `op="add"` 与 `op="mul"` 的区别是**有没有 `stat`**：面板增益的 `op` 是面板算子且必带
-`stat`，所以走快照分支（`effects.py:421-424` 注释）。
+`stat`，所以走快照分支（`effects.py:417-420` 注释）。
 
 ## `EFFECT_RULES`：任何 key 都可以有规则，也可以没有
 
@@ -104,9 +104,9 @@ hit（dict）                           →  {stacks:1, expire, hit}      出手
 | `stat_scale` | `stats._apply_effects`（`stats.py:60`）面板折算 |
 | `debuff_scale` | ✅ **引擎消费**（`landing.deal_damage`，2026-09-11 接线）：Σ(每层系数 × stacks) → 承伤 ×(1+Σ)，与 `stat_scale` 对称。`hunt_mark`/`soul_mark`/`curse` 的「每层承伤 +N%」现生效；`target["_dmg_taken_mult"]`（`landing.py`）仍是无状态来源的固定乘区 |
 | `panel` | `effects.act_apply` 快照分支（`effects.py:466-478`） |
-| `consume.mode` | `effects.act_apply` 控制分支（`effects.py:354-357`）+ `Battle.act` 的控制消费（`battle.py:526-553`） |
+| `consume.mode` | `effects.act_apply` 控制分支（`effects.py:354-357`）+ `Battle.act` 的控制消费（`battle.py:522-546`） |
 | `period` | `schedule._settle_time_effects`（`schedule.py:663-671`） |
-| `cleanse` / `period` / `on=="target"` | `effects.act_cleanse`（`effects.py:635-644`） |
+| `cleanse` / `period` / `on=="target"` | `effects.act_cleanse`（`effects.py:621-630`） |
 | `cd_mult` | `actions.do_skill` 冷却设置（`actions.py:91-99`，取多态最小） |
 | `negative` | **内容侧**负面种数计数（`class_mech_proc.py:767`），引擎不读 |
 

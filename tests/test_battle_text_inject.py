@@ -43,6 +43,7 @@ if _HERE not in sys.path:
 
 from ext_combat import Battle                                   # noqa: E402
 from ext_combat.battle import landing                           # noqa: E402
+from ext_combat.battle.actions import _skill_usable              # noqa: E402
 from ext_combat.battle.actors import ActCtx, make_actor          # noqa: E402
 from ext_combat import gauge as G                                 # noqa: E402
 from saintess_engine.cues import MISS_LINE                       # noqa: E402
@@ -94,31 +95,51 @@ def _setup(text=None):
 
 
 def _defend(b):
-    """驱动一行**未迁移**点位（`battle.core.defend`，走 `battle._t` 的渐进迁移口）。"""
+    """驱动一行**已迁移**点位（`battle.core.defend`，B3 起走 cue）—— 配夹具表用。"""
     return b._do_defend(ActCtx(caster=b.sides_of("player")[0], action="defend"))
+
+
+def _cd_line(b):
+    """驱动一行**未迁移**点位（`battle.actions.skill_cd`，仍走 `render_via` 的渐进迁移口）。
+
+    ★ B3（2026-09-27）起「未迁移的点位」只剩 actions / gauge / schedule 那 19 条 ——
+    本文件拿它当「渐进迁移口」的探针（B2 时用的是 `battle.core.defend`，那条本批已迁走）。
+    """
+    _actor = {"name": "甲",
+              "cooldown": {"盾墙": float(getattr(b, "_now", 0.0) or 0.0) + 1.5}}
+    _lg: list = []
+    _skill_usable(b, _actor, {"name": "盾墙"}, _lg)
+    return _lg
+
+
+def _lack_line(b):
+    """驱动另一行**未迁移**点位（`battle.actions.resource_lack`，同样走渐进迁移口）。"""
+    _actor = {"name": "甲", "class_name": "cls_x", "effects": {"energy": {"stacks": 1}}}
+    _lg: list = []
+    _skill_usable(b, _actor, {"name": "技能", "res_cost": {"energy": 3}}, _lg)
+    return _lg
 
 
 # ---------------------------------------------------------------- 1. 注入生效
 print("【1. 注入生效（反证）：给了表 → 输出随表变】")
 stub = _Stub()
 b, _pa, ea = _setup(text=stub)
-lg = _defend(b)
-check("注入表被问到 key（battle.core.defend 在册）",
-      "battle.core.defend" in stub.asked, stub.asked[:4])
-check("★ 日志取自注入表（不是内联串）", lg == ["[缺]battle.core.defend"], lg)
-stub2 = _Stub({"battle.core.defend": "★改过的串★"})
+lg = _cd_line(b)
+check("注入表被问到 key（battle.actions.skill_cd 在册）",
+      "battle.actions.skill_cd" in stub.asked, stub.asked[:4])
+check("★ 日志取自注入表（不是内联串）", lg == ["[缺]battle.actions.skill_cd"], lg)
+stub2 = _Stub({"battle.actions.skill_cd": "★改过的串★"})
 b2, _pa2, ea2 = _setup(text=stub2)
-lg2 = _defend(b2)
+lg2 = _cd_line(b2)
 check("★ 表里换一串 → 该行输出必变（注入非死代码）", lg2 == ["★改过的串★"], lg2)
 
 # ---------------------------------------------------------------- 2. 未注入 = 兜底
 print("\n【2. 未迁移点位：未注入 = 兜底模板：逐字节等于历史内联串】")
 b3, pa3, ea3 = _setup()
-check("防御行逐字", _defend(b3)
-      == ["🛡 甲 摆出防御姿态，受到的伤害减半！"])
-check("逃跑行逐字", b3._do_flee(ActCtx(caster=pa3, action="flee")) == ["💨 甲 逃跑了！"])
-check("终局行逐字（human_act 已结束）",
-      b3.human_act("defend", None) == (["战斗已结束！"], True, None))
+check("冷却行逐字（未迁移点位仍走调用点兜底模板）",
+      _cd_line(b3) == ["⏳ 【盾墙】冷却中：还需 1.5 刻！"], _cd_line(b3))
+check("资源不足行逐字（同上）",
+      _lack_line(b3) == ["⚡ 核心资源不足：需要 3 energy，当前 1！"], _lack_line(b3))
 check("显式 text=None 与不给参数同款", _setup(text=None)[0].text is None)
 random.seed(7)
 _b3b, _p3b, _ea3b = _setup()
@@ -162,6 +183,14 @@ _restore_subs = fix_install()                  # 夹具订阅表（覆盖 CUE_NA
 try:
     _bf, _pf, _ef = _setup(text=FIX_TEXT)
     check("★ 装了订阅表 ⇒ 这场战斗带总线", _bf.cues is not None)
+    # —— B3 起 `battle.core.*` 也走 cue：下面三行原先在 §2（未注入=兜底）里断言，现按
+    #    「已迁移 ⇒ 缺表报错不回落；配表 ⇒ 逐字 = 迁移前那句」的口径搬到这里。
+    check("防御行逐字（B3 起走 cue ⇒ 措辞取自内容侧文案表）",
+          _defend(_bf) == ["🛡 甲 摆出防御姿态，受到的伤害减半！"], _defend(_bf))
+    check("逃跑行逐字（同上）",
+          _bf._do_flee(ActCtx(caster=_pf, action="flee")) == ["💨 甲 逃跑了！"])
+    check("终局行逐字（human_act 已结束；同上）",
+          _bf.human_act("defend", None) == (["战斗已结束！"], True, None))
     _ef["dodge"] = 0.0
     _lgf = []
     random.seed(7)
@@ -229,12 +258,11 @@ check("★ 没总线 ⇒ 禁疗行是坏数据行（措辞不再由引擎给）"
 
 # ---------------------------------------------------------------- 3. 表缺 key 回落
 print("\n【3. 未迁移点位：表缺 key → 回落兜底模板（渐进迁移语义）】")
-stub3 = _Stub({"battle.core.defend": "★只改了防御行★"})
+stub3 = _Stub({"battle.actions.skill_cd": "★只改了冷却行★"})
 b4, _p, ea4 = _setup(text=stub3)
-check("声明的 key 走表", _defend(b4) == ["★只改了防御行★"], _defend(b4))
+check("声明的 key 走表", _cd_line(b4) == ["★只改了冷却行★"], _cd_line(b4))
 check("未声明的 key 走兜底（无异常、无空串）",
-      b4._do_flee(ActCtx(caster=b4.sides_of("player")[0], action="flee"))
-      == ["[缺]battle.core.fled"], "见上")
+      _lack_line(b4) == ["[缺]battle.actions.resource_lack"], _lack_line(b4))
 
 # ---------------------------------------------------------------- 4. 残留扫描
 print("\n【4. 残留扫描：battle/ + gauge/ 的日志实参零中文】")
@@ -375,9 +403,9 @@ _sig7 = _insp.signature(Battle.from_state).parameters
 check("★ from_state 的 text 为关键字专属（不留位置参数口子）",
       "text" in _sig7 and _sig7["text"].kind is _insp.Parameter.KEYWORD_ONLY,
       str({_n: str(_pp.kind) for _n, _pp in _sig7.items()}))
-_c7 = Battle.from_state(_st7, text=_Stub({"battle.core.defend": "／表：续战防御"}))
+_c7 = Battle.from_state(_st7, text=_Stub({"battle.actions.skill_cd": "／表：续战冷却"}))
 check("★ 恢复带 text= ⇒ 续战日志取自表（注入链不断在 from_state）",
-      _defend(_c7) == ["／表：续战防御"], _defend(_c7))
+      _cd_line(_c7) == ["／表：续战冷却"], _cd_line(_c7))
 _c8 = Battle.from_state(_st7)
 check("恢复不传 text ⇒ .text is None（未注入）", _c8.text is None)
 _lg8 = []
@@ -388,7 +416,7 @@ check("未注入恢复 ⇒ 已迁移点位是一行坏数据（**不**回落引�
       _lg8 == [MISS_LINE], _lg8)
 from ext_combat import from_state as _fs_mod                            # noqa: E402
 check("模块级 from_state 同款（text= 关键字透传）",
-      _fs_mod(_st7, text=_Stub({"battle.core.defend": "／表：模块级"})).text is not None)
+      _fs_mod(_st7, text=_Stub({"battle.actions.skill_cd": "／表：模块级"})).text is not None)
 
 # ★ 恢复 + 夹具总线/文案表 ⇒ 已迁移点位逐字 = 迁移前那句（注入链一路通到 cue）
 _restore2 = fix_install()
@@ -409,7 +437,6 @@ finally:
 print()
 print("【8. P-59：兜底模板零坏格式符（双冒号）+ 默认模板不吐机器键】")
 from saintess_engine.text import safe_format                           # noqa: E402
-from ext_combat.battle.actions import _skill_usable                      # noqa: E402
 from ext_combat.battle.effects import act_apply                          # noqa: E402
 
 #: 判据盯**语义**：只扫「真正交给渲染口的模板实参」（AST 里的字符串常量），
@@ -451,9 +478,47 @@ for _root in (os.path.join(FW_ROOT, "extends"), os.path.join(FW_ROOT, "saintess_
     _bad_all += _b
     _nargs += _n
     _nfiles += _nf
-check("扫描面够大（≥30 个模板实参 / ≥30 个 .py —— 防空转假绿）",
-      _nargs >= 30 and _nfiles >= 30, "实参 %d / 文件 %d" % (_nargs, _nfiles))
-check("★ 引擎侧模板实参零坏格式符（双冒号）", not _bad_all, _bad_all[:4])
+
+
+def _declared_templates(root):
+    """**内容侧文案真源**里声明的模板（字符串常量含 `{`）→ (坏格式符清单, 模板数, .py 数)。
+
+    ★ B3（2026-09-27）：措辞一路往内容侧搬（引擎侧实参 40 → 15）⇒ 防「空转假绿」的扫描面
+    同批跟着真源走 —— 不再只看引擎那一面。这不是放宽：口径改成**两面合计**。
+    """
+    bad, n, nf = [], 0, 0
+    for _dp, _dirs, _fs in os.walk(root):
+        _dirs[:] = [d for d in _dirs if d != "__pycache__"]
+        for _f in sorted(_fs):
+            if not _f.endswith(".py"):
+                continue
+            nf += 1
+            _p = os.path.join(_dp, _f)
+            _tree = ast.parse(open(_p, encoding="utf-8").read(), filename=_p)
+            for _c in ast.walk(_tree):
+                if isinstance(_c, ast.Constant) and isinstance(_c.value, str) \
+                        and "{" in _c.value:
+                    n += 1
+                    if _BADSPEC.search(_c.value):
+                        bad.append("%s:%d  %r" % (_p, getattr(_c, "lineno", 0), _c.value[:70]))
+    return bad, n, nf
+
+
+_bad_c, _nc, _nfc = [], 0, 0
+for _root in (os.path.join(FW_ROOT, "examples", "minimal-game", "content"),
+              os.path.join(FW_ROOT, "tests")):
+    _bc, _n2, _nf2 = _declared_templates(_root)
+    _bad_c += [x for x in _bc if "_cue_text_fixture" in x or "minimal-game" in x]
+    _nc += _n2
+    _nfc += _nf2
+check("引擎侧扫描面还在（≥15 个模板实参 / ≥30 个 .py）",
+      _nargs >= 15 and _nfiles >= 30, "实参 %d / 文件 %d" % (_nargs, _nfiles))
+check("★ 内容侧文案真源声明模板 ≥ 30（迁移把措辞搬到这一面，扫描面跟着走）",
+      _nc >= 30, "内容侧模板 %d / 文件 %d" % (_nc, _nfc))
+check("★ 两面合计 ≥ 45（防「空转假绿」：两侧都缩水就红）",
+      _nargs + _nc >= 45, "引擎 %d + 内容 %d = %d" % (_nargs, _nc, _nargs + _nc))
+check("★ 模板零坏格式符（双冒号；引擎侧 + 内容侧真源一起扫）",
+      not _bad_all and not _bad_c, (_bad_all + _bad_c)[:4])
 
 # 两态（改前/改后逐字对照）：旧模板 = 坏格式符 ⇒ `safe_format` 原样吐回（玩家看到花括号）；
 # 新模板 = 合法格式符 ⇒ 正常渲染。三处 P-59 各一对。
@@ -480,7 +545,18 @@ for _tag, _old, _new, _want in (
 
 # 走**真调用点**（未注入文案表 ⇒ 用兜底模板）：日志必须逐字正确、且不含机器键。
 class _B59:
+    """假 battle：`_now` 供冷却读；`cues` 供**已迁移点位**（`battle.effects.shield_pct`）出话。
+
+    ★ B3：shield_pct 已迁进 cue ⇒ 那个假 battle 也要有一条总线 + 一张文案表，
+    否则拿到的是「一行坏数据」（下面那条逐字判据就没意义了）。
+    """
+
     _now = 10.0
+
+    def __init__(self):
+        from saintess_engine.cues import CueBus
+        self.cues = CueBus({n: ({"kind": "text", "key": n},) for n in FIX_TEMPLATES},
+                           table=FIX_TEXT)
 
 
 _a59 = {"name": "甲", "cooldown": {"盾墙": 11.5}}
@@ -501,7 +577,8 @@ _lg59c = []
 act_apply(_B59(), _holder59, _holder59, {"key": "reduce", "value": 0.45, "turns": 3}, _lg59c)
 check("值型效果真落进 effects 容器", isinstance(_holder59["effects"].get("reduce"), dict),
       repr(_holder59["effects"]))
-check("★ shield_pct 日志逐字 = 合法渲染", _lg59c == ["🛡️ 45%（持续 3 刻）"], _lg59c)
+check("★ shield_pct 日志逐字 = 合法渲染（B3：措辞取自内容侧文案表）",
+      _lg59c == ["🛡️ 45%（持续 3 刻）"], _lg59c)
 check("★ 默认模板**不吐机器键**（key 槽位仍照旧下传，供内容侧模板引用）",
       all("reduce" not in _x for _x in _lg59c), _lg59c)
 

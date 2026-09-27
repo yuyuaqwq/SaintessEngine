@@ -39,6 +39,15 @@ from _check import bind_check  # noqa: E402
 
 check = bind_check(globals(), "passed", "failed", "DETAIL")
 
+# ★ B3（2026-09-27）：已迁移点位（`battle.schedule.cast_begin` 等）的措辞真源在**内容侧文案表**，
+#   引擎模板已删 ⇒ 合成战斗必须自己注入「订阅表 + 文案表」，否则**正常路径也会多一条诊断**
+#   （本文件有一条「不配 hook 的那场零诊断」的判据当场抓到）。
+#   `_cue_text_fixture` = 门禁夹具（**不是真源**）。
+from _cue_text_fixture import TEXT as FIX_TEXT                   # noqa: E402
+from _cue_text_fixture import install as fix_install             # noqa: E402
+
+fix_install()
+
 _HOOK_NAMES = ("time_model_fn", "action_base_fn", "recover_model_fn", "recover_base_fn",
                "segment_plan_fn")
 _saved = {n: CFG._HOOKS.get(n) for n in _HOOK_NAMES}
@@ -61,7 +70,7 @@ def _battle(spd=50):
                     hp=100, max_hp=100, atk=20, spd=spd)
     ea = make_actor("e1", "怪", "enemy", kind="monster", hp=500, max_hp=500, atk=10, spd=5)
     return Battle(btype="monster", sides={"player": [pa], "enemy": [ea]},
-                  seed_ct=False), pa
+                  seed_ct=False, text=FIX_TEXT), pa
 
 
 def _solo(spd=5):
@@ -71,7 +80,7 @@ def _solo(spd=5):
                     hp=100, max_hp=100, atk=20, spd=spd)
     ea = make_actor("e1", "怪", "enemy", kind="monster", hp=500, max_hp=500, atk=10, spd=0)
     return Battle(btype="monster", sides={"player": [pa], "enemy": [ea]},
-                  seed_ct=False), pa
+                  seed_ct=False, text=FIX_TEXT), pa
 
 
 def _raises(fn):
