@@ -63,7 +63,7 @@ flowchart TD
   `schedule → actors, effects` 与 `battle → actors`。
 - **函数内 import 制造了恰好 2 对双向互指**：`effects ↔ effect_triggers`
   （`effects.py:442` / `effect_triggers.py:100`）与 `battle ↔ serialize`
-  （`battle.py:719` / `serialize.py:64`）。这两对都是「延迟 import 破环」的写法，
+  （`battle.py:724` / `serialize.py:64`）。这两对都是「延迟 import 破环」的写法，
   **改它们的时候不要把 import 提到模块级**。
 - `support/*` 只 import 上级包（`from .. import config`），不 import 任何兄弟结算模块 ——
   它是可单独复制的纯函数库。
@@ -75,7 +75,7 @@ flowchart TD
 | 模块 | 它不知道什么 | 它知道什么 |
 |---|---|---|
 | `actors.py` | 任何人都一样（无类型分派） | dict 字段名、`ct` 是绝对时刻 |
-| `config.py` | 表里有什么 | 表叫什么名字（15 个 hook 名 + 2 个表名） |
+| `config.py` | 表里有什么 | 表叫什么名字（29 个 hook 名 + 2 个表名） |
 | `state_effects.py` | 规则语义 | 「去哪查规则」 |
 | `support/` | 你的游戏 | 站位/射程数学、表达式求值、条的算术 |
 

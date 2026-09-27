@@ -20,6 +20,7 @@ from . import formulas as _F
 from .actors import DEFEND_TAG, window_open      # 状态容器：窗口条目查询（收口后唯一真源）
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from saintess_engine.text import render_via
+from .cues import cue as _cue          # 已迁移点位走表现事件（未装配 ⇒ 内部落回 render_via）
 
 # ============================================================
 # 伤害落地
@@ -92,9 +93,9 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
         try:
             _imm = target.get("element_immune") or []
             if isinstance(_imm, (list, tuple)) and element in _imm:
-                logs.append(render_via(battle, "battle.landing.element_immune", "💠 免疫！【{name}】免疫{element}伤害！",
-                                    name=target.get('name', '敌人'),
-                                    element=element))
+                _cue(battle, logs, "battle.landing.element_immune",
+                     "💠 免疫！【{name}】免疫{element}伤害！",
+                     {"name": target.get('name', '敌人'), "element": element})
                 return 0
             _wk = target.get("element_weak") or {}
             if isinstance(_wk, dict):
@@ -112,8 +113,8 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             if _ar > 0 and dmg > 0:
                 red = max(1, int(dmg * _ar))
                 dmg = max(1, dmg - red)
-                logs.append(render_via(battle, "battle.landing.resist_reduce", "🛡️ 元素抗性减免 {red} 点伤害！",
-                                    red=red))
+                _cue(battle, logs, "battle.landing.resist_reduce",
+                     "🛡️ 元素抗性减免 {red} 点伤害！", {"red": red})
         except Exception as _e:
             _diag(battle, "deal_damage · 免疫/弱点/抗性", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # 免疫/弱点/抗性异常不阻断落地
@@ -277,8 +278,8 @@ def _roll_dodge(battle, target: dict, logs: list) -> bool:
             return False
         import random
         if random.random() < dodge:
-            logs.append(render_via(battle, "battle.landing.dodged", "💨 {name} 闪避了攻击！",
-                                name=target.get('name', '目标')))
+            _cue(battle, logs, "battle.landing.dodged", "💨 {name} 闪避了攻击！",
+                 {"name": target.get('name', '目标')})
             return True
     except Exception as _e:
         _diag(battle, "_roll_dodge", _e)          # 审计 P-44：不再静默（行为不变）

@@ -19,6 +19,7 @@ from saintess_engine import config
 from .data import classes as C
 from .data import rules as R
 from .data import skills as S
+from .cues import cue_subs as _cue_subs
 from .mech import actions as _actions  # noqa: F401  import 即注册本游戏的动词
 
 _MOUNTED = False
@@ -107,6 +108,7 @@ def install_engine() -> None:
         action_base_fn=_action_base,                        # 行动类别 → 第一段基准耗时
         recover_model_fn=_recover_model,                    # 第二段（收招）耗时（本游戏 = 同形状）
         recover_base_fn=_recover_base,                      # 行动类别 → 第二段基准耗时（全 0）
+        cue_subs_fn=_cue_subs,                              # 表现事件订阅表（已迁移点位谁渲染）
     )
     GC.load_game_rules(R)       # EFFECT_ACTIONS / EFFECT_RULES（新家：ext_combat.battle.game_config）
     _MOUNTED = True

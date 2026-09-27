@@ -152,6 +152,18 @@ _HOOKS = {
     #     绝不把键名当玩家文案投出去）。
     #   ★ 读口走 `optional_hook`（**不**受 strict 影响）：fail-closed 由 `Host` 那三态自己负责。
     "guard_text_fn": None,
+    # ★ cue（2026-09-27）：**表现层订阅表**读口 —— 结算只发事实（cue），
+    #   「这一条给玩家看什么」由内容侧订阅者渲染。
+    #   形状 = fn() -> Mapping[cue 名, 订阅者...] | None：
+    #     · `None`                   ⇒ 这款游戏还没接 cue（引擎连问都不问，
+    #                                  已迁移点位落回原路 ⇒ 与接线前**逐字节相同**）；
+    #     · 映射                     ⇒ 引擎按自己的 `CUE_NAMES` 做**装配期对账**
+    #                                  （缺订阅 / 多订阅 / 同一 cue 声明 ≥2 个 text ⇒ 抛）。
+    #   订阅者最小形状：`{"kind": "text", "key": "<文案表 key>"}`（措辞留在内容侧文案表）
+    #   或 `{"kind": "call", "handler": <callable>, "emits_lines": bool}`。
+    #   形状与三条硬规矩（同步就地 / 只读契约 / fail-closed 三层）见 `saintess_engine/cues.py`。
+    #   ★ 读口走 `optional_hook`：不配 = 不用 cue（合法状态），不是配置错误。
+    "cue_subs_fn": None,
 }
 
 # R8：无挂载静默降级开关。

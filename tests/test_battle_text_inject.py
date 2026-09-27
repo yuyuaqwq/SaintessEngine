@@ -352,7 +352,7 @@ def _template_args(root):
                 _fn = _n.func
                 _nm = _fn.attr if isinstance(_fn, ast.Attribute) else (
                     _fn.id if isinstance(_fn, ast.Name) else "")
-                if _nm not in ("render_via", "render_or", "_t"):
+                if _nm not in ("render_via", "render_or", "_t", "cue", "_cue", "emit"):
                     continue
                 for _a in ast.walk(_n):
                     if isinstance(_a, ast.Constant) and isinstance(_a.value, str) \

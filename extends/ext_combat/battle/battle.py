@@ -72,6 +72,11 @@ class Battle:
         self.heal_redirect_hook = None
         # 文案表注入（可选；构造注入，无模块级全局态）
         self.text = text
+        # 表现层订阅（cue）装配：内容侧没声明 `cue_subs_fn` ⇒ None
+        # （= 「不装配不存在」，已迁移点位落回原路 ⇒ 与接线前逐字节相同）。
+        # 装了 ⇒ 构造期做装配期对账（缺订阅 / 多订阅 / 同 cue 双 text ⇒ 当场抛）。
+        from .cues import build_cue_bus as _build_cue_bus
+        self.cues = _build_cue_bus(text)
         # 阵营容器（唯一）
         self.sides: dict = {}
         for sn, acts in (sides or {}).items():
