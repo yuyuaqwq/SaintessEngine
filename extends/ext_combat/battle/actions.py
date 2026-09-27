@@ -18,6 +18,7 @@ from saintess_engine import _validators as _V                       # 引擎侧�
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from . import game_config as _GC
 from . import stats as S
+from . import attributes as ATTR      # 属性写口（唯一写入口；钳制规则归它）
 from .actors import actor_alive
 from saintess_engine.text import render_via
 
@@ -303,7 +304,8 @@ def _spend_skill_cost(actor: dict, info: dict):
     pay = _skill_pay_of(actor, info)
     mp = int(pay.get("mp") or 0)
     if mp > 0 and actor.get("mp") is not None:
-        actor["mp"] = max(0, int(actor.get("mp", 0)) - mp)
+        # 属性写口收口：钳制改由 `attributes` 统一（收口前是本行的 `max(0, …)`，行为不变）
+        ATTR.set_current(actor, "mp", int(actor.get("mp", 0)) - mp, reason="cost")
     # 核心资源消耗（res_cost：扣 effects[key].stacks）
     res_cost = pay.get("res") or {}
     if res_cost:

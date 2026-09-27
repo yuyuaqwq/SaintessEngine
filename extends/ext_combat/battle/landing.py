@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import Optional
 
 from . import formulas as _F
+from . import attributes as ATTR      # 属性写口（hp 的三个写点收进它）
 from .actors import DEFEND_TAG, window_open      # 状态容器：窗口条目查询（收口后唯一真源）
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from saintess_engine.text import render_via
@@ -350,7 +351,9 @@ def _apply_death_guard(battle, target: dict, logs: list) -> bool:
             ef.pop("death_guard", None)
         # 保底
         guard_pct = float(cfg.get("guard_hp_pct") or 0.10)
-        target["hp"] = max(1, int(mhp * guard_pct))
+        # 保命下限 `max(1,…)` 是**机制行为**（不是引擎内建规则）⇒ 算完再交给写口
+        ATTR.set_current(target, "hp", max(1, int(mhp * guard_pct)),
+                         reason="death_guard", battle=battle)
         # 额外回血（走 heal_actor 收口——clamp max_hp / on_heal 联动）
         heal_pct = float(cfg.get("heal_pct") or 0.0)
         if heal_pct > 0 and target.get("hp", 0) < mhp:
@@ -393,7 +396,7 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
         return 0
     old = int(target.get("hp", 0) or 0)
     new = max(0, old - dmg)
-    target["hp"] = new
+    ATTR.set_current(target, "hp", new, reason="damage", battle=battle)
     _real = old - new
     # ★ 屏上那个数 = **这一击的真伤害**（2026-09-27 修）：原先印 `_real` = 被剩余血**钳过**的数 ——
     #   「5 层垂星印 126」其实是 150+ 被 126 点血截出来的假数（试玩取数会被坑），击杀那一手更明显
@@ -477,9 +480,8 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
     heal = _apply_heal_mods(target, heal, logs, battle.text)
     if heal <= 0:
         return 0
-    _mx = target.get("max_hp", target.get("hp", 1)) or 1
     _before = int(target.get("hp", 0) or 0)
-    target["hp"] = min(_mx, _before + heal)
+    ATTR.set_current(target, "hp", _before + heal, reason="heal", battle=battle)
     _real = int(target["hp"]) - _before
     if _real > 0 and label:
         logs.append(label.format(_real=_real, _planned=heal))

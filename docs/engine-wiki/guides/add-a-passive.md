@@ -108,7 +108,7 @@ ctrl · ctrl_any · res · left_key · left_init · cost_field · buff_key
 | `domain` | 写哪里 | 引擎消费者 | 数值来源 |
 |---|---|---|---|
 | `cap` | `actor["bonus"]["cap"][cap_key] += add` | `effects._cap_of`（`effects.py:77`） | `passive.add` 或 `cfg.add`，**只累加正数** |
-| `cost` | `actor["bonus"]["cost"]`（`mp_pct` / `when[].mp_pct`） | `actions._skill_pay_of`（`actions.py:320`） | `passive.mp_mult`（如 0.5 = 打五折） |
+| `cost` | `actor["bonus"]["cost"]`（`mp_pct` / `when[].mp_pct`） | `actions._skill_pay_of`（`actions.py:322`） | `passive.mp_mult`（如 0.5 = 打五折） |
 
 `cap` 域**不 continue**：声明里同时有 `event` 时（如 `soul_mark_cap` / `poison_cap_up`）
 会继续走事件装配（原文注释「双通道声明 → 不 continue，fall through」，
@@ -136,13 +136,13 @@ ctrl · ctrl_any · res · left_key · left_init · cost_field · buff_key
 
 | 我想... | 用 | 为什么 |
 |---|---|---|
-| 影响**我打出的伤害**（增伤/处决/破魔） | `dmg_calc` | 攻击方视角乘区，`actions.py:492` |
-| 影响**我受到的伤害**（减伤/护盾转化） | `taken_calc` | 承伤方视角乘区，`landing.py:89` |
-| 影响**我造成的治疗**（治疗增幅） | `heal_calc` | 施法者视角乘区，`actions.py:731` |
+| 影响**我打出的伤害**（增伤/处决/破魔） | `dmg_calc` | 攻击方视角乘区，`actions.py:494` |
+| 影响**我受到的伤害**（减伤/护盾转化） | `taken_calc` | 承伤方视角乘区，`landing.py:90` |
+| 影响**我造成的治疗**（治疗增幅） | `heal_calc` | 施法者视角乘区，`actions.py:733` |
 | 影响**DOT 每跳伤害** | `dot_calc` | 广播事件（无 subject），用 `ctx["dot_key"]` 过滤 |
 | 命中后做事（叠层/挂条/上控制） | `skill_hit` / `attack_hit` | 主体=攻击者；普攻走 `attack_hit` |
 | 受击后自我强化/反击 | `on_taken` | 主体=受击者，`ctx["source"]` = 攻击者 |
-| 每次施放前（条件暴击/挂印/吸血面板） | `act_cast` | 扣费与冷却之后、结算之前，`actions.py:113` |
+| 每次施放前（条件暴击/挂印/吸血面板） | `act_cast` | 扣费与冷却之后、结算之前，`actions.py:114` |
 | 回合开始（免控/回资源） | `turn_start` | **早于**控制消费，所以「清除控制」等效免疫 |
 | 死亡时（复活/遗言） | `on_death` | 死者**自己的**声明会执行（subject 例外） |
 | 击杀时（回能/溅射） | `on_kill` | 主体=击杀者；DOT/环境杀无此事件 |

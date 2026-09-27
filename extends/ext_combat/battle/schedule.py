@@ -31,6 +31,7 @@ from typing import Optional
 from saintess_engine import config as _cfg
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 from .actors import actor_alive
+from . import attributes as ATTR      # 属性写口（ct / mp 的四处写点收进它）
 from . import traits                    # 内容侧标签判定（引擎不认标签叫什么 · 审计 E3）
 from .effects import _cap_of as _stack_cap_of
 from saintess_engine.text import render_via
@@ -454,9 +455,12 @@ def _after_act(battle, actor: dict, action: str, recover_base: Optional[float] =
         rec_decl = {"base": float(recover_base)} if recover_base is not None else action
     # 用聚合面板速度（buffs 修正）——actor 裸 spd 字段可能是 0（玩家面板由
     # stats.actor_stats 从 class/equip 聚合），与 next_ct / 待发槽同一口径。
-    actor["ct"] = (float(battle._now)
-                   + segment_time(battle, actor, cast_decl, "cast", "行动后推 ct 的第一段（cast）")
-                   + segment_time(battle, actor, rec_decl, "recover", "行动后推 ct 的第二段（recover）"))
+    ATTR.set_current(
+        actor, "ct",
+        float(battle._now)
+        + segment_time(battle, actor, cast_decl, "cast", "行动后推 ct 的第一段（cast）")
+        + segment_time(battle, actor, rec_decl, "recover", "行动后推 ct 的第二段（recover）"),
+        reason="schedule_after_act", battle=battle)
 
 
 def _advance_time(battle, dt: float, logs: list):
@@ -530,9 +534,8 @@ def _apply_base_mp_regen(battle, actor: dict, fn, logs: list) -> None:
     _gain = int(_raw)
     if _gain <= 0:
         return
-    _mx = int(actor.get("max_mp", actor.get("mp", 1)) or 1)
     _before = int(actor.get("mp", 0) or 0)
-    actor["mp"] = min(_mx, _before + _gain)
+    ATTR.set_current(actor, "mp", _before + _gain, reason="regen", battle=battle)
     _real = int(actor["mp"]) - _before
     if _real <= 0:
         return                                   # 已满：不写值、不出日志（与既有回复段同款）
@@ -781,7 +784,8 @@ def _settle_time_effects(battle, logs: list):
                                 if int(a.get("mp", 0) or 0) < _mx_mp:
                                     _gain = max(1, int(_mx_mp * _mpct))
                                     _before = int(a.get("mp", 0) or 0)
-                                    a["mp"] = min(_mx_mp, _before + _gain)
+                                    ATTR.set_current(a, "mp", _before + _gain,
+                                                     reason="regen", battle=battle)
                                     _real = int(a["mp"]) - _before
                                     if _real > 0:
                                         logs.append(render_via(battle, "battle.schedule.regen_mp", "🍲 {name} 持续恢复，恢复 {heal} 点魔力！",
@@ -793,7 +797,8 @@ def _settle_time_effects(battle, logs: list):
                             if _mpct > 0 and int(a.get("mp", 0) or 0) < _mx_mp:
                                 _gain = max(1, int(_mx_mp * _mpct))
                                 _before = int(a.get("mp", 0) or 0)
-                                a["mp"] = min(_mx_mp, _before + _gain)
+                                ATTR.set_current(a, "mp", _before + _gain,
+                                                 reason="regen", battle=battle)
                                 _real = int(a["mp"]) - _before
                                 if _real > 0:
                                     logs.append(render_via(battle, "battle.schedule.regen_mp", "🍲 {name} 持续恢复，恢复 {heal} 点魔力！",

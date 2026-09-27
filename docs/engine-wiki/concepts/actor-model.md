@@ -12,14 +12,14 @@
 同构化的收益：
 
 - 一个机制动作对玩家和怪同时生效，不需要「怪也能用」的额外适配
-- `add_actor()` 加援军/召唤物时不需要给调度器注册新类型（`battle.py:259`）
+- `add_actor()` 加援军/召唤物时不需要给调度器注册新类型（`battle.py:260`）
 - 序列化不需要按类型分派（`serialize._serialize_actor` 对任何 actor 一视同仁，`serialize.py:51`）
 
 代价：**身份信息全靠字段**。要表达「这是 Boss」就写 `traits=["boss"]`（标签名随内容侧起，
 引擎**不认识 Boss 这个概念**）—— 引擎只提供 `traits.of(actor)` / `traits.has(actor, name)` /
 `traits.has_any(actor, names)` 三个只读判据，**名单为空 ⇒ 一律 False**（不声明 = 这条规则不适用于任何人）。
 「谁带标签才吃哪条规则」由声明给：控制时长减半看该状态的 `ctrl_half_traits`（`effects.py:376-377`）、
-DOT 折扣档看该周期的 `trait_tags`（`schedule.py:656`）。旧字段 `is_boss` / `role` 引擎**已不再读**
+DOT 折扣档看该周期的 `trait_tags`（`schedule.py:659`）。旧字段 `is_boss` / `role` 引擎**已不再读**
 （2026-09-25 E3 已删）—— 内容侧仍可自己读它们，那是内容侧的事。
 
 ## 字段全集
@@ -44,7 +44,7 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:656`）。旧字段 `is
 ⚠️ 这些是**裸值**。战斗内的「有效面板」要经 `stats.actor_stats()`（`stats.py:18`）
 聚合：有 `class_name` → 调 `panel_fn` hook 重算职业面板；无 → 直读字段；
 然后叠加 `effects` 里的面板修正。**伤害/速度/暴击都读聚合面板，不读裸字段**
-（例：`schedule._after_act` 用 `stats.actor_spd`，`schedule.py:490`）。
+（例：`schedule._after_act` 用 `stats.actor_spd`，`schedule.py:494`）。
 
 > 唯一的数值兜底：`stats._monster_base_stats` 里 `crit` 缺省取 **0.05**（`stats.py:145`），
 > 而 `make_actor` 播种的是 0.0（`actors.py:100`）。这两处不一致，见
@@ -62,7 +62,7 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:656`）。旧字段 `is
 | `poi_buff` | any | 透传字段，引擎不读 |
 | `triggers` | `{事件名: [效果 dict]}` | 事件声明（见 [event-bus.md](event-bus.md)） |
 | `act_count` | int | 个体行动计数，`actor_auto` 每动 +1（`battle.py:457`） |
-| `dot_next` / `dot_jumps` | `{key: 数值}` | 周期结算的运行期辅助（`schedule.py:652-653` 惰性建） |
+| `dot_next` / `dot_jumps` | `{key: 数值}` | 周期结算的运行期辅助（`schedule.py:655-656` 惰性建） |
 
 **为什么 `shields` / `cooldown` 不进 `effects`**：它们**不是状态**。
 护盾是「承伤时按值扣减的资源」，冷却键是「还能不能再放」的调度表——
@@ -78,7 +78,7 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:656`）。旧字段 `is
 | `equipment` | 装备 dict，透传给 `panel_fn` |
 | `skills` | 技能 key 列表（构造 Battle 时索引进 `_skill_index`） |
 | `learned_skills` | 已学技能列表（**引擎不读**，是给你的装配器扫的，如《奥兰迪亚》的 `_learned_mech_skills`） |
-| `auto_act` | 自动行动配置（`actor_auto` 读它，`battle.py:399`） |
+| `auto_act` | 自动行动配置（`actor_auto` 读它，`battle.py:403`） |
 | `ai` | 通用怪 AI 决策数据（`ai.normalize_ai` / `resolve_ai_move` 读） |
 | `_skill_index` | 技能名/index → 技能 dict。**不进存档**（`serialize._STRIP_KEYS`，`serialize.py:31`） |
 
@@ -100,7 +100,7 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:656`）。旧字段 `is
 |---|---|---|
 | `bonus.panel` | `stats._player_base_stats`（`stats.py:99`） | 面板增幅 dict，透传给 `panel_fn` |
 | `bonus.cap` | `effects._cap_of`（`effects.py:77`） | `{资源key: 上限增量}`，纯 flat int 加在 `EFFECT_RULES[key].cap` 上 |
-| `bonus.cost` | `actions._bonus_cost_of`（`actions.py:292`） | 技能消耗折扣（`mp_pct`/`mp_flat`/`res` + `when` 判据） |
+| `bonus.cost` | `actions._bonus_cost_of`（`actions.py:293`） | 技能消耗折扣（`mp_pct`/`mp_flat`/`res` + `when` 判据） |
 
 ### 其余透传字段
 
@@ -129,6 +129,25 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:656`）。旧字段 `is
 已经按槽位收口的两处读点：控制免疫（`effects.py` 的 `immune_control`）、DOT 免疫名单
 （`effects.py` 的 `immune_dots`）。
 
+## 属性写口：`hp` / `mp` / `ct` 只有一个写入口
+
+收口前，引擎里 12 处写点各写各的钳制（`mp` 扣费有 `max(0,…)` 也有 `max(1,…)`、`hp` 三处口径
+各不同、`ct` 完全裸写）—— 同一条规则各写一遍，且已经不一致。现在全部走
+`extends/ext_combat/battle/attributes.py`：
+
+| 件 | 形状 | 说明 |
+|---|---|---|
+| **唯一写口** | `set_current(actor, key, value, *, reason, battle)` / `add_current(...)` | `key` 不在 `("hp","mp","ct")` ⇒ `KeyError`（走错地方当场炸）；值没变 ⇒ 不写、不叫钩子 |
+| **内建边界** | `ceiling` / `floor_of` | 下限一律 ≥0 · 上限 `hi = max(上限, 现在值)`：**只在抬值方向生效**（现在值没越界 ⇒ 就是 `min(max_hp,…)`，与 heal/regen 路逐字相同；已越界的脏数据**不压回** —— 实测 `test_host_skeleton` 的合成 fixture `hp=300 > max_hp=203` 会被严格上限翻掉胜负）。`ct` 无上限。**保命类下限（`max(1,…)`）不是内建规则** —— 那是机制行为，调用方算完再传 |
+| **类型保持** | 按**入参类型**落值 | int 进 int 出、float 进 float 出 —— 冻结对拍逐字节相同靠这条 |
+| **预改钩子** | `attr_pre_fn(actor, key, value, ctx)` | 未装配 ⇒ 不存在；返回变换后的值，`None` = 交回内建规则；**不做拦截语义** |
+| **后改钩子** | `attr_post_fn(actor, key, old, new, ctx)` | 只在值真变了时调用（响应/记账位）；抛错上抛 |
+| **机器门禁** | `tests/test_attrs_write_port.py` | 引擎代码里**不得再出现对 `hp`/`mp`/`ct` 的下标直接赋值**（白名单一处报价 dict，条数恒 1）⇒ 漏改一处当场红 |
+
+`reason` 是引擎词（`damage` / `heal` / `cost` / `regen` / `schedule_seed` / `schedule_after_act` /
+`death_guard`），只用于记账与排障，**不是**游戏名词。面板派生值（`max_hp`/`atk`…）是重算出来的、
+`traits` 是构造期数据、`effects[key].stacks` 已由 `actors.open_entry` 收口 —— 三者**都不走写口**。
+
 ## `ActCtx`：一次行动的上下文
 
 ```python
@@ -156,7 +175,7 @@ class ActCtx:                       # actors.py:19
 `sides = {阵营名: [actor, ...]}`（普通 dict，没有封装类）。设计原因：**动态遍历**。
 调度（`schedule._next_player_due` / `_next_auto_due`）、序列化（`serialize.to_state`）、
 事件广播（`fire` 遍历全部 sides）都在运行期直接遍历它，所以 `add_actor` 不需要
-通知任何人（`battle.py:269-271`）。
+通知任何人（`battle.py:270-272`）。
 
 阵营敌对关系由 `hostile_sides`（`actors.py:195`）决定：优先读 `battle.hostile_map[side]`，
 没有则「除自己外的全部阵营」。**引擎不预设玩家/怪身份**。
