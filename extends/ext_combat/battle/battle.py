@@ -81,6 +81,11 @@ class Battle:
         self.result: Optional[str] = None      # None | victory | defeat | fled
         self.winner_side: Optional[str] = None
         self.killed_actors: list = []
+        # 战斗级跨手标记（2026-09-27 接上）：内容侧可放任何 JSON 化得出来的东西，
+        # **随每一手 to_state/from_state 往返带着走**（`serialize.py` 两个口都接了它）。
+        # 为什么要有这一格：本包「场」这条路由每一手都要往返一次序列化 ⇒ 挂在 Battle 上的
+        # 临时属性（`setattr`）过不了往返 = 每手清零，「每场一次 / 每场几层」那类记账全栽。
+        self.flags: dict = {}
         # CTB 绝对时刻（N4 schedule）
         self._now: float = 0.0
         self._p_acts: int = 0
@@ -477,6 +482,13 @@ class Battle:
         #      主体=行动者，只处理其自身声明，旁观者不误触发）----
         from .effect_triggers import fire as _fire
         _fire(self, "turn_start", {"actor": actor}, logs)
+        # ---- ★ 防御姿态到期（2026-09-27 · 口径 = 「到你下一次行动之前」）----
+        #  `_do_defend`（落地段）只置 `defending=True`；此前全仓**只有死亡**会清它 ⇒ 敲一次
+        #  『防御』这一场剩下的每一手都被减半（骑士/法师/刺客/狂战四路实测复现，跨游戏）。
+        #  到期点 = **行动者自己动手的这一帧**（本函数就是「你下一次行动」的入口）：在那之前
+        #  （对面打过来的那些手）减伤照旧有效；被控跳过的那一手也算这一次行动已到。
+        #  写值不删键：actor 字段形状（`actors.make_actor` 那张表）保持不变。
+        actor["defending"] = False
         # ---- 控制消费（统一入口，人类/自动/随从全走这里）----
         # V 系列：控制条目在 effects 容器（effects[tag] = {expire, mode}）
         ef = actor.get("effects") or {}

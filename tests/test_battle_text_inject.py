@@ -100,7 +100,14 @@ landing.deal_damage(b3, None, ea3, 7, logs3)
 check("伤害行逐字", logs3 == ["💥 房间怪 受到 7 点伤害！"], logs3)
 logs4 = []
 landing.deal_damage(b3, None, ea3, 99999, logs4)
-check("倒下行逐字", logs4 == ["💥 房间怪 受到 493 点伤害，倒下了！"], logs4)
+# ★ 2026-09-27 **口径改动**（判据跟着真源改，不是放宽）：屏上那个数 = **这一击的真伤害**，
+#   不再被剩余血（493）截断 —— 原先「击杀那一手印 25 点、实打 152」是假数，四路试玩取数被坑
+#   （队列 ⛔「致命一击真伤数」）。扣血 / 返回值 / on_kill 的 dmg 一格没动。
+check("倒下行逐字（真伤害，不被剩余血截断）",
+      logs4 == ["💥 房间怪 受到 99999 点伤害，倒下了！"], logs4)
+_b3b, _p3b, _ea3b = _setup()
+check("★ 但**真扣血**仍钳到剩余血（返回 = 493，两只口径别混）",
+      landing.deal_damage(_b3b, None, _ea3b, 99999, []) == 493)
 check("防御行逐字", b3._do_defend(ActCtx(caster=pa3, action="defend"))
       == ["🛡 甲 摆出防御姿态，受到的伤害减半！"])
 check("逃跑行逐字", b3._do_flee(ActCtx(caster=pa3, action="flee")) == ["💨 甲 逃跑了！"])

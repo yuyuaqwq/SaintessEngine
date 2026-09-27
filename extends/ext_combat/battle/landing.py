@@ -387,6 +387,11 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
     new = max(0, old - dmg)
     target["hp"] = new
     _real = old - new
+    # ★ 屏上那个数 = **这一击的真伤害**（2026-09-27 修）：原先印 `_real` = 被剩余血**钳过**的数 ——
+    #   「5 层垂星印 126」其实是 150+ 被 126 点血截出来的假数（试玩取数会被坑），击杀那一手更明显
+    #   （「受到 25 点伤害，倒下了」而实际是一发 152）。扣血 / 返回 / on_kill 的 `dmg` 全不动，
+    #   只把呈现用数换成未被血条截断的那一个。
+    _shown = int(dmg)
     # 濒死保护（N9.12）：伤害会致死时查 target.state death_guard 层（声明表参数）
     # → 保底不死亡 + 回血 + 层-1。规则通用（引擎零名词——声明表 guard_hp_pct/heal_pct）
     if new <= 0:
@@ -397,7 +402,7 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
     if new <= 0:
         logs.append(render_via(battle, "battle.landing.down", "💥 {name} 受到 {dmg} 点伤害，倒下了！",
                             name=target.get('name', '目标'),
-                            dmg=_real))
+                            dmg=_shown))
         if hasattr(battle, "_on_actor_dead"):
             battle._on_actor_dead(target, logs)
         # N8 事件：击杀（主体=击杀者；DOT/环境杀无 on_kill）
@@ -412,7 +417,7 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
     else:
         logs.append(render_via(battle, "battle.landing.damage", "💥 {name} 受到 {dmg} 点伤害！",
                             name=target.get('name', '目标'),
-                            dmg=_real))
+                            dmg=_shown))
     return _real
 
 

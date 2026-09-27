@@ -15,7 +15,8 @@ state = {
   "sides": {side名: [actor, ...]},
   "hostile_map": {...},
   "killed": [...],  # 击杀记录（uid 列表）
-  "battle_flags": {...},  # 战斗级一次性标记（后续扩展）
+  "flags": {...},  # **战斗级跨手标记**（内容侧「每场一次 / 每场几层」那类记账挂这里；
+                   #  挂在 Battle 上的临时属性过不了往返 —— 每手重建 ⇒ 每手清零）
 }
 """
 from __future__ import annotations
@@ -42,7 +43,8 @@ def to_state(battle: Battle) -> dict:
                   for sn, acts in battle.sides.items()},
         "hostile_map": dict(battle.hostile_map or {}),
         "killed": [a.get("uid") for a in battle.killed_actors if a.get("uid")],
-        "flags": {},
+        # 战斗级跨手标记（2026-09-27 接上 · 原先写死 `{}` ⇒ 内容侧挂在 Battle 上的记账每手清零）
+        "flags": dict(battle.flags or {}),
     }
 
 
@@ -73,6 +75,8 @@ def from_state(st: dict, *, text=None) -> Battle:
     b._p_acts = int(st.get("p_acts", 0) or 0)
     b.result = st.get("result")
     b.winner_side = st.get("winner_side")
+    # 战斗级跨手标记（2026-09-27 接上）：内容侧「每场一次 / 每场几层」那类记账随每一手回来
+    b.flags = dict(st.get("flags") or {})
     # 续战（恢复的战斗已在开战事件后）→ 不重复 fire battle_start
     b._started = True
     # 击杀记录（uid → 找 actor；找不到跳过——已从 sides 移除的阵亡单位）
