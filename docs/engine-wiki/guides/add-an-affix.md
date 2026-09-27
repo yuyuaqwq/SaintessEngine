@@ -51,10 +51,10 @@ def we_affix_dot(battle, caster, target, params, logs):
 | 内部叠层用局部 helper | 例 `_add_stacks(actor, key, amount, cap)` 走 `effects[key].stacks` | `game/services/battle_we_procs.py:49-55` |
 
 ⚠️ `actor["ext"]` 有一个**必须知道**的性质：它会**随存档落盘**
-（`serialize._serialize_actor` 不剥 `ext`，只剥 `_skill_index`，`serialize.py:30`）。
+（`serialize._serialize_actor` 不剥 `ext`，只剥 `_skill_index`，`serialize.py:31`）。
 所以「本次战斗的 CD」用 `ext` 是安全的；如果你的 `ext` 里放了不可 JSON 化的东西，
 存档时 `json.dumps` 会抛 —— `serialize.state_to_json` 用了 `default=str` 兜底
-（`serialize.py:120`），结果是静默变成字符串。
+（`serialize.py:124`），结果是静默变成字符串。
 
 ## 事件映射：旧事件名 → 引擎事件名
 
@@ -92,7 +92,7 @@ def map_event(old_ev):
 你的数据表只写「命中」时，得同时挂两个。
 
 **为什么 `enemy_act` 映射到 `act_done`**：`act_done` 是**不带 subject 的广播事件**
-（`ctx["acted"]` 才是行动者，`battle.py:609-614`），所以「敌方行动后我叠减速」
+（`ctx["acted"]` 才是行动者，`battle.py:621-626`），所以「敌方行动后我叠减速」
 这类特效要在动作里**自己判敌我**（例：`we_act_done_slow`）。
 
 ## 词条的三种数值通道

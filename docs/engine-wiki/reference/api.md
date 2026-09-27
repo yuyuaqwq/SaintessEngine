@@ -97,13 +97,13 @@ Battle(btype="monster", sides=None, hostile_map=None, target_picker=None,
 | `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:239`） |
 | `sides` | `{阵营名: [actor]}`，**唯一入口** | 全包（`ext_combat`） |
 | `hostile_map` | `{side: [敌对 side]}` | `actors.hostile_sides`（`actors.py:202-204`）；缺省 = 除自己外全部阵营 |
-| `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:433-437`） |
+| `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:438-442`） |
 | `on_event` | `callable(battle, event, ctx, logs)`，事件总线尾部观察者 | `effect_triggers.fire`（`effect_triggers.py:117-122`） |
-| `action_override` | `callable(battle, action, actor, skill_name, target) -> (logs, cast)`；接管非内置行动 | `Battle.act`（`battle.py:520-528`） |
-| `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:378-387`） |
-| `redirect_hook` | `callable(battle, victim, guard, amount, dmg_kind) -> bool`；承伤转移是否真由保护者承受 | `landing.deal_damage`（`landing.py:62`）；治疗侧同款见 `heal_redirect_hook`（`landing.py:448`，非构造参数） |
-| `seed_ct` | `True` = 播种初始 ct；`from_state` 传 `False` | `battle.py:95-98` |
-| `text` | 文案表（鸭子类型 `render_or(key, default, **slots)`） | `Battle._t`（`battle.py:106`）；不落盘，恢复方重新注入 |
+| `action_override` | `callable(battle, action, actor, skill_name, target) -> (logs, cast)`；接管非内置行动 | `Battle.act`（`battle.py:532-540`） |
+| `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:383-392`） |
+| `redirect_hook` | `callable(battle, victim, guard, amount, dmg_kind) -> bool`；承伤转移是否真由保护者承受 | `landing.deal_damage`（`landing.py:62`）；治疗侧同款见 `heal_redirect_hook`（`landing.py:453`，非构造参数） |
+| `seed_ct` | `True` = 播种初始 ct；`from_state` 传 `False` | `battle.py:100-103` |
+| `text` | 文案表（鸭子类型 `render_or(key, default, **slots)`） | `Battle._t`（`battle.py:111`）；不落盘，恢复方重新注入 |
 
 > ⚠️ **N10 收口（2026-09-26）**：构造参数 `title_bonus` 与实例字段 `battle.title_bonus`
 > **已删**（存档里也不再写该键）。外部面板增幅的**唯一**容器是 per-actor
@@ -131,35 +131,35 @@ Battle(btype="monster", sides=None, hostile_map=None, target_picker=None,
 
 | 方法 | 位置 | 返回 |
 |---|---|---|
-| `sides_of(side)` | `battle.py:221` | 该阵营 actor 列表（**拷贝**，改它不影响战斗） |
-| `hostile_of(side)` | `battle.py:224` | `actors.hostile_actors` 的结果（敌对存活 actor） |
-| `focus()` | `battle.py:224` | `sides["player"]` 里第一个 `human_controlled` 存活 actor；兜底找 `kind == "player"` 的存活者；无则 `None` |
-| `alive_actors()` | `battle.py:239` | 全阵营存活 actor |
-| `alive_sides()` | `battle.py:241` | 有存活 actor 的阵营名列表 |
+| `sides_of(side)` | `battle.py:226` | 该阵营 actor 列表（**拷贝**，改它不影响战斗） |
+| `hostile_of(side)` | `battle.py:229` | `actors.hostile_actors` 的结果（敌对存活 actor） |
+| `focus()` | `battle.py:229` | `sides["player"]` 里第一个 `human_controlled` 存活 actor；兜底找 `kind == "player"` 的存活者；无则 `None` |
+| `alive_actors()` | `battle.py:244` | 全阵营存活 actor |
+| `alive_sides()` | `battle.py:246` | 有存活 actor 的阵营名列表 |
 
 ### 运行期注册
 
 ```python
-add_actor(actor: dict, side: str, front: bool = False) -> dict      # battle.py:254
+add_actor(actor: dict, side: str, front: bool = False) -> dict      # battle.py:259
 ```
 入 sides（`front=True` 插队首）→ 建技能索引 → 播种 ct → 返回 actor。
 用于召唤 / 援军 / 变身。原文强调「引擎零游戏知识：不认识随从/召唤/亡灵/援军，
-只做注册 + 索引 + 排程」（`battle.py:264`）。
+只做注册 + 索引 + 排程」（`battle.py:269`）。
 （引文里的「引擎」是该模块的原文；2026-09-23 起这个模块属扩展包 `ext_combat`，纪律即「本包零游戏知识」）。
 
 ### 行动入口
 
 ```python
 human_act(action, skill_name, actor=None, target=None, target_side=None)
-    -> (logs: list, ended: bool, who: dict | None)                   # battle.py:277
-advance(logs: list) -> dict | None                                   # battle.py:338
-auto_run(logs: list, max_steps: int = 500) -> None                    # battle.py:347
-actor_auto(actor: dict, ctx_target=None) -> (logs, ended)             # battle.py:363
-act(ctx: ActCtx) -> (logs, ended)                                     # battle.py:459
+    -> (logs: list, ended: bool, who: dict | None)                   # battle.py:282
+advance(logs: list) -> dict | None                                   # battle.py:343
+auto_run(logs: list, max_steps: int = 500) -> None                    # battle.py:352
+actor_auto(actor: dict, ctx_target=None) -> (logs, ended)             # battle.py:368
+act(ctx: ActCtx) -> (logs, ended)                                     # battle.py:464
 ```
 
 - `human_act`：命令层唯一入口。`actor` 缺省用 `focus()`。战斗已结束 → `(["战斗已结束！"], True, None)`。
-  出手后（且未结束）会 `_after_act` 推 ct + `advance` 到下一个决策点（`battle.py:271-291`）
+  出手后（且未结束）会 `_after_act` 推 ct + `advance` 到下一个决策点（`battle.py:276-296`）
 - `advance`：`schedule.advance` 的薄包装，返回下一个该决策的人控 actor
 - `auto_run`：全自动（人控 actor 也普攻）；`guard` 上限 `max_steps`。
   ⚠️ 全仓调用点**只在 `tests/`** —— 内容侧零调用，实质是测试/AI 仿真辅助；
@@ -174,17 +174,17 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 
 | 方法 | 位置 | 内容层引用数（全仓 grep） |
 |---|---|---|
-| `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:113/117/151` | 仅包内 |
-| `_do_defend` / `_do_flee` | `battle.py:625/458` | 仅包内 |
-| `_ensure_battle_started` | `battle.py:641` | 仅包内 |
-| `_on_actor_dead(actor, logs=None)` | `battle.py:658` | `landing._apply_damage` 调（`landing.py:401`） |
-| `_check_side_end` | `battle.py:678` | 仅包内 |
+| `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:118/117/151` | 仅包内 |
+| `_do_defend` / `_do_flee` | `battle.py:637/458` | 仅包内 |
+| `_ensure_battle_started` | `battle.py:653` | 仅包内 |
+| `_on_actor_dead(actor, logs=None)` | `battle.py:670` | `landing._apply_damage` 调（`landing.py:406`） |
+| `_check_side_end` | `battle.py:690` | 仅包内 |
 
 ### 序列化
 
 ```python
-to_state() -> dict                    # battle.py:705 → serialize.to_state
-Battle.from_state(st, *, text=None)   # battle.py:701（classmethod）→ serialize.from_state
+to_state() -> dict                    # battle.py:717 → serialize.to_state
+Battle.from_state(st, *, text=None)   # battle.py:713（classmethod）→ serialize.from_state
 ```
 
 ## 3. 模块级公开函数（除 `config.py` 外都在扩展包 `ext_combat`）
@@ -229,7 +229,7 @@ Battle.from_state(st, *, text=None)   # battle.py:701（classmethod）→ serial
 deal_damage(battle, source, target, amount, logs, dmg_kind="", defend_reduce=None, element="") -> int
 # landing.py:28
 heal_actor(battle, target, amount, logs, source=None, label="") -> int
-# landing.py:437
+# landing.py:442
 ```
 
 两个都是**落地唯一收口**。内部子函数（无外部引用）：`_lv_pressure`（`:221`）、
@@ -278,9 +278,9 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 
 见 [../concepts/config-injection.md](../concepts/config-injection.md) 的 25 hook 表。
 公开面（引擎侧只剩「注入面 + 严格模式」这几个）：
-`EngineNotConfigured`（`:20`）· `strict`（`:134`）· `set_config`（`:145`）· `get_config`（`:154`）·
-`register_hook_provider`（`:163`）· `set_hook`（`:173`）· `mount`（`:186`）· `get_hook`（`:192`）·
-`unconfigured(name, default)`（`:241`）。
+`EngineNotConfigured`（`:20`）· `strict`（`:146`）· `set_config`（`:157`）· `get_config`（`:166`）·
+`register_hook_provider`（`:175`）· `set_hook`（`:185`）· `mount`（`:198`）· `get_hook`（`:204`）·
+`unconfigured(name, default)`（`:253`）。
 ★ 原先那一串「游戏配置取件面」（`load_game_rules` / `get_effect_rules` / `state_def` /
 `formulas()` / `kind_of` / `monster_skill_of` …）**已随第 7 批搬进扩展包** —— 现在住
 `ext_combat.battle.game_config`（包内写 `from ext_combat.battle import game_config`）。
@@ -309,11 +309,11 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 
 | 函数 | 位置 | 语义 |
 |---|---|---|
-| `to_state(battle)` | `:36` | Battle → dict |
-| `from_state(st)` | `:55` | dict → Battle |
-| `state_to_json(state)` | `:119` | `json.dumps(..., ensure_ascii=False, default=str)` |
-| `json_to_state(raw)` | `:123` | `json.loads` |
-| `_STRIP_KEYS` | `:30` | `{"_skill_index"}` |
+| `to_state(battle)` | `:34` | Battle → dict |
+| `from_state(st)` | `:57` | dict → Battle |
+| `state_to_json(state)` | `:123` | `json.dumps(..., ensure_ascii=False, default=str)` |
+| `json_to_state(raw)` | `:127` | `json.loads` |
+| `_STRIP_KEYS` | `:31` | `{"_skill_index"}` |
 
 ### `actions.py`
 

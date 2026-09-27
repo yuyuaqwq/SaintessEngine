@@ -154,8 +154,8 @@
 | R6 | `actions.py:859` → `game.engine.skill_buff_turns` | 反向边 |
 | R7 | `actions.py:845` → `game.core.constants` | 死 import |
 | R8 | `actions.py:865` → `game.engine.skill_mech_val` | 反向边 |
-| R9 | `battle.py:138` → `game.engine`（技能表查询） | 反向边 |
-| R10 | `battle.py:139` → `game.content.MONSTER_SKILLS` | 内容表直读 |
+| R9 | `battle.py:143` → `game.engine`（技能表查询） | 反向边 |
+| R10 | `battle.py:144` → `game.content.MONSTER_SKILLS` | 内容表直读 |
 | R11 | `stats.py:15` → `game.engine.player_final_stats` | **最重的一条**（玩家面板全算） |
 | R12 | `config.py:35` → `game.data.battle_rules` | 位置不合规（装配逻辑落在引擎包内） |
 | R13 | `stats.py:96` → 字面量 `"战士"` | 内容名侵入 |
@@ -189,7 +189,7 @@
 | B4 | ~~`schedule._settle_time_effects` 里按 `is_boss` / `role == "boss"` / `is_elite` 三个**游戏字段**判身份（旧案）~~ **2026-09-25 E3 已消除** | `schedule.py:656`（现为 `traits.has_any(a, period.get("trait_tags") or ())`） | 引擎不再认识「Boss」：身份 = 内容侧在声明里写的 `traits` 标签，引擎只做 `traits.of` / `has` / `has_any`，**名单为空 ⇒ 一律 False**（引擎零游戏知识）。剩下的 `pct_boss` / `boss_pct_mult` / `pct_cur_boss` 只是**那张声明表自己的字段名**（引擎按名读声明块、不解释语义） | `extends/ext_combat/battle/schedule.py`（判定面 `battle/traits.py`） |
 | B5 | ~~`effects.act_apply` 里 `if holder.get("is_boss") or holder.get("role") == "boss"`（旧案）~~ **2026-09-25 E3 已消除** | `effects.py:376-377`（现为 `traits.has_any(holder, state_def(key)["ctrl_half_traits"])`） | 同上（控制时长减半）：**带哪些标签才减半**由该状态的规则声明给（`ctrl_half_traits`），引擎不认标签叫什么 | `extends/ext_combat/battle/effects.py` |
 | B6 | `effects._mech_to_effect` 的 `_is_stack_resource` 判据关键词含 `debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct` | `effects.py:277-281` | 这些字段**没有消费者**（`debuff_scale` 已于 2026-09-11 接线），但它们的**存在与否改变分派结果** —— 声明了 `debuff_scale` 会意外让 mech 走叠层路径 | `extends/ext_combat/battle/effects.py` |
-| B7 | `battle.py` 里 `"player"` 阵营名硬编码 | `battle.py:684`（`_check_side_end`）、`:170`（`focus`） | 你的游戏若不叫 `player` 就得改这个包或用 `hostile_map` 绕过 | `extends/ext_combat/battle/battle.py` |
+| B7 | `battle.py` 里 `"player"` 阵营名硬编码 | `battle.py:696`（`_check_side_end`）、`:170`（`focus`） | 你的游戏若不叫 `player` 就得改这个包或用 `hostile_map` 绕过 | `extends/ext_combat/battle/battle.py` |
 | B8 | `B6` 的反面：`stats._monster_base_stats` 的 `crit` 兜底 0.05 与 `make_actor` 播种 0.0 不一致 | `stats.py:145` vs `actors.py:100` | 同一种 actor 在不同路径下暴击率不同 | `extends/ext_combat/battle/stats.py` vs `battle/actors.py` |
 
 **结论（三层后，边界瑕疵分成两类）**：

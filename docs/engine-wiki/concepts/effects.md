@@ -26,7 +26,7 @@ actor["effects"] = {
 - 到期只有一处（`schedule._settle_time_effects`，`schedule.py:479-498`）
 - 净化只有一处（`effects.act_cleanse`，`effects.py:635-644`）
 - 面板折算只有一处（`stats._apply_effects`，`stats.py:39`）
-- 序列化天然覆盖（`serialize._serialize_actor` 全字段带走，`serialize.py:49`）
+- 序列化天然覆盖（`serialize._serialize_actor` 全字段带走，`serialize.py:51`）
 - 「这个效果属于哪一类」不再需要回答——**行为由声明给，不由容器给**
 
 **唯一例外**：`shields`（承伤资源）与 `cooldown`（调度）**故意留在 containers 之外**
@@ -41,13 +41,13 @@ actor["effects"] = {
 | 字段 | 谁写 | 谁读 | 含义 |
 |---|---|---|---|
 | `stacks` | `act_apply`（`effects.py:431/429`）/ `act_consume` / 周期 gain | `_cap_of` clamp、`stats` 折算、`schedule` 周期跳、`_apply_death_guard` | 层数。**允许 float**（小数刻度，如信仰每刻 −0.7） |
-| `expire` | `act_apply` | `schedule._settle_time_effects`（`schedule.py:545-529`）、`Battle.act` 控制过期兜底（`battle.py:482-484`）、`actions._consume_hit_buffs` | **绝对时刻**；`None` = 永不到期 |
-| `mode` | `act_apply` 控制分支 | `Battle.act` 控制消费（`battle.py:491-518`） | `"skip"` = 整跳行动 / `"no_skill"` = 技能转普攻 |
+| `expire` | `act_apply` | `schedule._settle_time_effects`（`schedule.py:545-529`）、`Battle.act` 控制过期兜底（`battle.py:494-496`）、`actions._consume_hit_buffs` | **绝对时刻**；`None` = 永不到期 |
+| `mode` | `act_apply` 控制分支 | `Battle.act` 控制消费（`battle.py:503-530`） | `"skip"` = 整跳行动 / `"no_skill"` = 技能转普攻 |
 | `v` | `act_apply` value 型 | **无引擎消费者**（☞ 见下） | 值型数值（如减伤 0.45） |
 | `stat` / `op` / `mult` | `act_apply` 快照分支 | `stats._apply_effects`（`stats.py:69-80`） | 面板增益快照 |
 | `hit` | `act_apply` hit 子键 | `actions._consume_hit_buffs`（`actions.py:472`） | 出手消费型（`dmg_mult` / `guaranteed_crit` / `bonus_atk_pct`） |
 | `period` | **内容侧**直接写入 | `schedule._settle_time_effects`（`schedule.py:663-671`） | 动态周期声明（条目自带优先，回落表声明） |
-| `value` | 内容侧（`heal_amp_pct` 等） | `landing._apply_heal_mods`（`landing.py:522`） | 附加数值袋（形态自定，消费方自己解释） |
+| `value` | 内容侧（`heal_amp_pct` 等） | `landing._apply_heal_mods`（`landing.py:527`） | 附加数值袋（形态自定，消费方自己解释） |
 
 ### `v` 字段的消费缺口
 
