@@ -8,7 +8,7 @@
 否则碰到那些行拿到的是「一行坏数据 + 一条诊断」，断言文案的用例会集体变红。
 
 **真源**是各游戏包自己的文案表（如 `examples/minimal-game/content/texts.py`）——
-本文件这 42 条是它们的**副本**，只服务于引擎门禁（不让引擎门禁依赖某个具体内容包的措辞）。
+本文件这 60 条是它们的**副本**，只服务于引擎门禁（不让引擎门禁依赖某个具体内容包的措辞）。
 两份串必须逐字相同（`tests/test_cues_shape.py` 逐字对拍两者）。
 
 跑法：不单独跑 —— 被门禁 import（`from _cue_text_fixture import TEXT, SUBS, install`）。
@@ -71,6 +71,25 @@ TEMPLATES = {
     "battle.effects.cast_broken": "💥 {name} 的出招被打断了！",
     "battle.effects.damaged": "💥 {name} 受到 {dmg} 点伤害！",
     "battle.effects.stack_add": "✦ {key} {n}{cap}（+{amount}）",
+    "battle.actions.no_target": "但没有可攻击的目标！",
+    "battle.actions.skill_cd": "⏳ 【{name}】冷却中：还需 {left:.1f} 刻！",
+    "battle.actions.resource_lack": "⚡ 核心资源不足：需要 {rv:g} {rk}，当前 {cur:g}！",
+    "battle.actions.enchant_followup": "{tag} 附魔追击，追加 {dmg} 点伤害！",
+    "battle.actions.effect_on": "✨ {key} 生效！",
+    "battle.actions.lifesteal": "🩸 吸血：回复 {heal} 点生命！",
+    "battle.actions.skill_heal_full": "你施展【{name}】，圣光治愈了你 {heal} 点生命！",
+    "battle.actions.skill_heal": "你施展【{name}】，治愈了 {heal} 点生命！",
+    "battle.actions.skill_cast": "你施展【{name}】！",
+    "battle.schedule.actor_turn": "—— {name} 行动 ——",
+    "battle.schedule.dot_tick": "🔥 {name} 受 {key} {n} 层影响，损失 {dmg} 生命",
+    "battle.schedule.regen_hp": "🍲 {name} 持续恢复，恢复 {heal} 点生命！",
+    "battle.schedule.regen_mp": "🍲 {name} 持续恢复，恢复 {heal} 点魔力！",
+    "battle.gauge.gain": "💥 {bar} 积蓄 +{add}（{val}/{maxcap}）",
+    "battle.gauge.trigger": "💢 【{bar}】触发！(第 {count} 次)",
+    "battle.gauge.shaken": "💢 【{name}】被{bar}震慑，无法行动！",
+    "battle.gauge.phase_preserve": "💢【{name}】阶段更迭：{bar}积蓄保留 {pct}%（{before} → {after}）",
+    "battle.gauge.reflect": "🪨 反震：反弹 {dmg} 点伤害！",
+
 }
 
 _MISSING = sorted(set(CUE_NAMES) - set(TEMPLATES))

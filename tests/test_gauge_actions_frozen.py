@@ -17,25 +17,30 @@
    内存里喂给 `inspect`，仓库文件一个字节都不动）。
 
 改写登记（4 个函数 / 6 处；为什么行为不变）
-------------------------------------------
-逐条都只做「内联 f-string → key + 兜底模板 + 槽位」（`render_via`，或把注入表
-`text=` 下传给模块级 `bar_gain`/`bar_trigger`）：
+-------------------------------------------
+**T2 第 1/2 轮**（内联 f-string → key + 兜底模板 + 槽位；注入表 `text=` 下传模块级函数）
+**T3 / cue 解耦 B4（2026-09-27）**：这 5 条日志改走**表现事件**（`_cue(battle, logs, key, 槽位)`），
+`bar_gain` / `bar_trigger` 的第一个参数从「文案表 `text=`」换成**战斗本体**
+（总线 + 文案表都在它身上）—— 措辞真源在内容侧文案表，模块级函数手里没有模板可回落。
 
 * **`_settle`（2 处）**
-  ① 触发转发多带 `text=text_of(battle)`；
-  ② `...被破绽震慑，无法行动！`（硬编码游戏名词）→ `...被{bar}震慑，无法行动！`，
+  ① 触发转发改传 `battle`（原 `text=text_of(battle)`）；
+  ② `...被破绽震慑，无法行动！`（硬编码游戏名词）→ `_cue(... "battle.gauge.shaken" ...)`，
      条显示名由 `bd.get('name', key)` 供给。该条另有独立理由：作业书 §4 硬禁令 +
      引擎中立性门禁 `tests/test_no_game_vocabulary.py`（扫 `saintess_engine/**`，词表含该名词）
      ⇒ 引擎源码不得出现它。`bd` 来自内容侧 config（游戏侧
      `MECH_CFG["enemy_bar"]["shaken"]["name"]` 即该名词）⇒ 渲染逐字节相同；且该分支只在
      `bd["trigger_effect"]=="skip_turn"` 时可达（config 必在位，不存在「未装配 → 打印 bar key」）。
-* **`bar_gain_act` / `passive_reflect_bar_act`**：调 `bar_gain(...)` 时多带 `text=text_of(battle)`。
-* **`bar_phase_preserve_act` / `passive_reflect_bar_act`**：两条日志改走 `render_via`。
+* **`bar_gain_act` / `passive_reflect_bar_act`**：调 `bar_gain(...)` 时改传 `battle`。
+* **`bar_phase_preserve_act` / `passive_reflect_bar_act`**：两条日志改走 `_cue`。
 
-**零回归的根据**：`render_or(text, key, default, **slots)` 在 `text is None`（未注入）时走
-`safe_format(default, slots)` —— 兜底模板就是搬运前那条 f-string 的「占位化」原文，槽位只做
-「原表达式求值后传入」⇒ 输出逐字节不变。`test_log_render_equivalence()` 对 **5 条日志**逐行钉死
-这一点（真实现 + 猴补 config），并逐条反证「换表 ⇒ 该行必变」。
+**零回归的根据**：`test_log_render_equivalence()` 用**门禁夹具文案表**
+（`tests/_cue_text_fixture.py`，逐字 = 搬运前那句）配上总线跑真实现，对 **5 条日志**逐行钉死；
+并逐条反证「换表 ⇒ 该行必变」。**不配总线 ⇒ 只出一行坏数据**（不回落任何引擎措辞）——
+这条也是判据（cue 解耦的解耦点）。
+**活实现 sha 重钉**：B4 改了 4 个函数（`_settle` / `bar_gain_act` / `bar_phase_preserve_act` /
+`passive_reflect_bar_act`）⇒ `PIN_NEW` 按同一算法（`_sha(inspect.getsource(fn))`）重钉；
+`PIN_FROZEN`（冻结副本）**一字未动**。
 
 跑法：python tests/test_gauge_actions_frozen.py（exit=0 全绿）
 """
@@ -234,31 +239,27 @@ _REL_MAP = (
 _FROZEN_DIVERGENCE = {
     "_settle": (
         (r'''    if not bar_trigger(host, key, logs, now):''',
-         r'''    if not bar_trigger(host, key, logs, now, text=text_of(battle)):'''),
+         r'''    if not bar_trigger(battle, host, key, logs, now):'''),
         (r'''        logs.append(f"💢 【{host.get('name', '目标')}】被破绽震慑，无法行动！")''',
-         r'''        logs.append(render_via(
-            battle, "battle.gauge.shaken", "💢 【{name}】被{bar}震慑，无法行动！",
-            name=host.get('name', '目标'), bar=bd.get('name', key)))'''),
+         r'''        _cue(battle, logs, "battle.gauge.shaken",
+             {"name": host.get('name', '目标'), "bar": bd.get('name', key)})'''),
     ),
     "bar_gain_act": (
         (r'''    bar_gain(host, key, amount, logs, now=_now_of(battle))''',
-         r'''    bar_gain(host, key, amount, logs, now=_now_of(battle), text=text_of(battle))'''),
+         r'''    bar_gain(battle, host, key, amount, logs, now=_now_of(battle))'''),
     ),
     "bar_phase_preserve_act": (
         (r'''        logs.append(f"💢【{host.get('name', '目标')}】阶段更迭："
                     f"{bd.get('name', key)}积蓄保留 {pct}%（{int(before)} → {int(after)}）")''',
-         r'''        logs.append(render_via(
-            battle, "battle.gauge.phase_preserve",
-            "💢【{name}】阶段更迭：{bar}积蓄保留 {pct}%（{before} → {after}）",
-            name=host.get('name', '目标'), bar=bd.get('name', key),
-            pct=pct, before=int(before), after=int(after)))'''),
+         r'''        _cue(battle, logs, "battle.gauge.phase_preserve",
+             {"name": host.get('name', '目标'), "bar": bd.get('name', key),
+              "pct": pct, "before": int(before), "after": int(after)})'''),
     ),
     "passive_reflect_bar_act": (
         (r'''        logs.append(f"🪨 反震：反弹 {rd} 点伤害！")''',
-         r'''        logs.append(render_via(battle, "battle.gauge.reflect",
-                               "🪨 反震：反弹 {dmg} 点伤害！", dmg=rd))'''),
+         r'''        _cue(battle, logs, "battle.gauge.reflect", {"dmg": rd})'''),
         (r'''        bar_gain(attacker, key, gain, logs, now=now)''',
-         r'''        bar_gain(attacker, key, gain, logs, now=now, text=text_of(battle))'''),
+         r'''        bar_gain(battle, attacker, key, gain, logs, now=now)'''),
     ),
 }
 
@@ -288,11 +289,13 @@ PIN_NEW = {
     '_ensure_tick': '40e7e0530939dbca3df5ff01224128f1ba292215c0106abb7729b7de69f6c752',
     '_host_of': 'c7ed3a30e827d53b8293edc5400fc3a4cec4fa5192b2b3c25df7c4415146aba2',
     '_now_of': '8216c6a8826b3c3872289f88ac9d3572acc0865eb1d1f17a348d1f4b471801b2',
-    '_settle': '4b0f93cb7efe1ad4a8be024bc5ea4bd53442b57dc35391728934d00f9a6fc74c',
-    'bar_gain_act': 'b1726cc6845c0e8f71678c03de55389842976d632c11981a617b5284d37111f5',
-    'bar_phase_preserve_act': 'a41f410ab6546f2b5cb3afcadd75948e56ba12d1e220001542cbfca0f1333054',
+    # ★ B4（2026-09-27）重钉：这 4 个函数改走 cue（`text=text_of(battle)` → 传 `battle`；
+    #   `render_via` → `_cue`）。算法与旧值同源：`_sha(inspect.getsource(fn))`。
+    '_settle': '8ff290c18aabb7ec00a9ef8c09ef5baefe4c9bee18c96970ada7a2a7b5ce967c',
+    'bar_gain_act': '8ad6d5d58d1ecb2e2c44153d351cd06bacfae457005a2a4b2c5dae5a83417e14',
+    'bar_phase_preserve_act': 'ff9f3e2c5fc920ea6e6b5b9e058ee92b6b40f8691ed9eccfbbaa1e451a59de7d',
     'bar_time_settle_act': 'bc9bf48679b0fc8aef3a1e29ec9d7574a511d8b98f91559b6b7c67a3eab390d6',
-    'passive_reflect_bar_act': 'b1f2358b59ea33112520ee0050427c94c250dc4ce7e04031cda89e185df2c64f',
+    'passive_reflect_bar_act': '17e17b36ebcd303091da276273fcf1baa879bf51de41877b4e7e64ef4402e64a',
 }
 PIN_REG_NAMES = ['bar_gain', 'bar_phase_preserve', 'bar_time_settle', 'passive_reflect_bar']
 
@@ -442,101 +445,140 @@ def test_frozen_contract():
 
 
 class _StubText:
-    """假文案表（只实现 `render_or`）：key 在册 → 返回标记；否则标记缺 key。"""
+    """假文案表（`render_or` + 命中判定 `in`）：key 在册 → 返回标记；否则标记缺 key。
+
+    ★ B4：cue 的 `kind=text` 渲染是「**必须命中**」口（`render_required`）⇒ 假表也要能
+    回答「有没有这个 key」（原先只实现 `render_or` 的替身现在推不动已迁移点位）。
+    """
 
     def __init__(self, mapping=None):
         self.mapping = dict(mapping or {})
+
+    def __contains__(self, key):
+        return key in self.mapping
 
     def render_or(self, key, default, **slots):
         return self.mapping.get(key, "[缺]%s" % key)
 
 
 class _Holder:
-    """只带 `text`（+ 可选 `_fire_ctx`）的 Battle 替身（= 注入面形状）。"""
+    """带 `text` / `cues`（+ 可选 `_fire_ctx`）的 Battle 替身（= 注入面形状）。
 
-    def __init__(self, text=None, fire_ctx=None):
+    ★ B4：这 5 条日志走 cue ⇒ 表现要 `cues`（总线）**和** `text`（总线里的措辞表）两样。
+    """
+
+    def __init__(self, text=None, fire_ctx=None, cues=None):
         self.text = text
+        self.cues = cues
         if fire_ctx is not None:
             self._fire_ctx = fire_ctx
 
 
+def _cue_bus(table):
+    """按 5 条 gauge 日志的 cue 名建一条总线（`table` = 文案表）。"""
+    from saintess_engine.cues import CueBus
+    names = ("battle.gauge.shaken", "battle.gauge.gain", "battle.gauge.trigger",
+             "battle.gauge.phase_preserve", "battle.gauge.reflect")
+    return CueBus({n: ({"kind": "text", "key": n},) for n in names}, table=table)
+
+
+_FIX_BUS = None
+
+
+def _fix_holder(fire_ctx=None):
+    """夹具表 + 总线 的 Battle 替身（逐字 = 搬运前那句）。"""
+    global _FIX_BUS
+    if _FIX_BUS is None:
+        from _cue_text_fixture import TEXT as _FIX_TEXT
+        _FIX_BUS = _cue_bus(_FIX_TEXT)
+    return _Holder(None, fire_ctx=fire_ctx, cues=_FIX_BUS)
+
+
 def test_log_render_equivalence():
-    print("【gauge 5 条日志：未注入逐字 == 搬运前文案；注入 = 表说了算】")
+    print("【gauge 5 条日志：配夹具表 ⇒ 逐字 == 搬运前文案；换表 ⇒ 必变；不配总线 ⇒ 一行坏数据】")
     import ext_combat.gauge as G
     from ext_combat.battle import landing as L
+    from saintess_engine.cues import MISS_LINE
     saved = (G.bar_def, G.bar_should_trigger, G.bar_trigger, L.deal_damage)
     G.bar_def = lambda k: {"trigger_effect": "skip_turn", "name": "破绽",
                            "max": 100, "threshold_base": 10}
     try:
-        # ① _settle：skip_turn 控制跳过（未注入 / 注入）
+        # ① _settle：skip_turn 控制跳过（配夹具表 / 换表 / 不配总线）
         G.bar_should_trigger = lambda h, k, now: True
-        G.bar_trigger = lambda h, k, logs, now, text=None: True
+        G.bar_trigger = lambda b, h, k, logs, now: True
         host0 = {"name": "目标", "effects": {}}
         logs = []
-        ok = A._settle(None, host0, "shaken", logs)
-        check("① skip_turn 日志逐字节 == 搬运前文案",
+        ok = A._settle(_fix_holder(), host0, "shaken", logs)
+        check("① skip_turn 日志逐字节 == 搬运前文案（B4：措辞取自内容侧夹具表）",
               bool(ok) and logs == ["💢 【目标】被破绽震慑，无法行动！"], repr(logs))
         check("skip 落地条目仍在（mode=skip / expire=None）",
               host0["effects"].get("bar_skip:shaken") == {"mode": "skip", "expire": None},
               repr(host0["effects"]))
+        host0b = {"name": "目标", "effects": {}}
         logs = []
-        A._settle(_Holder(_StubText({"battle.gauge.shaken": "X"})), host0, "shaken", logs)
-        check("①' 注入表换串 → 该行输出变（注入非死代码）", logs == ["X"], repr(logs))
+        A._settle(_Holder(cues=_cue_bus(_StubText({"battle.gauge.shaken": "X"}))),
+                  host0b, "shaken", logs)
+        check("①' 换表 → 该行输出变（措辞真源在内容侧表）", logs == ["X"], repr(logs))
+        host0c = {"name": "目标", "effects": {}}
+        logs = []
+        A._settle(_Holder(), host0c, "shaken", logs)
+        check("①'' 不配总线 / 不配表 ⇒ 一行坏数据（**不**回落引擎模板）",
+              logs == [MISS_LINE], repr(logs))
 
-        # ② bar_gain / ③ bar_trigger：模块级函数（text= 由动作侧 text_of(battle) 传下来）
+        # ② bar_gain / ③ bar_trigger：模块级函数（B4 起第一个参数 = 战斗本体）
         G.bar_should_trigger = saved[1]
         G.bar_trigger = saved[2]
         e = {"effects": {}}
         logs = []
-        G.bar_gain(e, "shaken", 5, logs, now=0.0)
+        G.bar_gain(_fix_holder(), e, "shaken", 5, logs, now=0.0)
         check("② 积蓄行逐字节 == 搬运前文案",
               logs == ["💥 shaken 积蓄 +5（5/100）"], repr(logs))
         logs = []
-        G.bar_gain(e, "shaken", 5, logs, now=0.0,
-                   text=_StubText({"battle.gauge.gain": "Y"}))
-        check("②' 注入表换串 → 该行输出变", logs == ["Y"], repr(logs))
+        G.bar_gain(_Holder(cues=_cue_bus(_StubText({"battle.gauge.gain": "Y"}))),
+                   e, "shaken", 5, logs, now=0.0)
+        check("②' 换表 → 该行输出变", logs == ["Y"], repr(logs))
         e2 = {"effects": {}}
         logs = []
-        G.bar_gain(e2, "shaken", 15, logs, now=0.0)
-        G.bar_trigger(e2, "shaken", logs, now=0.0)
+        G.bar_gain(_fix_holder(), e2, "shaken", 15, logs, now=0.0)
+        G.bar_trigger(_fix_holder(), e2, "shaken", logs, now=0.0)
         check("③ 触发行逐字节 == 搬运前文案",
               logs[-1] == "💢 【破绽】触发！(第 1 次)", repr(logs))
         e3 = {"effects": {}}
         logs = []
-        G.bar_gain(e3, "shaken", 15, logs, now=0.0,
-                   text=_StubText({"battle.gauge.gain": "Y"}))
-        G.bar_trigger(e3, "shaken", logs, now=0.0,
-                      text=_StubText({"battle.gauge.trigger": "Z"}))
-        check("③' 注入表换串 → 触发行输出变", logs[-1] == "Z", repr(logs))
+        _bus3 = _cue_bus(_StubText({"battle.gauge.gain": "Y", "battle.gauge.trigger": "Z"}))
+        G.bar_gain(_Holder(cues=_bus3), e3, "shaken", 15, logs, now=0.0)
+        G.bar_trigger(_Holder(cues=_bus3), e3, "shaken", logs, now=0.0)
+        check("③' 换表 → 触发行输出变", logs[-1] == "Z", repr(logs))
 
-        # ④ 阶段更迭（未注入 / 注入）
+        # ④ 阶段更迭（配表 / 换表）
         host = {"name": "目标", "effects": {"bar:shaken": {"val": 40.0}}}
         logs = []
-        A.bar_phase_preserve_act(None, None, None, {"_owner": host}, logs)
+        A.bar_phase_preserve_act(_fix_holder(), None, None, {"_owner": host}, logs)
         check("④ 阶段更迭行逐字节 == 搬运前文案",
               logs == ["💢【目标】阶段更迭：破绽积蓄保留 50%（40 → 20）"], repr(logs))
         host2 = {"name": "目标", "effects": {"bar:shaken": {"val": 40.0}}}
         logs = []
-        A.bar_phase_preserve_act(_Holder(_StubText({"battle.gauge.phase_preserve": "P"})),
-                                 None, None, {"_owner": host2}, logs)
-        check("④' 注入表换串 → 该行输出变", logs == ["P"], repr(logs))
+        A.bar_phase_preserve_act(
+            _Holder(cues=_cue_bus(_StubText({"battle.gauge.phase_preserve": "P"}))),
+            None, None, {"_owner": host2}, logs)
+        check("④' 换表 → 该行输出变", logs == ["P"], repr(logs))
 
-        # ⑤ 反震（未注入 / 注入）；deal_damage 猴补 no-op，隔离它自己的日志
+        # ⑤ 反震（配表 / 换表）；deal_damage 猴补 no-op，隔离它自己的日志
         L.deal_damage = lambda *a, **kw: None
         atk = {"name": "甲", "hp": 100, "max_hp": 100}
         dfd = {"name": "乙", "hp": 100, "max_hp": 100}
         logs = []
         A.passive_reflect_bar_act(
-            _Holder(None, fire_ctx={"source": atk, "dmg": 30}), None, dfd,
+            _fix_holder(fire_ctx={"source": atk, "dmg": 30}), None, dfd,
             {"_owner": dfd, "reflect_pct": 0.5, "key": "shaken", "gain": 3}, logs)
         check("⑤ 反震行（+ 反推条积蓄行）逐字节 == 搬运前文案",
               logs == ["🪨 反震：反弹 15 点伤害！", "💥 shaken 积蓄 +3（3/100）"], repr(logs))
         atk2 = {"name": "甲", "hp": 100, "max_hp": 100}
         dfd2 = {"name": "乙", "hp": 100, "max_hp": 100}
-        stub = _StubText({"battle.gauge.reflect": "R", "battle.gauge.gain": "G"})
+        stub = _cue_bus(_StubText({"battle.gauge.reflect": "R", "battle.gauge.gain": "G"}))
         logs = []
         A.passive_reflect_bar_act(
-            _Holder(stub, fire_ctx={"source": atk2, "dmg": 30}), None, dfd2,
+            _Holder(cues=stub, fire_ctx={"source": atk2, "dmg": 30}), None, dfd2,
             {"_owner": dfd2, "reflect_pct": 0.5, "key": "shaken", "gain": 3}, logs)
         check("⑤' 注入表换串 → 两行都取自表", logs == ["R", "G"], repr(logs))
     finally:
@@ -564,13 +606,15 @@ def test_teeth():
     print("【有牙反证：猴补破坏 3 件事 → 门禁必须变红；跑完不写盘还原】")
     check("基线：门禁本来是绿的", not evaluate(), "；".join(evaluate()[:3]))
 
-    # M1 —— 改一条 logs.append 文案
+    # M1 —— 改一个 cue key（B4 起引擎侧**不再有**内联文案可改 ⇒ 措辞路由被偷改就是这一档的牙）
     orig = A.bar_phase_preserve_act
-    A.bar_phase_preserve_act = _tamper("bar_phase_preserve_act", "阶段更迭", "阶段更替")
+    A.bar_phase_preserve_act = _tamper("bar_phase_preserve_act",
+                                       "battle.gauge.phase_preserve",
+                                       "battle.gauge.phase_preserve_typo")
     try:
         bad = evaluate()
-        check("M1 改 logs.append 文案 → 门禁变红", bool(bad),
-              "（没红说明文案没被门禁看到）")
+        check("M1 改 cue key（措辞路由）→ 门禁变红", bool(bad),
+              "（没红说明这行没被门禁看到）")
     finally:
         A.bar_phase_preserve_act = orig
 

@@ -26,7 +26,7 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 | 1 | `battle_start` | `battle.py:681`（`_ensure_battle_started`） | `{}` | **无**（全体触发） | 首个 actor 行动前，**整场一次**（`_started` 守卫） |
 | 2 | `turn_start` | `battle.py:503`（`act`） | `actor` | 行动者 | 回合开始，**先于控制检查**（所以「回合开始回蓝」被晕也触发） |
 | 3 | `act_begin` | `battle.py:548`（`act`） | `actor`, `target` | 行动者 | 控制通过、行动执行前 |
-| 4 | `act_cast` | `actions.py:113`（`do_skill`） | `actor`, `target`, `info` | 施法者 | 扣费与冷却之后、结算之前 |
+| 4 | `act_cast` | `actions.py:112`（`do_skill`） | `actor`, `target`, `info` | 施法者 | 扣费与冷却之后、结算之前 |
 | 5 | `skill_hit` | `actions.py:491-493`（`_single_target_pipeline`） | `actor`, `target`, `info`, `dmg` | 攻击者 | 技能命中后（伤害已落地）；AOE 每目标各触发一次 |
 | 6 | `attack_hit` | 同上（`info["_basic"]` 为真时选它） | 同上 | 攻击者 | 普攻命中后 |
 | 7 | `crit` | `actions.py:524-522` | `actor`, `target`, `info`, `dmg` | 攻击者 | 暴击命中（`skill_hit`/`attack_hit` 的子集，**紧跟其后**） |
@@ -34,7 +34,7 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 | 9 | `on_heal` | `landing.py:425`（`heal_actor`） | `actor`, `target`, `source`, `amount`, `overflow` | 被治疗者 | 实际回血 > 0 时 |
 | 10 | `on_kill` | `landing.py:408`（`_apply_damage`） | `actor`, `target`, `dmg` | **击杀者** | 致死伤害落地后；`source is None`（DOT/环境杀）不触发 |
 | 11 | `on_death` | `battle.py:701`（`_on_actor_dead`） | `actor`, `target` | 死者 | 所有死亡路径统一在此；**死者的声明仍会执行**（subject 例外） |
-| 12 | `dot_tick` | `schedule.py:813`（`_settle_time_effects`） | `actor`, `target`, `key`, `dmg` | 受跳者 | DOT 每一跳 |
+| 12 | `dot_tick` | `schedule.py:808`（`_settle_time_effects`） | `actor`, `target`, `key`, `dmg` | 受跳者 | DOT 每一跳 |
 | 13 | `dot_calc` | `schedule.py:756`（同上） | `target`, `dot_key`, `dmg`, `mult` | **无**（广播） | DOT 伤害落地**前**的乘区钩子 |
 | 14 | `on_act_consume` | `battle.py:536`（`act`） | `actor`, `tag` | 行动者 | 被控跳过行动（`mode="skip"`）时 |
 | 15 | `on_hit_consume` | `actions.py:593`（`_consume_hit_buffs`） | `actor`, `key` | 出手者 | 一次性出手 buff 被消费时 |

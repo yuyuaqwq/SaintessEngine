@@ -79,14 +79,14 @@ actions.do_attack(battle, ctx)                                      actions.py:5
 
 actions.do_skill(battle, ctx)                                       actions.py:64
   1. info 空 → return []
-  2. 玩家（有 class_name）→ _skill_usable(...)                       actions.py:143
+  2. 玩家（有 class_name）→ _skill_usable(...)                       actions.py:142
        └─ res_cost 条目存在且 stacks < 需求 → 拦截 + 日志，return
-  3. _spend_skill_cost(actor, info)                                 actions.py:192
+  3. _spend_skill_cost(actor, info)                                 actions.py:189
        ├─ mp 扣减（pay = _skill_pay_of 折算）
        ├─ res_cost 扣 effects[key].stacks
        └─ consume_all → ef.pop(key)
   4. cd > 0 → actor["cooldown"][name] = now + cd（cd_mult 取态声明最小） :83-100
-  5. ⚡ fire("act_cast", {actor, target, info})                       actions.py:113
+  5. ⚡ fire("act_cast", {actor, target, info})                       actions.py:112
   6. kind 分派（比较的是 config.kind_of 注入的值）:
        kind == heal → _do_heal(...)     → heal_calc ⚡ → landing.heal_actor → on_heal ⚡
        kind == buff → _do_buff(...)     → apply_effects（effect 名词）

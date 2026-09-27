@@ -19,7 +19,7 @@ from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（
 from . import game_config as _GC
 from . import stats as S
 from .actors import actor_alive
-from saintess_engine.text import render_via
+from .cues import cue as _cue           # 已迁移点位走表现事件（措辞真源 = 内容侧文案表）
 
 # S1 断链（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 R1/R2/R14/R15）：
 # 引擎不得 import game.engine / game.core.constants —— 原 `E.*` 数值公式调用与
@@ -119,7 +119,9 @@ def do_skill(battle, ctx) -> list:
     # ---- 攻击类：目标解析 + 伤害管线 ----
     target = ctx.target if ctx.target is not None else _default_target(battle, actor)
     if target is None:
-        return [render_via(battle, "battle.actions.no_target", "但没有可攻击的目标！")]
+        _no_target: list = []
+        _cue(battle, _no_target, "battle.actions.no_target", {})
+        return _no_target
     lv = _GC.formulas().skill_level_of(actor, info.get("name", "")) if actor.get("class_name") else 0
     logs.extend(_attack_damage_pipeline(battle, actor, target, info, lv))
     return logs
@@ -240,9 +242,8 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
             #   不是合法格式符）—— `safe_format` 渲染失败会把**带花括号的模板原样**吐给
             #   玩家（这正是内容侧要顶掉这一句的成因）。改成合法格式符后：内容侧没顶掉
             #   这个 key 时，渲染出来是一句正常的话，而不是坏模板。
-            logs.append(render_via(battle, "battle.actions.skill_cd", "⏳ 【{name}】冷却中：还需 {left:.1f} 刻！",
-                                name=info.get('name') or '技能',
-                                left=left))
+            _cue(battle, logs, "battle.actions.skill_cd",
+                 {"name": info.get('name') or '技能', "left": left})
         return False
     # ---- 1.5 ★ P-51（2026-09-26）「mp 门槛入口」（内容侧注入 · 引擎零数值/零文案）----
     #   引擎**不知道「多少算不够」**：判定线与回话全在内容侧 hook（`mp_gate_fn`）。
@@ -286,10 +287,8 @@ def _skill_usable(battle, actor: dict, info: dict, logs: list = None) -> bool:
                 # ★ P-59（2026-09-26）：两个占位符原先各多打了一个冒号（双冒号不是合法
                 #   格式符）⇒ 渲染失败就把带花括号的模板原样吐给玩家。改成合法格式符
                 #   （`g` = 通用数值格式：整数不带小数点、小数保留有效位）。
-                logs.append(render_via(battle, "battle.actions.resource_lack", "⚡ 核心资源不足：需要 {rv:g} {rk}，当前 {cur:g}！",
-                                    rv=rv,
-                                    rk=rk,
-                                    cur=cur))
+                _cue(battle, logs, "battle.actions.resource_lack",
+                     {"rv": rv, "rk": rk, "cur": cur})
             return False
     return True
 
@@ -568,9 +567,8 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
         _bns_dmg = max(1, int((_bst.get("atk", 0) or 0) * bns))
         if _bns_dmg > 0 and actor_alive(target):
             logs.extend(_deal_hit(battle, actor, target, _bns_dmg))
-            logs.append(render_via(battle, "battle.actions.enchant_followup", "{tag} 附魔追击，追加 {dmg} 点伤害！",
-                                tag=hit_buffs.get('bonus_tag') or '⚡',
-                                dmg=_bns_dmg))
+            _cue(battle, logs, "battle.actions.enchant_followup",
+                 {"tag": hit_buffs.get('bonus_tag') or '⚡', "dmg": _bns_dmg})
     # 命中后 mech/effect 效果（N3：mech → effects 兼容层）
     _apply_hit_effects(battle, actor, target, info, lv, logs)
     # N8 事件：命中后——普攻 attack_hit / 技能 skill_hit；暴击 crit（子集）。
@@ -624,7 +622,7 @@ def _consume_hit_buffs(battle, actor: dict, logs: list) -> dict:
         if bns > 0:
             out["bonus_atk_pct"] += bns
             out["bonus_tag"] = hit.get("bonus_tag") or "⚡"
-        logs.append(render_via(battle, "battle.actions.effect_on", "✨ {key} 生效！", key=key))
+        _cue(battle, logs, "battle.actions.effect_on", {"key": key})
         # N8 事件：出手消费点（一次性 buff 被消费；主体=出手者）
         try:
             from .effect_triggers import fire as _fire
@@ -778,8 +776,7 @@ def _settle_lifesteal(battle, actor: dict, dmg_total: int, kind: str, logs: list
             heal = max(1, int(heal * _mw))
         from .landing import heal_actor
         heal_actor(battle, actor, heal, logs)
-        logs.append(render_via(battle, "battle.actions.lifesteal", "🩸 吸血：回复 {heal} 点生命！",
-                            heal=heal))
+        _cue(battle, logs, "battle.actions.lifesteal", {"heal": heal})
     except Exception as _e:
         _diag(battle, "_settle_lifesteal · 吸血", _e)          # 审计 P-44：不再静默（行为不变）
         pass  # 吸血异常不阻断战斗（伤害已落地）
@@ -841,13 +838,11 @@ def _do_heal(battle, ctx, actor, info, logs) -> list:
     from .landing import heal_actor
     _real = heal_actor(battle, target, heal, logs)
     _sk = info.get('name', ctx.skill_name or '技能')
-    logs.append(render_via(battle, "battle.actions.skill_heal_full",
-                           "你施展【{name}】，圣光治愈了你 {heal} 点生命！",
-                           name=_sk, heal=heal)
-                if _real >= heal else
-                render_via(battle, "battle.actions.skill_heal",
-                           "你施展【{name}】，治愈了 {heal} 点生命！",
-                           name=_sk, heal=_real))
+    # 两条同族文案按「是否满额治疗」选一条（B4 前是三元式选**模板**，现在选**key**）
+    if _real >= heal:
+        _cue(battle, logs, "battle.actions.skill_heal_full", {"name": _sk, "heal": heal})
+    else:
+        _cue(battle, logs, "battle.actions.skill_heal", {"name": _sk, "heal": _real})
     return logs
 
 
@@ -981,6 +976,6 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
         except Exception as _e:
             _diag(battle, "_do_buff · mech 落地", _e)          # 审计 P-44：不再静默（行为不变）
             pass  # mech 落地异常不阻断增益
-    logs.append(render_via(battle, "battle.actions.skill_cast", "你施展【{name}】！",
-                        name=info.get('name', ctx.skill_name or '技能')))
+    _cue(battle, logs, "battle.actions.skill_cast",
+         {"name": info.get('name', ctx.skill_name or '技能')})
     return logs

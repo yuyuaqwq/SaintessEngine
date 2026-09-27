@@ -99,47 +99,39 @@ def _defend(b):
     return b._do_defend(ActCtx(caster=b.sides_of("player")[0], action="defend"))
 
 
-def _cd_line(b):
-    """驱动一行**未迁移**点位（`battle.actions.skill_cd`，仍走 `render_via` 的渐进迁移口）。
-
-    ★ B3（2026-09-27）起「未迁移的点位」只剩 actions / gauge / schedule 那 19 条 ——
-    本文件拿它当「渐进迁移口」的探针（B2 时用的是 `battle.core.defend`，那条本批已迁走）。
-    """
-    _actor = {"name": "甲",
-              "cooldown": {"盾墙": float(getattr(b, "_now", 0.0) or 0.0) + 1.5}}
-    _lg: list = []
-    _skill_usable(b, _actor, {"name": "盾墙"}, _lg)
-    return _lg
+# ★ B4（2026-09-27）：引擎侧**已无未迁移点位**（60 个点位全部走 cue）⇒ 「渐进迁移口」
+#   （`render_via` / `render_or` 的「表缺 key ⇒ 用调用点兜底模板」那一路）不再有引擎调用点，
+#   本文件对它的三条不变量改在**文案口本体**（框架 API）上直接验 —— 比借一个引擎调用点更直接，
+#   且与「已迁移点位必须命中」那一面（§2b 起）互为反证。
+_PROBE_KEY = "battle.probe.key"
+_PROBE_TPL = "★{n}★"
 
 
-def _lack_line(b):
-    """驱动另一行**未迁移**点位（`battle.actions.resource_lack`，同样走渐进迁移口）。"""
-    _actor = {"name": "甲", "class_name": "cls_x", "effects": {"energy": {"stacks": 1}}}
-    _lg: list = []
-    _skill_usable(b, _actor, {"name": "技能", "res_cost": {"energy": 3}}, _lg)
-    return _lg
+class _ProbeHolder:
+    """只带 `text` 的持有者（= `Battle` 的注入面形状）。"""
+
+    def __init__(self, text):
+        self.text = text
+
+
+def _probe(table, n=1):
+    """直接过文案口（`render_via`）：表非 None 就问表，否则用调用点兜底模板。"""
+    return render_via(_ProbeHolder(table), _PROBE_KEY, _PROBE_TPL, n=n)
 
 
 # ---------------------------------------------------------------- 1. 注入生效
 print("【1. 注入生效（反证）：给了表 → 输出随表变】")
 stub = _Stub()
-b, _pa, ea = _setup(text=stub)
-lg = _cd_line(b)
-check("注入表被问到 key（battle.actions.skill_cd 在册）",
-      "battle.actions.skill_cd" in stub.asked, stub.asked[:4])
-check("★ 日志取自注入表（不是内联串）", lg == ["[缺]battle.actions.skill_cd"], lg)
-stub2 = _Stub({"battle.actions.skill_cd": "★改过的串★"})
-b2, _pa2, ea2 = _setup(text=stub2)
-lg2 = _cd_line(b2)
-check("★ 表里换一串 → 该行输出必变（注入非死代码）", lg2 == ["★改过的串★"], lg2)
+lg = _probe(stub)
+check("注入表被问到 key（%s 在册）" % _PROBE_KEY, _PROBE_KEY in stub.asked, stub.asked[:4])
+check("★ 日志取自注入表（不是内联串）", lg == "[缺]%s" % _PROBE_KEY, lg)
+check("★ 表里换一串 → 该行输出必变（注入非死代码）",
+      _probe(_Stub({_PROBE_KEY: "★改过的串★"})) == "★改过的串★")
 
 # ---------------------------------------------------------------- 2. 未注入 = 兜底
-print("\n【2. 未迁移点位：未注入 = 兜底模板：逐字节等于历史内联串】")
-b3, pa3, ea3 = _setup()
-check("冷却行逐字（未迁移点位仍走调用点兜底模板）",
-      _cd_line(b3) == ["⏳ 【盾墙】冷却中：还需 1.5 刻！"], _cd_line(b3))
-check("资源不足行逐字（同上）",
-      _lack_line(b3) == ["⚡ 核心资源不足：需要 3 energy，当前 1！"], _lack_line(b3))
+print("\n【2. 未注入 = 兜底模板：逐字节等于历史内联串】")
+check("未注入（text=None）⇒ 走调用点兜底模板（逐字 = 模板 + 槽位）",
+      _probe(None, n=7) == "★7★", _probe(None, n=7))
 check("显式 text=None 与不给参数同款", _setup(text=None)[0].text is None)
 random.seed(7)
 _b3b, _p3b, _ea3b = _setup()
@@ -249,20 +241,20 @@ finally:
     _restore_subs()
 
 # 没有总线时：禁疗行同样只是坏数据行（不落回引擎模板）
+_b_nobus, _p_nobus, _e_nobus = _setup()
 _h4 = make_actor("h4", "木桩", "enemy", kind="monster", hp=50, max_hp=100)
 _h4.setdefault("effects", {})["heal_down"] = {"stacks": 1}
 _lg4 = []
-landing.heal_actor(b3, _h4, 30, _lg4)
+landing.heal_actor(_b_nobus, _h4, 30, _lg4)
 check("★ 没总线 ⇒ 禁疗行是坏数据行（措辞不再由引擎给）",
       _lg4 == [MISS_LINE], _lg4)
 
 # ---------------------------------------------------------------- 3. 表缺 key 回落
 print("\n【3. 未迁移点位：表缺 key → 回落兜底模板（渐进迁移语义）】")
-stub3 = _Stub({"battle.actions.skill_cd": "★只改了冷却行★"})
-b4, _p, ea4 = _setup(text=stub3)
-check("声明的 key 走表", _cd_line(b4) == ["★只改了冷却行★"], _cd_line(b4))
-check("未声明的 key 走兜底（无异常、无空串）",
-      _lack_line(b4) == ["[缺]battle.actions.resource_lack"], _lack_line(b4))
+check("声明的 key 走表", _probe(TextTable({_PROBE_KEY: "T {n}"}), n=2) == "T 2")
+check("未声明的 key 走兜底（表缺 ⇒ 用调用点现给的模板，逐字；无异常、无空串）",
+      _probe(TextTable({"battle.other.key": "X"}), n=2) == "★2★",
+      _probe(TextTable({"battle.other.key": "X"}), n=2))
 
 # ---------------------------------------------------------------- 4. 残留扫描
 print("\n【4. 残留扫描：battle/ + gauge/ 的日志实参零中文】")
@@ -353,26 +345,42 @@ check("★ 真 TextTable 同款（key 同名槽位）",
       TextTable({"k": "T {key}"}).render_or("k", "D", key="A") == "T A")
 
 print()
-print("【6. gauge 文案口：模块级 bar_gain / bar_trigger 收注入表（text=）】")
+print("【6. gauge 文案口：模块级 bar_gain / bar_trigger 收**战斗本体**（B4：总线 + 文案表）】")
 _saved_bar = (G.bar_def, G.bar_should_trigger, G.bar_trigger)
 G.bar_def = lambda k: {"name": "破绽", "max": 100, "threshold_base": 10,
                        "trigger_effect": "skip_turn"}
+
+
+class _BarBattle:
+    """gauge 侧最小 Battle 替身：`cues` = 按 gauge 两条 cue 名建的总线（措辞表 = table）。
+
+    ★ B4 前这两条日志走 `render_or(text, …)`（表由动作侧 `text_of(battle)` 下传）；
+    现在走 cue ⇒ 替身要交出**总线**（措辞表在总线里）。
+    """
+
+    def __init__(self, table):
+        from saintess_engine.cues import CueBus
+        names = ("battle.gauge.gain", "battle.gauge.trigger")
+        self.cues = CueBus({n: ({"kind": "text", "key": n},) for n in names}, table=table)
+        self.text = table
+
+
 _tbl = TextTable({"battle.gauge.gain": "／表：{bar} +{add}（{val}/{maxcap}）"})
 _e1 = {"effects": {}}
 _lg = []
-G.bar_gain(_e1, "shaken", 5, _lg, now=0.0, text=_tbl)
-check("★ 注入表 → 积蓄行取自表（gauge 的 text= 链通）",
+G.bar_gain(_BarBattle(_tbl), _e1, "shaken", 5, _lg, now=0.0)
+check("★ 注入表 → 积蓄行取自表（gauge 的 cue 链通）",
       _lg == ["／表：shaken +5（5/100）"], _lg)
 _e2 = {"effects": {}}
 _lg = []
-G.bar_gain(_e2, "shaken", 15, _lg, now=0.0, text=_tbl)
-G.bar_trigger(_e2, "shaken", _lg, now=0.0, text=_tbl)
-check("★ 表只声明一条 → 未声明的 key 回落兜底模板逐字",
-      _lg[-1] == "💢 【破绽】触发！(第 1 次)", _lg)
+G.bar_gain(_BarBattle(_tbl), _e2, "shaken", 15, _lg, now=0.0)
+G.bar_trigger(_BarBattle(_tbl), _e2, "shaken", _lg, now=0.0)
+check("★ 表只声明一条 → 未声明的 key **不回落**：一行坏数据（已迁移点位必须命中）",
+      _lg[-1] == MISS_LINE, _lg)
 _e3 = {"effects": {}}
 _lg = []
-G.bar_gain(_e3, "shaken", 5, _lg, now=0.0)
-check("未注入 → 积蓄行逐字 == 搬运前文案",
+G.bar_gain(_BarBattle(FIX_TEXT), _e3, "shaken", 5, _lg, now=0.0)
+check("配夹具表 → 积蓄行逐字 == 搬运前文案",
       _lg == ["💥 shaken 积蓄 +5（5/100）"], _lg)
 G.bar_def, G.bar_should_trigger, G.bar_trigger = _saved_bar
 
@@ -403,9 +411,9 @@ _sig7 = _insp.signature(Battle.from_state).parameters
 check("★ from_state 的 text 为关键字专属（不留位置参数口子）",
       "text" in _sig7 and _sig7["text"].kind is _insp.Parameter.KEYWORD_ONLY,
       str({_n: str(_pp.kind) for _n, _pp in _sig7.items()}))
-_c7 = Battle.from_state(_st7, text=_Stub({"battle.actions.skill_cd": "／表：续战冷却"}))
-check("★ 恢复带 text= ⇒ 续战日志取自表（注入链不断在 from_state）",
-      _cd_line(_c7) == ["／表：续战冷却"], _cd_line(_c7))
+_c7 = Battle.from_state(_st7, text=FIX_TEXT)
+check("★ 恢复带 text= ⇒ 那张表跟着进新战斗（注入链不断在 from_state）",
+      _c7.text is FIX_TEXT, type(_c7.text).__name__)
 _c8 = Battle.from_state(_st7)
 check("恢复不传 text ⇒ .text is None（未注入）", _c8.text is None)
 _lg8 = []
@@ -416,7 +424,7 @@ check("未注入恢复 ⇒ 已迁移点位是一行坏数据（**不**回落引�
       _lg8 == [MISS_LINE], _lg8)
 from ext_combat import from_state as _fs_mod                            # noqa: E402
 check("模块级 from_state 同款（text= 关键字透传）",
-      _fs_mod(_st7, text=_Stub({"battle.actions.skill_cd": "／表：模块级"})).text is not None)
+      _fs_mod(_st7, text=_Stub({})).text is not None)
 
 # ★ 恢复 + 夹具总线/文案表 ⇒ 已迁移点位逐字 = 迁移前那句（注入链一路通到 cue）
 _restore2 = fix_install()
@@ -511,8 +519,8 @@ for _root in (os.path.join(FW_ROOT, "examples", "minimal-game", "content"),
     _bad_c += [x for x in _bc if "_cue_text_fixture" in x or "minimal-game" in x]
     _nc += _n2
     _nfc += _nf2
-check("引擎侧扫描面还在（≥15 个模板实参 / ≥30 个 .py）",
-      _nargs >= 15 and _nfiles >= 30, "实参 %d / 文件 %d" % (_nargs, _nfiles))
+check("★ 引擎侧**零模板实参**（B4：60 个点位全走 cue ⇒ 引擎一条措辞都不剩；扫描面 ≥30 个 .py）",
+      _nargs == 0 and _nfiles >= 30, "实参 %d / 文件 %d" % (_nargs, _nfiles))
 check("★ 内容侧文案真源声明模板 ≥ 30（迁移把措辞搬到这一面，扫描面跟着走）",
       _nc >= 30, "内容侧模板 %d / 文件 %d" % (_nc, _nfc))
 check("★ 两面合计 ≥ 45（防「空转假绿」：两侧都缩水就红）",

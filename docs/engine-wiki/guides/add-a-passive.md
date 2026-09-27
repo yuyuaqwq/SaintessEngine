@@ -142,7 +142,7 @@ ctrl · ctrl_any · res · left_key · left_init · cost_field · buff_key
 | 影响**DOT 每跳伤害** | `dot_calc` | 广播事件（无 subject），用 `ctx["dot_key"]` 过滤 |
 | 命中后做事（叠层/挂条/上控制） | `skill_hit` / `attack_hit` | 主体=攻击者；普攻走 `attack_hit` |
 | 受击后自我强化/反击 | `on_taken` | 主体=受击者，`ctx["source"]` = 攻击者 |
-| 每次施放前（条件暴击/挂印/吸血面板） | `act_cast` | 扣费与冷却之后、结算之前，`actions.py:113` |
+| 每次施放前（条件暴击/挂印/吸血面板） | `act_cast` | 扣费与冷却之后、结算之前，`actions.py:112` |
 | 回合开始（免控/回资源） | `turn_start` | **早于**控制消费，所以「清除控制」等效免疫 |
 | 死亡时（复活/遗言） | `on_death` | 死者**自己的**声明会执行（subject 例外） |
 | 击杀时（回能/溅射） | `on_kill` | 主体=击杀者；DOT/环境杀无此事件 |

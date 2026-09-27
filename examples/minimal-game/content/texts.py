@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """《铆炉回声》文案表 —— 本包**唯一**的玩家可见措辞真源。
 
-为什么要有它（cue 解耦 B1 / B2 / B3）
-------------------------------------
+为什么要有它（cue 解耦 B1 / B2 / B3 / B4）
+------------------------------------------
 引擎不再自己拼句：结算只发「表现事件」（cue），措辞从本表按 key 取。已迁移点位的
-模板**已从引擎删掉**（B1 的 3 条 + B2 的 landing 核心 14 条 + B3 的 effects 16 / battle.py 9
-= **42 条**：`battle.landing.*` · `battle.effects.*` · `battle.core.*` · `battle.schedule.cast_begin`）
-—— 本表缺一条 ⇒ 那条表现**渲染不出来**（引擎记诊断 + 出一行可读坏数据），
-**不会有**任何引擎兜底（回落 = 影子真源，正是解耦要拆掉的东西）。
+模板**已从引擎删掉**（B1 3 条 + B2 14 条 + B3 25 条 + B4 18 条 = **60 条**，
+覆盖 `battle.landing.*` / `battle.effects.*` / `battle.core.*` / `battle.schedule.*` /
+`battle.actions.*` / `battle.gauge.*`）—— 本表缺一条 ⇒ 那条表现**渲染不出来**
+（引擎记诊断 + 出一行可读坏数据），**不会有**任何引擎兜底（回落 = 影子真源，
+正是解耦要拆掉的东西）。
 
 key 命名 = 引擎的 cue 名（同名即接口，不造映射表）；`content/cues.py` 的订阅表只写 key。
 注入：`content/apply.py::install_engine()` 挂 hook `text_table_fn` ⇒
@@ -18,8 +19,8 @@ from __future__ import annotations
 from saintess_engine.text import TextTable
 
 #: key（= cue 名）→ 逐字模板。★ 从引擎调用点**逐字**搬来（一个字符都不许漂）：
-#: B1/B2 的 17 条由搬运脚本按 `battle.landing.*` 的原样字符串生成；
-#: B3 的 25 条同理（含一处原先**未键化**的裸 f-string，现补 key `battle.effects.stack_add`）。
+#: 各批都由搬运脚本按原样字符串生成；B3 另有 1 条原先**未键化**的裸 f-string 现补 key
+#: （`battle.effects.stack_add`）。
 TEMPLATES = {
     "battle.landing.dodged": "💨 {name} 闪避了攻击！",
     "battle.landing.element_immune": "💠 免疫！【{name}】免疫{element}伤害！",
@@ -63,6 +64,24 @@ TEMPLATES = {
     "battle.effects.cast_broken": "💥 {name} 的出招被打断了！",
     "battle.effects.damaged": "💥 {name} 受到 {dmg} 点伤害！",
     "battle.effects.stack_add": "✦ {key} {n}{cap}（+{amount}）",
+    "battle.actions.no_target": "但没有可攻击的目标！",
+    "battle.actions.skill_cd": "⏳ 【{name}】冷却中：还需 {left:.1f} 刻！",
+    "battle.actions.resource_lack": "⚡ 核心资源不足：需要 {rv:g} {rk}，当前 {cur:g}！",
+    "battle.actions.enchant_followup": "{tag} 附魔追击，追加 {dmg} 点伤害！",
+    "battle.actions.effect_on": "✨ {key} 生效！",
+    "battle.actions.lifesteal": "🩸 吸血：回复 {heal} 点生命！",
+    "battle.actions.skill_heal_full": "你施展【{name}】，圣光治愈了你 {heal} 点生命！",
+    "battle.actions.skill_heal": "你施展【{name}】，治愈了 {heal} 点生命！",
+    "battle.actions.skill_cast": "你施展【{name}】！",
+    "battle.schedule.actor_turn": "—— {name} 行动 ——",
+    "battle.schedule.dot_tick": "🔥 {name} 受 {key} {n} 层影响，损失 {dmg} 生命",
+    "battle.schedule.regen_hp": "🍲 {name} 持续恢复，恢复 {heal} 点生命！",
+    "battle.schedule.regen_mp": "🍲 {name} 持续恢复，恢复 {heal} 点魔力！",
+    "battle.gauge.gain": "💥 {bar} 积蓄 +{add}（{val}/{maxcap}）",
+    "battle.gauge.trigger": "💢 【{bar}】触发！(第 {count} 次)",
+    "battle.gauge.shaken": "💢 【{name}】被{bar}震慑，无法行动！",
+    "battle.gauge.phase_preserve": "💢【{name}】阶段更迭：{bar}积蓄保留 {pct}%（{before} → {after}）",
+    "battle.gauge.reflect": "🪨 反震：反弹 {dmg} 点伤害！",
 }
 
 

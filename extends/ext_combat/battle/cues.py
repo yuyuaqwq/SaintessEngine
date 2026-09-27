@@ -83,6 +83,25 @@ CUE_NAMES = (
     "battle.effects.cast_broken",
     "battle.effects.damaged",
     "battle.effects.stack_add",
+    # ---- B4（18 条 · actions 9 + schedule 4 + gauge 5；`regen_mp` 两处同 key）----
+    "battle.actions.no_target",
+    "battle.actions.skill_cd",
+    "battle.actions.resource_lack",
+    "battle.actions.enchant_followup",
+    "battle.actions.effect_on",
+    "battle.actions.lifesteal",
+    "battle.actions.skill_heal_full",
+    "battle.actions.skill_heal",
+    "battle.actions.skill_cast",
+    "battle.schedule.actor_turn",
+    "battle.schedule.dot_tick",
+    "battle.schedule.regen_hp",
+    "battle.schedule.regen_mp",
+    "battle.gauge.gain",
+    "battle.gauge.trigger",
+    "battle.gauge.shaken",
+    "battle.gauge.phase_preserve",
+    "battle.gauge.reflect",
 )
 
 

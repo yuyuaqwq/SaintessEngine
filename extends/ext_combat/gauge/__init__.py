@@ -45,7 +45,7 @@ S3 通用件归位（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §6.5 / §7-S3）
 from math import floor
 
 from ..battle import game_config as _GC
-from saintess_engine.text import render_or
+from ..battle.cues import cue as _cue    # 已迁移点位走表现事件（措辞真源 = 内容侧文案表）
 
 
 def _battle_cfg(name: str) -> dict:
@@ -153,13 +153,14 @@ def _default_bar_max() -> float:
         return 0.0
 
 
-def bar_gain(enemy: dict, bar_key: str, amount: float, logs: list | None = None,
-             now: float | None = None, text=None) -> float:
+def bar_gain(battle, enemy: dict, bar_key: str, amount: float, logs: list | None = None,
+             now: float | None = None) -> float:
     """积蓄注入：val += amount（封顶 max），返回新值。
 
     - 传 now → 先结算到当刻；免疫窗口内不积蓄（策划案「触发后 2 刻内不再积蓄」）
     - 触发当帧注入 = 0（`_no_inject_at` 帧戳，防「控制→积蓄→又满→再控」自锁）
-    - 传 text（注入的文案表；None = 未注入）→ 日志措辞走表，否则用兜底模板
+    - ★ B4（2026-09-27）：日志改走 cue ⇒ 第一个参数必须是**战斗本体**（总线 + 文案表都在它身上）。
+      原先下传的 `text=`（文案表）已删：措辞真源在内容侧表，本函数手里没有模板可回落。
     """
     bd = bar_def(bar_key)
     if not bd:
@@ -187,9 +188,8 @@ def bar_gain(enemy: dict, bar_key: str, amount: float, logs: list | None = None,
         add = 0.0
     bs["val"] = min(mx, float(bs.get("val", 0.0) or 0.0) + add)
     if logs is not None:
-        logs.append(render_or(
-            text, "battle.gauge.gain", "💥 {bar} 积蓄 +{add}（{val}/{maxcap}）",
-            bar=bar_key, add=int(add), val=int(bs['val']), maxcap=int(mx)))
+        _cue(battle, logs, "battle.gauge.gain",
+             {"bar": bar_key, "add": int(add), "val": int(bs['val']), "maxcap": int(mx)})
     return bs["val"]
 
 
@@ -204,11 +204,11 @@ def bar_should_trigger(enemy: dict, bar_key: str, now: float | None = None) -> b
     return float(bs.get("val", 0.0) or 0.0) >= float(bs.get("threshold", 0) or 0)
 
 
-def bar_trigger(enemy: dict, bar_key: str, logs: list | None = None,
-                now: float | None = None, text=None) -> bool:
+def bar_trigger(battle, enemy: dict, bar_key: str, logs: list | None = None,
+                now: float | None = None) -> bool:
     """执行触发：效果由调用方处理（本函数管理阈值递增/免疫/计数），返回是否触发。
 
-    传 text（注入的文案表；None = 未注入）→ 日志措辞走表，否则用兜底模板。
+    ★ B4（2026-09-27）：同 `bar_gain` —— 日志走 cue，第一个参数是战斗本体。
     """
     bd = bar_def(bar_key)
     if not bd:
@@ -232,9 +232,8 @@ def bar_trigger(enemy: dict, bar_key: str, logs: list | None = None,
         bs["_no_inject_at"] = now
     if logs is not None:
         bname = bd.get("name", bar_key)
-        logs.append(render_or(
-            text, "battle.gauge.trigger", "💢 【{bar}】触发！(第 {count} 次)",
-            bar=bname, count=bs['trigger_count']))
+        _cue(battle, logs, "battle.gauge.trigger",
+             {"bar": bname, "count": bs['trigger_count']})
     return True
 
 

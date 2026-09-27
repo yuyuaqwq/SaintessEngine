@@ -126,9 +126,9 @@ info["res_cost"] = {"guard_core": 3}     # 施放时扣 3 层
 
 引擎原生消费（**这是引擎唯一直接认的资源字段**）：
 
-- 预检：`_skill_usable`（`actions.py:143`）——条目存在且 `stacks < 需求` → 拦截 + 写日志
+- 预检：`_skill_usable`（`actions.py:142`）——条目存在且 `stacks < 需求` → 拦截 + 写日志
   「⚡ 核心资源不足：需要 X key，当前 Y！」
-- 扣费：`_spend_skill_cost`（`actions.py:192`）——`stacks = norm_stack(max(0, cur - rv))`
+- 扣费：`_spend_skill_cost`（`actions.py:189`）——`stacks = norm_stack(max(0, cur - rv))`
 
 ⚠️ **一个重要的历史行为**：`res_cost` 只在 `actor.effects` **已经有该 key 条目**时才拦截
 （`actions.py:223-226` 的 `continue`）。没条目 = 不拦（保持历史行为）。
@@ -163,8 +163,8 @@ info["consume_all"] = {"key": "arcane"}    # actions.py:228-231：直接 ef.pop
 "period": {"dir": "gain", "interval": 1.0, "amount": -0.7}  # 每刻 -0.7（允许负值）
 ```
 
-- 引擎侧消费者：`schedule._settle_time_effects` 的 `gain` 分支（`schedule.py:809-828`）
-- **静默**（不刷日志，`schedule.py:816-817` 注释）
+- 引擎侧消费者：`schedule._settle_time_effects` 的 `gain` 分支（`schedule.py:804-823`）
+- **静默**（不刷日志，`schedule.py:811-812` 注释）
 - clamp 到 `[0, cap]`，cap 取 `period.cap` 或 `_cap_of`（表声明 + `bonus.cap`）
 - 负数也走（信仰清醒档衰减），但**下限 0**，不会归负
 - `dir="gain"` **不要求 `stacks > 0`** —— 0 层也要能回（`schedule.py:675-678`）

@@ -19,7 +19,7 @@
 | # | 判据 | 实现 | 不满足时 |
 |---|------|------|----------|
 | 1 | 技能可**解析** | `ActCtx.__post_init__` 查 `actor["_skill_index"]`（**无全局兜底**） | `info={}` → 空动作，白耗一回合 |
-| 2 | **冷却** | `_skill_usable` → `_cd_left_of`（`actions.py:143` / `:121`） | 拦截文案 + 不扣费 / 不写冷却 |
+| 2 | **冷却** | `_skill_usable` → `_cd_left_of`（`actions.py:142` / `:121`） | 拦截文案 + 不扣费 / 不写冷却 |
 | 3 | **魔力 / 核心资源** | `_skill_pay_of`（`actions.py:320`）折算后比对 `mp` / `effects[key].stacks` | 拦截文案（同 2） |
 | 4 | kind 分派执行 | `_do_heal` / `_do_buff` / 伤害管线 | — |
 
@@ -45,7 +45,7 @@ if not _skill_usable(battle, actor, info, logs):
 | 环节 | 约定 |
 |------|------|
 | **声明** | 技能表 `"cd": 12`，单位**刻**（CTB 刻度）。`0` / 缺省 = 无冷却 |
-| **写入** | `actor["cooldown"][info["name"]] = battle._now + cd`（`actions.py:105`） |
+| **写入** | `actor["cooldown"][info["name"]] = battle._now + cd`（`actions.py:104`） |
 | **key** | **技能显示名**（`info["name"]`，不是技能 key）——内容改名会让旧条目失配（无害：自然到期） |
 | **读取** | `_cd_left_of` = `due - battle._now`；`<= 0` 视为就绪，顺手 `pop` 到期条目（惰性清理，防表无限增长） |
 | **修正** | `cd_mult`：态内冷却加速，取多态**最速**（`min`），`max(1, …)` 保底 1 刻（`actions.py:91-102`） |

@@ -62,7 +62,7 @@
 |---|---|---|---|
 | `dir` | str | `"damage"` | ✅ `:246`。四向：`damage` / `heal` / `mana` / `gain` |
 | `interval` | float | `1.0` | ✅ `:251`。间隔刻数（**绝对时刻**，非「每 tick」） |
-| `turns` | int | `0` | ✅ `:252`。限跳次数，跳到就清层（`0` = 无限）。计数器 `actor["dot_jumps"]`，`schedule.py:819-825` |
+| `turns` | int | `0` | ✅ `:252`。限跳次数，跳到就清层（`0` = 无限）。计数器 `actor["dot_jumps"]`，`schedule.py:814-820` |
 | `cap` | int | 0 → 回落 `_cap_of` | ✅ `:341`（仅 `gain` 向）。**可覆盖** `EFFECT_RULES.cap` |
 | `amount` | float | 0 | ✅ `:340`（仅 `gain` 向）。每刻加/减量，**负值也走**（衰减），clamp 下限 0 |
 | `pct_max_hp` | float | 0 | ✅ `:283`（`damage` 向）。每层每跳的最大生命比例 |
@@ -80,7 +80,7 @@
 | `mana_pct` | float | 0 | ✅ `:311/323`（`heal` 与 `mana` 向）。每跳回复最大魔力比例 |
 | `type` | str | — | ⚠️ **无消费者**（参考实现里 `bleed` 写了 `"type": "flat"`） |
 | `per_layer` | int | — | ⚠️ **无消费者**（参考实现里 `bleed` 写了 `"per_layer": 0`） |
-| `dmg_type` | str | — | ✅ **`ext_combat` 消费**（2026-09-11）：DOT 结算透传为落地 `dmg_kind`（`schedule.py:802`）。`"true"` = 真伤（物免/魔免/格挡全跳过，`landing` 内 `"true" not in kd` 守卫）；空/缺省 = 不减免（与接线前一致） |
+| `dmg_type` | str | — | ✅ **`ext_combat` 消费**（2026-09-11）：DOT 结算透传为落地 `dmg_kind`（`schedule.py:797`）。`"true"` = 真伤（物免/魔免/格挡全跳过，`landing` 内 `"true" not in kd` 守卫）；空/缺省 = 不减免（与接线前一致） |
 
 **`damage` 向的兜底**：两个 pct 都 <= 0 且**未声明 atk/matk 系数**时 `dmg = max(1, n)`（层数当伤害，`schedule.py:735`）；声明了系数（系数型 DOT，如 poison=atk×0.8）则基线为 0，伤害全部来自系数段。
 所以一个只声明 `dir/interval` 的 DOT 每跳掉「层数」点血。
