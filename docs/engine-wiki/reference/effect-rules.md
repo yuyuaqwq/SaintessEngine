@@ -33,7 +33,7 @@
 | `on` | `"caster"` \| `"target"` | ✅ `effects.act_cleanse`（`effects.py:621`，`on=="target"` 也清）；内容侧 `_mech_to_effect` 判 `on_target`（`effects.py:252`） | 效果的默认作用对象。`"target"` = 对敌标记类 |
 | `negative` | bool | ⚠️ 包不读 | 「负面」标记。内容侧用它数「负面种数」（`class_mech_proc.py:767`，`target_debuff_kinds` judge） |
 | `tag` | str | ⚠️ 包不读 | 旧 CLEANSE_TAGS 时代的标记。`act_apply` 读的是 **params** 的 `tag`（作为 `key` 的兜底，`effects.py:344`），不是 `cfg["tag"]` |
-| `cd_mult` | float | ✅ `actions.do_skill`（`actions.py:91-99`） | 冷却倍率（`0.8` = CD −20%）。多态并存时**取最小**（最速） |
+| `cd_mult` | float | ✅ `actions.do_skill`（`actions.py:92-100`） | 冷却倍率（`0.8` = CD −20%）。多态并存时**取最小**（最速） |
 | `on_threshold` | `{层数: {...}}` | ⚠️ **无消费者** | 「满 N 层触发什么」。`threshold` **事件**有引擎点位（`effects.py:456`），但**这张映射表没被读**。目前要靠内容侧监听 `threshold` 自己实现 |
 | `guard_hp_pct` | float | ✅ `landing._apply_death_guard`（`landing.py:343`） | 濒死保护触发后保底到的最大生命比例（缺省 0.10） |
 | `heal_pct` | float | ✅ 同上（`landing.py:358`） | 濒死保护触发时额外回复的最大生命比例 |
@@ -56,7 +56,7 @@
 ## `period` 子字段
 
 `period = {"dir": ..., "interval": ..., 数值字段...}`。扩展包读点在
-`schedule._settle_time_effects`（`extends/ext_combat/battle/schedule.py:657-807`）。
+`schedule._settle_time_effects`（`extends/ext_combat/battle/schedule.py:660-812`）。
 
 | 子字段 | 类型 | 默认 | 消费者/语义 |
 |---|---|---|---|
@@ -69,7 +69,7 @@
 | `pct_boss` | float | — | ✅ `:275`（`damage` 向）。Boss/精英档**精确覆盖** `pct_max_hp`（与 `boss_pct_mult` 二者取一，**不叠乘**） |
 | `pct_cur_hp` | float | 0 | ✅ `:287`。每层每跳的**当前**生命比例 |
 | `pct_cur_boss` | float | — | ✅ `:286`。Boss 档覆盖 `pct_cur_hp` |
-| `atk` | float | 0 | ✅ **2026-09-11（DOT 混合公式）**：`schedule.py:743-747`。乘**施法者强度快照**的 atk 系数（快照见 `entry["src"]` / `effects.note_dot_source`） |
+| `atk` | float | 0 | ✅ **2026-09-11（DOT 混合公式）**：`schedule.py:746-750`。乘**施法者强度快照**的 atk 系数（快照见 `entry["src"]` / `effects.note_dot_source`） |
 | `matk` | float | 0 | ✅ 同上。乘施法者快照 matk 的系数 |
 | `pct_cap` | float | — | ✅ `:280-282`。**单层**百分比上限（`pct` 被 `min` 到该值）；也用于 `atk/matk` 型 DOT（防极端叠层） |
 | `boss_pct_mult` | float | — | ✅ `:277`。Boss/精英的 pct 段折扣系数（`pct_boss` 未声明时才用） |
@@ -82,7 +82,7 @@
 | `per_layer` | int | — | ⚠️ **无消费者**（参考实现里 `bleed` 写了 `"per_layer": 0`） |
 | `dmg_type` | str | — | ✅ **`ext_combat` 消费**（2026-09-11）：DOT 结算透传为落地 `dmg_kind`（`schedule.py:797`）。`"true"` = 真伤（物免/魔免/格挡全跳过，`landing` 内 `"true" not in kd` 守卫）；空/缺省 = 不减免（与接线前一致） |
 
-**`damage` 向的兜底**：两个 pct 都 <= 0 且**未声明 atk/matk 系数**时 `dmg = max(1, n)`（层数当伤害，`schedule.py:735`）；声明了系数（系数型 DOT，如 poison=atk×0.8）则基线为 0，伤害全部来自系数段。
+**`damage` 向的兜底**：两个 pct 都 <= 0 且**未声明 atk/matk 系数**时 `dmg = max(1, n)`（层数当伤害，`schedule.py:738`）；声明了系数（系数型 DOT，如 poison=atk×0.8）则基线为 0，伤害全部来自系数段。
 所以一个只声明 `dir/interval` 的 DOT 每跳掉「层数」点血。
 
 ### DOT 混合公式（2026-09-11 接线，权威 = 下游游戏的数值设计文档）
@@ -106,9 +106,9 @@
 - **boss 折扣优先级**：条目级 `pct_boss`（精确值）> `boss_pct_mult`（折扣系数），二者取一。
 
 **首跳延迟**：某 key 第一次被结算时只登记 `dot_next[key] = now + interval`
-（`schedule.py:685-688`），不在当刻跳。这是对齐旧引擎的语义。
+（`schedule.py:688-691`），不在当刻跳。这是对齐旧引擎的语义。
 
-**补跳上限**：一次 `_settle_time_effects` 最多补 20 跳（`guard < 20`，`schedule.py:688`）。
+**补跳上限**：一次 `_settle_time_effects` 最多补 20 跳（`guard < 20`，`schedule.py:691`）。
 
 ## 三种「声明驱动」的对照组（便于理解哪个字段谁读）
 

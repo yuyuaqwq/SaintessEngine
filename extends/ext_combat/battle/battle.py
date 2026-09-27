@@ -20,6 +20,7 @@ from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（
 from . import actions
 from . import game_config as _GC
 from .cues import cue as _cue          # 已迁移点位走表现事件（措辞真源 = 内容侧文案表）
+from . import attributes as ATTR       # 属性写口（ct 的两处排程写点也走它）
 from saintess_engine.config import optional_hook as _optional_hook
 
 
@@ -149,7 +150,7 @@ class Battle:
             #   抛 NameError（诊断自己把容错路径炸了）。`diag(battle=self)` 记进本场诊断。
             _diag(self, "_seed_ct_one", _e)          # 审计 P-44：不再静默（行为不变）
             pass
-        actor["ct"] = _ict(_spd)
+        ATTR.set_current(actor, "ct", _ict(_spd), reason="schedule_seed", battle=self)
 
     def _index_one_actor(self, actor: dict) -> None:
         """单 actor 技能索引（构造期与运行期 add_actor 共用）。
@@ -337,8 +338,11 @@ class Battle:
                     _after_act(self, caster, _cast, _rec)
                 else:
                     try:
-                        caster["ct"] = (float(self._now) + max(0.0, float(_cast))
-                                        + max(0.0, float(_rec or 0.0)))
+                        ATTR.set_current(
+                            caster, "ct",
+                            float(self._now) + max(0.0, float(_cast))
+                            + max(0.0, float(_rec or 0.0)),
+                            reason="schedule_after_act", battle=self)
                     except Exception as _e:
                         _diag(self, "human_act", _e)          # 审计 P-44 余量：不再静默（行为不变）
                         _after_act(self, caster, "attack")

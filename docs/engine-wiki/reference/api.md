@@ -227,7 +227,7 @@ Battle.from_state(st, *, text=None)   # battle.py:729（classmethod）→ serial
 
 ```python
 deal_damage(battle, source, target, amount, logs, dmg_kind="", defend_reduce=None, element="") -> int
-# landing.py:28
+# landing.py:29
 heal_actor(battle, target, amount, logs, source=None, label="") -> int
 # landing.py:437
 ```
@@ -240,12 +240,12 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 
 | 符号 | 位置 | 语义 |
 |---|---|---|
-| `action_time(spd, base=None) -> float` | `:94` | **转发内容侧时间模型**（`time_model_fn`）；`base=None` → 默认行动类别的基准耗时 |
-| `initial_ct(spd, base=None) -> float` | `:94` | 开局第一动等待 = `action_time` |
-| `next_ct(battle, actor, base=None) -> float` | `:110` | ⚠️ **无调用方**（实际推进走 `_after_act`） |
-| `action_base_of(action) -> float` | `:120` | **转发内容侧基准表**（`action_base_fn`）；未知类别回落 `DEFAULT_ACTION` |
-| `recover_time(spd, base=None) -> float` | `:137` | **转发内容侧第二段时间模型**（`recover_model_fn`）；`base=None` → 默认行动类别的第二段基准 |
-| `recover_base_of(action) -> float` | `:129` | **转发内容侧第二段基准表**（`recover_base_fn`）；未知类别回落 `DEFAULT_ACTION` |
+| `action_time(spd, base=None) -> float` | `:95` | **转发内容侧时间模型**（`time_model_fn`）；`base=None` → 默认行动类别的基准耗时 |
+| `initial_ct(spd, base=None) -> float` | `:95` | 开局第一动等待 = `action_time` |
+| `next_ct(battle, actor, base=None) -> float` | `:111` | ⚠️ **无调用方**（实际推进走 `_after_act`） |
+| `action_base_of(action) -> float` | `:118` | **转发内容侧基准表**（`action_base_fn`）；未知类别回落 `DEFAULT_ACTION` |
+| `recover_time(spd, base=None) -> float` | `:135` | **转发内容侧第二段时间模型**（`recover_model_fn`）；`base=None` → 默认行动类别的第二段基准 |
+| `recover_base_of(action) -> float` | `:127` | **转发内容侧第二段基准表**（`recover_base_fn`）；未知类别回落 `DEFAULT_ACTION` |
 | `advance(battle, logs, max_steps=200) -> ("player", actor) \| ("over", None)` | `:285` | 推进到下一个决策点 |
 | `_after_act(battle, actor, action)` | `:362` | 行动后推 ct |
 | `_advance_time(battle, dt, logs)` | `:421` | 加时钟 → 结算 → 广播 `time_advance` |
@@ -399,7 +399,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 | `front_rank(units)` | `:20` |
 | `reachable_units(attacker, units)` | `:28`（⚠️ 无外部引用） |
 | `select_target(attacker, units, threat=None, exclude_uid=None, threat_mode="front")` | `:34` |
-| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一消费者：`actions._deal_aoe`，`battle/actions.py:445`） |
+| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一消费者：`actions._deal_aoe`，`battle/actions.py:447`） |
 | `pick_by_policy(policy, units, threat=None, fallback=None)` | `:122` |
 | `compact(units)` | `:161` |
 | `numbered_units(units)` | `:191` |
@@ -465,7 +465,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 
 | 名称 | 位置 | 状态 |
 |---|---|---|
-| `schedule.next_ct` | `schedule.py:48` | 有定义、无调用方 |
+| `schedule.next_ct` | `schedule.py:49` | 有定义、无调用方 |
 | `state_effects.stat_scale_of` | `state_effects.py:18` | 仅测试引用 |
 | `formation.reachable_units` | `formation/__init__.py:28` | 零外部引用 |
 | `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |

@@ -104,7 +104,7 @@ from saintess_engine.landing import deal_damage, heal_actor
 # v181.M-R2：dir=gain（资源自然回）不依赖现有层数——0 层也要回
 # （游侠 energy 耗到 0 若被 n<=0 拦截将永远回不了，卡死）
 ```
-（`schedule.py:671-672`）
+（`schedule.py:674-675`）
 
 ```python
 # 事件主体过滤（N9 修正）：ctx.actor = 该事件的主体 actor——只处理主体 actor
@@ -115,7 +115,7 @@ from saintess_engine.landing import deal_damage, heal_actor
 要写的四类内容：
 
 1. **拒绝过的方案**及原因（例：`actions._deal_aoe` 里解释为何不迁旧 AOE 反推算法，
-   `actions.py:320-322`）
+   `actions.py:322-324`）
 2. **顺序依赖**（例：旋律基础叠层必须排 `act_cast` 首位，游戏仓 `game/services/class_mech_proc.py:2291-2293`）
 3. **缺口**（例：游戏仓 `game/data/battle_rules.py:218-224` 的「⚠️ 缺口（不硬凑）」段）
 4. **数值权威来源**（例：「desc 权威：30%/20%」，游戏仓 `game/data/battle_rules.py:768`）

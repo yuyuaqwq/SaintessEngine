@@ -52,7 +52,7 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 
 ### 关于 `skill_hit` / `attack_hit` 的「静态 grep 不到」
 
-`actions.py:542` 是：
+`actions.py:544` 是：
 
 ```python
 ev = "attack_hit" if info.get("_basic") else "skill_hit"

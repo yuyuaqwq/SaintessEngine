@@ -102,17 +102,17 @@ def _cap_of(actor, key):                       # effects.py:64，S2 公开别名
 ## 周期结算（`period`）
 
 `period` 是「按刻重复发生」的声明，形态见 [../reference/effect-rules.md](../reference/effect-rules.md)。
-引擎的实现要点（`schedule._settle_time_effects`，`schedule.py:657-807`）：
+引擎的实现要点（`schedule._settle_time_effects`，`schedule.py:660-812`）：
 
 1. **首次挂不给跳**：第一次看到某 key 时只登记 `dot_next[key] = now + interval`
-   （`schedule.py:685-688`，对齐旧引擎的「首跳延迟」）
+   （`schedule.py:688-691`，对齐旧引擎的「首跳延迟」）
 2. **到点补跳**：`while now >= dot_next[key]`，一次最多补 20 跳（`guard < 20`）防死循环
 3. **`dir` 四向**：`damage`（掉血）/ `heal`（回血 + 可选 mana_pct）/ `mana`（回蓝）/ `gain`（给自身叠层加/减，**静默**、clamp `[0, cap]`）
 4. **`turns` 限跳**：跳够 `turns` 次就清层（计数器 `dot_jumps`，`schedule.py:814-820`）
 5. **`dir="gain"` 不需要 `stacks > 0`**：0 层也要回（游侠精力耗到 0 若被拦将永远回不了，
-   `schedule.py:675-678` 注释）
+   `schedule.py:678-681` 注释）
 6. **标签档**（原「boss 档」）：目标身上带该周期声明的标签之一时读 `pct_boss` / `pct_cur_boss`
-   （名单 = 声明里的 `trait_tags`，引擎只问 `traits.has_any`，`schedule.py:656` / `:638`）。
+   （名单 = 声明里的 `trait_tags`，引擎只问 `traits.has_any`，`schedule.py:659` / `:638`）。
    引擎**不认识「Boss」**：谁是 boss / 精英由内容侧在声明里写标签（`traits`），
    名单为空 ⇒ 一律 False（这条折扣对谁都不生效，引擎零游戏知识）
 

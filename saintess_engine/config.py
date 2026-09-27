@@ -62,6 +62,11 @@ _HOOKS = {
     # fn() -> {槽位: tag}；缺省见 `battle/tags.DEFAULT_SLOTS`（如 immune_control → cc_immune）。
     # 内容侧要换名/挂层级（如 `immune.control`）就挂这个；引擎只按槽位取名字，不认游戏名词。
     "tag_slots_fn": None,
+    # ---- 属性写口（battle/attributes.py）：唯一写入口的两个钩子 ----
+    # 预改钩子 fn(actor, key, value, ctx) -> float | None（返回变换后的值；None = 交回内建边界）
+    "attr_pre_fn": None,
+    # 后改钩子 fn(actor, key, old, new, ctx) -> None（只在值真变了时调用；异常上抛）
+    "attr_post_fn": None,
     # ---- CTB 时间模型注入面：`battle/schedule.py` 的读点（引擎零公式/零数值）----
     # 时间模型 fn(spd, base) -> float（一次行动耗时，游戏秒；形状与参数全在内容侧）
     "time_model_fn": None,

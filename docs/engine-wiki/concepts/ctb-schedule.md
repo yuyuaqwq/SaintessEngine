@@ -17,7 +17,7 @@
 | **绝对时刻制**（本引擎） | 时间只在「从 A 到 B」时被推进；`_advance_time(battle, dt)` 一次推进就能结算期间所有到期事件 |
 
 绝对时刻制的关键收益：**时间推进是一个显式函数调用**（`schedule._advance_time`，
-`schedule.py:553`），它内部依次做「加时钟 → 结算周期/到期 → 广播 `time_advance`」。
+`schedule.py:556`），它内部依次做「加时钟 → 结算周期/到期 → 广播 `time_advance`」。
 所以「3 秒内发生了 3 次 DOT」这件事是确定的、可断言的，不依赖主循环被调用了几次。
 
 ## 公式（**由内容侧装配**，不在引擎里）
@@ -26,7 +26,7 @@
 只是一个转发位，向注入面取内容侧给的时间模型：
 
 ```python
-def action_time(spd, base=None):                     # schedule.py:95
+def action_time(spd, base=None):                     # schedule.py:96
     if base is None:
         base = action_base_of(DEFAULT_ACTION)         # 默认行动类别的基准耗时
     return float(_time_model_fn()(spd, base))         # ← 内容侧装配的 fn(spd, base) -> float
@@ -125,7 +125,7 @@ now=1.12  │  （下次 human_act 前，命令层会 advance → 推到怪的 1
 ```
 
 **谁会被 `advance` 认为是「人控」**：`actor["human_controlled"]` 为真
-（`schedule._next_player_due`，`schedule.py:498-508`）。**不是** `kind` / `side`。
+（`schedule._next_player_due`，`schedule.py:502-512`）。**不是** `kind` / `side`。
 如果没有配置 `human_controlled`，`advance` 会一路跑完所有自动行动 ——
 这正是 `auto_run` 能「全自动打完」的原因。
 
@@ -137,13 +137,13 @@ now=1.12  │  （下次 human_act 前，命令层会 advance → 推到怪的 1
 ## 两段化：出招窗口（在飞待发）与 `settle_landing()`
 
 `act()` 只**登记**待发（`cast_done_at` = 登记时刻 + 第一段耗时），落地（伤害 / 治疗结算）
-发生在时钟被推过该时刻的那一瞬（`schedule.py:293` `_resolve_due_pending`）。于是
+发生在时钟被推过该时刻的那一瞬（`schedule.py:294` `_resolve_due_pending`）。于是
 **「谁把时钟推过那个时刻」决定了行动何时出伤**：
 
-- `advance()`（`schedule.py:396`，命令层心脏）一路推到**下一个决策点**。真人轮流制
+- `advance()`（`schedule.py:397`，命令层心脏）一路推到**下一个决策点**。真人轮流制
   （PVP / 多人副本）里那个决策点常常就在当刻 ⇒ **一步不推时钟** ⇒ 本次落地被挂起到
   对手那一回合（面板读到的是登记态旧值）。
-- `settle_landing(battle, logs, actor=None)`（`schedule.py:366`）只把时钟推到**待发落地
+- `settle_landing(battle, logs, actor=None)`（`schedule.py:367`）只把时钟推到**待发落地
   时刻**并结算，**不驱动任何 actor 决策** ⇒ 驱动方口径 = **一次出手 = 落地后返回**。
   给了 `actor` ⇒ 锚定它这一手（早于它的其它待发由 `_advance_time` 按时刻顺路结算）；
   `None` ⇒ 全场最早那个。无待发 ⇒ 零行为（返回 `None`）。
@@ -153,7 +153,7 @@ now=1.12  │  （下次 human_act 前，命令层会 advance → 推到怪的 1
 
 ## 时间推进时发生什么
 
-`_advance_time(battle, dt, logs)`（`schedule.py:478`）：
+`_advance_time(battle, dt, logs)`（`schedule.py:482`）：
 
 ```python
 battle._now += dt            # ① 时钟前进
@@ -162,10 +162,10 @@ fire(battle, "time_advance", {"dt": dt, "now": battle._now}, logs)   # ③ 广�
 ```
 
 顺序很重要：**广播在结算之后**，所以监听 `time_advance` 的内容层读到的
-`now` 已经是结算后的状态（`schedule.py:555-557` 注释：挂敌身条等按刻连续结算的
+`now` 已经是结算后的状态（`schedule.py:558-560` 注释：挂敌身条等按刻连续结算的
 声明订阅此事件，「读点永远拿到当刻值」）。
 
-`_settle_time_effects`（`schedule.py:396`）三轮：
+`_settle_time_effects`（`schedule.py:397`）三轮：
 
 1. **`effects` 到期**：`expire <= now` → pop，并 `fire("effect_expire", {"actor", "target", "key"})`
 2. **`shields` 到期**：`expire_at <= now` → pop（`expire_at is None` = 永久盾不删）

@@ -117,10 +117,10 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 > 门禁：`tests/test_n10_title_bonus_removed.py` 第 5 节（28/28）。
 | ~~`DEFAULT_CT_WAIT = 2.0`~~ | ~~`battle.py:38`~~ | **已删**（2026-09-11） |
 | ~~`schedule.CAST_ITEM = 1.0`~~ | ~~`schedule.py:29`~~ | **已删**（2026-09-11） |
-| ~~`schedule.HOT_INTERVAL = 1.0`~~ | ~~`schedule.py:36`~~ | **已删**（2026-09-11） |
-| `schedule.next_ct` | `schedule.py:48` | 有定义、无调用方（实际推进走 `_after_act`） |
+| ~~`schedule.HOT_INTERVAL = 1.0`~~ | ~~`schedule.py:37`~~ | **已删**（2026-09-11） |
+| `schedule.next_ct` | `schedule.py:49` | 有定义、无调用方（实际推进走 `_after_act`） |
 | `state_effects.stat_scale_of` | `state_effects.py:18` | 仅测试引用 |
-| `actions._aoe_falloff_apply` | `actions.py:610` | **占位实现**（原样返回 logs）。`info["aoe_falloff"]` 在 `actions.py:416` 被读取但随后被丢弃 → AOE falloff 实际未生效 |
+| `actions._aoe_falloff_apply` | `actions.py:612` | **占位实现**（原样返回 logs）。`info["aoe_falloff"]` 在 `actions.py:418` 被读取但随后被丢弃 → AOE falloff 实际未生效 |
 | `formation.reachable_units` | `formation/__init__.py:28` | 零外部引用 |
 | `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |
 | `gauge.charge_*`（6 个） | `gauge/__init__.py:244-321` | **全部零外部引用** —— 蓄力三律无消费者 |
@@ -154,7 +154,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | 事件 | 结论 |
 |---|---|
 | `phase` / `player_low` / `pv_broken` | **在 `EVENTS` 里但引擎零 fire 点位**（设计如此，由上层驱动 —— `effect_triggers.py:38-40`） |
-| `skill_hit` / `attack_hit` | **有点位但静态 grep 不到**：`actions.py:542` 用变量选事件名（`ev = "attack_hit" if info.get("_basic") else "skill_hit"`）。文档若按 grep 结果断言「无点位」会是错的 |
+| `skill_hit` / `attack_hit` | **有点位但静态 grep 不到**：`actions.py:544` 用变量选事件名（`ev = "attack_hit" if info.get("_basic") else "skill_hit"`）。文档若按 grep 结果断言「无点位」会是错的 |
 | `EVENTS` 实际条目数 | **26**（不是 docstring 说的「19 时机」）。引擎插桩自然点位 **23** 个（不是注释说的「16 个」） |
 
 ## 3. `注释 ≠ 代码`（发现了 6 处）
