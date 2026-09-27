@@ -4,7 +4,7 @@
 为什么要有它
 ------------------------------------------------------------------
 `tools/_cue_freeze.py` 的 5 组战斗是**逐字节冻结基线**（改脚本 = 毁基线），
-它们只覆盖 60 条 cue 里的 45 条 —— 剩下 15 条「这 5 组打不到」。
+它们只覆盖 61 条 cue 里的 45 条 —— 剩下 16 条「这 5 组打不到」。
 设计案的判据是：**每条被迁移的 cue 计数必须 ≥1，打不到的必须补场景，不许放过**。
 本工具就是「补场景」：**不动那 5 组**，另建一批最小场景，逐条把剩下的 cue 打到。
 （判据 = `union(冻结 5 组, 本工具) == CUE_NAMES`；每条要么被驱动、要么在
@@ -181,6 +181,29 @@ def _d_heal_wound(rig):
     t = rig.state(rig.player(uid="p2", name="靶"), "_anti_heal_pct", {"value": {"pct": 0.5}})
     bt = rig.battle([p, t], [rig.mob()])
     rig.LAND.heal_actor(bt, t, 100, [])
+
+
+@driver("battle.landing.taken_reduce")
+def _d_taken_reduce(rig):
+    """引擎发射点：`landing.deal_damage` 的**承伤减免读点**（`state_reduce_of` 那一段，
+    收口第 2 批新增：原先这一族只有写、没有读）。
+
+    条件 = 承伤者身上有一条**规则里声明了 `taken_pct: true`** 的条目 + 内容侧骨架表
+    声明了 `reduce.cap`（示例包没声明 ⇒ 中性 0.0 ⇒ 封到 0 = 不减伤）⇒ 两处都要补。
+    补的是**输入声明**（效果规则 + 公式骨架），发射点仍是 `landing` 里的真代码。
+    """
+    from ext_combat.battle import state_effects as SE
+    tbl = SE.get_effect_rules()
+    tbl["probe_ward"] = {"taken_pct": True}
+    undo = _with_skeleton(rig, {"reduce": {"cap": 0.9}})
+    try:
+        p = rig.stat(rig.player(), "dodge", 0.0)
+        t = rig.state(rig.mob(hp=900), "probe_ward", {"value": 0.30, "expire": 999999.0})
+        bt = rig.battle([p], [t])
+        rig.LAND.deal_damage(bt, p, t, 100, [], dmg_kind="phys")
+    finally:
+        undo()
+        tbl.pop("probe_ward", None)
 
 
 @driver("battle.actions.no_target")

@@ -37,12 +37,12 @@ if pct <= 0:
 
 | 允许 | 形式 | 例 |
 |---|---|---|
-| **别名指向同一对象** | `new = old` | `cap_of = _cap_of`（`effects.py:87`）、`norm_stack = _norm_stack`（`effects.py:86`） |
+| **别名指向同一对象** | `new = old` | `cap_of = _cap_of`（`effects.py:89`）、`norm_stack = _norm_stack`（`effects.py:88`） |
 | **兼容 shim 委托到新实现** | 一个函数体只有一次转发调用 | 引擎侧已不留这类 shim —— 旧的 `config.load_game_defaults` 随拆仓从引擎删净（`saintess_engine/config.py` 里 `strict` 附近有原话：框架不认识「默认配置」是什么）；拆仓前它有 52 个测试调用点 |
 
 不允许：把旧逻辑复制一份留在原地、在引擎读源路径上做「旧字段也读一下」的回落。
 存档迁移是唯一例外，而且**只允许一处**（`serialize._deserialize_actor`，
-迁完立刻 `pop` 旧键，`serialize.py:105-114`）。
+迁完立刻 `pop` 旧键，`serialize.py:104-113`）。
 
 原文（`serialize.py:96-98`）：
 
@@ -52,7 +52,7 @@ if pct <= 0:
 ## 3. 落地只能走 `landing`
 
 **任何模块自己扣 `hp` 都是 bug。** 引擎自己的 DOT 也走 `landing.deal_damage`
-（`schedule.py:802`）。自己的动词也必须走：
+（`schedule.py:792`）。自己的动词也必须走：
 
 ```python
 from saintess_engine.landing import deal_damage, heal_actor
@@ -60,10 +60,12 @@ from saintess_engine.landing import deal_damage, heal_actor
 （`landing.py:8-13` 原文：「若每个机制自己写扣血，会出现旧引擎那种『某技能绕过护盾
 直接扣血』的 bug」）
 
-## 4. 状态只能写 `effects`（或 shields/cooldown）
+## 4. 状态只能写 `effects`（`cooldown` 除外）
 
 一个机制的持久状态请写 `actor["effects"][key]`。
-`shields`（承伤资源）与 `cooldown`（调度）是**唯一**允许的独立容器
+`cooldown`（调度表）是**唯一**允许的独立容器（行动记账，不是状态）。
+承伤资源（护盾）已并进 `effects`（收口第 2 批 · 2026-09-28）：它是容器里一条
+**声明了 `absorb`** 的带 `value` 条目。
 （`actors.py:114-117` 给了理由）。要放「引擎不读的自定义状态」用 `actor["ext"]`
 （`actors.py:135-136`：**引擎绝不读**）。
 
@@ -90,7 +92,7 @@ from saintess_engine.landing import deal_damage, heal_actor
 ## 6. 容错铁律：异常不阻断战斗
 
 事件源、观察者、单个 handler 的异常都 `continue` / 吞掉（`effect_triggers.py:109-120`、
-`effects.py:179-183`）。这是**有意为之**：一场战斗不能因为一个效果写错就崩。
+`effects.py:181-185`）。这是**有意为之**：一场战斗不能因为一个效果写错就崩。
 
 代价是你必须自己写测试；并且**不要**用裸 `except: pass` 掩盖你自己的逻辑错误 ——
 引擎的容错是为了「别人的错不连累我」，不是为了「我的错没人看见」。
@@ -104,7 +106,7 @@ from saintess_engine.landing import deal_damage, heal_actor
 # v181.M-R2：dir=gain（资源自然回）不依赖现有层数——0 层也要回
 # （游侠 energy 耗到 0 若被 n<=0 拦截将永远回不了，卡死）
 ```
-（`schedule.py:677-678`）
+（`schedule.py:667-668`）
 
 ```python
 # 事件主体过滤（N9 修正）：ctx.actor = 该事件的主体 actor——只处理主体 actor

@@ -136,7 +136,7 @@ class Host(EngineHost):
         for key, value in merged.items():
             if key in player or key in MINIMAL_SAVE_KEYS:
                 player[key] = value
-        for key in ("hp", "mp", "max_hp", "max_mp", "effects", "shields", "cooldown", "ct"):
+        for key in ("hp", "mp", "max_hp", "max_mp", "effects", "cooldown", "ct"):
             if key in merged:
                 player[key] = merged[key]
         return out

@@ -99,7 +99,6 @@ def _deserialize_actor(data: dict) -> dict:
     """
     actor = dict(data)
     actor.setdefault("effects", {})
-    actor.setdefault("shields", {})
     actor.setdefault("cooldown", {})
     actor.setdefault("ext", {})
     _bns = actor.get("bonus")

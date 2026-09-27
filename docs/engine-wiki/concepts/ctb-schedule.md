@@ -162,19 +162,20 @@ fire(battle, "time_advance", {"dt": dt, "now": battle._now}, logs)   # ③ 广�
 ```
 
 顺序很重要：**广播在结算之后**，所以监听 `time_advance` 的内容层读到的
-`now` 已经是结算后的状态（`schedule.py:561-563` 注释：挂敌身条等按刻连续结算的
+`now` 已经是结算后的状态（`schedule.py:563-565` 注释：挂敌身条等按刻连续结算的
 声明订阅此事件，「读点永远拿到当刻值」）。
 
 `_settle_time_effects`（`schedule.py:397`）三轮：
 
 1. **`effects` 到期**：`expire <= now` → pop，并 `fire("effect_expire", {"actor", "target", "key"})`
-2. **`shields` 到期**：`expire_at <= now` → pop（`expire_at is None` = 永久盾不删）
+2. ~~**`shields` 到期**~~ —— ★ 2026-09-28 收口第 2 批已删（护盾并进 `effects`，
+   `expire` 缺省 = 永不到期）
 3. **周期跳**：见 [effects.md](effects.md) 的「周期结算」节
 
 `damage` 方向的周期跳在落地前会先 `fire("dot_calc", {"target", "dot_key", "dmg", "mult"})`
-（`schedule.py:818`，**不带 `actor` 键** → 广播给所有人，因为施毒者不在承伤者身上；
+（`schedule.py:808`，**不带 `actor` 键** → 广播给所有人，因为施毒者不在承伤者身上；
 效果侧用 `ctx["dot_key"]` 自己过滤）。落地后 `fire("dot_tick", {"actor", "target", "key", "dmg"})`
-（`schedule.py:813`）。
+（`schedule.py:803`）。
 
 ## 行动耗时表（`action_base_of`，`schedule.py:381`）
 

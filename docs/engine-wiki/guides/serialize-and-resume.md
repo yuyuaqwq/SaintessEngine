@@ -58,13 +58,13 @@ b2.script_hook = my_director
 _STRIP_KEYS = {"_skill_index"}      # serialize.py:31 —— 运行时索引，恢复时重建
 ```
 
-**其它一切原样落盘**，包括 `effects` / `shields` / `cooldown` / `triggers` / `ext` /
+**其它一切原样落盘**，包括 `effects`（承伤资源也在里面）/ `cooldown` / `triggers` / `ext` /
 `bonus` / `dot_next` / `dot_jumps` / `act_count` / 任意透传自定义字段。
 这意味着：
 
 - 好处：你的自定义状态（放 `ext`）**自动**持久化，不需要写序列化代码
 - 风险：**不可 JSON 化的东西会让存档炸**。`state_to_json` 有 `default=str` 兜底
-  （`serialize.py:124`），会把奇怪对象静默变成字符串 —— 恢复后类型就变了。
+  （`serialize.py:123`），会把奇怪对象静默变成字符串 —— 恢复后类型就变了。
   所以 `ext` 里只放基本类型 / dict / list
 
 **实际会出现在存档里的「非内容字段」清单**（知道有这些，排查时才不会以为中邪）：
@@ -72,10 +72,10 @@ _STRIP_KEYS = {"_skill_index"}      # serialize.py:31 —— 运行时索引，�
 | 字段 | 来源 | 说明 |
 |---|---|---|
 | `_content_applied` | 内容侧 `apply_game_content` 的幂等标记（`game/content_rules/apply.py:81`） | 会落盘（原文自记：游戏仓侧拆仓计划的收口步 S9 若要清掉需改引擎 `serialize.py`） |
-| `dot_next` / `dot_jumps` | 引擎周期结算辅助（`schedule.py:655-656`） | 落盘是**续战能对上**的原因，别手删 |
+| `dot_next` / `dot_jumps` | 引擎周期结算辅助（`schedule.py:645-646`） | 落盘是**续战能对上**的原因，别手删 |
 | `_dmg_taken_mult` | 上层直写（例 `commands/boss_script.py:684`） | 承伤乘区（`landing.py:102-108` 读） |
 | `act_count` | `actor_auto` 每动 +1（`battle.py:475`） | AI `round_mod` 谓词读它 |
-| `reduce_left` | `effects.act_apply`（`effects.py:486`） | ⚠️ 无消费者 |
+| ~~`reduce_left`~~ | ★ 2026-09-28 收口第 2 批**已删**（容器 `expire` 的影子账，引擎内零消费者；到期的真源只有条目的 `expire`） | 已删 |
 
 ## 恢复时的三个隐式决定
 
@@ -135,7 +135,7 @@ if not isinstance(_bns, dict) or "panel" not in _bns:
     actor.pop("cap_bonus", None)
     actor.pop("title_bonus", None)
 ```
-（`serialize.py:105-114`）
+（`serialize.py:104-113`）
 
 历史：`bonus` 容器统一之前，面板增幅散在 `stat_bonus` / `cap_bonus` / `title_bonus`
 三个旧键上。这段代码把旧档**一次性**迁进 `bonus` 分域并**清掉旧键**。
@@ -167,9 +167,9 @@ get 兜底；新档 actor 已带 bonus 容器则原样」**（`serialize.py:96-9
 ```python
 from saintess_engine.serialize import state_to_json, json_to_state
 
-raw = state_to_json(battle.to_state())      # serialize.py:123
+raw = state_to_json(battle.to_state())      # serialize.py:122
 ...
-battle = Battle.from_state(json_to_state(raw))   # serialize.py:127
+battle = Battle.from_state(json_to_state(raw))   # serialize.py:126
 ```
 
 ## 续战正确性 checklist

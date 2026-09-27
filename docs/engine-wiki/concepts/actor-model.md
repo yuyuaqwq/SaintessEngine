@@ -18,13 +18,13 @@
 代价：**身份信息全靠字段**。要表达「这是 Boss」就写 `traits=["boss"]`（标签名随内容侧起，
 引擎**不认识 Boss 这个概念**）—— 引擎只提供 `traits.of(actor)` / `traits.has(actor, name)` /
 `traits.has_any(actor, names)` 三个只读判据，**名单为空 ⇒ 一律 False**（不声明 = 这条规则不适用于任何人）。
-「谁带标签才吃哪条规则」由声明给：控制时长减半看该状态的 `ctrl_half_traits`（`effects.py:376-377`）、
-DOT 折扣档看该周期的 `trait_tags`（`schedule.py:662`）。旧字段 `is_boss` / `role` 引擎**已不再读**
+「谁带标签才吃哪条规则」由声明给：控制时长减半看该状态的 `ctrl_half_traits`（`effects.py:378-379`）、
+DOT 折扣档看该周期的 `trait_tags`（`schedule.py:652`）。旧字段 `is_boss` / `role` 引擎**已不再读**
 （2026-09-25 E3 已删）—— 内容侧仍可自己读它们，那是内容侧的事。
 
 ## 字段全集
 
-`make_actor`（`actors.py:60`）产生的字段分四组。
+`make_actor`（`actors.py:62`）产生的字段分四组。
 
 ### ① 身份 / 数据标签
 
@@ -47,34 +47,41 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:662`）。旧字段 `is
 （例：`schedule._after_act` 用 `stats.actor_spd`，`schedule.py:498`）。
 
 > 唯一的数值兜底：`stats._monster_base_stats` 里 `crit` 缺省取 **0.05**（`stats.py:145`），
-> 而 `make_actor` 播种的是 0.0（`actors.py:100`）。这两处不一致，见
+> 而 `make_actor` 播种的是 0.0（`actors.py:102`）。这两处不一致，见
 > [_selfcheck.md](../_selfcheck.md)。
 
 ### ③ 战斗可变状态（构造时已播种）
 
 | 字段 | 形态 | 说明 |
 |---|---|---|
-| `effects` | `{key: entry}` | **单容器**：增益/减益/DOT/控制/标记/职业资源/挂敌身条/**窗口态**（如防御姿态 `effects["defend"]`，条目自带 `until` 边界声明）**全在这里** |
-| `shields` | `{key: {"value","expire_at","halve"}}` | 承伤资源，**独立容器**（不是 effects 条目） |
-| `cooldown` | `{技能名: 绝对时刻}` | 调度资源，**独立容器** |
+| `effects` | `{key: entry}` | **单容器**：增益/减益/DOT/控制/标记/职业资源/挂敌身条/**窗口态**（如防御姿态 `effects["defend"]`，条目自带 `until` 边界声明）**全在这里**，**承伤资源（护盾）也在**（收口第 2 批并入：一条声明了 `absorb` 的带 `value` 条目） |
+| `cooldown` | `{技能名: 绝对时刻}` | 调度资源，**独立容器**（它不是「状态」，是行动记账） |
 | `charging` | dict \| None | 蓄力态（被打断时清） |
 | `ct` | float | **下次可行动时刻**（绝对时刻，见 [ctb-schedule.md](ctb-schedule.md)） |
 | `poi_buff` | any | 透传字段，引擎不读 |
 | `triggers` | `{事件名: [效果 dict]}` | 事件声明（见 [event-bus.md](event-bus.md)） |
 | `act_count` | int | 个体行动计数，`actor_auto` 每动 +1（`battle.py:475`） |
-| `dot_next` / `dot_jumps` | `{key: 数值}` | 周期结算的运行期辅助（`schedule.py:655-656` 惰性建） |
+| `dot_next` / `dot_jumps` | `{key: 数值}` | 周期结算的运行期辅助（`schedule.py:645-646` 惰性建） |
 
-**为什么 `shields` / `cooldown` 不进 `effects`**：它们**不是状态**。
-护盾是「承伤时按值扣减的资源」，冷却键是「还能不能再放」的调度表——
-把护盾塞进 `effects` 会让「净化」把盾一起清掉、让面板折算把盾值当减伤算。
-设计原话见 `actors.py:114-117`。
+**为什么 `cooldown` 不进 `effects`**：它**不是状态**，是「还能不能再放」的调度表，
+与「现在身上有什么」无关（按技能名索引，条目模型也表达不了）。
+
+**承伤资源为什么进 `effects`（收口第 2 批 · 2026-09-28 的反转）**：护盾原先是**独立容器**，
+理由是「把盾塞进 effects 会让净化把盾清掉、让面板折算把盾值当减伤算」。收口后两条都不成立：
+· **净化**只清「有 `period`（非 gain）/ `on==target` / `cleanse` 声明」的条目（`effects.act_cleanse`），
+  护盾条目一个都不声明 ⇒ **净化不会碰它**（要清就内容侧给 `cleanse: true`）；
+· **面板折算**只读 `stacks` / `stat` / `mult` / `stat_scale`，`value` 不参与面板（`stats._apply_effects`）。
+真正的收益是**到期/清除只有一条通路**：原先护盾有自己的到期段（`schedule` 第 2 段），
+是同一个容器的逻辑的**副本**（第二本账）；并进来之后到期走容器那一段、只发一次事件。
+是否「吸收」由**内容侧声明**决定（`EFFECT_RULES[key].absorb`，可挂在父级 tag 上一族继承），
+引擎不认「哪个 key 是盾」。
 
 ### ④ 配置 / 能力
 
 | 字段 | 说明 |
 |---|---|
 | `class_name` | 有值 → `stats` 走职业面板公式；**这是引擎唯一的「身份→行为」分支**，但它是配置读取，不是类型分派 |
-| `level` | 等级。⚠️ 引擎不认 `lv`（`actors.py:81`），旧数据的 `lv` 必须由你的桥翻译 |
+| `level` | 等级。⚠️ 引擎不认 `lv`（`actors.py:83`），旧数据的 `lv` 必须由你的桥翻译 |
 | `equipment` | 装备 dict，透传给 `panel_fn` |
 | `skills` | 技能 key 列表（构造 Battle 时索引进 `_skill_index`） |
 | `learned_skills` | 已学技能列表（**引擎不读**，是给你的装配器扫的，如《奥兰迪亚》的 `_learned_mech_skills`） |
@@ -99,7 +106,7 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:662`）。旧字段 `is
 | 子域 | 消费者 | 语义 |
 |---|---|---|
 | `bonus.panel` | `stats._player_base_stats`（`stats.py:99`） | 面板增幅 dict，透传给 `panel_fn` |
-| `bonus.cap` | `effects._cap_of`（`effects.py:77`） | `{资源key: 上限增量}`，纯 flat int 加在 `EFFECT_RULES[key].cap` 上 |
+| `bonus.cap` | `effects._cap_of`（`effects.py:79`） | `{资源key: 上限增量}`，纯 flat int 加在 `EFFECT_RULES[key].cap` 上 |
 | `bonus.cost` | `actions._bonus_cost_of`（`actions.py:293`） | 技能消耗折扣（`mp_pct`/`mp_flat`/`res` + `when` 判据） |
 
 ### 其余透传字段
@@ -177,7 +184,7 @@ class ActCtx:                       # actors.py:19
 事件广播（`fire` 遍历全部 sides）都在运行期直接遍历它，所以 `add_actor` 不需要
 通知任何人（`battle.py:292-294`）。
 
-阵营敌对关系由 `hostile_sides`（`actors.py:195`）决定：优先读 `battle.hostile_map[side]`，
+阵营敌对关系由 `hostile_sides`（`actors.py:206`）决定：优先读 `battle.hostile_map[side]`，
 没有则「除自己外的全部阵营」。**引擎不预设玩家/怪身份**。
 
 ## 相关

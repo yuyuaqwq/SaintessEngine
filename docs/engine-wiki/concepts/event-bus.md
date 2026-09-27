@@ -96,7 +96,7 @@ if _m != 1.0:
     total = max(1, int(total * _m))
 ```
 （`actions.py:494-501`，同款出现在 `landing.py:90-100` 的 `taken_calc`、
-`actions.py:733-803` 的 `heal_calc`、`schedule.py:703-720` 的 `dot_calc`）
+`actions.py:733-803` 的 `heal_calc`、`schedule.py:693-710` 的 `dot_calc`）
 
 ⚠️ **它是单槽、覆盖式、不落盘**（`effect_triggers.py:85-86` 注释）：
 单线程同步 fire 所以成立；**别在异步/多线程里依赖它**。`dot_calc` 广播后
@@ -156,10 +156,10 @@ actor["triggers"][event]
    → ACTIONS_HANDLERS[动词](battle, caster, target, params, logs)
 ```
 
-`apply_effects`（`effects.py:171`）里的两条通用规则：
+`apply_effects`（`effects.py:173`）里的两条通用规则：
 
-1. **概率 roll**：`eff["chance"]` 存在时 `random() >= chance` 就跳过（`effects.py:188-194`）
-2. **参数合并**：`_merge_params` 让调用方参数优先于映射默认（`effects.py:158-167`）
+1. **概率 roll**：`eff["chance"]` 存在时 `random() >= chance` 就跳过（`effects.py:190-196`）
+2. **参数合并**：`_merge_params` 让调用方参数优先于映射默认（`effects.py:160-169`）
 
 ## 引擎自然点位速查（26 个事件里哪些引擎会自己喊）
 

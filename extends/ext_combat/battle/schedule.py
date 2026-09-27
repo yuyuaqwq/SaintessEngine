@@ -556,7 +556,9 @@ def _settle_time_effects(battle, logs: list):
     N7.2 收口（对齐旧 _decay_buff_table/_advance_time 的到期语义）+ V 系列合并：
     - effects 到期：条目 expire <= now → 删（None=常驻/纯叠层；控制 on_act/
       一次性 on_hit 由消费点清除，这里只做时间兜底）
-    - shields 到期：expire_at <= now → 删（None = 永久不删；独立容器）
+    - ★ 收口第 2 批（2026-09-28）：原先这里还有**第 2 段**「shields 到期」
+      （独立容器 `expire_at`）—— 护盾并进容器后它就是**同一段逻辑的副本** ⇒ 整段删。
+      护盾到期现在走上面那段（条目 `expire`），到期只有一个真源、也只发一次事件。
     - 周期跳（统一方向分流，DOT/HOT 同构）：
       * 表声明 dot（EFFECT_RULES[key].dot，旧 damage 规则，静态每层数值）
       * 条目自带 period（effects[key]["period"]，动态声明——食物 HOT 的
@@ -597,19 +599,7 @@ def _settle_time_effects(battle, logs: list):
                         except Exception as _e:
                             _diag(battle, "_settle_time_effects · 事件源", _e)          # 审计 P-44：不再静默（行为不变）
                             pass  # 事件源异常不阻断结算
-            # ---------- 2) shields 到期（独立容器）----------
-            sh = a.get("shields")
-            if isinstance(sh, dict) and sh:
-                for key in list(sh.keys()):
-                    s = sh[key]
-                    if not isinstance(s, dict):
-                        continue
-                    exp = s.get("expire_at")
-                    if exp is None:
-                        continue  # 永久盾
-                    if now >= float(exp):
-                        sh.pop(key, None)
-            # ---------- 3) 周期跳（effects 条目：dot/period 声明）----------
+            # ---------- 2) 周期跳（effects 条目：dot/period 声明）----------
             if isinstance(ef, dict) and ef:
                 dnext = a.setdefault("dot_next", {})
                 djump = a.setdefault("dot_jumps", {})

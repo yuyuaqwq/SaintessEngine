@@ -42,7 +42,9 @@
   是内容侧约定 —— 见 [../reference/effect-rules.md](../reference/effect-rules.md)）
 - 面板折算要遍历全部条目（`stats._apply_effects`）
 
-**但保留了 2 个独立容器**：`shields`（承伤资源）与 `cooldown`（调度表）。理由见
+**但保留了 2 个独立容器**（2026-09-28 收口第 2 批后只剩 `cooldown` 调度表 ——
+`shields` 承伤资源已并进 `effects`，成为一条声明了 `absorb` 的带 `value` 条目）。
+理由见
 `actors.py:114-117` 注释：它们不是「状态」，混进去会让净化清掉盾、让面板折算把盾当减伤。
 
 **痕迹**：`actors.py:48-50` 的「V 系列统一：四容器 → 单 effects 容器」注释；
@@ -86,7 +88,7 @@
 - 报错少、调试难：症状是「没反应」而不是「抛异常」
 - 必须自己写测试（[../guides/testing.md](../guides/testing.md)）
 - 唯一的例外要记住：`stats._monster_base_stats` 的 `crit` 兜底 **0.05**
-  （`stats.py:145`），而 `make_actor` 播种的是 0.0（`actors.py:100`）
+  （`stats.py:145`），而 `make_actor` 播种的是 0.0（`actors.py:102`）
 
 **痕迹**：
 - `config.py:97-101` 的 R8 说明：「静默降级」两档语义
@@ -109,7 +111,7 @@
 （`taken_calc` 的 `mult`）。
 
 **痕迹**：`landing.py:8-13` 原文（「为什么必须统一收口」）；
-`effects.act_damage` 也只做「读参数 → 调 `landing.deal_damage`」（`effects.py:670-696`）。
+`effects.act_damage` 也只做「读参数 → 调 `landing.deal_damage`」（`effects.py:687-713`）。
 
 ---
 

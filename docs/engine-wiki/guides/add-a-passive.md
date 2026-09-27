@@ -107,7 +107,7 @@ ctrl · ctrl_any · res · left_key · left_init · cost_field · buff_key
 
 | `domain` | 写哪里 | 引擎消费者 | 数值来源 |
 |---|---|---|---|
-| `cap` | `actor["bonus"]["cap"][cap_key] += add` | `effects._cap_of`（`effects.py:77`） | `passive.add` 或 `cfg.add`，**只累加正数** |
+| `cap` | `actor["bonus"]["cap"][cap_key] += add` | `effects._cap_of`（`effects.py:79`） | `passive.add` 或 `cfg.add`，**只累加正数** |
 | `cost` | `actor["bonus"]["cost"]`（`mp_pct` / `when[].mp_pct`） | `actions._skill_pay_of`（`actions.py:324`） | `passive.mp_mult`（如 0.5 = 打五折） |
 
 `cap` 域**不 continue**：声明里同时有 `event` 时（如 `soul_mark_cap` / `poison_cap_up`）
