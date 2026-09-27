@@ -524,6 +524,29 @@ def _head_of(tree: str) -> str:
 # 比对
 # ============================================================
 
+# ============================================================
+# 「预期消失的键」登记表（2026-09-28）
+# ------------------------------------------------------------
+# 收口某批重构时会**故意删掉**若干只写不读的键（第二本账的影子字段）。它们从
+# `to_state` 拍平表里消失是**预期结果**，不是行为变化 —— 判据要认得这件事，
+# 否则每次收口都要人工解释一遍 RED。
+#
+# ★ 刻意做窄的三条边界（不许以后被当成「放宽判据」的先例）：
+#   ① 只有「键**消失**」才放行；键**值**变了仍 RED。
+#   ② 只有登记过的键名才放行；没登的消失键仍 RED（不许「顺手加一条就变绿」）。
+#   ③ 每次命中都在输出里**逐条打印**（键名 + 理由 + 出现在哪一组），审计可见。
+EXPECTED_DROPPED_KEYS = {
+    "reduce_left": ("状态容器收口第 2 批（df4caf0）删掉的影子字段：与容器条目 `expire` 重复，"
+                    "引擎内零消费者（只被包侧播种表透传 + 面板展示）"),
+}
+
+
+def _is_expected_dropped(path: str) -> str:
+    """path 命中登记表 ⇒ 返回理由；没命中 ⇒ 空串（仍算差异）。"""
+    leaf = path.rsplit(".", 1)[-1]
+    return EXPECTED_DROPPED_KEYS.get(leaf, "")
+
+
 def _diff_state(fb: dict, fa: dict):
     """逐键 diff：返回 [(path, 归因类别, 明细), ...]。"""
     diffs = []
@@ -557,7 +580,8 @@ def _diff_state(fb: dict, fa: dict):
 def compare(before: dict, after: dict) -> dict:
     """三通道对拍：logs 逐字节 / 逐 cue 计数表 / to_state 逐键。"""
     res = {"logs": [], "counts": [], "state": [], "n_state_keys": 0,
-           "n_ok_sha": 0, "n_groups": 0, "notes": [], "zero_count": []}
+           "n_ok_sha": 0, "n_groups": 0, "notes": [], "zero_count": [],
+           "expected_dropped": []}
     gb = {g["gid"]: g for g in before["groups"]}
     ga = {g["gid"]: g for g in after["groups"]}
     res["n_groups"] = len(gb)
@@ -609,7 +633,13 @@ def compare(before: dict, after: dict) -> dict:
                                      ["%s %d→%d" % (k, cb[k], ca[k]) for k in bad] or "-")))
 
         # ③ to_state 逐键
-        diffs = _diff_state(bg["state_flat"], ag["state_flat"])
+        raw = _diff_state(bg["state_flat"], ag["state_flat"])
+        diffs = []
+        for d in raw:
+            if d[1] == "结构差异" and "只有 before 有" in d[2] and _is_expected_dropped(d[0]):
+                res["expected_dropped"].append("G%d  %s —— %s" % (gid, d[0], _is_expected_dropped(d[0])))
+                continue
+            diffs.append(d)
         res["n_state_keys"] += len(bg["state_flat"])
         res["state"].append((gid, "PASS" if not diffs else "FAIL",
                              "%d 键，差 %d" % (len(bg["state_flat"]), len(diffs)), diffs))
@@ -683,6 +713,10 @@ def render_report(before: dict, after: dict, res: dict, inject: str) -> str:
         % (res["n_ok_sha"], res["n_groups"],
            sum(1 for s in res["counts"] if s[1] == "PASS"), res["n_groups"],
            sum(len(s[3]) for s in res["state"])))
+    if res["expected_dropped"]:
+        add("预期消失的键（已登记 · 不算差异 · 共 %d 条）：" % len(res["expected_dropped"]))
+        for line in res["expected_dropped"]:
+            add("   · %s" % line)
     add("verdict: %s" % res["verdict"])
     if res["verdict"] == "RED":
         add("红因：")
@@ -812,6 +846,7 @@ def main(argv=None) -> int:
                     "state_diff_detail": [{"gid": gid, "path": p, "kind": k, "detail": d}
                                           for gid, _st, _i, dd in res["state"]
                                           for (p, k, d) in dd],
+                    "expected_dropped": res["expected_dropped"],
                 }, fh, ensure_ascii=False, sort_keys=True, indent=1)
             print("json → %s" % args.json)
         return 0 if res["verdict"] == "GREEN" else 1
