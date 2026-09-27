@@ -18,7 +18,7 @@ register_action       config.set_config           actor["triggers"]
 
 - `battle` 是战斗实例；`logs` 是 list，直接 `append` 就是玩家看到的日志
 - **不要自己扣血/加血** —— 落地必须走 `landing.heal_actor` / `landing.deal_damage`
-  （`landing.py:437` / `:23`）。绕过落地会丢掉护盾、死亡判定、濒死保护、`on_heal` 事件
+  （`landing.py:440` / `:23`）。绕过落地会丢掉护盾、死亡判定、濒死保护、`on_heal` 事件
 - 抛异常会被 `apply_effects` 吞掉并跳过该动作（`effects.py:179-183`），不会中断战斗
 
 ```python
@@ -124,7 +124,7 @@ hero hp: 65
 
 上面走的是「事件触发」路子。另一条路是**技能数据驱动**：技能 dict 里的 `mech`
 字段经 `effects_from_skill`（`effects.py:218`）转成 effect 列表，在命中后由
-`_apply_hit_effects`（`actions.py:540`）执行。分派判据见 `_mech_to_effect`
+`_apply_hit_effects`（`actions.py:542`）执行。分派判据见 `_mech_to_effect`
 （`effects.py:236`）——「叠层资源型」走 `apply op=add`，否则保留名词走 `EFFECT_ACTIONS`。
 
 更完整的机制写法（judge 谓词 / 乘区钩子 / 计数器）见

@@ -6,26 +6,26 @@
 
 ```
 命令层
-  └─ Battle.human_act(action, skill_name, actor, target)        battle.py:298
+  └─ Battle.human_act(action, skill_name, actor, target)        battle.py:299
        ├─ ActCtx(caster, action, skill_name, target, ...)       actors.py:20
-       ├─ Battle.act(ctx)                                       battle.py:483
-       │    ├─ _ensure_battle_started()                         battle.py:664   ⚡ battle_start
-       │    ├─ fire("turn_start")                               battle.py:503   ⚡
-       │    ├─ 控制消费（mode=skip → 早退；no_skill → 技能转普攻） battle.py:522-546 ⚡ on_act_consume
-       │    ├─ fire("act_begin")                                battle.py:548   ⚡
-       │    ├─ _p_acts += 1                                     battle.py:502
+       ├─ Battle.act(ctx)                                       battle.py:487
+       │    ├─ _ensure_battle_started()                         battle.py:668   ⚡ battle_start
+       │    ├─ fire("turn_start")                               battle.py:507   ⚡
+       │    ├─ 控制消费（mode=skip → 早退；no_skill → 技能转普攻） battle.py:526-550 ⚡ on_act_consume
+       │    ├─ fire("act_begin")                                battle.py:552   ⚡
+       │    ├─ _p_acts += 1                                     battle.py:506
        │    ├─ 分派：
-       │    │    attack → actions.do_attack                      actions.py:51
-       │    │    skill  → actions.do_skill                       actions.py:64
-       │    │    defend → Battle._do_defend                      battle.py:645
-       │    │    flee   → Battle._do_flee                        battle.py:654
-       │    │    其他   → Battle.action_override 注入点           battle.py:559
-       │    ├─ fire("act_done")                                 battle.py:636   ⚡
-       │    └─ _check_side_end()                                battle.py:706
+       │    │    attack → actions.do_attack                      actions.py:52
+       │    │    skill  → actions.do_skill                       actions.py:65
+       │    │    defend → Battle._do_defend                      battle.py:649
+       │    │    flee   → Battle._do_flee                        battle.py:658
+       │    │    其他   → Battle.action_override 注入点           battle.py:563
+       │    ├─ fire("act_done")                                 battle.py:640   ⚡
+       │    └─ _check_side_end()                                battle.py:710
        └─ 若未结束且 action ∈ {attack, skill, defend} 或 override 被消费：
-            ├─ schedule._after_act(battle, caster, action)      schedule.py:490  推 ct
-            └─ Battle.advance(logs)                             battle.py:362
-                 └─ schedule.advance（推时钟 + 自动 actor 行动）  schedule.py:396
+            ├─ schedule._after_act(battle, caster, action)      schedule.py:494  推 ct
+            └─ Battle.advance(logs)                             battle.py:366
+                 └─ schedule.advance（推时钟 + 自动 actor 行动）  schedule.py:397
 ```
 
 ## 展开 1：`advance` 的循环
@@ -42,26 +42,26 @@ schedule.advance(battle, logs, max_steps=200)                     schedule.py:39
     else:
         _advance_time(battle, auto[1] - battle._now, logs)
         logs.append("—— {name} 行动 ——")
-        battle.actor_auto(actor)                                       battle.py:387
+        battle.actor_auto(actor)                                       battle.py:391
 ```
 
-`_advance_time(battle, dt, logs)`（`schedule.py:556`）内部：
+`_advance_time(battle, dt, logs)`（`schedule.py:559`）内部：
 
 ```
 battle._now += dt
 _settle_time_effects(battle, logs)                                  schedule.py:397
    ├─ for 每个存活 actor:
-   │    ├─ effects 到期 → pop + ⚡ effect_expire                      schedule.py:595
-   │    ├─ shields 到期（expire_at <= now）→ pop                      schedule.py:645-655
+   │    ├─ effects 到期 → pop + ⚡ effect_expire                      schedule.py:598
+   │    ├─ shields 到期（expire_at <= now）→ pop                      schedule.py:648-658
    │    └─ 周期跳（period）:
-   │         首次 → dot_next[key] = now + interval（不跳）             schedule.py:688-691
+   │         首次 → dot_next[key] = now + interval（不跳）             schedule.py:691-694
    │         到点 → while now >= dot_next（最多 20 跳）:
    │             dir=damage → ⚡ dot_calc → landing.deal_damage → ⚡ dot_tick   :285/:292/:297
    │             dir=heal   → landing.heal_actor（+ mana_pct）        :301-320
    │             dir=mana   → 直接加 mp                                :321-330
    │             dir=gain   → effects[key].stacks ±= amount（clamp，静默） :331-350
    │             限时（turns）→ 跳够清层                                :351-359
-fire("time_advance", {"dt": dt, "now": battle._now})                schedule.py:595 ⚡
+fire("time_advance", {"dt": dt, "now": battle._now})                schedule.py:598 ⚡
 ```
 
 ## 展开 2：`do_attack` → `do_skill` → 伤害管线
@@ -79,14 +79,14 @@ actions.do_attack(battle, ctx)                                      actions.py:5
 
 actions.do_skill(battle, ctx)                                       actions.py:65
   1. info 空 → return []
-  2. 玩家（有 class_name）→ _skill_usable(...)                       actions.py:142
+  2. 玩家（有 class_name）→ _skill_usable(...)                       actions.py:143
        └─ res_cost 条目存在且 stacks < 需求 → 拦截 + 日志，return
-  3. _spend_skill_cost(actor, info)                                 actions.py:189
+  3. _spend_skill_cost(actor, info)                                 actions.py:190
        ├─ mp 扣减（pay = _skill_pay_of 折算）
        ├─ res_cost 扣 effects[key].stacks
        └─ consume_all → ef.pop(key)
   4. cd > 0 → actor["cooldown"][name] = now + cd（cd_mult 取态声明最小） :83-100
-  5. ⚡ fire("act_cast", {actor, target, info})                       actions.py:112
+  5. ⚡ fire("act_cast", {actor, target, info})                       actions.py:113
   6. kind 分派（比较的是 config.kind_of 注入的值）:
        kind == heal → _do_heal(...)     → heal_calc ⚡ → landing.heal_actor → on_heal ⚡
        kind == buff → _do_buff(...)     → apply_effects（effect 名词）
@@ -94,16 +94,16 @@ actions.do_skill(battle, ctx)                                       actions.py:6
 ```
 
 ```
-actions._attack_damage_pipeline(battle, actor, target, info, lv)    actions.py:379
-  if info["aoe"] → _deal_aoe(...)                                   actions.py:391
+actions._attack_damage_pipeline(battle, actor, target, info, lv)    actions.py:381
+  if info["aoe"] → _deal_aoe(...)                                   actions.py:393
         scope = "all" | info["aoe"]
         enemies = 敌对 side 全部 actor
         targets = support.formation.select_aoe_targets(...)
         for t in targets: _single_target_pipeline(..., _no_lifesteal=True)
-  else → _single_target_pipeline(...)                               actions.py:396
+  else → _single_target_pipeline(...)                               actions.py:398
 
-actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:396
-  1. _consume_hit_buffs(battle, actor, logs)                        actions.py:474
+actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:398
+  1. _consume_hit_buffs(battle, actor, logs)                        actions.py:476
        └─ 遍历 effects 里带 "hit" 子键的条目 → 累积 dmg_mult/guaranteed_crit/bonus_atk_pct
           → ⚡ on_hit_consume → pop 条目
   2. st  = stats.actor_stats(battle, actor)                          stats.py:18
@@ -116,16 +116,16 @@ actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:
        ├─ expr 段：config.formulas().skill_formula_expr → resolve_formula(...)
        └─ 非 expr：config.formulas().calc_damage(atk|matk × power + skill_flat, def|mdef, ...)
   7. total *= _st_mult；total *= hit_buffs.dmg_mult
-  8. ⚡ fire("dmg_calc", {actor, target, dmg, is_crit, info, mult:1.0})  actions.py:494-501
+  8. ⚡ fire("dmg_calc", {actor, target, dmg, is_crit, info, mult:1.0})  actions.py:496-503
        └─ 读回 battle._fire_ctx["mult"] → total *= mult
   9. _deal_hit(battle, actor, target, total, defend_reduce, element)   actions.py:581
-       └─ landing.deal_damage(...)                                  landing.py:29
- 10. _settle_lifesteal(...)（非 AOE）                               actions.py:670
+       └─ landing.deal_damage(...)                                  landing.py:30
+ 10. _settle_lifesteal(...)（非 AOE）                               actions.py:672
        └─ rate = min(lifesteal 类面板, 0.30)，真伤不吸，mortal_wound ×0.5
           → landing.heal_actor → on_heal ⚡
  11. bonus_atk_pct > 0 → 再 _deal_hit 一段附伤
- 12. _apply_hit_effects(...) → effects_from_skill(info, lv) → apply_effects   actions.py:540
- 13. ⚡ fire("attack_hit"|"skill_hit")，然后若是暴击 ⚡ fire("crit")    actions.py:465-522
+ 12. _apply_hit_effects(...) → effects_from_skill(info, lv) → apply_effects   actions.py:542
+ 13. ⚡ fire("attack_hit"|"skill_hit")，然后若是暴击 ⚡ fire("crit")    actions.py:467-524
 ```
 
 ## 展开 3：`landing.deal_damage` 的落地顺序（顺序有语义）
@@ -134,46 +134,46 @@ actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:
 landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduce, element)
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ 1. amount <= 0 → 0                                                       │
-│ 2. _lv_pressure(battle, source, target, dmg)          landing.py:233     │
+│ 2. _lv_pressure(battle, source, target, dmg)          landing.py:234     │
 │      btype == "pvp" → 不压；任一方无 level → 不压                          │
 │      低打高：前 3 级 ×0.95，之后 ×0.90，封顶 ×0.30                         │
 │      高打低：每级 ×1.02 连乘（封顶 50 级）                                 │
-│ 3. 元素免疫 / 弱点 / 元素抗性（仅 element 非空）        landing.py:90-116     │
+│ 3. 元素免疫 / 弱点 / 元素抗性（仅 element 非空）        landing.py:91-117     │
 │      element_immune 含该元素 → 直接 return 0                              │
 │      element_weak[el] > 1 → ×倍率                                        │
 │      elem_res / abyss_res（dark 吃 abyss_res）cap 0.5 → 减伤              │
-│ 4. ⚡ fire("taken_calc", {actor: target, dmg, mult: 1.0})   landing.py:117-123 │
+│ 4. ⚡ fire("taken_calc", {actor: target, dmg, mult: 1.0})   landing.py:118-124 │
 │      → 读回 mult → dmg *= mult                                            │
-│ 5. target["_dmg_taken_mult"] > 1 → dmg *= 它           landing.py:132-134    │
-│ 6. _roll_dodge(battle, target, logs)                   landing.py:166（定义 :260） │
+│ 5. target["_dmg_taken_mult"] > 1 → dmg *= 它           landing.py:133-135    │
+│ 6. _roll_dodge(battle, target, logs)                   landing.py:167（定义 :260） │
 │      dodge 面板 cap 0.40 → 命中则 return 0（整个伤害免掉）                 │
 │      ★ `no_dodge=True` ⇒ 跳过这一掷（内容侧自付那一笔没人能闪 —— 2026-09-27 开的一格开关） │
-│ 7. 防御姿态 → dmg *= (1 - defend_reduce or 0.5) landing.py:179-185          │
-│ 8. _apply_taken_reductions(dmg_kind)                   landing.py:185（定义 :287） │
+│ 7. 防御姿态 → dmg *= (1 - defend_reduce or 0.5) landing.py:180-186          │
+│ 8. _apply_taken_reductions(dmg_kind)                   landing.py:186（定义 :287） │
 │      phys → phys_reduce cap 0.40；magi → magic_reduce cap 0.40            │
 │      block 概率 cap 0.40 → 减半                                          │
-│ 9. effects 里带 wake_on_hit 的态 → pop（打醒）+ 日志    landing.py:193-202  │
+│ 9. effects 里带 wake_on_hit 的态 → pop（打醒）+ 日志    landing.py:194-203  │
 │10. ★ **这一层不打断前摇**（T15 §0 D15 第 2 条）：普通伤害照常结算、前摇不动；  │
 │      控制类效果由**内容侧**挂引擎 `interrupt` 动作显式打断                  │
-│      （`effects.act_interrupt` —— 引擎不认识「控制」这个词）  landing.py:207-210 │
-│11. _apply_damage(battle, target, dmg, logs, source)    landing.py:209（定义 :364） │
+│      （`effects.act_interrupt` —— 引擎不认识「控制」这个词）  landing.py:208-211 │
+│11. _apply_damage(battle, target, dmg, logs, source)    landing.py:210（定义 :364） │
 │      ├─ 护盾吸收（遍历 shields，按 value 扣减，耗尽即 pop）                 │
 │      ├─ hp 扣减                                                          │
-│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:324     │
+│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:325     │
 │      │     effects["death_guard"].stacks > 0 → hp 拉回 guard_hp_pct      │
 │      │     （+heal_pct 额外治疗，走 heal_actor）→ 层 -1                    │
-│      ├─ 仍 <= 0 → Battle._on_actor_dead(...)   landing.py:412（定义 battle.py:680） │
+│      ├─ 仍 <= 0 → Battle._on_actor_dead(...)   landing.py:415（定义 battle.py:684） │
 │      │       killed_actors.append / 清 charging + 容器窗口（离场）          │
 │      │     ⚡ fire("on_death", {actor, target})                            │
 │      │     source 非 None → ⚡ fire("on_kill", {actor: source, ...})       │
 │      └─ 否则：日志「受到 N 点伤害」                                        │
-│12. 未死 → ⚡ fire("on_taken", {actor, target, source, dmg})   landing.py:215 │
+│12. 未死 → ⚡ fire("on_taken", {actor, target, source, dmg})   landing.py:216 │
 └──────────────────────────────────────────────────────────────────────────┘
 返回 real（实际扣血）
 ```
 
 ⚠️ 第 6 步（闪避）的位置有注释明确说明：**「位置在防御姿态减伤前（对齐旧顺序：
-闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）」**（`landing.py:166`）。
+闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）」**（`landing.py:167`）。
 改顺序会改变「闪避是否省下防御姿态/是否打断读条」这类语义。
 
 ## 展开 4：事件在链上的位置（一次普攻）
@@ -196,10 +196,10 @@ turn_start ─→ act_begin ─→ act_cast ─→ dmg_calc
 
 | 细节 | 事实 | 依据 |
 |---|---|---|
-| 普攻不是独立的伤害路径 | 它把自己改写成一次 `action="skill"` 的施放 | `actions.py:60-63` |
-| 技能索引进 `_skill_index` 且**失败不阻断** | 索引空 → 技能静默空放 | `battle.py:145-170` |
-| `act_done` 不带 `actor` 键 | 所以它是全员广播；行动者放在 `ctx["acted"]` | `battle.py:631-636` |
-| 被控跳过时 `act()` **提前 return**，`act_done` 不 fire | 推 ct 由调用方做 | `battle.py:537-546` |
+| 普攻不是独立的伤害路径 | 它把自己改写成一次 `action="skill"` 的施放 | `actions.py:61-64` |
+| 技能索引进 `_skill_index` 且**失败不阻断** | 索引空 → 技能静默空放 | `battle.py:146-171` |
+| `act_done` 不带 `actor` 键 | 所以它是全员广播；行动者放在 `ctx["acted"]` | `battle.py:635-640` |
+| 被控跳过时 `act()` **提前 return**，`act_done` 不 fire | 推 ct 由调用方做 | `battle.py:541-550` |
 | `_fire_ctx` 会被嵌套 fire 覆盖 | 需要 save/restore | `game/services/class_mech_proc.py:238-244`（游戏仓侧） |
 
 ## 相关

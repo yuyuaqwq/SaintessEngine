@@ -92,7 +92,7 @@ def map_event(old_ev):
 你的数据表只写「命中」时，得同时挂两个。
 
 **为什么 `enemy_act` 映射到 `act_done`**：`act_done` 是**不带 subject 的广播事件**
-（`ctx["acted"]` 才是行动者，`battle.py:631-636`），所以「敌方行动后我叠减速」
+（`ctx["acted"]` 才是行动者，`battle.py:635-640`），所以「敌方行动后我叠减速」
 这类特效要在动作里**自己判敌我**（例：`we_act_done_slow`）。
 
 ## 词条的三种数值通道
@@ -104,7 +104,7 @@ def map_event(old_ev):
 | `triggers` 参数 | `{"type": "we_xxx", "pct": 0.2}` | 你自己的族动作 | 一次性/有条件的效果 |
 | `actor["bonus"]["panel"]` | 面板增幅 dict | `stats._player_base_stats` 把它传给 `panel_fn`（`stats.py:99`） | 常驻面板增幅 |
 | `actor["bonus"]["cap"]` | `{资源key: +N}` | `effects._cap_of`（`effects.py:77`） | 资源上限词条 |
-| `actor["bonus"]["cost"]` | `{mp_pct, mp_flat, res, when}` | `actions._skill_pay_of`（`actions.py:322`） | 消耗折扣词条 |
+| `actor["bonus"]["cost"]` | `{mp_pct, mp_flat, res, when}` | `actions._skill_pay_of`（`actions.py:324`） | 消耗折扣词条 |
 
 `bonus.panel` 的形态由**你的** `panel_fn` 决定（引擎只是把它当不透明 dict 透传）。
 `bonus.cap` / `bonus.cost` 的形态是引擎定的，有确切读取点。
@@ -130,7 +130,7 @@ pay = max(1, floor(声明 × (1 - Σpct)) - Σflat)
 - **折扣只减不增**；声明消耗 >0 的技能**保底扣 1**（不许白嫖）
 - `floor` 向下取整（玩家受益方向）；无折扣 → 返回值与声明完全一致（行为零变化）
 
-`when` 的判据由 `_cost_judge_hit`（`actions.py:302`）实现，支持三个谓词：
+`when` 的判据由 `_cost_judge_hit`（`actions.py:303`）实现，支持三个谓词：
 `element`（技能有元素）、`mech_prefix`（技能 mech 前缀）、
 `name_contains`（技能显示名含子串）。多个谓词是 **OR**；空 judge = 恒命中。
 

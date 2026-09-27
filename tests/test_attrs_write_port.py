@@ -49,6 +49,15 @@ _saved_pre = CFG._HOOKS.get("attr_pre_fn")
 _saved_post = CFG._HOOKS.get("attr_post_fn")
 _saved_base = CFG._HOOKS.get("action_base_fn")
 _saved_tm = CFG._HOOKS.get("time_model_fn")
+# ★ 2026-09-27（cue 解耦 B0–B5 落地后）：战斗日志不再由引擎拼 —— 结算发**表现事件**，
+#   措辞由内容侧订阅表 + 文案表渲染（`render_required` 必须命中）⇒ 本门禁要在**装了 cue**
+#   的环境里跑，否则屏上只会是一行坏数据（那一行是给「内容侧没接」的包的提示，
+#   不是「写口改了表现」）。装的是引擎自带的标准夹具（与 `test_battle_text_inject` 同源）。
+_saved_subs = CFG._HOOKS.get("cue_subs_fn")
+_saved_table = CFG._HOOKS.get("text_table_fn")
+from _cue_text_fixture import SUBS as _FIX_SUBS, TEXT as _FIX_TEXT   # noqa: E402
+CFG._HOOKS["cue_subs_fn"] = lambda: _FIX_SUBS
+CFG._HOOKS["text_table_fn"] = lambda: _FIX_TEXT
 _ATTR_SRC = os.path.join(FW_ROOT, "extends", "ext_combat", "battle", "attributes.py")
 
 # ct 那条路要走内容侧声明的时间模型（引擎零数值）⇒ 本门禁临时装两个桩（用完还原）。
@@ -237,3 +246,5 @@ if __name__ == "__main__":
         CFG._HOOKS["attr_post_fn"] = _saved_post
         CFG._HOOKS["action_base_fn"] = _saved_base
         CFG._HOOKS["time_model_fn"] = _saved_tm
+        CFG._HOOKS["cue_subs_fn"] = _saved_subs
+        CFG._HOOKS["text_table_fn"] = _saved_table
