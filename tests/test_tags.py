@@ -25,6 +25,7 @@ sys.path.insert(0, FW_ROOT)
 
 from ext_combat.battle import tags                              # noqa: E402
 from ext_combat.battle import effects as EFF                     # noqa: E402
+from ext_combat.battle import landing as LND                     # noqa: E402
 from ext_combat.battle import traits as TR                       # noqa: E402
 from ext_combat.battle import game_config as GC                  # noqa: E402
 from ext_combat.battle.actors import make_actor, open_entry      # noqa: E402
@@ -210,6 +211,46 @@ lg = []
 EFF.act_apply(bt2, caster, holder, {"key": "burn_z", "turns": 3, "on": "target"}, lg)
 check("★ ⑥ 换名后名单跟着换（同一个名单，新名字下照拦）",
       "burn_z" not in holder["effects"] and any("免疫" in x for x in lg), "%s / %s" % (holder["effects"], lg))
+
+# ============================================================
+# ⑦ 声明层级继承：前缀带行为（子级只写差异）
+# ============================================================
+print("\n【⑦ 声明层级继承：前缀带行为】")
+_rules({"control": {"consume": {"mode": "skip"}},
+        "control.stun": {"consume": {"mode": "no_skill"}},
+        "status": {"wake_on_hit": True}})
+_r1, _s1 = tags.rule_of("control.stun")
+check("⑦ 精确声明优先（子级自己声明过就用自己那份）",
+      (_r1.get("consume") or {}).get("mode") == "no_skill" and _s1 == "control.stun",
+      "%s / %s" % (_r1, _s1))
+_r2, _s2 = tags.rule_of("control.freeze")
+check("★ ⑦ 子级没声明 ⇒ 继承父级（前缀带行为）",
+      (_r2.get("consume") or {}).get("mode") == "skip" and _s2 == "control",
+      "%s / %s" % (_r2, _s2))
+_r3, _s3 = tags.rule_of("nope.nothing")
+check("⑦ 全都没有 ⇒ 空声明（不声明 = 不适用，零兜底）",
+      _r3 == {} and _s3 is None, "%s / %s" % (_r3, _s3))
+_r4, _s4 = tags.rule_of("control")
+check("⑦ 父级自身照常精确命中（层级查询不削一级）", _s4 == "control", str(_s4))
+check("⑦ 空 tag ⇒ 空声明", tags.rule_of("") == ({}, None))
+
+h3, f3 = _mk("h3", "player"), _mk("f3", "enemy")
+bt3 = _bt(h3, f3)
+bt3._now = 1.0
+lg = []
+EFF.act_apply(bt3, f3, h3, {"key": "control.freeze", "turns": 3, "on": "target"}, lg)
+check("★ ⑦ 端到端：父级声明了消费方式 ⇒ 子级 tag 落地即**控制条目**（引擎只按前缀查表）",
+      (h3["effects"].get("control.freeze") or {}).get("mode") == "skip",
+      "%s / %s" % (h3["effects"], lg))
+
+h4, f4 = _mk("h4", "player"), _mk("h4b", "enemy")
+bt4 = _bt(h4, f4)
+open_entry(h4, "status.sleep", stacks=1)
+lg = []
+LND.deal_damage(bt4, f4, h4, 1, lg)
+check("★ ⑦ 端到端：父级声明 wake_on_hit ⇒ 子级状态被攻击打醒并移除（另一条读点也吃前缀）",
+      "status.sleep" not in h4["effects"] and any("惊醒" in x for x in lg),
+      "%s / %s" % (h4["effects"], lg))
 
 # ============================================================
 if _saved_slots is None:

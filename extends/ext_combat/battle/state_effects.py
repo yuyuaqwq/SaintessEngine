@@ -11,8 +11,14 @@ from .game_config import get_effect_rules
 
 
 def state_def(key: str) -> dict:
-    """查效果规则（无规则 = 空 dict = 纯数值）。"""
-    return get_effect_rules().get(key) or {}
+    """查效果规则（无规则 = 空 dict = 纯数值）。
+
+    ★ 2026-09-28（标签机制）：**层级继承** —— 精确声明优先；没有就逐级往父级找
+    （`control.stun` 没单独声明 ⇒ 用 `control` 的声明）。这就是 GAS 那边「前缀带行为」的
+    落法：一族 tag 的共同行为在父级声明一次，子级只写差异。全都没有 ⇒ `{}`（零兜底）。
+    """
+    from . import tags as _tags
+    return _tags.rule_of(key, table=get_effect_rules())[0]
 
 
 def stat_scale_of(key: str, value: int, stat: str) -> float:

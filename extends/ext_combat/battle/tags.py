@@ -32,7 +32,7 @@ TAG_SEP = "."
 
 __all__ = [
     "TAG_SEP", "DEFAULT_SLOTS",
-    "ancestors", "root_of", "name_match",
+    "ancestors", "root_of", "name_match", "rule_of",
     "register", "register_many", "registered", "reset_registry",
     "slot", "of", "sources_of", "has", "has_exact", "has_any", "has_all", "match",
 ]
@@ -77,6 +77,28 @@ def name_match(name, query) -> bool:
     if not n or not q:
         return False
     return n == q or n.startswith(q + TAG_SEP)
+
+
+def rule_of(tag, table=None):
+    """按层级取**声明**（GAS 的「前缀带行为」）：精确声明优先，缺就逐级往父级找。
+
+    返回 `(rule, source_tag)` —— `source_tag` = 实际生效的那一级（排障/审计看它）；
+    都没有 ⇒ `({}, None)`（**不声明 = 这条规则不适用于任何人**，零兜底）。
+
+    用途：内容侧把**一族** tag 的共同行为声明在父级（如 `control` 的消费方式），
+    子级（`control.stun`）只写差异甚至不写 —— 引擎只按 `.` 边界逐级查表，不认名词。
+    """
+    t = str(tag or "")
+    if not t:
+        return {}, None
+    if table is None:
+        from .state_effects import all_state_effects
+        table = all_state_effects()
+    for name in ancestors(t):
+        got = table.get(name)
+        if isinstance(got, dict):
+            return got, name
+    return {}, None
 
 
 # ============================================================

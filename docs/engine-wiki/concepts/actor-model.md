@@ -122,6 +122,7 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:656`）。旧字段 `is
 | **统一面** | `of(actor)` / `sources_of(actor, tag)` | 一个查询面看**三个来源**：`actor["traits"]`（身份标签）∪ `effects` 容器条目 key（状态）∪ 条目 `grants`（一条状态授多个 tag）。撤销 = 条目没了即没了，不另开接口 |
 | **查询** | `has`（层级）/ `has_exact` / `has_any` / `has_all` / `match` | `has(actor, "control")` **父级查得到子级**（命中 `control.stun`，按 `.` 边界；不反向） |
 | **槽位** | `slot("immune_control")` → tag 名 | 引擎固定词汇表的**名字归内容侧声明**（装配面 `tag_slots_fn`）；未装配 = 内建缺省，未知名 ⇒ `KeyError`（fail-closed） |
+| **前缀带行为** | `rule_of(tag)` → `(声明, 生效那一级)` | 声明表按层级继承：**精确优先**，缺就逐级往父级找（`control.stun` 未声明 ⇒ 用 `control` 的）。`state_def()` 已改成走它 ⇒ 一族 tag 的共同行为在父级写一次，子级只写差异；全都没有 ⇒ `{}`（零兜底） |
 
 口径：空 tag / 空名单 ⇒ 一律 `False`（不声明 = 这条规则不适用于任何人）。
 `traits.*` 保留为**精确面**（扁平身份标签，现行行为一字不动）；要层级或全来源就用 `tags.*`。
