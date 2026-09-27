@@ -499,6 +499,58 @@ for _root in (os.path.join(FW_ROOT, "examples", "minimal-game", "content"),
     _nfc += _nf2
 check("★ 引擎侧**零模板实参**（B4：60 个点位全走 cue ⇒ 引擎一条措辞都不剩；扫描面 ≥30 个 .py）",
       _nargs == 0 and _nfiles >= 30, "实参 %d / 文件 %d" % (_nargs, _nfiles))
+
+
+def _direct_literals(root):
+    """**直给日志面的字面行**（设计 §3.5①：不只扫汉字，补全角标点 / emoji 裸行的漏洞）。
+
+    只认「顶层就是字面」的形态：
+      * `logs.append("…")` / `.append(f"…")` / `.append("a" + x)`（字符串常量 / f-string / 拼接）
+      * `return ["…"]`（返回值式点位的直接字面）
+    **不算**：变量、函数调用（`emit(...)` / `_cue(...)` / `_broken_line(...)`）、字典里的槽位名
+    （`{"name": …}` 是字段名不是措辞）、`logs.extend(子段)`（行由被转交的那段自己出）。
+    ⇒ 迁移完成后此数应为 **0**：引擎侧不再有任何一条「自己说话」的行。
+    """
+    def _lit(node):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return "常量"
+        if isinstance(node, ast.JoinedStr):
+            return "f-string"
+        if isinstance(node, ast.BinOp):
+            for _s in (node.left, node.right):
+                _r = _lit(_s)
+                if _r:
+                    return "拼接+" + _r
+        return None
+
+    out = []
+    for _dp, _dirs, _fs in os.walk(root):
+        _dirs[:] = [d for d in _dirs if d != "__pycache__"]
+        for _f in sorted(_fs):
+            if not _f.endswith(".py"):
+                continue
+            _p = os.path.join(_dp, _f)
+            _rel = os.path.relpath(_p, FW_ROOT).replace("\\", "/")
+            for _n in ast.walk(ast.parse(open(_p, encoding="utf-8").read(), filename=_p)):
+                if isinstance(_n, ast.Call) and isinstance(_n.func, ast.Attribute) \
+                        and _n.func.attr in ("append", "extend", "insert") \
+                        and isinstance(_n.func.value, ast.Name) and _n.func.value.id == "logs":
+                    for _a in _n.args:
+                        _r = _lit(_a)
+                        if _r:
+                            out.append("%s:%d %s %r" % (_rel, _n.lineno, _r, ast.unparse(_a)[:60]))
+                elif isinstance(_n, ast.Return) and isinstance(_n.value, ast.List):
+                    for _el in _n.value.elts:
+                        _r = _lit(_el)
+                        if _r:
+                            out.append("%s:%d return列表/%s %r"
+                                       % (_rel, _n.lineno, _r, ast.unparse(_el)[:60]))
+    return out
+
+
+_direct = _direct_literals(os.path.join(FW_ROOT, "extends", "ext_combat"))
+check("★ 引擎侧**零直给字面行**（设计 §3.5①：不只扫汉字 —— 全角标点/emoji 的裸行也拦得住）",
+      _direct == [], "; ".join(_direct[:4]) or "0 处")
 check("★ 内容侧文案真源声明模板 ≥ 30（迁移把措辞搬到这一面，扫描面跟着走）",
       _nc >= 30, "内容侧模板 %d / 文件 %d" % (_nc, _nfc))
 check("★ 两面合计 ≥ 45（防「空转假绿」：两侧都缩水就红）",
