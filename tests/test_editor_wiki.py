@@ -178,6 +178,27 @@ def test_readme_counts():
     check(f".py 总数 {files} == 磁盘 {len(all_py)}", files == len(all_py))
     check(f"总行数 {lines} == 磁盘 {total}", lines == total, f"差 {total - lines}")
 
+    # ★ 2026-09-27 加强：**仓根 `README.md` 也钉同一行数字**。
+    #   为什么：根 README 从前没人盯 —— 它停留在 2026-09-13 那版（还写着「引擎内 12 个模块」、
+    #   `battle/` / `gauge/` / `formation/` 在引擎里），而包栈重构（09-23）早就把它们搬进
+    #   `extends/ext_combat/` 了 ⇒ 首页对着磁盘撒谎了半个月。现在两处 README 都要有可解析的那行，
+    #   且数字互等、且都等于磁盘（三态互锁：缺一行 / 两处不一致 / 与磁盘不一致，任一即红）。
+    root_readme = _os.path.join(W.FW_ROOT, "README.md")
+    with open(root_readme, encoding="utf-8") as f:
+        rtext = f.read()
+    rm = re.search(r"\*\*(\d+)\*\* 个子包 \+ \*\*(\d+)\*\* 个顶层模块；"
+                   r"共 \*\*(\d+)\*\* 个 `\.py` / \*\*([\d ]+)\*\* 行", rtext)
+    check("★ 仓根 README.md 也有同一行可解析的目录数字（首页不许静默过期）", rm is not None,
+          "格式与 wiki README 同一行：**N** 个子包 + **N** 个顶层模块；共 **N** 个 `.py` / **N NNN** 行")
+    if rm:
+        rpk, rtop, rfiles, rlines = (int(rm.group(1)), int(rm.group(2)),
+                                     int(rm.group(3)), int(rm.group(4).replace(" ", "")))
+        check("★ 两处 README 的数字一致（单一真源的口径）",
+              (rpk, rtop, rfiles, rlines) == (pk, top, files, lines),
+              "根 %s / wiki %s" % ((rpk, rtop, rfiles, rlines), (pk, top, files, lines)))
+        check(f"★ 仓根 README 的数字 == 磁盘（子包 {rpk} 顶层 {rtop} 文件 {rfiles} 行 {rlines}）",
+              (rpk, rtop, rfiles, rlines) == (len(dirs), len(mods), len(all_py), total))
+
 
 # ★═════════════════════════ PKG_WIKI_BEGIN（B18-L11）═════════════════════════
 # 包自带 wiki（`<pkg>/docs/wiki/**.md`）的**纯增量**断言：渲染 / 死链 / 深链。

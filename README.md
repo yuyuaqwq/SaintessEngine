@@ -1,24 +1,70 @@
-# saintess_engine —— 通用文字游戏框架
+# saintess_engine —— 零游戏知识的通用文字游戏框架
 
-> 零游戏知识的文字游戏框架：**换配置 + 挂机制 = 换游戏，框架代码零改动**。
-> 从《奥兰迪亚：余烬纪年》的实战代码中提炼而来，那段历史完整保留在本仓库。
+> 纯 Python、零第三方依赖、零游戏名词的**声明驱动**框架，分**三层**：
+> **引擎** / **扩展包** / **数据包**。**换一套配置 = 新游戏，引擎代码零改动。**
+> 从《奥兰迪亚：余烬纪年》的实战代码里提炼而来，那段历史完整保留在本仓库。
 
-## 这是什么
+## 三层布局
 
-一个**游戏框架**，不是某个游戏。包内 **12 个模块并列**（战斗 / 表达式 / 计量条 /
-阵型 / 类别 / 存储 / 命令 / 事件 / 时钟 / 容器 / 会话 / 注入面），彼此零依赖或单向依赖
-—— 每个都能单独理解、单独拷走：
+```text
+数据包  game-*      games/<包>/         一款游戏的内容（一个进程只允许一个）
+                       │  depends（按 id 装扩展包）
+                       ▼
+扩展包  ext-*       extends/<包>/       可插拔的游戏能力（可互相依赖）
+                       │  from saintess_engine …（随便用）
+                       ▼
+引擎    engine-core saintess_engine/   通用件，零游戏词汇
+```
 
-| 框架提供（通用） | 使用方提供（内容） |
-|---|---|
-| CTB 调度 / 行动结算 / 效果叠层 / 事件总线 / 存档序列化 | 数值公式的具体系数、技能表、职业表、怪物表 |
-| 声明表机制（`EFFECT_RULES` / `EFFECT_ACTIONS` / `PASSIVE_PROC` / `MECH_CASH`） | 那些声明表里的**条目** |
-| `@register_action` 回调注册制（机制动作外挂，不进框架） | 机制动作实现（放自己的 `mech/`） |
-| 存储 / 命令 / 事件 / 时钟 / 容器 / 会话骨架 | 业务查询、表结构、指令文案 |
-| 中性兜底（未挂配置时不崩，走骨架值） | 装配入口 `apply.py`（内容 → 引擎方向） |
+**依赖方向严格单向：数据包 → 扩展包 → 引擎**（门禁 `tests/test_layering.py` 机器钉死）。
 
-**架构铁律**：框架不 import 内容，也不认识任何游戏名词（`职业` / `技能` / `技能名` 都不认）。
-方向永远是 **内容 → 框架**（`tests/test_engine_purity.py` 是这条的门禁）。
+- 引擎目录：`saintess_engine/`（**19** 个子包 + **7** 个顶层模块；共 **65** 个 `.py` / **13 188** 行）
+  —— 数字由 `tests/test_editor_wiki.py` 逐项对照磁盘锁定（本文件与 `docs/engine-wiki/README.md` 两处都要一致）
+- 引擎侧的模块（与 `saintess_engine/__init__.py` 里的「模块布局」同一份口径，全部平级）：
+  - **基础** `config`（注入面）· `domains`（引擎默认域集 + 合并规则）· `package`（包栈加载器）
+  - **通用原语** `expr/` · `formula/` · `conditions/` · `bonus/` · `grant/` · `acts/` · `gates/`
+    · `wire/` · `_validators/`
+  - **运行时** `store/` · `command/` · `events/` · `clock/` · `container/` · `text/` · `session/`
+    · `log/` · `tlog/` · `records/`
+  - **宿主** `host/`（包加载 / 会话循环 / 命令通道 / 战斗驱动半边）
+- 扩展包目录 `extends/`：引擎自带 **10** 个 —— `ext_combat`（CTB / 结算 / 效果 / 面板 / 计量条 /
+  站位）· `ext_quest` · `ext_world` · `ext_life` · `ext_economy` · `ext_social` · `ext_loot` ·
+  `ext_dialogue` · `ext_achieve` · `ext_reward`。装法永远是一句话：数据包 `game.json` 里
+  `"depends": ["ext_xxx"]`，包栈按拓扑序装
+- 数据包目录 `games/`：一款游戏一个包（`games/orlandia` = 《奥兰迪亚》导出包 ·
+  `games/my_game` = 演示包）。**一个进程只允许一个数据包**：指令路由 / 动作注册表 /
+  文案表 / 时钟都是进程级单例，两个数据包会互撞 —— 要同时跑两款游戏就开两个进程
+
+★ **游戏级能力在扩展包里，不在引擎里**（2026-09-23 起）。引擎只留「任何文字游戏都要的那一层」。
+**架构铁律**：引擎不 import 内容，也不认识任何游戏名词（职业 / 技能 / 技能名都不认；
+`tests/test_engine_purity.py` 是这条的门禁）。
+
+## 表现层：文案怎么出去（cue · 引擎零文案）
+
+玩家可见的每一行**都不是**引擎拼的：结算只发一条**表现事件（cue）**，措辞由内容侧订阅者
+从自己的文案表渲染。
+
+```text
+结算（引擎/扩展包）                    内容包
+  改动事实
+    ↓
+  _cue(battle, logs, "<key>", {槽位})   ← 引擎侧唯一出口（战斗 60 个点位全在册）
+    ↓
+  订阅表（内容侧 cue_subs_fn）           ← 「哪个 cue 归谁渲染」
+    ↓
+  render_required(key)：**必须命中**     ← 表不在 / 表里没这一格 ⇒ 抛
+    ↓
+  文案表（内容侧 text_table_fn）          ← 措辞真源（代码只传槽位，见下）
+```
+
+- 引擎侧**一条兜底模板都不剩**（`render_via` / `render_or(带 default)` / `Battle._t` /
+  `text_of` 的调用点全部为 0；后两个 helper 已删）⇒ 换一句台词**只改内容包**，不动引擎。
+- 出错方向是 **fail-closed**：装配期对账（声明的 cue 必须条条有订阅、条条有文案格）、
+  运行期「必须命中」、真出问题落**一行可读坏数据 + 诊断通道**（不静默、不回落、不影响结算）。
+- 形状与读法：`saintess_engine/cues.py`（总线 / 订阅表 / 三条硬规矩）·
+  `extends/ext_combat/battle/cues.py`（`CUE_NAMES` 声明面）；门禁 `tests/test_cues_shape.py`。
+- 对拍证据：`tools/_cue_freeze.py`（5 组固定战斗逐字节 + 状态 + 逐 cue 计数三通道对拍）·
+  `tools/_cue_coverage.py`（覆盖率尺：60 条声明每条至少被真驱动一次）。
 
 ## 快速开始
 
@@ -32,55 +78,12 @@ python editor/server.py
 
 两者都**只用 Python 标准库**（无需 pip install / Node / npm）。
 
-## 目录
-
-单包、**多模块并列** —— 纯度契约一致（只依赖相对导入 + 标准库，均可整包拷走）：
-
-| 模块 | 定位 |
-|---|---|
-| `battle/` | **战斗域**：CTB 调度 / 行动结算 / 效果叠层 / 落地结算 / 存档 / AI / 面板公式 |
-| `expr/` | 表达式求值器（数值公式任意自定义；白名单 tokenizer，不 eval 输入） |
-| `gauge/` | 计量条：累积 / 衰减 / 阈值触发 / 免疫窗口 / 阶段保留 |
-| `formation/` | 站位与目标选择几何（层数 / 射程 / AoE 范围） |
-| `store/` | SQLite 骨架：连接/锁/事务 + 建表注册 + 列迁移 + Repository |
-| `command/` | 命令层骨架：分页 / 文本剥离 / 守卫 / handler 路由 / 提示 / 基类 / **指令声明注册表** |
-| `events/` | 领域事件总线：注册序执行 / 未知事件策略 / 异常容忍 |
-| `clock/` | 懒计时器：类型注册 + 惰性过期 + 回调不绕路（不跑后台定时器） |
-| `container/` | 容器骨架：容量受限的格子列表（仓库 / 邮件附件 / 公会仓库 同形） |
-| `text/` | 文案模板表：装载 / 渲染（未知槽原样保留）/ 缺失与死文案自检 |
-| `session/` | 会话骨架：宿主事件契约 + 参考实现(PlainEvent) + 会话标识适配点 |
-| `config` | 注入面：内容侧把公式 / 面板 / 查询函数挂进来的唯一入口 |
-
-```
-saintess_engine/            # 框架包（可整包拷走）
-  __init__.py       #   包门面：公开 API 面 + 12 个子模块转出
-  config.py         #   注入面（内容侧把公式/面板/查询函数挂进来）
-  battle/           #   战斗域（12 模块）
-                    #     battle / actions / landing / effects / schedule /
-                    #     ai / stats / formulas / actors /
-                    #     effect_triggers / state_effects / serialize
-  expr/             #   表达式求值器
-  gauge/            #   计量条
-  formation/        #   站位与目标选择几何
-  store/            #   SQLite 骨架
-  command/          #   命令层骨架
-  events/           #   领域事件总线
-  clock/            #   懒计时器
-  container/        #   容量受限格子容器
-  session/          #   宿主会话适配
-editor/             # 框架编辑器：创造/编辑「游戏工具包」
-examples/           # 示例游戏（第三方视角的验收物）
-docs/               # 文档（含面向插件开发者的 wiki）
-tools/              # 文档工具：wiki 行号引用自检 / 内容锚定位移
-tests/              # 框架自身测试（纯度 + 中立性 + 行号 三门禁）
-```
-
 ## 用法：三种角色
 
 **① 只想跑一个现成游戏** —— 看该游戏的 README（它自带 `apply.py` + 数据）。
 
 **② 想做一个新游戏** —— 用编辑器：`python editor/server.py` → 新建游戏包 →
-按域填数据（技能/职业/怪物…）→ 试跑 → 导出。不需要写框架代码。
+按域填数据（技能 / 职业 / 怪物 …）→ 试跑 → 导出。不需要写框架代码。
 
 **②b 想用「声明驱动」管指令与文案**（可拔插，不用就零行为）
 
@@ -89,39 +92,55 @@ from saintess_engine import CommandRegistry, TextTable
 
 # 指令：一份声明同时供 匹配 / 帮助目录 / 静态表 / 漂移自检
 reg = CommandRegistry.from_data(json.load(open("content/data/commands.json", encoding="utf-8")))
-reg.pattern_map()                  # → {key: 正则}（宿主 filter 用）
+reg.pattern_map()                   # → {key: 正则}（宿主 filter 用）
 reg.audit_handlers(handler_names)   # → 两个方向的漂移（漏登记 / 死声明）
 
-# 文案：key → 模板；未定义的 key 会计入 missing（迁移待办清单）
+# 文案：key → 模板；代码只传槽位，措辞全在表里（表现层走 cue，见上）
 text = TextTable(json.load(open("content/data/texts.json", encoding="utf-8")))
-text.render("battle.damage_taken", n=7)   # 未知占位符原样保留，不炸玩家输出
+text.render("battle.hit", n=7)      # 未知占位符原样保留，不炸玩家输出
 text.missing(); text.unused(); text.validate()
 ```
 
 两张表都能在**框架编辑器**里建与改（域 `commands` / `texts`，带 schema 校验 + 字段分组）。
 
 **③ 想给框架加通用能力**（别人也能用） —— 加到 `saintess_engine/` 下**对应的模块**
-（战斗语义 → `battle/`；通用原语 → 顶层子包；也可以按「模块」粒度新建一个平级子包），
-跑本仓库测试；机制动作请优先放自己游戏包的 `mech/`（那才是「外挂」该待的地方）。
+（通用原语 → 顶层子包；也可以按「模块」粒度新建一个平级子包），跑本仓库测试；
+**游戏级能力请放扩展包** `extends/ext_<名>/`（数据包 `depends` 装它），
+机制动作放自己游戏包的 `mech/`（那才是「外挂」该待的地方）。
 
 > **判定一段代码该不该进框架**（三条全过才行）：
-> 1. **零游戏名词** —— 不含职业/技能/怪物/地图/物品/机制名（门禁 A/B 守）
+> 1. **零游戏名词** —— 不含职业 / 技能 / 怪物 / 地图 / 物品 / 机制名（门禁守）
 > 2. **形状而非内容** —— 把常量与枚举拿掉，逻辑仍成立
-> 3. **第二个游戏能用** —— 换个职业/数值/地图，它需要改框架代码吗？要改 = 不通通用
+> 3. **第二个游戏能用** —— 换个职业 / 数值 / 地图，它需要改框架代码吗？要改 = 不通通用
 >
 > 最快的是**追问测试**：逐行问「这行是不是只有某一只游戏才会写？」
 
 ## 契约（第三方必读）
 
-- `docs/engine-wiki/` —— 分层文档：概念 / 参考 / 指南 / 贡献
+- `docs/engine-wiki/` —— 分层文档：概念 / 参考 / 指南 / 贡献（**入口**：`README.md`）
 - `docs/engine-wiki/reference/skill-availability.md` —— 「技能放不放得出、何时能再放」四道判据
 - `docs/engine-wiki/_selfcheck.md` —— **诚实清单**：已核实无消费方的字段、注释与代码不一致处
+
+## 工具（`tools/`，都是离线只读）
+
+| 工具 | 用途 |
+|---|---|
+| `check_wiki_refs.py` | wiki 的「文件:行」引用是否越界 / 指向空行（`drift 0`） |
+| `remap_wiki_refs.py` | 改了代码行号后，把 wiki 引用按位移重锚 |
+| `_cue_freeze.py` | **冻结对拍尺子**：5 组固定战斗的 logs sha256 / 逐 cue 计数 / `to_state` 三通道 |
+| `_cue_coverage.py` | **覆盖尺**：60 条 cue 每条至少被真驱动一次（冻结 5 组 + 补驱动） |
+| `export_actions.py` | 导出动词/动作清单（内容侧对账用） |
 
 ## 测试
 
 ```bash
-python tests/run_all.py        # 引擎全量
+python tests/run_all.py        # 引擎全量：tests/test_*.py + 各扩展包 extends/<包>/tests/*.py
+python tests/run_all.py --serial   # 串行（排查并发发抖时用）
 ```
+
+门禁里几条值得知道的：`test_layering`（三层依赖方向）· `test_engine_purity`（引擎零游戏词）·
+`test_cues_shape`（表现事件形状 / 装配期对账 / 只读契约）· `test_cue_coverage`（覆盖尺 60/60）·
+`test_editor_wiki`（**两处 README 的目录数字对照磁盘**）· 各扩展包自己的 `tests/`。
 
 ## 许可
 
