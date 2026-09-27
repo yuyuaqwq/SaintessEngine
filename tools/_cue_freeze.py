@@ -676,7 +676,21 @@ def render_report(before: dict, after: dict, res: dict, inject: str) -> str:
 # CLI
 # ============================================================
 
+_MSYS_RX = re.compile(r"^/([A-Za-z])/(.*)$")
+
+
+def _norm_path(p: str) -> str:
+    """git-bash 风格 `/c/Users/...` → 原生 `C:/Users/...`。
+
+    原生程序（python.exe 自身）不做 MSYS 路径转换，传 `/c/...` 会「不是目录」，
+    这里一次性抹平，免得尺子在 git-bash 里被路径坑。
+    """
+    m = _MSYS_RX.match(str(p or ""))
+    return (m.group(1).upper() + ":/" + m.group(2)) if m else str(p)
+
+
 def _collect_subprocess(tree: str, inject: str, out_path: str) -> None:
+    """在独立解释器里采集一棵树（两棵树必须各自新进程：同名模块不可双载）。"""
     env = dict(os.environ)
     env["PYTHONHASHSEED"] = "0"
     env["PYTHONIOENCODING"] = "utf-8"
@@ -715,6 +729,9 @@ def main(argv=None) -> int:
 
     if not args.before or not args.after:
         ap.error("--before 与 --after 都要给（同树自洽也照样给两次）")
+    args.before, args.after = _norm_path(args.before), _norm_path(args.after)
+    if args.json:
+        args.json = _norm_path(args.json)
     for t in (args.before, args.after):
         if not os.path.isdir(t):
             print("不是目录：%s" % t, file=sys.stderr)
@@ -732,6 +749,9 @@ def main(argv=None) -> int:
         res = compare(before, after)
         print(render_report(before, after, res, args.inject))
         if args.json:
+            _jdir = os.path.dirname(os.path.abspath(args.json))
+            if _jdir and not os.path.isdir(_jdir):
+                os.makedirs(_jdir, exist_ok=True)
             with open(args.json, "w", encoding="utf-8") as fh:
                 json.dump({
                     "schema": SCHEMA,
