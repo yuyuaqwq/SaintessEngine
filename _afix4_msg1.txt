@@ -1,0 +1,43 @@
+test(records): 审计 L381 —— 给 views.py 补门禁（该模块此前零覆盖）
+
+台账 L381（eng-saintess/records #6 · 中）：tests/test_records_registry.py 的 32 条断言
+全在 __init__.py 的注册表/重载；全仓 tests/ 对 apply_replacements / update_in_place /
+placeholder / 别名回填 grep = 0 命中 => records/views.py 零门禁覆盖。
+L376（高·别名回填按 id(None) 把模块里所有恰好为 None 的无关全局名批量改写成同一个新对象）
+能活到现在就是这么来的：它静默、不抛、还「看起来正常」，而当时的门禁面根本扫不到它。
+
+本笔只补门禁、不改判据、不动产品码（saintess_engine/records/views.py 本笔零改动）。
+新门禁 tests/test_records_views.py 共 47 条断言，钉住九组：
+  ① placeholder() 实例进 replacements => 跳过、返回 0 条（每个名字一份独立身份）
+  ② ★ old is None 不参与回填：模块里每一个恰好为 None 的无关全局名原样不动；
+     只作用于 module_prefix 命中的模块
+  ③ 正常别名回填按**身份**（id）改指：同对象的第二个名字也改指；== 但身份不同的不动；
+     new is old 跳过；两条 == 相等的 old 各自成一条（序列不去重）；旧对象含不可哈希成员也行
+  ④ __ 开头的全局名不回填
+  ⑤ 容器替换走别名映射 => TypeError 并点名「就地更新」（dict/list/set 三型）
+  ⑥ update_in_place 同型就地换内容、身份不变；五种不同型组合全部抛错
+  ⑦ 登记序 = (order, 登记序) 升序；registered_views() 返回副本
+  ⑧ 登记是弱引用：函数被回收 => 登记随之消失（不泄漏）
+  ⑨ 任一重建函数抛错 => ViewsRebuildError 点名 qualname / 登记序 / 原因 / 已完成数
+
+★ 写门禁时踩的一个坑（已写进文件注释）：要验「按身份而非按相等」，就**不能**用字面量元组
+  —— CPython 有两条规则会把「== 相等」悄悄变成「id 相同」：① 常量元组 interning
+  （("a", 1) is ("a", 1) 实测 True）② 常量表达式折叠（("a",) + (1,) 编译期就折成常量
+  元组，同样进池）。两者都会让断言拿到假绿。走一次函数调用（_mk）绕过折叠才造得出真对象。
+  本轮实测：先写字面量版 3 条红、换 + 号折叠仍 3 条红，改 _mk 后 47/47 全绿。
+
+判据数字：
+  新门禁 47/47 全绿。
+  ★ 反证：把 views.py 的 `aliases[id(old)] = _UNSET if old is None else new` 退回成旧的
+    `aliases[id(old)] = new`（= L376 修复前的行为）=> 恰好 3 条转红，且报红内容就是
+    「N/OTHER/UNAFFECTED 原样仍是 None」；改回后 47/47 复绿。判据确实有牙。
+  引擎全量 tests/run_all.py = 108 文件 / 通过 106 / 失败 2，与基线**同红集**、未出现第 3 条：
+    extends/ext_social/tests/test_presence_shape.py（审计线在途，该文件工作区仍脏）
+    tests/test_editor_wiki.py（门槛数字红：别线搬文件带入）
+  tools/check_wiki_refs.py：可判定 336 · drift **0** · 跨仓 148 · 未解析 0
+  tools/_cue_coverage.py：62/62 全覆盖 ✓
+  tools/_cue_freeze.py：verdict RED —— **别线在途**，红因是 logs 逐字节不同，
+    证据行点名 G4 sides.player[0].reduce_left（状态容器收口第 2 批 df4caf0 的影子字段）；
+    本笔只新增一个 records 门禁文件，不碰 cue/日志面，登记为别线红、不动。
+
+未动 games/orlandia（C 车道包仓在跑）。不 push。
