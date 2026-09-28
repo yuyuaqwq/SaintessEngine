@@ -16,6 +16,13 @@ S1 断链（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 / §7）：
 """
 from __future__ import annotations
 
+from .log import get_logger
+
+# 装配失败必须留痕（见 `_lazy_bootstrap`）：静默吞掉 = 线上「技能打不动」零线索。
+# ★ logger 名走门面（门禁 `tests/test_log.py` 判据 7：引擎业务模块零硬编码 logger 名）
+#   —— 与 `clock.timer._LOG` 同一来源。
+_HOOK_ERROR_LOG = get_logger("config")
+
 
 class EngineNotConfigured(RuntimeError):
     """引擎求解所需的游戏挂载缺失（strict=True 模式下抛出，见 R8）。"""
@@ -194,6 +201,11 @@ strict = False
 #  自己的入口，框架不认识「默认配置」是什么）。
 _hook_provider = None
 _hook_provider_running = False
+# ★ 真幂等标志（2026-09-28 审计 L1571）：原注释两处宣称惰性装配器「一次，幂等」，
+# 实跑反证 5 次未命中读口 → provider 被调 **5/5** 次（每次未命中都重问一遍）。
+# 这里记「已问过」而不是靠 provider 自身幂等 —— 引擎不该假定内容侧的代价：
+# provider 若重建整表 / 落盘 / 打日志，就是 N 倍开销且不报错。
+_hook_provider_done = False
 
 
 def set_config(kind: str, table) -> None:
@@ -215,9 +227,13 @@ def get_config(kind: str, default=None):
 
 
 def register_hook_provider(fn) -> None:
-    """内容侧注册「hook 惰性装配器」：首次访问未装配 hook 时调用一次。"""
-    global _hook_provider
+    """内容侧注册「hook 惰性装配器」：首次访问未装配 hook 时调用**一次**。
+
+    换 provider 会重置「已问过」标志（新装配器还有机会装上东西）。
+    """
+    global _hook_provider, _hook_provider_done
     _hook_provider = fn
+    _hook_provider_done = False
 
 
 # ============================================================
@@ -246,8 +262,8 @@ def mount(**hooks) -> None:
 def get_hook(name: str):
     """读单个 hook。
 
-    未装配 → 先问内容侧惰性装配器（一次，幂等）；仍未装配：strict=True →
-    抛 EngineNotConfigured，否则 None。
+    未装配 → 先问内容侧惰性装配器（**全进程只问一次**，见 `_hook_provider_done`）；
+    仍未装配：strict=True → 抛 EngineNotConfigured，否则 None。
     """
     value = _HOOKS.get(name)
     if value is None and _hook_provider is not None:
@@ -279,15 +295,27 @@ def optional_hook(name: str):
 
 
 def _lazy_bootstrap() -> None:
-    """触发内容侧惰性装配（防重入；装配失败静默，交由 strict/兜底决定）。"""
-    global _hook_provider_running
-    if _hook_provider_running:
+    """触发内容侧惰性装配（防重入 · **真幂等** · 失败可诊断）。
+
+    * **防重入**：provider 自己回头读 hook 时不会无限递归。
+    * **真幂等**：`provider_done` 在调用**前**置位 —— 无论成功还是抛错都只问一次。
+      （旧写法每次未命中都重问，注释却写「一次，幂等」；provider 若重建整表 / 落盘 /
+      打日志就是 N 倍开销且不报错。见审计 L1571。）
+    * **失败不静默**：旧写法 `except Exception: pass` 让内容侧装配崩掉后
+      `get_hook` 一路返回 `None`、**零日志零异常** ⇒ 线上表现是「技能打不动、
+      伤害恒 0」而没有任何线索。现在打一条 error 日志，异常照样不外抛
+      （`strict` 的 fail-closed 由两个读口自己判，不在这一层）。
+    """
+    global _hook_provider_running, _hook_provider_done
+    if _hook_provider_running or _hook_provider_done:
         return
+    _hook_provider_done = True
     _hook_provider_running = True
     try:
         _hook_provider()
-    except Exception:
-        pass
+    except Exception:                                    # noqa: BLE001
+        _HOOK_ERROR_LOG.exception("hook 惰性装配器抛错：本次挂载视为未完成"
+                                  "（strict=True 时由读口抛 EngineNotConfigured）")
     finally:
         _hook_provider_running = False
 
