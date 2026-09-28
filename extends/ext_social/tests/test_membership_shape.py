@@ -131,6 +131,29 @@ def t2_roles():
     check("★ 幂等后 can_appoint 仍为 False（已是该职）",
           slots.can_appoint("1001", "lead", r) is False)
 
+    # ★ 名单里**同一个人重复登记**（审计 L753）：占槽按「人」算，不按名单行数算。
+    #   改前 `[m for m in roster.members if ...]` 把同一人数两次 ⇒ cap=2 却判满员，
+    #   真实空着的第 2 席再也任命不上。Roster 本就允许重复成员（防重是调用方的选择），
+    #   所以这里显式钉住「重复不占第二个槽」。
+    dup = Roster(["2001", "2001", "2002"])
+    ds = RoleSlots({"lead": 2}, roster=dup)
+    ds.appoint("2001", "lead")
+    check("★ 名单重复成员：holders 不把同一人列两次", ds.holders("lead") == ["2001"],
+          str(ds.holders("lead")))
+    check("★ 名单重复成员：cap=2 真在任 1 人 ⇒ 第二个仍可任",
+          ds.can_appoint("2002", "lead", dup) is True)
+    ds.appoint("2002", "lead")
+    check("★ 两人都真在任后判定满员", ds.can_appoint("2001", "lead", dup) is False)
+    check("★ 满员时 holders 按名单序且不重复", ds.holders("lead") == ["2001", "2002"],
+          str(ds.holders("lead")))
+    # 顺序口径：去重保留**首次出现**的位置，名单序仍是展示序的依据
+    ord_r = Roster(["2002", "2001", "2001"])
+    os_ = RoleSlots({"lead": 2}, roster=ord_r)
+    os_.appoint("2001", "lead")
+    os_.appoint("2002", "lead")
+    check("★ 去重保留名单序（不是任命序）", os_.holders("lead") == ["2002", "2001"],
+          str(os_.holders("lead")))
+
     # 互斥
     ex = RoleSlots({"lead": 1, "aide": 2}, roster=r, exclusive=True)
     ex.appoint("1001", "lead")

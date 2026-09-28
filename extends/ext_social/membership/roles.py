@@ -80,10 +80,28 @@ class RoleSlots:
         return roster if roster is not None else self.roster
 
     def _holders_of(self, role: str, roster) -> list:
-        """任该职的人：注入了名单按**名单序**，否则按任命序。"""
+        """任该职的人：注入了名单按**名单序**，否则按任命序。
+
+        ★ 按**人**去重，不按名单行数（台账 L753 `membership/roles.py:82-86`）：
+          名单里同一个成员出现两次时（重复登记），原先按行匹配会把他**数两次** ——
+          `holders()` 回 `['a','a']`（展示上「同一个人占两席」），
+          更要紧的是 `can_appoint` 的上限判定 `len(...) < cap` 也按这个长度算 ⇒
+          cap=2 而真在任只有 1 人时，**真实空着的第 2 个席位判成满员**，
+          于是第二个同职再也任命不上（去重前实测 `can_appoint('b')=False`，
+          去重后同输入 `True`）。
+          去重保留**首次出现的顺序** = 名单序本身（名单序仍是展示口径的依据）。
+        """
         if roster is None:
             return [m for m, r in self._assign.items() if r == role]
-        return [m for m in roster.members if self._assign.get(m) == role]
+        seen = set()
+        out = []
+        for m in roster.members:                 # 名单序 = 展示序，逐项扫
+            if m in seen:                        # 同一个人已在册（名单重复登记）
+                continue
+            if self._assign.get(m) == role:
+                seen.add(m)
+                out.append(m)
+        return out
 
     # ---------------------------------------------------------------- 判定
     def can_appoint(self, member, role, roster=None) -> bool:
