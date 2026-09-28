@@ -33,9 +33,38 @@ from typing import Any, Callable, Optional
 from ..log import get_logger
 from ..log.warn import WarnMixin
 
-__all__ = ["LazyTimers"]
+__all__ = ["LazyTimers", "TimerStorageError"]
 
 _LOG = get_logger("clock")
+
+
+class TimerStorageError(RuntimeError):
+    """事件表里某条记录取不出可用的过期时间 —— fail-closed，不静默当已过期。
+
+    为什么要 fail-closed：`expire` 缺失/非整数时，原写法 `.get("expire", 0)` 会让
+    `now >= 0` **恒真** ⇒ 一行坏数据被当成「已过期」静默物理删除并触发 `on_expire`
+    （作废会话、平移结算数据这类副作用会在无人察觉时发生）；而 `expire=None` 则抛
+    裸 `TypeError`、事件卡在表里出不来。两种都不对。存的是坏数据就要**点名是谁**。
+    """
+
+
+def _expire_of(ev: dict, key: Any, owner: Any) -> int:
+    """取一条事件的过期时间戳（整数秒）。
+
+    缺键 / 非整数 / `bool` ⇒ 抛 `TimerStorageError`，文案点名 `owner` 与 `key`。
+    取值口径与 `_validators.clock_now` 同源（`bool` 不算整数）。
+    """
+    if not isinstance(ev, dict):
+        raise TimerStorageError(
+            f"事件记录不是映射（owner={owner!r} key={key!r}）：{type(ev).__name__}")
+    if "expire" not in ev:
+        raise TimerStorageError(f"事件记录缺 expire 键（owner={owner!r} key={key!r}）")
+    value = ev["expire"]
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TimerStorageError(
+            f"expire 必须是整数秒（owner={owner!r} key={key!r}）："
+            f"{type(value).__name__}：{value!r}")
+    return int(value)
 
 
 class LazyTimers(WarnMixin):
@@ -126,13 +155,14 @@ class LazyTimers(WarnMixin):
         if not ev:
             return None
         now = int(self._clock())
-        if now >= ev.get("expire", 0):
+        if now >= _expire_of(ev, key, owner):
             events.pop(key, None)
             self._persist(owner, events)
             self._fire_expire(owner, ev)
             return None
+        expire = _expire_of(ev, key, owner)
         return {"type": ev.get("type"), "data": ev.get("data", {}),
-                "expire": ev["expire"], "remain": ev["expire"] - now}
+                "expire": expire, "remain": expire - now}
 
     def items(self, owner: Any, *, type_key: Optional[str] = None,
               data_match: Optional[dict] = None) -> list:
@@ -143,7 +173,8 @@ class LazyTimers(WarnMixin):
         """
         events = self._load(owner) or {}
         now = int(self._clock())
-        expired = {k: ev for k, ev in events.items() if now >= ev.get("expire", 0)}
+        expired = {k: ev for k, ev in events.items()
+                    if now >= _expire_of(ev, k, owner)}
         for k in expired:
             events.pop(k, None)
         if expired:
@@ -158,14 +189,16 @@ class LazyTimers(WarnMixin):
                                       for dk, dv in data_match.items()):
                 continue
             out.append({"key": k, "type": ev.get("type"), "data": ev.get("data", {}),
-                        "expire": ev["expire"], "remain": ev["expire"] - now})
+                        "expire": _expire_of(ev, k, owner),
+                        "remain": _expire_of(ev, k, owner) - now})
         return out
 
     def refresh(self, owner: Any) -> int:
         """全量惰性清理：过期项执行 on_expire + 物理删除。返回清理条数。"""
         events = self._load(owner) or {}
         now = int(self._clock())
-        expired = {k: ev for k, ev in events.items() if now >= ev.get("expire", 0)}
+        expired = {k: ev for k, ev in events.items()
+                    if now >= _expire_of(ev, k, owner)}
         if not expired:
             return 0
         for k in expired:
