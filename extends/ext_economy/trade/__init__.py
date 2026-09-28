@@ -44,7 +44,7 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 from typing import NamedTuple
 
-from saintess_engine._validators import int_of
+from saintess_engine._validators import int_of, number_of
 
 __all__ = ["DailyLimit", "DailyLimitExceeded", "SaleResult", "apply_rate", "settle_sale"]
 
@@ -104,8 +104,18 @@ class DailyLimit:
 
     @staticmethod
     def _as_count(raw, store_key: str) -> int:
-        """计数读口：缺项 = 0；非整数/负数 = 存档坏了 → 显式报错（不静默当 0）。"""
-        if raw is None:
+        """计数读口：缺项 / **空串** = 0；非整数/负数 = 存档坏了 → 显式报错（不静默当 0）。
+
+        ★ 空串与 `ext_life.periodic._as_count` **同口径**（缺项 / 空串 = 0）。收敛到这一支的
+          理由：① 同是「每日计数」，存档层落库常经 `str(value)`（见
+          `games/orlandia/content/persistence/world.py::set_event_state`），「清空」写出来的
+          就是一个空串 —— 当坏数据抛，会让**同一个存档值在两个形状里一抛一放**；
+          ② `periodic` 那一侧有生产消费者（`content/cmds_event.py::_supply_counter`）且
+          「值非空即为已领」是与真源逐字同口径的既有判定，改它 = 改玩家可见行为；
+          `DailyLimit` 零生产消费者（仅测试），改它零风险 ⇒ 由它向 periodic 看齐。
+          ③ 其余坏值（非整数 / 负数）仍**一律抛**：分叉只消掉「认得出」的那一格。
+        """
+        if raw is None or raw == "":
             return 0
         if isinstance(raw, bool) or not isinstance(raw, int):
             raise ValueError(f"当日计数不是整数：{raw!r}")
@@ -226,9 +236,15 @@ def apply_rate(price, *, rate=1.0, discount=1.0, floor=1, mode="round") -> int:
     * `mode="trunc"`：向零截断（等价 `int(price × rate × discount)`；负值也向零）
     * `floor`：整数下界，默认 1（小额条目不被折成 0）；显式传 `None` = **不施加下界**，
       返回值可能就是 0 或负，怎么处理由调用方定
+    * `rate` / `discount` 必须是**有限数值**（`bool` 不算、`NaN`/`inf` 拒绝）：坏值一律
+      `TypeError` / `ValueError` 并点名字段，绝不静默当 1.0（= 不打折）
     """
     if isinstance(price, bool) or not isinstance(price, int):
         raise TypeError(f"price 必须是整数，收到 {price!r}")
+    # ★ `rate`/`discount` 曾零校验：`float()` 的原生报错不带字段名，`True` 还静默算 1.0
+    #   （= 不打折）。守卫单源 = `_validators.number_of`（`bool` 不算数值），文案点名字段。
+    rate_value = number_of(rate, "rate")
+    discount_value = number_of(discount, "discount")
     if floor is not None:
         if isinstance(floor, bool) or not isinstance(floor, int):
             raise TypeError(f"floor 必须是整数，收到 {floor!r}")
@@ -236,7 +252,7 @@ def apply_rate(price, *, rate=1.0, discount=1.0, floor=1, mode="round") -> int:
             raise ValueError(f"floor 不能为负，收到 {floor!r}")
     if mode not in ("round", "trunc"):
         raise ValueError(f"mode 必须是 'round' 或 'trunc'，收到 {mode!r}")
-    scaled = price * float(rate) * float(discount)
+    scaled = price * rate_value * discount_value
     value = int(round(scaled)) if mode == "round" else int(scaled)
     if floor is None:
         return value
