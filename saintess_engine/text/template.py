@@ -38,6 +38,7 @@
 """
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from string import Formatter
@@ -282,12 +283,26 @@ class TextTable:
         if self.strict:
             raise KeyError("文案未定义：%r（表 %s）" % (key, self.name or "<匿名>"))
         if self.on_miss is not None:
+            # ★ 2026-09-29（审计 L2296）：`on_miss` 是本表**唯一**的缺 key 诊断通道
+            #   （内容侧 `texts.py::_on_miss` 打 ERROR 日志、orlandia 的 `instance_gate`
+            #   也靠它把「包内没接宿主日志」这件事传出去）。原写法 `except: pass`
+            #   在它抛错时**静默降级**成继续走 fallback ⇒ 玩家照样看到 key 本身，
+            #   而那条唯一能说清「为什么少了这句」的日志**一条也没留下** ——
+            #   缺 key 这件事彻底无痕。黑盒实测：on_miss 抛 RuntimeError 时
+            #   `render` 照旧返回 key、`missing()` 照旧记账，**零异常零日志**。
+            #   判据：`missing()` 只记「哪个 key 没定义」，记不住「诊断通道自己坏了」
+            #   ⇒ 兜底分支必须自己留痕，不能指望下游有人看见。
+            #   记诊断**而不抛**：文案是玩家可见面，让一个日志句柄的故障把整条渲染
+            #   掀掉，等于用「什么都看不见」换「重复上报」—— 前者玩家直接吃亏。
             try:
                 got = self.on_miss(key, slots)
-                if got is not None:
-                    return str(got)
-            except Exception:
-                pass
+            except Exception as exc:                                # noqa: BLE001
+                logging.getLogger(__name__).exception(
+                    "on_miss 回调抛错（缺 key %r，表 %s）—— 已按「回调没有给出替代文案」"
+                    "继续走兜底：%s: %s", key, self.name or "<匿名>", type(exc).__name__, exc)
+                got = None
+            if got is not None:
+                return str(got)
         if self.fallback:
             return safe_format(self.fallback, slots)
         return key

@@ -9,6 +9,7 @@
   3. **可拔插**：未装载的表渲染返回 key（或 fallback），**行为零变化**；
      `render_or` 支持渐进迁移（新文案走表、旧的先内联默认串）。
 """
+import logging
 import os
 import sys
 
@@ -176,6 +177,89 @@ check("空表：render 返回 key（调用方零改动可用）", TextTable().re
 check("空表：validate / audit 空",
       TextTable().validate() == [] and TextTable().audit()["total"] == 0)
 check("模块导入本身无副作用（无全局单例被自动装载）", TextTable().missing() == ())
+
+
+# ====================================================================== 审计 L2296
+# `on_miss` 是**唯一**的缺 key 诊断通道；原 `except: pass` 在回调抛错时静默降级，
+# 玩家照样看到 key 本身而唯一能说清缘由的日志一条不留。
+# 判据钉**性质**（有诊断 / 行为不变），不钉源码形态 —— 把 except 删掉同样能过这组。
+def _l2296_capture():
+    """装一个会记到 logging 上的处理器，返回 (记录列表, 还原函数)。"""
+    recs = []
+
+    class _H(logging.Handler):
+        def emit(self, record):
+            recs.append(record)
+
+    h = _H(level=logging.DEBUG)
+    lg = logging.getLogger("saintess_engine.text.template")
+    lg.addHandler(h)
+    old_level, old_prop = lg.level, lg.propagate
+    lg.setLevel(logging.DEBUG)
+    lg.propagate = False
+    return recs, lambda: (lg.removeHandler(h), lg.setLevel(old_level),
+                          setattr(lg, "propagate", old_prop))
+
+
+def _l2296_boom(key, slots):
+    raise RuntimeError("宿主日志通道炸了（探针）")
+
+
+# ① 回调抛错 ⇒ 必须留下诊断（异常级 + 栈），这是本条的核心不变式
+_recs, _restore = _l2296_capture()
+try:
+    _t = TextTable({}, name="l2296-boom", on_miss=_l2296_boom)
+    _out = _t.render("L2296_MISSING", n=1)
+finally:
+    _restore()
+_errs = [r for r in _recs if r.levelno >= logging.ERROR and r.exc_info]
+check("L2296：on_miss 抛错 ⇒ 留下带栈的 ERROR 诊断（不再静默吞掉）",
+      len(_errs) >= 1, "ERROR+exc_info=%d / 全部记录 %d" % (len(_errs), len(_recs)))
+
+# ② 诊断必须点名「是哪个 key / 哪张表」，否则运维拿到一行日志查不下去
+_msgs = " ".join(r.getMessage() for r in _errs)
+check("L2296：诊断点名缺 key 与表名（可定位）",
+      "L2296_MISSING" in _msgs and "l2296-boom" in _msgs, _msgs[:120])
+
+# ③ ★ 守住「记诊断**而不抛**」这半边：玩家可见文案不因日志句柄故障而整条消失。
+#    反向护栏 —— 若有人改成直接 raise，这一格会红（提醒他同时改这一条口径）。
+_recs2, _restore2 = _l2296_capture()
+try:
+    _t2 = TextTable({}, name="l2296-boom2", on_miss=_l2296_boom)
+    _out2 = _t2.render("L2296_MISSING2")
+    _no_raise = True
+except Exception as _e:                                          # noqa: BLE001
+    _out2, _no_raise = repr(_e), False
+finally:
+    _restore2()
+check("L2296：回调炸了仍回落出文案（不抛，玩家面不空）",
+      _no_raise and _out2 == "L2296_MISSING2", "raised=%s out=%r" % (not _no_raise, _out2))
+
+# ④ 回落语义与改前逐字节相同：走 fallback 那一格（回调没给出替代文案 ⇒ got=None）
+_t3 = TextTable({"A": "甲{tag}"}, name="l2296-fb", fallback="缺：{tag}", on_miss=_l2296_boom)
+_recs3, _restore3 = _l2296_capture()
+try:
+    _out3 = _t3.render("L2296_NO_SUCH", tag="剑")
+finally:
+    _restore3()
+check("L2296：回调炸时 fallback 串照常渲染（既有兜底未丢）",
+      _out3 == "缺：剑", _out3)
+
+# ⑤ ★ 不许把「回调正常」也打成异常级 —— 正常协议是「回调返回 None ⇒ 走兜底」，
+#    那是**约定**不是故障。若有人把 except 删在 try 外面并误报，这格会红。
+_recs4, _restore4 = _l2296_capture()
+try:
+    _t4 = TextTable({"A": "甲"}, name="l2296-ok", fallback="F", on_miss=lambda k, s: None)
+    _out4 = _t4.render("L2296_NOT_DEFINED")
+finally:
+    _restore4()
+check("L2296：回调返回 None（合法协议）不产生任何诊断",
+      not [r for r in _recs4 if r.levelno >= logging.ERROR] and _out4 == "F",
+      "err=%d out=%r" % (len([r for r in _recs4 if r.levelno >= logging.ERROR]), _out4))
+
+# ⑥ 反证锚点（防空转恒绿）：本组引用的异常类名必须真的出现在探针里
+check("L2296：探针自锚点非空（避免判据空转恒绿）",
+      bool(_errs) and "l2296-boom" in _msgs, "errs=%d" % len(_errs))
 
 print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
 sys.exit(1 if failed else 0)
