@@ -641,36 +641,51 @@ def _apply_heal_mods(battle, target: dict, amount: int, logs: list) -> int:
     `_TextHolder` 随之删除（它的存在理由就是「拿不到 battle」）。
     """
     heal = amount
-    try:
-        ef = target.get("effects") or {}
-        # 受疗增幅（heal_amp_pct：装配层把 proc_heal amp 装备折算进 effects 条目 stacks/value）
-        amp_entry = ef.get("heal_amp_pct")
-        if isinstance(amp_entry, dict):
+    # ★ 2026-09-29（审计 L253 邻支 · 同族收口）：三个修正原先**共用一个 try** ⇒ 任一条目
+    #   形状坏（float("abc")）会把**后面几个修正整段跳过**。黑盒复现：同一 target 同时挂
+    #   「合法的 heal_down 禁疗」与「形状坏的 heal_amp_pct」⇒ 实跑 100（禁疗**没生效**），
+    #   而单跑禁疗是 50 ⇒ 玩家视角 = 禁疗**悄悄不生效**、文案也不发，无从察觉。
+    #   现在**逐个修正各自兜底**：一个坏值只废掉自己那一个修正，其余照常（隔离变量，
+    #   合法路径逐字不变）；坏值必须点名留痕（_diag），不静默。
+    ef = target.get("effects") or {}
+    if not isinstance(ef, dict):
+        _diag(battle, "_apply_heal_mods", TypeError(
+            f"effects 必须是 dict（键 → 条目），收到 {type(ef).__name__}"))
+        ef = {}
+    # 受疗增幅（heal_amp_pct：装配层把 proc_heal amp 装备折算进 effects 条目 stacks/value）
+    amp_entry = ef.get("heal_amp_pct")
+    if isinstance(amp_entry, dict):
+        try:
             # 两种形态：stacks 计数（装配层旧写法）/ value.amp 数值
-            amp_pct = float(amp_entry.get("value", {}).get("amp", 0) or 0) \
-                if isinstance(amp_entry.get("value"), dict) \
-                else float(amp_entry.get("stacks", 0) or 0)
+            _v = amp_entry.get("value")
+            if isinstance(_v, dict):
+                amp_pct = float(_v.get("amp", 0) or 0)
+            else:
+                amp_pct = float(amp_entry.get("stacks", 0) or 0)
             if amp_pct > 0:
                 heal = int(round(heal * (1 + min(amp_pct, 1.0))))
-        # 禁疗（heal_down 层×每层比例 cap 上限——effects 条目 stacks；V4 两数读内容侧骨架表）
-        hd_entry = ef.get("heal_down")
-        if isinstance(hd_entry, dict):
+        except Exception as _e:
+            _diag(battle, "_apply_heal_mods · 受疗增幅", _e)   # 只废掉本修正，其余照常
+    # 禁疗（heal_down 层×每层比例 cap 上限——effects 条目 stacks；V4 两数读内容侧骨架表）
+    hd_entry = ef.get("heal_down")
+    if isinstance(hd_entry, dict):
+        try:
             ehd = int(hd_entry.get("stacks", 0) or 0)
             if ehd > 0:
                 cut = max(0.0, min(ehd * _F.heal_down_per_stack(), _F.heal_down_cap()))
                 heal = max(0, int(heal * (1 - cut)))
                 _cue(battle, logs, "battle.landing.heal_forbid", {"pct": int(cut * 100)})
-        # 重伤（_anti_heal_pct cap 上限；effects 条目 value 内嵌；V4 上限读内容侧骨架表）
-        ah_entry = ef.get("_anti_heal_pct")
-        if isinstance(ah_entry, dict):
+        except Exception as _e:
+            _diag(battle, "_apply_heal_mods · 禁疗", _e)
+    # 重伤（_anti_heal_pct cap 上限；effects 条目 value 内嵌；V4 上限读内容侧骨架表）
+    ah_entry = ef.get("_anti_heal_pct")
+    if isinstance(ah_entry, dict):
+        try:
             aheal = float((ah_entry.get("value") or {}).get("pct", 0) or 0)
             if aheal > 0:
                 cut2 = max(0.0, min(aheal, _F.anti_heal_cap()))
                 heal = max(0, int(heal * (1 - cut2)))
                 _cue(battle, logs, "battle.landing.heal_wound", {"pct": int(cut2 * 100)})
-    except Exception as _e:
-        # ★ 2026-09-27（B2）：签名改成接 `battle`（表现层要发 cue）⇒ 这里回到正常的
-        #   `_diag(battle, …)`（2026-09-25 那版传 None 是因为当时签名里没有 battle）。
-        _diag(battle, "_apply_heal_mods", _e)          # 审计 P-44：不再静默（行为不变）
-        pass
+        except Exception as _e:
+            _diag(battle, "_apply_heal_mods · 重伤", _e)
     return max(0, heal)
