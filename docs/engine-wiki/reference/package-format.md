@@ -449,7 +449,7 @@ def initial_save(uid: str, ctx: dict) -> dict:      # 可选
   写了它，**整栈**都不带 `commands` / `texts` / `tlogs`。装载口会点名「哪一层写的 +
   被跳过的域」（见下文「装载告警」一节）；不点名就换两条路之一：把那三张空表自建进包里，
   或把 `$builtin` 这个键**删掉**（键缺失 = 引擎默认集照常兜底，是默认形态）。
-* **合并规则只有一份**：`saintess_engine/domains.py:147` 的 `merge_decls`（单层合并）与同模块的
+* **合并规则只有一份**：`saintess_engine/domains.py:170` 的 `merge_decls`（单层合并）与同模块的
   `layered_decls`（三层合并）。编辑器 `editor.packages.effective_domains()` 与引擎装载口
   `records.read_domain_decl` **委托的是同一份** ⇒ 域元数据放包内、放扩展包、还是放引擎默认集里，
   两边看到的是**同一份有效域表**（装配点：`saintess_engine/records/__init__.py:590`）。
@@ -719,7 +719,7 @@ effective_domains(pkg) = ① 引擎默认集 → ② 该包 depends 的扩展包
     （extends/ext_combat · ext_world · ext_loot 的 domains.json），要它们就在 `depends` 里装对应包；
     内容域一个都不内置，否则等于「框架里揣着某个游戏的域」）
     **只在包里没有可用声明时兜底**（第三方包 / 坏包 / 未迁移的老包）—— 它是回退，不是真源
-  · ★ 合并规则**只有一份**：`saintess_engine/domains.py:147` 的 merge_decls —— 编辑器
+  · ★ 合并规则**只有一份**：`saintess_engine/domains.py:170` 的 merge_decls —— 编辑器
     `effective_domains()` 与**引擎装载口** `records.read_domain_decl` 委托的是同一份
     ⇒ 域元数据放包内、放扩展包、还是放引擎默认集里，两边看到的是**同一份有效域表**
     （2026-09-20 T1 双向迁移演习的「一处装配点」：`saintess_engine/records/__init__.py:590`）

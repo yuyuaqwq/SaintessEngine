@@ -77,49 +77,72 @@ def ext_domain_decls(pkg_root: str = "", *, depends: list | None = None) -> list
     所以「装了 ext_world 的包，编辑器与装载口就认得 instances 域」。
 
     只读扩展包的 `domains.json`（纯数据）—— **不加载扩展包代码、不跑依赖拓扑**；
-    目录发现复用包栈那套约定搜索路径（`package.default_ext_dirs`）。读不到就跳过（不抛）。
+    目录发现复用包栈那套约定搜索路径（`package.default_ext_dirs`）。
+
+    ★ **两种「读不到」必须可区分**（台账 `saintess_engine/domains.py:121`，判据 2）：
+
+      · **目录/文件不在**（扩展包没装、被裁掉）⇒ 跳过，那是**正常**的，可静默；
+      · **文件在、但内容坏**（坏 JSON / 顶层不是非空映射）⇒ 抛 `RecordsDeclarationError`
+        —— 与同仓另两条路径**同口径**（`package.py` 的坏 JSON → `PackageError`、
+        `records.read_domain_decl:615-621` 真抛）。
+
+      原先两者一起被一个 `except Exception` 吞成 `[]`，于是「域表少一个域」这个**错因**
+      离现场极远：后续只报「域不在声明里」，包作者无从判断是自己写坏了还是引擎没认。
+      实测（改前）：坏 JSON / 顶层字符串 / 顶层数组 三种坏输入 **全部静默返回 `[]`**。
     """
     out = []
     if not pkg_root:
         return out
-    try:
-        import json as _json
-        from .package import default_ext_dirs
-        mf = os.path.join(pkg_root, "game.json")
-        if not os.path.isfile(mf):
-            return out
-        with io.open(mf, encoding="utf-8") as f:
-            manifest = _json.load(f)
-        # `depends` 显式给了就用它 —— 编辑器「能力开关」要**试算另一组 depends**
-        # 会得到什么域表（关掉某扩展包前先看清代价），而试算**必须共用这一份口径**，
-        # 不能另写一个拼装器（两边口径漂 = 2026-09-20 踩过的坑）。
-        deps = ([str(x) for x in depends] if depends is not None
-                else [str(x) for x in ((manifest or {}).get("depends") or [])])
-        if not deps:
-            return out
-        found: dict = {}
-        for base in default_ext_dirs(pkg_root):
-            try:
-                names = sorted(os.listdir(base))
-            except OSError:
-                continue
-            for name in names:
-                d = os.path.join(base, name)
-                if os.path.isdir(d) and name not in found:
-                    found[name] = d
-        for dep in deps:
-            root = found.get(dep)
-            if not root:
-                continue
-            fp = os.path.join(root, "domains.json")
-            if not os.path.isfile(fp):
-                continue
+    # ★ 这两条 import 提到 `try` 外：`try` 现在**只包单次文件读取**。原口径里
+    #   `try:` 起于 import、`except` 落在函数末尾，一把包住「manifest 解析 +
+    #   depends 提取 + 逐包遍历 + 每个文件的 json.load」**全部**主逻辑（台账中
+    #   「注释自陈读不到就跳过，但范围包住了整段主逻辑」那条），而 `records` 在
+    #   模块级 import 本模块 ⇒ 也不能反过来顶层 import `records`（循环），
+    #   故错误类在**用到时**函数级取。
+    import json as _json
+    from .package import default_ext_dirs
+    from .records import RecordsDeclarationError
+    mf = os.path.join(pkg_root, "game.json")
+    if not os.path.isfile(mf):
+        return out
+    with io.open(mf, encoding="utf-8") as f:
+        manifest = _json.load(f)
+    # `depends` 显式给了就用它 —— 编辑器「能力开关」要**试算另一组 depends**
+    # 会得到什么域表（关掉某扩展包前先看清代价），而试算**必须共用这一份口径**，
+    # 不能另写一个拼装器（两边口径漂 = 2026-09-20 踩过的坑）。
+    deps = ([str(x) for x in depends] if depends is not None
+            else [str(x) for x in ((manifest or {}).get("depends") or [])])
+    if not deps:
+        return out
+    found: dict = {}
+    for base in default_ext_dirs(pkg_root):
+        try:
+            names = sorted(os.listdir(base))
+        except OSError:                      # 目录不在 = 这条搜索路径没装，可静默
+            continue
+        for name in names:
+            d = os.path.join(base, name)
+            if os.path.isdir(d) and name not in found:
+                found[name] = d
+    for dep in deps:
+        root = found.get(dep)
+        if not root:
+            continue                         # 扩展包没装 = 正常，静默
+        fp = os.path.join(root, "domains.json")
+        if not os.path.isfile(fp):
+            continue                         # 这个扩展包没声明域 = 正常，静默
+        try:
             with io.open(fp, encoding="utf-8") as f:
                 raw = _json.load(f)
-            if isinstance(raw, dict):
-                out.append(raw)
-    except Exception:                                              # noqa: BLE001
-        return out
+        except (OSError, ValueError) as exc:
+            # ★ 坏 JSON / 读不动 = **数据坏了**，不静默（与 records.read_domain_decl 同口径）
+            raise RecordsDeclarationError(
+                "扩展包域声明读不了 / 坏 JSON：%s（%s: %s）"
+                % (fp, type(exc).__name__, exc)) from exc
+        if not isinstance(raw, dict) or not raw:
+            raise RecordsDeclarationError(
+                "扩展包域声明顶层不是非空映射：%s（是 %s）" % (fp, type(raw).__name__))
+        out.append(raw)
     return out
 
 
