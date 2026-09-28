@@ -14,6 +14,7 @@
 """
 import ast
 import copy
+import importlib.util
 import json
 import os
 import sys
@@ -29,7 +30,16 @@ for _p in (ROOT, _EXT_BASE, _HERE):
         sys.path.insert(0, _p)
 
 from ext_economy.shelf import Shelf, ShelfFillError, ShelfStateError  # noqa: E402
-from test_no_game_vocabulary import GAME_TERMS                            # noqa: E402
+
+# ★ 审计 L633：词表从**引擎根真源**取（`tests/test_no_game_vocabulary.py`），
+#   不再靠「同目录下有一份同名副本」被 import 命中 —— 那份副本 ROOT=包目录、
+#   四个扫描根全不存在，实扫 0 个文件、恒绿，是一条**恒真断言**（已删，见 L633）。
+#   这里按**确切路径**加载，副本再出现也不会被误当真源。
+_VOCAB_PATH = os.path.join(ROOT, "tests", "test_no_game_vocabulary.py")
+_vspec = importlib.util.spec_from_file_location("_engine_vocab_true_source", _VOCAB_PATH)
+_vmod = importlib.util.module_from_spec(_vspec)
+_vspec.loader.exec_module(_vmod)
+GAME_TERMS = _vmod.GAME_TERMS
 
 passed = failed = 0
 

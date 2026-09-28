@@ -157,8 +157,30 @@ def check_c_schema_id_neutral():
     return bad
 
 
+# ★ 审计 L633：**实扫下限**。旧实现四个扫描根全不存在时 `os.path.isdir` 静默 `continue`
+#   ⇒ 扫 0 个文件仍三项全 ✅（恒真断言）。已实测：包内那份复制件 ROOT=包目录时
+#   实扫 **0** 个文件、rc=0 恒绿；本文件 ROOT=引擎根时实扫 **140** 个。
+#   下限按「四个根各至少存在」+「实扫文件数 ≥ 100」取，低于即红（门禁自己失效要能叫醒人）。
+MIN_SCANNED_FILES = 100
+MIN_PRESENT_ROOTS = 4
+
+
+def _scan_coverage_bad():
+    """扫描面自检：四个根必须**真的存在**，且实扫文件数达下限（否则本门禁是恒真的）。"""
+    bad = []
+    present = [d for d in SCAN_DIRS if os.path.isdir(os.path.join(ROOT, d))]
+    for d in SCAN_DIRS:
+        if d not in present:
+            bad.append(f"扫描根不存在（判据恒真）：{d}  ROOT={ROOT}")
+    n = len(list(_iter_files()))
+    if n < MIN_SCANNED_FILES:
+        bad.append(f"实扫文件数 {n} < 下限 {MIN_SCANNED_FILES}（门禁扫不到东西）")
+    return bad
+
+
 def main() -> int:
     results = [
+        ("★ 0. 扫描面自检（四个根存在 + 实扫文件数达下限）", _scan_coverage_bad()),
         ("A. schema enum 不含非 ASCII（游戏内容分类）", check_a_no_non_ascii_enum()),
         ("B. 框架层不含游戏身份词", check_b_no_game_terms()),
         ("C. schema $id 不含游戏名", check_c_schema_id_neutral()),
