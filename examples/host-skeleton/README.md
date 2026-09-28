@@ -13,11 +13,15 @@
 ```bash
 # 在框架仓根目录（saintess_engine/ 的上一层）
 python examples/host-skeleton/adapter_cli.py \
-    --package games/orlandia \
     --db /tmp/demo.db \
     --scenario /tmp/scenario.json \
     --seed 12345
 ```
+
+> **不写 `--package` 就跑自带的零注入示例**（`examples/minimal-game`）。
+> 要玩**真游戏包**（如 `games/orlandia`）必须显式给 `--package` **并自备 inject**：
+> 那种包在 `game.json` 里声明了 `bind`，而骨架不提供注入对象 ⇒ 加载即
+> `PackageError`（这是**正确的 fail-closed**，别去改引擎）。
 
 > `--scenario` 是这场战斗的**输入数据**（玩家档 + 敌组 + 可选掉落池请求，形状见 `main.Scenario`）。
 > 为什么让调用方给：挑怪 / 算数值 / 选池都是**内容策略**，不该长在宿主里。

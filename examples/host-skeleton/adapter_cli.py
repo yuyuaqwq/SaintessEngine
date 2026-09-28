@@ -32,7 +32,13 @@ if _HERE not in sys.path:
 from main import Host, Scenario                          # noqa: E402
 from store_sqlite import SQLiteStore                     # noqa: E402
 
-DEFAULT_PACKAGE = os.path.join(os.path.dirname(os.path.dirname(_HERE)), "games", "orlandia")
+# ★ 默认包 = **本仓自带的零注入示例**（`examples/minimal-game`，`game.json` 无 `bind` 键）
+#   ⇒ 不给 --package 也能直接跑起来，这是骨架「默认能跑」这个卖点。
+#   过去默认指向 `games/orlandia` —— 那是个**声明了 bind** 的真游戏包，于是
+#   `python main.py`（不带任何参数）必抛 PackageError（骨架不提供 inject）。
+#   那是正确的 fail-closed，但**默认值不该选一个自己跑不起来的包**：
+#   要玩真游戏就显式 `--package games/orlandia` + 自备 inject（见 README）。
+DEFAULT_PACKAGE = os.path.join(os.path.dirname(_HERE), "minimal-game")
 
 
 class CLIAdapter:
