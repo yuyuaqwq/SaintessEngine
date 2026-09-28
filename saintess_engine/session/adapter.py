@@ -103,13 +103,22 @@ class SessionAdapter:
         self._resolve_uid = resolve_uid
 
     def resolve(self, raw: str) -> str:
-        """原始标识 → 稳定标识（默认原样返回）。"""
+        """原始标识 → 稳定标识（默认原样返回）。
+
+        ★ 回落只认 `None`，异常不吞（2026-09-28，审计 L2297）：
+          旧写法 `except Exception: return raw` 让宿主 `resolve_uid` 一炸，
+          **每一条**事件都静默拿平台原始 openid 当稳定标识用 ——
+          看着"能跑"（不崩），实际是**跨会话串档**：登录态 / 存档 / 权限
+          全部按 openid 记，而不是按 `_resolve_uid` 映射出的稳定 uid。
+          换宿主时（换 QQ→AstrBot→…）同一个 openid 在新旧宿主下的映射结果不同，
+          于是同一玩家在切换前后被当成两个人（或反过来被合并）。
+          与 engine Step 2b「乘区/开关类回落只认 None」同族：
+          钩子抛错是**内容侧装配错**，必须当场点名，不许降级成"当没配"。
+        """
         if self._resolve_uid is None:
             return raw
-        try:
-            return self._resolve_uid(raw) or raw
-        except Exception:
-            return raw
+        mapped = self._resolve_uid(raw)
+        return raw if mapped is None else mapped
 
     def uid(self, event) -> tuple:
         """返回 `(group_id, user_id)`。

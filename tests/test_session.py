@@ -3,7 +3,7 @@
 
 锁死的契约：
 1. `PlainEvent` 满足命令层骨架用到的全部访问点（含可写 `message_str`）
-2. `SessionAdapter`：群/发送者兜底 + `resolve_uid` 钩子（含异常容忍）
+2. `SessionAdapter`：群/发送者兜底 + `resolve_uid` 钩子（钩子抛错原样上抛，不静默穿透 openid）
 3. ★ **端到端**：用 `PlainEvent`（非 AstrBot 宿主）驱动一个命令基类，
    走通「守卫 → 剥参数 → 分页 → 回复」整条链
 4. 零宿主 / 零游戏依赖
@@ -61,8 +61,16 @@ def _boom(raw):
     raise RuntimeError("映射表炸了")
 
 
+# ★ L2297（2026-09-28）：旧判据把「resolve 异常容忍」钉成期望 ——
+#   那正是缺陷本身（异常时静默拿 openid 当稳定 uid ⇒ 跨会话串档）。
+#   判据前提已失效 ⇒ 正规推进为「异常原样上抛，不降级成当没配」。
+#   反证：撤掉 adapter.py 那一刀后，下面这条当场红（旧码返回 "openid_x"）。
 ad3 = SessionAdapter(resolve_uid=_boom)
-check("resolve 异常容忍（不影响主流程）", ad3.resolve("openid_x") == "openid_x")
+try:
+    ad3.resolve("openid_x")
+    check("resolve 钩子抛错 ⇒ 原样上抛（不静默穿透 openid）", False, "竟然没抛，被静默吞了")
+except RuntimeError as e:
+    check("resolve 钩子抛错 ⇒ 原样上抛（不静默穿透 openid）", "映射表炸了" in str(e), str(e))
 
 ad4 = SessionAdapter(private_fallback="dm", unknown_fallback="anon")
 check("可定制兜底值", ad4.uid(PlainEvent("x")) == ("dm", "anon"))
