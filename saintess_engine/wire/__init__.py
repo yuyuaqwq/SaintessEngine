@@ -157,6 +157,18 @@ class Surface:
                 raise ValueError("别名必须是非空字符串：%r" % (alias,))
             if target not in self._name_src:
                 raise ValueError("别名 `%s` 指向未声明的名字：%r" % (alias, target))
+            # ★ 2026-09-28（审计 L2919）：别名**不得遮蔽已声明的名字**。
+            #   旧写法只校验「别名目标 ∈ 名单」，于是别名键与某个已声明名同名时，
+            #   `resolve()` 的 `canonical = self._aliases.get(name, name)` 会让
+            #   **取那个别名的目标值**，而 `names()` / `has()` / `missing()` 三处
+            #   都按「没被遮蔽」的口径答 —— 自检说「齐了」、取件拿到别人的值，
+            #   无异常无告警（实测 `Surface({'a':…, 'b':7}, aliases={'a':'b'})`
+            #   ⇒ `missing() == []` 而 `resolve('a')` 返回 7）。
+            #   这与「同一个键在两个面上必须是同一个东西」直接矛盾 ⇒ 构造期 fail-closed。
+            if alias in self._name_src:
+                raise ValueError(
+                    "别名 `%s` 与已声明的名字同名（会静默遮蔽它）：别名只能指向**别的**已声明名"
+                    % (alias,))
         if getter is None:
             getter = _default_getter
         elif not callable(getter):
