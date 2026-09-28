@@ -345,7 +345,13 @@ class FormulaTable:
         over = list(vrs.get(e["over"]) or [])
         acc = 0.0 if e["op"] == "sum" else 1.0
         for x in over:
-            iv = _expr.eval_expr(e["_compiled"]["item_expr"], dict(p, x=float(x)))
+            # ★ 2026-09-28（审计 L994）：原先只给 `dict(p, x=…)` —— **拿不到 vrs**。
+            #   而 V5（`_check_vars`）的 `allowed` = vars ∪ params ∪ guard ∪ random，
+            #   装配期**放行**了写在 `vars` 里的名字（如 `atk`），运行期 `eval_expr`
+            #   却取不到 ⇒ **静默算成 0**（实测 `{vars:[items,atk], item_expr:"x * atk"}`
+            #   + `vrs={items:[1,2,3],atk:10}` 得 0.0，期望 60.0）。
+            #   口径与 combine 侧（下面那行 `local = dict(vrs)` + update(p)）对齐。
+            iv = _expr.eval_expr(e["_compiled"]["item_expr"], dict(vrs, **p, x=float(x)))
             acc = (acc + iv) if e["op"] == "sum" else (acc * iv)
         local = dict(vrs)
         local.update(p)

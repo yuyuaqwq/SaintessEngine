@@ -227,9 +227,18 @@ def compile_expr(expr: str):
                 unary = (prev_token is None or prev_token in "+-*/( ")
                 if unary and op == "-":
                     tokens.append(("neg",))
-                elif unary:
-                    # 一元正号 + 直接忽略
+                elif unary and op == "+":
+                    # 一元正号：合法，直接忽略（不产生任何令牌）
                     pass
+                elif unary:
+                    # ★ 2026-09-28（审计 L1280）：`*` `/` `^` 落在一元位上**不是**正号，
+                    #   原先与 `+` 同归「直接忽略」⇒ 令牌被**静默丢弃**，实测
+                    #   `atk**1.2` 编译成 `[var atk, num 1.2]`（求值得 12.0，期望 120.0）、
+                    #   `*5` / `/5` / `^5` 各自被整段吃掉且零报错。
+                    #   语法错必须**编译期现形**（V4 的口径：装配期抛，别让运行期算错数）。
+                    raise ExprError(
+                        f"表达式 {expr!r} 的 @{m.start()} 处：操作符 {op!r} 不能作一元算子"
+                        f"（只允许一元 - 与一元 +；要算幂请写 ^，如 a^1.2）")
                 else:
                     tokens.append(("op", op))
                 prev_token = op
