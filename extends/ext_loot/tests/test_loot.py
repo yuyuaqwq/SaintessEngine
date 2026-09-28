@@ -181,10 +181,17 @@ def t3_roll():
     def boom(pool, ctx, table):
         raise RuntimeError("x")
 
-    t2 = _tbl({"b": {"type": "boom", "entries": []}}, strategies={"boom": boom})
-    check("策略抛错 → 吞掉返回 []（非严格模式，参考实现行为）", t2.roll("b") == [])
+    # ★ 审计 L566：`strict` 默认已由 False 改 True（不写就默认降级 = 把声明错误静默成空掉落）。
+    #   下面两条把两种模式都**显式**钉住：`strict=False` 仍可优雅跳过（能力未删），
+    #   `strict=True`（含**不传** = 新默认）一律抛。判据意图「可选择性优雅跳过」原样保留。
+    t2 = _tbl({"b": {"type": "boom", "entries": []}}, strategies={"boom": boom},
+              strict=False)
+    check("策略抛错 → 吞掉返回 []（显式 strict=False，参考实现行为）", t2.roll("b") == [])
     t3 = LootTable({"b": {"type": "boom", "entries": []}}, strategies={"boom": boom}, strict=True)
-    check("strict=True → 抛出来（迁移期排查用）", _raises(RuntimeError, lambda: t3.roll("b")))
+    check("strict=True → 抛出来", _raises(RuntimeError, lambda: t3.roll("b")))
+    t4 = LootTable({"b": {"type": "boom", "entries": []}}, strategies={"boom": boom})
+    check("默认 strict=True（不传也抛，审计 L566）",
+          t4.strict is True and _raises(RuntimeError, lambda: t4.roll("b")))
     check("池查找会剥内容侧前缀（pool_key_prefixes）",
           _tbl(pools, pool_key_prefixes=("weighted:",)).has_pool("weighted:w1"))
 

@@ -274,7 +274,7 @@ class LootTable:
     """一张掉落表（池集合 + 引用解析器 + 策略）。构造后不可变；`roll()` 是唯一入口。"""
 
     def __init__(self, pools, *, resolver=None, strategies=None, inline_prefixes=(),
-                 pool_key_prefixes=(), special_refs=(), rng=None, strict: bool = False,
+                 pool_key_prefixes=(), special_refs=(), rng=None, strict: bool = True,
                  fallback_attr: str = "fallback_roll"):
         self._pools = pools if pools is not None else {}
         self._resolver = resolver
@@ -387,10 +387,16 @@ class LootTable:
         return []
 
     def roll_pool(self, pool: dict, ctx) -> list:
-        """按池的 `type` 分派策略；**运行期**策略抛错时非严格模式吞掉返回 []（优雅跳过）。
+        """按池的 `type` 分派策略；`strict` **默认 True**（审计 L566）⇒ 策略抛错一律上抛。
 
-        ★ 但「未知策略」是**声明错**，不是运行期掉落失败 ⇒ 一律上抛（`UnknownStrategy`），
-          与 strict 无关。否则它会被当成"这次没掉"，等价于把声明错误静默变成空掉落。
+        ★ 为什么默认严格：旧默认 `False` 把掉落层**任何**异常降级成「这次没掉」——
+          内容侧 `LootTable(...)` 构造时没传 `strict`（奥兰迪亚 `content/loot.py:561` 即如此）
+          ⇒ 线上跑的全是"吞异常"那一支：一个笔误 / 一行坏数据 ⇒ 玩家看到的只是**什么都没掉**，
+          无报错、无诊断、无从察觉（判据 2「不静默」的教科书形态）。
+        ★ `strict=False` 仍在，但它现在是**显式选择**（要"优雅跳过某个池"就自己写出来），
+          不再是「不写就默认降级」。
+        ★ 「未知策略」是**声明错**，不是运行期掉落失败 ⇒ 两种模式都上抛（`UnknownStrategy`）。
+          否则它会被当成"这次没掉"，等价于把声明错误静默变成空掉落。
         """
         fn = self.strategy_of(pool)["fn"]            # 未知策略在此已抛
         if self.strict:
