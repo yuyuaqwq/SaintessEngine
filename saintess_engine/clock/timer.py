@@ -46,6 +46,11 @@ class TimerStorageError(RuntimeError):
     `now >= 0` **恒真** ⇒ 一行坏数据被当成「已过期」静默物理删除并触发 `on_expire`
     （作废会话、平移结算数据这类副作用会在无人察觉时发生）；而 `expire=None` 则抛
     裸 `TypeError`、事件卡在表里出不来。两种都不对。存的是坏数据就要**点名是谁**。
+
+    **本类是该形状的唯一异常类型**（跨层单源）：`ext_life.timers.Timers` 是同一形状的
+    另一层实现，它**导入本类**而不另立一个同名类 —— 两层各自的 `except` 才能互相兜住。
+    同名不同类（`is` 为 False）会让人写 `except TimerStorageError` 时漏捕另一层的错，
+    而两层的触发条件都是「存的是坏数据」⇒ 漏捕 = 坏数据一路冒到顶层、零诊断。
     """
 
 

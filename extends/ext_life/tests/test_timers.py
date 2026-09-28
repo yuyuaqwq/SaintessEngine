@@ -476,6 +476,16 @@ def t7_zero_knowledge():
     check("公开面只有形状名（无游戏语义）",
           set(TIMERS_MOD.__all__) == {"TimerStorageError", "Timers"},
           str(TIMERS_MOD.__all__))
+    # 跨层单源：`clock.LazyTimers` 与本类 `Timers` 是同一形状的两层实现，此前各立一个
+    # 同名 `TimerStorageError`（`is` 为 False）⇒ 两层各自的 `except` 互相不认，坏数据
+    # 冒到顶层零诊断。判据 = 身份同一，不是「名字一样」（Step 0e「归一化层 ≠ 双源」
+    # 的反面：这里是真·双份类型，必须单源）。
+    from saintess_engine.clock.timer import TimerStorageError as _EngineTSE
+    check("★ 异常类型与引擎层同一（跨层单源，except 才互相兜得住）",
+          TimerStorageError is _EngineTSE, f"{TimerStorageError!r} vs {_EngineTSE!r}")
+    check("★ 本包不再自己定义同名异常类（防同形副本复活）",
+          TIMERS_MOD.TimerStorageError.__module__ == "saintess_engine.clock.timer",
+          TIMERS_MOD.TimerStorageError.__module__)
     check("Timers 的公开方法是规格那六个",
           all(callable(getattr(Timers, m, None)) for m in
               ("register", "set", "get", "due", "remove", "refresh")))

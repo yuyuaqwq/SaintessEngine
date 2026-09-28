@@ -67,6 +67,7 @@ from collections.abc import Mapping, MutableMapping
 from typing import Any, Callable, Optional
 
 from saintess_engine._validators import clock_now, owner_key
+from saintess_engine.clock.timer import TimerStorageError
 from saintess_engine.log import get_logger
 from saintess_engine.log.warn import WarnMixin
 
@@ -76,10 +77,6 @@ _LOG = get_logger("timers")
 
 #: 「键不在存储里」的哨兵 —— 与「键在但值是 None/空串」区分开（后两者按无事件读）。
 _MISSING = object()
-
-
-class TimerStorageError(RuntimeError):
-    """该主体的事件表取不出来（坏数据 / 非预期形态）—— fail-closed，不静默当空。"""
 
 
 def _duration_of(value: Any, label: str) -> int:
