@@ -159,10 +159,18 @@ def check(group_id, qq_id, player=None, extra=None) -> list:
     stats = _h("stats_of")(group_id, qq_id) or {}
     profs = _h("profs_of")(group_id, qq_id) or {}
     extra = extra or {}
-    try:
-        unlocked = {r["id"] for r in _rows(group_id, qq_id)}
-    except Exception:
-        unlocked = set()
+    # ★ 账本读口是**权威状态**，异常不许塌成「什么都没解锁」（台账 L805，高）。
+    #   塌成空集的代价不是「少显示几条」：`check()` 在判定循环里会 `mark(..., 1, 0)`
+    #   把判为新解锁的条目**写成未领**，而此刻「已解锁集合」恰好是空集 ⇒
+    #   **每一条都已领的成就都被重置成未领**。读口一恢复，`claim()` 就把它们
+    #   **再发一次奖**（实测：OSError 期间 check() 写入 ('a1',1,0)，
+    #   恢复后 claim() 走 ('PAYOUT',0,0) + ('a1',1,1) —— 同一个成就发两次）。
+    #
+    #   与同文件 `_rows` 的 docstring（"读口异常**不吞**，各调用点自己定口径"）对齐：
+    #   本函数是「读 + **改 + 落库**」那一类，口径就必须是上抛，不是吞。
+    #   （`_unlocked_loose` 那种宽松口径留给 `labels` / `points` 两处**纯只读**判据，
+    #   它们不落库，空集最多少算几个标签/点数 —— 与这里不是同一件事。）
+    unlocked = {r["id"] for r in _rows(group_id, qq_id)}
     cleared = set()
     for key in unlocked:
         cid = _h("clear_of")(key)

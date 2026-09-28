@@ -842,6 +842,32 @@ def t9_ledger():
         check("★ 形状不吞异常（读库失败 ⇒ 抛给调用方定降级）", True)
     DB_FAIL = False
 
+    # ★ check() 也必须上抛（审计 L805，高）：它是「读 + 改 + 落库」那一类。
+    #   塌成空集 ⇒ 已领条目被当成未领 → mark(...,1,0) 把 claimed 重置成 0
+    #   → 读口一恢复，claim() 把同一个成就**再发一次奖**。上面 claim 那条判据
+    #   只钉了「抛不抛」，没钉「抛之前有没有已经写坏账本」—— 这里补上。
+    _marks_before = len(MARKS)
+    ROWS[:] = [{"id": "a1", "claimed": 1, "progress": 1}]     # 已领
+    _rows_before = [dict(r) for r in ROWS]
+    DB_FAIL = True
+    try:
+        L.check("g", "q", {"exp": 0, "qq_id": ""}, {})
+        check("★ check() 读口异常 ⇒ 当场抛（不塌成「什么都没解锁」）", False)
+    except OSError:
+        check("★ check() 读口异常 ⇒ 当场抛（不塌成「什么都没解锁」）", True)
+    DB_FAIL = False
+    check("★ ★ 抛之前**没有**写坏账本（claimed 未被重置成 0）",
+          MARKS[len(MARKS):] == [] and [dict(r) for r in ROWS] == _rows_before,
+          "新写入=%r 账本=%r" % (MARKS[_marks_before:], [dict(r) for r in ROWS]))
+    # a2/a3 本来就没领过（表里只有 a1 claimed=1），它们解锁是**正确**的；
+    # 要盯的是「a1 不会再被当成新解锁」—— 那才是二次发奖的那一条。
+    _after = L.check("g", "q", {"exp": 0, "qq_id": ""}, {})
+    _ids = [a["id"] for a in _after]
+    check("★ 读口恢复后**已领的 a1** 不再被当成新解锁（不会二次发奖）",
+          "a1" not in _ids, str(_ids))
+    check("★ 对照：确实没领过的 a2/a3 仍正常解锁（判据没被削成「什么都不给」）",
+          set(_ids) == {"a2", "a3"}, str(_ids))
+
     print("  -- 收尾：reload 回未装配态（与 t4 / t7 同法）")
     fresh = importlib.reload(_shape)
     check("reload 后回到未装配态", fresh._INJ is None)
