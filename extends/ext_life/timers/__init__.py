@@ -143,7 +143,6 @@ def _view(ev: Mapping, at: int, *, key: Optional[str] = None) -> dict:
 
 
 class Timers(WarnMixin):
-    _warn_logger = _LOG                    # 未注入 logger 时的兜底（见 log.warn）
     """主体维度的倒计时事件表：类型注册 + 挂载刷新 + 懒过期 + 过期回调。
 
     * `store` —— 内容侧的存储面（`MutableMapping`）。引擎只做 `get / __setitem__ /
@@ -156,6 +155,8 @@ class Timers(WarnMixin):
 
     公开面只有六个方法：`register` / `set` / `get` / `due` / `remove` / `refresh`。
     """
+    _warn_logger = _LOG                    # 未注入 logger 时的兜底（见 log.warn）
+                                        # 必须在 docstring 之**后**：放在类首行会把 docstring 挤成一句哑字面量（`Timers.__doc__ is None`）。
 
     def __init__(self, store: MutableMapping, clock: Callable[[], int], *,
                  default_duration: int = 60,

@@ -370,6 +370,14 @@ def t5_fail_closed():
 # ---------------------------------------------------------------- 6 形状
 def t6_shape():
     print("\n[6] 形状：视图隔离 / 主体隔离 / 自定义键 / 存储序 / JSON 往返")
+    # 类首行必须是 docstring：任何一条赋值抬到第一行都会把它挤成哑字面量
+    # （改前实测 Timers.__doc__ is None，整段类文档丢失且零报错）。
+    _doc = Timers.__doc__
+    check("★ 类文档真的存在（非 None）", bool(_doc) and len(_doc) > 100, repr(_doc))
+    check("★ 类文档首行就是类自述（不是兜底赋值之后的碎片）",
+          bool(_doc) and _doc.lstrip().startswith("主体维度的倒计时"),
+          repr(_doc[:40]) if _doc else "None")
+    check("★ _warn_logger 兜底仍在（移位不得带走它）", Timers._warn_logger is not None)
     st, ck = {}, Clock(0)
     tm = mk(st, ck)
     tm.register("k1", duration=10)
