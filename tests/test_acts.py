@@ -284,6 +284,32 @@ def t6_zero_knowledge():
     check("模块只引 stdlib 白名单 + 引擎内部件", not bad, ",".join(bad))
 
 
+
+def t8_plan_on_removed():
+    print("\n[8] L1825：Plan.on 是只写字段（零生产消费者），已删")
+    # 三仓实测：Plan.on 全仓命中只有三处，全是写/构造/__repr__，零生产读取点
+    # （games/orlandia 与 aetheran-package 侧均无 plan.on）。
+    # docs/engine-wiki/concepts/acts.md:88 本来就写「on 只是标记」，与删字段一致。
+    # 判据钉**不变式**而不是计数：Plan 不许再持有只写字段。
+    p = Plan("n", [], None)
+    check("L1825：Plan 不再有 on 槽位", not hasattr(p, "on"),
+          repr(getattr(p, "on", None)))
+    check("L1825：Plan 仍是不可变的 name/steps 形状",
+          p.name == "n" and p.steps == () and hasattr(p, "_when"))
+    check("L1825：__repr__ 不再印 on", "on=" not in repr(p), repr(p))
+    # ★ 带牙反证：把 on 加回 __slots__ 与构造器 ⇒ 第一条必须转红。
+    try:
+        bad = _variant(
+            '    __slots__ = ("name", "steps", "_when")',
+            '    __slots__ = ("name", "on", "steps", "_when")',
+        )
+        bp = bad.Plan("n", [], None)
+        bp.on = "x"
+        check("反证·on 加回槽位后判据转红（有牙）", hasattr(bp, "on"), repr(getattr(bp, "on", None)))
+    except AssertionError as exc:
+        check("反证·on 加回槽位后判据转红（有牙）· 锚点唯一命中", False, str(exc))
+
+
 # ============================================================ 7 有牙反证
 def _variant(anchor, repl):
     """把真源改坏成一个**内存拷贝**（真源只读；锚点必须唯一命中）。"""
@@ -383,6 +409,7 @@ def main():
     t5_verb_error()
     t6_zero_knowledge()
     t7_counterproof()
+    t8_plan_on_removed()
     print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
     return 1 if failed else 0
 

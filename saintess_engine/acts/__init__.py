@@ -155,16 +155,15 @@ def _value(value, where: str):
 
 
 class Plan:
-    """一条**已编译**的动作序列（不可变：`name` / `on` / 步表都在构造时冻结）。
+    """一条**已编译**的动作序列（不可变：`name` / 步表都在构造时冻结）。
 
     执行 = `run(ctx)`：`when` 为假 ⇒ 空列表；否则按声明序逐条调动词，结果按序收。
     """
 
-    __slots__ = ("name", "on", "steps", "_when")
+    __slots__ = ("name", "steps", "_when")
 
-    def __init__(self, name: str, on, steps, when_fn) -> None:
+    def __init__(self, name: str, steps, when_fn) -> None:
         self.name = name
-        self.on = on
         self.steps = tuple(steps)          # ((动词名, 动词, {实参名: 取值fn}, 短路fn|None), ...)
         self._when = when_fn
 
@@ -186,7 +185,7 @@ class Plan:
         return result
 
     def __repr__(self) -> str:  # pragma: no cover - 调试用
-        return "Plan(name=%r, on=%r, steps=%d)" % (self.name, self.on, len(self.steps))
+        return "Plan(name=%r, steps=%d)" % (self.name, len(self.steps))
 
 
 class Acts:
@@ -274,7 +273,7 @@ class Acts:
                     raise SpecError(f"{where}.stop_if 不合法：{e}") from e
             steps.append((vname, self._verbs[vname], kwargs, stop_if))
 
-        return Plan(pid, spec.get("on"), steps, when_fn)
+        return Plan(pid, steps, when_fn)
 
     def compile_table(self, table: Mapping) -> dict:
         """声明表 `{id: 声明}` → `{id: Plan}`。**任一条不合法 ⇒ 整表不装**（先全编再返回）。"""
