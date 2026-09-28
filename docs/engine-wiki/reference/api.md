@@ -22,7 +22,7 @@ from saintess_engine import Host, load_stack, config                 # 引擎通
 from ext_combat import Battle, make_actor, deal_damage, actor_stats  # 战斗（CTB / 结算 / 效果 / 面板）
 from ext_world import Space, Admission, Roster                       # 空间与准入链
 from ext_loot import LootTable, TierTable, pick_weighted             # 掉落池 / 档位阶梯
-from ext_dialogue import Dialogue, Cursor                            # 对话树与会话游标
+from ext_dialogue.dialogue import Dialogue, Cursor                  # 对话树与会话游标（★ L1185-4：包根不再门面 re-export）
 ```
 
 | 要哪些符号 | 从哪 import | 数据包 `game.json` 里写 |
