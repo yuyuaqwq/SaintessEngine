@@ -338,6 +338,27 @@ def t8_ctor():
           _raises(TypeError, lambda: Grant(sinks={"alpha": _noop}, log=object())))
     check("log=None（缺省）合法", isinstance(Grant(sinks={"alpha": _noop}, log=None), Grant))
 
+    # ★ 审计 L2236：`info` 只收 msg 一个参数的句柄，原先**构造期通过、发放期才炸**，
+    #   而炸之前前面的类别已经发出去了（部分发放）。判据钉「构造期就拒」。
+    class _OneArg:
+        def info(self, msg):                      # 单参句柄（接不住 (msg, kind, n)）
+            raise AssertionError("不该被调用")
+
+    check("★ log.info 接不住 (msg,*args) → 构造期 TypeError（不留到发放期炸）",
+          _raises(TypeError, lambda: Grant(sinks={"alpha": _noop}, log=_OneArg())))
+    check("★ 拒绝发生在发放之前：一行都没发出去",
+          _raises(TypeError, lambda: Grant(sinks={"alpha": _noop}, log=_OneArg()))
+          and calls_before_partial_issue() == [])
+
+    class _Std:
+        def info(self, msg, *args):                # 正常形态
+            pass
+
+    check("★ log.info(msg,*args) → 构造期通过",
+          isinstance(Grant(sinks={"alpha": _noop}, log=_Std()), Grant))
+    check("★ 关键字 + *args 形态也接得住（logging.Logger 那样）",
+          isinstance(Grant(sinks={"alpha": _noop}, log=_KwLoggerLike()), Grant))
+
     calls = []
     table = {"beta": _mk("beta", calls), "alpha": _mk("alpha", calls)}
     g = Grant(sinks=table)
@@ -374,6 +395,36 @@ def t8_ctor():
           and sig.parameters["log"].default is None)
     check("第 1 个位置参传 sinks → TypeError（签名拒绝）",
           _raises(TypeError, lambda: Grant({"alpha": _noop})))
+
+
+
+def _KwLoggerLike():
+    """`logging.Logger.info(msg, *args, **kwargs)` 那种全关键字形态 —— 判据必须放行。"""
+
+    class _L:
+        def info(self, msg, *args, **kwargs):
+            pass
+
+    return _L()
+
+
+def calls_before_partial_issue():
+    """构造期被拒的路径不该发出任何一类（防止「先发一半再校验」）。"""
+    fired = []
+
+    def _sink(ctx, payloads):
+        fired.append(payloads)
+        return 0
+
+    class _Bad:
+        def info(self, msg):                       # 单参：发放中途必 TypeError
+            return None
+
+    try:
+        Grant(sinks={"a": _sink}, log=_Bad()).grant({})
+    except TypeError:
+        pass
+    return fired
 
 
 # ---------------------------------------------------------------- 9 零知识

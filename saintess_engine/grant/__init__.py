@@ -44,6 +44,8 @@
 
 **`log` 约定**：给了 `log`（一个带 `info(...)` 的日志句柄，如 `saintess_engine.log` 门面
 给出的 logger），每发成一个类别记一行「kind + 载荷条数」；不给就不记。
+`log.info` 的签名必须**接得住 `(msg, *args)`** —— 只收 `msg` 一个参数的句柄在**构造期**就被拒
+（`TypeError`），不留到发放期炸：那时前面的类别已经发出去了，等于部分发放。
 
 **有意不做的事**
 ----------------
@@ -55,6 +57,7 @@
 """
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable, Iterable, Mapping
 
 __all__ = ["Grant", "UnknownSink"]
@@ -87,12 +90,35 @@ def _sink_table(sinks) -> dict:
     return table
 
 
+def _accepts_args(fn) -> bool:
+    """`fn` 能否收下 `(msg, *args)`。`inspect` 取不到签名时**按能收下算**
+    （C 扩展 / 代理对象）—— 那是真日志句柄的常态，宁可放行也不误杀。"""
+    try:
+        sig = inspect.signature(fn)
+    except (TypeError, ValueError):
+        return True
+    return any(p.kind in (p.VAR_POSITIONAL, p.VAR_KEYWORD) for p in sig.parameters.values())
+
+
 def _logger(log):
-    """`log` 归一：`None` = 不记；否则必须是带 `info(...)` 的日志句柄（不静默丢日志）。"""
+    """`log` 归一：`None` = 不记；否则必须是能接 `(msg, *args)` 的日志句柄（不静默丢日志）。
+
+    **接不住 *args 的当场拒**（构造期抛，不留到发放期）：本模块每发成一类调一次
+    `log.info(fmt, kind, len)`（见 `grant()`），只收 `msg` 一个参数的句柄会在**发到一半**时
+    `TypeError` —— 而前面的类别已经发出去了（部分发放），且报错点离原因十万八千里。
+    """
     if log is None:
         return None
-    if not callable(getattr(log, "info", None)):
+    fn = getattr(log, "info", None)
+    if not callable(fn):
         raise TypeError(f"log 必须是带 info(...) 的日志句柄，收到 {type(log).__name__}")
+    if not _accepts_args(fn):
+        raise TypeError(
+            "log.info 必须是能接 (msg, *args) 的签名（每发成一类记一行 "
+            "'grant kind=%%s payloads=%%d'）；只收 msg 一个参数的句柄会在发放途中抛错，"
+            "且此前的类别已经发出去了。收到 %s.info%s" % (type(log).__name__,
+                                                      inspect.signature(fn))
+        )
     return log
 
 
