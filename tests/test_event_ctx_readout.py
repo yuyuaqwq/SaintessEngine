@@ -97,6 +97,51 @@ for _root, _dirs, _files in os.walk(EX):
 check("④ 样板包 examples/minimal-game 不再出现私槽读法",
       not _hits, " | ".join(_hits))
 
+# ⑤ 「None 与 {} 不可区分」这件事本身是**本读口的设计取舍**，必须钉住其正确性前提：
+#    event_ctx 对「尚未 fire」返回 {}（②），而内容侧大量同族代码写成
+#    `ctx = ...; if ctx is None: return`（实测 games/orlandia 34 处）。
+#    两者**语义不同**：{} 会继续往下取键、None 是提前返回。
+#    这条差异之所以安全，唯一前提是**引擎 fire() 在派发 handler 之前就把私槽设好**
+#    —— 那样 `is None` 守卫在真实调用链上恒不可达（私槽必已存在），行为不因本读口改变。
+#    ★ 本条钉的就是这个前提：一旦 fire() 改成「派发后才设」，34 处守卫会在
+#      「未 fire」路径上全部失效（读到 {} 而不是 None ⇒ 不再提前 return），
+#      而门禁 ①②③④ 仍全绿 —— 静默行为漂移。
+def _mk_battle_with_sides():
+    b = _FakeBattle()
+    b.sides = {"A": [{}], "B": [{}]}
+    b._fire_ctx = None
+    return b
+
+
+_b5 = _mk_battle_with_sides()
+# 只注册一个空 handler：只观测 fire() 派发时刻私槽是否已就位，不引入内容侧行为。
+import ext_combat.battle.effects as _EFF                     # noqa: E402
+_real_apply = getattr(_EFF, "apply_effects", None)
+_seen = {}
+
+
+def _spy_apply_effects(*a, **k):
+    _seen["ctx_at_dispatch"] = getattr(_b5, "_fire_ctx", "<<缺属性>>")
+    return {}
+
+
+try:
+    _EFF.apply_effects = _spy_apply_effects
+    # 声明一个必然匹配的事件，actor 侧挂 triggers 让 fire 走到派发。
+    _ev = next(iter(sorted(ET.EVENTS))) if hasattr(ET, "EVENTS") else None
+    if _ev is not None:
+        _b5.sides["A"][0] = {
+            "alive": True, "hp": 10,
+            "triggers": {_ev: [{"action": "noop_effect"}]},
+        }
+        ET.fire(_b5, _ev, {"actor": _b5.sides["A"][0]}, [])
+finally:
+    _EFF.apply_effects = _real_apply
+check("⑤ fire() 派发前私槽已就位（内容侧 is None 守卫据此恒不可达）",
+      isinstance(_seen.get("ctx_at_dispatch"), dict),
+      "派发时私槽=%r —— 若非 dict，说明 fire 改成派发后才设，包内 34 处守卫会静默失效"
+      % (_seen.get("ctx_at_dispatch"),))
+
 # 同一族：内容侧 orlandia 也不该再新增私槽读法（本条只报数，不判红 ——
 # 它是 C 车道文件面，收口归那条线；此处留个可见度，免得悄悄扩散）
 _PKG = os.path.join(FW_ROOT, "games", "orlandia", "content")
