@@ -120,7 +120,14 @@ for label, bad in (("返回 None", lambda: None),
                    ("条目缺 source", lambda: {"x": {"label": "甲"}}),
                    ("source 类别不认", lambda: {"x": {"source": {"from": "lvl"}}}),
                    ("else 里类别不认", lambda: {"x": {"source": {"from": "input", "key": "base",
-                                                                 "else": {"from": "nope"}}}})):
+                                                                 "else": {"from": "nope"}}}}),
+                   ("stat 缺 key", lambda: {"x": {"source": {"from": "stat"}}}),
+                   ("input 缺 key", lambda: {"x": {"source": {"from": "input"}}}),
+                   ("const 缺 value", lambda: {"x": {"source": {"from": "const"}}}),
+                   ("const value 是 None", lambda: {"x": {"source": {"from": "const", "value": None}}}),
+                   ("stat key 不是字符串", lambda: {"x": {"source": {"from": "stat", "key": 7}}}),
+                   ("else 支缺 key", lambda: {"x": {"source": {"from": "input", "key": "base",
+                                                              "else": {"from": "stat"}}}})):
     _mount(bad)
     raised, err = _raises(EX.declared_vars)
     ok = raised and isinstance(err, _cfg.EngineNotConfigured)
@@ -128,6 +135,44 @@ for label, bad in (("返回 None", lambda: None),
     raised2, err2 = _raises(lambda: EX.build_vars({}))
     check("  同一张坏表走 build_vars 也抛（不是只在读口抛）", raised2, repr(err2))
 _restore()
+
+# ------------------------------------------------------- 3b 载荷键（审计 L1282）
+print()
+print("【3b. 载荷键：key/value 缺了当场抛（审计 L1282）—— 原先 7/9 畸形声明静默得 0】")
+_STATS = {"atk": 10.0}
+# 正常声明逐条仍通过（收紧不许波及合法表）
+for _ok_label, _ok_src in (("stat 带 key", {"from": "stat", "key": "atk"}),
+                           ("input 带 key", {"from": "input", "key": "base"}),
+                           ("const 带 value", {"from": "const", "value": 1.5}),
+                           ("input+else 都带 key", {"from": "input", "key": "target_max_hp",
+                                                    "else": {"from": "stat", "key": "max_hp"}})):
+    _mount(lambda s=_ok_src: {"x": {"label": "X", "source": s}})
+    raised_ok, err_ok = _raises(EX.declared_vars)
+    check("合法声明「%s」不被新判据误伤" % _ok_label, not raised_ok, repr(err_ok))
+# 缺载荷键的：读口抛
+for _bad_label, _bad_src in (("stat 缺 key", {"from": "stat"}),
+                             ("input 缺 key", {"from": "input"}),
+                             ("const 缺 value", {"from": "const"}),
+                             ("else 支缺 key", {"from": "input", "key": "base",
+                                                "else": {"from": "stat"}})):
+    _mount(lambda s=_bad_src: {"x": {"label": "X", "source": s}})
+    raised_b, err_b = _raises(EX.declared_vars)
+    check("缺载荷键「%s」⇒ 抛（错名里带变量名）" % _bad_label,
+          raised_b and isinstance(err_b, _cfg.EngineNotConfigured) and "x" in str(err_b),
+          repr(err_b))
+    raised_b2, err_b2 = _raises(lambda: EX.build_vars(_STATS))
+    check("  同一张坏表走 build_vars 也抛（不是只在读口抛）", raised_b2, repr(err_b2))
+# ★ 反证：运行期取值兜底口径一个字没动（模块头明写「缺 → 0」）；
+#   改的是**装配期**该不该放行，不是 _value_of 的兜底。
+check("_value_of 运行期兜底未变：stat 缺 key 仍取 0",
+      EX._value_of({"from": "stat"}, _STATS, {}) == 0.0,
+      repr(EX._value_of({"from": "stat"}, _STATS, {})))
+check("_value_of 运行期兜底未变：input 缺 key 仍取 0",
+      EX._value_of({"from": "input"}, _STATS, {}) == 0.0,
+      repr(EX._value_of({"from": "input"}, _STATS, {})))
+_restore()
+check("收尾恢复现场：hook 已摘掉（默认表生效）", EX.variable_names() == HISTORIC_NAMES,
+      repr(EX.variable_names()))
 
 # ---------------------------------------------------------------- ④ 反证
 print("\n【4. 反证：旧名不许回归 · 声明口必须在 hook 白名单里（有牙）】")

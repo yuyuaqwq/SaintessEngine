@@ -65,11 +65,23 @@ _DEFAULT_EXPR_VARS = {
 _SOURCE_KINDS = ("stat", "input", "const")
 
 
+#: 每类来源**必带**的键（缺 ⇒ 该条根本取不到值，见 `_value_of` 的 `stats.get(key, 0)` 兜底）
+_SOURCE_REQUIRED_KEY = {"stat": "key", "input": "key", "const": "value"}
+
+
 def _validate_source(source, var_name: str, path: str) -> None:
     """校验一条来源声明；不合法 ⇒ 抛 `EngineNotConfigured`（fail-closed）。
 
     校验在**读表时**做（不是用到才做）：一个没被任何表达式引用的坏条目也要当场现形 ——
     否则它会静静躺在表里，等某天有人写了引用它的公式才炸。
+
+    ★ 2026-09-28（审计 L1282）：**三类来源的载荷键一律校**（原先只校 `from`）。
+      代价不是「少显示几条」，而是**该变量恒取 0**：`_value_of` 走
+      `stats.get(source.get("key"), 0) or 0` ⇒ 缺 `key` / `const` 缺 `value`
+      都**静默得 0.0**，于是「这个变量本该是攻击力」在装配期看不出、到战斗里
+      变成「攻击力恒 0 的公式」。实测 7/9 种畸形声明**全部静默通过**（`from` 拼错
+      反而是唯一会抛的那一种）。E4 整轮设计的目标是「写错的声明不许无声无息」，
+      这里补齐载荷侧。
     """
     kind = source.get("from") if isinstance(source, dict) else None
     if kind not in _SOURCE_KINDS:
@@ -77,6 +89,27 @@ def _validate_source(source, var_name: str, path: str) -> None:
             "expr_vars_fn 变量 %r 的 %s 来源类别 %r 引擎不认（只认 %s）—— "
             "形状见 saintess_engine.expr 模块头"
             % (var_name, path, kind, " / ".join(_SOURCE_KINDS)))
+    # ★ 载荷键：`stat`/`input` 必带 `key`，`const` 必带 `value`。
+    #   `key` 只查「在不在且是字符串」——**不查它是否真能在 stats/inputs 里命中**：
+    #   stats 的键集是内容侧属性表给的（今天鱼鱼 10 条明天 12 条），在装配期拿它当白名单
+    #   = 把「拼错」与「这张属性表里暂时没这一条」混成一类，后者是合法的。
+    #   拼错的值仍会在运行期读成 0（口径与模块头「缺 → 0」一致），但**声明写错本身当场现形**。
+    _need = _SOURCE_REQUIRED_KEY[kind]
+    if _need not in source:
+        raise EngineNotConfigured(
+            "expr_vars_fn 变量 %r 的 %s 来源是 %r 却**没带 %r**（引擎只有这一个键可取，"
+            "缺了它这条变量恒为 0）—— 形状见 saintess_engine.expr 模块头"
+            % (var_name, path, kind, _need))
+    if kind in ("stat", "input") and not isinstance(source.get(_need), str):
+        raise EngineNotConfigured(
+            "expr_vars_fn 变量 %r 的 %s 来源 %r 的 %r 必须是字符串（键名）， got %r —— "
+            "形状见 saintess_engine.expr 模块头"
+            % (var_name, path, kind, _need, source.get(_need)))
+    if kind == "const" and not isinstance(source.get("value"), (int, float)):
+        raise EngineNotConfigured(
+            "expr_vars_fn 变量 %r 的 %s 来源 const 的 value 必须是数字，got %r —— "
+            "形状见 saintess_engine.expr 模块头"
+            % (var_name, path, source.get("value")))
     if source.get("else") is not None:
         _validate_source(source["else"], var_name, path + ".else")
 
