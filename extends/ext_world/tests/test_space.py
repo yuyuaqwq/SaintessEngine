@@ -133,6 +133,23 @@ def t4_mesh():
           star.depth("g") == 4 and mesh_same.depth("g") == 2, f"{star.depth('g')}/{mesh_same.depth('g')}")
     check("显式不可达节点深度=节点数", mesh_same.depth("zzz") == 5)
     check("显式 ggate=首节点（网状图无天然出入口）", sp.gate() == "a")
+    # ★ gate 与 depth 同款两口径（审计 L536）：派生走形状函数、显式走角色规则，
+    #   **分歧条件只有一个 = 显式图且 root 不是枢纽**。下面这格专造该条件：
+    #   root 取首节点「s1」（辐条），派生按星形形状仍给出口「g」，
+    #   显式按角色规则回落给 root「s1」⇒ 钉住「它们确实不同」，防后人统一掉。
+    _nh = [{"id": "s1", "role": SPOKE}, {"id": "h", "role": HUB},
+           {"id": "t", "role": THROUGH}, {"id": "g", "role": EXIT}]
+    _d = mk(_nh, topology="star")
+    _e = Space(nodes=_nh, links=_d.adjacency(), roles=R)
+    check("★同一张图 root 非枢纽：派生 gate=出口 / 显式 gate=root（故意不统一）",
+          _d.gate() == "g" and _e.gate() == "s1" and _d.gate() != _e.gate(),
+          f"{_d.gate()}/{_e.gate()}")
+    # 反向：root 即枢纽时两口径必须一致（否则就不是「有意取舍」而是真 bug）
+    _hh = [{"id": "h", "role": HUB}, {"id": "t", "role": THROUGH}, {"id": "g", "role": EXIT}]
+    _d2 = mk(_hh, topology="star")
+    _e2 = Space(nodes=_hh, links=_d2.adjacency(), roles=R)
+    check("root 即枢纽：派生/显式 gate 同值（分歧面只限 root 非枢纽）",
+          _d2.gate() == _e2.gate() == "g", f"{_d2.gate()}/{_e2.gate()}")
     check("显式 + 派生形状名 → ValueError（互斥）",
           _raises(ValueError, lambda: Space(nodes=[{"id": "a"}], topology="star", links={}, roles=R)))
     check("mesh 名 + 不给 links → ValueError（保留名不派生）",

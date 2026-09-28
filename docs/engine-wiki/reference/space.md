@@ -85,6 +85,22 @@ sp.to_view()         # 纯 JSON 视图（编辑器画图 / 序列化）
 网状图**没有**天然顺序，链/星形的顺序**本身就是数据**。同一张星形图两种口径会给出不同深度
 （`gate` 深度 4 vs 2）—— 门禁专门断言「它们确实不同」，防后人为了「整齐」统一掉。
 
+## 出图点：两口径，同样故意不统一
+
+`gate()` 是**同一个语义**（找跨图落点）走两条实现，**与深度同源**的有意取舍：
+
+| 来源 | 口径 |
+|---|---|
+| 派生（链 / 星） | 拓扑形状函数给的 `_gate_hint`（星形=出口角色节点；链状=首节点） |
+| 显式连通表 | **角色规则**（首节点是枢纽角色且有出口角色节点 → 那个出口节点；否则首节点） |
+
+**分歧条件只有一个**：显式图且「`root` 不是枢纽」。此时派生按形状走（仍给出口），
+显式按角色规则回落（给 `root`）。`root` 即枢纽时两口径**必须同值** —— 门禁两侧各钉一条
+（一条断言「它们确实不同」、一条断言「该同值时确实同值」），防后人为了「整齐」统一掉。
+
+真数据侧：orlandia 121 张图该分歧条件 **0 次命中**（97 张走显式 `links`，要么显式给
+`gate=`，要么 `root` 恰是枢纽）⇒ 这是**潜伏**分歧，不是正在发生的错。
+
 ## 必经路径：`route(src, dst)`
 
 BFS 最短路，**含两端**；`route("a", "a") == ["a"]`；任一端未知或不可达 → `[]`。
@@ -134,15 +150,15 @@ register_topology("ring", _ring, doc="环形：首尾相连")
 
 | 形状 | 位置 | 说明 |
 |---|---|---|
-| `Space(nodes, topology=None, *, roles, role_key, id_key, label_key, links, root, gate)` | `space/graph.py:45` | 构造即派生（不可变，无 setter） |
-| `links(id)` | `space/graph.py:161` | 邻接；未知 id → `[]` |
-| `adjacency()` | `space/graph.py:165` | 全图邻接（含零邻接节点 → 空列表） |
-| `depth(id)` | `space/graph.py:169` | 深度（两口径见上） |
-| `gate()` / `entry()` | `space/graph.py:219` / `:242` | 跨图落点 / 出图点（同义，`entry` 是内容侧旧名的别名） |
-| `route(src, dst)` / `route_names(...)` | `space/graph.py:205` / `:235` | 必经路径 / 其显示名 |
-| `audit()` | `space/graph.py:280` | 结构自检 |
-| `edges()` / `to_view(label_key=None)` | `space/graph.py:318` / `:326` | 有向边 / 纯 JSON 视图 |
-| `node(id)` / `role_of(id)` / `label_of(id)` | `space/graph.py:140` / `:147` / `:150` | 原始节点 / 角色 / 显示名 |
+| `Space(nodes, topology=None, *, roles, role_key, id_key, label_key, links, root, gate)` | `space/graph.py:57` | 构造即派生（不可变，无 setter） |
+| `links(id)` | `space/graph.py:213` | 邻接；未知 id → `[]` |
+| `adjacency()` | `space/graph.py:217` | 全图邻接（含零邻接节点 → 空列表） |
+| `depth(id)` | `space/graph.py:221` | 深度（两口径见上） |
+| `gate()` / `entry()` | `space/graph.py:231` / `:259` | 跨图落点 / 出图点（同义，`entry` 是内容侧旧名的别名） |
+| `route(src, dst)` / `route_names(...)` | `space/graph.py:262` / `:292` | 必经路径 / 其显示名 |
+| `audit()` | `space/graph.py:297` | 结构自检 |
+| `edges()` / `to_view(label_key=None)` | `space/graph.py:335` / `:343` | 有向边 / 纯 JSON 视图 |
+| `node(id)` / `role_of(id)` / `label_of(id)` | `space/graph.py:192` / `:199` / `:202` | 原始节点 / 角色 / 显示名 |
 | `register_topology(name, fn, *, doc, replace)` | `space/topology.py:34` | 注册自定义形状 |
 | `topology_names()` / `get_topology(name)` | `space/topology.py:51` / `:56` | 已注册形状名 / 取函数 |
 | `MESH` | `space/topology.py:28` | 保留名（显式连通表） |
