@@ -59,6 +59,30 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 #               heal_mult；subject=施法者，只处理施法者自己声明的 triggers）
 
 
+def event_ctx(battle) -> dict:
+    """**本次事件的上下文读口**（公开面，内容侧读事件数值走这里）。
+
+    背景（审计 L5618）：事件数值（`dmg` / `heal` / `amount` / `is_crit` /
+    `source` / `mult` / `dt` …）过去只放在 `battle._fire_ctx` 这个**私槽**上，
+    于是内容侧与示例包（`examples/minimal-game/` 是给第三方作者的抄写样板）
+    只能 `getattr(battle, "_fire_ctx", None)` —— 越过 API 读引擎内部，
+    契约失真（样板教人读私槽）。
+
+    语义（与 `fire` 的既有行为**逐字节相同**，不改任何行为）：
+    - 返回 `battle._fire_ctx` **本尊**（不是副本）—— 乘区钩子（`dmg_calc` /
+      `taken_calc` / `heal_calc`）的设计是「handler 原地改 `ctx["mult"]`，
+      调用方读同一个对象」，复制会让乘区静默丢失。
+    - 尚未 fire 过（私槽不存在 / 不是 dict）⇒ 返回**空 dict**（空读安全；
+      内容侧据此判「本次事件没给这个键」）。
+    - 嵌套：`fire` 收尾把私槽指向**本次** ctx，所以 fire 之后立刻读到的
+      就是本次事件的那份（外层调用方若要抗嵌套，见 `class_mech.py` 的存档还原写法）。
+
+    引擎零游戏知识：这里只搬运「事件上下文」这个协议，不含任何游戏名词。
+    """
+    ctx = getattr(battle, "_fire_ctx", None)
+    return ctx if isinstance(ctx, dict) else {}
+
+
 def fire(battle, event: str, ctx: dict, logs: list) -> None:
     """事件总线唯一入口：匹配声明 → 翻译执行。引擎各点调用。
 

@@ -18,7 +18,7 @@
 from .battle.actors import ActCtx, actor_alive, actor_ext, hostile_sides, make_actor
 from .battle.actions import heal_amount, skill_pay_of
 from .battle.battle import Battle, now_of
-from .battle.effect_triggers import fire
+from .battle.effect_triggers import event_ctx, fire
 from .battle.effects import act_apply, act_shield, apply_effects, cap_of, norm_stack, register_action
 from .battle.landing import deal_damage, heal_actor
 from .battle.schedule import action_time, initial_ct, recover_time, settle_landing
@@ -50,7 +50,7 @@ __all__ = [
     # 规则
     "state_def", "all_state_effects",
     # 事件 / 时间轴
-    "fire", "action_time", "initial_ct", "recover_time", "settle_landing", "now_of",
+    "fire", "event_ctx", "action_time", "initial_ct", "recover_time", "settle_landing", "now_of",
     # 阵营
     "hostile_sides",
     # 行动结算工具

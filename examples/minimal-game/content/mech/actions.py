@@ -14,7 +14,8 @@ actor_alive / actor_stats（都在 saintess_engine.__all__ 里）。
 """
 from __future__ import annotations
 
-from ext_combat import actor_alive, actor_stats, apply_effects, deal_damage, register_action
+from ext_combat import (actor_alive, actor_stats, apply_effects, deal_damage,
+                        event_ctx, register_action)
 
 
 def _holder_of(caster, params):
@@ -58,7 +59,7 @@ def res_gain(battle, caster, target, params, logs):
     if not _when_ok(holder, params.get("when")):
         return
     if params.get("per_dt"):
-        ctx = getattr(battle, "_fire_ctx", None) or {}
+        ctx = event_ctx(battle)
         # ⚠️ 回落只认 None（2026-09-28 审计 L5618）：`or 1.0` 会把**合法值 0.0** 吞成 1.0
         #   —— 乘区为 0（「这一段时间内不涨」）永远做不出来，且不报错。
         _raw_dt = ctx.get("dt")
@@ -101,13 +102,14 @@ def heat_vent(battle, caster, target, params, logs):
 def backdraft(battle, caster, target, params, logs):
     """被动 proc（PASSIVE_PROC 装配）：受击后按自身攻击力比例反击伤害来源。
 
-    事件数值不在 params 里，在 battle._fire_ctx（单槽覆盖式）——必须**同步读完**。
-    ★ 审计 L5618 记着一条待办：`battle._fire_ctx` 是**引擎私槽**（`_` 前缀），
-      引擎应提为公开读口；本示例作为「第三方照抄的范本」不该教人读私槽。
-      引擎侧改动不在内容车道文件面内，故此处只把约束写明，不改行为。
+    事件数值不在 params 里，在**本次事件的上下文**里——必须**同步读完**。
+    读法：`event_ctx(battle)`（ext_combat 公开面）。
+    ★ 审计 L5618：事件上下文过去只放在 `battle._fire_ctx` 私槽上，本示例作为
+      「第三方照抄的范本」不该教人读私槽 ⇒ 引擎已把它提为 `event_ctx`（2026-09-28），
+      本样板改走公开面（行为不变：返回的就是同一个 ctx 对象，不复制）。
     """
-    ctx = getattr(battle, "_fire_ctx", None) or {}
-    source = ctx.get("source")          # ← 先读，后面对账会再次 fire 覆盖本槽
+    ctx = event_ctx(battle)
+    source = ctx.get("source")          # ← 先读；嵌套 fire 会再覆盖本槽（见 event_ctx docstring）
     holder = _holder_of(caster, params)
     pct = float(params.get("pct") or 0)
     if holder is None or pct <= 0 or source is None or not actor_alive(source):
