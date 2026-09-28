@@ -167,12 +167,20 @@ class Conditions:
 
     def pop(self, key: str, default=_MISSING):
         """摘掉一个 key 并返回它的判定函数（注册表可逆）；未注册时：
-        给了 `default` → 返回它；没给 → `UnknownCondition`。语义同 `dict.pop`。"""
-        if key in self._fns:
-            return self._fns.pop(key)
+        给了 `default` → 返回它；没给 → `UnknownCondition`。语义同 `dict.pop`。
+
+        校验 **与 `get` / `evaluate` / `__getitem__` 同一校验**：先过 `_check_key`
+        （不可哈希 → `TypeError`；空串 → `ValueError`），再走登记表。
+        写在前头是——`pop([])` 落到裸 `TypeError: unhashable type: 'list'`（dict 自带那句），
+        `pop("")` 落到 `UnknownCondition`（报“未注册”）。后者更误导：
+        **空键本来就不应该能被登记**，却被报成“你要的条件没实现”。
+        """
+        cond_key = _check_key(key)
+        if cond_key in self._fns:
+            return self._fns.pop(cond_key)
         if default is not _MISSING:
             return default
-        raise UnknownCondition(key, self.keys())
+        raise UnknownCondition(cond_key, self.keys())
 
     def missing(self, needed: Iterable[str]) -> list:
         """`needed` 里**没实现**的那些，按传入顺序（重复项各算一次）。
@@ -183,7 +191,12 @@ class Conditions:
             raise TypeError("needed 必须是一串 key，不是单个字符串（要单个就用 has/missing([k])）")
         out = []
         for key in needed:
-            if not self.has(key):
+            # 不走 `has`：`has` 对非法键宽恕返回 False（只是查询），那会把
+            # 拼写/错形的条件名算成「没实现」→ `missing([""])` 报 `[""]`、
+            # `missing([[]])` 报 `[[]]`，把形错掩成了缺失。`missing` 是「声明
+            # 没实现」的自检，它的结论会被内容侧当作事实看 → 必须只能有
+            # 两种结论（“没实现”/“都实现了”），不能有第三种。
+            if _check_key(key) not in self._fns:
                 out.append(key)
         return out
 

@@ -228,6 +228,25 @@ def t4_fail_closed():
     check("has 非字符串 → False（查询不报错）",
           c.has(None) is False and c.has("") is False and c.has(7) is False)
 
+    # ---- pop：当前一条断言都没有（之前 grep pop = 0 命中），补上下面一组 ----
+    _cp = Conditions()
+    _cp.register("pk", lambda ctx: True)
+    check("pop 已登记 → 返回判定函数且确实摘掉",
+          _cp.pop("pk") is not None and _cp.has("pk") is False)
+    check("pop 未登记 + 给了 default → 返回 default",
+          _cp.pop("nope", None) is None and _cp.pop("nope", 42) == 42)
+    check("pop 未登记且没给 default → UnknownCondition（点名）",
+          raises(UnknownCondition, _cp.pop, "nope")[0])
+    # 键键是与 get / evaluate / __getitem__ 对齐的那一条（台账既有红）：键键先过 _check_key
+    hit, e = raises(TypeError, _cp.pop, [])
+    check("★ pop 不可哈希键键 → TypeError 并点名（非裸 unhashable）",
+          hit and "list" in str(e) and "可哈希" in str(e), str(e))
+    check("★ pop 空键键 → ValueError（不是 UnknownCondition：空键键本来就不能被登记）",
+          raises(ValueError, _cp.pop, "")[0])
+    check("★ pop 可哈希非字符串键键 → 与 get 同口径（int 键键可用）",
+          _cp.register(7, lambda ctx: True) is not None
+          and _cp.pop(7) is not None and _cp.pop(7, "dflt") == "dflt")
+
 
 # ---------------------------------------------------------------- 5 missing 自检
 def t5_missing():
@@ -250,6 +269,19 @@ def t5_missing():
           raises(TypeError, c.missing, "ab")[0])
     check("missing 的判定口径与 has 一致（未注册才点名）",
           c.missing(["a", "nope"]) == ["nope"] and c.missing(["nope", "a"]) == ["nope"])
+    # ---- 非法键键：不得被算成「没实现」（形错会被掩成缺失） ----
+    hit, e = raises(TypeError, c.missing, [[]])
+    check("★ missing 不可哈希键键 → TypeError 并点名（改前返回 [[]]）",
+          hit and "list" in str(e), str(e))
+    check("★ missing 空键键 → ValueError（改前返回 ['']）",
+          raises(ValueError, c.missing, [""])[0])
+    # None 是**可哈希键**（非空串）→ 合法：missing 必须当法处理，
+    # 它只能给出两种结论（没实现 / 都实现了），不能抹掉。
+    check("★ missing None 键键 → 合法（None 可哈希）：未登记点名 / 登记了不点",
+          c.missing([None]) == [None]
+          and (lambda d: (d.register(None, lambda ctx: True), d.missing([None]))[1])(Conditions()) == [])
+    check("★ missing 可哈希非字符串键键仍当法（int 键键 = 编号型条件名）",
+          c.missing([7]) == [7] and c.missing([7]) == [7])
 
 
 # ---------------------------------------------------------------- 6 Ctx 透传
