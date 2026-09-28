@@ -100,11 +100,30 @@ class TLog:
         return rec
 
     def write_many(self, records: Iterable[Record]) -> int:
-        """批量写（分析/回灌场景）；返回成功写入的 sink 数。"""
+        """批量写（分析/回灌场景）；返回成功写入的 sink 数。
+
+        声明表存在时**与 `emit` 走同一份校验**（见 `strict`）：原先这条写口只把 kind
+        记进 `_seen` 就不管了，于是未声明的 kind 能整批进 sink、`audit()["problems"]` 却是空的
+        —— 声明表在这条路上形同虚设。
+        """
         batch = list(records)
-        for r in batch:
-            if r.kind not in self._seen:
-                self._seen.append(r.kind)
+        with self._lock:
+            for r in batch:
+                if r.kind not in self._seen:
+                    self._seen.append(r.kind)
+        if self.kinds is not None:
+            for r in batch:
+                problems = self.kinds.check_record(r)
+                if not problems:
+                    continue
+                self._problems.extend(problems)
+                if self.strict:
+                    raise ValueError("流水与声明不符：" + "；".join(problems))
+                if self.on_undeclared is not None:
+                    try:
+                        self.on_undeclared(problems)
+                    except Exception:                             # noqa: BLE001
+                        pass
         if not self.sinks:
             return 0
         return _sinks.dispatch(self.sinks, batch)
