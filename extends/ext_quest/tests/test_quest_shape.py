@@ -24,6 +24,7 @@
 """
 import ast
 import json
+import re
 import os
 import sys
 import time
@@ -1028,6 +1029,42 @@ def t_zero_knowledge():
           ("Progress" in doc and "collect" in doc))
     check("不做落库：QuestLog 没有任何落库/连接类 API",
           not any(n in dir(QuestLog) for n in ("save", "commit", "connect", "execute", "flush")))
+
+    # ── 审计 L609 / L610（台账低 #9 / #10）：死常量与错指针
+    import ext_quest.quest.objective as _obj
+    import ext_quest.quest as _qmod
+    # #9：本模块不得再定义字段名字面量（#9 删掉的那两个）。
+    #     判据 = 模块顶层根下**不存在**以下名字的模块属性。
+    #     保留约束：`ext_dialogue` 另有一份**在用**的 `_F_NEED`，不影响本断言；
+    #     本模块的字段名全部由调用方注入，引擎不内置字段名。
+    check("★ 审计 L609：objective 模块不再定义 `_F_NEED` / `_F_PROGRESS` 字段名常量",
+          not any(hasattr(_obj, n) for n in ("_F_NEED", "_F_PROGRESS")),
+          [n for n in ("_F_NEED", "_F_PROGRESS") if hasattr(_obj, n)])
+    check("★ 审计 L609：删除的字常量没被引进 `__all__`（不留兼容壳）",
+          not any(n in _obj.__all__ for n in ("_F_NEED", "_F_PROGRESS")), _obj.__all__)
+    # #10：模块 docstring 指向的包 docstring 必须真实可导入，且不得指向不存在的目录。
+    _odoc = _obj.__doc__ or ""
+    #     指针可能跨行折行（模块 docstring 里给长路径时常换行）。
+    _ref = re.search(r"见包 docstring（\s*`([A-Za-z_][\w.]*)`", _odoc)
+    # 判据要**可计数**：直接 `__import__` 会让坏指针把门禁整个带崩（import 抛异常 ⇒
+    # 后面的断言一条都跑不到，红集就没法逐条对拍了）。改成 try/except 收成布尔 + 点名。
+    _importable, _why = (False, "未找到指针")
+    if _ref is not None:
+        try:
+            _importable = getattr(__import__(_ref.group(1), fromlist=["__doc__"]),
+                                  "__doc__", None) is not None
+            _why = _ref.group(1)
+        except Exception as _exc:                      # noqa: BLE001 —— 判据要收成布尔
+            _why = "%s（%s: %s）" % (_ref.group(1), type(_exc).__name__, _exc)
+    check("★ 审计 L610：模块 docstring 里指向包 docstring 的那个名字能真实导入",
+          _importable, _why)
+    check("★ 审计 L610：模块 docstring 不再指向不存在的 `saintest_engine.quest`",
+          "saintest_engine.quest" not in _odoc)
+    # 口径条数不得再落后（包 docstring 已到１７ 条）。
+    _n = len(re.findall(r"^[①-⑳] ", _qmod.__doc__ or "", re.M))
+    check("★ 模块 docstring 声称的口径条数与实际一致（不得落后）",
+          ("**%d 条口径分歧**" % _n) in _odoc,
+          "实际 %d 条，模块 docstring 口径数字混合" % _n)
 
 
 def main():
