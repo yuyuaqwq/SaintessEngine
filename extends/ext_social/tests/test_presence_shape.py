@@ -40,7 +40,8 @@ for _p in (ROOT, _EXT_BASE, _HERE_DIR):
         sys.path.insert(0, _p)
 
 import ext_social.presence as PRESENCE                              # noqa: E402
-from ext_social.presence import (Lookup, Presence, cooldown_ok,     # noqa: E402
+from ext_social.presence import (Lookup, Presence, SlotOutOfRange,     # noqa: E402
+                                      cooldown_ok,
                                       day_hit, day_slot, guarded_roll,
                                       merge_tables, minutes_left)
 
@@ -400,11 +401,22 @@ def t8_slots_and_overlay():
     check("空静态 / 空叠加各自退化",
           p.slots([], []) == [] and p.slots([], ["C"]) == [(1, "overlay", "C")]
           and p.slots(["A"], []) == [(1, "static", "A")])
-    check("slot_at 1-based 取整条；越界（含 0/负）→ None",
+    check("slot_at 1-based 取整条（正常格逐字不变）",
           p.slot_at(slots, 1) == (1, "static", "A")
-          and p.slot_at(slots, 3) == (3, "overlay", "C")
-          and p.slot_at(slots, 0) is None and p.slot_at(slots, -1) is None
-          and p.slot_at(slots, 4) is None and p.slot_at([], 1) is None)
+          and p.slot_at(slots, 3) == (3, "overlay", "C"))
+    # ★ 越界改抛（2026-09-28 收口）：旧写法把两种语义不同的越界都归成 `None` ——
+    #   「序号 < 1」是**调用方算错**（真错），「序号 > len」是**正常的并发失效**
+    #   （NPC 走了 / 限时项过期），两者不可区分 ⇒ 真错被静默当「没找到」放过。
+    #   判据钉**新契约**（不是放宽）：两类越界各自钉住专用的异常类型。
+    check("slot_at 序号 < 1（调用方算错）→ ValueError",
+          _raises(lambda: p.slot_at(slots, 0), ValueError)
+          and _raises(lambda: p.slot_at(slots, -1), ValueError))
+    check("slot_at 序号 > len（该序号这会儿不存在）→ SlotOutOfRange",
+          _raises(lambda: p.slot_at(slots, 4), SlotOutOfRange)
+          and _raises(lambda: p.slot_at([], 1), SlotOutOfRange))
+    check("★ 专有异常可单独捕获，且真错不归它（『就当没有』是显式选择）",
+          _raises(lambda: p.slot_at(slots, 4), LookupError)     # 父类可捕获
+          and not _raises(lambda: p.slot_at(slots, 0), SlotOutOfRange))
     check("slot_at 非整数 → TypeError", _raises(lambda: p.slot_at(slots, "1"), TypeError))
 
     evs = [{"key": "k1", "row_id": "w1", "place": "m1", "remain": 61},
@@ -523,11 +535,14 @@ def t9_zero_knowledge():
           not (roots & set(_FORBIDDEN_IMPORTS)), f"roots={sorted(roots)}")
     check("绝对 import 落在标准库 + 引擎通用件（可分发性；2026-09-23 起本形状在 extends/ext_social/）",
           roots <= (set(sys.stdlib_module_names) | {"saintess_engine"}), f"roots={sorted(roots)}")
+    # ★ `__all__` 契约同步：新增公开异常类 `SlotOutOfRange`（越界不再静默 None）。
+    #   这条是**冻结契约**（逐字比对）⇒ 加名字是「记录已扩的公开面」，
+    #   不是放宽：任何**未登记**的名字进来照样报红。
     check("模块 docstring 在（形状自带说明）且 __all__ 与设计一致",
           bool(PRESENCE.__doc__)
-          and PRESENCE.__all__ == ["Lookup", "Presence", "day_slot", "day_hit",
-                                   "minutes_left", "guarded_roll", "cooldown_ok",
-                                   "merge_tables"], str(PRESENCE.__all__))
+          and PRESENCE.__all__ == ["Lookup", "Presence", "SlotOutOfRange", "day_slot",
+                                   "day_hit", "minutes_left", "guarded_roll",
+                                   "cooldown_ok", "merge_tables"], str(PRESENCE.__all__))
     check("rng 缺省 / 显式 None → TypeError（不许悄悄用系统随机）",
           _raises(lambda: guarded_roll(0, guarantee=7, chance=0.5), TypeError)
           and _raises(lambda: guarded_roll(0, guarantee=7, chance=0.5, rng=None), TypeError))

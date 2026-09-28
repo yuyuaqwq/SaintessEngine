@@ -44,7 +44,7 @@
     p.rows(ids, place=current_place, day=ordinal)     # [(id, row, 表下标)]，声明序
     p.here(ids, place=current_place, day=ordinal)     # [row]
     slots = p.slots(static_items, timed_items)        # [(序号, "static"|"overlay", 项)]
-    p.slot_at(slots, 3)
+    p.slot_at(slots, 3)                   # 1-based；越界抛 SlotOutOfRange（不静默 None）
 
 **为什么有它**：「同一份判定/派生在多个出口各写一遍」是这类系统的常态 —— 当天定位在
 两处各算一次哈希、展示分钟在两处各写一次 `ceil`、多表首命中在几十处各写一次 `or` 链、
@@ -81,7 +81,10 @@
    `a.get(k) or b.get(k)` 同口径），**空 mapping 会穿透**到下一张表；不是
    `is not None` 链。跨表查找因此对「表中有一个空壳值」保持既有行为。
 7. **保序 / 不去重 / 不排序**：清单一律声明序；`slots` 静态在前、叠加项**续号**（从 1 起）；
-   `slot_at` 是 1-based，越界给 `None`（**不抛**）。
+   `slot_at` 是 1-based，越界**抛**（序号 `< 1` = 调用方算错 → `ValueError`；
+   序号 `> len(slots)` = 该序号这会儿不存在 → 专有 `SlotOutOfRange`）。
+   旧写法两种越界都归成 `None`，调用方分不出「我算错了」与「它没了」；
+   要「就当没有」就**显式** `except SlotOutOfRange`。
 8. **`merge_tables` 后表覆盖前表、`exclude` 只跳过不报错**：同名键按表序后者胜（与
    `{**a, **b}` 同口径）；`exclude` 内的键在**每一张**表里都跳过（跳过的键不占位）。
 
@@ -113,8 +116,17 @@ from typing import Any, Callable
 
 from saintess_engine._validators import callable_of, int_of, number_of
 
-__all__ = ["Lookup", "Presence", "day_slot", "day_hit", "minutes_left",
+__all__ = ["Lookup", "Presence", "SlotOutOfRange", "day_slot", "day_hit", "minutes_left",
            "guarded_roll", "cooldown_ok", "merge_tables"]
+
+
+class SlotOutOfRange(LookupError):
+    """请求的在场序号**这会儿不存在**（`> len(slots)`）—— 不是 `None`，让调用方知悉。
+
+    ★ 与「序号 `< 1`」分开：那是**调用方算错**（`ValueError`），这一条是**正常的并发失效**
+      （NPC 走了 / 限时项过期）。两者都曾静默 `None` ⇒ 调用方分不出「我算错了」和
+      「它没了」。要「就当没有」就显式 `except SlotOutOfRange`。
+    """
 
 #: 日期哈希的乘法常量与掩码（逐字 = 包内搬来的那一份；改它 = 换世界）。
 _HASH_MULT = 2654435761
@@ -386,10 +398,27 @@ class Presence:
         return out
 
     def slot_at(self, slots: list, index: int):
-        """1-based 取用序号对应的**整条** ``(序号, 来源, 项)``；越界（含 `< 1`）→ `None`（不抛）。"""
+        """1-based 取用序号对应的**整条** ``(序号, 来源, 项)``。
+
+        越界**抛** `SlotOutOfRange`（`len(slots)` 一并带在消息里），不静默 `None`：
+
+        ★ 口径裁定（2026-09-28，台账 `presence/__init__.py:388-393`「静默 None 不可区分」条）：
+          旧写法把两种语义不同的越界都归成 `None` ——
+          「序号 `< 1`」（调用方算错 / 传了 0、-1：**真错**，同文件的 `cooldown_ok`、
+          `minutes_left` 都是 fail-closed 抛错）与「序号 `> len`」（那个序号这会儿不存在，
+          是**正常**的并发失效：NPC 走了、限时项过期了）。两者不可区分 ⇒ 真错被当成
+          「没找到」静默放过。裁定：**「序号不存在」抛一个专用异常类**
+          （`SlotOutOfRange`，调用方要「就当没有」就显式 `except` 它），
+          不用 `None` ⇒ 静默 `None` 这一格消失。判 `index < 1` 的真错另抛 `ValueError`。
+        """
         position = int_of(index, "index")
-        if position < 1 or position > len(slots):
-            return None
+        if position < 1:
+            raise ValueError(
+                f"序号是 1-based（< 1 是调用方的错）：收到 {position!r}，slots 共 {len(slots)} 条")
+        if position > len(slots):
+            raise SlotOutOfRange(
+                f"序号 {position} 不存在（共 {len(slots)} 条）——"
+                "这一格内容侧可能已撤下（NPC 走了 / 限时项过期）")
         return slots[position - 1]
 
     def overlay(self, events, *, now, minutes: Callable = minutes_left) -> list:
