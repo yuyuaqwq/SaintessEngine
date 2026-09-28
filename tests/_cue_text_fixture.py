@@ -49,6 +49,10 @@ TEMPLATES = {
     # ★ B5（2026-09-28 状态容器收口第 2 批）：承伤减免读点。与示例包
     #   `content/texts.py` 逐字相同（门禁 `test_cues_shape.py` 会逐字对拍两份）。
     "battle.landing.taken_reduce": "🛡️ {name} 减免了 {pct}% 承伤！",
+    # ★ B6（2026-09-28 承伤减免两条通道互斥）。与示例包 `content/texts.py` 逐字相同
+    #   （门禁 `test_cues_shape.py` 会逐字对拍两份）。
+    "battle.landing.taken_mult_skipped": (
+        "🛡️ {name} 减免了 {pct}% 承伤（本次事件乘区减免 {mult_pct}% 已跳过，两条减伤不叠加）"),
     "battle.core.no_actor": "没有可行动的玩家！",
     "battle.core.finished": "战斗已结束！",
     "battle.core.silenced": "🤐 {name} 被沉默，无法使用技能！(只能普攻/防御)",

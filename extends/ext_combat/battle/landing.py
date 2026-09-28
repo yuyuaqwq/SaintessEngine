@@ -118,6 +118,14 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             pass  # 免疫/弱点/抗性异常不阻断落地
     # N9.13 数值修正钩子：taken_calc（承伤者视角减伤乘区）——装配层乘区扩展动作
     # 改 battle._fire_ctx["mult"]（沸血全减伤/death_dance 减伤等条件减伤）
+    # ★ 2026-09-28 互斥（鱼鱼拍板，机制可预测）：承伤减免**只走一条通道**。同一 actor
+    #   身上若既有声明了 `taken_pct` 的容器条目、又有 `taken_calc` 乘区，两条会**相乘**
+    #   （0.3 × 0.4 ⇒ 实吃 0.28 伤害，机制不可预测）⇒ **声明优先**：乘区被**跳过**，
+    #   并发一条 cue 说清「走了哪条、另一支被跳过」（`_skip_event_mult`）。
+    # 为什么只弃**乘区**、不整条事件不 fire：内容侧挂在 `taken_calc` 上的**别的**声明动作
+    #   读的是 `_fire_ctx["dmg"]` 而不是 `mult`（例：奥兰迪亚 `passive_overflow_shield`
+    #   「溢出承伤转盾」）。连 fire 一起跳过会静默杀掉那些动作 —— 判据钉的是**减免这一个数
+    #   只被算一次**，不是「不许任何人监听这个事件」。
     try:
         from .effect_triggers import fire as _fire
         _fctx = {"actor": target, "target": target, "source": source,
@@ -127,7 +135,7 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
         #   格挡/无敌帧），而 `0.0 or 1.0` 会被吞成 1.0 → 0 乘区永远失效。None 才回落 1.0。
         _raw_m = _fctx.get("mult")   # 读**本次事件的 ctx 对象**（嵌套 fire 不影响它）
         _m = 1.0 if _raw_m is None else float(_raw_m)
-        if _m != 1.0:
+        if _m != 1.0 and not _skip_event_mult(battle, target, _m, logs):
             dmg = max(1, int(dmg * _m))
     except Exception as _e:
         _diag(battle, "deal_damage · 修正钩子", _e)          # 审计 P-44：不再静默（行为不变）
@@ -194,6 +202,11 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     #   字段是同一件事的第二本账）。现在引擎只问内容侧一句「哪些条目声明了
     #   `taken_pct`」，累加它们的 `value`，按**内容侧骨架表** `formulas.reduce_cap()`
     #   封顶后打折。封顶未装配 = 0.0 ⇒ 折到 0 ⇒ **这一段对没声明的包零行为变化**。
+    # ★★ 2026-09-28 互斥（鱼鱼拍板）：本段是承伤减免的**唯一真源**，与 `taken_calc`
+    #   事件乘区**二选一**（声明优先）——`taken_calc` 那支的跳过判定在
+    #   `_skip_event_mult`，两支同时成立时本段生效、乘区被跳过并发 cue 说明。
+    #   封顶 `formulas.reduce_cap()` **只封这一支**（声明通道的累加值），**不封乘区** ——
+    #   乘区是内容侧自己给的「本次修正」，引擎不替它设帽（口径见 wiki）。
     try:
         _red = state_reduce_of(target)
         if _red > 0:
@@ -370,6 +383,41 @@ def _apply_death_guard(battle, target: dict, logs: list) -> bool:
     except Exception as _e:
         _diag(battle, "_apply_death_guard", _e)          # 审计 P-44：不再静默（行为不变）
         return False
+
+
+def _skip_event_mult(battle, target: dict, mult: float, logs: list) -> bool:
+    """**互斥判定**：这一笔该事件乘区要不要被跳过（承伤方同时有 `taken_pct` 声明时跳过）。
+
+    ★ 2026-09-28（鱼鱼拍板）：承伤减免**同一状态只走一条通道**。
+      · 通道 A（**声明**）= 容器里声明了 `taken_pct` 的条目累加（`state_reduce_of`）
+      · 通道 B（**事件**）= `taken_calc` 乘区（内容侧在 `on_taken`/乘区动作里改 `_fire_ctx["mult"]`）
+      两条各自成立时**会相乘**（0.3 × 0.4 ⇒ 实吃 28% 而非 42%）⇒ 机制不可预测。
+      ⇒ **声明优先**：通道 A 命中时通道 B 被跳过，并发一条 cue 说清走了哪条、弃了哪条。
+
+    返回 True = 跳过（通道 A 优先）；False = 照常乘。
+    「通道 A 命中」的口径 = `state_reduce_of(target) > 0.0`：**已按内容侧封顶折算后的
+    生效比例**，不是「有没有声明」。理由：封顶未装配（`reduce_cap` = 0.0）或声明了但
+    累加 ≤0 时，通道 A **实际不减伤** —— 那时不构成「两条都在减伤」，放通道 B 过是
+    唯一让减伤真发生的选择（否则会出现「两条都声明了、却一次都不减」的死局）。
+    封顶后的比例是本函数唯一的判据来源，故**与读点读的是同一个 getter**（不会分叉）。
+    """
+    if not isinstance(mult, (int, float)) or float(mult) == 1.0:
+        return False                       # 没改乘区 = 通道 B 根本没参与，无从互斥
+    try:
+        from .state_effects import taken_pct_keys
+        if not taken_pct_keys(target):
+            return False                   # 通道 A 一条都没有 = 无冲突
+        declared = state_reduce_of(target)
+    except Exception as _e:
+        _diag(battle, "_skip_event_mult", _e)   # 审计 P-44：不再静默（行为不变）
+        return False
+    if declared <= 0.0:
+        return False                       # 声明在、但生效比例 0（封顶未装/值 0）⇒ 不算通道 A 参与
+    _cue(battle, logs, "battle.landing.taken_mult_skipped",
+         {"name": target.get('name', '目标'),
+          "pct": int(round(declared * 100)),
+          "mult_pct": int(round((1.0 - float(mult)) * 100))})
+    return True
 
 
 def state_reduce_of(actor: dict) -> float:

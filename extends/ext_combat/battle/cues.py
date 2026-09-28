@@ -59,6 +59,8 @@ CUE_NAMES = (
     "battle.landing.heal_wound",
     # ---- B5（1 条 · 状态容器收口第 2 批：承伤减免读点）----
     "battle.landing.taken_reduce",
+    # ---- B6（1 条 · 承伤减免两条通道互斥：声明通道优先，乘区被跳过时说清走了哪条）----
+    "battle.landing.taken_mult_skipped",
     # ---- B3（25 条 · effects 16 + battle.py 9）----
     "battle.core.no_actor",
     "battle.core.finished",

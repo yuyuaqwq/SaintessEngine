@@ -43,6 +43,11 @@ TEMPLATES = {
     #   这一族 —— 原先只有写、没有读）。措辞是新点位（引擎侧从来没有过模板），
     #   槽位 = 承伤者名 + 实际生效的减免百分比（已按内容侧封顶 clamp）。
     "battle.landing.taken_reduce": "🛡️ {name} 减免了 {pct}% 承伤！",
+    # ★ B6（2026-09-28 承伤减免两条通道互斥）：**声明通道优先**，事件乘区被跳过。
+    #   槽位 = 承伤者名 + 生效的声明减免% + 被跳过的乘区本会给的减免%（`mult_pct`）。
+    #   两条同时成立时**只发这一条**（乘区那次不再另发一行「减免」——它没真发生）。
+    "battle.landing.taken_mult_skipped": (
+        "🛡️ {name} 减免了 {pct}% 承伤（本次事件乘区减免 {mult_pct}% 已跳过，两条减伤不叠加）"),
     "battle.core.no_actor": "没有可行动的玩家！",
     "battle.core.finished": "战斗已结束！",
     "battle.core.silenced": "🤐 {name} 被沉默，无法使用技能！(只能普攻/防御)",

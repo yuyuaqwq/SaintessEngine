@@ -134,7 +134,7 @@ actions._single_target_pipeline(battle, actor, target, info, lv)     actions.py:
 landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduce, element)
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ 1. amount <= 0 → 0                                                       │
-│ 2. _lv_pressure(battle, source, target, dmg)          landing.py:248     │
+│ 2. _lv_pressure(battle, source, target, dmg)          landing.py:261     │
 │      btype == "pvp" → 不压；任一方无 level → 不压                          │
 │      低打高：前 3 级 ×0.95，之后 ×0.90，封顶 ×0.30                         │
 │      高打低：每级 ×1.02 连乘（封顶 50 级）                                 │
@@ -144,36 +144,36 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 │      elem_res / abyss_res（dark 吃 abyss_res）cap 0.5 → 减伤              │
 │ 4. ⚡ fire("taken_calc", {actor: target, dmg, mult: 1.0})   landing.py:118-124 │
 │      → 读回 mult → dmg *= mult                                            │
-│ 5. target["_dmg_taken_mult"] > 1 → dmg *= 它           landing.py:133-135    │
-│ 6. _roll_dodge(battle, target, logs)                   landing.py:167（定义 :260） │
+│ 5. target["_dmg_taken_mult"] > 1 → dmg *= 它           landing.py:141-143    │
+│ 6. _roll_dodge(battle, target, logs)                   landing.py:175（定义 :260） │
 │      dodge 面板 cap 0.40 → 命中则 return 0（整个伤害免掉）                 │
 │      ★ `no_dodge=True` ⇒ 跳过这一掷（内容侧自付那一笔没人能闪 —— 2026-09-27 开的一格开关） │
-│ 7. 防御姿态 → dmg *= (1 - defend_reduce or 0.5) landing.py:180-186          │
-│ 8. _apply_taken_reductions(dmg_kind)                   landing.py:186（定义 :287） │
+│ 7. 防御姿态 → dmg *= (1 - defend_reduce or 0.5) landing.py:188-194          │
+│ 8. _apply_taken_reductions(dmg_kind)                   landing.py:194（定义 :287） │
 │      phys → phys_reduce cap 0.40；magi → magic_reduce cap 0.40            │
 │      block 概率 cap 0.40 → 减半                                          │
-│ 9. effects 里带 wake_on_hit 的态 → pop（打醒）+ 日志    landing.py:208-217  │
+│ 9. effects 里带 wake_on_hit 的态 → pop（打醒）+ 日志    landing.py:221-230  │
 │10. ★ **这一层不打断前摇**（T15 §0 D15 第 2 条）：普通伤害照常结算、前摇不动；  │
 │      控制类效果由**内容侧**挂引擎 `interrupt` 动作显式打断                  │
-│      （`effects.act_interrupt` —— 引擎不认识「控制」这个词）  landing.py:222-225 │
-│11. _apply_damage(battle, target, dmg, logs, source)    landing.py:224（定义 :364） │
+│      （`effects.act_interrupt` —— 引擎不认识「控制」这个词）  landing.py:235-238 │
+│11. _apply_damage(battle, target, dmg, logs, source)    landing.py:237（定义 :364） │
 │      ├─ 承伤吸收（遍历容器里**声明 absorb** 的条目，按 value 扣，耗尽即 pop）  │
 │      ├─ hp 扣减                                                          │
-│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:339     │
+│      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:352     │
 │      │     effects["death_guard"].stacks > 0 → hp 拉回 guard_hp_pct      │
 │      │     （+heal_pct 额外治疗，走 heal_actor）→ 层 -1                    │
-│      ├─ 仍 <= 0 → Battle._on_actor_dead(...)   landing.py:417（定义 battle.py:684） │
+│      ├─ 仍 <= 0 → Battle._on_actor_dead(...)   landing.py:411（定义 battle.py:684） │
 │      │       killed_actors.append / 清 charging + 容器窗口（离场）          │
 │      │     ⚡ fire("on_death", {actor, target})                            │
 │      │     source 非 None → ⚡ fire("on_kill", {actor: source, ...})       │
 │      └─ 否则：日志「受到 N 点伤害」                                        │
-│12. 未死 → ⚡ fire("on_taken", {actor, target, source, dmg})   landing.py:230 │
+│12. 未死 → ⚡ fire("on_taken", {actor, target, source, dmg})   landing.py:243 │
 └──────────────────────────────────────────────────────────────────────────┘
 返回 real（实际扣血）
 ```
 
 ⚠️ 第 6 步（闪避）的位置有注释明确说明：**「位置在防御姿态减伤前（对齐旧顺序：
-闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）」**（`landing.py:167`）。
+闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）」**（`landing.py:175`）。
 改顺序会改变「闪避是否省下防御姿态/是否打断读条」这类语义。
 
 ## 展开 4：事件在链上的位置（一次普攻）

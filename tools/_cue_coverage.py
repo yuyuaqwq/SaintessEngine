@@ -206,6 +206,44 @@ def _d_taken_reduce(rig):
         tbl.pop("probe_ward", None)
 
 
+@driver("battle.landing.taken_mult_skipped")
+def _d_taken_mult_skipped(rig):
+    """引擎发射点：`landing._skip_event_mult`（承伤减免**两条通道互斥**那一支）。
+
+    条件 = 承伤者身上**同时**有 ① 一条声明了 `taken_pct` 的容器条目（通道 A · 声明）
+    与 ② 一条 `taken_calc` 事件乘区把 `_fire_ctx["mult"]` 改成 ≠1.0（通道 B · 事件）
+    ⇒ 乘区被**跳过**，改发这一条 cue（说清走了哪条、弃了哪条）。
+
+    补的是**内容侧本该有的两类声明**（效果规则 + 公式骨架封顶 + 乘区动作），
+    发射点仍是 `landing` 里的真代码；`taken_calc` 仍**照常 fire**（只有 `mult` 被弃），
+    这一点由 `tests/test_taken_channel_exclusive.py` 另钉（那里挂了一个读 `dmg` 的旁证动作）。
+    """
+    from ext_combat.battle import effects as EFF
+    from ext_combat.battle import state_effects as SE
+    tbl = SE.get_effect_rules()
+    tbl["probe_ward"] = {"taken_pct": True}
+    undo = _with_skeleton(rig, {"reduce": {"cap": 0.9}})
+
+    @EFF.register_action("probe_taken_mult")
+    def _probe_taken_mult(battle, caster, target, params, logs):
+        """内容侧**乘区动作**（同奥兰迪亚 `we_taken_mult_cond` 的形状）：改 ctx["mult"]。"""
+        ctx = getattr(battle, "_fire_ctx", None)
+        if isinstance(ctx, dict):
+            ctx["mult"] = 0.5          # 通道 B：事件乘区 0.5（= 减伤 50%）
+
+    try:
+        p = rig.stat(rig.player(), "dodge", 0.0)
+        t = rig.state(rig.mob(hp=900), "probe_ward", {"value": 0.30, "expire": 999999.0})
+        t.setdefault("triggers", {})["taken_calc"] = [
+            {"action": "probe_taken_mult"}]
+        bt = rig.battle([p], [t])
+        rig.LAND.deal_damage(bt, p, t, 100, [], dmg_kind="phys")
+    finally:
+        EFF.ACTION_HANDLERS.pop("probe_taken_mult", None)
+        undo()
+        tbl.pop("probe_ward", None)
+
+
 @driver("battle.actions.no_target")
 def _d_no_target(rig):
     """引擎发射点：`actions` 里「没有可攻击目标」那一支（**返回值式**：`return [...]`）。

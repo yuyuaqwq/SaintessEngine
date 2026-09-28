@@ -67,7 +67,42 @@ actor["effects"] = {
   声明这一族请用 `taken_pct` + `value`（新形状），不要指望 `v` 复活。
 
 **另一条仍然生效的「受击减伤」通道**是 `taken_calc` 事件的 `ctx["mult"]` 乘区
-（事件触发器 / 装配层那条，本批没动它）。
+（事件触发器 / 装配层那条，位置 = `landing.deal_damage` 的第 4 步 `fire("taken_calc")`）。
+
+### ★ 两条通道**互斥**（2026-09-28 · 鱼鱼拍板 · 机制可预测）
+
+承伤减免有**两条并行通道**，各自都成立时**会相乘**：
+
+| | 通道 A（**声明**） | 通道 B（**事件**） |
+|---|---|---|
+| 触发面 | `landing.deal_damage` 第 8 步之后的 `state_reduce_of(target)` | `landing.deal_damage` 第 4 步 `fire("taken_calc")` 读回 `ctx["mult"]` |
+| 口径 | 容器里**声明了 `taken_pct`** 的条目 `value` 累加 | 内容侧乘区动作**原地改** `_fire_ctx["mult"]`（例：`passive_taken_reduce` / `we_taken_mult_cond`） |
+| 封顶 | 内容侧骨架表 `formulas.reduce_cap()` | **无引擎封顶**（见下） |
+
+**口径（唯一真源 = 通道 A 优先）**：
+
+- 同一 actor 身上**同时**有 `taken_pct` 声明的条目（且**封顶后生效比例 > 0**）与一个
+  `≠1.0` 的 `taken_calc` 乘区 ⇒ **只走通道 A**；通道 B 的 `mult` 被**跳过**，
+  并发一条 `battle.landing.taken_mult_skipped`（说清走了哪条、弃了哪条，各带百分比）。
+- 判定函数 = `landing._skip_event_mult`，判据 = `state_reduce_of(target) > 0.0`，
+  与读点**读的是同一个 getter**（不会分叉）。
+- 「通道 A 生效比例 = 0」（封顶未装配 ⇒ 0.0，或声明了但累加 ≤0）**不算通道 A 参与** ⇒
+  放通道 B 过。理由：此时通道 A **实际不减伤**，若仍跳过通道 B 就会出现
+  「两条都声明了、却一次都不减」的死局。
+- ⚠️ **只弃 `mult`，不弃 `fire`**：`taken_calc` 事件**照常广播**。内容侧挂在这个事件上
+  读 `_fire_ctx["dmg"]` 的动作（例：奥兰迪亚 `passive_overflow_shield`「溢出承伤转盾」）
+  不受影响。判据钉的是「**减免这一个数只被算一次**」，不是「不许任何人监听这个事件」。
+
+**`formulas.reduce_cap()` 封的是哪一支**（2026-09-28 复核确认）：
+
+- 封顶读口有两个、同一个 getter：① **写** `actions._do_buff` 落 `taken_pct` 族那一族时
+  `min(rp, reduce_cap())`（读写对称）；② **读** `state_reduce_of` 返回前
+  `min(total, reduce_cap())`。
+- ⇒ **它只封通道 A（声明通道）的比例**。**通道 B 的 `mult` 不受此帽约束** ——
+  引擎不替内容侧的「本次修正」设上限（乘区连 0.0 = 完全免伤都是合法值）。
+- 未装配（骨架表没声明 `reduce.cap`）⇒ `0.0` ⇒ **通道 A 折到 0 = 完全不减伤**，
+  即「不配 = 不存在」；此时若内容侧还声明了 `taken_pct` 条目，**只有通道 B 会减伤**
+  （上面的「比例 = 0 不算参与」那一档）。
 
 ## 层数数值口径：int 资源 vs float 刻度
 

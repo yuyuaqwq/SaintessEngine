@@ -94,14 +94,14 @@ Battle(btype="monster", sides=None, hostile_map=None, target_picker=None,
 
 | 参数 | 语义 | 包内消费者 |
 |---|---|---|
-| `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:256`） |
+| `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:269`） |
 | `sides` | `{阵营名: [actor]}`，**唯一入口** | 全包（`ext_combat`） |
 | `hostile_map` | `{side: [敌对 side]}` | `actors.hostile_sides`（`actors.py:202-204`）；缺省 = 除自己外全部阵营 |
 | `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:461-465`） |
 | `on_event` | `callable(battle, event, ctx, logs)`，事件总线尾部观察者 | `effect_triggers.fire`（`effect_triggers.py:117-122`） |
 | `action_override` | `callable(battle, action, actor, skill_name, target) -> (logs, cast)`；接管非内置行动 | `Battle.act`（`battle.py:552-560`） |
 | `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:406-415`） |
-| `redirect_hook` | `callable(battle, victim, guard, amount, dmg_kind) -> bool`；承伤转移是否真由保护者承受 | `landing.deal_damage`（`landing.py:69`）；治疗侧同款见 `heal_redirect_hook`（`landing.py:507`，非构造参数） |
+| `redirect_hook` | `callable(battle, victim, guard, amount, dmg_kind) -> bool`；承伤转移是否真由保护者承受 | `landing.deal_damage`（`landing.py:69`）；治疗侧同款见 `heal_redirect_hook`（`landing.py:555`，非构造参数） |
 | `seed_ct` | `True` = 播种初始 ct；`from_state` 传 `False` | `battle.py:124-127` |
 | `text` | 文案表（鸭子类型：`render_or` / `__contains__`） | `Battle.__init__`（`battle.py:93`，**三级取表**：显式 `text=` > 内容侧 hook `text_table_fn` > 未注入）→ 表现层 `cue` 渲染；不落盘，恢复方重新注入 |
 
@@ -177,7 +177,7 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 | `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:134/117/151` | 仅包内 |
 | `_do_defend` / `_do_flee` | `battle.py:649/654` | 仅包内 |
 | `_ensure_battle_started` | `battle.py:668` | 仅包内 |
-| `_on_actor_dead(actor, logs=None)` | `battle.py:684` | `landing._apply_damage` 调（`landing.py:417`） |
+| `_on_actor_dead(actor, logs=None)` | `battle.py:684` | `landing._apply_damage` 调（`landing.py:411`） |
 | `_check_side_end` | `battle.py:710` | 仅包内 |
 
 ### 序列化
@@ -229,12 +229,13 @@ Battle.from_state(st, *, text=None)   # battle.py:733（classmethod）→ serial
 deal_damage(battle, source, target, amount, logs, dmg_kind="", defend_reduce=None, element="") -> int
 # landing.py:30
 heal_actor(battle, target, amount, logs, source=None, label="") -> int
-# landing.py:496
+# landing.py:544
 ```
 
-两个都是**落地唯一收口**。内部子函数（无外部引用）：`_lv_pressure`（`:241`）、
-`_roll_dodge`（`:274`）、`_apply_taken_reductions`（`:286`）、`_apply_death_guard`（`:325`）、
-`_apply_damage`（`:403`）、`_apply_heal_mods`（`:548`）。
+两个都是**落地唯一收口**。内部子函数（无外部引用）：`_lv_pressure`（`:254`）、
+`_roll_dodge`（`:287`）、`_apply_taken_reductions`（`:313`）、`_apply_death_guard`（`:352`）、
+`_skip_event_mult`（`:388`，承伤减免**两条通道互斥**判定）、`state_reduce_of`（`:423`）、
+`_apply_damage`（`:451`）、`_apply_heal_mods`（`:596`）。
 
 ### `schedule.py`
 
