@@ -156,16 +156,26 @@ class CommandBase:
     @classmethod
     def _static_handlers(cls) -> list:
         """静态兜底表（懒构建 + 缓存）。"""
-        if cls._STATIC_HANDLERS is None:
-            cls._STATIC_HANDLERS = cls._build_static_handlers()
-        return cls._STATIC_HANDLERS
+        # ★ 2026-09-28 审计 L287-1 / L288-1：缓存**按类隔离**。
+        #   原写法读 `cls._STATIC_HANDLERS`（属性查找会沿 MRO 落到父类那份）：
+        #   父类先建过缓存后，子类拿到**父类**的表 —— 复现 Child 拿到 ['p_h']（期望 ['c_h']）。
+        #   判据 = 「这个键是不是 cls 自己的」：命中 cls.__dict__ 才算已缓存；
+        #   否则（含 None 占位、继承而来的父类缓存）一律按本类重建，
+        #   写也只写 cls.__dict__，绝不污染父类那份。
+        cache = cls.__dict__.get("_STATIC_HANDLERS")
+        if cache is None:
+            cache = cls._build_static_handlers()
+            cls._STATIC_HANDLERS = cache
+        return cache
 
     @classmethod
     def command_patterns(cls) -> PatternSet:
         """「怎样算一条指令」的正则集合（懒编译 + 缓存）。"""
-        if cls._COMMAND_PATTERNS is None:
-            cls._COMMAND_PATTERNS = PatternSet(cls._build_command_regex_strings)
-        return cls._COMMAND_PATTERNS
+        cache = cls.__dict__.get("_COMMAND_PATTERNS")
+        if cache is None:
+            cache = PatternSet(cls._build_command_regex_strings)
+            cls._COMMAND_PATTERNS = cache
+        return cache
 
     @staticmethod
     def matches_command_text(text: str, patterns: Sequence) -> bool:
