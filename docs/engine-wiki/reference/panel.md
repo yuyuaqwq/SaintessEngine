@@ -94,7 +94,6 @@ for L in sorted(layers, key=(order, 声明序)):
 | `.resolve` | `(base: dict, ctx=None) -> ResolvedPanel` | 求值。`ResolvedPanel` 是 `Mapping[str, number]` ⇒ 可直接当 dict 用 |
 | `ResolvedPanel.trace` | `(key) -> list[TraceRow]` | 逐层中间量（打印数据源）；`TraceRow = {layer, src, group, mode, in, out, delta}` |
 | `ResolvedPanel.shares` | `(key) -> dict[group, float]` | 按 `group` 汇总的来源占比（只算 `add` 层） |
-| `cached_stack` | `(stack_id, decl) -> PanelStack` | 按 `(stack_id, version)` 缓存校验结果 |
 
 **`ctx` 结构**：`{"refs": {域: {键: 值}}, "flags": {...}, "actor": …, "battle": …}`。
 `refs` 是**不透明**的（内容侧装配点塞，形状层只按路径取）。

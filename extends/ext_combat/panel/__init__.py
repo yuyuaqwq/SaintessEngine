@@ -38,9 +38,6 @@ __all__ = ["PanelStack", "ResolvedPanel", "PanelDeclError", "TraceRow"]
 
 _MODES = ("add", "mul", "set")
 _BASE_MODES = ("actor", "value")
-_MAX_CACHE = 512
-#: `(stack_id, version) -> PanelStack` 进程内缓存（一次校验，反复用）
-_STACK_CACHE: dict = {}
 
 
 class PanelDeclError(ValueError):
@@ -312,15 +309,3 @@ class PanelStack:
               f"层 {L['id']!r} 的 values 里没有键 {k!r}（有的是 {sorted(v)[:8]}…）")
         return v[k]
 
-
-def cached_stack(stack_id: str, decl: dict) -> PanelStack:
-    """按 `(stack_id, version)` 缓存校验结果（对齐 `expr` 的编译缓存口径）。"""
-    key = (stack_id, decl.get("version"))
-    hit = _STACK_CACHE.get(key)
-    if hit is not None:
-        return hit
-    s = PanelStack.from_decl(decl)
-    if len(_STACK_CACHE) >= _MAX_CACHE:
-        _STACK_CACHE.clear()
-    _STACK_CACHE[key] = s
-    return s
