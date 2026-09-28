@@ -207,6 +207,35 @@ check("★ strict=False ⇒ 不崩：一行可读坏数据 + 问题落 problems�
       _lc2 == [MISS_LINE] and any("x.a" in p for p in _miss_diag.problems),
       "%s / %s" % (_lc2, _miss_diag.problems))
 
+# ---- ★ 审计 L2054：一条 cue 要么整条渲染出来，要么一行都不留 ----
+# 原先逐行 append：第二个订阅者的 key 没命中时抛错，第一个订阅者已写进 logs 的
+# 真行留了下来（实测 ['第一行:7']）⇒ 半条真行 + 一条坏数据行。
+_half = CueBus(normalize_subs({
+    "x.a": [{"kind": "text", "key": "x.a"},
+            {"kind": "text", "key": "x.missing"}]}),
+    table=_Table({"x.a": "第一行:{n}"}))
+_hl: list = []
+check("★ 中途抛错 ⇒ logs 一行都不留（不是半渲染）",
+      _raises(lambda: _half.emit(_hl, "x.a", {"n": 7})) is not None and _hl == [], str(_hl))
+
+_half_tol = CueBus(normalize_subs({
+    "x.a": [{"kind": "text", "key": "x.a"},
+            {"kind": "text", "key": "x.missing"}]}),
+    table=_Table({"x.a": "第一行:{n}"}), strict=False)
+_ht: list = []
+_half_tol.emit(_ht, "x.a", {"n": 7})
+check("★ strict=False 下的半渲染 = 真行 + 一条坏数据行（宽松模式本就出坏数据行）",
+      _ht == ["第一行:7", MISS_LINE], str(_ht))
+
+_ok2 = CueBus(normalize_subs({
+    "x.a": [{"kind": "text", "key": "x.a"},
+            {"kind": "text", "key": "x.b"}]}),
+    table=_Table({"x.a": "甲:{n}", "x.b": "乙:{n}"}))
+_ol: list = []
+_ok2.emit(_ol, "x.a", {"n": 7})
+check("全部命中 ⇒ 行序 = 订阅者声明序（先渲染后一次 append 不改序）",
+      _ol == ["甲:7", "乙:7"], str(_ol))
+
 # ============================================================
 # 4. 装载口（config hook `cue_subs_fn`）
 # ============================================================

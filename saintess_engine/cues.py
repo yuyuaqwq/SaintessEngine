@@ -147,9 +147,15 @@ class CueBus:
             logs.append("%s 无订阅者（装配缺口）" % name)
             return
         slots = dict(payload or {})
+        # ★ 先全部渲染、再一次 append。原先逐行 append：中途某个订阅者抛
+        #   `CueContractError` 时，前面订阅者已写进 `logs` 的**真行留了下来**
+        #   （实测 `['第一行:7']` 残留在抛错后的 logs 里）⇒ 一次 cue 半渲染 =
+        #   半条真行 + 一条坏数据行，与本模块头注「同步就地、无合并」和
+        #   `MISS_LINE` 的「不静默丢行」自相矛盾。
+        out: list = []
         for sub in subs:
-            for line in self._render(sub, str(name), slots):
-                logs.append(line)
+            out.extend(self._render(sub, str(name), slots))
+        logs.extend(out)
 
     def _render(self, sub: Mapping, name: str, slots: dict) -> list:
         if str(sub.get("kind")) == "text":
