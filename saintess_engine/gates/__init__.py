@@ -5,8 +5,8 @@
 
 ## 为什么建
 
-旧项目**没有**这个能力：装备 687 条靠人肉 + 工作区十几个临时 `_audit_*.py` 脚本检查，
-所以会出现「同装等一件强三倍」这种事。本模块给出一组**纯函数校验器**，
+旧项目**没有**这个能力：上千条数值全靠人肉 + 工作区十几个临时脚本检查，
+所以会出现「同档的一件强三倍」这种事。本模块给出一组**纯函数校验器**，
 让内容侧（或 CI）能一次跑完、拿到全部违规、给退出码。
 
 ## 通用约定
@@ -86,7 +86,9 @@ def _is_num(v) -> bool:
 def within_budget(value, *, budget, label) -> list[str]:
     """`value ≤ budget` 通过；**严格大于**才报红（恰等于预算是允许的）。
 
-    落地判据：`PE(装等 L, 品阶 Q) = PE_base(L) × (1 + 0.08 × Q)`，单件 PE 不得超过它。
+    落地判据（由**调用方**给的 PE 公式算出，本函数只比大小）：单件 PE 不得超过同组上限。
+    ★ 引擎不认识任何游戏词：分组口径、成长阶段、条目类别一律由调用方给（见「有意不做」），
+      改内容侧口径时这里不必跟着改。
     """
     lb = _label(label)
     b = _num(budget, f"{lb}: budget", nonneg=True)
@@ -101,12 +103,12 @@ def within_budget(value, *, budget, label) -> list[str]:
 # 校验器 2 · 同组极差
 # ════════════════════════════════════════════════════════════
 def spread_within(rows: Sequence[tuple[str, float]], *, tol, label) -> list[str]:
-    """`(max − min) / max ≤ tol`（装备 5% / 技能 15%）。
+    """`(max − min) / max ≤ tol`（容差由调用方按内容侧口径给）。
 
     - `rows` 长度 ≥ 1；**0 条 → 抛 ValueError**（空组不能算通过，否则「没填 = 配平」）。
     - 重复 id → 抛 ValueError（点名重复 id）。
     - `max ≤ 0`（全负/全零）时改用 `(max − min) / abs(min)` —— 否则除零。
-    - **分组由调用方给**（同装等 + 同品阶 + 同槽位 / 同职业 + 同等级段），引擎不猜分组键。
+    - **分组由调用方给**（内容侧自己怎么分组都行），引擎不猜分组键、不认识任何游戏词。
     """
     lb = _label(label)
     t = _num(tol, f"{lb}: tol", nonneg=True)
@@ -127,7 +129,8 @@ def spread_within(rows: Sequence[tuple[str, float]], *, tol, label) -> list[str]
     if denom == 0:
         return []                                   # 全零 ⇒ 极差 0 ⇒ 必通过
     r = (hi - lo) / denom
-    # 越界条目：取极差贡献最大的若干条（这里给 max/min 两侧 + 明显偏离均值的）
+    # 越界条目：max/min 两侧 + 既不等于 max 也不等于 min 的那些，**按输入序**取前 6 个
+    # （只影响点名顺序，不影响判红本身；真要按偏离度排序是内容侧读文案时的事）
     bad = [i for i, v in vals if abs(v - hi) > 1e-12 and abs(v - lo) > 1e-12]
     ids = ", ".join([hi_id, lo_id] + [i for i in bad][:6])
     if r <= t:
@@ -197,9 +200,10 @@ def monotone_by(rows: Sequence[tuple[int, Mapping[str, float]]], *, keys,
 def within_cap(value, *, cap, label) -> list[str]:
     """`cap is None` ⇒ **无上限，永远通过**；给了数值 ⇒ `value ≤ cap`。
 
-    ★ 字段级坑（改动声明时必读）：`crit_dmg` 的上限 **1.5** 是**加算量**（上限 3.0 倍），不是比例；
-    `haste` 是 `None`（自然递减，无上限）；`pene_*` / `lifesteal` / `heal_power` / `elem_res` / `thorns`
-    是「直接百分比」而非 rating。**cap 表的值必须逐条照抄，不许把 `None` 写成 0。**
+    ★ 字段级坑（改动声明时必读）：有些属性的 cap 是**加算量**而不是比例、有些属性根本没有
+    上限（自然递减）——`None` 与 `0` 语义相反，**cap 表的值必须逐条照抄，不许把 `None` 写成 0。**
+    ★ 哪些属性是哪一种，属**内容侧**词表，引擎不认也不该认（见「有意不做」）；
+      本函数只按调用方给的数字比大小。
     """
     lb = _label(label)
     v = _num(value, f"{lb}: value", nonneg=True)
@@ -215,7 +219,7 @@ def within_cap(value, *, cap, label) -> list[str]:
 # 校验器 5 · 占比上限
 # ════════════════════════════════════════════════════════════
 def share_within(parts: Sequence[tuple[str, float]], *, total, cap, label) -> list[str]:
-    """逐部件 `part / total ≤ cap`（主属性 ≤60% / 词条合计 ≤40% / 单一来源 ≤45%）。
+    """逐部件 `part / total ≤ cap`（占比上限由调用方给）。
 
     `total ≤ 0` → 抛 ValueError（不能除以 0 也算通过）。
     """
