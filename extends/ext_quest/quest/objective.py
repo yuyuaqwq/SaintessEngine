@@ -226,6 +226,11 @@ class Objectives:
         * 修饰键归**离它最近的在它之前**的那个 part；出现在任何 part 之前的前导修饰键
           归**下一个** part（不丢）。
         * 未注册且非修饰键的键**不进 parts**（`lines` 走 `unknown` 策略）。
+        * ★ 前导修饰键**后面没有 part** 时报错（台账 L603），不静默丢掉：
+          `{"数量": 3}` 只有修饰键、没有目标类型 → 旧实现返回 `[]`，
+          但文档承诺的是「归下一个 part（不丢）」——没有下一个就说得没处可归。
+          它会把整条目标变成零行（`lines` 给空、`satisfied` 为空串、`hits` 无事发生），
+          而调用方一话都不知道。**报错更安全**：读一份写错的目标应在被读时就现形。
         """
         if not isinstance(objective, Mapping):
             raise TypeError("目标必须是 mapping，收到 " + type(objective).__name__)
@@ -239,6 +244,12 @@ class Objectives:
                     rows[-1][2][key] = value
                 else:
                     pending[key] = value
+        if pending:
+            raise ValueError(
+                "修饰键 " + ", ".join(sorted(pending)) + " 在目标里没有归属的目标类型：它们在 "
+            + ", ".join(repr(k) for k in objective) + " 里排在所有目标类型之前，"
+            "而后面没有任何 part 可归 → 修饰键无主 ⋯ 若静默丢掉，整条目标会变成零行。"
+            "（改目标 mapping 的键序：修饰键应跟在它要修饰的那个目标类型之后）")
         return [(type_key, value, self.need_of(objective, type_key), dict(mods))
                 for type_key, value, mods in rows]
 
