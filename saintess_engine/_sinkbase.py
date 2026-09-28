@@ -53,6 +53,19 @@ class FileSinkBase:
         self._fh = None
         self._lock = threading.RLock()
 
+    def __repr__(self) -> str:
+        """★ 2026-09-28（审计 L2734-2）：出口报错误里带**路径**，不只给内存地址。
+
+        `sink_error` 的文案是 `f"... {sink!r} ..."`；此前 `log/*` / `tlog/*` / 本文件
+        **全仓零 `__repr__` / `__str__` 定义** ⇒ 排障时 stderr 只给
+        `<...FileSink object at 0x...>`，**哪个文件写失败要先猜**。
+        路径就在 `self.path`（子类 `__init__` 落点），取不到就退回默认 repr（诊断本身不抛）。
+        """
+        path = getattr(self, "path", None)
+        if not path:
+            return object.__repr__(self)
+        return "%s(path=%s)" % (type(self).__name__, path)
+
     # ------------------------------------------------------------ 内部
     def _open_mode(self) -> str:
         return "a"
