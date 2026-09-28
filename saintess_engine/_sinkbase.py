@@ -86,6 +86,14 @@ class FileSinkBase:
                 self._fh.flush()
 
     def close(self) -> None:
+        """关掉当前句柄。**不是终态关窗** —— `self._fh` **不置 None**（审计 L2739）。
+
+        `close()` 之后 `self._fh.closed is True`；紧接着任何一次 `write()` 会走
+        `_open()` 的 `or self._fh.closed` 分支**自动重开**同一个文件（append 续写）。
+
+        判据：这是标准库 handler 的同一语义（关闭后仍可复用），**不是 bug**；
+        写在这里是为了让下一个人读 `close()` 时不会把它当「此后再写会抛」。
+        """
         with self._lock:
             if self._fh is not None and not self._fh.closed:
                 self._fh.flush()
