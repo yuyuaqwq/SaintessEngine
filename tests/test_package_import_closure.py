@@ -837,7 +837,18 @@ def _dedupe(pkgs: list) -> list:
 # ============================================================
 
 def load_rules(sources: dict) -> "list | None":
-    rules = [dict(r, hits=[], source="builtin") for r in DYNAMIC_EXPORT_RULES]
+    # ★ 审计 L4968：内置白名单登的是**某一个包**的模块名。本门禁却要扫**任意**包
+    #   （`IMPGATE_PKG_ROOT` / 多包枚举），换包时那些条目必然「模块不存在」。
+    #   原实现对每条不存在的 `module` 直接 ok=False ⇒ 整个装载失败 ⇒ **一条包内 import
+    #   都没扫**就报红（实测 aetheran-package：3 条 ❌ + 0 扫描）。真实缺口被完全遮蔽。
+    #   修法：按 `module` 存在性**过滤**，锚点自检只对**命中的**条目做。
+    #   这不是放宽 —— 命中的条目锚点对不上照样红（下面的 ok 判据一字未动）。
+    builtin = [r for r in DYNAMIC_EXPORT_RULES if r["module"] in sources]
+    skipped = [r["module"] for r in DYNAMIC_EXPORT_RULES if r["module"] not in sources]
+    if skipped:
+        print("[note] 动态白名单跳过 %d 条（本次扫描的包里没有该模块）：%s"
+              % (len(skipped), "、".join(skipped)))
+    rules = [dict(r, hits=[], source="builtin") for r in builtin]
     raw = os.getenv("IMPGATE_DYNAMIC_RULES")
     if raw:
         try:
@@ -866,8 +877,9 @@ def load_rules(sources: dict) -> "list | None":
             ok = False
             continue
         if r.get("from_mod") and r["from_mod"] not in sources:
-            print("❌ 动态白名单条目 %s 的 from_mod 不存在：%s" % (mod, r["from_mod"]))
-            ok = False
+            # from_mod 只用于「转发对象的导出面」；它不在本包时该条目本就无从核对
+            # （evidence 仍按 mod 取，仍受下一条判据保护）⇒ 记名后跳过这一项检查。
+            print("[note] 动态白名单条目 %s 的 from_mod 不在本次扫描面：%s" % (mod, r["from_mod"]))
         if r["evidence"] not in sources[mod]:
             print("❌ 动态白名单条目 %s 的原文锚点对不上（源码里找不到）：%r" % (mod, r["evidence"]))
             ok = False
