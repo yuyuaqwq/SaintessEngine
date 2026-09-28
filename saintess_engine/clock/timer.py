@@ -81,7 +81,6 @@ def _duration_of(value: Any, label: str) -> int:
 
 
 class LazyTimers(WarnMixin):
-    _warn_logger = _LOG                    # 未注入 logger 时的兜底（见 log.warn）
     """主体维度的懒计时器。
 
     参数
@@ -94,6 +93,8 @@ class LazyTimers(WarnMixin):
     default_duration_sec: 未显式给时长、且类型也没注册时长时的兜底（默认 60）。
     logger:               传入 logger；None → 用门面 logger（`<prefix>.clock`）。
     """
+    _warn_logger = _LOG                    # 未注入 logger 时的兜底（见 log.warn）
+                                        # 必须在 docstring 之**后**：放在类首行会把 docstring 挤成一句哑字面量（`LazyTimers.__doc__ is None`）。
 
     def __init__(self, *, load: Callable[[str], dict],
                  save: Callable[[str, dict], None],

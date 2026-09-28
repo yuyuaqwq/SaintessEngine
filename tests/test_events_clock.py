@@ -153,6 +153,16 @@ check("str 与 list 混排保持整句",
 # ================================================================ LazyTimers
 print("== 5. LazyTimers：懒过期与回调 ==")
 
+# 类首行必须是 docstring：任何一条赋值抬到第一行都会把它挤成一句哑字面量。
+# 改前实测 `LazyTimers.__doc__ is None`（整段 15 行类文档从未挂在任何地方，
+# help() 与 IDE 都读不到、零报错）；与 `ext_life.timers.Timers` 是同一形态的缺陷。
+_lt_doc = LazyTimers.__doc__
+check("★ 类文档真的存在（非 None）", bool(_lt_doc) and len(_lt_doc) > 100, repr(_lt_doc))
+check("★ 类文档首行就是类自述（不是兜底赋值之后的碎片）",
+      bool(_lt_doc) and _lt_doc.lstrip().startswith("主体维度的懒计时器"),
+      repr(_lt_doc[:40]) if _lt_doc else "None")
+check("★ _warn_logger 兜底仍在（移位不得带走它）", LazyTimers._warn_logger is not None)
+
 
 class FakeClock:
     def __init__(self, t=1000):
