@@ -100,6 +100,10 @@ def configure(*, level=None, fmt: Optional[str] = None, sinks=(),
     name = _state["prefix"]
     logger = logging.getLogger(name)
 
+    # ★ 入口一次物化：`if sinks:` 对生成器恒真，而下面的 `for s in sinks` 会把它吃干，
+    # 随后 SinkHandler 拿到 0 个 sink —— 且因为已判过真，不进 else、不报错，
+    # 日志静默丢失（实测 buf 为空）。类型标注是 Sequence，但这是唯一公开装配口、没有门禁拦。
+    sinks = list(sinks)
     if sinks:
         if fmt is not None:
             for s in sinks:

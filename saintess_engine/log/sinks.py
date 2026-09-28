@@ -141,8 +141,14 @@ class FileSink(FileSinkBase):
         self.path = os.fspath(path)
         self.fmt = fmt
         self.encoding = encoding
+        # 回落/夹紧都只认 None：backups=0 是非法值（静默改写成 1 会让「不留历史」表达不了），
+        # max_bytes=0 会让每次 emit 都轮转、主文件恒空 —— 两者都改为直接报错。
         self.max_bytes = int(max_bytes)
-        self.backups = max(1, int(backups))
+        if self.max_bytes < 0:
+            raise ValueError(f"max_bytes 须为非负整数，收到 {max_bytes!r}")
+        self.backups = 3 if backups is None else int(backups)
+        if self.backups < 1:
+            raise ValueError(f"backups 须为正整数，收到 {backups!r}")
         if rotate is None:
             self.rotate_mode: Optional[str] = None
         elif isinstance(rotate, bool):
@@ -200,7 +206,11 @@ class MemorySink:
 
     def __init__(self, limit: Optional[int] = None) -> None:
         self.records: list[logging.LogRecord] = []
-        self.limit = int(limit) if limit else None
+        # 回落只认 None：limit=0 的语义是「一条不留」，`if limit else None` 会把 0 吞成
+        # 「无上限」（实测写 3 条全留）—— falsy 是合法值，不是「没给」。
+        self.limit = None if limit is None else int(limit)
+        if self.limit is not None and self.limit < 0:
+            raise ValueError(f"limit 须为非负整数，收到 {limit!r}")
         self._lock = threading.RLock()
 
     def emit(self, record: logging.LogRecord) -> None:

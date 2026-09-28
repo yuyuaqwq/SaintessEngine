@@ -123,7 +123,10 @@ class MemorySink:
 
     def __init__(self, limit: Optional[int] = None) -> None:
         self.records: list = []
-        self.limit = int(limit) if limit else None
+        # 与 log/sinks.py 同一口径：回落只认 None（limit=0 = 一条不留，不是「无上限」）。
+        self.limit = None if limit is None else int(limit)
+        if self.limit is not None and self.limit < 0:
+            raise ValueError(f"limit 须为非负整数，收到 {limit!r}")
         self._lock = threading.RLock()
 
     def write(self, records: Iterable[Record]) -> None:
