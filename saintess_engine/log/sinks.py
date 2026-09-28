@@ -84,6 +84,25 @@ def _flush_sinks(sinks: Sequence[Any]) -> None:
             sink_error(s, exc, what="日志 flush")
 
 
+def _close_sinks(sinks: Sequence[Any]) -> None:
+    """逐个关出口（协议里 `close()` **可选** ⇒ 有才调；关不掉的不牵连同批其余出口）。
+
+    ★ 审计 L1025-1：`SinkHandler.close()` 原先**只 flush、不 close**，
+      于是 `remove_sinks()` 摘掉 handler 之后 `FileSink._fh` 仍开着
+      ⇒ Windows 上 `os.remove(log)` 直接 `WinError 32`（实测已复现）。
+      能力本来就齐备（`Sink` 协议把 `close()` 列为可选 · `FileSinkBase.close`
+      就在 `_sinkbase.py`），只是**没人调它** ⇒ 对偶模块 `tlog/core.py::close()`
+      早就逐个 `s.close()`，两边双口径。此处把那份形状搬过来。
+    """
+    for s in sinks:
+        try:
+            fn = getattr(s, "close", None)
+            if callable(fn):
+                fn()
+        except Exception as exc:                                  # noqa: BLE001
+            sink_error(s, exc, what="日志 close")
+
+
 # ---------------------------------------------------------------- 出口实现
 class StreamSink:
     """写到文本流（默认 `sys.stderr` —— 与标准库 lastResort 去向一致）。
@@ -276,7 +295,12 @@ class SinkHandler(logging.Handler):
         _flush_sinks(self._sinks)
 
     def close(self) -> None:
+        # ★ flush 之后**逐个关出口**（审计 L1025-1）—— 关要放在 finally 之前：
+        #   close 抛了也要保证 flush 走过，flush 抛了也仍要把 close 走到（顺序不吞）。
         try:
             _flush_sinks(self._sinks)
         finally:
-            super().close()
+            try:
+                _close_sinks(self._sinks)
+            finally:
+                super().close()

@@ -284,6 +284,49 @@ def t8_takes_over_engine_logs():
           list(logging.getLogger("saintess_engine").handlers) == snap == [])
 
 
+# ------------------------------------------------- 9 摘出口时**真的关掉文件句柄**
+def t9_remove_sinks_closes_file_handles():
+    """审计 L1025-1：`remove_sinks()` 原先只 flush 不 close ⇒ 文件句柄留着不放。
+
+    旧门禁只断言「摘掉出口后不再进 sink」，**没断言句柄关闭** ——
+    实测旧码 `FileSink._fh.closed` 摘前摘后都是 False，Windows 上直接
+    `os.remove(log)` → `WinError 32`。本条把「关」钉成判据。
+    """
+    print("\n[9] 摘掉出口时逐个 close（文件句柄真的释放）")
+    import os                                                       # noqa: PLC0415
+    import tempfile                                                 # noqa: PLC0415
+    d = tempfile.mkdtemp(prefix="test_log_close")
+    path = os.path.join(d, "run.log")
+    fs = L.FileSink(path)
+    L.configure(prefix="afix3_close", level="WARNING", sinks=[fs], propagate=False)
+    logging.getLogger("afix3_close").warning("hello")
+    check("写入后句柄开着", not fs._fh.closed)
+    n = L.remove_sinks(prefix="afix3_close")
+    check("★ remove_sinks 摘掉 1 个", n == 1, f"got {n}")
+    check("★ 摘掉后 FileSink 的句柄已关闭（原缺陷：仍是 False）", fs._fh.closed)
+    gone = None
+    try:
+        os.remove(path)                                           # 旧码在此 WinError 32
+        gone = True
+    except OSError as exc:
+        gone = False
+        print("  os.remove 失败：", exc)
+    check("★ 日志文件删得掉（原缺陷：WinError 32）", gone)
+    # 关一个没有 close() 的出口不该牵连同批其余出口（分发纪律 1）
+    class _NoClose:
+        def emit(self, record): pass
+    class _BadClose:
+        def emit(self, record): pass
+        def close(self): raise RuntimeError("boom")
+    good = L.MemorySink()
+    from saintess_engine.log.sinks import SinkHandler                # noqa: PLC0415
+    h = SinkHandler([_BadClose(), good])
+    h.emit(_rec("x"))
+    h.close()                                                    # 不得因一个坏出口而抛出
+    check("★ 一个出口 close 抛错不牵连同批其余出口", len(good.records) == 1)
+    logging.getLogger("afix3_close").handlers.clear()
+
+
 def main():
     print("== 日志门面门禁：可拔插契约 + sink + 上下文 + 引擎侧收敛 ==")
     t1_unconfigured_is_thin()
@@ -294,6 +337,7 @@ def main():
     t6_dispatch_discipline()
     t7_engine_uses_facade()
     t8_takes_over_engine_logs()
+    t9_remove_sinks_closes_file_handles()
     print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
     return 1 if failed else 0
 
