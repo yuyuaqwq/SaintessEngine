@@ -164,6 +164,11 @@ _UNARY = {"-": 3}  # 一元负号优先级最高
 
 #: 编译缓存：表达式串 → 操作数栈。串来自数据表（技能/装备/食物公式），取值集合有限
 #: 且稳定；预编译产物是**纯数据**（eval_expr 只读遍历，不改写）⇒ 同串复用同一份。
+#:
+#: ★ 2026-09-29（审计 L1281 #3）：缓存**按变量表分桶** —— 键 = `(变量表标识, 表达式串)`。
+#:   变量表由内容侧声明且**可在运行期换**（`config.mount(expr_vars_fn=...)`，热重载 / 多款游戏
+#:   共进程都会换）。原键只有串：换表后**旧表的编译产物仍被复用**，而新的编译期校验
+#:   （`_check_names`）根本不会跑 ⇒ 表 B 装好时，表 A 那串表达式带着"已校验"的身份通过。
 _COMPILE_CACHE: dict = {}
 #: 缓存上界：防内容侧动态拼串把内存顶爆（超界整体清空，不做 LRU 记账）。
 _COMPILE_CACHE_MAX = 8192
@@ -182,6 +187,16 @@ def compile_expr(expr: str):
       ("op", str)             二元操作符 + - * /
       ("neg",)                一元负号（作用于栈顶）
     预编译一次，战斗时 eval_expr 反复求值（无字符串解析）；同串命中 _COMPILE_CACHE，不重复解析。
+
+    ★ 2026-09-29（审计 L1281 #3）**编译期按变量名校验**：`atk*1.2` 里 `atkk` 拼错时
+      原先**不抛**，`eval_expr` 走 `v.get(name, 0.0) or 0.0` ⇒ 该变量静默取 0 ⇒ 整条公式
+      算出一个"看起来正常"的错数（`atk*1.2` → 0.0），无报错、无诊断、无日志。
+      现在：名字不在**当前生效的变量表**（`variable_names()`，内容侧声明）里 ⇒ `compile_expr`
+      抛 `ExprError`，**装配期现形**。口径与同文件 `_validate_source`（L1282 载荷键校验）
+      一致：写错的声明/写错的公式不许无声无息。
+      注：取值阶段的「`from="stat"` 但 `key` 在属性表里拼错」**仍读成 0** —— 属性表键集由内容侧
+      给（今天 10 条明天 12 条），装配期拿它当白名单会把"拼错"与"暂时没这一条"混成一类；
+      拼错的**声明本身**已由 `_validate_source` 当场现形，这里只管公式里的**变量名**。
     """
     if expr is None:
         return None
@@ -189,7 +204,9 @@ def compile_expr(expr: str):
     if not expr:
         return None
 
-    cached = _COMPILE_CACHE.get(expr)
+    names = set(declared_vars())
+    ck = (frozenset(names), expr)
+    cached = _COMPILE_CACHE.get(ck)
     if cached is not None:
         return cached
 
@@ -282,9 +299,16 @@ def compile_expr(expr: str):
         if ops[-1][0] == "lparen":
             raise ExprError(f"括号不匹配 '{expr}'")
         out.append(ops.pop())
+    unknown = sorted({t[1] for t in out if t[0] == "var"} - names)
+    if unknown:
+        raise ExprError(
+            "表达式 %r 引用了变量表里没有的名字 %s —— 拼错还是漏声明？"
+            "（当前生效的变量表 = %d 个：%s）"
+            % (expr, "、".join(repr(u) for u in unknown), len(names),
+               "、".join(sorted(names)) or "（空）"))
     if len(_COMPILE_CACHE) >= _COMPILE_CACHE_MAX:
         _COMPILE_CACHE.clear()
-    _COMPILE_CACHE[expr] = out
+    _COMPILE_CACHE[ck] = out
     return out
 
 
