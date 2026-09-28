@@ -374,10 +374,22 @@ class LootTable:
         return c
 
     def fallback(self, pool, ctx, key: str = "fallback") -> list:
-        """池抽空时的兜底钩子（`ctx.fallback_roll(pool, fallback声明, ctx)`）。"""
+        """池抽空时的兜底钩子（`ctx.fallback_roll(pool, fallback声明, ctx)`）。
+
+        ★ 钩子抛错**按 `strict` 分流**（2026-09-29，审计 L566 的同族收口）。旧写法是
+          **无条件** `except Exception: return []` —— 它把 `roll_pool` 上一轮刚立起来的
+          `strict=True` 契约在**兜底这条支上又漏掉了**：钩子是**内容侧写的**回调
+          （`ctx.fallback_roll`），池抽空时若它抛（写错条目名 / 造档顺序不对 /
+          自己内部 KeyError），玩家看到的只是「这次没掉」—— 与 `strict=True` 要防的
+          形态**逐字同一种**，而且这条支只由 `weighted` 表池抽空走到，出错率低 ⇒ 更难被发现。
+          ⇒ `strict=True`（默认）**上抛**；`strict=False` 仍可优雅跳过，但必须是
+          **显式选择**（与 `roll_pool` 同一口径，不留「某条支偷偷宽松」的缝）。
+        """
         fb = pool.get(key)
         hook = getattr(ctx, self.fallback_attr, None)
         if fb and callable(hook):
+            if self.strict:
+                return hook(pool, fb, ctx) or []
             try:
                 return hook(pool, fb, ctx) or []
             except Exception:                                 # noqa: BLE001

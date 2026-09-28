@@ -218,6 +218,10 @@ def t4_fallback():
     print("\n[4] 兜底钩子（池抽空时）")
     pools = {"e": {"type": "weighted", "entries": [], "fallback": "mat_fb"}}
     calls = []
+    def _boom_strat(pool, ctx, table):
+        raise RuntimeError("boom")
+    t3_strict = _tbl({"boom_pool": {"type": "boom", "entries": []}},
+                     strategies={"boom": _boom_strat})      # strict 默认 True
 
     def fb(pool, decl, ctx):
         calls.append(decl)
@@ -228,8 +232,23 @@ def t4_fallback():
     check("池空 → 调 ctx.fallback_roll(pool, decl, ctx)",
           [x["item_id"] for x in t.roll("e", c)] == ["mat_fb"] and calls == ["mat_fb"])
     check("无 fallback 声明 → []", _tbl({"e2": {"type": "weighted", "entries": []}}).roll("e2", c) == [])
-    check("钩子抛错 → 吞掉返回 []",
-          t.roll("e", SimpleCtx(fallback_roll=lambda *a: (_ for _ in ()).throw(RuntimeError()))) == [])
+    # ★ 审计 L566 同族（2026-09-29，批次 1）：钩子抛错**按 strict 分流**。
+    #   旧判据「钩子抛错 → 吞掉返回 []」钉的是**无条件吞**那条支 —— 它与同轮刚立的
+    #   `strict=True` 契约（t3_roll 那组）**逐字相反**：同一个表，同一个 `strict=True`，
+    #   策略抛错上抛、兜底钩子抛错却静默空掉落。判据只**换口径**不放松：
+    #   ① 默认 strict=True → 上抛（新默认，防的正是线上那一支）；
+    #   ② **显式** strict=False 仍可优雅跳过（能力未删，意图原样保留）；
+    #   ③ 钩子**正常返回 falsy** 时仍回落 []（不是「抛错就空」）。
+    _boom = lambda *a: (_ for _ in ()).throw(RuntimeError())
+    check("★ 钩子抛错 + strict=True（默认）→ 抛出来",
+          _raises(RuntimeError, lambda: t.roll("e", SimpleCtx(fallback_roll=_boom))))
+    check("★ 钩子抛错 + 显式 strict=False → 吞掉返回 []（能力保留）",
+          _tbl(pools, strict=False).roll("e", SimpleCtx(fallback_roll=_boom)) == [])
+    check("钩子正常返回 None → 回落 []（不是抛）",
+          t.roll("e", SimpleCtx(fallback_roll=lambda *a: None)) == [])
+    check("★ 兜底支与策略支同口径：strict=True 下两者都上抛",
+          _raises(RuntimeError, lambda: t.roll("e", SimpleCtx(fallback_roll=_boom)))
+          and _raises(RuntimeError, lambda: t3_strict.roll("boom_pool")))
 
 
 # ---------------------------------------------------------------- 5 展开 / 审计

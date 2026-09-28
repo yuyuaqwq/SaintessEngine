@@ -121,7 +121,7 @@ draw_slots(pool_ids, 3, fixed=("series_mark",), no_dup=True, rng=rng)  # 固定�
 | `roll_range` | `loot/pick.py:116` | `int` / `[a,b]` / `None` → 数量 |
 | `weigh` / `total_weight` | `loot/pick.py:32` / `:37` | 权重列表 / 权重和 |
 | `LootTable` | `loot/pool.py:219` | 池 + 策略；`roll` `:306` / `expand` `:324` / `audit` `:334` / `audit_pretty` `:399` |
-| `LootTable.audit(resolvable=…)` 的判定回调 | `loot/pool.py:462` | `resolvable(ref, pool)` → `True` / `False` / **措辞字符串** / `None` |
+| `LootTable.audit(resolvable=…)` 的判定回调 | `loot/pool.py:474` | `resolvable(ref, pool)` → `True` / `False` / **措辞字符串** / `None` |
 | `LootTable.roll_sub` / `roll_cfg` | `loot/pool.py:321` / `:271` | 子池/引用抽取 / 抽一行 roll（自定义策略也用得上） |
 | `LootTable.fallback` / `sub_ctx` | `loot/pool.py:299` / `:251` | 兜底钩子 / 子上下文（qty 覆盖） |
 | `register_strategy` / `strategy_names` | `loot/pool.py:47` / `:63` | 策略注册（`uses`/`needs_weights`/`expand` 元数据） |
