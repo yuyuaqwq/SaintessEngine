@@ -134,13 +134,24 @@ def _blank(kind):
     return {} if kind is dict else 0
 
 
-def _bumped(old, patch):
-    """推进度：`patch` 是 mapping → 合并；否则**覆盖**（现状两种口径都保留）。"""
-    if isinstance(patch, Mapping):
-        base = dict(old) if isinstance(old, Mapping) else {}
-        base.update(patch)
-        return base
-    return patch
+def _bumped(old, patch, kind, where):
+    """推进度：`kind` 是**声明的进度形态**（dict / int）。
+
+    mapping 口径 → 合并（保旧键）；int 口径 → 覆盖为整数。**类型必须与 lane 声明一致**
+    （口径⑯）：调用方一次写错就让 `pg` 变成另一种形态，而 `satisfied` 等读口会照形态
+    分支 ⇒ 静默走错。声明与实到不符 → TypeError（fail-closed），不静默改写。
+    """
+    if kind is int:
+        if not isinstance(patch, int) or isinstance(patch, bool):
+            raise TypeError(
+                "%s：进度声明是 int，实到 %s" % (where, type(patch).__name__))
+        return patch
+    if not isinstance(patch, Mapping):
+        raise TypeError(
+            "%s：进度声明是 dict（mapping），实到 %s" % (where, type(patch).__name__))
+    base = dict(old) if isinstance(old, Mapping) else {}
+    base.update(patch)
+    return base
 
 
 # ───────────────────────────────────────────────────────── 账本外壳
@@ -249,6 +260,13 @@ class QuestLog:
         else:
             base.setdefault(self._fields[_F_STATUS], self._words[_S_LIVE])
         if progress is not None:
+            if kind is int:
+                if not isinstance(progress, int) or isinstance(progress, bool):
+                    raise TypeError(
+                        "accept：进度声明是 int，实到 %s" % type(progress).__name__)
+            elif not isinstance(progress, Mapping):
+                raise TypeError(
+                    "accept：进度声明是 dict（mapping），实到 %s" % type(progress).__name__)
             base[self._fields[_F_PROGRESS]] = progress
         else:
             base.setdefault(self._fields[_F_PROGRESS], _blank(kind))
@@ -282,18 +300,19 @@ class QuestLog:
         field = self._fields[_F_PROGRESS]
         new = self._copy()
         if lane is None:
-            new[field] = _bumped(self._m().get(field, _MISSING), patch)
+            new[field] = _bumped(self._m().get(field, _MISSING), patch, dict, "主 lane")
             return new
-        self._kind(lane)
+        kind = self._kind(lane)
+        where = "子账本 %r" % (lane,) if key is None else "子账本 %r 的条目 %r" % (lane, key)
         lane_map = dict(self.lane(lane))
         if key is None:
-            lane_map[field] = _bumped(lane_map.get(field, _MISSING), patch)
+            lane_map[field] = _bumped(lane_map.get(field, _MISSING), patch, kind, where)
         else:
             got = self._existing(lane_map, key)
             if not isinstance(got, Mapping):
                 raise TypeError("条目不是 mapping：" + repr(key))
             lane_map[key] = self._patched(got, key, field,
-                                          _bumped(got.get(field, _MISSING), patch))
+                                          _bumped(got.get(field, _MISSING), patch, kind, where))
         new[lane] = lane_map
         return new
 
