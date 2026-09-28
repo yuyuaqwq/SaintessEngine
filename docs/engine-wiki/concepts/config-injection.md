@@ -185,7 +185,7 @@ config.register_hook_provider(my_lazy_mount)   # config.py:255
 def _battle_cfg(name):                  # gauge/__init__.py:52
     return _cfg.mech_cfg(name)
 
-def _skeleton():                        # formulas.py:84
+def _skeleton():                        # formulas.py:95
     fn = _cfg.get_hook("formula_skeleton_fn")
     return (fn() if fn is not None else None) or {}
 ```

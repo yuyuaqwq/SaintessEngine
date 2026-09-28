@@ -34,6 +34,17 @@ from saintess_engine import config as _cfg
 from .diagnostics import diag as _diag   # 阶段/钩子出错的诊断通道（P-44）
 
 
+def _num(value, default: float) -> float:
+    """数值回落：缺键/显式 `None` → `default`；**合法 0 原样返回**（不吞）。
+
+    ★ 本文件历史上写 `float(seg.get("mult", 1.0) or 1.0)`，而 `or` 会把**合法 0**
+      吞成默认。对「段乘区」而言 0 与缺键语义完全相反（0 = 零伤/零治疗段，
+      缺键 = 该段不吃乘区）⇒ 吞掉之后「零伤段 / 零治疗段」这类配置**做不出来**且零报错。
+      与 `actions._num` 同名同义（`actions` 本模块的下游，反向 import 会成环 ⇒ 各自定义）。
+    """
+    return default if value is None else float(value)
+
+
 # 未装配时的中性骨架参数（与 _NullFormulas 同语义：零效应，不产生额外数值）。
 # 为何需要：本模块 docstring 承诺「未装配时各 getter 返回中性值（{} / 1 级兜底）…不炸」，
 # 但下游直接索引 _skeleton()["skill_growth"] / float(_flat.get(...)) —— 空 dict 会
@@ -433,7 +444,7 @@ def skill_expr_preview(info: dict | None, level: int, stats: dict | None = None)
                     _se = skill_formula_expr_for_seg(_seg, lv)
                     if _se:
                         try:
-                            _total += eval_expr(compile_expr(_se), _vars) * float(_seg.get("mult", 1.0) or 1.0)
+                            _total += eval_expr(compile_expr(_se), _vars) * _num(_seg.get("mult"), 1.0)
                         except Exception as _e:
                             # ★ 2026-09-25（E1 修）：本函数是**纯计算 helper**（参数里没有 battle），
                             #   原先写 `_diag(battle, …)` ⇒ 作用域里没有 `battle` ⇒ 走到这里抛
@@ -588,7 +599,7 @@ def resolve_formula(formula, stats, target_def, target_mdef, is_crit=False,
                 base = 0
         else:
             fstat = seg.get("stat", "atk")
-            fmult = float(seg.get("mult", 1.0) or 1.0) * mult
+            fmult = _num(seg.get("mult"), 1.0) * mult
             fflat = int(seg.get("flat", 0) or 0)
             # 属性来源
             if fstat == "matk":
