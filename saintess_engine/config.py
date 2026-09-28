@@ -11,8 +11,8 @@
 S1 断链（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 / §7）：
 本包历史上直接 import `game.engine` / `game.content` / `game.data`（15 条
 「引擎 → 内容」反向边）。现全部改走本模块的注入面 —— 方向反过来：
-**内容侧（game/bootstrap.py）把公式/面板/技能查询/kind 常量 mount 进来**，
-引擎自身零内容 import（门禁：tests/test_engine_no_content.py）。
+**内容侧（各包的 `apply.py::install_engine()`）把公式/面板/技能查询/kind 常量 mount 进来**，
+引擎自身零内容 import（门禁：tests/test_engine_purity.py）。
 """
 from __future__ import annotations
 
@@ -211,7 +211,7 @@ _HOOKS = {
 #   False（默认）= 与引擎历史行为一致：未装配 → 中性兜底（数值 0 / 空表），不炸；
 #   True         = 未装配即抛 EngineNotConfigured（防测试假绿 / 线上静默失效）。
 # 测试环境默认 False（避免已装配路径之外的既有用例集体报错）；生产接入点应显式
-# 调用 game.bootstrap.load_engine_config() 后可按需打开。
+# 调用内容侧 `apply.install_engine()` 后可按需打开。
 strict = False
 
 # 内容侧注册的"惰性装配器"：首次访问未装配 hook 时自动完成装配（见 get_hook）。
@@ -325,7 +325,7 @@ def get_hook(name: str):
     value = _resolved(name)
     if value is None and strict:
         raise EngineNotConfigured(
-            f"引擎未装配：缺少 hook {name!r}（content 侧应调 game.bootstrap.load_engine_config()）"
+            f"引擎未装配：缺少 hook {name!r}（content 侧应调 apply.install_engine()）"
         )
     return value
 
