@@ -538,6 +538,104 @@ def t8_negative():
           len(log.records) == 1 and "no_such_type" in log.records[0], str(log.records))
 
 
+
+# ================================================================ 9 守卫有牙
+# 本节盯的是**守卫本身**：把任意一条 `raise` 换 `pass`（或删掉分支），
+# 下面每一条都必须转红。写的是**退化形态**，不是「今天还对不对」。
+#
+# 为什么单独开一节：① 上一组 ①–④ 钉的是**正常路径的语义**，
+# 改坏成「只列不清 / 总回调 / 拒绝重复 / 静默兜底」才红；
+# ② 本组钉的是**非法输入的面** —— 那些 `raise` 守卫有的一直没被咬住
+# （2026-09-28 实测：`ext_life/timers` 19 条 raise 里 3 条零断言）。
+#
+# ★ 定性纪律（本节所有断言都按它写）：
+#   守卫被删后**有两种退化形态**，处置不同 ——
+#     (a) **仍然 fail-closed**（换个地方抛、只是点名丢了）
+#         ⇒ 真源零改动，只钉「别退化成静默」+ 钉住点名内容本身；
+#     (b) **静默出错**（坏值被接受 / 落到别的形状上）
+#         ⇒ 这才是真洞，必须钉死。
+#   本节两条都收：(a) 组额外断言**点名内容**（错误信息不许退化成引擎内部形态名）。
+def t9_guard_teeth():
+    print("\n[9] 守卫有牙：非法输入面 —— 删掉守卫必红（反证点写在每条括号里）")
+
+    # --- (b) 真洞：data 的配对 list 被静默收下、换成 dict 落盘 ------------------
+    # 守卫在 `set()`：`if data is not None and not isinstance(data, Mapping): raise TypeError`
+    # 反证：把那句 raise 换 pass ⇒ 下面的 `dict(data)` 照常跑，配对 list 静默变 dict。
+    st, ck = {}, Clock(0)
+    hit, exc = raises(TypeError,
+                      Timers(st, ck).set, "o1", "k", "t1", data=[("a", 1), ("b", 2)])
+    check("★(b) data 传配对 list → TypeError（反证：删守卫 → 静默落盘 {'a':1,'b':2}）",
+          hit, f"got {exc!r}")
+    check("★(b) 配对 list 被拒时一个字节都不写（反证：删守卫 → 载荷已落盘）",
+          st == {}, str(st))
+    check("★(b) 报错点名 'data'（反证：退化成裸 dict() 错 → 只有 'dictionary update'）",
+          hit and "data" in str(exc), f"got {exc!r}")
+
+    # 同一守卫的另一半：元素不成对时即便落过守卫也该由 dict() 挡住，
+    # 这里钉的是「不留半截载荷」而不是「错误类型」（类型由 dict() 决定，不归这条守卫管）。
+    st2 = {}
+    hit2, exc2 = raises(TypeError,
+                        Timers(st2, Clock(0)).set, "o1", "k", "t1", data=[1, 2])
+    check("(b) data 元素不成对 → 报错且不落盘（反证：删守卫 → 这里也变 OK）",
+          hit2 and st2 == {}, f"hit={hit2} exc={exc2!r} st={st2}")
+
+    # --- (a) 退化仍 fail-closed，但点名不许丢：clock ------------------------------
+    # 反证：把 `__init__` 里 `if not callable(clock): raise` 换 pass。
+    hit, exc = raises(TypeError, lambda: Timers({}, None))
+    check("(a) clock 不可调用 → TypeError（反证：删守卫 → 这里仍抛 'NoneType' object is not callable）",
+          hit, f"got {exc!r}")
+    check("(a) 报错点名 'clock'（反证：删守卫 → 只剩 'NoneType' object is not callable，点名全丢）",
+          hit and "clock" in str(exc), f"got {exc!r}")
+
+    # --- (a) 退化仍 fail-closed，但点名不许丢：_load 的 JSON 解码那条 ------------
+    # ★ 行号归属（2026-09-28 核实）：`raise ... 「事件表取不出来」` 是 JSON 解码的 except 分支；
+    #   「事件表不是映射」是它**下一条**独立的 isinstance 守卫。别把这两条当同一条。
+    st = {"o1": "{不是 JSON"}
+    tm = Timers(st, Clock(0))
+    hit, exc = raises(TimerStorageError, tm.due, "o1")
+    check("(a) 事件表是坏 JSON → TimerStorageError（反证：删解码守卫 → 仍抛，但降级成「不是映射：str」）",
+          hit, f"got {exc!r}")
+    check("(a) 坏 JSON 的报错点名是「取不出来」而不是「不是映射」（反证：降级后点位就错了）",
+          hit and "取不出来" in str(exc), f"got {exc!r}")
+    check("(a) 坏 JSON 的报错点名了原始 JSON 错误（反证：降级 → JSON 原因整条蒸发）",
+          hit and ("Expecting" in str(exc) or "JSONDecodeError" in repr(exc)), f"got {exc!r}")
+    check("(a) 坏 JSON 不被静默当空表（反证：清空 → due 返回 [] 且存储被改写）",
+          st.get("o1") == "{不是 JSON", str(st))
+
+    # --- (a) 同上：坏 JSON 在每条读路径上都得报 ----------------------------------
+    st3 = {"o1": "{不是 JSON"}
+    tm3 = Timers(st3, Clock(0))
+    check("(a) 坏 JSON 在 get 上也报错（每条读路径都不静默）",
+          raises(TimerStorageError, tm3.get, "o1", "a")[0], "")
+    check("(a) refresh 也报错（第三条读路径同样不绕过）",
+          raises(TimerStorageError, tm3.refresh, "o1")[0], "")
+    check("(a) 坏 JSON 三条读路径都没清空它",
+          st3.get("o1") == "{不是 JSON", str(st3))
+
+    # --- (a) 退化仍 fail-closed，但点名不许丢：值不是映射 --------------------------
+    # 反证：把 `if not isinstance(raw, Mapping): raise` 换 pass ⇒ 后面 `raw.items()`
+    # 抛 `AttributeError: 'int' object has no attribute 'items'` —— 抛的是**引擎内部形态名**，
+    # 内容侧既不知道是「事件表」、也不知道是哪个键。
+    for raw, kind in ((5, "int"), (["a"], "list")):
+        st4 = {"o1": raw}
+        tm4 = Timers(st4, Clock(0))
+        hit, exc = raises(TimerStorageError, tm4.due, "o1")
+        check(f"(a) 事件表值是 {kind} → TimerStorageError（反证：删守卫 → AttributeError 抛在 .items() 上）",
+              hit, f"got {exc!r}")
+        check(f"(a) {kind} 那条的报错点名「事件表」和键（反证：退化 → 只有 'int' object has no attribute 'items'）",
+              hit and "事件表" in str(exc) and "'o1'" in str(exc), f"got {exc!r}")
+
+    # --- 合法面逐字不变（钉「不放松」，不是钉「都抛」）---------------------------
+    good = {"a": {"type": "k1", "data": {"n": 1}, "expire": 5}}
+    tm5 = Timers({"o1": good}, Clock(0))
+    got = tm5.due("o1")
+    check("(a) 合法事件表照常读出（反证：把守卫写成宽判据 → 这里会误抛）",
+          [e["key"] for e in got] == ["a"], str(got))
+    check("(a) 合法 dict 型 data 照常落盘（data 守卫不许误伤 dict）",
+          Timers({}, Clock(0)).set("o", "k", "t1", data={"n": 1}) == 60, "")
+    check("(a) data=None 照常落盘成空 dict（缺省面不许误伤）",
+          Timers({}, Clock(0)).set("o", "k", "t1", data=None) == 60, "")
+
 def main():
     print("== timers 门禁：倒计时事件形状（注册 / 过期三路 / 删除 / 懒计时 / 零知识）==")
     t1_register_set()
@@ -548,6 +646,7 @@ def main():
     t6_shape()
     t7_zero_knowledge()
     t8_negative()
+    t9_guard_teeth()
     print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
     if DETAIL:
         print("失败清单：")
