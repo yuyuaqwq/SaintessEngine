@@ -297,7 +297,13 @@ def t2_positive(body, tpat):
     #   「守卫回话」；引用面 = 包内 `content/apply.py::guard_text` 装的 `guard_text_fn`）
     #   ⇒ 3208 → 3210。②中文键数锚点**照样不变**（仍 169）——别跟着 +2（会当场红）；
     #   ③标签字已同步（本行）。
-    check("包内文案条数锚点 == 3210（条数变了就同步更新本门禁的锚点）", len(body) == 3210, len(body))
+    # ★ 2026-09-28 R1（战斗日志 cue **内容半边** · 包侧 `c-r2`）：新增 **62** 键
+    #   （`battle.<域>.<事件>` 62 条，键名全 ASCII，新分类「战斗日志」；引用面 = 包内
+    #   `content/cues.py::cue_subs` 装的 `cue_subs_fn` + `content/apply.py` 装的
+    #   `text_table_fn`；引擎侧真源 = `ext_combat.battle.cues.CUE_NAMES`）
+    #   ⇒ 3210 → 3272。②中文键数锚点**照样不变**（仍 169，键名全 ASCII）——别跟着 +62；
+    #   ③标签字已同步（本行）。措辞逐字 = cue 迁移前引擎 `render_via` 模板。
+    check("包内文案条数锚点 == 3272（条数变了就同步更新本门禁的锚点）", len(body) == 3272, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
