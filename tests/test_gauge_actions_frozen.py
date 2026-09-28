@@ -247,6 +247,29 @@ _FROZEN_DIVERGENCE = {
     "bar_gain_act": (
         (r'''    bar_gain(host, key, amount, logs, now=_now_of(battle))''',
          r'''    bar_gain(battle, host, key, amount, logs, now=_now_of(battle))'''),
+        # 审计 L251（2026-09-28 · 批次 4）：两处宽泛 except 收窄为 (TypeError, ValueError) 并接诊断通道。
+        # 行为逐字节不变（amount 保持未乘原值 / 仍 return），仅多诊断。
+        (r'''            except Exception:
+                pass
+    try:
+        amount = int(amount or 0)
+    except Exception:
+        return
+''',
+         r'''            except (TypeError, ValueError) as _e:
+                # 审计 L251：原来这里是宽泛 except + pass，多段量静默退成单段量（
+                # 错误一条日志都没有）。现收窄为 int() 真能抛的两类并记诊断；
+                # amount 保持未乘的原值 → 行为逐字节不变，只多一条诊断。
+                _diag(battle, "bar_gain_act · per_hit 多段量", _e,
+                      key=key, field=field, raw=amount)
+    try:
+        amount = int(amount or 0)
+    except (TypeError, ValueError) as _e:
+        # 审计 L251：不可转的量 → 无此行为（原为静默 return，一条日志都没有）。
+        # 记诊断后仍返回：非正数量 ≠ 正数量，不得为了可诊断而改行为。
+        _diag(battle, "bar_gain_act · 量转整", _e, key=key, raw=amount)
+        return
+'''),
     ),
     "bar_phase_preserve_act": (
         (r'''        logs.append(f"💢【{host.get('name', '目标')}】阶段更迭："
@@ -292,7 +315,9 @@ PIN_NEW = {
     # ★ B4（2026-09-27）重钉：这 4 个函数改走 cue（`text=text_of(battle)` → 传 `battle`；
     #   `render_via` → `_cue`）。算法与旧值同源：`_sha(inspect.getsource(fn))`。
     '_settle': '8ff290c18aabb7ec00a9ef8c09ef5baefe4c9bee18c96970ada7a2a7b5ce967c',
-    'bar_gain_act': '8ad6d5d58d1ecb2e2c44153d351cd06bacfae457005a2a4b2c5dae5a83417e14',
+    # ★ 重钉（2026-09-28 · 审计 L251）：bar_gain_act 的两处宽泛 except 收窄并接诊断。
+    #   PIN_FROZEN（冻结副本）**一字未动**；只重钉本函数的活实现 sha，算法与旧值同源。
+    'bar_gain_act': 'e831f1aaf63a4fbd6f10aad9d51748815be958e387d98a6797a581868bde9206',
     'bar_phase_preserve_act': 'ff9f3e2c5fc920ea6e6b5b9e058ee92b6b40f8691ed9eccfbbaa1e451a59de7d',
     'bar_time_settle_act': 'bc9bf48679b0fc8aef3a1e29ec9d7574a511d8b98f91559b6b7c67a3eab390d6',
     'passive_reflect_bar_act': '17e17b36ebcd303091da276273fcf1baa879bf51de41877b4e7e64ef4402e64a',

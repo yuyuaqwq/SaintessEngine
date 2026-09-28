@@ -55,15 +55,6 @@ ALLOW = {
     ("gauge/__init__.py", "_state_prefix"): "同上：未装配 → 历史兜底前缀（docstring 明写）",
     ("gauge/__init__.py", "_default_bar_max"): "同上：未装配 → 0.0，调用处回落历史兜底 100（docstring 明写）",
     ("gauge/__init__.py", "bar_gain"): "上限值认不出 → 0.0，再走 _default_bar_max；同函数另一处 add 认不出 → 0",
-    # ── ★ 未登记：gauge/actions.py 的 2 处（bar_gain_act）**故意不登记** ──
-    #    扩面把这两处暴露出来了（原先零覆盖）。它们是台账 L251 的真缺陷
-    #    （per_hit 多段量静默退成单段量），但 `gauge/actions.py` 属**批次 4**
-    #    文件面（它要重钉 test_gauge_actions_frozen 的源码 sha + pin）
-    #    ⇒ 本车道只登记不改（越界即双写）。
-    ("gauge/actions.py", "bar_gain_act"): "★ 真缺陷（台账 L251：per_hit 多段量静默退成单段量）·"
-                                 "属批次 4 文件面（它要重钉 test_gauge_actions_frozen 的源码 sha）·"
-                                 "本车道越界即双写，故登记。**批次 4 修完请删本行** ———"
-                                 "删不删都安全：白名单条目一旦不再是 S 类，第 2 节会当场报红（fail-closed）",
 }
 
 passed = failed = 0

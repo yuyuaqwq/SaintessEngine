@@ -32,6 +32,7 @@ from __future__ import annotations
 
 from ..battle.effects import register_action
 from ..battle.cues import cue as _cue    # 已迁移点位走表现事件（措辞真源 = 内容侧文案表）
+from ..battle.diagnostics import diag as _diag   # 阶段/锚点出错的诊断通道（审计 L251）
 
 
 def _now_of(battle) -> float:
@@ -118,11 +119,18 @@ def bar_gain_act(battle, caster, target, params, logs):
         if params.get("per_hit"):
             try:
                 amount = int(amount or 0) * int(info.get("hits") or info.get("multi") or 1)
-            except Exception:
-                pass
+            except (TypeError, ValueError) as _e:
+                # 审计 L251：原来这里是宽泛 except + pass，多段量静默退成单段量（
+                # 错误一条日志都没有）。现收窄为 int() 真能抛的两类并记诊断；
+                # amount 保持未乘的原值 → 行为逐字节不变，只多一条诊断。
+                _diag(battle, "bar_gain_act · per_hit 多段量", _e,
+                      key=key, field=field, raw=amount)
     try:
         amount = int(amount or 0)
-    except Exception:
+    except (TypeError, ValueError) as _e:
+        # 审计 L251：不可转的量 → 无此行为（原为静默 return，一条日志都没有）。
+        # 记诊断后仍返回：非正数量 ≠ 正数量，不得为了可诊断而改行为。
+        _diag(battle, "bar_gain_act · 量转整", _e, key=key, raw=amount)
         return
     if amount <= 0:
         return
