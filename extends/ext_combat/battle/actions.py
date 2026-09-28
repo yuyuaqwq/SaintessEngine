@@ -900,10 +900,10 @@ def _heal_amount(st: dict, actor: dict, info: dict, lv: int) -> int:
             for hseg in hf:
                 hseg_expr = _GC.formulas().skill_formula_expr_for_seg(hseg, lv)
                 if isinstance(hseg, dict) and hseg_expr:
-                    hv += eval_expr(compile_expr(hseg_expr), _vars) * float(hseg.get("mult", 1.0) or 1.0)
+                    hv += eval_expr(compile_expr(hseg_expr), _vars) * _num(hseg.get("mult"), 1.0)
                 else:
                     fstat = hseg.get("stat", "matk")
-                    fmult = float(hseg.get("mult", 1.0) or 1.0)
+                    fmult = _num(hseg.get("mult"), 1.0)
                     fflat = int(hseg.get("flat", 0) or 0)
                     if fstat == "max_hp":
                         hv += actor.get("max_hp", 0) * fmult + fflat
