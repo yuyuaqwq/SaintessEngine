@@ -53,6 +53,27 @@ class CorruptSaveError(RuntimeError):
         self.reason = reason
 
 
+class CorruptBlobError(RuntimeError):
+    """额外 blob **在库里、但解不开**（坏 JSON）—— 与 `CorruptSaveError` 同形的 fail-closed。
+
+    ★ 审计 L5614 同族残留（2026-09-29）：与 `load_player` 的区别只在于**残的不是玩家档**，
+    而是宿主扩展表 `blobs` 的一行（组队/公会/世界状态这类「不是单玩家档」的数据）。
+    单独一条异常而不是复用 `CorruptSaveError`：后者的契约文案与属性都写着「玩家档 /
+    建档路径覆盖」，套到 blob 上会给出错误的处置指引（让人去查玩家档）。
+
+    属性：`key` / `raw`（原行原文）/ `reason`。**原行不会被改动。**
+    「key 不存在」仍返回 `None` —— 那是合法业务值，本类只管「在、但坏了」。
+    """
+
+    def __init__(self, key: str, raw, reason: str):
+        super().__init__(
+            "blob %r 在库里但解不开（%s）。原行未改动 —— 修好这条记录再读它，"
+            "**不要让下一次 save_blob 覆盖掉**。原行：%.200r" % (key, reason, raw))
+        self.key = key
+        self.raw = raw
+        self.reason = reason
+
+
 _SCHEMA = (
     "CREATE TABLE IF NOT EXISTS players ("
     " uid TEXT PRIMARY KEY, data TEXT NOT NULL, updated REAL NOT NULL)",
@@ -120,14 +141,31 @@ class SQLiteStore:
 
     # ------------------------------------------------------------ 额外 blob（可选钩子）
     def load_blob(self, key: str):
+        """读额外 blob（组队/公会/世界状态这类「不是单玩家档」的数据）→ 值 | None。
+
+        ★ 审计 L5614 同族残留（2026-09-29 晚到批第十四轮收口时补）：本函数是
+        `load_player` 的**同族**——「行在库里、但 JSON 解不开」时**同样回落成 `None`**。
+        而 `None` 在这条通路上恰好是**合法业务值**（「这个 key 本来就没有」，
+        `runtime.py::blob` 拿 `None` 去 `_blobs.get(key)` 回落），所以坏 blob 与
+        「没这个 key」被压成同一个返回值 ⇒ **静默丢数据**、且不留任何痕迹
+        （`save_blob` 是 upsert，下一次写就覆盖掉残值）。
+
+        与 `load_player` 的差别是**不能共用 `CorruptSaveError`**：那条异常的契约是
+        「玩家档残了、别让建档路径覆盖它」（`CorruptSaveError.uid` 语义 = 玩家 uid），
+        而这里残的是宿主自己的扩展表 ⇒ 新起一条 `CorruptBlobError`，同样 fail-closed：
+        **炸出来，不猜**。缺 key 仍返回 `None`（那是真业务值，语义未被改动）。
+        """
+        key = str(key)
         with self._lock:
-            row = self._conn.execute("SELECT data FROM blobs WHERE key=?", (str(key),)).fetchone()
+            row = self._conn.execute("SELECT data FROM blobs WHERE key=?", (key,)).fetchone()
         if not row:
             return None
         try:
             return json.loads(row[0])
-        except Exception:                                        # noqa: BLE001
-            return None
+        except (ValueError, TypeError) as exc:
+            # json.loads 的「解不开」全集就是这两类（JSONDecodeError ⊂ ValueError）。
+            # 收窄自 `except Exception`（审计 L5614 同族），不是把静默换个地方。
+            raise CorruptBlobError(key, row[0], "JSON 解不开：%s" % (exc,)) from exc
 
     def save_blob(self, key: str, value) -> None:
         payload = json.dumps(value, ensure_ascii=False)
