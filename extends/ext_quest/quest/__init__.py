@@ -30,7 +30,7 @@
                                 multi=False, modifiers=(...)), unknown=..., need_of=...)
     objs.keys() / objs.parts(obj) / objs.hits(obj, event) / objs.fold(obj, prog, event)
     objs.satisfied(obj, prog) / objs.complete(obj) / objs.lines(obj, text_of=...)
-    parse_needs(obj, need_of=..., modifiers=(...))
+    parse_needs(obj, keys=objs.keys(), need_of=..., modifiers=(...))   # keys 必填
 
 **引擎认什么**：只认**结构字段名**与**注入口**。`fields` 的角色键是引擎的契约词汇：
 `current` / `status` / `progress` / `archive` / `lanes`；`states` 的角色键同上只有三个：
@@ -95,6 +95,14 @@
 
 ⑫ **行序 = 信息序**：`lines` 不重排、不去重；拒绝提示的「先接取行 → 再拒绝行 → 最后
    已完成提示」是刻意的信息序，引擎只保证保序，不发明顺序。
+
+⑬ **交付「没有东西」不进完成史**：`QuestLog.deliver` 主 lane 的 `current` 为 `None`
+   时**不**追加 `archive`（那是「没有可交付的东西」，旧形状灌 `None` 且「不去重」
+   ⇒ 永久留存）。★ `next_of(None)` **仍照传**（口径⑥ 钉住，终章 vs 数据缺由内容侧裁决）。
+
+⑭ **`parse_needs` 的 `keys` 必填**：已注册目标类型键（照 `Objectives.keys()` 给）。
+   既非类型键又非修饰键的键**当场 KeyError** —— 与 `Objectives.need_of` 对未注册类型
+   fail-closed 同一口径；旧形状对每个非修饰键都发需求数，会把 `备注` 当成「目标和 1 个」。
 
 **明确不做的事**
 ----------------

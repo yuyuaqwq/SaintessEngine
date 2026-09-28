@@ -365,7 +365,7 @@ class Objectives:
 
 
 # ───────────────────────────────────────────────────────── 需求数批量提取
-def parse_needs(objective, *, need_of=None, modifiers=()) -> dict:
+def parse_needs(objective, *, keys, need_of=None, modifiers=()) -> dict:
     """目标 mapping → `{类型键: 需求数}`。
 
     把现状「`数量修饰 or 基础数`」与「只看基础数」两种口径**收敛到一个函数**，
@@ -374,16 +374,26 @@ def parse_needs(objective, *, need_of=None, modifiers=()) -> dict:
     * 注入了 `need_of(objective, key)` → 逐键调它。
     * 没注入 → 默认口径：按 `modifiers` 声明序取**首个正整数**修饰键值；都没有 → 1。
       ⚠️ 默认口径的修饰键名**必须由调用方给**（`count` / `数量` 这类都是取值，引擎不内置）。
+
+    ⚠️ `keys` = **已注册的目标类型键**（照 `Objectives.keys()` 给），**必填**。
+    不是目标键也不是修饰键的键**当场 KeyError**（口径⑭）：引擎不内置类型名，
+    认不出一个键是不是目标类型 —— 旧形状对每个非修饰键都发一个需求数，于是
+    `{"收集": 1, "备注": "x"}` 会吐出 `{'收集': 1, '备注': 1}`，把「备注」当成
+    目标和 1 个需求。这与 `Objectives.need_of` 对未注册类型 fail-closed 是同一条口径。
     """
     if not isinstance(objective, Mapping):
         raise TypeError("目标必须是 mapping，收到 " + type(objective).__name__)
     mods = _as_names(modifiers, "modifiers")
+    types = _as_names(keys, "keys")
     if need_of is not None and not callable(need_of):
         raise TypeError("need_of 必须可调用（收目标与类型键）")
     out = {}
     for key in objective:
         if key in mods:
             continue
+        if key not in types:
+            raise KeyError("不是已注册的目标类型键（也不是修饰键）：" + repr(key)
+                           + "；keys=" + repr(tuple(types)))
         out[key] = (int(need_of(objective, key)) if need_of is not None
                     else _first_positive(objective, mods))
     return out

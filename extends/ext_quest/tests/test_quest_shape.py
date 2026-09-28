@@ -5,14 +5,14 @@
 跑法：`python extends/ext_quest/tests/test_quest_shape.py`（或随 `python tests/run_all.py` 一起跑）
 退出码：0 = 全绿；1 = 有失败（结尾打印 `结果：通过 X / 共 Y` + 失败清单）。
 
-覆盖（照 `U1-D2_BATCHES.md` §1 的 L1 判据 + `U1-D2_DESIGN.md` §2 的字段级形状 + §2.3 的 12 条口径分歧）：
+覆盖（照 `U1-D2_BATCHES.md` §1 的 L1 判据 + `U1-D2_DESIGN.md` §2 的字段级形状 + §2.3 的 14 条口径分歧）：
   ① **目标注册表**：声明序 = 判定序 = 展示序；`parts` 的修饰键归属；复合目标；`need_of`；
      `hits` / `fold` / `satisfied` / `complete` / `lines` / `unknown` 逐条 + 每条兜底分支。
   ② **账本**：读口（`raw`/`current`/`status`/`progress`/`done`/`lane`/`entry`/`status_of`/`is_open`）·
      迁移（`accept`/`set_status`/`bump`/`deliver`/`abandon`/`require`/`snapshot`/`restore`）。
   ③ **不变量**：构造 O(1) 零遍历（探针账本 + 成本对照）· 注入面 fail-closed · 迁移返回新对象 ·
      不改原 `raw`（`json.dumps` 指纹，判据 10）· 异常不吞 · 顺序即语义。
-  ④ **12 条口径分歧各 ≥1 条断言**（故意不同的两口径**断言「它们确实不同」**，防后人顺手统一）。
+  ④ **14 条口径分歧各 ≥1 条断言**（故意不同的两口径**断言「它们确实不同」**，防后人顺手统一）。
   ⑤ **有牙反证**：逐处打印「预期变红 / 实测变红」；两处同坏 + 第三处仍绿。
   ⑥ **零知识静态扫描**（`ast`，判据 5/6/8）：代码字符串常量零取值词（表 = `U1-D2_FROZEN_GATE.md` §4）·
      import 只有标准库且不含 os/sys/json/datetime/time/calendar/random · 零字段知识。
@@ -226,18 +226,30 @@ def t_need():
           and objs2.need_of({"other": 1}, "other") == 99)
 
     check("parse_needs 默认（无修改键声明）→ 每个非修改键 need=1",
-          parse_needs({"alpha": 1, "beta": 2}) == {"alpha": 1, "beta": 1})
+          parse_needs({"alpha": 1, "beta": 2}, keys=("alpha", "beta"))
+          == {"alpha": 1, "beta": 1})
     check("parse_needs 声明修改键 → 修改键不出现在结果里",
-          parse_needs({"alpha": 1, "qty": 3}, modifiers=("qty",)) == {"alpha": 3})
+          parse_needs({"alpha": 1, "qty": 3}, keys=("alpha",), modifiers=("qty",))
+          == {"alpha": 3})
     check("★ 口径④ parse_needs 取**首个正整数**修改键（qty2 优先于 qty）",
-          parse_needs({"beta": 1, "qty": 2, "qty2": 4}, modifiers=("qty2", "qty"))
+          parse_needs({"beta": 1, "qty": 2, "qty2": 4}, keys=("beta",),
+                      modifiers=("qty2", "qty"))
           == {"beta": 4})
     check("★ 口径④ 修改键都是 0/缺失 → 退 1（与上面的 4 确实不同）",
-          parse_needs({"beta": 1, "qty": 0}, modifiers=("qty", "qty2")) == {"beta": 1})
+          parse_needs({"beta": 1, "qty": 0}, keys=("beta",),
+                      modifiers=("qty", "qty2")) == {"beta": 1})
     check("parse_needs 注入 need_of → 逐键调它",
-          parse_needs({"alpha": 1, "beta": 1}, need_of=lambda o, k: len(k)) == {"alpha": 5, "beta": 4})
-    hit, exc = raises(TypeError, parse_needs, "x")
+          parse_needs({"alpha": 1, "beta": 1}, keys=("alpha", "beta"),
+                      need_of=lambda o, k: len(k)) == {"alpha": 5, "beta": 4})
+    hit, exc = raises(TypeError, parse_needs, "x", keys=("alpha",))
     check("★ parse_needs 非 mapping → TypeError", hit, f"{exc!r}")
+    # 口径⑭ 未注册键不再被当成目标发需求数（旧形状：{'收集':1,'备注':'x'} → {'备注':1}）
+    hit, exc = raises(KeyError, parse_needs, {"收集": 1, "备注": "x"}, keys=("收集",))
+    check("★ 口径⑭ 未注册键 → KeyError（不把它当成目标和 1 个需求）", hit, f"{exc!r}")
+    hit, exc = raises(KeyError, parse_needs, {"alpha": 1, "备注": "x"}, keys=("alpha",))
+    check("★ 口径⑭ 注册键 + 未注册键混在一起也报（不静默跳过那一个）", hit, f"{exc!r}")
+    check("★ 口径⑭ 修饰键仍不算目标（keys 缺它也不报）",
+          parse_needs({"alpha": 1, "qty": 3}, keys=("alpha",), modifiers=("qty",)) == {"alpha": 3})
 
 
 # ─────────────────────────────────────────────────────────── ④ hits / fold
@@ -466,13 +478,13 @@ def t_ledger_migrate():
           log.deliver(lane=None, next_of=lambda cur: None)["cur"] is None)
     check("★ 口径⑥ deliver 缺省 next_of=None → current 置 None（引擎不猜下一环）",
           log.deliver(lane=None)["cur"] is None)
-    # 口径⑪ current 为 None 不进历史（空账本交付是调用方 bug，不该把 None 灌进完成史）
+    # 口径⑬ current 为 None 不进历史（空账本交付是调用方 bug，不该把 None 灌进完成史）
     thrice = {}
     for _ in range(3):
         thrice = QuestLog(thrice, fields=FIELDS, states=STATES, lanes=LANES).deliver(lane=None)
-    check("★ 口径⑪ current=None → 不追加历史（连调 3 次 archive 仍为空，不是 [None,None,None]）",
+    check("★ 口径⑬ current=None → 不追加历史（连调 3 次 archive 仍为空，不是 [None,None,None]）",
           thrice["hist"] == [], thrice["hist"])
-    check("★ 口径⑪ 与口径⑦ 两口径确实不同：非 None 仍照常**重复追加**（不去重没被顺手改掉）",
+    check("★ 口径⑬ 与口径⑦ 两口径确实不同：非 None 仍照常**重复追加**（不去重没被顺手改掉）",
           _mk(_raw(hist=["t1"])).deliver(lane=None, next_of=lambda c: "t2")["hist"] == ["t1", "t1"])
     new = log.deliver(lane="sub", key="s1")
     check("★ 口径① deliver 子账本：条目置终结态（**不追加 done**）",
@@ -538,7 +550,7 @@ def t_quest():
           not hasattr(Quest({}, objectives=objs, objective_key="o", next_key="n"), "__dict__"))
 
 
-# ─────────────────────────────────────────────────────────── ⑩ 12 条口径分歧
+# ─────────────────────────────────────────────────────────── ⑩ 口径分歧
 def t_divergences():
     print("\n[10] 12 条口径分歧（每条 ≥1 断言；故意不同的两口径断言「确实不同」）")
     objs = _objs()
@@ -575,8 +587,8 @@ def t_divergences():
     check("④ 两口径确实不同", objs.need_of({"beta": "b", "qty": 3, "qty2": 4}, "beta")
           != objs.need_of({"beta": "b", "qty": 3}, "beta"))
     check("④ parse_needs 把口径整个交还注入面（默认只退 1）",
-          parse_needs({"beta": 1}) == {"beta": 1}
-          and parse_needs({"beta": 1}, need_of=lambda o, k: 4) == {"beta": 4})
+          parse_needs({"beta": 1}, keys=("beta",)) == {"beta": 1}
+          and parse_needs({"beta": 1}, keys=("beta",), need_of=lambda o, k: 4) == {"beta": 4})
 
     # ⑤ unknown 目标类型三出口
     check("⑤ 默认 unknown → None → 不加行", objs.lines({"zzz": 1}) == [])
@@ -942,9 +954,9 @@ def t_zero_knowledge():
     doc = mod.__doc__ or ""
     check("模块 docstring 写清：形状 / 口径分歧 / 明确不做 / 为什么不复用",
           all(k in doc for k in ("口径分歧", "明确不做", "为什么不复用")))
-    check("★ 12 条口径分歧逐条落在包 docstring 里",
-          all(mark in doc for mark in ("①", "②", "③", "④", "⑤", "⑥",
-                                       "⑦", "⑧", "⑨", "⑩", "⑪", "⑫")))
+    check("★ 14 条口径分歧逐条落在包 docstring 里",
+          all(mark in doc for mark in ("①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨",
+                                       "⑩", "⑪", "⑫", "⑬", "⑭")))
     check("包 docstring 明确点出「为什么不复用 run.Progress 与 collect」",
           ("Progress" in doc and "collect" in doc))
     check("不做落库：QuestLog 没有任何落库/连接类 API",
