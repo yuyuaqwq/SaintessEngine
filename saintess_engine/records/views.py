@@ -126,16 +126,32 @@ def registered_views() -> list:
     return [fn for _order, _seq, fn in sorted(_live(), key=lambda row: (row[0], row[1]))]
 
 
+#: 「这一格没抓到旧值」的哨兵 —— 参与 `replacements` 的**回填判据**。
+#:
+#: ★ 为什么不能拿 `None` 当「没值」：内容侧 `catalog_*.py` 的收口写法一律是
+#:   `old = {'X': None, ...}` + `for _n in list(old): old[_n] = globals()[_n]`。
+#:   域里缺 key 时该全局**就是** `None` ⇒ 重建后这条会走成 `(None, 新对象)`。
+#:   而 `_rebind` 按 `id(value)` 回填 ⇒ 模块里**每一个**恰好等于 `None` 的全局名
+#:   （彼此毫不相干）都会被改写成同一个新对象（实测：2 个不相干的 `None` 全局
+#:   同时被写成 `('beta', 2)`，而另一个真值名原样不动）。
+#:   ⇒ 判据必须区分「这一格没值」与「这一格的值恰好是 `None`」。
+_UNSET = object()
+
+
 def _rebind(namespace: dict, replacements: dict) -> None:
-    """把 `namespace` 里**值 `is` 旧对象**的全局名改指新对象（通用别名回填）。"""
+    """把 `namespace` 里**值 `is` 旧对象**的全局名改指新对象（通用别名回填）。
+
+    `replacements` 是 `{id(旧对象): 新对象}`；**值为 `_UNSET` 的格表示「这一格没抓到旧值」
+    ⇒ 永不参与回填**（旧值不存在 = 没有「谁还指着它」需要改指）。
+    """
     for key, value in list(namespace.items()):
         if key.startswith("__"):
             continue
         try:
-            new = replacements.get(id(value))
+            new = replacements.get(id(value), _UNSET)
         except TypeError:                                          # 不可哈希/异常值
             continue
-        if new is not None and new is not value:
+        if new is not _UNSET and new is not value:
             namespace[key] = new
 
 
@@ -194,7 +210,10 @@ def _apply_replacements(replacements, module_prefix: Optional[str]) -> int:
             raise TypeError(
                 "rebuild_views：容器替换不许走别名映射（%s → %s）—— 容器请用 update_in_place "
                 "就地更新" % (type(old).__name__, type(new).__name__))
-        aliases[id(old)] = new
+        # ★ `old is None` ⇒ 这一格没抓到旧值（内容侧 `catalog_*` 以 `None` 起手，
+        #   域缺 key 时全局就是 `None`）⇒ 记成 `_UNSET`，**不回填**；
+        #   否则模块里所有恰好为 `None` 的无关全局名会被批量改写成同一个新对象。
+        aliases[id(old)] = _UNSET if old is None else new
     if aliases and module_prefix:
         for module in _prefix_modules(module_prefix):
             namespace = getattr(module, "__dict__", None)
