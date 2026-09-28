@@ -60,6 +60,26 @@ e, w = monotone_by(anchor_rows, keys=["max_hp", "atk", "def"], label="数值/锚
 
 ## 边界
 
-引擎只给**纯函数**，由**两处消费**（都在内容侧）：
-① 内容侧的建包/CI 脚本（跑一次、报全部、给退出码）；② 编辑器/门禁的调用方。
-**引擎不注册命令、不自动调用** —— 配平是离线批处理，不是"一条指令一次回执"的会话模型。
+引擎只给**纯函数**，**零 hook、零词汇、引擎不注册命令、不自动调用** ——
+配平是离线批处理，不是「一条指令一次回执」的会话模型。
+
+**现状：全仓零消费方（2026-09-29 复核）** —— `git grep` 六个校验器名（`within_budget` /
+`spread_within` / `monotone_by` / `within_cap` / `share_within` / `sum_within`）在
+`saintess_engine/` `extends/` `games/` `editor/` `tools/` `scripts/` `tests/` `examples/`
+里**只命中本模块自身**（`gates/__init__.py` 的 `__all__` 与函数定义）与本页。
+⚠️ 台账曾在此写「由两处消费（内容侧建包/CI 脚本 + 编辑器/门禁调用方）」，与仓库现状**相反**，已按实测改掉。
+
+**给内容侧的接入指引**（新包要自己接，引擎不会替你调）：
+
+- 校验器签名是 `(被测数据…, *, <阈值>, label) -> list[str]`，**空列表 = 通过** ⇒
+  调用方负责聚合与退出码：
+  ```python
+  from saintess_engine.gates import within_budget
+  errs = []
+  for item in rows:
+      errs += within_budget(item["PE"], budget=item["PE预算"] * 1.05, label=f"装备[{item['名']}].pe")
+  raise SystemExit(1 if errs else 0)
+  ```
+- **不猜分组键**（「哪些条目算同组」由内容侧给）· **不读文件**（调用方自己读、自己传）·
+  **不做越权修正**（只报不改）。
+- 建议接在**包自己的 `tests/`** 或 CI 里当常驻判据；引擎的 `tests/run_all.py` 不管它。
