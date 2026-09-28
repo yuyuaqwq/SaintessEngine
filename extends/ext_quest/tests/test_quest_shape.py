@@ -5,14 +5,14 @@
 跑法：`python extends/ext_quest/tests/test_quest_shape.py`（或随 `python tests/run_all.py` 一起跑）
 退出码：0 = 全绿；1 = 有失败（结尾打印 `结果：通过 X / 共 Y` + 失败清单）。
 
-覆盖（照 `U1-D2_BATCHES.md` §1 的 L1 判据 + `U1-D2_DESIGN.md` §2 的字段级形状 + §2.3 的 14 条口径分歧）：
+覆盖（照 `U1-D2_BATCHES.md` §1 的 L1 判据 + `U1-D2_DESIGN.md` §2 的字段级形状 + §2.3 的 15 条口径分歧）：
   ① **目标注册表**：声明序 = 判定序 = 展示序；`parts` 的修饰键归属；复合目标；`need_of`；
      `hits` / `fold` / `satisfied` / `complete` / `lines` / `unknown` 逐条 + 每条兜底分支。
   ② **账本**：读口（`raw`/`current`/`status`/`progress`/`done`/`lane`/`entry`/`status_of`/`is_open`）·
      迁移（`accept`/`set_status`/`bump`/`deliver`/`abandon`/`require`/`snapshot`/`restore`）。
   ③ **不变量**：构造 O(1) 零遍历（探针账本 + 成本对照）· 注入面 fail-closed · 迁移返回新对象 ·
      不改原 `raw`（`json.dumps` 指纹，判据 10）· 异常不吞 · 顺序即语义。
-  ④ **14 条口径分歧各 ≥1 条断言**（故意不同的两口径**断言「它们确实不同」**，防后人顺手统一）。
+  ④ **15 条口径分歧各 ≥1 条断言**（故意不同的两口径**断言「它们确实不同」**，防后人顺手统一）。
   ⑤ **有牙反证**：逐处打印「预期变红 / 实测变红」；两处同坏 + 第三处仍绿。
   ⑥ **零知识静态扫描**（`ast`，判据 5/6/8）：代码字符串常量零取值词（表 = `U1-D2_FROZEN_GATE.md` §4）·
      import 只有标准库且不含 os/sys/json/datetime/time/calendar/random · 零字段知识。
@@ -201,6 +201,29 @@ def t_parts():
     check("parts 返回新 list（调用方改它不影响注册表）", isinstance(seq, list) and seq[0][3] is not None)
     again = objs.parts({"alpha": "x", "qty": 3})
     check("★ 顺序即语义：两次同一输入逐值相等", seq == again)
+
+    # ── 口径⑮（台账 L604）：修饰键**按型自己声明**归属，不是全表并集 ──
+    # _objs：alpha/qty · beta/qty,qty2 · gamma/cap（cap 只有 gamma 声明）
+    got = objs.parts({"alpha": "a", "cap": 9, "gamma": "g"})
+    check("★ 口径⑮ cap 不修饰没声明它的 alpha、归到声明它的 gamma",
+          got[0][3] == {} and got[1][3] == {"cap": 9}, got)
+    got = objs.parts({"cap": 9, "gamma": "g"})
+    check("★ 口径⑮ 前导修饰键照旧归下一个声明它的 part",
+          got == [("gamma", "g", 0, {"cap": 9})], got)
+    objs_ns = Objectives(Objective("alpha", need=_need_alpha, modifiers=("m",)),
+                         Objective("beta", need=_need_beta))
+    got = objs_ns.parts({"m": 1, "alpha": "a", "beta": "b"})
+    check("★ 口径⑮ 两型都出 part，前导修饰键只归声明它的 alpha（不整包倒）",
+          [p[0] for p in got] == ["alpha", "beta"] and got[0][3] == {"m": 1}
+          and got[1][3] == {}, got)
+    objs_ns2 = Objectives(Objective("alpha", need=_need_alpha, modifiers=("m",)),
+                          Objective("beta", need=_need_beta, modifiers=("m",)))
+    got = objs_ns2.parts({"alpha": "a", "m": 1, "beta": "b"})
+    check("★ 口径⑮ 两型都声明同一修饰键 → 归它紧跟的那一型（不复制成两份）",
+          got == [("alpha", "a", 1, {"m": 1}), ("beta", "b", 1, {})], got)
+    hit, exc = raises(ValueError, objs.parts, {"cap": 9, "alpha": "a"})
+    check("★ 口径⑮ 修饰键无主（声明它的型不在目标里）→ fail-closed，不默默倒给别的型",
+          hit, f"{exc!r}")
 
 
 # ─────────────────────────────────────────────────────────── ③ need_of / parse_needs
@@ -954,9 +977,9 @@ def t_zero_knowledge():
     doc = mod.__doc__ or ""
     check("模块 docstring 写清：形状 / 口径分歧 / 明确不做 / 为什么不复用",
           all(k in doc for k in ("口径分歧", "明确不做", "为什么不复用")))
-    check("★ 14 条口径分歧逐条落在包 docstring 里",
+    check("★ 15 条口径分歧逐条落在包 docstring 里",
           all(mark in doc for mark in ("①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨",
-                                       "⑩", "⑪", "⑫", "⑬", "⑭")))
+                                       "⑩", "⑪", "⑫", "⑬", "⑭", "⑮")))
     check("包 docstring 明确点出「为什么不复用 run.Progress 与 collect」",
           ("Progress" in doc and "collect" in doc))
     check("不做落库：QuestLog 没有任何落库/连接类 API",

@@ -179,13 +179,19 @@ class Objective:
 class Objectives:
     """**有序**目标类型注册表：声明序 = 判定序 = 展示序（**不重排**）。
 
+    ★ 修饰键**按类型自己声明**（口径⑮，台账 L604）：一个类型声明的修饰键**只修饰它
+      紧跟的那一型**，不构成全表并集。旧实现把全表修饰键并成一个集合再判归属，
+      于是别的类型的同名字段会被吞成 part —— 内容侧 `map` 挂在 `explore/find/use` 上，
+      目标里写 `{"map": "x", "talk": "村长"}` 时 `map` 被判成「修饰键」去修饰
+      `talk`，而**没有任何 `explore` part** ⇒ 目标整行静默消失、`satisfied` 漏判。
+
     构造 O(1)：只校验注册项与注入面，不读目标数据、不建索引、不缓存判定。
     """
 
-    __slots__ = ("_order", "_by_key", "_mods", "_unknown_fn", "_need_of")
+    __slots__ = ("_order", "_by_key", "_mods", "_mods_any", "_unknown_fn", "_need_of")
 
     def __init__(self, *types, unknown=None, need_of=None) -> None:
-        order, by_key, mods = [], {}, set()
+        order, by_key, mods = [], {}, {}
         for t in types:
             if not isinstance(t, Objective):
                 raise TypeError("注册项必须是 Objective 实例，收到 " + type(t).__name__)
@@ -193,7 +199,7 @@ class Objectives:
                 raise ValueError("目标类型名重复：" + repr(t.key))
             by_key[t.key] = t
             order.append(t.key)
-            mods.update(t.modifiers)
+            mods[t.key] = frozenset(t.modifiers)
         if unknown is not None and not callable(unknown):
             raise TypeError("unknown 必须可调用（unknown(key, value)）")
         if need_of is not None and not callable(need_of):
@@ -205,6 +211,7 @@ class Objectives:
         self._order = tuple(order)
         self._by_key = by_key
         self._mods = mods
+        self._mods_any = frozenset(k for v in mods.values() for k in v)
         self._unknown_fn = unknown
         self._need_of = need_of
 
@@ -225,6 +232,11 @@ class Objectives:
 
         * 修饰键归**离它最近的在它之前**的那个 part；出现在任何 part 之前的前导修饰键
           归**下一个** part（不丢）。
+        * ★ 修饰键判定**按那一型自己声明的 `modifiers`**（口径⑮，台账 L604），不是全表并集：
+          挂给 `explore` 的 `map` 不会去修饰 `talk`。判据 = **能配对** —— 修饰键要么归它
+          前面的那一型（该型声明了它），要么**作为前导修饰键归下一个声明了它的 part**。
+          两者都不成立 ⇒ 它不是修饰键（未注册键，交给 `lines` 的 `unknown` 策略），
+          而不是**默默去修饰一个没声明它的类型**。
         * 未注册且非修饰键的键**不进 parts**（`lines` 走 `unknown` 策略）。
         * ★ 前导修饰键**后面没有 part** 时报错（台账 L603），不静默丢掉：
           `{"数量": 3}` 只有修饰键、没有目标类型 → 旧实现返回 `[]`，
@@ -237,13 +249,19 @@ class Objectives:
         rows, pending = [], {}
         for key, value in objective.items():
             if key in self._by_key:
-                rows.append([key, value, dict(pending)])
-                pending.clear()
-            elif key in self._mods:
-                if rows:
-                    rows[-1][2][key] = value
-                else:
-                    pending[key] = value
+                # ★ 前导修饰键只交给**声明了它**的那一型（口径⑮）；本型没声明的退回
+                #   pending，等下一个声明了它的 part —— 绝不整包倒给不相干的一型。
+                _own = self._mods.get(key, ())
+                _picked = {k: v for k, v in pending.items() if k in _own}
+                _left = {k: v for k, v in pending.items() if k not in _own}
+                rows.append([key, value, _picked])
+                pending = _left
+            elif rows and key in self._mods.get(rows[-1][0], ()):
+                rows[-1][2][key] = value
+            elif key in self._mods_any:
+                # 前导修饰键：先记着，等下一个**声明了它**的 part 来认领（不丢）
+                pending[key] = value
+            # 两者都不成立 ⇒ 不是修饰键（未注册键），不进 parts、不进 pending
         if pending:
             raise ValueError(
                 "修饰键 " + ", ".join(sorted(pending)) + " 在目标里没有归属的目标类型：它们在 "
@@ -352,7 +370,9 @@ class Objectives:
                     line = t.text(objective, progress, state)
                 else:
                     line = None
-            elif key in self._mods:
+            elif key in self._mods_any:
+                # 修饰键不出行、也不走 unknown（口径⑤）——判据取**全表并集**：它在
+                # 目标里出现就只有修饰键这一种身份，出不出行与「归哪一型」无关。
                 continue
             else:
                 line = self.unknown(key, value)
