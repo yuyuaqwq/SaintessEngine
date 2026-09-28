@@ -37,14 +37,25 @@ VERSION_INFO = tuple(list(VERSION_INFO) + [0] * (3 - len(VERSION_INFO)))
 
 _OPS = (">=", "<=", "==", "!=", ">", "<")
 _CLAUSE = re.compile(r"^\s*(>=|<=|==|!=|>|<)?\s*v?(\d+(?:\.\d+)*)\s*$")
+# 整串锚定的版本号（不做 findall 刮数字；见 parse 的说明）
+_VERSION_RE = re.compile(r"^v?(\d+(?:\.\d+)*)$")
 
 
 def parse(text: str) -> tuple:
-    """'0.1.0' / 'v1.2' → (0,1,0) / (1,2)。非法输入抛 ValueError。"""
-    parts = re.findall(r"\d+", str(text or ""))
-    if not parts:
+    r"""'0.1.0' / 'v1.2' → (0,1,0) / (1,2)。非法输入抛 ValueError。
+
+    ★ 锚定整串（2026-09-28 修 L2642）：原先是**不锚定的** `findall(r"\d+")` 刮数字，
+    于是 `"abc123"` 被刮成 `(1,)`、`"1.2.3-rc1"` 被刮成 `(1,2,3)` —— 非法输入**静默放行**，
+    与本模块 docstring 的「不满足时调用方显式报错，不静默降级」正面冲突
+    （实测 `check(">=0.1", "abc123")` 曾返回 `(True, "框架 abc123 满足 >=0.1")`）。
+    现在只接受**整串就是一个版本号**（可选 `v` 前缀 + 可选前后空白），否则 `raise ValueError`。
+    `check` 本来就 `except ValueError` ⇒ 解析失败天然走 fail-closed 返回 `False`。
+    """
+    raw = str(text if text is not None else "").strip()
+    m = _VERSION_RE.match(raw)
+    if not m:
         raise ValueError(f"不是合法版本号：{text!r}")
-    return tuple(int(x) for x in parts[:3])
+    return tuple(int(x) for x in m.group(1).split("."))[:3]
 
 
 def _cmp(a: tuple, b: tuple) -> int:
