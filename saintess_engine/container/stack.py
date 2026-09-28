@@ -137,18 +137,35 @@ class Stack:
         return Stack(entries, marks=self.marks, cap=self.cap)
 
     @classmethod
-    def load(cls, raw: Any, *, marks: str, cap: Optional[int] = None) -> "Stack":
-        """从 JSON 文本 / 列表 / None 载入（**容错**：坏数据 → 空容器）。
+    def load(cls, raw: Any, *, marks: str, cap: Optional[int] = None,
+             strict: bool = False) -> "Stack":
+        """从 JSON 文本 / 列表 / None 载入。
 
-        容错是刻意的：这一层读的是历史落盘数据，格式漂移不该让功能崩（与 `Slots.load` 同口径）。
+        `strict=False`（默认，**保持原行为**）：坏数据 → 空容器。
+        ★ `strict=True`：「有值但解析不出」当场抛，不塌成空容器 —— 与 `Slots.load`
+        **同一份判据**（台账 L1545：默认容错在纯读里只是少显示几件，在「读→改→写回」
+        里是**静默清空**）。凡是读完会写回的调用方都必须传 `strict=True`。
+        `raw` 为 `None` / 空串（没有存档）不抛 —— 那是「空容器」，不是「坏档」。
         """
         data = raw
         if isinstance(data, (str, bytes)):
-            try:
-                data = json.loads(data)
-            except (ValueError, TypeError):
-                data = None
+            if data and strict:
+                try:
+                    data = json.loads(data)
+                except (ValueError, TypeError) as exc:
+                    raise ValueError(
+                        "Stack.load：落盘数据坏 JSON（strict=True 不接受塌成空容器）："
+                        "%r（%s: %s）" % (str(data)[:60], type(exc).__name__, exc)) from exc
+            else:
+                try:
+                    data = json.loads(data)
+                except (ValueError, TypeError):
+                    data = None
         if not isinstance(data, list):
+            if strict and data is not None and not isinstance(data, list):
+                raise ValueError(
+                    "Stack.load：落盘数据顶层不是列表（strict=True）：%s"
+                    % (type(data).__name__))
             data = []
         return cls(data, marks=marks, cap=cap)
 

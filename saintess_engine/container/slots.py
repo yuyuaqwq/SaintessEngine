@@ -48,18 +48,41 @@ class Slots:
         return make_entry(e.get("key"), e.get("data") or {}, e.get("count") or 1)
 
     @classmethod
-    def load(cls, raw: Any, max_slots: Optional[int] = None) -> "Slots":
-        """从 JSON 文本 / 列表 / None 载入（**容错**：坏数据 → 空容器）。
+    def load(cls, raw: Any, max_slots: Optional[int] = None, *, strict: bool = False) -> "Slots":
+        """从 JSON 文本 / 列表 / None 载入。
 
-        容错是刻意的：这一层读的是历史落盘数据，格式漂移不该让功能崩。
+        `strict=False`（默认，**保持原行为**）：坏数据 → 空容器。这一层读的是历史
+        落盘数据，格式漂移不该让**纯读**的调用方崩。
+
+        ★ `strict=True`：**「有值但解析不出」当场抛** `ValueError`，不塌成空容器。
+        这是给「读 → 改 → 写回」那条链路用的（台账 L1545）：
+        默认容错在**纯读**里只是少显示几件东西，但在**读改写**里是**静默清空** ——
+        坏档读成空仓，紧接着的任何一次写回（存 1 件东西）就把整个仓覆盖成那一件，
+        原来那几十件**永久不可恢复**，全程零异常零回话。
+        实测（`games/orlandia/content/persistence/world.py:465` 存仓就是这个形状）：
+        坏档 + 存 1 个木头 ⇒ 写回 `[{"key":"wood",...}]`，原仓内容全部消失。
+        ⇒ **凡是读完会写回的调用方都必须传 `strict=True`**（或自己先验一遍）。
+        `raw` 为 `None` / 空串（**没有存档**）不抛 —— 那是「空仓」，不是「坏档」。
         """
         data = raw
         if isinstance(data, (str, bytes)):
-            try:
-                data = json.loads(data)
-            except (ValueError, TypeError):
-                data = None
+            if data and strict:
+                try:
+                    data = json.loads(data)
+                except (ValueError, TypeError) as exc:
+                    raise ValueError(
+                        "Slots.load：落盘数据坏 JSON（strict=True 不接受塌成空容器）："
+                        "%r（%s: %s）" % (str(data)[:60], type(exc).__name__, exc)) from exc
+            else:
+                try:
+                    data = json.loads(data)
+                except (ValueError, TypeError):
+                    data = None
         if not isinstance(data, list):
+            if strict and data is not None and not isinstance(data, list):
+                raise ValueError(
+                    "Slots.load：落盘数据顶层不是列表（strict=True）：%s"
+                    % (type(data).__name__))
             data = []
         return cls(max_slots=max_slots, entries=data)
 
