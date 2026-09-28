@@ -7,7 +7,6 @@
 
 用法：
     python tools/check_wiki_refs.py            # 全量报告
-    python tools/check_wiki_refs.py --fix-hint # 只列有建议值的
     python tools/check_wiki_refs.py --fix-bare # 只修「纯行号」档的硬失效（空行/越界）
     python tools/check_wiki_refs.py --fix-bare-all # 连「语义存疑」档的纯行号也改到符号定义行
 退出码：0 = 无 drift；1 = 有 drift（可接 CI）。
@@ -167,7 +166,14 @@ def _related(txt: str, names) -> bool:
 
 
 def main() -> int:
-    fixed_hint_only = "--fix-hint" in sys.argv
+    # ★ 2026-09-28（审计 L170「死变量 + 误导性 docstring」）：
+    #   原 docstring 用法块登记了 `--fix-hint # 只列有建议值的`，本行也把它读进
+    #   `fixed_hint_only` —— 但该变量**自 c3d2e4d 引入起零读取**，实跑黑盒：
+    #   `check_wiki_refs.py --fix-hint` 输出与无参数**逐字节相同**（rc 与行数全同）。
+    #   即 docstring 承诺的「只列有建议值的」行为**从未存在**，照着用的人只会拿到
+    #   全量报告。死变量与那条用法行一并删掉，**不留兼容壳**（不留「认了这个开关但
+    #   不做效果」的假开关）。真要「只列有建议值的」，自行对本报告 grep 即可，
+    #   本工具不为此另造一个筛选口径。
     fix = "--fix" in sys.argv
     fix_bare = "--fix-bare" in sys.argv or "--fix-bare-all" in sys.argv
     #: `--fix-bare-all`：连「语义存疑」那一档的纯行号也改到**该符号的定义行**
