@@ -137,8 +137,12 @@ async def run_shortcut(owner: Any, event: Any, text: str, finder: Callable[[str]
             if r:
                 yield r
     except Exception as e:  # noqa: BLE001
-        lg.warning("[saintess_engine.command] 快捷转发失败 %s: %s", text, e)
-        yield event.plain_result(f"{error_prefix}{e}")
+        # ★ 2026-09-28 审计 L288-2：异常**详情**只进日志，玩家那一行只给通用句。
+        #   原写法 f"{error_prefix}{e}" 把 KeyError('dungeon_floor_id') 这类内部细节
+        #   （机器键 / 字段名 / 内部路径）直接印给玩家，违反「玩家可见文本禁机器键」。
+        #   日志侧补 exc_info 让 traceback 也可追（原先只有 str(e)，丢栈）。
+        lg.warning("[saintess_engine.command] 快捷转发失败 %s: %s", text, e, exc_info=True)
+        yield event.plain_result(error_prefix + "（详情见服务端日志）")
     finally:
         if orig is not None:
             setattr(event, swap_attr, orig)
