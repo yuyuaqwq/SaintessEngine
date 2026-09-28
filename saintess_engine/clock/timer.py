@@ -28,6 +28,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Mapping
 from typing import Any, Callable, Optional
 
 from .._validators import int_of
@@ -71,6 +72,36 @@ def _expire_of(ev: dict, key: Any, owner: Any) -> int:
             f"expire 必须是整数秒（owner={owner!r} key={key!r}）："
             f"{type(value).__name__}：{value!r}")
     return int(value)
+
+
+def _data_of(ev: dict, key: Any, owner: Any) -> dict:
+    """取一条事件的 `data`：必须是映射；缺键 / `None` 归一为 `{}`。
+
+    为什么要 fail-closed：`data` 是本表里唯一**内容侧完全自持**的载荷（`type`/`expire`
+    都被本模块校验过，只有它一路裸奔）。原实现两处缺口：
+
+    ① `set()` 的 `data or {}` —— 任何非映射（`'坏字符串'` / `123` / `['x']`）都能落盘，
+       零报错；同一形状的另一份实现（`ext_life.timers.Timers.set`）当场 TypeError。
+    ② `items(data_match=…)` 的 `ev.get("data", {}).get(dk)` —— 直接对存储给的东西
+       调 `.get`，非映射存储一进来就是 `AttributeError: 'str' object has no
+       attribute 'get'`，**报在引擎内部**、不点名 owner/key，玩家侧只看到一次无来由的
+       崩溃（实测复现，键名与归属都丢了）。
+
+    与 `_expire_of` 同口径：坏数据点名 `owner` 与 `key` 后抛 `TimerStorageError`，
+    不静默当空载荷（静默会把「数据坏了」伪装成「这条事件没有额外条件」）。
+    `Mapping` 而非 `dict`：与 `ext_life.timers._event_of` 取同一集合。
+    """
+    if not isinstance(ev, dict):
+        raise TimerStorageError(
+            f"事件记录不是映射（owner={owner!r} key={key!r}）：{type(ev).__name__}")
+    data = ev.get("data")
+    if data is None:
+        return {}
+    if not isinstance(data, Mapping):
+        raise TimerStorageError(
+            f"事件的 data 不是映射（owner={owner!r} key={key!r}）："
+            f"{type(data).__name__}：{data!r}")
+    return dict(data)
 
 
 def _type_key_of(type_key: Any) -> str:
@@ -178,6 +209,8 @@ class LazyTimers(WarnMixin):
         """
         _event_key_of(key)
         _type_key_of(type_key)
+        if data is not None and not isinstance(data, Mapping):
+            raise TypeError(f"data 必须是映射，收到 {type(data).__name__}：{data!r}")
         spec = self._types.get(type_key)
         if spec is None:
             # 未注册类型：按 `ext_life.timers` 同一口径取兜底时长并**留痕**（不是静默）。
@@ -196,7 +229,9 @@ class LazyTimers(WarnMixin):
             dur = self.default_duration_sec
         expire = int(self._clock()) + dur
         events = self._load(owner) or {}
-        events[key] = {"type": type_key, "data": data or {}, "expire": expire}
+        events[key] = {"type": type_key,
+                       "data": dict(data) if data is not None else {},
+                       "expire": expire}
         self._save(owner, events)
         return expire
 
@@ -226,7 +261,7 @@ class LazyTimers(WarnMixin):
             self._fire_expire(owner, ev)
             return None
         expire = _expire_of(ev, key, owner)
-        return {"type": ev.get("type"), "data": ev.get("data", {}),
+        return {"type": ev.get("type"), "data": _data_of(ev, key, owner),
                 "expire": expire, "remain": expire - now}
 
     def items(self, owner: Any, *, type_key: Optional[str] = None,
@@ -250,10 +285,10 @@ class LazyTimers(WarnMixin):
         for k, ev in events.items():
             if type_key is not None and ev.get("type") != type_key:
                 continue
-            if data_match and not all(ev.get("data", {}).get(dk) == dv
+            if data_match and not all(_data_of(ev, k, owner).get(dk) == dv
                                       for dk, dv in data_match.items()):
                 continue
-            out.append({"key": k, "type": ev.get("type"), "data": ev.get("data", {}),
+            out.append({"key": k, "type": ev.get("type"), "data": _data_of(ev, k, owner),
                         "expire": _expire_of(ev, k, owner),
                         "remain": _expire_of(ev, k, owner) - now})
         return out
@@ -286,7 +321,7 @@ class LazyTimers(WarnMixin):
         if not cb:
             return
         try:
-            cb(owner, ev.get("data", {}) or {})
+            cb(owner, _data_of(ev, ev.get("type"), owner))
         except Exception:
             self._warn("on_expire 回调失败（type=%r）", ev.get("type"))
 
