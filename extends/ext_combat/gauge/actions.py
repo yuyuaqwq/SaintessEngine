@@ -33,6 +33,11 @@ from __future__ import annotations
 from ..battle.effects import register_action
 from ..battle.cues import cue as _cue    # 已迁移点位走表现事件（措辞真源 = 内容侧文案表）
 from ..battle.diagnostics import diag as _diag   # 阶段/锚点出错的诊断通道（审计 L251）
+# 段数口径单源到 battle 侧（审计 L251 同族 · 批次 4）：本模块的 per_hit 多段量与
+# 战斗侧读同两个键、同一默认，改前写成 `or` 链吞 0 ⇒ `hits: 0` 时两侧分叉
+# （战斗侧 0 段 = 零伤害 · 这里 1 段 = 白送一份量），零报错。依赖方向 gauge -> battle，
+# battle/* 全族零 gauge 反向引用 ⇒ 零循环 import。
+from ..battle.actions import hits_of as _hits_of
 
 
 def _now_of(battle) -> float:
@@ -118,7 +123,7 @@ def bar_gain_act(battle, caster, target, params, logs):
         # （skill_hit 每次施放只 fire 一次，段循环在 fire 之前——等价旧引擎逐段 settle）
         if params.get("per_hit"):
             try:
-                amount = int(amount or 0) * int(info.get("hits") or info.get("multi") or 1)
+                amount = int(amount or 0) * _hits_of(info)
             except (TypeError, ValueError) as _e:
                 # 审计 L251：原来这里是宽泛 except + pass，多段量静默退成单段量（
                 # 错误一条日志都没有）。现收窄为 int() 真能抛的两类并记诊断；

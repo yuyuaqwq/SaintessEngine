@@ -46,6 +46,18 @@ def _int(value, fallback, default: int) -> int:
     return default if value is None else int(value)
 
 
+def hits_of(info: dict) -> int:
+    """技能的**施放段数**（内容侧 `hits` / `multi`，缺键回落 1；合法 0 原样返回）。
+
+    段数是乘区：0 段 = 零伤害（内容侧配得出来的合法档位），缺键 = 单段。
+    `or` 回落会把 0 吞成 1（0 段静默变成 1 段、伤害凭空多出一份）⇒ 本函数只认 `None`。
+    ★ **本函数是段数口径的唯一真源**：`gauge/actions.py::bar_gain_act` 的 per_hit
+    多段量读同两个键、同一默认，改前写成 `or` 链吞 0、两侧对 `hits: 0` 分叉
+    （战斗侧 0 段 = 零伤害 · 计量条侧 1 段 = 白送一份量），零报错。
+    """
+    return _int(info.get("hits"), info.get("multi"), 1)
+
+
 def _kind(name: str) -> str:
     """kind 语义值（内容注入；未装配 → ""）。引擎零 kind 字面量。"""
     return _GC.kind_of(name)
@@ -529,7 +541,7 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
     lucky = False
     if is_crit:
         lucky = random.random() < _F.lucky_rate()      # L246：0.30 已下沉骨架表
-    multi = _int(info.get("hits"), info.get("multi"), 1)
+    multi = hits_of(info)
     pp_phys = float(st.get("pene_phys", 0) or 0)
     pf_phys = int(st.get("pene_flat_phys", 0) or 0)
     pp_magi = float(st.get("pene_magi", 0) or 0)

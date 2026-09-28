@@ -270,6 +270,14 @@ _FROZEN_DIVERGENCE = {
         _diag(battle, "bar_gain_act · 量转整", _e, key=key, raw=amount)
         return
 '''),
+        # 审计 L251 同族（2026-09-29 · 批次 4 · 段数口径单源化）：per_hit 的多段量
+        # 原写成 `int(info.get("hits") or info.get("multi") or 1)`，`or` 链吞掉合法 0
+        # ⇒ 同一份 info 在两侧分叉：战斗侧 `hits: 0` = 零段 = 零伤害，本模块 = 1 段
+        # = 白送一份量（`per_hit` 的 shaken_gain 等多段加成），零报错。
+        # 改走 `battle.actions.hits_of`（段数口径唯一真源，只认 None）。合法非 0 配置
+        # （真源实测：1/2/3/4，无 0）行为逐字节不变。
+        (r'''                amount = int(amount or 0) * int(info.get("hits") or info.get("multi") or 1)''',
+         r'''                amount = int(amount or 0) * _hits_of(info)'''),
     ),
     "bar_phase_preserve_act": (
         (r'''        logs.append(f"💢【{host.get('name', '目标')}】阶段更迭："
@@ -329,7 +337,7 @@ PIN_NEW = {
     '_settle': '8ff290c18aabb7ec00a9ef8c09ef5baefe4c9bee18c96970ada7a2a7b5ce967c',
     # ★ 重钉（2026-09-28 · 审计 L251）：bar_gain_act 的两处宽泛 except 收窄并接诊断。
     #   PIN_FROZEN（冻结副本）**一字未动**；只重钉本函数的活实现 sha，算法与旧值同源。
-    'bar_gain_act': 'e831f1aaf63a4fbd6f10aad9d51748815be958e387d98a6797a581868bde9206',
+    'bar_gain_act': 'a2bdbd86de7a1e479704c5208fceb9413a165648db905153956fdafdd7043aa7',
     # ★ 重钉（2026-09-28 · 审计 L251 同族）：保留比例单源化（falsy 吞合法 0）。
     #   PIN_FROZEN（冻结副本）**一字未动**；只重钉本函数的活实现 sha，算法与旧值同源。
     'bar_phase_preserve_act': '2da1168d5de782be512157838065a420ae24bc3558b8ea916c118f5944a267e7',
