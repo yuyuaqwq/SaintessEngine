@@ -42,7 +42,7 @@ import sys
 import weakref
 from typing import Callable, Optional
 
-__all__ = ["register_view", "views", "rebuild_views", "ViewsRebuildError",
+__all__ = ["register_view", "registered_views", "rebuild_views", "ViewsRebuildError",
            "update_in_place", "apply_replacements", "placeholder"]
 
 #: 已登记的重建函数（弱引用 + 登记序）—— 模块被回收，登记随之消失（不强引用、不泄漏）。
@@ -113,8 +113,13 @@ def _live() -> list:
     return live
 
 
-def views() -> list:
+def registered_views() -> list:
     """已登记的重建函数副本（**构建序**，即 `(order, 登记序)` 升序）。
+
+    ★ 名字带 `registered_` 前缀是**刻意的**：本模块叫 `views.py`，而同名函数 `views()`
+      会在 `records/__init__.py` 的 `from .views import ... views` 处**遮蔽同名子模块** ——
+      `R.views` 变成函数、`R.views._apply_replacements` 当场 AttributeError
+      （连 `import saintess_engine.records.views as V` 都会绑到函数）。故改名，不留别名壳。
 
     返回新列表（不是内部容器）：调用方拿到的是**函数对象**本身，可直接调用/查看。
     """

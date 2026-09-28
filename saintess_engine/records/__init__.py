@@ -86,7 +86,7 @@
 **内容侧派生重建（视图注册表，`records/views.py`）**::
 
     register_view(fn, order=0)     # 内容侧各模块 import 期登记自己的重建函数
-    views()                        # 已登记函数副本（`(order, 登记序)` 升序）
+    registered_views()             # 已登记函数副本（`(order, 登记序)` 升序）
     rebuild_views(module_prefix=…) # 依次调用；返回成功个数。容器就地更新；非容器由引擎按
                                    # 身份在 `module_prefix` 前缀的已加载模块里做**别名回填**。
                                    # 任一失败 → `ViewsRebuildError`（点名函数与原因，不吞）
@@ -120,15 +120,16 @@ __all__ = ["Records", "RecordsSet", "RecordsOrderMismatch", "RecordsReloadError"
            "package_root_of", "set_from_module",
            "DEFAULT_DECL", "DEFAULT_KIND_DIRS",
            # 通用视图注册表（`records/views.py`；见该模块头注「两条口径」）
-           "register_view", "views", "rebuild_views", "ViewsRebuildError",
+           "register_view", "registered_views", "rebuild_views", "ViewsRebuildError",
            "update_in_place", "apply_replacements", "placeholder"]
 
 # 通用视图注册表（派生重建）：引擎只按 `(order, 登记序)` 调函数 + 按身份做别名回填，
 # 不认识任何具体派生名字（零领域知识）。实现与文档在 `records/views.py`。
 from ..domains import (decl_switch as _decl_switch, merge_decls as _merge_decls,   # noqa: E402
                        layered_decls as _layered)
-from .views import (ViewsRebuildError, apply_replacements, placeholder,   # noqa: E402
-                    rebuild_views, register_view, update_in_place, views)
+from .views import (ViewsRebuildError, apply_replacements,    # noqa: E402
+                    placeholder, rebuild_views, register_view,
+                    registered_views, update_in_place)
 
 _UNSET: Any = object()
 

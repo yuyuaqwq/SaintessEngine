@@ -6,8 +6,9 @@
 搬到这里，包内**只再导出**（42 个调用点零改动）。
 
 * `read_json` —— 最底层的 JSON 读（缺文件 / 坏 JSON → `default`，不抛）。
-  引擎宿主装载口 `saintess_engine/host/package.py` 用的是**同一份**（两处实现原逐字相同，
-  W8 去重：`host/package.py` 改为从本模块取）。
+  ★ 历史上引擎宿主装载口 `saintess_engine/host/package.py` 也用这一份（W8 去重），
+    但**该文件已删**（`787f8bf`，`git log --diff-filter=D` 可查）⇒ 不要再照这句去「核对去重」，
+    那已是不存在的文件。
 * `int_keys` —— JSON 字符串键 → int 键（非整数键**原样保留**，不静默丢）。
 * `num_sorted` —— int 键表按**数值升序**（JSON 是字典序：`"10" < "2"` ⇒ 不排序 = 档位乱序）。
 * `ordered` —— 按**调用方给的声明序**排外层键；键集与声明不一致 → `raise`（防静默改序）。
