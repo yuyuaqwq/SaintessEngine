@@ -94,6 +94,16 @@ _KEYS_ARG = frozenset({"op", "arg"})
 _KEYS_MEMBER = frozenset({"op", "elem", "seq"})
 
 
+#: 一元算子 → 「取 `arg` 的值之后套哪一层」。
+#: `bool` / `len` / `int` 与 `not` 的差别**只在套的那层函数**，形状校验是同一份
+#: （`_KEYS_ARG`）⇒ 形状错时报的点名用 `op` 本身，四种算子共用一个分支。
+#: `int` 的 `int(v or 0)` 是 docstring 明写的有意口径（台账 :933 判「不列」），原样保留。
+_UNARY_OPS = {"not": lambda v: not v,
+              "truthy": bool,
+              "len": len,
+              "int": lambda v: int(v or 0)}
+
+
 #: 「这一步没给 default」哨兵（与「default 就是 None」分开）
 _MISSING = object()
 
@@ -212,26 +222,15 @@ def _compile_op(spec):
                     return out
             return out
         return _or
-    if op == "not":
+    if op in _UNARY_OPS:
+        # 四个一元算子（not / truthy / len / int）形状**完全同构**（`_KEYS_ARG` =
+        # {op, arg}），只是包一层不同的函数 ⇒ 一张表 + 一个分支，取代原先四份
+        # 逐字重复的「形状校验 + 取 arg + 包 lambda」三行（台账 L999 同族逐字重复）。
         if frozenset(spec) != _KEYS_ARG:
-            raise SpecError("not 节点的键不对：%r" % (sorted(spec),))
+            raise SpecError("%s 节点的键不对：%r" % (op, sorted(spec)))
         arg = _compile(spec["arg"])
-        return lambda ctx, _a=arg: not _a(ctx)
-    if op == "truthy":
-        if frozenset(spec) != _KEYS_ARG:
-            raise SpecError("truthy 节点的键不对：%r" % (sorted(spec),))
-        arg = _compile(spec["arg"])
-        return lambda ctx, _a=arg: bool(_a(ctx))
-    if op == "len":
-        if frozenset(spec) != _KEYS_ARG:
-            raise SpecError("len 节点的键不对：%r" % (sorted(spec),))
-        arg = _compile(spec["arg"])
-        return lambda ctx, _a=arg: len(_a(ctx))
-    if op == "int":
-        if frozenset(spec) != _KEYS_ARG:
-            raise SpecError("int 节点的键不对：%r" % (sorted(spec),))
-        arg = _compile(spec["arg"])
-        return lambda ctx, _a=arg: int(_a(ctx) or 0)
+        wrap = _UNARY_OPS[op]
+        return lambda ctx, _a=arg, _w=wrap: _w(_a(ctx))
     if op == "contains":
         if frozenset(spec) != _KEYS_MEMBER:
             raise SpecError("contains 节点的键不对：%r" % (sorted(spec),))
