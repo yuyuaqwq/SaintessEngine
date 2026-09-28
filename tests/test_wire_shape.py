@@ -12,9 +12,14 @@
   ④ **只读视图**：`handles()` 改不动
   ⑤ **零知识**：wire 源码里不得出现内容侧取值（注释 / docstring 一并算）
   ⑥ **边界**：wire 不 import 任何包内模块（只标准库）
+  ⑦ **接线样板两套口径不混用**（`slot()` 声明式 vs 手写 `Wire()`+`bind_host`）——
+     ★ 只钉「同一文件不得同时用两套」这个**不变式**，**不钉任何计数**：
+     迁移在继续，钉死数量只会变成下一批的假红（与 `test_editor_wiki` 的 README 门槛同型）
 """
 import ast
+import io
 import os
+import re
 import sys
 import types
 
@@ -365,6 +370,38 @@ def t8_boundaries():
         check(f"边界写明：{phrase}", phrase in mod_doc)
 
 
+def t9_slot_vs_handwritten_not_mixed():
+    """接线样板两套口径**不混用**（`slot()` 声明式 vs 手写 `Wire()`+`bind_host`）。
+
+    为什么钉这条：两套口径的**失败形态不同** —— `slot(**objs)` 全收，而手写版的
+    `bind_host(db=None, content=None, ...)` 是**具名参数**，未声明的键 `TypeError`。
+    同一文件里混用两套 ⇒ 同一种「接宿主」的写法有两种失败口径，读代码的人无从判断。
+    实测（2026-09-28）：orlandia 生产面两套**零交集**（slot 27 文件 / 手写 19 文件）⇒
+    是「未收净」而不是「混乱」。
+
+    ★ **只钉不变式，不钉计数** —— 迁移继续，数字必然漂；钉死数量 = 制造下一条假红门禁。
+    """
+    content_dir = os.path.join(ROOT, "games", "orlandia", "content")
+    if not os.path.isdir(content_dir):
+        check("orlandia/content 存在（不混用断言的扫描根）", False, "缺 " + content_dir)
+        return
+    slot_files, manual_files = set(), set()
+    for dirpath, dirnames, filenames in os.walk(content_dir):
+        dirnames[:] = [d for d in dirnames if d != "__pycache__"]
+        for fn in filenames:
+            if not fn.endswith(".py"):
+                continue
+            p = os.path.join(dirpath, fn)
+            txt = io.open(p, "r", encoding="utf-8", errors="replace").read()
+            if "slot as _slot" in txt or re.search(r"=\s*slot\s*\(", txt):
+                slot_files.add(p)
+            if re.search(r"=\s*Wire\s*\(\s*\)", txt):
+                manual_files.add(p)
+    both = sorted(slot_files & manual_files)
+    check("★ 接线样板两套口径不混用（同一文件不得同时用 slot() 与手写 Wire()）",
+          not both, "同时用两套的文件：%s" % [os.path.relpath(p, ROOT) for p in both])
+
+
 def main():
     print("== wire 门禁：注入句柄 / 惰性模块 / 观测口 / 名字面 / 零知识 ==")
     t1_handle_fail_closed()
@@ -375,6 +412,7 @@ def main():
     t6_readonly_view()
     t7_zero_knowledge()
     t8_boundaries()
+    t9_slot_vs_handwritten_not_mixed()
     print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
     return 1 if failed else 0
 
