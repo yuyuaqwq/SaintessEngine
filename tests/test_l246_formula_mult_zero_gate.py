@@ -28,6 +28,12 @@
 4. 非零取值逐值不变（0.5 / 1.0 / 2.0）
 5. **静态向**：两个文件里不得再出现 `get("mult", 1.0) or 1.0` 这一形态
 6. **两向反证**：把任一处改回旧写法，判据必须转红 —— 证明它真在钉这件事
+7. ★ **第四轮新增（静态扫描根扩面 + 覆盖面自证）**：上面第 5 条只扫 `formulas.py` 一个文件
+   —— 那正是包仓第一轮「列名 4 个文件」漏掉整个 `content/flow/` 的同一个坑。
+   ⇒ 改为扫 `extends/` + `saintess_engine/` + `editor/` + `tools/` + `examples/` 整棵子树，
+   **外加「扫到 >= 180 个 .py」的覆盖面断言**（实测 188 · 命中 0）。
+   ⇒ ★ 反面约束：**不要**照「引擎里还有 `or`」去改别处。`x.get(k, 1.0) or 1.0` 只在
+     **乘法读点**上吞 0；用在**布尔谓词**上是另一族（判据得分开写，见包仓门禁的分族判据）。
 """
 from __future__ import annotations
 
@@ -49,6 +55,21 @@ PASS = 0
 check = bind_check(globals(), "PASS", "FAIL", "FAILS")
 
 _FORMULAS = os.path.join(_ROOT, "extends", "ext_combat", "battle", "formulas.py")
+
+# ★ 审计 L246 同族 · 第四轮扩面：静态扫描根由「逐个列名的 1 个文件」扩到**引擎自有的整棵产品子树**。
+#   同一形态在两个仓各犯一次（教训链）：
+#     · 第一轮（包仓）：扫描根 = 逐个列名的 4 个文件 => 整个 content/flow/ 漏网（第二十二轮实测）
+#     · 第二轮（包仓）：扩到 content/flow/，仍是「已知处 + 一个目录」=> 再按形态扫整棵 content/
+#     · 第三轮（本文件）：扫描根 = **单个** formulas.py，且**没有覆盖面自证**
+#       => 「我扫够了没有」永远无法判定（本轮实测整棵子树的文件数与命中数后才敢说清）。
+#   ⇒ 这一条不是「多加几个断言」，是把「够宽」变成**可判定的**（Step 0g）。
+_MULT_KEYS = ("mult", "atk_mult", "hp_mult", "pct", "factor", "rate", "ratio", "scale")
+# 跳过：__pycache__/.git 无意义 · data/ docs/ 无产品码 · tests/ 是门禁自身（自己审自己会永真）
+#   · games/ 是**子模块检出**（别人的仓）=> 由包仓那份 whole_tree 门禁管，本门禁不越界
+_SKIP_DIRS = {"__pycache__", ".git", "data", "docs", "design", "tests", "games"}
+# 扫哪些子树：引擎自有的产品面。**不写死文件** —— 写死的根就是下一轮漏网的起点。
+_SCAN_ROOTS = ("extends", "saintess_engine", "editor", "tools", "examples")
+_ENGINE_PY_MIN = 180          # 覆盖面自证下限（实测 188，留余量给增删）
 
 _STATS = {"atk": 1000, "matk": 0, "max_hp": 5000, "level": 10, "_skill_lv": 1}
 
@@ -135,12 +156,80 @@ def test_both_call_sites_use_shared_helper():
         check(f"{fname} 段乘区走 _num 回落", uses_num)
 
 
+def _doc_lines(tree):
+    """返回「属于 docstring 的行号集合」—— 文档里引用旧写法不算活代码。"""
+    bad = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            if ast.get_docstring(node, clean=False) is None:
+                continue
+            first = node.body[0]
+            bad.update(range(first.lineno, (first.end_lineno or first.lineno) + 1))
+    return bad
+
+
+def test_static_whole_engine_tree():
+    """静态向：引擎自有子树零处 `get(乘区键, 非零默认) or 常量`（含覆盖面自证）。"""
+    hits, scanned, parse_fail = [], 0, []
+    for sub in _SCAN_ROOTS:
+        root_dir = os.path.join(_ROOT, sub)
+        if not os.path.isdir(root_dir):
+            parse_fail.append("扫描根不存在: %s" % sub)
+            continue
+        for root, dirs, files in os.walk(root_dir):
+            dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
+            for f in sorted(files):
+                if not f.endswith(".py"):
+                    continue
+                p = os.path.join(root, f)
+                rel = os.path.relpath(p, _ROOT).replace("\\", "/")
+                try:
+                    tree = ast.parse(io.open(p, encoding="utf-8").read())
+                except SyntaxError as e:
+                    parse_fail.append("%s: %s" % (rel, e))
+                    continue
+                scanned += 1
+                bad = _doc_lines(tree)
+                for n in ast.walk(tree):
+                    if not (isinstance(n, ast.BoolOp) and isinstance(n.op, ast.Or)
+                            and len(n.values) == 2):
+                        continue
+                    if n.lineno in bad:
+                        continue
+                    lhs = n.values[0]
+                    if not (isinstance(lhs, ast.Call) and isinstance(lhs.func, ast.Attribute)
+                            and lhs.func.attr == "get" and lhs.args
+                            and isinstance(lhs.args[0], ast.Constant)):
+                        continue
+                    if lhs.args[0].value not in _MULT_KEYS or len(lhs.args) < 2:
+                        continue
+                    try:
+                        default = float(lhs.args[1].value)
+                    except (AttributeError, IndexError, TypeError, ValueError):
+                        continue
+                    if default == 0.0:
+                        continue
+                    # ★ 右值也必须非零才算「吞 0」：`x or 0` 保留 0（判据自我纠错①）
+                    try:
+                        rhs = float(n.values[1].value)
+                    except (AttributeError, TypeError, ValueError):
+                        rhs = None
+                    if rhs == 0.0:
+                        continue
+                    hits.append("%s:%s" % (rel, n.lineno))
+    check("引擎子树全部可解析（扫描前提）", not parse_fail, "解析失败 %s" % parse_fail)
+    check("引擎自有子树扫到 >=%d 个 .py（覆盖面自证）" % _ENGINE_PY_MIN,
+          scanned >= _ENGINE_PY_MIN, "只扫了 %s" % scanned)
+    check("引擎自有子树零处 get(乘区键, 非零) or 常量", not hits, "命中 %s" % hits)
+
+
 def main() -> int:
     test_resolve_formula_zero_segment_not_swallowed()
     test_skill_expr_preview_zero_segment_not_swallowed()
     test_missing_and_none_still_fall_back_to_one()
     test_no_or_swallow_pattern_in_source()
     test_both_call_sites_use_shared_helper()
+    test_static_whole_engine_tree()
     print(f"\nPASS={PASS} FAIL={len(FAILS)}")
     for f in FAILS:
         print("  FAIL:", f)
