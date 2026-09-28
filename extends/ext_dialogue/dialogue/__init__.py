@@ -224,7 +224,7 @@ class Dialogue:
         """树上的 `start` 字段取值（**不校验命中**；「start 缺不缺」由导出器审计）。"""
         return self._root().get(_F_START)
 
-    def node(self, node_id) -> dict:
+    def node(self, node_id) -> dict | None:
         """按 id 取节点；不在 `nodes` 里 → **回退 `start` 节点**；再没有 → `{}`。
 
         判据是「键在不在」而不是「值真不真」：键在、值是 `None` → 返回 `None`。
