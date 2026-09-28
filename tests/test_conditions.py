@@ -90,6 +90,21 @@ def t1_register_paths():
     same = deco(_c9)
     check("装饰器调用后才登记", c3.has("k9") and same is _c9)
 
+    # -- 显式 None 不等于「省略」：真修法是哨兵，不是拿 None 当两义（审计 L920）
+    #    改前 register("k", None) 返回装饰器、keys()==[] 静默零登记，
+    #    与 docstring「fn 不可调用 → TypeError」当打对空；改后当场点名抛。
+    c4 = Conditions()
+    check("显式传 None 抛 TypeError（写错不是省略）",
+          fails(c4.register, "k", None))
+    check("显式传 None 不留下零登记的半截状态", c4.keys() == [])
+    check("显式传 None 后 key 查不到（没被悄悄登记）",
+          not c4.has("k") and c4.get("k") is None)
+    for _bad in (0, "", [], {}, 0.0):
+        check(f"显式传不可调用 {_bad!r} 抛 TypeError",
+              fails(c4.register, "kb", _bad))
+    check("省略 fn 仍返回装饰器（哨兵没把正常路堵死）",
+          callable(Conditions().register("kc")))
+
 
 # ---------------------------------------------------------------- 2 声明序
 def t2_key_order():

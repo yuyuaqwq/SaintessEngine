@@ -108,17 +108,18 @@ class Conditions:
         self._fns: dict = {}
 
     # ---------------------------------------------------------------- 登记
-    def register(self, key: str, fn: Optional[Callable] = None):
+    def register(self, key: str, fn=_MISSING):
         """登记 `key` → `fn`；`fn` 省略时返回装饰器（`@conds.register("k")`）。
 
         * `fn` 省略 → 返回装饰器，装饰时把函数登记进去并**返回函数本身**。
         * `fn` 给了 → 直接登记，返回 `fn`。
         * `key` 非字符串 / 空串 → `TypeError` / `ValueError`；`fn` 不可调用 → `TypeError`。
+          （**显式传 `None` 也算**：写错不是「省略」；省略与空值靠哨兵区分，不靠 `fn is None`）
         * 同 key 再注册 = **覆盖**（登记序保持首次位置）—— 与「一个字典赋值」同口径，
           引擎不替内容侧拦重复（重复与否是内容侧的自检，用 `missing` / 审计去看）。
         """
         cond_key = _check_key(key)
-        if fn is None:
+        if fn is _MISSING:
             def deco(func: Callable) -> Callable:
                 self._put(cond_key, func)
                 return func
