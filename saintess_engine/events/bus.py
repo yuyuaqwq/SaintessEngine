@@ -89,9 +89,12 @@ class EventBus(WarnMixin):
            blank_line: Optional[bool] = None) -> None:
         """注册订阅方（**注册序 = 执行序 = 输出行序**）。
 
-        subscriber(ctx) -> Sequence[str] | None
+        subscriber(ctx) -> str | Sequence[str] | None
         * `ctx` 由发布方构造；总线会补 `ctx["event"]`，并把 `ctx[sink_key]` 当行收集器
         * 返回 None / [] = 本段无输出
+        * **返回 `str` = 一行**（不是逐字拆开）。`str` 本就是 `Sequence[str]`，
+          早先写 `Sequence[str] | None` 与「行收集器」的语义自相矛盾：`extend` 一个
+          `str` 会把一句话拆成逐字单行（实测 `lambda c: "已收到订单"` -> 5 行单字）。
         * `blank_line`：该段输出前是否补一个空行（None → 用 `blank_line_default`）
         """
         if event not in self._registry:
@@ -150,9 +153,15 @@ class EventBus(WarnMixin):
                 continue
             if not seg:
                 continue
+            # `str` 是一行，不是逐字序列 —— 不做这一步，一句提示会被拆成逐字单行。
+            seg_lines = [seg] if isinstance(seg, str) else list(seg)
+            # 整段只有空白行时视为无输出（`""` 曾被当成一行空行收集起来）。
+            seg_lines = [ln for ln in seg_lines if ln != ""]
+            if not seg_lines:
+                continue
             if blank and lines and lines[-1] != "":
                 lines.append("")
-            lines.extend(seg)
+            lines.extend(seg_lines)
         return lines
 
     # ------------------------------------------------------------ 内部

@@ -122,6 +122,33 @@ bus5.clear()
 check("clear 清空", bus5.subscribers("k") == ())
 check("has()", bus5.has("k") and not bus5.has("nope"))
 
+print("== 4b. EventBus：str 返回 = 一行（审计 L2178） ==")
+
+# 订阅方返回 str 时，早先 `lines.extend(seg)` 把一句话拆成逐字单行（玩家可见：
+# 一句提示变成 5 行单字）。四种返回形态逐个钉住。
+bus6 = EventBus(("s",))
+bus6.on("s", lambda c: "已收到订单")
+check("str 返回 = 一行（不逐字拆）", bus6.fire("s", {}) == ["已收到订单"], bus6.fire("s", {}))
+
+bus7 = EventBus(("t",))
+bus7.on("t", lambda c: ("行A", "行B"))
+check("tuple 返回逐行保留", bus7.fire("t", {}) == ["行A", "行B"], bus7.fire("t", {}))
+
+bus8 = EventBus(("n",))
+bus8.on("n", lambda c: None)
+check("None 返回 = 无输出", bus8.fire("n", {}) == [], bus8.fire("n", {}))
+
+bus9 = EventBus(("m",))
+bus9.on("m", lambda c: "")
+bus9.on("m", lambda c: [])
+check("空串 / 空列表 = 无输出", bus9.fire("m", {}) == [], bus9.fire("m", {}))
+
+bus10 = EventBus(("x",))
+bus10.on("x", lambda c: "整句", blank_line=False)
+bus10.on("x", lambda c: ["第二条"], blank_line=False)
+check("str 与 list 混排保持整句",
+      bus10.fire("x", {}) == ["整句", "第二条"], bus10.fire("x", {}))
+
 
 # ================================================================ LazyTimers
 print("== 5. LazyTimers：懒过期与回调 ==")
