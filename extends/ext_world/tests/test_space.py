@@ -208,6 +208,59 @@ def t7_registry():
     check("清理后回到两种内置形状", set(topology_names()) == {"chain", "star"})
 
 
+def t7b_topology_shape():
+    """拓扑返回值**形状错**必须在构造期 fail-closed（不许 `or {}` / `.get(默认)` 吞掉）。
+
+    `register_topology` 是公开扩展点，第三方写的 fn 返错形状时，静默空图 / 静默回落 root /
+    落点指向不存在的 id 三种都会顺着跑进玩家流程。
+    """
+    print(chr(10) + "[7b] 拓扑返回值形状校验（fail-closed）")
+    N = [{"id": "a", "role": HUB}, {"id": "b"}, {"id": "c", "role": EXIT}]
+
+    def bad(name, fn):
+        register_topology(name, fn, doc="形状错的探针")
+        try:
+            Space(nodes=N, roles=R, topology=name)
+            return False
+        except ValueError:
+            return True
+        finally:
+            T.TOPOLOGIES.pop(name, None)
+
+    check("返空 dict → 构造期抛（缺 links）",
+          bad("bad_empty", lambda *a, **k: {}))
+    check("缺 links 键 → 抛（不许静默空图）",
+          bad("bad_nolinks", lambda *a, **k: {"gate": "c"}))
+    check("links 不是 dict → 抛",
+          bad("bad_links_type", lambda *a, **k: {"links": ["a", "b"], "gate": "c"}))
+    check("返回值不是映射 → 抛",
+          bad("bad_notmap", lambda *a, **k: [("links", {})]))
+    check("gate 指向不存在的 id → 抛（不许落点落空）",
+          bad("bad_gate", lambda *a, **k: {"links": {"a": ["b", "c"]}, "gate": "nope"}))
+    check("返回 None → 抛",
+          bad("bad_none", lambda *a, **k: None))
+    # 正常形状照旧（反证：上面的抛不是「全都不给过」）
+    register_topology("ok_shape", lambda *a, **k: {"links": {"a": ["b", "c"]}, "gate": "c"},
+                      doc="形状对的探针")
+    try:
+        _ok = Space(nodes=N, roles=R, topology="ok_shape")
+        check("合法返回照旧可用（gate 生效）", _ok.gate() == "c" and _ok.links("a") == ["b", "c"])
+    finally:
+        T.TOPOLOGIES.pop("ok_shape", None)
+    # 悬空**边**仍归 audit 报（不在构造期炸 —— 补边是内容决策）
+    register_topology("ok_dangling", lambda *a, **k: {"links": {"a": ["zzz"]}, "gate": "a"},
+                      doc="悬空边的探针")
+    try:
+        _d = Space(nodes=N, roles=R, topology="ok_dangling")
+        check("悬空边由 audit 报（构造期不炸）", _d.audit()["dangling"] == [["a", "zzz"]])
+    finally:
+        T.TOPOLOGIES.pop("ok_dangling", None)
+    # 空节点表是合法输入（gate() 承诺返回 ""）⇒ 不该被这条校验误伤
+    check("空节点表仍合法（gate 返回 ''）",
+          Space(nodes=[], roles=R).gate() == "")
+    check("清理后仍只有两种内置形状", set(topology_names()) == {"chain", "star"})
+
+
 # ---------------------------------------------------------------- 8 零知识
 def t8_zero_knowledge():
     print("\n[8] 零知识：换一套角色取值，结构一字不差")
@@ -280,6 +333,7 @@ def main():
     t5_route()
     t6_audit()
     t7_registry()
+    t7b_topology_shape()
     t8_zero_knowledge()
     t9_view()
     print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")

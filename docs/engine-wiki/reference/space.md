@@ -138,10 +138,10 @@ register_topology("ring", _ring, doc="环形：首尾相连")
 | `links(id)` | `space/graph.py:161` | 邻接；未知 id → `[]` |
 | `adjacency()` | `space/graph.py:165` | 全图邻接（含零邻接节点 → 空列表） |
 | `depth(id)` | `space/graph.py:169` | 深度（两口径见上） |
-| `gate()` / `entry()` | `space/graph.py:179` / `:202` | 跨图落点 / 出图点（同义，`entry` 是内容侧旧名的别名） |
+| `gate()` / `entry()` | `space/graph.py:219` / `:242` | 跨图落点 / 出图点（同义，`entry` 是内容侧旧名的别名） |
 | `route(src, dst)` / `route_names(...)` | `space/graph.py:205` / `:235` | 必经路径 / 其显示名 |
-| `audit()` | `space/graph.py:240` | 结构自检 |
-| `edges()` / `to_view(label_key=None)` | `space/graph.py:278` / `:286` | 有向边 / 纯 JSON 视图 |
+| `audit()` | `space/graph.py:280` | 结构自检 |
+| `edges()` / `to_view(label_key=None)` | `space/graph.py:318` / `:326` | 有向边 / 纯 JSON 视图 |
 | `node(id)` / `role_of(id)` / `label_of(id)` | `space/graph.py:140` / `:147` / `:150` | 原始节点 / 角色 / 显示名 |
 | `register_topology(name, fn, *, doc, replace)` | `space/topology.py:34` | 注册自定义形状 |
 | `topology_names()` / `get_topology(name)` | `space/topology.py:51` / `:56` | 已注册形状名 / 取函数 |

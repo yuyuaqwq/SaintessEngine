@@ -86,7 +86,47 @@ class Space:
                 f"未知拓扑：{self._topology!r}；已注册：{list(topology_names())}（或显式给 links）"
             ) from None
         out = fn(self._nodes, roles=self._roles, role_key=self._role_key, root=self._root)
-        return dict(out.get("links") or {}), out.get("gate", self._root)
+        return self._take_topology(out)
+
+    # ───────────────────────────── 拓扑返回值的形状校验（fail-closed）
+    def _take_topology(self, out) -> tuple:
+        """校验派生拓扑的返回值再取用（**不接受缺项 / 悬空 id**）。
+
+        `register_topology` 是**公开扩展点**（第三方注册环形/网格/迷宫），返回值就是一份
+        外部喂进来的声明 ⇒ 形状错必须在**构造期**炸出来，不能顺着跑：
+        旧实现 `dict(out.get("links") or {})` + `out.get("gate", self._root)` 把三种错
+        一起吞了：返回 `{}` ⇒ 静默空图；漏 `gate` ⇒ 静默回落到 root（内容侧的出图点
+        意图被顶掉）；`gate` 给不存在的 id ⇒ 落点指向不存在的节点，玩家「出图」落空。
+
+        不对称 / 悬空**边**不在这儿炸：`links` 里指向未知 id 的边是内容侧的数据问题，
+        `audit()` 负责**报**它（补边是内容决策，引擎擅自补会掩盖数据错误）。
+        这里只管三件**形状**事：返回非映射 · 缺 `links` · `gate` 不在节点表里。
+        """
+        if not isinstance(out, dict):
+            raise ValueError(
+                f"拓扑 {self._topology!r} 必须返回 {{'links': {{id: [id…]}}, 'gate': id}}，"
+                f"实际返回 {type(out).__name__}：{out!r}"
+            )
+        if "links" not in out:
+            raise ValueError(
+                f"拓扑 {self._topology!r} 的返回值缺 'links' 键（键名一字不差）："
+                f"实际返回 {sorted(out)}"
+            )
+        links = out["links"]
+        if not isinstance(links, dict):
+            raise ValueError(
+                f"拓扑 {self._topology!r} 的 'links' 必须是 {{id: [id…]}}，"
+                f"实际是 {type(links).__name__}：{links!r}"
+            )
+        gate = out.get("gate")
+        # 空节点表是**合法**输入（`gate()` 对外承诺返回 ""）⇒ 没有可校验的成员，不在这儿判。
+        if self._ids and gate is not None and gate not in self._ids:
+            raise ValueError(
+                f"拓扑 {self._topology!r} 给的 gate={gate!r} 不在节点表里；"
+                f"节点表 = {list(self._ids)}"
+            )
+        normalized = {nid: list(v or ()) for nid, v in links.items()}
+        return normalized, (self._root if gate is None else gate)
 
     def _compute_depth(self):
         """落两种口径的深度表（构造期算一次；见模块文档「深度两口径」）。"""
