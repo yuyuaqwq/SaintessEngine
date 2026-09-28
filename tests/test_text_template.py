@@ -18,6 +18,7 @@ if FW_ROOT not in sys.path:
     sys.path.insert(0, FW_ROOT)
 
 from saintess_engine.text import TextSpec, TextTable, extract_params, safe_format  # noqa: E402
+from saintess_engine.text.template import _KeepUnknown  # noqa: E402  L1452 对拍用
 
 passed = failed = 0
 
@@ -66,6 +67,51 @@ check("safe_format：坏模板不抛（原样返回）", safe_format("{unclosed"
 check("safe_format：None slots 原样返回", safe_format("a {b}") == "a {b}")
 check("safe_format：未知槽保留", safe_format("{a}-{b}", {"a": 1}) == "1-{b}")
 check("safe_format：带格式说明的未知槽不抛", isinstance(safe_format("{x:>5}", {"y": 1}), str))
+
+# ---- L1452：`safe_format` 的第二支是恒不可达死分支（已删）
+# 对拍判据：**两支的可达性必须完全一致** —— 只有在「format_map 失败但 format 能成功」
+# 这种格子上，第二支才可能改变输出；枚举常见形态逐格判定，若将来 str.format 的失败集合
+# 真的分叉了（例如某种占位符只在 format_map 下失败），本条会**立刻报红**并点名。
+def _fmt_map(tpl, slots):
+    try:
+        return tpl.format_map(_KeepUnknown(dict(slots)))
+    except Exception:
+        return None
+
+
+def _fmt_star(tpl, slots):
+    try:
+        return tpl.format(**dict(slots))
+    except Exception:
+        return None
+
+
+_TPLS = [
+    "{name}", "{}", "{0}", "{name} {age}", 
+    "{name!r}", "{name:>5}", "{name:d}", "{a[b]}", "{a.b}",
+    "{{esc}}", "{missing}", "{missing:d}", "{missing.attr}", "{name:>{width}}",
+    "{name:{width}.2f}", "{a[0]}", "{a[0][1]}", "{}{}", "{name!s:>10}", "{a}",
+    "{ }", "{:>3}", "{name:x}", "{name:,.2f}", "{unclosed",
+]
+_VALS = ["v", "", 0, 1, 3.5, None, True, [1, 2], {"a": 1}, (1, 2)]
+_diverge = []
+_pairs = 0
+for _t in _TPLS:
+    for _k in (None, "name", "a", "missing", "0", "width", " "):
+        for _v in _VALS:
+            _s = {} if _k is None else {_k: _v}
+            _r1 = _fmt_map(_t, _s)
+            _r2 = _fmt_star(_t, _s)
+            _pairs += 1
+            if _r1 is None and _r2 is not None:
+                _diverge.append((_t, dict(_s)))
+check("L1452：format_map 失败但 format 成功 = 0 组（删掉的死分支确实恒不可达）",
+      len(_diverge) == 0, _diverge[:3])
+check("L1452：对拍样本非空（避免判据空转恒绿）", _pairs > 1000, _pairs)
+check("safe_format：坏模板仍原样返回（删死分支后唯一退路未丢语义）",
+      safe_format("{name:d}", {"name": "abc"}) == "{name:d}")
+check("safe_format：未知槽仍保留字面量（活路径未受影响）",
+      safe_format("{name}-{miss}", {"name": "A"}) == "A-{miss}")
 check("extract_params：去重保序 + 跳过转义",
       extract_params("{a} {b} {a} {{lit}}") == ("a", "b"),
       extract_params("{a} {b} {a} {{lit}}"))

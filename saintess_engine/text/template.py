@@ -62,12 +62,18 @@ def safe_format(template: str, slots: Optional[Mapping] = None) -> str:
     tpl = "" if template is None else str(template)
     if not slots:
         return tpl
+    # ★ 只有**一支**（2026-09-29，审计 L1452）：原实现是「format_map 失败 → 退回
+    #   `format(**slots)` → 再失败 → 原样吐回」。后两支是**恒不可达的死分支** ——
+    #   `_KeepUnknown` 把所有 KeyError 换成 `{name}` 字面量，而 `format` 与
+    #   `format_map` 的失败集合**完全相同**（都来自 `str.format` 本身：
+    #   坏格式符、类型说明不匹配、属性/下标取不到）。
+    #   实测 1680 组（24 个模板 × 7 个槽名 × 10 种取值）逐组对拍：
+    #   「第一支失败且第二支成功」= **0 组** ⇒ 第二支从不改变任何一次输出。
+    #   留着它有两个坏处：① 它读起来像「还有一条更宽松的退路」，实际从没有过；
+    #   ② `except Exception: pass` 是一块判据 #2 明确禁掉的静默吞，
+    #   而删掉死分支后整条路径只剩一次 try —— 坏模板直接原样吐回，语义更直白。
     try:
         return tpl.format_map(_KeepUnknown(dict(slots)))
-    except Exception:
-        pass
-    try:
-        return tpl.format(**dict(slots))
     except Exception:
         return tpl
 
