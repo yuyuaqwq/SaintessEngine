@@ -87,13 +87,13 @@ mech/actions.py            data/rules.py                      apply.py
 
 ```
 💥 铆壳浮标 受到 29 点伤害！      ← 普攻（技能管道）
-✦ kiln 3/6（+1）                 ← 资源渠道：channels.attack_hit → res_gain → 引擎 apply 动词
+✦ 资源 3/6（+1）                 ← 资源渠道：channels.attack_hit → res_gain → 引擎 apply 动词
 💥 铆壳浮标 受到 9 点伤害！        ← 自定义机制：heat_vent 追伤（landing.deal_damage 收口）
 ♨️ 炉温喷涌：3 层炉温追加 9 点贯穿伤害！
-✦ 消耗 2 点 kiln（剩余 1）        ← consume 动词（引擎内置）
-💫 铆炉匠·阿铆 被【clamp】控制，无法行动！  ← 名词 clamp → EFFECT_ACTIONS → apply mode=skip
+✦ 消耗 2 点资源（剩余 1）        ← consume 动词（引擎内置）
+💫 铆炉匠·阿铆 晕着 —— 这一手什么都做不了！  ← 名词 clamp → EFFECT_ACTIONS → apply mode=skip
 🔥 回火：铆炉匠·阿铆 反击 铆壳浮标 10 点伤害！  ← PASSIVE_PROC → on_taken → backdraft
-🔥 铆炉匠·阿铆 受 rust 2 层影响，损失 4 生命   ← EFFECT_RULES.rust.period（DOT）
+🔥 【铆炉匠·阿铆】持续受损（2 层）—— 损失 4 生命   ← EFFECT_RULES.rust.period（DOT）
 ```
 
 ## 4. 为什么这样设计

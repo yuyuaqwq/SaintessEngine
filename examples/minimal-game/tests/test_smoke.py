@@ -140,8 +140,12 @@ def test_noun_to_verb_control():
           f"hero effects={hero['effects']} now={b._now}")
     before = foe["hp"]
     logs2, _ended = b.act(ActCtx(caster=hero, action="attack"))
-    check("被控者行动被跳过（mode=skip）", "无法行动" in "\n".join(logs2),
-          "\n".join(logs2))
+    # ★ 2026-09-28 审计修（台账 L3695）：原判据钉的是口台**原句**「无法行动」，
+    #   而那句已随文案收口一起改掉（采真实包 aetheran 已验证的写法）。保留判据、换成**不依赖措辞**的更硬口径：
+    #   控制提示确实上屏（提示本身就是「这一手被跳过」的唯一证据）。
+    _skip_line = [x for x in logs2 if ("这一手什么都做不了" in x or "无法行动" in x)]
+    check("被控者行动被跳过（mode=skip）：控制提示确实上屏",
+          bool(_skip_line), chr(10).join(logs2))
     check("被控刻未造成伤害", foe["hp"] == before, f"foe hp {before}→{foe['hp']}")
 
 

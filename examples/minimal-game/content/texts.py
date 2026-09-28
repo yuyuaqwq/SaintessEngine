@@ -51,7 +51,10 @@ TEMPLATES = {
     "battle.core.no_actor": "没有可行动的玩家！",
     "battle.core.finished": "战斗已结束！",
     "battle.core.silenced": "🤐 {name} 被沉默，无法使用技能！(只能普攻/防御)",
-    "battle.core.controlled": "💫 {name} 被【{tag}】控制，无法行动！",
+    "battle.core.controlled": "💫 {name} 晕着 —— 这一手什么都做不了！",
+  # ★ 2026-09-28 审计修（台账 L3695）：原来印的是 **容器键原文** `{tag}`。
+  #   真实包（aetheran-package）已经把它收掉（夜班试玩 w3 碰到「被【star_daze】控制」）。
+  #   examples/ 是给第三方作者的 **抄写样板**（README 写着「照它抄就行」）⇒ 样板不能教错写法。
     "battle.core.unknown_action": "未知行动类型：{action}",
     "battle.schedule.cast_begin": "🌀 {name} 开始出招…",
     "battle.core.defend": "🛡 {name} 摆出防御姿态，受到的伤害减半！",
@@ -65,14 +68,16 @@ TEMPLATES = {
     "battle.effects.on_hit_ready": "✦ {key} 出手效果就绪（{turns} 刻内生效）",
     "battle.effects.stack_active": "✦ {key}（持续 {turns} 刻）",
     "battle.effects.stack_short": "⚠️ {key} 不足（需 {amount}，当前 {cur}）",
-    "battle.effects.stack_spent": "✦ 消耗 {amount} 点 {key}（剩余 {left}）",
+    "battle.effects.stack_spent": "✦ 消耗 {amount} 点资源（剩余 {left}）",
+  # ★ 同批：收掉 `{key}`（本例子中是职业资源键 `kiln`）。
     "battle.effects.shield_gain": "🛡️ {name} 获得护盾 {value} 点！",
     "battle.effects.cleansed": "✨ 净化了 {names}！",
     "battle.effects.cleanse_none": "✨ 净化（无减益可解）",
     "battle.effects.healed": "✨ {name} 恢复了 {heal} 点生命！",
     "battle.effects.cast_broken": "💥 {name} 的出招被打断了！",
     "battle.effects.damaged": "💥 {name} 受到 {dmg} 点伤害！",
-    "battle.effects.stack_add": "✦ {key} {n}{cap}（+{amount}）",
+    "battle.effects.stack_add": "✦ 资源 {n}{cap}（+{amount}）",
+  # ★ 同批：收掉 `{key}`（本例子中是职业资源键 `kiln`）。
     "battle.actions.no_target": "但没有可攻击的目标！",
     "battle.actions.skill_cd": "⏳ 【{name}】冷却中：还需 {left:.1f} 刻！",
     "battle.actions.resource_lack": "⚡ 核心资源不足：需要 {rv:g} {rk}，当前 {cur:g}！",
@@ -83,7 +88,8 @@ TEMPLATES = {
     "battle.actions.skill_heal": "你施展【{name}】，治愈了 {heal} 点生命！",
     "battle.actions.skill_cast": "你施展【{name}】！",
     "battle.schedule.actor_turn": "—— {name} 行动 ——",
-    "battle.schedule.dot_tick": "🔥 {name} 受 {key} {n} 层影响，损失 {dmg} 生命",
+    "battle.schedule.dot_tick": "🔥 【{name}】持续受损（{n} 层）—— 损失 {dmg} 生命",
+  # ★ 同批：收掉容器键 `{key}`（本例子中值是英文 `rust`）。
     "battle.schedule.regen_hp": "🍲 {name} 持续恢复，恢复 {heal} 点生命！",
     "battle.schedule.regen_mp": "🍲 {name} 持续恢复，恢复 {heal} 点魔力！",
     "battle.gauge.gain": "💥 {bar} 积蓄 +{add}（{val}/{maxcap}）",
