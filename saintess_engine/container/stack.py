@@ -39,6 +39,31 @@ def carries_records(data: Any, *, marks: str) -> bool:
     return isinstance(data, dict) and data.get(marks) is not None
 
 
+def _cap_of(cap: Any) -> Optional[int]:
+    """`cap`（个体记录条数上限）的**唯一取值口** —— `None` = 不限。
+
+    `cap <= 0` / `bool` / 非整数 一律 raise ValueError（台账 L1540/L1544）：
+    * `cap=0` ⇒ `joined[-0:] == joined`，**上限静默失效**（实跑得全量保留）；
+    * `cap=-1` ⇒ `joined[1:]`，悄悄丢最旧一条；
+    * `cap=True` ⇒ `int(True)==1`，把「不限」写成了「只留 1 条」；
+    * `cap=2.5` ⇒ 切片下标抛标准库 TypeError（错误文案与本模块的口径无关）。
+    零行为变化的边界：合法 `cap`（正整数 / `None`）与字符串数字（`'5'` → 5）
+    仍照旧解析 —— 原先 `int(cap)` 那一支的字面行为一字未动。
+    """
+    if cap is None:
+        return None
+    if isinstance(cap, bool) or not isinstance(cap, (int, str, float)):
+        raise ValueError(
+            "cap（个体记录条数上限）必须是正整数或 None，拿到 %s: %r"
+            % (type(cap).__name__, cap))
+    n = int(cap)                       # 原口径：能转数字就转（str/float 同此）
+    if isinstance(cap, float) and n != cap:
+        raise ValueError("cap 必须是整数，拿到 %r" % (cap,))
+    if n <= 0:
+        raise ValueError("cap（个体记录条数上限）必须是正整数，拿到 %r" % (cap,))
+    return n
+
+
 def _stored_records(stored: Any, marks: str) -> Any:
     """已存一格的个体记录：映射取 `marks`（缺键 → `[]`）；裸序列即记录本身；其它 → `[]`。"""
     if isinstance(stored, dict):
@@ -57,7 +82,8 @@ def merge_records(stored: Any, incoming: dict, *, marks: str,
     """
     out = {k: v for k, v in incoming.items() if k != marks}
     joined = _stored_records(stored, marks) + incoming[marks]
-    out[marks] = joined if cap is None else joined[-cap:]
+    limit = _cap_of(cap)
+    out[marks] = joined if limit is None else joined[-limit:]
     return out
 
 
@@ -108,7 +134,7 @@ class Stack:
                  marks: str, cap: Optional[int] = None) -> None:
         """`marks` = 个体记录字段名（内容侧协议，**必填**）；`cap` = 记录条数上限（`None` = 不限）。"""
         self.marks = marks
-        self.cap = None if cap is None else int(cap)
+        self.cap = _cap_of(cap)
         self._entries: list[dict] = []
         self._index: dict = {}
         for e in entries or ():
