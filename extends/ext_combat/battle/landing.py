@@ -126,6 +126,10 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     #   读的是 `_fire_ctx["dmg"]` 而不是 `mult`（例：奥兰迪亚 `passive_overflow_shield`
     #   「溢出承伤转盾」）。连 fire 一起跳过会静默杀掉那些动作 —— 判据钉的是**减免这一个数
     #   只被算一次**，不是「不许任何人监听这个事件」。
+    # ★ 互斥判定的结果（弃了乘区的那一笔）：**初始化在 try 之前** —— 下面任何一步抛异常
+    #   被 `_diag` 吞掉时，读点仍必须读得到这个值（不定义 ⇒ NameError ⇒ 承伤结算炸）。
+    _mult_skipped = False
+    _mult_skipped_pct = 0
     try:
         from .effect_triggers import fire as _fire
         _fctx = {"actor": target, "target": target, "source": source,
@@ -135,7 +139,17 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
         #   格挡/无敌帧），而 `0.0 or 1.0` 会被吞成 1.0 → 0 乘区永远失效。None 才回落 1.0。
         _raw_m = _fctx.get("mult")   # 读**本次事件的 ctx 对象**（嵌套 fire 不影响它）
         _m = 1.0 if _raw_m is None else float(_raw_m)
-        if _m != 1.0 and not _skip_event_mult(battle, target, _m, logs):
+        # ★ 2026-09-28（审计 L3362）：互斥**判定**仍在这里（乘区该不该被弃是这一刻定的），
+        #   但那条 cue **不在这儿发** —— 闪避的早返回在下面（`:177`），它一命中整段
+        #   承伤结算就地结束，哪一条减免都没生效。此处发 cue = 玩家先看到
+        #   「乘区减免 40% 已跳过、走了声明那条」，实得伤害却是 0（闪避）⇒
+        #   **两条减免都没生效却已播报**，账目与屏幕对不上。
+        #   改法：判定与**播报**分离（不新增第三处判定，仍只有 `state_reduce_of` 一个
+        #   getter）—— 弃了乘区就记一笔，cue 延到**声明读点真正生效**时才发。
+        if _m != 1.0 and _skip_event_mult(battle, target, _m, logs, emit=False):
+            _mult_skipped = True
+            _mult_skipped_pct = int(round((1.0 - float(_m)) * 100))
+        if not _mult_skipped and _m != 1.0:
             dmg = max(1, int(dmg * _m))
     except Exception as _e:
         _diag(battle, "deal_damage · 修正钩子", _e)          # 审计 P-44：不再静默（行为不变）
@@ -211,6 +225,15 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
         _red = state_reduce_of(target)
         if _red > 0:
             dmg = max(1, int(dmg * (1.0 - _red)))
+            # ★ 互斥那条说明**在这里**才发（审计 L3362）：走到这一格 = 声明通道**真的
+            #   减伤了**，此时说「乘区那条被跳过」才是实话。走到不了（闪避早返回）
+            #   就一句都不发 —— 没有减免发生，就不该有减免播报。
+            #   行序与改前一致（先互斥说明、后真值），非闪避路径的日志逐字不变。
+            if _mult_skipped:
+                _cue(battle, logs, "battle.landing.taken_mult_skipped",
+                     {"name": target.get('name', '目标'),
+                      "pct": int(round(_red * 100)),
+                      "mult_pct": _mult_skipped_pct})
             _cue(battle, logs, "battle.landing.taken_reduce",
                  {"name": target.get('name', '目标'), "pct": int(round(_red * 100))})
     except Exception as _e:
@@ -385,7 +408,8 @@ def _apply_death_guard(battle, target: dict, logs: list) -> bool:
         return False
 
 
-def _skip_event_mult(battle, target: dict, mult: float, logs: list) -> bool:
+def _skip_event_mult(battle, target: dict, mult: float, logs: list,
+                     *, emit: bool = True) -> bool:
     """**互斥判定**：这一笔该事件乘区要不要被跳过（承伤方同时有 `taken_pct` 声明时跳过）。
 
     ★ 2026-09-28（鱼鱼拍板）：承伤减免**同一状态只走一条通道**。
@@ -422,10 +446,16 @@ def _skip_event_mult(battle, target: dict, mult: float, logs: list) -> bool:
         return False
     if declared <= 0.0:
         return False                       # 声明在、但生效比例 0（封顶未装/值 0）⇒ 不算通道 A 参与
-    _cue(battle, logs, "battle.landing.taken_mult_skipped",
-         {"name": target.get('name', '目标'),
-          "pct": int(round(declared * 100)),
-          "mult_pct": int(round((1.0 - float(mult)) * 100))})
+    # ★ 2026-09-28 审计 L3362：`emit=False` = **只判定、不播报**。返回 True 仍表示
+    #   「乘区该被跳过」；cue 改由 `deal_damage` 的**声明读点**在真正减伤时发 —— 因为
+    #   闪避早返回会让后面整段结算不执行，此处发 = 播报一条没发生的减免。
+    #   读点发时用的 `pct` 是**读点当时**的 `state_reduce_of`（同一个 getter、同一时刻），
+    #   与此处算出的 `declared` 逐值相同（两者之间 target 的容器没人改）⇒ 槽位不变。
+    if emit:
+        _cue(battle, logs, "battle.landing.taken_mult_skipped",
+             {"name": target.get('name', '目标'),
+              "pct": int(round(declared * 100)),
+              "mult_pct": int(round((1.0 - float(mult)) * 100))})
     return True
 
 

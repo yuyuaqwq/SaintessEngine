@@ -222,7 +222,10 @@ probe_off()
 # ============================================================
 print("\n【⑤ ★ 反证：摘掉互斥判断（恒 False）⇒ 两支相乘 ⇒ ① ② 当场红】")
 _real_skip = LND._skip_event_mult
-LND._skip_event_mult = lambda battle, target, mult, logs: False
+# ★ 签名随 L3362 修复加了 `emit` 关键字（只判定、不播报）—— 这个替身也照原样收下它，
+#   否则调用点传 `emit=False` 会把替身打成 TypeError、被上面的 except 吞掉，
+#   于是「摘掉互斥」这场反证会**假通过**（跑的还是真互斥 ⇒ real=70 ≠ 42）。
+LND._skip_event_mult = lambda battle, target, mult, logs, **kw: False
 try:
     t5, src5 = _mk("t5", "enemy", hp=500), _mk("src5", "player")
     bt5 = _bt(t5, src5)
@@ -341,6 +344,53 @@ check("★ ⑧ 新 cue `battle.landing.taken_mult_skipped` 已在 CUE_NAMES 登�
 check("★ ⑧ 门禁夹具文案表有那一格（措辞真源 = 内容侧）",
       "battle.landing.taken_mult_skipped" in FIX_TEXT.templates
       if hasattr(FIX_TEXT, "templates") else True, "")
+
+# ============================================================
+# ⑩ ★ 闪避早返回不许留下「没发生的减免播报」（审计 L3362）
+# ============================================================
+print()
+print("【⑩ ★ 闪避命中 ⇒ 互斥 cue 不得早于闪避发出（审计 L3362）】")
+_real_roll = LND._roll_dodge
+def _dodge_on(battle, target, logs):
+    LND._cue(battle, logs, "battle.landing.dodged", {"name": target.get("name", "目标")})
+    return True
+try:
+    LND._roll_dodge = _dodge_on
+    t10, src10 = _mk("t10", "enemy", hp=500), _mk("src10", "player")
+    bt10 = _bt(t10, src10)
+    open_entry(t10, "probe_ward", stacks=1, value=0.30, expire=99.0)
+    _arm(t10, {"taken_calc": [{"action": MULT_ACT, "mult": 0.6}]})
+    _reset()
+    lg10 = []
+    real10 = LND.deal_damage(bt10, src10, t10, 100, lg10, dmg_kind="phys")
+    check("⑩ 闪避命中 ⇒ 实得 0（基线行为未变）", real10 == 0, "real=%s" % real10)
+    check("⑩ ★ 闪避命中时**不发**互斥 cue（两条减免都没生效，不该有减免播报）",
+          not [x for x in lg10 if "已跳过" in x], str(lg10))
+    check("⑩ ★ 闪避命中时**不发**声明减免真值 cue（那一格压根没走到）",
+          not [x for x in lg10 if "减免了" in x], str(lg10))
+    check("⑩ 闪避 cue 照常发（没把正常的闪避提示也一起吞掉）",
+          any("闪避" in x for x in lg10) or not lg10, str(lg10))
+    # 证伪方向：同一条路径关掉闪避 ⇒ 互斥 cue 必须**回来**（证明上面不是「永远不发」）
+    LND._roll_dodge = lambda b, t, logs: False
+    t11, src11 = _mk("t11", "enemy", hp=500), _mk("src11", "player")
+    bt11 = _bt(t11, src11)
+    open_entry(t11, "probe_ward", stacks=1, value=0.30, expire=99.0)
+    _arm(t11, {"taken_calc": [{"action": MULT_ACT, "mult": 0.6}]})
+    _reset()
+    lg11 = []
+    real11 = LND.deal_damage(bt11, src11, t11, 100, lg11, dmg_kind="phys")
+    check("⑩ 证伪：闪避未命中 ⇒ 互斥 cue 仍发（不是被永久删掉）",
+          any("已跳过" in x for x in lg11), str(lg11))
+    check("⑩ 证伪：闪避未命中 ⇒ 数值仍是 70（读点口径未变）", real11 == 70, "real=%s" % real11)
+    # 行序：互斥说明仍排在声明真值**之前**（改前就是这个序，玩家读屏顺序不变）
+    # 夹具把「互斥说明」渲染成同一句模板 + 括号后缀 ⇒ 靠括号区分两行
+    _idx_skip = next((i for i, x in enumerate(lg11) if "已跳过" in x), -1)
+    _idx_red = next((i for i, x in enumerate(lg11) if "减免了" in x and "已跳过" not in x), -1)
+    check("⑩ 互斥说明的行序仍在声明真值之前（读屏顺序与改前一致）",
+          _idx_skip >= 0 and _idx_red >= 0 and _idx_skip < _idx_red,
+          "skip=%d red=%d %s" % (_idx_skip, _idx_red, lg11))
+finally:
+    LND._roll_dodge = _real_roll
 
 undo_skel()
 probe()
