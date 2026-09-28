@@ -82,6 +82,17 @@ def _rules():
     return r() if callable(r) else r
 
 
+def _tag_text(value) -> list:
+    """敌人标签入表前的文本归一：标量转字符串、序列逐项转、`None`/空容器 → 空表。
+
+    引擎零内容知识：这里只保证「标签是可做子串判定的文本」，不解释标签含义。
+    """
+    if value is None:
+        return []
+    items = value if isinstance(value, (list, tuple, set, frozenset)) else [value]
+    return [t for t in (str(i) for i in items) if t]
+
+
 def match_cond(cond: dict, group_id, qq_id, player: dict, cur_map: dict, evt: dict) -> bool:
     """条件判定；cond 为 None/{} 恒真（逐字搬自数据包 `_match_cond`，只有取件点换成注入句柄）。"""
     if not cond:
@@ -140,15 +151,20 @@ def match_cond(cond: dict, group_id, qq_id, player: dict, cur_map: dict, evt: di
         # ★ 2026-09-25（审计 E3）：原先这里把 `is_boss` / `is_elite` 两个**游戏字段**映射成
         #   "boss" / "elite" 两个**游戏标签** —— 引擎替内容做了命名 ✗。现在标签由内容侧写在
         #   `enemy["traits"]`（或 `enemy["tags"]`）上，引擎**原样透传**，判定交给规则声明。
-        tags = [t for t in (enemy.get("traits") or [])]
-        tags.append(enemy.get("name", ""))
-        tags.append(enemy.get("id", ""))
-        tags += [t for t in (enemy.get("tags") or [])]
+        # ★ 2026-09-28（审计 L810）：标签入表前统一 `str()` 归一。
+        #   `enemy` 是**自由字典**（uid / 怪物 id 由内容侧给），`make_actor` 的 `uid` 允许是 int，
+        #   标签元素同理 —— 而下面按**子串**匹配（`w in t`）对 int 恒抛
+        #   `TypeError: argument of type 'int' is not iterable`，把「配置写得对不对」变成崩溃。
+        #   归一后 int 标签照常参与子串判定（`12345` 可被 `2345` 命中，语义与 str 标签一致）。
+        tags = [t for t in _tag_text(enemy.get("traits"))]
+        tags += [t for t in _tag_text(enemy.get("name"))]
+        tags += [t for t in _tag_text(enemy.get("id"))]
+        tags += [t for t in _tag_text(enemy.get("tags"))]
         want = cond["enemy_tag"]
-        if isinstance(want, list):
-            if not any(w in tags or any(w in t for t in tags if t) for w in want):
-                return False
-        elif want not in tags and not any(want in t for t in tags if t):
+        want_list = want if isinstance(want, list) else [want]
+        # `want` 同样可能是非字符串（内容侧写了数字）⇒ 一并归一，避免落回 `w in tags` 的 TypeError。
+        want_texts = _tag_text(want_list)
+        if not any(w in t for w in want_texts for t in tags):
             return False
     # 残血
     if "hp_pct_max" in cond:
