@@ -28,6 +28,24 @@ class EngineNotConfigured(RuntimeError):
     """引擎求解所需的游戏挂载缺失（strict=True 模式下抛出，见 R8）。"""
 
 
+class UnknownHook(ValueError):
+    """装配了引擎不认识的 hook 名 —— 拼错，或内容侧走错了取件口。
+
+    为什么要抛：静默丢弃会让「装配看似成功、实则没装」一路走到线上。
+    报错带**相近名建议**（`difflib` 最近匹配）—— 拼错的形态绝大多数是手滑。
+    """
+
+    def __init__(self, name: str, known) -> None:
+        import difflib                                   # 仅在报错路径用到
+        near = difflib.get_close_matches(str(name), list(known), n=3, cutoff=0.6)
+        hint = f"；你是不是想写：{' / '.join(near)}" if near else ""
+        super().__init__(
+            f"引擎不认识的 hook 名 {name!r}（注入面共 {len(known)} 个）{hint}。"
+            f"★ 声明表（effect_rules / effect_actions / passive_proc 等）不走 mount，"
+            f"走 `game_config.load_game_rules(...)`；完整名单见 `config._HOOKS`。"
+        )
+
+
 # 挂载的配置表容器（引擎只存不认 —— 表名由调用方定，见 set_config / get_config）。
 # ⚠ 这里**不许**预置任何具体表名：预置 = 把游戏侧的词汇写进引擎（第 7 批清掉的那批）。
 _LOADED: dict = {}
@@ -241,20 +259,29 @@ def register_hook_provider(fn) -> None:
 # ============================================================
 
 def set_hook(name: str, value) -> None:
-    """内容侧挂载单个 hook（未知名忽略 —— 引擎只认 `_HOOKS` 名单）。
+    """内容侧挂载单个 hook。**未知名抛 `UnknownHook`**（不再静默丢弃）。
 
     ★ `_HOOKS` 的名单是**注入面契约**（引擎声明它认识哪些 hook 名），不是
       「引擎里的游戏词」—— 第 7 批一度把它清空，两个门禁立刻红：
       `test_engine_purity.py` 正面断言「注入面含 hook X」、
       `test_engine_neutral_fallback.py` 断言「_HOOKS 认识两个第二段 hook 名」。
       名单留着；被搬走的是**取件函数**（get_effect_rules / skill_by_key …）。
+
+    ★ 为什么未知名要抛（2026-09-28 审计 L1574）：旧写法 `if name in _HOOKS`
+      静默丢弃 ⇒ 拼错一个字母（`mount(pannel_fn=…)`）时**装配看起来成功、
+      实则那个 hook 根本没装**，等到线上表现为「效果不生效 / 伤害恒 0」才现形，
+      且全程零信号。仓内实证：`games/my_game/content/apply.py:52-54` 传的
+      `effect_rules` / `effect_actions` / `passive_proc` **三个都不在名单**
+      （声明表该走 `game_config.load_game_rules`，见 `editor/packages.py:668`）
+      —— 静默丢弃帮它掩盖了「这三条走错了口」这件事。
     """
-    if name in _HOOKS:
-        _HOOKS[name] = value
+    if name not in _HOOKS:
+        raise UnknownHook(name, sorted(_HOOKS))
+    _HOOKS[name] = value
 
 
 def mount(**hooks) -> None:
-    """内容侧批量挂载 hook（幂等；未知名忽略）。"""
+    """内容侧批量挂载 hook（幂等）。**未知名抛 `UnknownHook`**，不静默丢弃。"""
     for name, value in hooks.items():
         set_hook(name, value)
 
