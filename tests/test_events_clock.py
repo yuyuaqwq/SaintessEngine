@@ -301,6 +301,11 @@ check("on_expire 抛异常不影响清理", tolerant_ok)
 
 print("== 8b. LazyTimers：坏时长 fail-closed（审计 L1348） ==")
 
+# L1353 重复实现的后果之一：`LazyTimers` 与 `ext_life.timers.Timers` 是**同一形状的两份实现**，
+# 但只有后者校验类型标签 / 事件 key。原来这里直接放行 ⇒ `set(o,k,123)` 把
+# `{"type": 123}` 原样落盘（只有一条 WARNING），拼错类型名的后果到**到期时**才现形：
+# `_fire_expire` 查不到回调 ⇒ 事件被物理删除、零回调。收口到与 ext_life 逐字相同的判据。
+
 # 负时长 / bool / 0 原本被 `max(1, int(dur))` 一律压成 1 秒（行为与意图相反且不报错），
 # 字符串被 `int()` 悄悄收下。改为与 `ext_life.timers._duration_of` 同一判据：点名报错。
 clock = FakeClock(1000)
@@ -341,6 +346,49 @@ except Exception as exc:                                       # noqa: BLE001
 exp = timers.set("u9", "ok", "a", duration_sec=600)
 check("合法 duration_sec 行为未变", exp == 1600, exp)
 check("合法 set 落盘 expire", store.data["u9"]["ok"]["expire"] == 1600, store.data["u9"])
+
+print("== 8c. LazyTimers：类型标签 / 事件 key fail-closed（审计 L1353） ==")
+
+clock = FakeClock(1000)
+store = MemStore()
+timers = LazyTimers(load=store.load, save=store.save, remove=store.remove,
+                    clock=clock, default_duration_sec=30,
+                    logger=__import__("logging").getLogger("t"))
+timers.register("ok", duration_sec=10)
+
+for bad in (123, None, "  ", b"ok", 0):
+    try:
+        timers.set("v1", "k", bad)
+        check("★ set 非字符串/空 type_key 拒绝（%r）" % (bad,), False, "落盘了：%r" % bad)
+    except (TypeError, ValueError) as exc:
+        check("★ set 拒绝 type_key=%r" % (bad,), True, "")
+    check("   拒绝后零落盘（type_key=%r）" % (bad,), "v1" not in store.data, store.data)
+
+for bad in (123, "", "  ", b"k"):
+    try:
+        timers.set("v2", bad, "ok")
+        check("★ set 拒绝事件 key=%r" % (bad,), False, "落盘了：%r" % bad)
+    except (TypeError, ValueError):
+        check("★ set 拒绝事件 key=%r" % (bad,), True, "")
+    check("   拒绝后零落盘（key=%r）" % (bad,), "v2" not in store.data, store.data)
+
+try:
+    timers.register("")
+    check("★ register 空 type_key 拒绝", False, "注册成功")
+except ValueError:
+    check("★ register 空 type_key 拒绝", True, "")
+try:
+    timers.register(123)
+    check("★ register 非字符串 type_key 拒绝", False, "注册成功")
+except TypeError:
+    check("★ register 非字符串 type_key 拒绝", True, "")
+
+# 合法值行为逐字未变（不许把判据写成「什么都拒」）
+v = timers.set("v3", "good", "ok")
+check("合法 set 落盘 expire 不变", v == 1010 and store.data["v3"]["good"]["expire"] == 1010,
+      store.data.get("v3"))
+check("合法 register/set 后 registered_types 仍可读", "ok" in timers.registered_types,
+      timers.registered_types)
 
 print("== 9. 零游戏 / 零宿主依赖 ==")
 banned = []

@@ -68,6 +68,37 @@ def _expire_of(ev: dict, key: Any, owner: Any) -> int:
     return int(value)
 
 
+def _type_key_of(type_key: Any) -> str:
+    """校验类型标签：非空字符串（类型标签由内容侧给）。
+
+    为什么要 fail-closed：`LazyTimers` 与 `ext_life.timers.Timers` 是**同一形状的两份实现**，
+    而只有后者校验类型标签 —— 原来这里直接 `self._types.get(type_key)` 放行，于是
+    `set(owner, key, 123)` 会把 `{"type": 123}` **原样落盘**、只留一条 WARNING。
+    拼错类型名的后果在到期时才现形：`_fire_expire` 查不到回调 ⇒ 事件被物理删除、**零回调**
+    （挂在该类型上的清理副作用无声蒸发）。两份实现必须是同一份判据。
+    """
+    if not isinstance(type_key, str):
+        raise TypeError(f"type_key 必须是字符串（类型标签由内容侧给），"
+                        f"收到 {type(type_key).__name__}：{type_key!r}")
+    if not type_key.strip():
+        raise ValueError("type_key 必须是非空字符串（类型标签由内容侧给）")
+    return type_key
+
+
+def _event_key_of(key: Any) -> str:
+    """校验事件 key：非空字符串。
+
+    空串与 `7` 原本都能落盘并读得回来（`get("")` 命中），但内容侧按名字取事件时
+    空串与「没有名字」的东西同形，`7` 与字符串 key 混在一张表里 —— 同一形状的另一份实现
+    （`ext_life.timers`）早就 fail-closed 拒绝这两种，收口到同一口径。
+    """
+    if not isinstance(key, str):
+        raise TypeError(f"事件 key 必须是字符串，收到 {type(key).__name__}：{key!r}")
+    if not key.strip():
+        raise ValueError("事件 key 必须是非空字符串")
+    return key
+
+
 def _duration_of(value: Any, label: str) -> int:
     """校验时长：正整数秒（`bool` 不算整数）。
 
@@ -119,8 +150,7 @@ class LazyTimers(WarnMixin):
         `on_expire(owner, data) -> None` 在该类型的实例过期被清理时调用
         （三条清理路径都会走到它）。异常被容忍（log + 跳过）。
         """
-        if not type_key:
-            raise ValueError("type_key 不得为空")
+        _type_key_of(type_key)
         dur = None if duration_sec is None else _duration_of(
             duration_sec, f"duration_sec（类型 {type_key!r}）")
         self._types[type_key] = {"duration_sec": dur, "on_expire": on_expire}
@@ -141,6 +171,8 @@ class LazyTimers(WarnMixin):
         * 同 `key` 重复挂载 = 顶替刷新（新过期时间）
         * 时长优先级：`duration_sec` 参数 > 类型注册值 > `default_duration_sec`
         """
+        _event_key_of(key)
+        _type_key_of(type_key)
         spec = self._types.get(type_key)
         if spec is None:
             # 未注册类型：按 `ext_life.timers` 同一口径取兜底时长并**留痕**（不是静默）。
