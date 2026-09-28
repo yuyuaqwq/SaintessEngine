@@ -99,7 +99,15 @@ def find_static(text: str, static_handlers: Sequence, owner: Any) -> Optional[Ha
             continue
         fn = getattr(owner, name, None)
         if fn is None:
-            return None
+            # ★ fail-closed（台账 L298）：静态表里写着的方法名在 owner 上取不到，
+            #   那是**声明与实现不一致**（改名/拼错/忘了继承），不是「这条没命中」。
+            #   原写法 return None 让它与「整表扫完都没命中」**完全同形** ⇒
+            #   玩家只看到「快捷指令无法识别」，维护者拿不到任何线索，
+            #   而这条指令在静态表里明明挂着。认不出就抛（本作核心铁律）。
+            raise AttributeError(
+                "静态表里的 handler 名在 owner 上取不到（声明与实现不一致）"
+                "：method=%r owner=%r pattern=%r" % (name, type(owner).__name__, getattr(regex, "pattern", regex))
+            )
         return HandlerHit(name, fn, True, raw=regex)
     return None
 

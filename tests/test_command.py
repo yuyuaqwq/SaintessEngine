@@ -26,7 +26,7 @@ FW_ROOT = os.path.dirname(_HERE)
 sys.path.insert(0, FW_ROOT)
 
 from saintess_engine.command import (  # noqa: E402
-    CommandBase, HandlerHit, PatternSet, matches_any, page_items, parse_page,
+    CommandBase, HandlerHit, PatternSet, find_static as _find_static, matches_any, page_items, parse_page,
     pick_tip, require_battle, require_player, strip_command,
 )
 from saintess_engine.command.text import strip_at_prefix  # noqa: E402
@@ -210,6 +210,28 @@ check("prebound=True（静态表取绑定方法）", hit.prebound is True)
 check("未命中 → None", m3._find_handler("无关文本") is None)
 check("空白输入 → None", m3._find_handler("   ") is None)
 
+
+# ★ 审计 L298（fail-closed：声明与实现不一致不许与「没命中」同形）
+#   静态表里写着的方法名取不到 ⇒ 抛 AttributeError 点名 method/owner/pattern，
+#   而不是 return None —— 后者与「整表扫完都没命中」完全同形，玩家只看到
+#   「快捷指令无法识别」，维护者零线索，而这条指令明明挂在静态表里。
+import re as _re_router
+_TypoOwner = type("_TypoOwner", (), {"ok_cmd": lambda self: None})
+_typo = [(_re_router.compile("^入口"), "typo_nam")]
+_raised = None
+try:
+    _find_static("入口", _typo, _TypoOwner())
+except AttributeError as _e:
+    _raised = _e
+check("★ 静态表方法名取不到 → 抛（不静默 None）", _raised is not None, "未抛")
+check("★ 抛出的异常点名了 method 与 pattern",
+      _raised is not None and "typo_nam" in str(_raised) and "^入口" in str(_raised),
+      str(_raised) if _raised else "无异常")
+check("★ 真·未命中仍是 None（两条路径不再同形）",
+      _find_static("无关文本", _typo, _TypoOwner()) is None)
+check("★ 真·命中仍取到（改动不误伤正常路径）",
+      _find_static("入口", [(_re_router.compile("^入口"), "ok_cmd")],
+                   _TypoOwner()).handler_name == "ok_cmd")
 
 class WithHost(_Cmds):
     """模拟宿主注册表探测：优先于静态表。"""
