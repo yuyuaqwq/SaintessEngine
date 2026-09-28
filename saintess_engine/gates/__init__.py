@@ -109,7 +109,7 @@ def spread_within(rows: Sequence[tuple[str, float]], *, tol, label) -> list[str]
     - **分组由调用方给**（同装等 + 同品阶 + 同槽位 / 同职业 + 同等级段），引擎不猜分组键。
     """
     lb = _label(label)
-    t = _num(tol, f"{lb}: tol")
+    t = _num(tol, f"{lb}: tol", nonneg=True)
     if t > 1:
         raise ValueError(f"{lb}: tol 必须 ≤ 1，收到 {t!r}")
     rows = list(rows)
@@ -243,7 +243,7 @@ def share_within(parts: Sequence[tuple[str, float]], *, total, cap, label) -> li
 def sum_within(parts: Sequence[tuple[str, float]], *, budget, label) -> list[str]:
     """`Σ parts ≤ budget`（用于「6 槽合计 = 35%」这类整体校验）。"""
     lb = _label(label)
-    b = _num(budget, f"{lb}: budget")
+    b = _num(budget, f"{lb}: budget", nonneg=True)
     parts = list(parts)
     if not parts:
         raise ValueError(f"{lb}: parts 为空")
