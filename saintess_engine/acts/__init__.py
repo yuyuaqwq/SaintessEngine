@@ -98,13 +98,16 @@ def _verb_name(name) -> str:
 
 
 def _is_node(value) -> bool:
-    """这个值是不是声明节点？（单保留键、或带 `op` 的映射）"""
+    """这个值是不是声明节点？（**带任一保留键**即按节点处理）
+
+    ★ 2026-09-28 修 L1820：原先还要「恰好单键」才算节点，于是**畸形节点被静默
+    当成普通字典**（`{"field": [...], "default": 0}`、`{"const": 1, "x": 2}` 都不算节点）
+    ⇒ 走递归字面量重建，**编译期不报错**，实参变成那个字面 dict 原样传给动词。
+    现在只要沾任一保留键就交给 `compile_spec` 判形：**对的照旧编译，多的键由它报**。
+    """
     if not isinstance(value, Mapping):
         return False
-    keys = set(value)
-    if "op" in keys:
-        return True
-    return len(keys) == 1 and bool(keys & _NODE_KEYS)
+    return bool(set(value) & _NODE_KEYS)
 
 
 def _value(value, where: str):
