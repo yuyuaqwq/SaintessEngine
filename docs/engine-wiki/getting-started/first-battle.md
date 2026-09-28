@@ -97,7 +97,7 @@ b = Battle(btype="monster", sides={"player": [hero], "enemy": [wolf]})
    —— 快者先手、开局第一动也按速度排（`schedule.initial_ct`，`schedule.py:45`）
 
 `sides` 的键名由你定；引擎唯一硬编码的约定是 **`"player"`** 这个键名
-（`_check_side_end` 里 `alive[0] == "player"` → `result="victory"`，`battle.py:716`）。
+（`_check_side_end` 里 `alive[0] == "player"` → `result="victory"`，`battle.py:717`）。
 
 ## 3. 打一拳
 

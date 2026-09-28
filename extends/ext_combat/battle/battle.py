@@ -507,11 +507,23 @@ class Battle:
         from .effect_triggers import fire as _fire
         _fire(self, "turn_start", {"actor": actor}, logs)
         # ---- ★ 窗口到期（口径 = 「到你下一次行动之前」）----
-        #  本帧（`Battle.act` T0）就是「你下一次行动」的入口：在那之前（对面打过来的那些手）
-        #  减伤照旧有效；被控跳过的那一手也算这一次行动已到（故本段先于下面的控制消费）。
-        #  收口后：到期不再是「这一处把某个裸 bool 写回 False」，而是**容器条目的边界声明**
-        #  （`effects[tag]["until"] == "own_act"`）在本帧被**通用消费段**消费 —— 引擎不认
-        #  哪个 tag 是防御（`actors.consume_windows`）。
+        #  ⚠ 本段位置**已证伪为错误位置**，但**代码未改**（2026-09-29 审计晚到批第十七轮取证）：
+        #    口径那句话本身是对的（到期 = 你下一次行动开始之前），但**消费点不该落在 `act` 的
+        #    T0 登记段**。实测调用栈 + 事件链（`OPEN id=X → CONSUMED id=X → DAMAGE` 全在
+        #    **同一个 `from_state` 周期内**）证明：包内 `instance_battle.act` 的每刻循环是
+        #    `from_state → human_act(actor=我方) → to_state`，而 `human_act` 登记完自己这一手后
+        #    立刻 `_after_act → advance` 推进**对手**帧并当场结算对手承伤 ⇒
+        #    「开窗」到「对手打过来」之间**没有下一刻**。
+        #    ⇒ 结果：`own_act` 窗口在对手承伤前就被弹掉，减伤**不减半**
+        #      （orlandia `test_texts_table` IN19/RT1 两条红，`blocked_amount` cue 触发 0 次）。
+        #  ⇒ 正确消费点是**包内每刻循环的边界**（`content/flow/instance_battle.py`：
+        #    本次行动结算完 + 存档写回之后再消费）—— 那是**包内文件面**，不归本仓改。
+        #  ⇒ 另两个位置也都验过是错位置：放本行（T0）被对手帧递归提前消费；
+        #    放 `_dispatch_pending` 尾部则「开窗那手本身即落地」⇒ 落地即消费，同样在对手之前。
+        #  本行原注释断言「本帧就是『你下一次行动』的入口」，**与上述实测矛盾**，故更正留证。
+        #  容器口径本身不变：到期不是「这一处把某个裸 bool 写回 False」，而是**容器条目的
+        #  边界声明**（`effects[tag]["until"] == "own_act"`）被**通用消费段**消费 ——
+        #  引擎不认哪个 tag 是防御（`actors.consume_windows`）。
         consume_windows(actor)
         # ---- 控制消费（统一入口，人类/自动/随从全走这里）----
         # V 系列：控制条目在 effects 容器（effects[tag] = {expire, mode}）
