@@ -11,6 +11,7 @@
 必须先断言**不配置时与标准库逐字一致**（同一 logger 对象、零 handler、级别/propagate 未动），
 再断言配置后生效 —— 这是 `reference/roadmap.md` §五写下的口径。
 """
+import contextlib
 import io
 import logging
 import os
@@ -327,6 +328,72 @@ def t9_remove_sinks_closes_file_handles():
     logging.getLogger("afix3_close").handlers.clear()
 
 
+# ------------------------------------------------------- 10 出口写失败的报告
+def t10_sink_error_not_owned_by_logging_global():
+    """审计 L2730：出口写失败的错误信号**不挂在 `logging` 的全局上**。
+
+    原先 `sink_error()` 开头是 `if not logging.raiseExceptions: return`
+    —— 那是**标准库的全局**，而「出口写失败」归本模块（log/tlog 共用这一个报告口）
+    ⇒ 耦合方向是反的：任何第三方库调一下那个全局，两侧**唯一的错误信号就没了**。
+
+    实测旧码：造一个写不进去的出口，`raiseExceptions=False` 下
+    **stderr 0 个字**、记录真丢、dispatch 返回 0（静默吞 = 静默丢数据）。
+    """
+    print(
+        chr(10)+"[10] 出口写失败：错误信号独立于 logging 全局（审计 L2730）")
+    import shutil                                                   # noqa: PLC0415
+    from saintess_engine import _sinkbase as SB                      # noqa: PLC0415
+    # 本模块的失败计数是**进程级**的，而 t9 已经推进过它（那里有一个 close 抛错的出口）
+    # ⇒ 直接从当前值往后跑，节流口径与生产一致（报告点 = 1, 1+N, 1+2N, ...）。
+    ESC = SB.SINK_ERROR_ESCALATE
+
+    blk = tempfile.mkdtemp(prefix="test_log_sinkerr")
+    try:
+        with open(os.path.join(blk, "notadir"), "w") as f:           # 父路径是个文件
+            f.write("x")                                            # ⇒ makedirs 必炸
+        fs = L.FileSink(os.path.join(blk, "notadir", "sub", "r.log"))
+        before = SB.sink_error_stats()["errors"]
+        to_next = 0 if (before - 1) % ESC == 0 else ESC - ((before - 1) % ESC)
+        buf = io.StringIO()
+        old = logging.raiseExceptions
+        logging.raiseExceptions = False            # 第三方随手关掉的全局
+        try:
+            with contextlib.redirect_stderr(buf):                  # noqa: PLC0415
+                for _ in range(to_next + 1):
+                    n = L.dispatch([fs], _rec("x"))
+        finally:
+            logging.raiseExceptions = old
+        out = buf.getvalue()
+        check("★ 写失败时 dispatch 返回 0", n == 0, f"n={n}")
+        check("★ 写失败时 stderr 至少出声一次（原缺陷：0 个字）",
+              "sink" in out, repr(out[:80]))
+        check("★ 报错误里带路径（排障不用先猜是哪个文件）",
+              ("path=" in out) or ("首次" in out and "notadir" in out),
+              repr(out[:100]))
+        st = SB.sink_error_stats()
+        check("★ 失败计数可查（丢了多少是事实，不靠 stderr 空不空）",
+              st["errors"] == before + to_next + 1,
+              f"{before} -> {st['errors']} (跑了 {to_next + 1} 次)")
+        check("★ 首次异常被点名（FileNotFoundError）", "Error" in st["first"], st["first"][:60])
+
+        # 自有开关：显式关掉才静默，且计数照记（不是「静默即丢证据」）
+        before = SB.sink_error_stats()["errors"]
+        SB.set_sink_reporter(True)
+        buf2 = io.StringIO()
+        with contextlib.redirect_stderr(buf2):
+            L.dispatch([fs], _rec("x"))
+        SB.set_sink_reporter(False)
+        check("★ 显式静默时 stderr 为空", buf2.getvalue() == "", repr(buf2.getvalue()[:40]))
+        check("★ 静默期间计数照记", SB.sink_error_stats()["errors"] == before + 1)
+    finally:
+        shutil.rmtree(blk, ignore_errors=True)
+    _src = open(SB.__file__, encoding="utf-8").read()
+    check("★ 不再有 'import logging'（真解耦，不是换个名字）", "import logging" not in _src)
+    check("★ 报告分支不再读那个全局（口径单源）",
+          "if not logging.raiseExceptions" not in _src)
+
+
+
 def main():
     print("== 日志门面门禁：可拔插契约 + sink + 上下文 + 引擎侧收敛 ==")
     t1_unconfigured_is_thin()
@@ -338,6 +405,7 @@ def main():
     t7_engine_uses_facade()
     t8_takes_over_engine_logs()
     t9_remove_sinks_closes_file_handles()
+    t10_sink_error_not_owned_by_logging_global()
     print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
     return 1 if failed else 0
 
