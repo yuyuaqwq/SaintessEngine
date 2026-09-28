@@ -547,6 +547,149 @@ def _is_expected_dropped(path: str) -> str:
     return EXPECTED_DROPPED_KEYS.get(leaf, "")
 
 
+# ============================================================
+# 「预期变更的屏上文案」登记表（2026-09-28，788d413 重录基线）
+# ------------------------------------------------------------
+# `EXPECTED_DROPPED_KEYS` 只管「键**消失**」，**管不了「文案变字」** ——
+# 那是完全另一回事：改文案就等于改玩家看到的东西，尺子必须认得哪一批是
+# **有意**改的，否则每次审计修都变成人工解释一遍 RED。
+#
+# 场景：审计修 L3695 发现**机器键漏到玩家屏上** —— 战斗日志的槽位 `{key}`
+# 填的是内部容器键（`kiln` / `echo` / `rust` / `rig_stack` / `clamp`），
+# 玩家看到的是「✦ kiln 6/6（+1）」。`788d413` 把样板包
+# `examples/minimal-game/content/texts.py` 的 4 条模板收掉这些机器键。
+# **方向是对的**（真实包 aetheran 早这么做了），但冻结尺的职责就是
+# 「屏上一字都不能**悄悄**变」⇒ 它 RED 是**正确**的。
+#
+# ★ 刻意做窄的四条边界（不许以后被当成「放宽判据」的先例）：
+#   ① **逐条白名单**，不是「有差异就放行」：每条要 (cue 名, 场景组, 行号,
+#      before 那句, after 那句) **五元组全部对上**才放行。
+#   ② **行号也要对上**：改动若挪动了行位置（前面多一行/少一行）⇒ 未登 ⇒ RED。
+#   ③ **必须 before/after 都对上**：只对上 after 那句（换了别的措辞）⇒ 仍 RED。
+#   ④ 每次命中都在输出里**逐条打印**（组 + 行号 + 前后两句 + 理由 + 提交号），
+#      审计可见；未登的差异照旧逐行打印在 logs 通道下。
+#
+# ★ 关键边界：`EXPECTED_DROPPED_KEYS` 放行的是**整条差异消失**（该键不再算差异）；
+#   本表放行的是「这一行**仍然算差异**、但归因到已登记的有意变更」——
+#   即 **logs sha256 判据本身没动**，只是红因被精确归因并被有条件地记账。
+#   所以 `--inject reorder`（换序）/`drop`（缺行）依旧 RED，牙没被拔。
+EXPECTED_LOG_TEXT = {
+    'battle.core.controlled': {
+        "commit": "788d413",
+        # 模板槽位本身没变，变的是**填进槽位的值**：
+        "before_tpl": '💫 {name} 被【{tag}】控制，无法行动！',
+        "after_tpl":  '💫 {name} 晕着 —— 这一手什么都做不了！',
+        "why": (
+            '机器键漏到玩家屏上（台账 L3695，高危）：`{tag}` 是**控制容器键**，本',
+            '示例实测值 `clamp`（G2 铁钳拘束 ms_clamp）⇒ 玩家看到「被【clamp】控',
+            '制」。`examples/minimal-game` 是给第三方作者的**抄写样板**（README ',
+            '写着「照它抄就行」）⇒ 样板不能教错写法。措辞逐字取自真实包 aetheran-',
+            'package 已验证的 COMBAT_CONTROLLED，不是自拟。'
+        ),
+        # 本基线里该 cue 实际渲染出的「屏上那一对文案」（逐条去重；
+        # 匹配时要行号与文案**同时**对上，只对上一半仍算差异）
+        "rendered": {
+            '💫 铆炉匠甲 被【clamp】控制，无法行动！': '💫 铆炉匠甲 晕着 —— 这一手什么都做不了！',
+        },
+        # 场景组 → 命中的行号（0 基，逐条列出；共 10 行）
+        "lines": {
+            2: (22, 52, 67, 86, 108, 127, 158, 193, 238, 257),
+        },
+    },
+    'battle.effects.stack_spent': {
+        "commit": "788d413",
+        # 模板槽位本身没变，变的是**填进槽位的值**：
+        "before_tpl": '✦ 消耗 {amount} 点 {key}（剩余 {left}）',
+        "after_tpl":  '✦ 消耗 {amount} 点资源（剩余 {left}）',
+        "why": (
+            '机器键漏到玩家屏上（788d413 同批第 2 条）：`{key}` 是**资源容器键**，',
+            '本示例实测值 `kiln`（G1/G2 铆炉匠）与 `rig_stack`（G4 引擎动词 rig_s',
+            'tack）⇒ 机器键 `rig_stack` 同样会印到玩家屏上。'
+        ),
+        # 本基线里该 cue 实际渲染出的「屏上那一对文案」（逐条去重；
+        # 匹配时要行号与文案**同时**对上，只对上一半仍算差异）
+        "rendered": {
+            '✦ 消耗 2 点 kiln（剩余 1）': '✦ 消耗 2 点资源（剩余 1）',
+            '✦ 消耗 2 点 kiln（剩余 2）': '✦ 消耗 2 点资源（剩余 2）',
+            '✦ 消耗 2 点 kiln（剩余 4）': '✦ 消耗 2 点资源（剩余 4）',
+            '✦ 消耗 2 点 rig_stack（剩余 1）': '✦ 消耗 2 点资源（剩余 1）',
+        },
+        # 场景组 → 命中的行号（0 基，逐条列出；共 4 行）
+        "lines": {
+            1: (5, 35),
+            2: (157,),
+            4: (50,),
+        },
+    },
+    'battle.effects.stack_add': {
+        "commit": "788d413",
+        # 模板槽位本身没变，变的是**填进槽位的值**：
+        "before_tpl": '✦ {key} {n}{cap}（+{amount}）',
+        "after_tpl":  '✦ 资源 {n}{cap}（+{amount}）',
+        "why": (
+            '机器键漏到玩家屏上（788d413 同批第 1 条）：`{key}` 是**资源容器键**，',
+            '本示例实测值跨 3 个：`kiln`（G1/G2/G4/G5 铆炉匠）、`echo`（G3 哨鸣师）、',
+            '`rust`（G1–G5 锈蚀 DOT 容器）⇒ 全部 79 行都属同一族。'
+        ),
+        # 本基线里该 cue 实际渲染出的「屏上那一对文案」（逐条去重；
+        # 匹配时要行号与文案**同时**对上，只对上一半仍算差异）
+        "rendered": {
+            '✦ echo 1/4（+1）': '✦ 资源 1/4（+1）',
+            '✦ kiln 1/6（+1）': '✦ 资源 1/6（+1）',
+            '✦ kiln 2/6（+1）': '✦ 资源 2/6（+1）',
+            '✦ kiln 3/6（+1）': '✦ 资源 3/6（+1）',
+            '✦ kiln 4/6（+1）': '✦ 资源 4/6（+1）',
+            '✦ kiln 6/6（+1）': '✦ 资源 6/6（+1）',
+            '✦ rust 2/2（+2）': '✦ 资源 2/2（+2）',
+        },
+        # 场景组 → 命中的行号（0 基，逐条列出；共 79 行）
+        "lines": {
+            1: (2, 16, 20, 28, 32, 40, 47, 57, 63, 70, 74, 81, 91, 97, 104, 108, 117, 129, 135, 140, 145, 153, 165, 169, 174, 179, 187, 197, 202),
+            2: (2, 13, 27, 33, 44, 45, 49, 56, 73, 92, 103, 104, 117, 133, 146, 149, 150, 154, 165, 180, 192, 199, 212, 215, 216, 228, 237, 244, 261),
+            3: (4, 11, 19, 31, 39, 51, 61, 73, 83, 95, 109, 119, 130),
+            4: (3, 22, 27),
+            5: (38, 45, 52, 57, 61),
+        },
+    },
+    'battle.schedule.dot_tick': {
+        "commit": "788d413",
+        # 模板槽位本身没变，变的是**填进槽位的值**：
+        "before_tpl": '🔥 {name} 受 {key} {n} 层影响，损失 {dmg} 生命',
+        "after_tpl":  '🔥 【{name}】持续受损（{n} 层）—— 损失 {dmg} 生命',
+        "why": (
+            '机器键漏到玩家屏上（788d413 同批第 3 条）：`{key}` 是**DOT 容器键**，',
+            '本示例实测值 `rust`（G1/G2/G3 铁锈吐息 ms_rustspit）。'
+        ),
+        # 本基线里该 cue 实际渲染出的「屏上那一对文案」（逐条去重；
+        # 匹配时要行号与文案**同时**对上，只对上一半仍算差异）
+        "rendered": {
+            '🔥 哨鸣师乙 受 rust 2 层影响，损失 27 生命': '🔥 【哨鸣师乙】持续受损（2 层）—— 损失 27 生命',
+            '🔥 铆炉匠甲 受 rust 2 层影响，损失 27 生命': '🔥 【铆炉匠甲】持续受损（2 层）—— 损失 27 生命',
+        },
+        # 场景组 → 命中的行号（0 基，逐条列出；共 50 行）
+        "lines": {
+            1: (38, 43, 51, 66, 77, 85, 100, 111, 113, 123, 133, 138, 157, 161, 172, 191, 195, 204),
+            2: (31, 36, 50, 69, 78, 88, 110, 113, 129, 147, 160, 169, 195, 203, 213, 224, 240, 249),
+            3: (17, 25, 35, 47, 55, 59, 69, 77, 81, 91, 99, 104, 117, 126),
+        },
+    },
+}
+
+
+def _expected_log_text(gid: int, idx: int, before_line: str, after_line: str):
+    """(gid, 行号, before 那句, after 那句) 命中登记表 ⇒ 返回登记项；没命中 ⇒ None（仍算差异）。
+
+    ★ 四元组必须**全部对上**才放行（组 + 行号 + before + after），任一不符 ⇒ 仍算差异。
+    """
+    for cue, ent in EXPECTED_LOG_TEXT.items():
+        want_after = ent["rendered"].get(before_line)
+        if want_after is None or want_after != after_line:
+            continue
+        if idx in ent["lines"].get(gid, ()):
+            return cue, ent
+    return None
+
+
 def _diff_state(fb: dict, fa: dict):
     """逐键 diff：返回 [(path, 归因类别, 明细), ...]。"""
     diffs = []
@@ -580,8 +723,9 @@ def _diff_state(fb: dict, fa: dict):
 def compare(before: dict, after: dict) -> dict:
     """三通道对拍：logs 逐字节 / 逐 cue 计数表 / to_state 逐键。"""
     res = {"logs": [], "counts": [], "state": [], "n_state_keys": 0,
-           "n_ok_sha": 0, "n_groups": 0, "notes": [], "zero_count": [],
-           "expected_dropped": []}
+           "n_ok_sha": 0, "n_ok_sha_reg": 0, "n_groups": 0, "notes": [],
+           "zero_count": [], "expected_dropped": [], "expected_text": [],
+           "text_unexpected": []}
     gb = {g["gid"]: g for g in before["groups"]}
     ga = {g["gid"]: g for g in after["groups"]}
     res["n_groups"] = len(gb)
@@ -591,26 +735,50 @@ def compare(before: dict, after: dict) -> dict:
     for gid in sorted(set(gb) & set(ga)):
         bg, ag = gb[gid], ga[gid]
 
-        # ① logs 逐字节 sha256
+        # ① logs 逐字节 sha256（★ 差异逐行归因：命中有意变更登记 ⇒ 该组仍算过）
+        nb, na = len(bg["logs"]), len(ag["logs"])
+        raw_diff = []
+        for i in range(max(nb, na)):
+            b = bg["logs"][i] if i < nb else "<缺行>"
+            a = ag["logs"][i] if i < na else "<缺行>"
+            if b != a:
+                raw_diff.append((i, b, a))
+        reg, unreg = [], []
+        for i, b, a in raw_diff:
+            # 行数不等（增删行）⇒ 那一侧是 <缺行>，恒不入登记表 ⇒ 必 RED
+            hit = _expected_log_text(gid, i, b, a) if (i < nb and i < na) else None
+            if hit is None:
+                unreg.append((i, b, a))
+            else:
+                reg.append((i, b, a, hit))
+        for i, b, a, (cue, ent) in reg:
+            res["expected_text"].append(
+                {"gid": gid, "idx": i, "cue": cue, "commit": ent["commit"],
+                 "before": b, "after": a, "why": "".join(ent["why"])})
+        for i, b, a in unreg:
+            res["text_unexpected"].append(
+                "G%d #%d：before=%r after=%r（未登记 ⇒ 仍算差异）" % (gid, i, b, a))
         if bg["logs_sha256"] == ag["logs_sha256"]:
             res["n_ok_sha"] += 1
             res["logs"].append((gid, "PASS", "%s（%d 行）"
                                 % (bg["logs_sha256"], len(bg["logs"]))))
+        elif reg and not unreg and nb == na:
+            # ★ 只有「每一条差异都逐条登了记（组+行号+前后两句全对）」才认过；
+            #   少登一条、挪了行、或换了别的措辞 ⇒ 落进 unreg ⇒ FAIL。
+            res["n_ok_sha_reg"] += 1
+            res["logs"].append((gid, "PASS", "sha %s ≠ %s｜行数 %d = %d｜差异 %d 行**逐条已登记**"
+                                "（%d 条 cue：%s）｜见下「预期变更的屏上文案」"
+                                % (bg["logs_sha256"][:12], ag["logs_sha256"][:12], nb, na,
+                                   len(reg), len({r[3][0] for r in reg}),
+                                   ", ".join(sorted({r[3][0] for r in reg})))))
         else:
-            first = None
-            for i in range(max(len(bg["logs"]), len(ag["logs"]))):
-                b = bg["logs"][i] if i < len(bg["logs"]) else "<缺行>"
-                a = ag["logs"][i] if i < len(ag["logs"]) else "<缺行>"
-                if b != a:
-                    first = (i, b, a)
-                    break
+            first = unreg[0] if unreg else (raw_diff[0] if raw_diff else (-1, "", ""))
             res["logs"].append((gid, "FAIL",
-                                "sha %s ≠ %s｜行数 %d vs %d｜首差 #%d：before=%r after=%r"
+                                "sha %s ≠ %s｜行数 %d vs %d｜差异 %d 行（已登 %d · **未登 %d**）"
+                                "｜首差 #%d：before=%r after=%r"
                                 % (bg["logs_sha256"][:12], ag["logs_sha256"][:12],
-                                   len(bg["logs"]), len(ag["logs"]),
-                                   (first[0] if first else -1),
-                                   (first[1] if first else ""),
-                                   (first[2] if first else ""))))
+                                   nb, na, len(raw_diff), len(reg), len(unreg),
+                                   first[0], first[1], first[2])))
 
         # ② 逐 cue 计数表
         cb, ca = bg["cue_counts"], ag["cue_counts"]
@@ -656,7 +824,7 @@ def compare(before: dict, after: dict) -> dict:
     res["covered"] = sorted(set(before.get("observed_keys") or ()))
     res["uncovered"] = sorted(before.get("uncovered_keys") or ())
     res["inventory_n"] = before.get("key_inventory_n") or 0
-    res["verdict"] = ("RED" if (res["n_ok_sha"] != res["n_groups"]
+    res["verdict"] = ("RED" if (res["n_ok_sha"] + res["n_ok_sha_reg"] != res["n_groups"]
                                 or any(s[1] == "FAIL" for s in res["counts"])
                                 or any(s[1] == "FAIL" for s in res["state"])
                                 or res["zero_count"]) else "GREEN")
@@ -709,19 +877,52 @@ def render_report(before: dict, after: dict, res: dict, inject: str) -> str:
         add("   ! %s" % line)
     add("")
     add("-" * 78)
-    add("判据：logs sha256 全等 %d/%d · 计数表 %d/%d · state 差异 %d 键"
-        % (res["n_ok_sha"], res["n_groups"],
+    add("判据：logs sha256 全等 %d/%d（另 %d 组靠逐条登记过） · 计数表 %d/%d · state 差异 %d 键"
+        % (res["n_ok_sha"], res["n_groups"], res["n_ok_sha_reg"],
            sum(1 for s in res["counts"] if s[1] == "PASS"), res["n_groups"],
            sum(len(s[3]) for s in res["state"])))
     if res["expected_dropped"]:
         add("预期消失的键（已登记 · 不算差异 · 共 %d 条）：" % len(res["expected_dropped"]))
         for line in res["expected_dropped"]:
             add("   · %s" % line)
+    if res["expected_text"]:
+        _by_cue = {}
+        for _r in res["expected_text"]:
+            _by_cue.setdefault((_r["cue"], _r["commit"]), []).append(_r)
+        add("")
+        add("预期变更的屏上文案（已登记 · **仍算差异、已归因** · 共 %d 行 / %d 条 cue）："
+            % (len(res["expected_text"]), len(_by_cue)))
+        for (cue, commit), rows in sorted(_by_cue.items()):
+            gids = sorted({r["gid"] for r in rows})
+            add("   · %s（提交 %s）—— 命中 G%s：%s"
+                % (cue, commit, gids,
+                   ", ".join("#%d" % r["idx"] for r in sorted(rows, key=lambda x: (x["gid"], x["idx"])))))
+            add("       理由：%s" % rows[0]["why"])
+            for r in sorted(rows, key=lambda x: (x["gid"], x["idx"]))[:6]:
+                add("         G%d #%-4d %r → %r" % (r["gid"], r["idx"], r["before"], r["after"]))
+            if len(rows) > 6:
+                add("         … 另 %d 行同款" % (len(rows) - 6))
+    if res["text_unexpected"]:
+        add("")
+        add("★ 未登记的屏上差异（%d 行 · 判它 RED 的就是这些）：" % len(res["text_unexpected"]))
+        for line in res["text_unexpected"][:40]:
+            add("   · %s" % line)
+        if len(res["text_unexpected"]) > 40:
+            add("   … 另有 %d 条" % (len(res["text_unexpected"]) - 40))
+    # 审计面（**不是判据**）：登记表里这次一条都没命中的 cue = 登记已过期
+    # （要么基线又变了，要么当初登宽了）⇒ 提示去清理，不自动红（不代替人去判）。
+    _hit = {r["cue"] for r in res["expected_text"]}
+    _stale = sorted(set(EXPECTED_LOG_TEXT) - _hit)
+    if _stale:
+        add("")
+        add("! 登记表中本次零命中的 cue（登记已过期 · 审计提示，非判据）：%s"
+            % ", ".join(_stale))
     add("verdict: %s" % res["verdict"])
     if res["verdict"] == "RED":
         add("红因：")
-        if res["n_ok_sha"] != res["n_groups"]:
-            add("   · logs 不是逐字节相同（顺序/增删/文案变）")
+        if res["n_ok_sha"] + res["n_ok_sha_reg"] != res["n_groups"]:
+            add("   · logs 不是逐字节相同（顺序/增删/文案变）；其中 **未登记** 的差异 %d 行"
+                % len(res["text_unexpected"]))
         for gid, st, info in res["counts"]:
             if st == "FAIL":
                 add("   · G%d 逐 cue 计数表不等：%s" % (gid, info))
@@ -836,6 +1037,7 @@ def main(argv=None) -> int:
                                          for k in res["covered"]},
                     "checks": {"groups": res["n_groups"],
                                "logs_pass": res["n_ok_sha"],
+                               "logs_pass_registered": res["n_ok_sha_reg"],
                                "counts_pass": sum(1 for s in res["counts"] if s[1] == "PASS"),
                                "state_keys": res["n_state_keys"],
                                "state_diffs": sum(len(s[3]) for s in res["state"]),
@@ -847,6 +1049,11 @@ def main(argv=None) -> int:
                                           for gid, _st, _i, dd in res["state"]
                                           for (p, k, d) in dd],
                     "expected_dropped": res["expected_dropped"],
+                    # ★ 留档：逐条登记命中的屏上文案差异（复现时不靠嘴说）
+                    "expected_text": res["expected_text"],
+                    "expected_text_registry": {c: {k: v for k, v in e.items() if k != "why"}
+                                               for c, e in EXPECTED_LOG_TEXT.items()},
+                    "text_unexpected": res["text_unexpected"],
                 }, fh, ensure_ascii=False, sort_keys=True, indent=1)
             print("json → %s" % args.json)
         return 0 if res["verdict"] == "GREEN" else 1
