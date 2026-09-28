@@ -49,10 +49,16 @@
 """
 from __future__ import annotations
 
-__all__ = ["bind", "check", "claim", "labels", "points"]
+__all__ = ["bind", "check", "claim", "labels", "mark_failures", "points"]
 
 #: 注入的句柄表；`None` = 未装配（取用即报错）
 _INJ = None
+
+#: 「待领但无物可领」那一格里 `mark` 的失败流水（逐条：哪一行 / 为什么）。
+#: ★ 这不是「兜底」，是**可观测性**：`claim` 的对外返回形状**一字未改**（仍是
+#:   `(lines, err)`），本形状不抛、不改判据；但失败不再随 `pass` 蒸发 ——
+#:   调用方（游戏侧那一层）读得到「哪一行没落成」。门禁钉的就是这一格。
+_MARK_FAILURES: list = []
 
 #: 二十个句柄的名字（bind 的必填面 + 门禁的 fail-loud 面共用同一份）
 REQUIRED = (
@@ -196,6 +202,24 @@ def check(group_id, qq_id, player=None, extra=None) -> list:
     return new_ones
 
 
+def mark_failures(*, clear: bool = False) -> list:
+    """`claim` 里「尽力落成已领」那一格的 `mark` **失败流水**（副本；默认只读）。
+
+    * 每条 = `{"group_id", "qq_id", "id", "exc_type", "exc"}`
+    * `clear=True` 同时清空流水（调用方取走后自己决定要不要留）
+
+    ★ 为什么有它：`claim` 的对外返回形状是 `(lines, err)`，塞不进失败明细；而那一格的
+      `mark` 失败**必须**让人知道（行仍是 `claimed=0` ⇒ 永久挂待领位 + 每次领奖白扫）。
+      抛也不对 —— 口径是「尽力落成，不因此打断玩家」。故走**独立读口**：
+      形状不静默，调用方要不要知悉由它自己选（不读 = 与改前行为逐字相同）。
+    """
+    if clear:
+        out = [dict(r) for r in _MARK_FAILURES]
+        _MARK_FAILURES.clear()
+        return out
+    return [dict(r) for r in _MARK_FAILURES]
+
+
 def claim(group_id, qq_id) -> tuple:
     """领取全部待领取的奖励；返回 `(lines, err)`（`err` 非空 = 提示语，不是异常）。
 
@@ -217,11 +241,20 @@ def claim(group_id, qq_id) -> tuple:
             claimable.append(a)
     if not claimable:
         # 没有可领之物的待领项直接落成「已领」，免得永久挂在待领位（与真源同口径）
+        #
+        # ★ 这一格的 `mark` 失败**不再静默 `pass`**（台账 `ledger/shape.py:211-217`）：
+        #   `mark` 抛了 ⇒ 那一行仍是 `claimed=0` ⇒ 永久挂待领位，且**每次领奖都白扫一遍**，
+        #   而调用方（游戏侧 `claim_achievement_rewards`）从头到尾不知情。
+        #   口径**不变**（仍是「尽力落成已领」，不因此改判据、不抛给玩家），
+        #   改的是**可观测性**：失败逐条记进 `mark_failures()`，调用方读得到
+        #   「哪一行没落成 + 为什么」⇒ 「记下但继续」不再等于「静默」。
         for r in pending:
             try:
                 _h("mark")(group_id, qq_id, r["id"], r.get("progress", 1), 1)
-            except Exception:
-                pass
+            except Exception as exc:                          # noqa: BLE001
+                _MARK_FAILURES.append({
+                    "group_id": group_id, "qq_id": qq_id, "id": r["id"],
+                    "exc_type": type(exc).__name__, "exc": str(exc)})
         return [], _h("phrase")("none")
     player = _h("player_of")(group_id, qq_id)
     if not player:

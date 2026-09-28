@@ -773,6 +773,27 @@ def t9_ledger():
     check("★ 某条落库失败 ⇒ 跳过该条、继续判后面的（a2 不在结果里）",
           [a["id"] for a in new3] == ["a1", "a3"], str([a["id"] for a in new3]))
 
+    # -- claim 里「尽力落成已领」那一格：mark 失败不再随 pass 蒸发（可观测性口径） --
+    ROWS[:] = [{"id": "a3", "claimed": 0, "progress": 1}]
+    MARKS[:] = []
+    _shape.mark_failures(clear=True)
+    FAIL_MARK.add("a3")
+    lines, err = L.claim("g", "q")
+    FAIL_MARK.clear()
+    fails = _shape.mark_failures()
+    check("★ claim 的 mark 失败逐条记进 mark_failures()（不再静默 pass）",
+          [f["id"] for f in fails] == ["a3"], str(fails))
+    check("★ 失败流水带得上「哪一行 + 异常类型与消息」",
+          bool(fails) and fails[0]["group_id"] == "g" and fails[0]["qq_id"] == "q"
+          and fails[0]["exc_type"] == "RuntimeError" and "落库失败" in fails[0]["exc"],
+          str(fails)[:200])
+    check("★ 口径不变：claim 仍返回 (lines, err) 且不因 mark 失败抛给玩家",
+          isinstance(lines, list) and isinstance(err, str) and err != "", "%r / %r" % (lines, err))
+    taken = _shape.mark_failures(clear=True)
+    check("★ clear=True 取走即清空（调用方取走后自己决定留不留）", taken == fails and _shape.mark_failures() == [])
+    check("★ 取走的副本与内部流水互不影响（改副本不污染内部）",
+          (taken.append({"id": "x"}) or _shape.mark_failures() == []))
+
     ROWS[:] = [{"id": "mark_d3", "claimed": 0, "progress": 1}]
     extra3 = {"inst_id": "d9"}
     L.check("g", "q", {"qq_id": "q"}, extra3)
