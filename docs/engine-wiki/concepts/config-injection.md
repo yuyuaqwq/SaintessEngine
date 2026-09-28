@@ -32,7 +32,7 @@
 
 | hook | 类型 | 引擎在哪里用 | 不装配的行为 |
 |---|---|---|---|
-| `formulas` | 对象 | `actions._skill_seg_damage`、`_settle_lifesteal`、`_do_heal`、`skill_pay_of` 等（`actions.py:124,355,492,500,602,630,739,769`） | 退回 `_NullFormulas`（全零效应，**静默**） |
+| `formulas` | 对象 | `actions._skill_seg_damage`、`_settle_lifesteal`、`_do_heal`、`skill_pay_of` 等（`actions.py:142,355,492,500,602,630,739,769`） | 退回 `_NullFormulas`（全零效应，**静默**） |
 | `formula_skeleton_fn` | `fn() -> dict` | `formulas.skill_power_mult / skill_buff_turns / skill_cond_mult / skill_mech_val / skill_lifesteal_pct / skill_learn_cost` | `{}` → 读 `["skill_growth"]` 时 **KeyError** |
 | `skill_flat_fn` | `fn() -> dict` | `formulas.skill_flat_value` | `{}` → `float(None)` **TypeError** |
 | `skill_up_fn` | `fn(info) -> dict` | `formulas._skill_up` | `{}` = 无成长配置 |
@@ -43,8 +43,8 @@
 | `panel_fn` | `fn(class_name, level, equipment, tier, attributes, evolve_path, panel_bonus, race) -> dict` | `stats._player_base_stats`（`stats.py:120-132`） | `{}`（空面板） |
 | `skill_lookup` | 对象（需 `.skill_info(cls, key)` / `.skill_by_key(key)`） | `battle._index_one_actor`（`battle.py:168,137`） | 返回 `None` → 技能索引空 |
 | `monster_skill_fn` | `fn(key) -> dict\|None` | `battle._index_one_actor`（`battle.py:174`） | `None` |
-| `basic_skill_fn` | `fn(class_name) -> dict\|None` | `actions.resolve_basic_skill`（`actions.py:41`） | 回落 `basic_fallback` |
-| `basic_fallback` | dict | 同上（`actions.py:49`） | 结构化兜底 `{"name": "", "kind": "", "exprs": ["atk*1.0"]}` |
+| `basic_skill_fn` | `fn(class_name) -> dict\|None` | `actions.resolve_basic_skill`（`actions.py:59`） | 回落 `basic_fallback` |
+| `basic_fallback` | dict | 同上（`actions.py:67`） | 结构化兜底 `{"name": "", "kind": "", "exprs": ["atk*1.0"]}` |
 | `kinds` | dict | `config.kind_of`（`config.py:390`）→ `actions._kind` | `""`（kind 比较全不成立） |
 | `mech_cfg_fn` | `fn(name) -> dict` | `config.mech_cfg` → `support/battle_bars._battle_cfg` | `{}` |
 | `bar_prefix_fn` | `fn() -> str` | `config.bar_prefix` → `support/battle_bars._state_prefix` | `""` |

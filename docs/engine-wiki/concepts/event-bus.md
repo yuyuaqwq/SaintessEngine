@@ -168,7 +168,7 @@ actor["triggers"][event]
 | **引擎有 fire 点位（23）** | `battle_start` `turn_start` `act_begin` `act_cast` `skill_hit`※ `attack_hit`※ `crit` `on_taken` `on_heal` `on_kill` `on_death` `dot_tick` `dot_calc` `on_act_consume` `on_hit_consume` `effect_expire` `threshold` `dmg_calc` `taken_calc` `heal_calc` `act_done` `interrupt` `time_advance` |
 | **⚠️ 引擎无点位（3，必须上层驱动）** | `phase` `player_low` `pv_broken` |
 
-※ `skill_hit` / `attack_hit` 的 fire 点位用变量选事件名（`actions.py:544`：
+※ `skill_hit` / `attack_hit` 的 fire 点位用变量选事件名（`actions.py:562`：
 `ev = "attack_hit" if info.get("_basic") else "skill_hit"`），静态 grep 不到字面量。
 
 精确点位（`文件:行号`）与每个事件的 ctx 字段见 [../reference/events.md](../reference/events.md)。

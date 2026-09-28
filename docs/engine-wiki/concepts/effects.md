@@ -47,7 +47,7 @@ actor["effects"] = {
 | `mode` | `act_apply` 控制分支 | `Battle.act` 控制消费（`battle.py:526-550`） | `"skip"` = 整跳行动 / `"no_skill"` = 技能转普攻 |
 | `v` | `act_apply` value 型 | **无引擎消费者**（☞ 见下） | 值型数值（如减伤 0.45）。⚠️ 收口第 2 批新增的承伤减免读点读的是 **`value`**（不是 `v`）—— 见下 |
 | `stat` / `op` / `mult` | `act_apply` 快照分支 | `stats._apply_effects`（`stats.py:69-80`） | 面板增益快照 |
-| `hit` | `act_apply` hit 子键 | `actions._consume_hit_buffs`（`actions.py:474`） | 出手消费型（`dmg_mult` / `guaranteed_crit` / `bonus_atk_pct`） |
+| `hit` | `act_apply` hit 子键 | `actions._consume_hit_buffs`（`actions.py:492`） | 出手消费型（`dmg_mult` / `guaranteed_crit` / `bonus_atk_pct`） |
 | `period` | **内容侧**直接写入 | `schedule._settle_time_effects`（`schedule.py:656-664`） | 动态周期声明（条目自带优先，回落表声明） |
 | `value` | **内容侧**（`heal_amp_pct` 等）/ `open_entry(..., value=…)` | `landing._apply_heal_mods`（禁疗/重伤）、`landing.state_reduce_of`（**声明 `taken_pct` ⇒ 承伤减免**）、`landing._apply_damage`（**声明 `absorb` ⇒ 承伤资源**） | **「这个状态带的一个数」**。走哪一族由条目的**声明**决定（`absorb` / `taken_pct`），引擎不按字段名猜语义 |
 

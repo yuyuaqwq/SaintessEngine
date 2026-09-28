@@ -28,6 +28,24 @@ from . import formulas as _F          # 骨架表具名 getter（L246 平衡数�
 # 中文 kind 字面量全部改走 config 注入面（内容侧 game/bootstrap.py 装配）。
 
 
+def _num(value, default: float) -> float:
+    """数值回落：缺键/显式 `None` → `default`；**合法 0 原样返回**（不吞）。
+
+    ★ 本文件历史上普遍写 `float(x.get(k, D) or D)`，而 `or` 会把**合法 0**
+      吞成默认。对「倍率/比例/件数」这类乘区，0 与缺键语义完全相反
+      （0 = 不加成、缺键 = 无此加成层）⇒ 吞掉之后「0 伤害 / 0 护盾 / 0 段」
+      这类配置**做不出来**且零报错。本函数只认 `None`。
+    """
+    return default if value is None else float(value)
+
+
+def _int(value, fallback, default: int) -> int:
+    """整数回落（`value` 为 `None` 时读 `fallback`，仍缺则 `default`）；合法 0 原样返回。"""
+    if value is None:
+        value = fallback
+    return default if value is None else int(value)
+
+
 def _kind(name: str) -> str:
     """kind 语义值（内容注入；未装配 → ""）。引擎零 kind 字面量。"""
     return _GC.kind_of(name)
@@ -505,13 +523,13 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
     st = S.actor_stats(battle, actor)
     est = S.actor_stats(battle, target)
     # state 声明伤害倍率（state_effects 表 dmg_mult：如某状态提供的乘区层）
-    _st_mult = float(st.get("_state_dmg_mult", 1.0) or 1.0)
+    _st_mult = _num(st.get("_state_dmg_mult"), 1.0)
     crit_pct = float(st.get("crit", 0) or 0)
     is_crit = hit_buffs["guaranteed_crit"] or (random.random() < crit_pct)
     lucky = False
     if is_crit:
         lucky = random.random() < _F.lucky_rate()      # L246：0.30 已下沉骨架表
-    multi = int(info.get("hits") or info.get("multi") or 1)
+    multi = _int(info.get("hits"), info.get("multi"), 1)
     pp_phys = float(st.get("pene_phys", 0) or 0)
     pf_phys = int(st.get("pene_flat_phys", 0) or 0)
     pp_magi = float(st.get("pene_magi", 0) or 0)
@@ -620,7 +638,7 @@ def _consume_hit_buffs(battle, actor: dict, logs: list) -> dict:
         exp = entry.get("expire")
         if exp is not None and now >= float(exp):
             continue  # 过期不消费（schedule 到期删兜底）
-        out["dmg_mult"] *= float(hit.get("dmg_mult", 1.0) or 1.0)
+        out["dmg_mult"] *= _num(hit.get("dmg_mult"), 1.0)
         if hit.get("guaranteed_crit"):
             out["guaranteed_crit"] = True
         # N9.8 出手附伤：bonus_atk_pct 累加（多 buff 并存时求和；缺省无此段）
@@ -681,7 +699,7 @@ def _skill_seg_damage(battle, actor, target, st, est, info, lv,
     #   已删：它只在 expr 分支被写，非 expr 分支没人写 ⇒ 怪当攻击者时 level=None 直接抛。
     _lv = int(actor.get("level", 1) or 1)
     kind = info.get("kind", "")
-    power = float(info.get("power", 1.0) or 1.0)
+    power = _num(info.get("power"), 1.0)
     if kind == _kind("true"):
         return _GC.formulas().calc_damage(int((st.get("atk", 0) * power + skill_flat)), 0, seg_crit,
                                            dmg_type="true", level=_lv), 0
@@ -900,7 +918,7 @@ def _heal_amount(st: dict, actor: dict, info: dict, lv: int) -> int:
     if info.get("hp_pct"):
         return int(actor.get("max_hp", 0) * float(info.get("hp_pct", 0)) * _GC.formulas().skill_power_mult(lv, info))
     # 兜底 matk × power（v95r38：power<1 曾是 hp% 语义，v174 已废弃改显式 hp_pct）
-    return int(st.get("matk", 0) * float(info.get("power", 1.0) or 1.0) * _GC.formulas().skill_power_mult(lv, info))
+    return int(st.get("matk", 0) * _num(info.get("power"), 1.0) * _GC.formulas().skill_power_mult(lv, info))
 
 
 # S2 公开 API 面（§5）：私有 → 公开；旧下划线名保留为别名（commands/instance_battle 仍在用）。
@@ -924,7 +942,7 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
     lv = _GC.formulas().skill_level_of(actor, info.get("name", "")) if actor.get("class_name") else 0
     # 怪物施法：buff_turns 固定读 info.buff_turns（缺省 3），不吃技能等级成长
     if not actor.get("class_name"):
-        base_turns = int(info.get("buff_turns", 3) or 3)
+        base_turns = _int(info.get("buff_turns"), None, 3)
     else:
         # 玩家施法：skill_buff_turns 带 info → 读 buff_turns（战吼 10）。
         # 旧引擎 else 分支漏传 info → 战吼只给 3 刻（desc 说 10 刻）= 旧 bug
@@ -963,7 +981,7 @@ def _do_buff(battle, ctx, actor, info, logs) -> list:
                 # V4：`shield_pct` 缺省从内容侧骨架表读（同 shield_default_pct 键；
                 #     未装配 → 0.0 → 下游走 shield 动作兜底，同样读骨架表）
                 _sp = float(_GC.formulas().shield_default_pct())
-                pct = float(info.get("shield_pct", _sp) or _sp)
+                pct = _num(info.get("shield_pct"), _sp)
                 _eff_params["pct"] = pct
         apply_effects(battle, actor, actor, [_eff_params], logs)
     # mech（目标向效果）：增益技也可带 mech——法术反制（silence 沉默目标）/守护姿态

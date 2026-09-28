@@ -112,7 +112,7 @@ def my_cond_mult(battle, caster, target, params, logs):
 
 - `ctx["mult"]` 初值由引擎置 1.0（`actions.py:499`），**累乘**多个源
 - `_fire_ctx` 是**单槽覆盖式**：只在你自己那次 `fire` 的同步栈里有效
-- 乘区在 `dmg_calc` 里改的是**已经算完的总伤**（多段之和，`actions.py:485-488` 之后）
+- 乘区在 `dmg_calc` 里改的是**已经算完的总伤**（多段之和，`actions.py:503-506` 之后）
 
 ## judge 谓词：把判据写成数据
 

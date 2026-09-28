@@ -126,9 +126,9 @@ info["res_cost"] = {"guard_core": 3}     # 施放时扣 3 层
 
 引擎原生消费（**这是引擎唯一直接认的资源字段**）：
 
-- 预检：`_skill_usable`（`actions.py:143`）——条目存在且 `stacks < 需求` → 拦截 + 写日志
+- 预检：`_skill_usable`（`actions.py:161`）——条目存在且 `stacks < 需求` → 拦截 + 写日志
   「⚡ 核心资源不足：需要 X key，当前 Y！」
-- 扣费：`_spend_skill_cost`（`actions.py:190`）——`stacks = norm_stack(max(0, cur - rv))`
+- 扣费：`_spend_skill_cost`（`actions.py:208`）——`stacks = norm_stack(max(0, cur - rv))`
 
 ⚠️ **一个重要的历史行为**：`res_cost` 只在 `actor.effects` **已经有该 key 条目**时才拦截
 （`actions.py:225-228` 的 `continue`）。没条目 = 不拦（保持历史行为）。
@@ -153,7 +153,7 @@ mode 全谱 → [../reference/mech-cash.md](../reference/mech-cash.md)。
 ### ③ `consume_all`（清零）
 
 ```python
-info["consume_all"] = {"key": "arcane"}    # actions.py:229-232：直接 ef.pop
+info["consume_all"] = {"key": "arcane"}    # actions.py:247-250：直接 ef.pop
 ```
 
 ## 自然回复 / 衰减

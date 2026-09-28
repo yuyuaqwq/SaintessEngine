@@ -33,7 +33,7 @@
 | `on` | `"caster"` \| `"target"` | ✅ `effects.act_cleanse`（`effects.py:638`，`on=="target"` 也清）；内容侧 `_mech_to_effect` 判 `on_target`（`effects.py:254`） | 效果的默认作用对象。`"target"` = 对敌标记类 |
 | `negative` | bool | ⚠️ 包不读 | 「负面」标记。内容侧用它数「负面种数」（`class_mech_proc.py:767`，`target_debuff_kinds` judge） |
 | `tag` | str | ⚠️ 包不读 | 旧 CLEANSE_TAGS 时代的标记。`act_apply` 读的是 **params** 的 `tag`（作为 `key` 的兜底，`effects.py:346`），不是 `cfg["tag"]` |
-| `cd_mult` | float | ✅ `actions.do_skill`（`actions.py:93-101`） | 冷却倍率（`0.8` = CD −20%）。多态并存时**取最小**（最速） |
+| `cd_mult` | float | ✅ `actions.do_skill`（`actions.py:111-119`） | 冷却倍率（`0.8` = CD −20%）。多态并存时**取最小**（最速） |
 | `on_threshold` | `{层数: {...}}` | ⚠️ **无消费者** | 「满 N 层触发什么」。`threshold` **事件**有引擎点位（`effects.py:458`），但**这张映射表没被读**。目前要靠内容侧监听 `threshold` 自己实现 |
 | `guard_hp_pct` | float | ✅ `landing._apply_death_guard`（`landing.py:371`） | 濒死保护触发后保底到的最大生命比例（缺省 0.10） |
 | `heal_pct` | float | ✅ 同上（`landing.py:451`） | 濒死保护触发时额外回复的最大生命比例 |

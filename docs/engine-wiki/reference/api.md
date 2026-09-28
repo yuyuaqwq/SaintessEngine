@@ -79,7 +79,7 @@ clock · command · container · domains · events · expr · host · log · ses
 | `actions` | `skill_pay_of` | `_skill_pay_of` |
 
 （这五个符号都在扩展包 `ext_combat` 里；别名赋值处：`effects.py:88-89`、`battle.py:44`、
-`battle/actions.py:336`、`battle/actions.py:857`）
+`battle/actions.py:354`、`battle/actions.py:857`）
 
 ## 2. `Battle`（扩展包 `ext_combat` · `battle.py:48`）
 
@@ -400,7 +400,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 | `front_rank(units)` | `:20` |
 | `reachable_units(attacker, units)` | `:28`（⚠️ 无外部引用） |
 | `select_target(attacker, units, threat=None, exclude_uid=None, threat_mode="front")` | `:34` |
-| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一消费者：`actions._deal_aoe`，`battle/actions.py:450`） |
+| `select_aoe_targets(attacker, units, scope)` | `:83`（AOE 唯一消费者：`actions._deal_aoe`，`battle/actions.py:468`） |
 | `pick_by_policy(policy, units, threat=None, fallback=None)` | `:122` |
 | `compact(units)` | `:161` |
 | `numbered_units(units)` | `:191` |

@@ -107,7 +107,7 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:652`）。旧字段 `is
 |---|---|---|
 | `bonus.panel` | `stats._player_base_stats`（`stats.py:99`） | 面板增幅 dict，透传给 `panel_fn` |
 | `bonus.cap` | `effects._cap_of`（`effects.py:79`） | `{资源key: 上限增量}`，纯 flat int 加在 `EFFECT_RULES[key].cap` 上 |
-| `bonus.cost` | `actions._bonus_cost_of`（`actions.py:293`） | 技能消耗折扣（`mp_pct`/`mp_flat`/`res` + `when` 判据） |
+| `bonus.cost` | `actions._bonus_cost_of`（`actions.py:311`） | 技能消耗折扣（`mp_pct`/`mp_flat`/`res` + `when` 判据） |
 
 ### 其余透传字段
 

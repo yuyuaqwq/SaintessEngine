@@ -149,18 +149,18 @@
 | R1 | `actions.py:16` → `game.engine`（21 处公式调用） | 核心反向边 |
 | R2 | `actions.py:20` → `game.core.constants` | 死 import |
 | R3 | `actions.py:40` → `game.content`（`C.CLASSES` 直读） | 内容表直读 |
-| R4 | `actions.py:368` → `game.core.formation` | 合规（通用纯函数，层级归属错） |
-| R5 | `actions.py:827` → `game.core.formula_expr` | 合规（通用解释器） |
-| R6 | `actions.py:861` → `game.engine.skill_buff_turns` | 反向边 |
-| R7 | `actions.py:847` → `game.core.constants` | 死 import |
-| R8 | `actions.py:867` → `game.engine.skill_mech_val` | 反向边 |
+| R4 | `actions.py:386` → `game.core.formation` | 合规（通用纯函数，层级归属错） |
+| R5 | `actions.py:845` → `game.core.formula_expr` | 合规（通用解释器） |
+| R6 | `actions.py:879` → `game.engine.skill_buff_turns` | 反向边 |
+| R7 | `actions.py:865` → `game.core.constants` | 死 import |
+| R8 | `actions.py:885` → `game.engine.skill_mech_val` | 反向边 |
 | R9 | `battle.py:159` → `game.engine`（技能表查询） | 反向边 |
 | R10 | `battle.py:160` → `game.content.MONSTER_SKILLS` | 内容表直读 |
 | R11 | `stats.py:15` → `game.engine.player_final_stats` | **最重的一条**（玩家面板全算） |
 | R12 | `config.py:62` → `game.data.battle_rules` | 位置不合规（装配逻辑落在引擎包内） |
 | R13 | `stats.py:96` → 字面量 `"战士"` | 内容名侵入 |
 | R14 | `actions.py:27-31` → 中文字面量 kind | 内容语义耦合 |
-| R15 | `actions.py:50` → 字面量 `"攻击"` | 内容名侵入（普攻兜底） |
+| R15 | `actions.py:68` → 字面量 `"攻击"` | 内容名侵入（普攻兜底） |
 
 统计：**15 条边**（2 条死 import R2/R7；2 条合规但层级归属错 R4/R5；11 条真反向耦合）。
 
@@ -302,7 +302,7 @@ def apply_game_content(actor: dict, ctx: dict | None = None) -> dict:   # games/
 | `game/content_rules/{skills,panel,gameplay}.py` | 技能表 / 面板公式 / 游戏规则（S5 从 `engine.py` 拆出） |
 
 ⚠️ **一个已核实的重要内容侧缺口**：技能数据的 `cond`（条件倍率）在引擎里是死字段 ——
-`actions._do_heal` 里 `cond_mult = 1.0  # N2b 补，恒 1.0 起步`（`actions.py:777`）。
+`actions._do_heal` 里 `cond_mult = 1.0  # N2b 补，恒 1.0 起步`（`actions.py:795`）。
 内容侧用 `battle_cond_procs.py` 把它接回乘区（「**引擎零改动**，走既有装配层扩展动作模式」，
 游戏仓 `battle_cond_procs.py:5-11`）。第三方要 `cond` 就得自己写这个装配器。
 
