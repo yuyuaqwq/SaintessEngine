@@ -212,4 +212,16 @@ class Admission:
             seen.add(r.name)
             if r.check is None and r.consume is None:
                 problems.append(f"规则 {r.name} 既无 check 也无 consume（空规则）")
+            # ★ 2026-09-28（审计 L538）：能拒绝的规则必须自带措辞。
+            #   没给 `reason`（默认空串）且带 check（能拒绝）时，拒绝理由会落到
+            #   兜底串「未通过：<name>」—— 那是**规则名**，通常是英文机器键
+            #   （内容侧 `Rule("key", …)` / `Rule("dungeon_gate", …)`），而它经
+            #   `Verdict.reason` 直接进玩家可见文本（`event.plain_result(v.reason)`）。
+            #   兜底串本身是**公开契约**（两处 docstring + `test_run.py` 钉住「未通过：<name>」），
+            #   所以这里**不删兜底、不改行为**，只在 audit 里点名，让装配期能看见。
+            if not r.reason and r.check is not None:
+                problems.append(
+                    f"规则 {r.name} 没给 reason（拒绝时会把规则名当措辞印给玩家："
+                    f"「未通过：{r.name}」）·"
+                    f"check 恒通过或就地返回 str 措辞时可忽略这条")
         return problems

@@ -192,8 +192,9 @@ def t3_audit():
           any("空规则" in p for p in Admission([Rule("e")]).audit()))
     check("只有 consume 的规则不算空", Admission([Rule("c", consume=lambda c: None)]).audit() == [])
     check("非 Rule 成员 → 报", any("非 Rule" in p for p in Admission([object()]).audit()))
-    check("干净链 → 零问题",
-          Admission([Rule("a", check=lambda c: True), Rule("b", check=lambda c: True)]).audit() == [])
+    check("干净链 → 零问题（两条都给了措辞）",
+          Admission([Rule("a", check=lambda c: True, reason="甲未满足"),
+                     Rule("b", check=lambda c: True, reason="乙未满足")]).audit() == [])
     check("rule_names 保序", Admission([Rule("a", check=lambda c: True),
                                         Rule("b", check=lambda c: True)]).rule_names() == ("a", "b"))
 
@@ -348,6 +349,18 @@ def t7_audit():
     r2.set_alive("zz", True)
     check("存活表含名单外成员 → 报", any("名单外" in x for x in r2.audit()))
     check("干净名单 → 零问题", Roster(["a"], leader="a").audit() == [])
+    # 审计 L538：能拒绝的规则没给措辞 ⇒ 兜底串把规则名印给玩家（机器键）
+    _nr = Admission([Rule("dungeon_gate", check=lambda c: False)]).audit()
+    check("可拒绝规则没给 reason → audit 报（否则把规则名当措辞印给玩家）",
+          any("没给 reason" in x and "dungeon_gate" in x for x in _nr), str(_nr))
+    check("给了 reason 的规则 → 这条不报",
+          Admission([Rule("ok1", check=lambda c: False, reason="入口未开启")]).audit() == [])
+    # 只有 consume / 无 check 的规则不要求措辞（它不会拒绝）
+    check("无 check 的规则不要求 reason（恒通过）",
+          not any("没给 reason" in x for x in Admission([Rule("c", consume=lambda c: None)]).audit()))
+    # 兜底串本身是公开契约（两处 docstring 钉住）—— 本次**不改行为**，只加审计
+    check("★兜底措辞仍是公开契约（未通过：<name>），本次只加审计不改行为",
+          Admission([Rule("z", check=lambda c: False)]).check({}).reason == "未通过：z")
 
 
 # ---------------------------------------------------------------- 8 零知识
@@ -357,7 +370,10 @@ def t8_zero_knowledge():
               "怪物", "职业", "等级", "dungeon", "instance", "player", "monster", "item",
               "gold", "equip", "level", "quest", "stage", "room", "key_item")
     bad = []
-    for root, _dirs, files in os.walk(os.path.join(ROOT, "extends", "ext_world", "run")):
+    # ★ 2026-09-28（审计 L539）：扫描面原先只盖 `run/`，同包的 `space/` 没有同款判据
+    #   ⇒ 那个目录新加内容取值无人拦。扫整个扩展包的源码目录（剔 __pycache__）。
+    for _sub in ("run", "space"):
+      for root, _dirs, files in os.walk(os.path.join(ROOT, "extends", "ext_world", _sub)):
         for fn in files:
             if not fn.endswith(".py"):
                 continue
