@@ -320,6 +320,60 @@ def t10_dispatch_discipline():
     check("add_sink / remove_sink", (tl.add_sink(TL.MemorySink()) or tl.remove_sink(m)) == 1)
 
 
+# ------------------------------------------------- 11 坏数据 / 筛选参数 fail-closed
+def t11_malformed_fails_closed():
+    """★ 审计 L_tlog-record / L_tlog-reader：坏数据与空筛选不许静默变「合法」。
+
+    三条各自独立可验：
+      ① `Record.from_dict` 非 Mapping 抛 —— 连带把 `JSONLSink.bad_lines` 这条**现成**的
+         坏行机制接回来（它 `except Exception` 收 bad_lines，坏数据从此不再混进读口）。
+      ② `Reader.iter_records(kind=[])` 抛 —— 筛选参数传错不再「放宽成全量」。
+      ③ `KIND_RE` 现行口径（首段字母开头、后续段可数字开头）—— 钉住**注释**声称的那条。
+    """
+    print("[11] 坏数据 / 空筛选 fail-closed")
+    # ① 非 Mapping 一律抛 TypeError，且点名类型（不是 str() 兜底）
+    for bad, label in (("hello", "裸字符串"), (12345, "数字"),
+                       (None, "null"), (["a"], "数组")):
+        try:
+            TL.Record.from_dict(bad)
+            check("from_dict 拒 %s（不得变成合法记录）" % label, False, "竟然没抛")
+        except TypeError as e:
+            check("from_dict 拒 %s" % label, "Mapping" in str(e), str(e))
+        except Exception as e:                                # noqa: BLE001
+            check("from_dict 拒 %s（异常类型要 TypeError）" % label, False, type(e).__name__)
+    # ①b 端到端：坏行必须进 bad_lines，且**不得**出现在读口里
+    p = os.path.join(tempfile.mkdtemp(), "bad.jsonl")
+    Q, NLCH = chr(34), chr(10)
+    with open(p, "w", encoding="utf-8") as f:
+        f.write("{" + Q + "kind" + Q + ":" + Q + "ok.a" + Q + "," + Q + "ts" + Q + ":1.0}" + NLCH)
+        f.write(Q + "这行是裸字符串" + Q + NLCH)
+        f.write("{" + Q + "kind" + Q + ":" + Q + "ok.b" + Q + "," + Q + "ts" + Q + ":2.0}" + NLCH)
+    sk = TL.JSONLSink(p)
+    got = list(sk.read_records())
+    check("坏行被记进 bad_lines（不再静默吞成合法记录）",
+          len(sk.bad_lines) == 1 and "裸字符串" in sk.bad_lines[0][1], str(sk.bad_lines))
+    check("读口只回真记录（坏行不进流）",
+          [r.kind for r in got] == ["ok.a", "ok.b"], str([r.kind for r in got]))
+    # ② 空筛选抛 ValueError；省略参数仍是「不过滤」
+    s = TL.MemorySink()
+    s.write([TL.Record("a.one", ts=1.0), TL.Record("b.two", ts=2.0)])
+    rd = TL.Reader([s])
+    for bad, label in (([], "空 list"), ((), "空 tuple"), ([""], "空串元素"), ("", "空串")):
+        try:
+            rd.count(kind=bad)
+            check("count(kind=%s) 抛（不得放宽成全量）" % label, False, "竟然没抛")
+        except ValueError as e:
+            check("count(kind=%s) 抛" % label, "kind" in str(e), str(e))
+    check("省略 kind = 不过滤（正常口径不受影响）", rd.count() == 2, str(rd.count()))
+    check("正常 kind 筛选照旧",
+          rd.count(kind="a.one") == 1 and rd.count(kind=["a.one", "b.two"]) == 2)
+    # ③ KIND_RE 现行口径：首段须字母/下划线，后续段**可**数字开头
+    check("KIND_RE 首段须字母开头",
+          not TL.is_valid_kind("0a.b") and not TL.is_valid_kind("9"))
+    check("KIND_RE 后续段可数字开头（现行口径，注释已对齐）",
+          TL.is_valid_kind("a.0b") and TL.is_valid_kind("a.b.0c")
+          and TL.is_valid_kind("_x.1y"))
+
 def main():
     print("== tlog 门禁：Record / KindTable / sinks / Reader / Replay / Bridge ==")
     t1_record()
@@ -332,6 +386,7 @@ def main():
     t8_bridge()
     t9_tlog_declaration()
     t10_dispatch_discipline()
+    t11_malformed_fails_closed()
     print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
     return 1 if failed else 0
 

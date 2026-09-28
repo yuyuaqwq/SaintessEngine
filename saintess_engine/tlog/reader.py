@@ -51,9 +51,18 @@ class Reader:
     def iter_records(self, *, kind=None, actor: Optional[str] = None,
                      tag: Optional[str] = None, since: Optional[float] = None,
                      until: Optional[float] = None) -> Iterator[Record]:
+        # ★ 审计 L_tlog-reader：`kind=[]` / `kind=()` / `kind=[""]` 一律抛（`ValueError`），
+        #   不再静默放宽成「不过滤 = 全量」。旧写法 `pats=[]` 与「未传 kind」同义，
+        #   于是 `count(kind=[])` 返回**全部**记录（实测 2 条全量，应 0）——
+        #   筛选参数传错反而拿到更宽的结果，调用方无从察觉。
+        #   判据：`kind` 省略（None）= 不过滤；给了就必须至少含一个非空 pattern。
         pats: list = []
         if kind is not None:
             pats = [str(kind)] if isinstance(kind, str) else [str(k) for k in kind]
+            if not [p for p in pats if p]:
+                raise ValueError(
+                    "kind 筛选给了却没有任何非空模式（收到 %r）——"
+                    "不过滤请省略该参数，不要传空值" % (kind,))
         for r in self.all():
             if pats and not any(_kind_match(r.kind, p) for p in pats):
                 continue

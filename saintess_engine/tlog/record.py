@@ -19,7 +19,11 @@ from typing import Iterable, Mapping, Optional
 
 __all__ = ["Record", "KindSpec", "KindTable", "is_valid_kind", "KIND_RE"]
 
-# kind 命名：点分标识（`battle.hit` / `a.b.c`），每段字母开头
+# kind 命名：点分标识（`battle.hit` / `a.b.c`）。
+#   ★ 首段必须字母/下划线开头；**后续段允许数字开头**（`a.0b` 合法）。
+#   旧注释写的是「每段字母开头」，与本正则不符（`a.0b` / `a.b.0c` / `_x.1y` 实跑均返回 True），
+#   照字面读会以为 `validate()` 判不出这类形态。注释按**现行正则**改口径，不动 `KIND_RE`
+#   —— 它是 `__all__` 公开面（`from .tlog import KIND_RE`），收紧属契约变更，须单独立项。
 KIND_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)*$")
 _FIELD_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
@@ -62,8 +66,16 @@ class Record:
 
     @classmethod
     def from_dict(cls, data: Mapping) -> "Record":
+        """反序列化一条流水。
+
+        ★ 审计 L_tlog-record：**非 Mapping 一律抛**（`TypeError`），不再 `str(data)` 兜成 kind。
+        旧写法把一行坏 JSON（裸字符串 / 数字 / null / 数组）静默变成 `kind="这行是裸字符串"`
+        的**合法记录**——`JSONLSink.read_records` 的 `bad_lines` 机制因此永远收不到它们
+        （实测：写入 1 条坏行后 `read_records` 返回 3 条、`bad_lines` 为空），
+        坏数据在流水里与真数据不可区分。现在抛错即被那条现成的 except 接住并记进 `bad_lines`。
+        """
         if not isinstance(data, Mapping):
-            return cls(kind=str(data))
+            raise TypeError("流水记录必须是对象（Mapping），收到：%r" % (type(data).__name__,))
         return cls(kind=data.get("kind", ""), ts=data.get("ts", 0.0),
                    actor=data.get("actor", ""), fields=data.get("fields") or {},
                    tags=data.get("tags") or ())
