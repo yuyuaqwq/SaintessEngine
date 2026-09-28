@@ -46,7 +46,7 @@ python examples/host-skeleton/adapter_cli.py \
 | # | 函数 | 契约 | 本骨架的 CLI 实现 | 你要换成的 |
 |---|---|---|---|---|
 | ① | `recv() -> ctx \| None` | None = 没有新消息（骨架自旋） | 从 stdin 读一行 | 平台事件队列取一条 |
-| ② | `load_player(uid) -> dict \| None` | None = 新玩家（引擎造初始档 / 问包要） | `store_sqlite.SQLiteStore` | 你的存储（SQLite/Redis/MySQL 都行） |
+| ② | `load_player(uid) -> dict \| None` | None = 新玩家（引擎造初始档 / 问包要）。★ **档在、但解不开 ⇒ 抛**（骨架抛 `CorruptSaveError`），**别回落成 None** —— 那样引擎的建档路径会把残档直接覆盖掉 | `store_sqlite.SQLiteStore` | 你的存储（SQLite/Redis/MySQL 都行） |
 | ② | `save_player(uid, data)` | 骨架保证「改完必存」（一条消息一次） | 同上 | 同上 |
 | ③ | `say(to, text)` | `to = {"uid","group_id"}`；**text 已渲染** | `print` | 平台 SDK 发送 |
 

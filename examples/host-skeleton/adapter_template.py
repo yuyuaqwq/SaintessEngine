@@ -60,7 +60,7 @@ class PlatformAdapter:
 
     # ------------------------------------------------------------ ② 存档读写
     def load_player(self, uid: str):
-        return self.store.load_player(uid)                        # dict | None（None = 新玩家）
+        return self.store.load_player(uid)                        # dict | None（None = 新玩家；坏档 store 会抛）
 
     def save_player(self, uid: str, data: dict) -> None:
         self.store.save_player(uid, data)                         # 改完必存

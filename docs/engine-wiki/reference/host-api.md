@@ -25,6 +25,7 @@ class MyAdapter:
                 "at": [...], "ts": ..., "raw": <平台原始事件>}
 
     def load_player(self, uid):           # ② 读档；None = 新玩家（引擎会问包要初始档）
+                                          #    档在但解不开 ⇒ 抛（别回落成 None，见「读档那半边」）
         return store.get(uid)
 
     def save_player(self, uid, data):     # ② 写档：**一条消息一次**（改完必存）
@@ -92,7 +93,7 @@ class MyAdapter:
 
 ```
 玩家消息 ──▶ 宿主 recv ──▶ Host.handle(ctx)
-                              ├─ load_player（新玩家则问包要 initial_save）
+                              ├─ load_player（新玩家则问包要 initial_save；坏档在此抛）
                               ├─ route：命中包内**声明**（正则来自包）
                               ├─ 跑守卫：声明里的 guards
                               │     · 内置名 `player` / `battle`（实现由宿主注入）

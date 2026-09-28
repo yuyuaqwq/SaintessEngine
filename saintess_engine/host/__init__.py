@@ -11,6 +11,7 @@
 ----------------------------------------
     recv() -> ctx | None                    没有新消息 → None（循环自旋）
     load_player(uid) -> dict | None         None = 新玩家（引擎造初始档 / 问包要）
+                                             档在、但解不开 ⇒ **抛**（别回落成 None，见下）
     save_player(uid, data) -> None          一条消息一次（改完必存）
     say(to, text) -> None                   to = {"uid", "group_id"}；text **已渲染**
 
