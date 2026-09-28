@@ -223,6 +223,25 @@ def t8_bridge():
     check("strict：未映射事件抛错", ok)
     check("detach 清掉订阅", br.detach(bus) == 2 and bus.subscribers("order_paid") == ())
 
+    # L670：detach 只能撤**本桥**挂上去的回调。原实现走 `bus.clear(ev)`（清空该事件
+    # **全部**订阅方）⇒ 同一事件上别人的订阅被一起抹掉、事件从此静默失联。
+    bus3 = EventBus(("order_paid",))
+    m3 = TL.MemorySink()
+    br3 = TL.EventLogBridge(TL.TLog(sinks=[m3]), {"order_paid": "shop.paid"})
+    seen3 = []
+    bus3.on("order_paid", lambda ctx: seen3.append(1))      # 别人的订阅方
+    br3.attach(bus3)
+    check("detach 前：桥的 + 别人的都挂着", len(bus3.subscribers("order_paid")) == 2,
+          str(len(bus3.subscribers("order_paid"))))
+    check("detach 只摘本桥那一个", br3.detach(bus3) == 1
+          and len(bus3.subscribers("order_paid")) == 1
+          and bus3.subscribers("order_paid")[0] is not None, str(bus3.subscribers("order_paid")))
+    bus3.fire("order_paid", {"qq_id": 7})
+    check("★ detach 后别人的订阅方仍被调用（反证：原 clear() 形态下此处为 0）",
+          len(seen3) == 1, "别人的订阅方调用次数=%d" % len(seen3))
+    check("detach 后桥自己不再产记录", len(m3.records) == 0, str(len(m3.records)))
+    check("重复 detach 幂等（挂表空 ⇒ 返 0，不当已清）", br3.detach(bus3) == 0)
+
 
 # ---------------------------------------------------------------- 9 声明联动
 def t9_tlog_declaration():
