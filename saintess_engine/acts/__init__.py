@@ -72,6 +72,7 @@
 """
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable, Mapping
 
 from ..conditions.declarative import NODE_KEYS, SpecError, compile_spec
@@ -107,6 +108,29 @@ def _is_node(value) -> bool:
     if not isinstance(value, Mapping):
         return False
     return bool(set(value) & NODE_KEYS)
+
+
+def _arg_names_of(verb) -> frozenset:
+    """该动词**可取名的实参**（`ctx` 除外）。
+
+    带 `**kwargs` 的动词**仍然只认签名里写出来的那些名字** —— `**_` 是实现细节，
+    用来接运行时不该出现的杂项，不是「实参名随便写」的许可证（台账 L1819）：
+    拼错的名字会被 `**_` 静静吃掉，于是动词走自己的默认值、产出错值，**全程零报错**。
+    取不到签名（`functools.partial` / C 实现 / 被换掉 `__signature__`）⇒ 抛 `TypeError`：
+    宁可编译期现形，也不要静默按默认值跑出错值。
+    """
+    try:
+        params = inspect.signature(verb).parameters
+    except (TypeError, ValueError) as e:
+        raise TypeError(
+            "动词 %r 取不到签名，无法校验实参名：%s"
+            % (getattr(verb, "__name__", verb), e)) from e
+    names = set()
+    for name, p in params.items():
+        if name == "ctx" or p.kind in (p.VAR_KEYWORD, p.VAR_POSITIONAL):
+            continue
+        names.add(name)
+    return frozenset(names)
 
 
 def _value(value, where: str):
@@ -232,8 +256,16 @@ class Acts:
                 raise UnknownVerb(
                     "%s 的动词未登记：%r（已登记：%s）"
                     % (where, vname, sorted(self._verbs) or "无"))
-            kwargs = {k: _value(v, f"{where}.{k}")
-                      for k, v in step.items() if k not in ("verb", "stop_if")}
+            arg_keys = [k for k in step if k not in ("verb", "stop_if")]
+            allowed = _arg_names_of(self._verbs[vname])
+            unknown = [k for k in arg_keys if k not in allowed]
+            if unknown:
+                raise SpecError(
+                    "%s 的实参名不在动词 %r 的签名里：%s（可取名的实参：%s）"
+                    % (where, vname, sorted(unknown),
+                       ", ".join(sorted(allowed)) or "无"))
+            kwargs = {k: _value(v, f"{where}.{k}") for k, v in step.items()
+                      if k in arg_keys}
             stop_if = None
             if step.get("stop_if") is not None:
                 try:

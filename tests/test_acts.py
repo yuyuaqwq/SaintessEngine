@@ -57,8 +57,12 @@ def _mk_acts(verbs=("a", "b", "c"), calls=None):
     calls = [] if calls is None else calls
     acts = Acts()
     for name in verbs:
-        def _v(ctx, _n=name, **kw):
-            calls.append((_n, dict(kw)))
+        # ★ 夹具修过一次（L1819）：原先是 `def _v(ctx, _n=name, **kw)` —— 靠 `**kw`
+        # 吞掉任意实参名，于是「实参逐值求值后传给动词」这条（:159）**在结构上不可能失败**：
+        # 动词根本不声明 `k`，拼错的名字也会被静静吃掉。改成显式声明 `k=None`，
+        # 让夹具与生产动词同款（可取名 + 收杂项），判据才真在咬。
+        def _v(ctx, _n=name, k=None, **kw):
+            calls.append((_n, dict(kw, k=k) if k is not None else dict(kw)))
             return _n
         acts.verbs[name] = _v
     return acts, calls
@@ -136,6 +140,27 @@ def t2_compile_fail_closed():
           _raises(SpecError, lambda: acts.compile({"id": "p", "seq": [{"verb": "a",
                                                                         "k": {"op": "nope"}}]})))
 
+    # ★ L1819：实参名**零校验**。全部动词都带 `**_` ⇒ 拼错的名字被静静吃掉，
+    # 动词走自己的默认值、产出错值，编译期与运行期都零报错（实测真生产动词
+    # `add_stacks_clamped`：`amout_of` 编译通过、运行取默认槽 "cores"）。
+    def _bad(spec):
+        try:
+            acts.compile(spec)
+        except SpecError as e:
+            return str(e)
+        return None
+
+    msg = _bad({"id": "p", "seq": [{"verb": "a", "kk": 1}]})
+    check("实参名拼错 ⇒ 装配期 SpecError（不再静静走默认值）", msg is not None, msg)
+    check("报错点名是哪个动词 + 哪个名字 + 可取名实参",
+          msg and "kk" in msg and "'a'" in msg and "k" in msg, msg)
+    msg2 = _bad({"id": "p", "seq": [{"verb": "a", "totally_unknown": 1}]})
+    check("完全陌生的实参名 ⇒ SpecError", msg2 is not None, msg2)
+    # 合法实参 / 保留键一个都不许被这条新校验误伤
+    check("合法实参仍可编译（k）", acts.compile({"id": "p", "seq": [{"verb": "a", "k": 1}]}))
+    check("stop_if 不被当实参校验",
+          acts.compile({"id": "p", "seq": [{"verb": "a", "stop_if": {"const": True}}]}))
+
     # 整表不装：坏一条 ⇒ 一条都不返回（且好条目也没有副作用）
     table = {"good": {"seq": [{"verb": "a"}]}, "bad": {"seq": [{"verb": "nope"}]}}
     check("表里任一条坏 ⇒ 整表不装", _raises(UnknownVerb, lambda: acts.compile_table(table)))
@@ -189,7 +214,8 @@ def t4_values():
     print("\n[4] 取值节点（复用 conditions.declarative 的语法，不另造）")
     acts = Acts()
     got = []
-    acts.verbs["cap"] = lambda ctx, **kw: got.append(kw) or kw
+    # ★ 同上：显式声明本节用到的两个实参（`v` / `s`），别靠 `**kw` 兜（L1819）
+    acts.verbs["cap"] = (lambda ctx, v=None, s=None, **kw: got.append(dict(kw, v=v, s=s)) or dict(kw, v=v, s=s))
 
     plans = acts.compile_table({
         "const": {"seq": [{"verb": "cap", "v": {"const": 7}}]},
@@ -241,7 +267,12 @@ def t6_zero_knowledge():
         check(f"{os.path.basename(path)}：无内容侧取值", not hits, ",".join(hits))
 
     # 模块的 import：只许 stdlib 白名单 + 引擎内部相对边（不引任何内容侧/第三方件）
-    allow = {"__future__", "collections.abc"}
+    # ★ 白名单**新增** `inspect`（L1819：实参名校验要 `inspect.signature`）。
+    # 它是**标准库**，与本门要拦的东西（内容侧 / 第三方件）不同类 —— 引擎里另有四件
+    # 同款用途（command/{binding,registry,router} + grant，都用 `inspect` 取签名）。
+    # 本门保护的是「引擎不引内容侧/第三方」，加一个 stdlib 条目不改变这条意图；
+    # 反过来若不许它，L1819 就没有可用的校验通路（只有拿 `**kw` 吞掉 = 缺陷照旧）。
+    allow = {"__future__", "collections.abc", "inspect"}
     tree = ast.parse(io.open(_SRC, encoding="utf-8").read())
     bad = []
     for node in ast.walk(tree):
