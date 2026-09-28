@@ -21,6 +21,7 @@ from . import stats as S
 from . import attributes as ATTR      # 属性写口（唯一写入口；钳制规则归它）
 from .actors import actor_alive
 from .cues import cue as _cue           # 已迁移点位走表现事件（措辞真源 = 内容侧文案表）
+from . import formulas as _F          # 骨架表具名 getter（L246 平衡数值下沉；见 formulas 顶部 V4 段）
 
 # S1 断链（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 R1/R2/R14/R15）：
 # 引擎不得 import game.engine / game.core.constants —— 原 `E.*` 数值公式调用与
@@ -401,6 +402,8 @@ def _skill_pay_of(actor: dict, info: dict) -> dict:
     out: dict = {"mp": 0, "res": {}}
     _dmp = int((info or {}).get("mp", 0) or 0)
     if _dmp > 0:
+        # ★ L246：`0.99` 是**消耗折扣封顶**的数学恒等式（保证扣减后 > 0、不出现 0 消耗），
+        #   不是可调平衡数值 ⇒ 故意留在引擎、不进内容侧骨架表（内容侧改它即可造出 0 消耗）。
         out["mp"] = max(1, int(_dmp * (1.0 - min(max(mp_pct, 0.0), 0.99))) - mp_flat)
     for _rk, _rv in ((info or {}).get("res_cost") or {}).items():
         try:
@@ -410,6 +413,7 @@ def _skill_pay_of(actor: dict, info: dict) -> dict:
             _d = 0.0
         if _d > 0:
             _disc = float(res_disc.get(str(_rk), 0.0) or 0.0)
+            # ★ L246：同上（资源消耗折扣封顶 = 数学恒等式，故意不下沉）。
             out["res"][_rk] = max(1, int(_d * (1.0 - min(max(_disc, 0.0), 0.99))))
     return out
 
@@ -506,7 +510,7 @@ def _single_target_pipeline(battle, actor: dict, target: dict, info: dict, lv: i
     is_crit = hit_buffs["guaranteed_crit"] or (random.random() < crit_pct)
     lucky = False
     if is_crit:
-        lucky = random.random() < 0.30
+        lucky = random.random() < _F.lucky_rate()      # L246：0.30 已下沉骨架表
     multi = int(info.get("hits") or info.get("multi") or 1)
     pp_phys = float(st.get("pene_phys", 0) or 0)
     pf_phys = int(st.get("pene_flat_phys", 0) or 0)
@@ -670,7 +674,7 @@ def _skill_seg_damage(battle, actor, target, st, est, info, lv,
         )
         # 幸运一击（v133 lucky_mult=1.3）：暴击命中后 30% 追加
         if lucky:
-            dmg = int(dmg * 1.3)
+            dmg = int(dmg * _F.lucky_mult())          # L246：1.3 已下沉骨架表
         return dmg, magi
     # 非 formula/非 expr：按 kind 兜底（对齐旧非 formula 路径）
     # ★ 等级从 **actor** 取（同构模型：玩家与怪一视同仁）—— 历史遗留 `st["_player_lv"]`
@@ -739,7 +743,8 @@ def _settle_lifesteal(battle, actor: dict, dmg_total: int, kind: str, logs: list
 
     - 通用段（面板吸血率）：rate = lifesteal，混合段按 phys/magi 合成细分率
     - 技能级：skill_info.lifesteal → E.skill_lifesteal_pct(info, lv) 附加
-    - cap 30%（对齐旧 min(rate, 0.30)）；mortal_wound → ×0.5
+    - cap = `FORMULA_SKELETON["lifesteal_cap"]`（L246 下沉；默认 0.30，对齐旧 min(rate, 0.30)）
+      ；mortal_wound → ×0.5
     """
     if dmg_total <= 0 or kind == _kind("true"):
         return
@@ -755,20 +760,22 @@ def _settle_lifesteal(battle, actor: dict, dmg_total: int, kind: str, logs: list
             sub_m = float(st.get("lifesteal_magi", 0) or 0)
             rate_p = 1 - (1 - rate) * (1 - sub_p)
             rate_m = 1 - (1 - rate) * (1 - sub_m)
-            heal = int(phys_dmg * min(rate_p, 0.30) + magi_part * min(rate_m, 0.30))
+            _cap = _F.lifesteal_cap()                # L246：0.30 已下沉骨架表
+            heal = int(phys_dmg * min(rate_p, _cap) + magi_part * min(rate_m, _cap))
         else:
             is_magi = (kind == _kind("magi"))
             sub_key = "lifesteal_magi" if is_magi else "lifesteal_phys"
             sub = float(st.get(sub_key, 0) or 0)
             if sub > 0:
                 rate = 1 - (1 - rate) * (1 - sub)
-            rate = min(rate, 0.30)
+            rate = min(rate, _F.lifesteal_cap())     # L246：0.30 已下沉骨架表
             heal = int(dmg_total * rate)
-        # 技能级吸血（info.lifesteal，如嗜血斩 0.25 随等级成长）——独立叠加、cap 30% 同限
+        # 技能级吸血（info.lifesteal，如嗜血斩 0.25 随等级成长）——独立叠加、cap 同限（L246）
         if skill_info and skill_info.get("lifesteal"):
             try:
                 spct = _GC.formulas().skill_lifesteal_pct(skill_info, skill_lv)
-                heal += int(dmg_total * min(float(spct), 0.30))
+                # ★ L246 同族第 6 处（台账只点了面板两处；技能级吸血 cap 同形态，一并下沉）
+                heal += int(dmg_total * min(float(spct), _F.lifesteal_cap()))
             except Exception as _e:
                 _diag(battle, "_settle_lifesteal", _e)          # 审计 P-44：不再静默（行为不变）
                 pass

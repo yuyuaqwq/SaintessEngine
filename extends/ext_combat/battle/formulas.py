@@ -73,6 +73,16 @@ _NEUTRAL_SKELETON = {
     "reduce": {"default_pct": 0.0, "cap": 0.0},
     "gauge": {"default_max": 0},
     "skill_max_level": 5,
+    # ---- 2026-09-28（审计 L246）：余下 6 处写死在 `battle/actions.py` 的**玩家可见平衡数值**
+    #   下沉到同一张骨架表（不新开第二张表/第二套注入面）。
+    #   ★ 这三项**不在「零效应中性段」**：默认值取原写死值，与已装内容逐字一致 ——
+    #     幸运率 0.30 / 幸运倍率 1.3 / 吸血 cap 0.30（这三条是通用战斗规则，
+    #     归零会让暴击追加与吸血上限整条消失，不是「零效应」）。
+    #   折扣上限 0.99 那两处**不在此表**：它们是「消耗折扣封顶」的数学恒等式
+    #   （保证消耗不为负、不为 0），属引擎不变量，挪进内容侧等于允许内容侧把它改成
+    #   制造 0 消耗 ⇒ 留在 `actions.py` 并补注释说明（见该处）。
+    "lucky": {"rate": 0.30, "mult": 1.3},
+    "lifesteal_cap": 0.30,
 }
 
 
@@ -194,6 +204,33 @@ def gauge_default_max() -> float:
     未装配 → 0.0；调用方按「<=0 → 历史兜底 100」处理（见 `ext_combat.gauge`）。
     """
     return _skel_sub_num("gauge", "default_max", 0.0)
+
+
+def lucky_rate() -> float:
+    """**幸运一击**触发率（暴击命中后追加一次，概率 0.30）。
+
+    ★ 2026-09-28（审计 L246）：原先写死在 `actions._roll_damage` 的 `random.random() < 0.30`。
+    内容侧要改只需声明 `FORMULA_SKELETON["lucky"]["rate"]`；默认值 = 原写死值 0.30。
+    """
+    return _skel_sub_num("lucky", "rate", 0.30)
+
+
+def lucky_mult() -> float:
+    """**幸运一击**伤害倍率（`dmg × 1.3`）。
+
+    ★ 2026-09-28（审计 L246）：同上。内容侧声明 `FORMULA_SKELETON["lucky"]["mult"]`。
+    默认值 = 原写死值 1.3。
+    """
+    return _skel_sub_num("lucky", "mult", 1.3)
+
+
+def lifesteal_cap() -> float:
+    """吸血**上限比例**（`min(rate, cap)`，原写死 0.30）。
+
+    ★ 2026-09-28（审计 L246）：同上。内容侧声明 `FORMULA_SKELETON["lifesteal_cap"]`。
+    默认值 = 原写死值 0.30。物理/法术两条读点（`_do_lifesteal` 的 758/765 行）共用本 getter。
+    """
+    return _skel_num("lifesteal_cap", 0.30)
 
 
 def skill_max_level_default() -> int:
