@@ -278,6 +278,27 @@ def main() -> int:
           {"atk", "def", "matk", "mdef", "spd", "crit", "dodge", "max_hp"}
           .issubset(set(G.PANEL_KEYS)), f"{G.PANEL_KEYS}")
 
+    # ── 审计 L1889-5：词典不能把 actor["bonus"] 说成 Bonus 形状（形状 ≠ 编码）────────
+    # 事实：`actor["bonus"]` 是**引擎读侧编码** `{域: {来源: 值}}`（panel/cap/cost 三档域各一个
+    # dict），由 ext_combat `serialize._actor` 建、`stats._monster_base_stats` / `effects._cap_of` /
+    # `actions._bonus_cost_of` 三处按 key 读；而 `saintess_engine.bonus.Bonus` 的 `resolve()`
+    # 返回**标量**、docstring 明写「不做域内分键」⇒ **同名不同物**。
+    # 旧词典三处（res_cost / domain / when / cap_key）直接写 "bonus.cap[cap_key]"，
+    # 接线的包作者照它做出一个 Bonus 用不上的结构。判据 = 四处 note 都必须带出**编码层**的标记。
+    def _note(dom, key):
+        return (G.GLOSSARY.get(dom, {}).get(key, {}) or {}).get("note", "") or ""
+
+    _BONUS_NOTES = [_note("skills", "res_cost"), _note("passive_proc", "domain"),
+                    _note("passive_proc", "when"), _note("passive_proc", "cap_key")]
+    _stale = [i for i, _n in enumerate(_BONUS_NOTES)
+              if ("bonus.cap[" in _n or "bonus.cost[" in _n) and "读侧编码" not in _n]
+    check("四处 actor-bonus 词典条目都取得到（fail-closed：取空不许静默过）",
+          all(n.strip() for n in _BONUS_NOTES), f"notes={_BONUS_NOTES}")
+    check("词典描述 actor bonus 时标出「引擎读侧编码」而非裸 bonus.cap/cost（形状≠编码）",
+          not _stale, f"仍是裸形状写法={_stale} notes={_BONUS_NOTES}")
+    check("词典明说 actor bonus 不是 Bonus 形状（接线的包作者不会照它做出用不上的结构）",
+          "Bonus" in _BONUS_NOTES[1] and "不做域内分键" in _BONUS_NOTES[1],
+          f"domain.note={_BONUS_NOTES[1]}")
     print(f"\n{'-' * 46}\n通过 {PASS} / 失败 {FAIL}")
     for f in FAILURES:
         print("  ❌", f)

@@ -143,7 +143,7 @@ _SKILLS = {
     "reduce_all": {"zh": "固定减伤", "note": "固定值减伤（非比例）。", "ref": ("reference/effect-actions.md", "reduce_all")},
     "reduce_pct": {"zh": "减伤比例", "note": "百分比减伤。", "ref": None},
     "charge": {"zh": "蓄力", "note": "蓄力标记（内容侧语义）。", "ref": None},
-    "res_cost": {"zh": "核心资源消耗", "note": "{资源 key: 数量}。资源上限走 actor.bonus.cap，消耗折扣走 PASSIVE_PROC 的 domain=cost。",
+    "res_cost": {"zh": "核心资源消耗", "note": "{资源 key: 数量}。资源上限走 actor[\"bonus\"][\"cap\"]（**引擎读侧编码** {域: {来源: 值}}，非 Bonus 形状的标量），消耗折扣走 PASSIVE_PROC 的 domain=cost。",
                  "ref": ("reference/mech-cash.md", "res_cost")},
     "kill": {"zh": "击杀结算", "note": "击杀时的额外结算块（内容侧解释）。", "ref": None},
     "cond.type": {"zh": "条件类型", "note": "条件判据的类型名。", "ref": ("guides/add-a-passive.md", "type")},
@@ -328,7 +328,7 @@ _EFFECT_RULES = {
 
 # ─────────────────────────────────────────────── 被动声明（PASSIVE_PROC，内容侧装配器读）
 _PASSIVE_PROC = {
-    "domain": {"zh": "静态域", "note": "两种静态域：cap（改资源上限，写 bonus.cap[cap_key]）/ cost（消耗折扣，只读被动块的 mp_mult）。⚠ 声明 domain=cap 时**不 continue** —— 同时写了 event 会继续走事件装配（双通道）。",
+    "domain": {"zh": "静态域", "note": "两种静态域：cap（改资源上限，写 actor[\"bonus\"][\"cap\"][cap_key]）/ cost（消耗折扣，只读被动块的 mp_mult）。⚠ actor[\"bonus\"] 是**引擎读侧编码** {域: {来源: 值}}（panel/cap/cost 三档域各一个 dict），**不是** saintess_engine.bonus.Bonus —— 后者 resolve() 返回标量、不做域内分键，形状 ≠ 编码，别照它写。⚠ 声明 domain=cap 时**不 continue** —— 同时写了 event 会继续走事件装配（双通道）。",
                "ref": ("reference/passive-proc.md", "domain")},
     "event": {"zh": "事件时机", "note": "逐字作为 triggers 的键（引擎 fire 的时机名）。空 = 跳过该条。值必须是引擎事件全集里的名字。",
               "ref": ("reference/events.md", "EVENTS")},
@@ -338,10 +338,10 @@ _PASSIVE_PROC = {
               "ref": ("reference/judges.md", "判据")},
     "also": {"zh": "第二事件钩子", "note": "同一动作再挂一个事件。⚠ 可覆盖的键是**硬编码白名单**（ctrl / ctrl_any / res / left_key / left_init / cost_field / buff_key），写别的键不报错也不生效。",
              "ref": ("reference/passive-proc.md", "also")},
-    "when": {"zh": "条件门", "note": "条件域用：满足条件时才生效（写进 bonus.cost[\"when\"]）。",
+    "when": {"zh": "条件门", "note": "条件域用：满足条件时才生效（写进 actor[\"bonus\"][\"cost\"][\"when\"] —— 嵌套声明，引擎 actions._bonus_cost_of 读它）。",
              "ref": ("reference/passive-proc.md", "when")},
     "buff_key": {"zh": "增益 key", "note": "指向的效果 key（装配出的条目按它读写 effects）。", "ref": ("reference/passive-proc.md", "buff_key")},
-    "cap_key": {"zh": "上限 key", "note": "domain=cap 时写入 bonus.cap[cap_key]。**缺省 = proc 名本身** —— proc 名 ≠ 资源 key 时必须显式写。",
+    "cap_key": {"zh": "上限 key", "note": "domain=cap 时写入 actor[\"bonus\"][\"cap\"][cap_key]（读侧编码，见 domain 条）。**缺省 = proc 名本身** —— proc 名 ≠ 资源 key 时必须显式写。",
                 "ref": ("reference/passive-proc.md", "cap_key")},
     "used_key": {"zh": "已用计数 key", "note": "⚠ 本仓 wiki 未记载该键语义（装配器是否读取**未核实**）—— 用前先看你的装配器实现。",
                  "ref": None},
