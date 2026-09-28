@@ -59,10 +59,11 @@ def res_gain(battle, caster, target, params, logs):
         return
     if params.get("per_dt"):
         ctx = getattr(battle, "_fire_ctx", None) or {}
-        try:
-            gain *= float(ctx.get("dt") or 1.0)
-        except Exception:
-            gain = 0.0
+        # ⚠️ 回落只认 None（2026-09-28 审计 L5618）：`or 1.0` 会把**合法值 0.0** 吞成 1.0
+        #   —— 乘区为 0（「这一段时间内不涨」）永远做不出来，且不报错。
+        _raw_dt = ctx.get("dt")
+        dt = 1.0 if _raw_dt is None else float(_raw_dt)
+        gain *= dt
     if gain <= 0:
         return
     apply_effects(battle, holder, holder,
@@ -101,6 +102,9 @@ def backdraft(battle, caster, target, params, logs):
     """被动 proc（PASSIVE_PROC 装配）：受击后按自身攻击力比例反击伤害来源。
 
     事件数值不在 params 里，在 battle._fire_ctx（单槽覆盖式）——必须**同步读完**。
+    ★ 审计 L5618 记着一条待办：`battle._fire_ctx` 是**引擎私槽**（`_` 前缀），
+      引擎应提为公开读口；本示例作为「第三方照抄的范本」不该教人读私槽。
+      引擎侧改动不在内容车道文件面内，故此处只把约束写明，不改行为。
     """
     ctx = getattr(battle, "_fire_ctx", None) or {}
     source = ctx.get("source")          # ← 先读，后面对账会再次 fire 覆盖本槽
