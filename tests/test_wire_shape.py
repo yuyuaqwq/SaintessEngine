@@ -241,6 +241,15 @@ def t4_surface():
     check("★ missing() 只列「声明了但取不到」（保序）", s.missing() == ["c", "d"], str(s.missing()))
     check("干净的名单 → missing() 为空", w.surface({"x": 1}).missing() == [])
 
+    # ★ 审计 L2869：docstring 原文「**只报不改**」是错的 —— missing() 逐个执行取值器。
+    #   消费侧的取值器是 importlib.import_module ⇒ 一次自检就真 import 全包。
+    #   这条把「会执行取值器」钉成判据：谁再把 docstring 写回「只报不改」，看这条。
+    _hits = []
+    _probe = w.surface({"job_q": None},
+                       getter=lambda src, name: (_hits.append(name), None)[1])
+    _probe.missing()
+    check("★ missing() 真的会执行取值器（不是纯查表）", _hits == ["job_q"], str(_hits))
+
     custom = w.surface({"m": "content.some.mod"},
                        getter=lambda src, name: src + "->" + name)
     check("自定义取值器收到（源, 名字）", custom.resolve("m") == "content.some.mod->m")

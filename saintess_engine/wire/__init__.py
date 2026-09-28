@@ -27,7 +27,7 @@
     s.resolve("a")              # 1
     s.resolve("alpha")          # 1（别名 → 声明名）
     s.resolve("zz")             # KeyError（点名）
-    s.missing()                 # 声明了但取不到的（供自检）
+    s.missing()                 # 声明了但取不到的（供自检）—— ★ **会执行取值器**（可能真 import）
 
 **零知识**：引擎不认任何具体名字。`log` / `tlog` 只是两个**便捷属性**（名字是与调用方
 之间的既有约定），其余句柄名一律由 `bind()` 给；本模块不知道「哪个域该有哪些句柄」。
@@ -187,7 +187,13 @@ class Surface:
         return value
 
     def missing(self) -> list:
-        """声明了但取不到的（供自检；顺序 = `names()`）。**只报不改**。"""
+        """声明了但取不到的（供自检；顺序 = `names()`）。
+
+        ⚠️ **会逐个执行取值器**（`resolve()` 就是取值）—— 它只**不改面**（不写回
+        `name_src` / `aliases`），但**会触发接线**：取值器若按模块名惰性 import，一次自检
+        就是**真 import**。引擎零游戏知识（见 tests 里「零知识」那组判据）⇒ 这里不点名包。
+        想只查声明不接线，用 `has()` / `names()`。
+        """
         out = []
         for name in self._name_src:
             try:
