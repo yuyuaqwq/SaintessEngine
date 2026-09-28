@@ -108,19 +108,70 @@ class SimpleCtx:
 
 # ───────────────────────────────────────────────────────── 内置策略
 
+def _count_of(value, label: str) -> int:
+    """数量格取值：**回落只认 `None`**（缺项给 `1`；`0` 是合法值，不被吞）。
+
+    ★ 这一族三处（`ctx.qty` / entry `n` / entry `w`）原先都是 `int(x.get(k, 1) or 1)`：
+      falsy 的合法值（`qty=0` / `n=0` / `w=0`）一律被吞成 1 —— `qty=0` 实跑出 1 条
+      （台账 ext_loot `pool.py:113` 探针 P5）。收敛到本函数一份判定。
+    """
+    if value is None:
+        return 1
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{label} 必须是数值（数量），收到 {value!r}")
+    return int(value)
+
+
+def _ctx_level(ctx):
+    """等级窗口的判定值：**显式区分「没有」与「0」**（`None` = 上下文没给等级）。
+
+    ★ 口径裁定（2026-09-28，台账 ext_loot `pool.py:115,120-122`「静默放过」条）：
+      旧写法 `int(getattr(ctx,"player_level",0) or getattr(ctx,"monster_lv",0) or 0)` 把
+      「玩家等级 0」「没给等级」和 `min_lv/max_lv` 全都短路掉 —— 探针 P6 实测
+      `min_lv:50` 的条目在 `player_level=0` 时**照样掉**（玩家没到等级也拿得到）。
+      裁定 = **「不启用窗口」**（缺等级时不按等级筛），理由：
+        ① 掉落上下文是**内容侧每次 roll 现给的**，等级是**玩家侧**的值 —— 怪物掉落
+           （`monster_lv` 口径）在拿不到玩家等级时本就该按怪物等级走，两者都缺才没得筛；
+        ② 反过来「全被滤」会把「没给等级」变成「掉不出东西」—— 那是拿一个**缺失值**
+           换一次玩家可见的「什么也没掉」，属最贵的一类静默；
+        ③ 本仓生产数据里 entry 级 `min_lv`/`max_lv` **零出现**（实测 1435 条 entry：
+           min_lv 0 / max_lv 0，见 `games/orlandia/content/data/drop*.json`）
+           ⇒ 判「不启用」不改变任何现有内容的行为。
+      但**这一格必须是显式的一份判定**，不能靠 `or` 链短路 ⇒ 缺等级返回 `None`。
+    """
+    for attr in ("player_level", "monster_lv"):
+        value = getattr(ctx, attr, None)
+        if value is not None:
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise TypeError(f"ctx.{attr} 必须是数值（等级），收到 {value!r}")
+            return int(value)
+    return None            # ★ 显式「没给等级」= 不启用窗口（不是 0、也不是被吞）
+
+
 def _s_weighted(pool: dict, ctx, table) -> list:
     """带权抽取：抽 `ctx.qty` 次；等级窗口过滤；抽空走 `ctx.fallback_roll` 钩子。"""
-    qty = int(getattr(ctx, "qty", 1) or 1)
+    # ★ 回落只认 `None`：`qty=0` 是合法值（这一抽就是「不要东西」），旧的 `or 1`
+    #   把它吞成 1（探针 P5：`qty=0` 实跑出 1 条）。`qty=""` 之类坏值另行报错。
+    raw_qty = getattr(ctx, "qty", None)
+    if raw_qty is None:
+        qty = 1
+    elif isinstance(raw_qty, bool) or not isinstance(raw_qty, (int, float)):
+        raise TypeError(f"ctx.qty 必须是数值（抽多少条），收到 {raw_qty!r}")
+    else:
+        qty = int(raw_qty)
+    if qty < 0:
+        raise ValueError(f"ctx.qty 不能为负，收到 {raw_qty!r}")
     entries = pool.get("entries", [])
-    lv = int(getattr(ctx, "player_level", 0) or getattr(ctx, "monster_lv", 0) or 0)
+    lv = _ctx_level(ctx)
     cand = []
     for e in entries:
         min_lv = e.get("min_lv")
         max_lv = e.get("max_lv")
-        if min_lv and lv and lv < int(min_lv):
-            continue
-        if max_lv and lv and lv > int(max_lv):
-            continue
+        if lv is not None:
+            if min_lv and lv < int(min_lv):
+                continue
+            if max_lv and lv > int(max_lv):
+                continue
         cand.append(e)
     if not cand:
         return table.fallback(pool, ctx)
@@ -130,7 +181,8 @@ def _s_weighted(pool: dict, ctx, table) -> list:
         if pick:
             r = table.resolve(pick["item"], ctx)
             if r:
-                r["count"] = r.get("count", 1) * int(pick.get("n", 1) or 1)
+                # ★ `n` 回落只认 `None`：`n=0` 是合法值（这条就是不给），旧 `or 1` 吞成 1
+                r["count"] = r.get("count", 1) * _count_of(pick.get("n"), "n")
                 out.append(r)
     return out
 
@@ -141,7 +193,8 @@ def _s_fixed(pool: dict, ctx, table) -> list:
     for e in pool.get("entries", []):
         r = table.resolve(e["item"], ctx)
         if r:
-            r["count"] = r.get("count", 1) * int(e.get("n", 1) or 1)
+            # ★ 同 `_s_weighted`：`n` 回落只认 `None`，`n=0` 不被吞成 1
+            r["count"] = r.get("count", 1) * _count_of(e.get("n"), "n")
             out.append(r)
     return out
 
@@ -186,7 +239,8 @@ def _expand_weighted(pool: dict, table) -> list:
         it = e.get("item", "")
         if not it:
             continue
-        w = min(int(e.get("w", 1) or 1), 1000)
+        # ★ 同上：`w` 回落只认 `None`（`w=0` = 这条权重为零，不该被吞成 1）
+        w = min(_count_of(e.get("w"), "w"), 1000)
         out.extend([it] * w)
     return out
 
