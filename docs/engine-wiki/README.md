@@ -185,9 +185,9 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
 | **声明表驱动** | 效果行为查 `EFFECT_RULES`；名词→动词查 `EFFECT_ACTIONS` | `game/data/battle_rules.py`（游戏仓侧） | `ext_combat`（表在数据包） |
 | **动词注册制** | 8 个引擎动词 + `register_action` 任意扩展（内容侧已扩到 70+） | `effects.py:102` | `ext_combat` |
 | **CTB 绝对时刻制** | `ct` = 下次可行动时刻；耗时多少由**内容侧装配**（引擎零公式） | `schedule.py:96` + `time_model_fn` | `ext_combat` |
-| **零默认值** | 未声明即无行为（`strict=False` 静默 / `strict=True` 抛错两档） | `config.py:144` | 引擎 |
+| **零默认值** | 未声明即无行为（`strict=False` 静默 / `strict=True` 抛错两档） | `config.py:146` | 引擎 |
 | **存档/续战** | sides-only JSON，`to_state` / `from_state`，旧档字段迁移 | `serialize.py:34/55` | `ext_combat` |
-| **注入式边界** | 引擎不 import 游戏；游戏把公式/面板/技能表 mount 进来 | `config.py:229` | 引擎 |
+| **注入式边界** | 引擎不 import 游戏；游戏把公式/面板/技能表 mount 进来 | `config.py:234` | 引擎 |
 
 ---
 

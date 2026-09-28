@@ -16,6 +16,8 @@ S1 断链（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §3.2 / §7）：
 """
 from __future__ import annotations
 
+import time
+
 from .log import get_logger
 
 # 装配失败必须留痕（见 `_lazy_bootstrap`）：静默吞掉 = 线上「技能打不动」零线索。
@@ -222,8 +224,11 @@ _hook_provider_running = False
 # ★ 真幂等标志（2026-09-28 审计 L1571）：原注释两处宣称惰性装配器「一次，幂等」，
 # 实跑反证 5 次未命中读口 → provider 被调 **5/5** 次（每次未命中都重问一遍）。
 # 这里记「已问过」而不是靠 provider 自身幂等 —— 引擎不该假定内容侧的代价：
-# provider 若重建整表 / 落盘 / 打日志，就是 N 倍开销且不报错。
+# provider 若重建整表 / 落标 / 打日志，就是 N 倍开销且不报错。
 _hook_provider_done = False
+# 「别人正装配、我等它」的上限（秒）。给上限是为了 provider 真死锁时读口不跟着挂死；
+# 正常装配是微秒~毫秒级，0.5s 足够，超时会**记 error**（不是静默）。
+_HOOK_BOOTSTRAP_WAIT = 0.5
 
 
 def set_config(kind: str, table) -> None:
@@ -286,16 +291,35 @@ def mount(**hooks) -> None:
         set_hook(name, value)
 
 
-def get_hook(name: str):
-    """读单个 hook。
+def _resolved(name: str):
+    """取一个 hook 的值，**含「装配在途就等它装完」**这一层（两个读口共用）。
 
-    未装配 → 先问内容侧惰性装配器（**全进程只问一次**，见 `_hook_provider_done`）；
-    仍未装配：strict=True → 抛 EngineNotConfigured，否则 None。
+    为什么要有这一层（2026-09-28 审计 L1579）：`config` 是**进程级全局单例**，
+    多线程读是现实场景。旧写法里 `_lazy_bootstrap()` 只防重入、不让**等**：
+    线程 A 正在跑 provider（装配中），线程 B~H 看到 `_hook_provider_running`
+    为真就直接返回，拿到的是**尚未装配的空槽**（静默中性兜底，strict=False
+    下零信号）。实测 8 线程并发 ⇒ 7 个拿到 `None`；加了一次性标志位后
+    更极端：**8 个全部 `None`**（没装上的那 7 个连重试机会都没有）。
+    ⇒ 读口在这里等装配那一轮结束，再读一次。
     """
     value = _HOOKS.get(name)
     if value is None and _hook_provider is not None:
         _lazy_bootstrap()
         value = _HOOKS.get(name)
+    if value is None and _hook_provider_running:
+        _wait_lazy_bootstrap()
+        value = _HOOKS.get(name)
+    return value
+
+
+def get_hook(name: str):
+    """读单个 hook。
+
+    未装配 → 先问内容侧惰性装配器（**全进程只问一次**，见 `_hook_provider_done`），
+    并在别人正装时**等它装完**；仍未装配：strict=True → 抛 EngineNotConfigured，
+    否则 None。
+    """
+    value = _resolved(name)
     if value is None and strict:
         raise EngineNotConfigured(
             f"引擎未装配：缺少 hook {name!r}（content 侧应调 game.bootstrap.load_engine_config()）"
@@ -314,11 +338,22 @@ def optional_hook(name: str):
       可选通道若也走 strict，strict 模式（开发/测试建议开）就会因为「没用到的可选件」
       到处抛 —— 那是把「可选」当「必需」判。故本读口**只看存不存在**。
     """
-    value = _HOOKS.get(name)
-    if value is None and _hook_provider is not None:
-        _lazy_bootstrap()
-        value = _HOOKS.get(name)
-    return value
+    return _resolved(name)
+
+
+def _wait_lazy_bootstrap() -> None:
+    """等**别的线程**那一轮惰性装配结束（超时上限保护，见 `_HOOK_BOOTSTRAP_WAIT`）。
+
+    只等「在途」这一轮，不自己触发 provider（触发权归第一个读口），免得每个读口
+    都去问一遍。返回后调用方重读一次。
+    """
+    deadline = time.monotonic() + _HOOK_BOOTSTRAP_WAIT
+    while _hook_provider_running and time.monotonic() < deadline:
+        time.sleep(0.005)
+    if _hook_provider_running:
+        _HOOK_ERROR_LOG.error(
+            "等 hook 惰性装配完成超时（%.1fs）—— 读口按未装配处理；"
+            "若这是常驻卡死，请查 provider 内部是否阻塞", _HOOK_BOOTSTRAP_WAIT)
 
 
 def _lazy_bootstrap() -> None:
