@@ -30,6 +30,7 @@ from __future__ import annotations
 import time
 from typing import Any, Callable, Optional
 
+from .._validators import int_of
 from ..log import get_logger
 from ..log.warn import WarnMixin
 
@@ -67,6 +68,18 @@ def _expire_of(ev: dict, key: Any, owner: Any) -> int:
     return int(value)
 
 
+def _duration_of(value: Any, label: str) -> int:
+    """校验时长：正整数秒（`bool` 不算整数）。
+
+    为什么要 fail-closed：原写法 `max(1, int(dur))` 会把**负时长 / `bool` / `0` 一律压成 1 秒**
+    （`duration_sec=-500` -> 过期戳只比现在大 1 秒），把「配置笔误（`-1` 想写永久）」变成
+    「1 秒后静默过期并触发 `on_expire`」—— 行为与意图完全相反且不报错；`"600"` 这种字符串
+    也会被 `int()` 悄悄收下。存进去的是**坏时长**就要点名是谁。
+    取值口径与 `ext_life.timers._duration_of` 同源（两处必须是同一份判据）。
+    """
+    return int_of(value, label, minimum=1)
+
+
 class LazyTimers(WarnMixin):
     _warn_logger = _LOG                    # 未注入 logger 时的兜底（见 log.warn）
     """主体维度的懒计时器。
@@ -92,7 +105,8 @@ class LazyTimers(WarnMixin):
         self._save = save
         self._remove = remove
         self._clock = clock or (lambda: int(time.time()))
-        self.default_duration_sec = default_duration_sec
+        self.default_duration_sec = _duration_of(default_duration_sec,
+                                                   "default_duration_sec")
         self._types: dict[str, dict] = {}
         self._logger = logger
 
@@ -106,7 +120,9 @@ class LazyTimers(WarnMixin):
         """
         if not type_key:
             raise ValueError("type_key 不得为空")
-        self._types[type_key] = {"duration_sec": duration_sec, "on_expire": on_expire}
+        dur = None if duration_sec is None else _duration_of(
+            duration_sec, f"duration_sec（类型 {type_key!r}）")
+        self._types[type_key] = {"duration_sec": dur, "on_expire": on_expire}
 
     @property
     def registered_types(self) -> tuple:
@@ -124,12 +140,23 @@ class LazyTimers(WarnMixin):
         * 同 `key` 重复挂载 = 顶替刷新（新过期时间）
         * 时长优先级：`duration_sec` 参数 > 类型注册值 > `default_duration_sec`
         """
+        spec = self._types.get(type_key)
+        if spec is None:
+            # 未注册类型：按 `ext_life.timers` 同一口径取兜底时长并**留痕**（不是静默）。
+            # 静默的后果实测得出：类型名拼错 -> 到期时 `on_expire` 查不到回调 -> 事件被
+            # 物理删除、**零回调**，挂在该类型上的清理副作用（作废会话一类）无声蒸发。
+            self._warn("未注册的类型 %r：取兜底时长 %s 秒"
+                       "（owner=%r key=%r）—— 类型级时长与过期回调都会缺省",
+                       type_key, self.default_duration_sec, owner, key)
+            spec = {}
         dur = duration_sec
-        if dur is None:
-            dur = self._spec(type_key).get("duration_sec")
-        if dur is None:
+        if dur is not None:
+            dur = _duration_of(dur, f"duration_sec（owner={owner!r} key={key!r}）")
+        elif spec.get("duration_sec") is not None:
+            dur = spec["duration_sec"]
+        else:
             dur = self.default_duration_sec
-        expire = int(self._clock()) + max(1, int(dur))
+        expire = int(self._clock()) + dur
         events = self._load(owner) or {}
         events[key] = {"type": type_key, "data": data or {}, "expire": expire}
         self._save(owner, events)

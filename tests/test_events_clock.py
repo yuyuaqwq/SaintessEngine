@@ -262,6 +262,49 @@ except Exception as exc:                                    # noqa: BLE001
     tolerant_ok = False
 check("on_expire 抛异常不影响清理", tolerant_ok)
 
+print("== 8b. LazyTimers：坏时长 fail-closed（审计 L1348） ==")
+
+# 负时长 / bool / 0 原本被 `max(1, int(dur))` 一律压成 1 秒（行为与意图相反且不报错），
+# 字符串被 `int()` 悄悄收下。改为与 `ext_life.timers._duration_of` 同一判据：点名报错。
+clock = FakeClock(1000)
+store = MemStore()
+timers = LazyTimers(load=store.load, save=store.save, remove=store.remove,
+                    clock=clock, default_duration_sec=30,
+                    logger=__import__("logging").getLogger("t"))
+timers.register("a")
+
+for _bad, _exc in ((-500, ValueError), (0, ValueError), (True, TypeError), ("600", TypeError)):
+    try:
+        timers.set("u9", "k", "a", duration_sec=_bad)
+        check(f"set duration_sec={_bad!r} 报错", False, "静默接受")
+    except _exc as exc:
+        check(f"set duration_sec={_bad!r} fail-closed（{_exc.__name__}）", True)
+    except Exception as exc:                                   # noqa: BLE001
+        check(f"set duration_sec={_bad!r} fail-closed", False, f"{type(exc).__name__}: {exc}")
+check("坏时长未被写入事件表", "k" not in store.data.get("u9", {}), store.data.get("u9"))
+
+try:
+    LazyTimers(load=store.load, save=store.save, remove=store.remove,
+               default_duration_sec="60")
+    check("default_duration_sec 非整数 → 装配即报错", False, "静默接受")
+except TypeError:
+    check("default_duration_sec 非整数 → 装配即报错", True)
+except Exception as exc:                                       # noqa: BLE001
+    check("default_duration_sec 非整数 → 装配即报错", False, f"{type(exc).__name__}: {exc}")
+
+try:
+    timers.register("b", duration_sec=-1)
+    check("register 非法 duration_sec → 注册即报错", False, "静默接受")
+except ValueError:
+    check("register 非法 duration_sec → 注册即报错", True)
+except Exception as exc:                                       # noqa: BLE001
+    check("register 非法 duration_sec → 注册即报错", False, f"{type(exc).__name__}: {exc}")
+
+# 时长优先级与合法值行为逐字未变
+exp = timers.set("u9", "ok", "a", duration_sec=600)
+check("合法 duration_sec 行为未变", exp == 1600, exp)
+check("合法 set 落盘 expire", store.data["u9"]["ok"]["expire"] == 1600, store.data["u9"])
+
 print("== 9. 零游戏 / 零宿主依赖 ==")
 banned = []
 for sub in ("events", "clock"):
