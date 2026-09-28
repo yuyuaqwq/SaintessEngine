@@ -42,6 +42,8 @@ import sys
 import weakref
 from typing import Callable, Optional
 
+from .shapes import same_container as _same_kind_container
+
 __all__ = ["register_view", "registered_views", "rebuild_views", "ViewsRebuildError",
            "update_in_place", "apply_replacements", "placeholder"]
 
@@ -155,14 +157,11 @@ def _rebind(namespace: dict, replacements: dict) -> None:
             namespace[key] = new
 
 
-def _same_kind_container(old, new) -> bool:
-    """`old` / `new` 同为 `dict` / `list` / `set`（就地更新只对同型容器成立）。"""
-    return ((isinstance(old, dict) and isinstance(new, dict))
-            or (isinstance(old, list) and isinstance(new, list))
-            or (isinstance(old, set) and isinstance(new, set)))
-
-
-
+# ★ 「同型可变容器」判定**单源**在 `shapes.same_container`（台账 L380 · 低 · 真重复：
+#   两份逐字同构、只差参数名；`shapes` 侧是公开口、内容侧 10 处 `catalog_*.py` 在用）。
+#   本模块原有一份私有副本 `_same_kind_container` ⇒ 同一判据两处各实现，
+#   改一边忘另一边就是「同型判定口径漂移」。从 shapes 复用，不再本地重写。
+#   依赖方向：views -> shapes；shapes 只 import json，不反向依赖本包任何模块（零循环 import）。
 
 
 def update_in_place(old, new) -> None:

@@ -1,0 +1,27 @@
+refactor(records): 审计 L380 —— 「同型可变容器」判定单源到 shapes.same_container
+
+台账 L380（eng-saintess/records #4 · 低 · 判为**真重复**）：difflib 0.880、两份逐字同构
+只差参数名。改动前：
+  records/shapes.py:84   same_container(a, b)          ← 公开口，内容侧 10 处 catalog_*.py 在用
+  records/views.py:158    _same_kind_container(old,new)  ← 私有副本，与上一份逐字重复
+同一判据两处各实现，改一边忘另一边就是「同型判定口径漂移」。
+
+本笔删掉 views 的本地副本、改为从 shapes 复用（名字/签名保持 `_same_kind_container` 不变，
+故 views 内那一处调用点与本模块对外形状零变化；不留兼容壳、也不新造别名）。
+依赖方向 views -> shapes；shapes.py 只 import json、不反向依赖本包任何模块 ⇒ 零循环 import
+（实跑 `import saintess_engine.records.views` 通过、`V._same_kind_container is shapes.same_container` True）。
+
+等价性取证（不是读码推断，是逐格实跑）：把旧实现与新实现在 9 种值
+{dict,list,set,tuple,str,int,None,frozenset,bytearray} 上做 9x9 = 81 组对拍 ⇒ mismatches 0。
+其中含「dict vs set」「list vs tuple」「frozenset vs frozenset」「set vs frozenset」
+等全部交叉组合，以及 falsy 形态（空容器 / "" / 0 / None）—— 全一致。
+
+判据数字：
+  引擎全量 tests/run_all.py = 108 文件 / 通过 106 / 失败 2，与基线**同红集**、未出现第 3 条
+    （extends/ext_social/tests/test_presence_shape.py = 审计线在途 · tests/test_editor_wiki.py = 门槛数字红）
+  records 门禁四支全绿：test_records_shape 61/61 · test_records_registry 27/27
+    · test_records_reload 46/46 · test_records_from_module 16/16
+  tests/test_records_views.py（本车道上一笔补的）47/47 全绿 —— 其中第 ⑤ 组正是拿
+    dict/list/set 三型走别名映射必抛 TypeError 的判据，容器同型判定一漂它当场转红。
+
+未动 games/orlandia（C 车道包仓在跑）。不 push。
