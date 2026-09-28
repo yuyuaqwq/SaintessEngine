@@ -236,8 +236,11 @@ def set_config(kind: str, table) -> None:
 
     （2026-09-23 第 7 批：原先这里只认 `effect_actions` / `effect_rules` 两个白名单，
       那等于把游戏侧的词汇写进了引擎。改成任何 kind 都能挂。）
+
+    `table=None` 表示「这张表已卸载」—— **原样存 None**，不与「空表」合并成一个态；
+    取值回落由 `get_config` 的 `default` 负责（表形状真源在装载口，set 侧不猜）。
     """
-    _LOADED[kind] = table if table is not None else {}
+    _LOADED[kind] = table
 
 
 def get_config(kind: str, default=None):
