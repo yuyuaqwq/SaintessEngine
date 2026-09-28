@@ -98,13 +98,24 @@ def _fields_map(fields):
 
 
 def _states_map(states):
+    """状态词映射：角色键齐 + **值必须是非空字符串**（口径⑰）。
+
+    值校验与 `_fields_map` 同口径（字段名 / 状态词都是「填进账本里的取值词」）：
+    缺角色键报缺键，值不是非空字符串报值 —— 两者各自点名，不合并成一条。
+    旧形状只查 `role in states`，`states={"todo": None, ...}` 被放行 ⇒ `status`
+    读口原样吐 `None`，而 `is_open` 按 `状态 != ended` 判 ⇒ 「状态是 None」的条目
+    被当成「还没结束」，玩家可见的进度读数与判定同时失真。
+    """
     if not isinstance(states, Mapping):
         raise TypeError("状态词映射必须是 mapping（角色键 → 状态词）")
     out = {}
     for role in _STATE_ROLES:
         if role not in states:
             raise ValueError("状态词映射缺角色键：" + repr(role))
-        out[role] = states[role]
+        word = states[role]
+        if not isinstance(word, str) or not word:
+            raise ValueError("状态词映射的值必须是非空字符串：" + repr(role))
+        out[role] = word
     return out
 
 

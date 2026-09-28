@@ -113,6 +113,10 @@
    **绝不默默去修饰一个没声明它的类型**。修饰键「不出行、不走 unknown」那条（口径⑤）
    仍取**全表并集**——在目标里出现就只有修饰键这一种身份，与归哪一型无关。
 
+⑰ **`states` 的值必须是非空字符串**（与 `fields` 同口径）：旧形状只查角色键在不在，
+   `{"todo": None}` 被放行 ⇒ `status` 读口原样吐 `None`，而 `is_open` 按
+   `状态 != ended` 判 ⇒ 「状态是 None」的条目被当成「还没结束」，读数与判定同时失真。
+
 ⑯ **进度补丁的类型必须与 lane 声明一致**：`bump` / `accept` 把 `dict` lane 收到整数
    （或 `int` lane 收到 mapping）当场 **TypeError**。旧形状只按补丁自身类型分支，于是
    每日 lane（声明 `progress: int`）被喂一个 mapping 就静默变成 `{...}`，而 `satisfied`

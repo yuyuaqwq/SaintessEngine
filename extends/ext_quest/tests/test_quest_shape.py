@@ -5,15 +5,15 @@
 跑法：`python extends/ext_quest/tests/test_quest_shape.py`（或随 `python tests/run_all.py` 一起跑）
 退出码：0 = 全绿；1 = 有失败（结尾打印 `结果：通过 X / 共 Y` + 失败清单）。
 
-覆盖（照 `U1-D2_BATCHES.md` §1 的 L1 判据 + `U1-D2_DESIGN.md` §2 的字段级形状 + §2.3 的 16 条口径分歧）：
+覆盖（照 `U1-D2_BATCHES.md` §1 的 L1 判据 + `U1-D2_DESIGN.md` §2 的字段级形状 + §2.3 的 17 条口径分歧）：
   ① **目标注册表**：声明序 = 判定序 = 展示序；`parts` 的修饰键归属；复合目标；`need_of`；
      `hits` / `fold` / `satisfied` / `complete` / `lines` / `unknown` 逐条 + 每条兜底分支。
   ② **账本**：读口（`raw`/`current`/`status`/`progress`/`done`/`lane`/`entry`/`status_of`/`is_open`）·
      迁移（`accept`/`set_status`/`bump`/`deliver`/`abandon`/`require`/`snapshot`/`restore`）。
   ③ **不变量**：构造 O(1) 零遍历（探针账本 + 成本对照）· 注入面 fail-closed · 迁移返回新对象 ·
      不改原 `raw`（`json.dumps` 指纹，判据 10）· 异常不吞 · 顺序即语义。
-  ④ **16 条口径分歧各 ≥1 条断言**（故意不同的两口径**断言「它们确实不同」**，防后人顺手统一；
-     ⑯ 是审计 L601 新增：进度补丁类型与 lane 声明不符 → TypeError）。
+  ④ **17 条口径分歧各 ≥1 条断言**（故意不同的两口径**断言「它们确实不同」**，防后人顺手统一；
+     ⑯ = 审计 L601 进度补丁类型守卫 · ⑰ = 审计 L604 状态词值守卫）。
   ⑤ **有牙反证**：逐处打印「预期变红 / 实测变红」；两处同坏 + 第三处仍绿。
   ⑥ **零知识静态扫描**（`ast`，判据 5/6/8）：代码字符串常量零取值词（表 = `U1-D2_FROZEN_GATE.md` §4）·
      import 只有标准库且不含 os/sys/json/datetime/time/calendar/random · 零字段知识。
@@ -595,6 +595,21 @@ def t_divergences():
           objs.lines({"alpha": "a"}, text_of=lambda k, o, p, s: "one") != objs.lines(
               {"alpha": "a"}, text_of=lambda k, o, p, s: "two"))
 
+    # ── 口径⑰（台账 L604）：states 的值必须是非空字符串（与 fields 同口径）──
+    L17 = [
+        ("★ 口径⑰ states 的 todo 为 None → ValueError", {"todo": None, "live": "l", "ended": "e"}),
+        ("★ 口径⑰ states 的 live 为 0 → ValueError", {"todo": "t", "live": 0, "ended": "e"}),
+        ("★ 口径⑰ states 的 ended 为空串 → ValueError", {"todo": "t", "live": "l", "ended": ""}),
+    ]
+    for label, st in L17:
+        hit, exc = raises(ValueError, _mk, None, states=st)
+        check(label, hit, f"{exc!r}")
+    check("★ 口径⑰ 报错文案点名的是**角色键**（不是笼统的映射）",
+          "todo" in (raises(ValueError, _mk, None, states=L17[0][1])[1] or Exception("")).__str__())
+    check("★ 口径⑰ 合法 states 逐字不变（三个角色词原样收下）",
+          _mk()._words == {"todo": "s_todo", "live": "s_live", "ended": "s_ended"},
+          getattr(_mk(), "_words", None))
+
     # ── 口径⑯（台账 L601）：补丁类型必须与 lane 声明一致，不符 fail-closed ──
     raw16 = _raw(tally={"d1": {"st": "s_live", "pr": 1}}, sub={"s1": {"st": "s_live", "pr": {"m1": 1}}})
     L16 = [
@@ -1006,9 +1021,9 @@ def t_zero_knowledge():
     doc = mod.__doc__ or ""
     check("模块 docstring 写清：形状 / 口径分歧 / 明确不做 / 为什么不复用",
           all(k in doc for k in ("口径分歧", "明确不做", "为什么不复用")))
-    check("★ 16 条口径分歧逐条落在包 docstring 里（⑯ = 审计 L601 进度补丁类型守卫）",
+    check("★ 17 条口径分歧逐条落在包 docstring 里（⑯ = 审计 L601 进度补丁类型守卫 · ⑰ = 审计 L604 状态词值守卫）",
           all(mark in doc for mark in ("①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨",
-                                       "⑩", "⑪", "⑫", "⑬", "⑭", "⑮", "⑯")))
+                                       "⑩", "⑪", "⑫", "⑬", "⑭", "⑮", "⑯", "⑰")))
     check("包 docstring 明确点出「为什么不复用 run.Progress 与 collect」",
           ("Progress" in doc and "collect" in doc))
     check("不做落库：QuestLog 没有任何落库/连接类 API",
