@@ -68,12 +68,31 @@ class PackageError(RuntimeError):
 # ============================================================
 
 def read_json(path: str, default=None):
-    """读一个 JSON 文件；读不到 / 坏 JSON → 返回 `default`（不抛）。"""
+    """读一个 JSON 文件。
+
+    ★ 2026-09-28（审计 L856）：**「文件不存在」与「文件存在但内容坏了」是两件事**。
+
+      旧写法 `except Exception: return default` 把两者压成同一个 `default`，而本函数是
+      域表/清单/指令表装载的**唯一底座**（全仓 21+ 处调用，含 `editor/*` 12 处）⇒ 坏 JSON
+      静默变成 `{}`，实测形态：截断的 `commands.json` 让 `command_declarations()` 返回 `{}`
+      —— **全部指令静默消失**，而装载与门禁全绿（最难查的一类故障）。
+
+      现行口径（照同文件 `optional_submodule` / `resolve_handler` 已有的「存在性用探针判、
+      本体的错误原样抛」）：
+        · **文件不存在**（`OSError`）→ 返回 `default`（这是「这一层没带这个文件」，合法）
+        · **存在但读不了 / 坏 JSON**（`UnicodeDecodeError` / `json.JSONDecodeError` /
+          `OSError` 的其余面）→ 抛 `PackageError`，**点名是哪个文件、原始异常类型与消息**
+    """
     try:
         with open(path, encoding="utf-8") as f:
             return json.load(f)
-    except Exception:                                          # noqa: BLE001
-        return default
+    except FileNotFoundError:
+        return default                                       # 这份文件压根没有（合法）
+    except IsADirectoryError:
+        raise PackageError("要读 JSON 的位置是个目录：%s" % path)
+    except (ValueError, UnicodeDecodeError, OSError) as exc:
+        raise PackageError("JSON 文件读不了（内容坏了）：%s（%s: %s）" % (
+            path, type(exc).__name__, exc))
 
 
 def read_manifest(root: str) -> dict:
@@ -242,7 +261,10 @@ class Package:
         self._subs: dict = {}
         self._handlers = None
         self._guards = None
-        self._bound = False
+        # ★ 曾有 `self._bound = False` / `apply_bind` 里 `= True`：判「绑过没有」用，
+        #   但**全仓零读取点**（AST 扫：package.py 内 2 处全是写；仓内其余文件 0 处读），
+        #   死字段 ⇒ 删。`apply_bind` 的可观测行为由它自己的三处 fail-closed 抛错承担
+        #   （无声明 / 无注入 / 声明不完整 / func 不可调用），删掉不影响任何判据。
 
     # ------------------------------------------------------------ 清单
     @property
@@ -317,8 +339,7 @@ class Package:
         fn = getattr(self._decl_module(mod_name), fn_name, None)
         if not callable(fn):
             raise PackageError("包 %s 的 bind.func 不可调用：%s:%s" % (self.id, mod_name, fn_name))
-        fn(**inject)
-        self._bound = True
+        fn(**inject)          # ★ 原先此处 `self._bound = True` —— 死字段，已删（零读取点）
 
     def _full(self, dotted: str) -> str:
         """包内相对模块名 → **全名**：数据包原样（`content`），扩展包加命名空间前缀。
