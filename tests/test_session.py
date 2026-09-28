@@ -67,6 +67,18 @@ check("resolve 异常容忍（不影响主流程）", ad3.resolve("openid_x") ==
 ad4 = SessionAdapter(private_fallback="dm", unknown_fallback="anon")
 check("可定制兜底值", ad4.uid(PlainEvent("x")) == ("dm", "anon"))
 
+# ★ L2298（2026-09-28）：回落只认 None。`0` / `""` 是**合法的会话标识**，
+# 原写法 `or fallback` 把它们静默并进 `private` / `unknown`（两条会话合并 ⇒ 存档串档）。
+check("group_id=0 不被并进 private",
+      ad.uid(PlainEvent("x", group_id=0, sender_id=2)) == ("0", "2"),
+      ad.uid(PlainEvent("x", group_id=0, sender_id=2)))
+check("空串 group_id 原样保留",
+      ad.uid(PlainEvent("x", group_id="", sender_id="")) == ("", ""),
+      ad.uid(PlainEvent("x", group_id="", sender_id="")))
+check("只有 None 才走兜底",
+      ad.uid(PlainEvent("x", group_id=None, sender_id=None)) == ("private", "unknown"),
+      ad.uid(PlainEvent("x")))
+
 
 print("== 3. ★ 端到端：假宿主跑通一条命令 ==")
 

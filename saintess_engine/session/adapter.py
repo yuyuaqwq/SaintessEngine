@@ -112,7 +112,18 @@ class SessionAdapter:
             return raw
 
     def uid(self, event) -> tuple:
-        """返回 `(group_id, user_id)`。"""
-        group_id = event.get_group_id() or self.private_fallback
-        sender_id = event.get_sender_id() or self.unknown_fallback
+        """返回 `(group_id, user_id)`。
+
+        ★ 回落只认 `None`（2026-09-28，L2298）：宿主给的是**平台原始 id**，
+        `0` / `''` 是**合法取值**（单人群的 group_id 常见 0，空串形态某些宿主也有），
+        原写法 `or fallback` 把它们静默改写成 `private` / `unknown`
+        ⇒ 两条不同的会话被合并成同一条（存档串档、互见状态）。
+        与 engine Step 2b「乘区/开关类回落只认 None」同族。
+        """
+        group_id = event.get_group_id()
+        if group_id is None:
+            group_id = self.private_fallback
+        sender_id = event.get_sender_id()
+        if sender_id is None:
+            sender_id = self.unknown_fallback
         return str(group_id), str(self.resolve(sender_id))
