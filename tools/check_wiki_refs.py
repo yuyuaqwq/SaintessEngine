@@ -9,7 +9,23 @@
     python tools/check_wiki_refs.py            # 全量报告
     python tools/check_wiki_refs.py --fix-bare # 只修「纯行号」档的硬失效（空行/越界）
     python tools/check_wiki_refs.py --fix-bare-all # 连「语义存疑」档的纯行号也改到符号定义行
+    python tools/check_wiki_refs.py --check --fix-bare  # 只报告，**不写任何文件**（见下）
 退出码：0 = 无 drift；1 = 有 drift（可接 CI）。
+
+`--check` 是**全局只读开关**（2026-09-28 修，审计 L216）
+--------------------------------------------------------------
+原先本工具**根本不读 `--check`**（`sys.argv` 只被查了 `--fix` / `--fix-bare` /
+`--fix-bare-all` / `--fix-files=` 四处）⇒ 照姊妹工具 `remap_wiki_refs.py` 的习惯
+打上 `--check` 想「只看别写」的人，**文件照样被改写**。黑盒实测：把
+`reference/api.md` 里某条纯行号引用改成越界值（`:99999`）后跑
+`--fix-bare --check` ⇒ rc=1 且报「已改写 1 处纯行号」，被改的那行**与传不传
+`--check` 逐字节相同**。同族对照：`remap_wiki_refs.py:143` 的写口一直带着
+`and not check` 门控 ⇒ 两个工具口径不一致，这正是本条的原始表述。
+危害不是「写错」，是**静默写**：想拿它做只读体检时，它在你不知情时动
+`docs/engine-wiki/**`，而 rc 与报告都长得跟正常检查一模一样。
+现在 `--check` 真的只读：三个改写开关全部被它压住，**照旧逐处打印建议**
+（诊断不受影响）；同时给 `--check` 与改写开关时**不报错**（它只让写不发生），
+但会在报告末尾显式说明「本次为只读检查」—— 不静默、不假装没收到。
 
 判据边界（有意保守）：
 - 只对「文档行里出现符号名」的引用做判定；纯行号无符号名 → 跳过（无法判定）。
@@ -174,11 +190,19 @@ def main() -> int:
     #   全量报告。死变量与那条用法行一并删掉，**不留兼容壳**（不留「认了这个开关但
     #   不做效果」的假开关）。真要「只列有建议值的」，自行对本报告 grep 即可，
     #   本工具不为此另造一个筛选口径。
-    fix = "--fix" in sys.argv
-    fix_bare = "--fix-bare" in sys.argv or "--fix-bare-all" in sys.argv
+    #: `--check` = **全局只读开关**（审计 L216）。在三个改写开关**之前**求值，
+    #:   一处把 `fix` / `fix_bare` / `fix_bare_all` 全部压成假 —— 下面的改写
+    #:   分支照旧收集建议并逐条打印，只是不落盘（不留「某个分支忘了判
+    #:   --check」的口子）。
+    check = "--check" in sys.argv
+    fix = ("--fix" in sys.argv) and not check
+    fix_bare = ("--fix-bare" in sys.argv or "--fix-bare-all" in sys.argv) and not check
     #: `--fix-bare-all`：连「语义存疑」那一档的纯行号也改到**该符号的定义行**
     #   （api.md 的符号表第二列就是「符号在文件里的位置」⇒ 定义行是对的落点）。
-    fix_bare_all = "--fix-bare-all" in sys.argv
+    fix_bare_all = ("--fix-bare-all" in sys.argv) and not check
+    #: 认了改写开关却被 `--check` 压住时如实说明 —— 否则「给了开关却什么都没发生」不可查。
+    suppressed = [s for s in ("--fix", "--fix-bare", "--fix-bare-all")
+                  if s in sys.argv and check]
     # --fix 只在「本次改动过的引擎文件」上自动改写（避免误改判不准的老引用）
     allow = [a.split("=", 1)[1] for a in sys.argv if a.startswith("--fix-files=")]
     global FIX_ALLOW
@@ -406,6 +430,8 @@ def main() -> int:
         print(f"\n-- --fix 已改写 {total} 处（限定文件：{', '.join(sorted(FIX_ALLOW))}）--")
     # ★ misresolved 与 drifts 同档：都是「文档指到了不存在的地方」，
     #   阻断（否则这 14 条会永远绿着，直到有人手动翻 crossrepo 清单才发现）。
+    if suppressed:
+        print("\n\n          本次为**只读检查**（--check）：%s 未落盘，原样保留 --" % "、".join(suppressed))
     return 1 if (drifts or misresolved) else 0
 
 
