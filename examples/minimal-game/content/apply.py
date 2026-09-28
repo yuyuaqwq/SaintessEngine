@@ -69,7 +69,12 @@ def _recover_model(spd, base):
 def _action_base(action):
     """内容侧「行动类别 → 第一段基准耗时」表（`action_base_fn` 供体）。"""
     _cast = R.TIME_MODEL["cast"]
-    return float(_cast.get(action) or _cast["attack"])
+    # ★ 2026-09-28（审计 L4645，台账 :81；同族同文件 :72）：回落**只认 None**。
+    #   旧写法 `.get(action) or _cast["attack"]` 把「显式配的 0.0」当成「没配」——
+    #   实测把 `cast.defend` 配成 0.0 ⇒ 取回 1.0（凭空多出一段耗时）。
+    #   `0.0` 在耗时表里是合法值（零耗时动作），必须原样取回。
+    v = _cast.get(action)
+    return float(_cast["attack"] if v is None else v)
 
 
 def _recover_base(action):
@@ -78,7 +83,9 @@ def _recover_base(action):
     本示例两段刻意分开：`recover` 全 0 ⇒ 行为与「只有一段」逐字节相同。
     """
     _rec = R.TIME_MODEL["recover"]
-    return float(_rec.get(action) or _rec["attack"])
+    # ★ 同上（L4645 点名的 :81 就是本函数；:72 是同族另一处，一并改）
+    v = _rec.get(action)
+    return float(_rec["attack"] if v is None else v)
 
 
 def install_engine() -> None:
