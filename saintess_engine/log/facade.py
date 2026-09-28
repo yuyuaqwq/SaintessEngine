@@ -150,9 +150,14 @@ class ContextAdapter(logging.LoggerAdapter):
 
     上下文进 `record.__dict__` —— sink 可据此落库 / 按字段查
     （`record.actor` / `record.command`）。`bind()` 可链式叠加（后写的覆盖先写的）。
+
+    保留键冲突**构造期即 `ValueError`**（与 `bind()` 同一把尺）—— 裸构造也是正当入口。
     """
 
     def __init__(self, logger: logging.Logger, extra: Optional[dict] = None) -> None:
+        # 保留键在这里 fail-fast —— 否则脏字段要到 emit 才由标准库抛 `KeyError`，
+        # 且**级别不够高时连那个 KeyError 都没有**（整条静默混过）。
+        _reject_reserved(extra or {})
         super().__init__(logger, dict(extra or {}))
 
     def process(self, msg, kwargs):

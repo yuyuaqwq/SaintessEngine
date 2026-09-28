@@ -21,7 +21,7 @@
     r = Roster(["1001", "1002"])
     slots = RoleSlots({"lead": 1, "aide": 2}, roster=r, exclusive=True)
     slots.can_appoint("1001", "lead", r)      # True：在册 / 未满 / 不互斥 / 未任该职
-    slots.appoint("1001", "lead")
+    slots.appoint("1001", "lead", r)          # 名单口径与 can_appoint 一致（显式传入优先）
     slots.appoint("1002", "aide")
     slots.role_of("1001")                     # 'lead'
     slots.holders("aide")                     # ['1002']（按名单顺序）
@@ -107,15 +107,20 @@ class RoleSlots:
         return len(self._holders_of(role, use)) < self._caps[role]
 
     # ---------------------------------------------------------------- 变更
-    def appoint(self, member, role) -> None:
-        """任命。不合规 → `RoleNotAllowed`；**已是该职 → 幂等**（不抛、不重复计）。"""
+    def appoint(self, member, role, roster=None) -> None:
+        """任命。不合规 → `RoleNotAllowed`；**已是该职 → 幂等**（不抛、不重复计）。
+
+        `roster` 的口径与 `can_appoint` **完全一致**（显式传入 > 构造时绑定 > 不判在册）——
+        两者判的是同一件事，结论不能相反。
+        """
         member, role = str(member), str(role)
         if self._assign.get(member) == role:
             return
-        if not self.can_appoint(member, role):
+        if not self.can_appoint(member, role, roster):
             raise RoleNotAllowed(
                 f"不能任命：成员 {member!r} → 职位 {role!r}"
-                f"（可任表={sorted(self._caps)}，在册={self.roster is not None}，互斥={self.exclusive}）")
+                f"（可任表={sorted(self._caps)}，在册={self._roster_of(roster) is not None}，"
+                f"互斥={self.exclusive}）")
         self._assign[member] = role
 
     def demote(self, member) -> None:
