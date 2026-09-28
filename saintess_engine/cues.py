@@ -180,12 +180,17 @@ class CueBus:
             return []
         if isinstance(got, str):
             out = [got] if got else []
-        elif isinstance(got, (list, tuple, set, frozenset)):
+        elif isinstance(got, (list, tuple)):
             out = [str(x) for x in got if x not in (None, "")]
         else:
+            # ★ set / frozenset **不接受**：集合无迭代序，同一订阅者两次 emit
+            #   的行序可能不同（随进程哈希种子漂）⇒ 玩家看到的行会重排，
+            #   也让「顺序 = 订阅者声明序」这条承诺落空。要去重就自己排序后交 list。
+            _extra = "（set/frozenset 无序，请排序后交 list）" if isinstance(
+                got, (set, frozenset)) else ""
             raise CueContractError(
-                "cue %r 的 call 订阅者回执形状不对：要 None / str / 序列[str]，拿到 %s"
-                % (name, type(got).__name__))
+                "cue %r 的 call 订阅者回执形状不对：要 None / str / 序列[str]，拿到 %s%s"
+                % (name, type(got).__name__, _extra))
         if out and not sub.get("emits_lines"):
             raise CueContractError(
                 "cue %r 的 call 订阅者产出了日志行却没声明 emits_lines=True（只读契约："
