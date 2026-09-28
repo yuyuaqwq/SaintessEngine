@@ -253,6 +253,11 @@ class Ctx:
         return self._fields.get(name, default)
 
     def __getattr__(self, name: str):
+        # 未初始化面（Ctx.__new__(Ctx) / copy.copy 的进行期态）：
+        # 此时本身的属性表里还没有 _fields，再去取它会再进 __getattr__
+        # → 无限递归（实跑 Ctx.__new__(Ctx).a → RecursionError）。归正常的 AttributeError。
+        if name == "_fields":
+            raise AttributeError(name)
         try:
             return self._fields[name]
         except KeyError:

@@ -15,6 +15,7 @@
 """
 import ast
 import operator
+import copy
 import os
 import sys
 
@@ -489,6 +490,14 @@ def t10_shape():
           c.evaluate("k1", Ctx()) == "second")
     check("repr 可读（调试面）", "Conditions" in repr(c) and "k1" in repr(c))
     check("Ctx repr 可读", "owner" in repr(Ctx(owner="a")))
+    # 未初始化面（L921：_getattr 去取 _fields → 再进本方法 → 无限递归）
+    _bare = Ctx.__new__(Ctx)
+    check("未初始化的 Ctx 读字段 → AttributeError（非 RecursionError）",
+          raises(AttributeError, lambda: _bare.a)[0])
+    check("未初始化的 Ctx 读 fields → AttributeError",
+          raises(AttributeError, lambda: _bare.fields)[0])
+    check("copy 中的 Ctx 仍能读到字段（未被守卫误伤）",
+          copy.copy(Ctx(owner="a")).owner == "a")
 
 
 # ---------------------------------------------------------------- 11 声明式装配
