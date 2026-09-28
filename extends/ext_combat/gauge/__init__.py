@@ -45,15 +45,24 @@ S3 通用件归位（docs/archive/ENGINE_CONTENT_SPLIT_PLAN.md §6.5 / §7-S3）
 from math import floor
 
 from ..battle import game_config as _GC
+from ..battle.diagnostics import diag as _diag   # 注入面出错的诊断通道（审计 L251-4）
 from ..battle.cues import cue as _cue    # 已迁移点位走表现事件（措辞真源 = 内容侧文案表）
 
 
 def _battle_cfg(name: str) -> dict:
-    """读取机制配置表 MECH_CFG[机制键]（内容侧经 game_config 注入；未装配 → {}）。"""
-    try:
-        return _GC.mech_cfg(name) or {}
-    except Exception:
-        return {}
+    """读取机制配置表 MECH_CFG[机制键]（内容侧经 game_config 注入；未装配 → {}）。
+
+    ★ 审计 L251-4（2026-09-29）：删掉原 here 的 `try / except Exception: return {}`。
+      实测量过两件事，才敢删：
+       ① **「未装配」这条路根本到不了这个 try** —— `game_config.mech_cfg` 自己就
+          fail-closed（`fn is None → {}`），所以下面 `or {}` 仍然给出 `{}`，
+          合法形态逐字不变；或landia 侧 `apply.py:176` 也确实注入了 `mech_cfg_fn`。
+       ② 原 except **只**在「内容侧供体自己抛错」时命中——而那种情况下回落成 `{}`
+          的后果是 `bar_def` 给不出条配置 ⇒ `bar_state`/`bar_trigger` 按未声明处理，
+          **敌身条整套参数静默换成引擎缺省**（阈值/上限/递增率），玩家零报错。
+      保留它就是把「内容侧数据崩了」伪装成「这条没配置过」。
+    """
+    return _GC.mech_cfg(name) or {}
 
 
 def _cfg(cfg: dict, key, default=None):
@@ -79,11 +88,15 @@ def _num_cfg(bd: dict, key: str, default: float) -> float:
 
 
 def _state_prefix() -> str:
-    """条状态在 effects 容器里的键前缀（内容侧经 game_config 注入；未装配 → 历史兜底 "bar:"）。"""
-    try:
-        return _GC.bar_prefix() or "bar:"
-    except Exception:
-        return "bar:"
+    """条状态在 effects 容器里的键前缀（内容侧经 game_config 注入；未装配 → 历史兜底 "bar:"）。
+
+    ★ 审计 L251-4：同上删掉 `except Exception`。
+      `game_config.bar_prefix` 自己 fail-closed（`fn is None → ""`）⇒ `or "bar:"`
+      仍给出历史兜底，合法形态逐字不变。原先那个 except 只在**供体抛错**时命中，
+      而那时静默回落 "bar:" 的后果是：本场已用另一前缀写进 effects 的条
+      **再也读不到**（键对不上）——状态无声蒸发、零报错。
+    """
+    return _GC.bar_prefix() or "bar:"
 
 
 def bar_effect_key(bar_key: str) -> str:
@@ -165,11 +178,13 @@ def _default_bar_max() -> float:
 
     未装配 → 0.0 → 调用处回落历史兜底 100（`ext_combat.gauge` 的旧字面量口径）。
     """
-    try:
-        from ..battle import formulas as _F
-        return float(_F.gauge_default_max() or 0.0)
-    except Exception:                                        # noqa: BLE001
-        return 0.0
+    # ★ 审计 L251-4：删掉 `except Exception: return 0.0`。
+    #   `formulas.gauge_default_max` 未装配时自己给 0.0（`_skel_sub_num(..., 0.0)`），
+    #   `or 0.0` 仍归一成 0.0，合法形态逐字不变。原先的 except 只在**供体抛错**时命中，
+    #   而那会让封顶上限塌成 0 → 调用处 `<=0` 再回落硬编码 100，
+    #   即「内容侧配的封顶上限被静默换成 100」。
+    from ..battle import formulas as _F
+    return float(_F.gauge_default_max() or 0.0)
 
 
 def bar_gain(battle, enemy: dict, bar_key: str, amount: float, logs: list | None = None,
@@ -197,13 +212,20 @@ def bar_gain(battle, enemy: dict, bar_key: str, amount: float, logs: list | None
     _mx = bd.get("max")
     try:
         mx = float(_mx) if _mx else 0.0
-    except Exception:                                        # noqa: BLE001
+    except (TypeError, ValueError) as _e:
+        # 审计 L251-4：原为 `except Exception: mx = 0.0`。float() 真能抛的只有这两类，
+        # 收窄不改变任何已覆盖的形态；记诊断后仍回落 0.0（行为逐字节不变）。
+        # 不静默的理由：mx 落到 0 会被下面的 `<=0` 兜底换成 `_default_bar_max() or 100`，
+        # 于是「配了个坏 max」看起来像「配了个很小的 max」。
+        _diag(None, "bar_gain · 条上限转数", _e, key=bar_key, raw=_mx)
         mx = 0.0
     if mx <= 0:
         mx = _default_bar_max() or 100.0
     try:
         add = float(amount or 0)
-    except Exception:
+    except (TypeError, ValueError) as _e:
+        # 审计 L251-4：同上收窄 + 记诊断。行为不变：add 仍为 0.0（本回合不涨条）。
+        _diag(None, "bar_gain · 增量转数", _e, key=bar_key, raw=amount)
         add = 0.0
     bs["val"] = min(mx, float(bs.get("val", 0.0) or 0.0) + add)
     if logs is not None:

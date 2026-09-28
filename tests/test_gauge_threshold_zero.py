@@ -25,6 +25,7 @@ FW_ROOT = os.path.dirname(_HERE)
 sys.path.insert(0, FW_ROOT)
 sys.path.insert(0, os.path.join(FW_ROOT, "extends"))
 
+import ast  # noqa: E402
 from ext_combat import gauge as G  # noqa: E402
 
 PASS = 0
@@ -128,6 +129,172 @@ first, after = _fire({"threshold_base": 50, "threshold_inc": 0, "threshold_cap":
 check("恢复后 inc=0 真的生效（阈值 0）", after == 0, after)
 first, after = _fire({"threshold_base": 50, "threshold_inc": 1.35, "threshold_cap": 2.5})
 check("恢复后正常配置逐字不变（67）", after == 67, after)
+
+# ============================================================
+# ★ 审计 L251-4：注入面读取不许静默降级（敌身条整套参数无声换缺省）
+# ============================================================
+def _hook_named(node):
+    """这个 try 的 handler 是不是「裸 / 宽泛 except + pass|return 常量」。"""
+    for h in node.handlers:
+        hn = getattr(h.type, "id", None) or getattr(h.type, "attr", None)
+        body = [s for s in h.body if not isinstance(s, ast.Expr)]
+        if h.type is None:
+            return True
+        if hn in ("Exception", "BaseException"):
+            return True
+    return False
+
+
+def test_no_wide_except_in_injection_reads():
+    """三个注入面读取口（_battle_cfg / _state_prefix / _default_bar_max）
+    不许再用宽泛 except 把「供体抛错」静默降级成「未装配」。
+
+    为什么这两条不该判「合法」：`game_config.mech_cfg` / `bar_prefix` /
+    `formulas.gauge_default_max` **自己就 fail-closed**（hook 未注册 → 返回 `{}` / `""` /
+    0.0），所以「未装配」根本走不到调用侧的 try；try 只在**内容侧供体自己崩了**时命中，
+    而那时静默回落的后果是：
+      · _battle_cfg   → bar_def 给不出配置 ⇒ 敌身条阈值/上限/递增率整套换引擎缺省
+      · _state_prefix → 键前缀错位 ⇒ 本场已写入 effects 的条再也读不到（状态蒸发）
+      · _default_bar_max → 封顶上限塌成 0 → 调用处回落硬编码 100
+    三者都是「内容侧数据坏了」被伪装成「这条没配置过」，玩家零报错。
+    """
+    import ast
+    import io as _io
+    import os as _os
+
+    path = _os.path.join(FW_ROOT, "extends", "ext_combat", "gauge", "__init__.py")
+    src = _io.open(path, encoding="utf-8").read()
+    tree = ast.parse(src)
+
+    fns = {}
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            fns[node.name] = node
+
+    for name in ("_battle_cfg", "_state_prefix", "_default_bar_max"):
+        check("★ 扫到 %s（判据前提）" % name, name in fns)
+        fn = fns.get(name)
+        if fn is None:
+            continue
+        wide = [ast.get_source_segment(src, t) for t in ast.walk(fn)
+                if isinstance(t, ast.Try) and _hook_named(t)]
+        check("★ %s 里没有宽泛/裸 except" % name, not wide,
+              (wide[0] or "")[:160] if wide else "")
+
+    # bar_gain 的两处 float 转换：必须收窄到 float() 真能抛的两类 + 记诊断
+    bg = fns.get("bar_gain")
+    check("★ 扫到 bar_gain（判据前提）", bg is not None)
+    if bg is not None:
+        narrow = diag = 0
+        for t in ast.walk(bg):
+            if not isinstance(t, ast.Try):
+                continue
+            for h in t.handlers:
+                names = tuple(getattr(x, "id", None) for x in ast.walk(h.type)
+                              if isinstance(x, ast.Name)) if h.type is not None else ()
+                if set(names) == {"TypeError", "ValueError"}:
+                    narrow += 1
+                    if any(isinstance(n, ast.Call) and "diag" in ast.dump(n.func)
+                           for n in ast.walk(h)):
+                        diag += 1
+        check("★ bar_gain 两处转换已收窄成 (TypeError, ValueError)",
+              narrow >= 2, "只找到 %d 处" % narrow)
+        check("★ bar_gain 的收窄处都接了诊断通道（不许换个地方静默）",
+              diag >= 2, "只有 %d 处记了诊断" % diag)
+
+
+def test_broken_hook_is_not_silent():
+    """行为侧：供体抛错时**不再**静默降级；未装配（hook=None）仍照常回落。
+
+    这是本条的核心 —— 只扫 AST 只能证明「没有 except」，
+    必须实跑证明「真的不再静默」且「合法形态一个字没变」。
+    """
+    from ext_combat import gauge as G
+    from ext_combat.battle import game_config as GC
+    from ext_combat.battle import formulas as F
+
+    # ★ 本文件前面那几节的 `_install()` 把 `G._battle_cfg` 猴补成了读 _CFG 的 lambda
+    #   且**从不还原**（脚本式门禁，没有 finally）。若这里直接调 G._battle_cfg，
+    #   量到的永远是那个 lambda —— 我第一版就因此写出两条假红（拿 lambda 的返回值
+    #   当「未装配应给 {}」的证据）。正确姿势 = 取模块级原函数，并把它读出来再比对。
+    import importlib as _il
+    _pristine = _il.reload(G)
+    saved = (GC.mech_cfg, GC.bar_prefix, F.gauge_default_max)
+    try:
+        # ① 未装配：三个 hook 全返回「空」形态 ⇒ 与修前逐字相同
+        GC.mech_cfg = lambda name: {}
+        GC.bar_prefix = lambda: ""
+        F.gauge_default_max = lambda: 0.0
+        check("★ 未装配：_battle_cfg 给 {}（与修前一致）",
+              _pristine._battle_cfg("enemy_bar") == {},
+              repr(_pristine._battle_cfg("enemy_bar")))
+        check("★ 未装配：_state_prefix 回落 'bar:'",
+              _pristine._state_prefix() == "bar:", repr(_pristine._state_prefix()))
+        check("★ 未装配：_default_bar_max 给 0.0",
+              _pristine._default_bar_max() == 0.0, repr(_pristine._default_bar_max()))
+
+        # ② 供体抛错：必须现形（fail-closed），不许静默回落
+        def _boom(*a, **k):
+            raise RuntimeError("sim: 内容侧供体崩了")
+
+        for label, setter, getter in (
+            ("_battle_cfg", lambda: setattr(GC, "mech_cfg", _boom),
+             lambda: _pristine._battle_cfg("enemy_bar")),
+            ("_state_prefix", lambda: setattr(GC, "bar_prefix", _boom),
+             lambda: _pristine._state_prefix()),
+            ("_default_bar_max", lambda: setattr(F, "gauge_default_max", _boom),
+             lambda: _pristine._default_bar_max()),
+        ):
+            setter()
+            raised = None
+            try:
+                getter()
+            except RuntimeError:
+                raised = True
+            check("★ %s 遇供体抛错时现形（不再静默降级）" % label, raised,
+                  "静默返回了，没有抛")
+    finally:
+        GC.mech_cfg, GC.bar_prefix, F.gauge_default_max = saved
+
+
+def test_bad_max_records_diag_behavior_unchanged():
+    """坏 max/坏 amount：行为逐字节不变（仍回落 0），但诊断必须记下来。"""
+    from ext_combat import gauge as G
+    from ext_combat.battle import diagnostics as DG
+
+    recs = []
+    orig_diag = DG.diag
+
+    def _cap(battle, stage, exc=None, **kw):
+        rec = orig_diag(battle, stage, exc, **kw)
+        recs.append(rec)
+        return rec
+
+    saved = G._diag
+    saved_cfg = G._battle_cfg
+    G._diag = _cap
+    try:
+        for bad in ("zz", ["x"]):
+            enemy = {"effects": {}}
+            G._battle_cfg = (lambda k: {"shaken": {"max": bad, "threshold": 10}}
+                             if k == "enemy_bar" else {})
+            G.bar_gain(None, enemy, "shaken", 5, [])
+            st = (enemy.get("effects", {}).get("bar:shaken") or {}).get("val")
+            check("★ 坏 max=%r 行为不变（val 照涨，落到 0 兜底）" % (bad,), st == 5.0,
+                  repr(st))
+        check("★ 坏 max 各记了一条诊断（不再无声）", len(recs) == 2,
+              "记了 %d 条" % len(recs))
+        check("★ 诊断里带键与原值（可定位）",
+              bool(recs) and recs[0].get("key") == "shaken"
+              and "raw" in recs[0], repr(recs[0] if recs else None))
+    finally:
+        G._diag = saved
+        G._battle_cfg = saved_cfg
+
+print("== L251-4 注入面读取不许静默降级 ==")
+test_no_wide_except_in_injection_reads()
+test_broken_hook_is_not_silent()
+test_bad_max_records_diag_behavior_unchanged()
 
 print("== 结果：通过 %d / 共 %d ==" % (PASS, PASS + FAIL))
 if FAILURES:
