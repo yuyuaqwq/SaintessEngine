@@ -498,6 +498,11 @@ def t10_shape():
           raises(AttributeError, lambda: _bare.fields)[0])
     check("copy 中的 Ctx 仍能读到字段（未被守卫误伤）",
           copy.copy(Ctx(owner="a")).owner == "a")
+    # L922：_RESERVED 集合漏了 _RESERVED 自己 → 构造成功但 x._RESERVED
+    # 读到类属性 frozenset，字段被静默盖掉（收不到、不报错）。
+    check("保留名 _RESERVED 自己也被拒（否则字段被类属性静默盖）",
+          raises(ValueError, Ctx, _RESERVED="我的值")[0])
+    check("普通字段名不被误拒", Ctx(owner="a").owner == "a")
 
 
 # ---------------------------------------------------------------- 11 声明式装配

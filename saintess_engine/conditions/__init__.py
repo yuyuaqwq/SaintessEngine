@@ -226,7 +226,7 @@ class Ctx:
 
     #: 外壳自身的属性名 —— 内容侧字段不得占用（`ctx.fields` 必须是字段映射本身）。
     _RESERVED = frozenset({
-        "fields", "_fields", "get", "keys", "register", "evaluate", "has", "missing",
+        "fields", "_fields", "_RESERVED", "get", "keys", "register", "evaluate", "has", "missing",
         "__slots__", "__init__", "__getattr__", "__repr__", "__class__", "__dict__",
         "__doc__", "__module__", "__weakref__",
     })
