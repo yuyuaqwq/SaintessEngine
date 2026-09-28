@@ -150,13 +150,35 @@ class Stack:
     # ------------------------------------------------------------ 构造 / 序列化
     @staticmethod
     def _normalize(e: Any) -> dict:
-        """把任意来源的一格规整成 `{key, count, data}`（脏数据不炸；件数照原样不夹紧）。"""
+        """把任意来源的一格规整成 `{key, count, data}`。
+
+        **件数 = 物品件数**（与 `Slots` 的「格内件数」语义不同，见模块头注）：
+        * 缺 `count` / `count=None` → 1（历史裸行形态，照旧）；
+        * `count=0` → **照原样不夹紧**（既有契约：零格可被 `add` 累加成 1，钉在
+          `tests/test_u1i2_container_stack_frozen.py` 的 R2 两条）；零格是「已扣空未落库」的
+          在途形态，**不是**非法值；
+        * `count<0` → **负资产面**，当场 raise（台账 L1547）。原先 `int(c)` 照单全收，
+          实跑 `Stack.load('[{"key":"a","count":-5}]', strict=True)` 得
+          `count_of('a') == -5` / `total() == -5`，`dump()` 把 `count: -5` 原样写回落盘
+          ⇒ 读→改→写回这条链上**负库存静默扩散**。内容侧写口
+          `add_item/remove_item` 早有 `count <= 0` 拒绝（F1 P1-3），唯独**读口**没有，
+          两端口径不一致。
+          与 `Stack.add` / `Stack.take` 的既有 fail-fast（正整数，否则 ValueError）
+          收在同一处；`bool` 也拒（`isinstance(True, int)` 为真的陷阱）。
+        零行为变化的边界：合法件数（正整数 / `0` / 数字字符串 `'2'` / 缺键 / `None`）
+        逐字照旧解析 —— 原先 `int(c)` 那一支的字面行为一字未动。
+        """
         if not isinstance(e, dict):
             return {"key": e, "count": 1, "data": {}}
         c = e.get("count")
         d = e.get("data")
-        return {"key": e.get("key"), "count": 1 if c is None else int(c),
-                "data": {} if d is None else d}
+        if c is None:
+            return {"key": e.get("key"), "count": 1, "data": {} if d is None else d}
+        n = int(c)                          # 原口径：能转数字就转（str/float 同此）
+        if isinstance(c, bool) or n < 0:
+            raise ValueError(
+                "Stack 的件数不能是负数（负资产面），拿到 %s: %r" % (type(c).__name__, c))
+        return {"key": e.get("key"), "count": n, "data": {} if d is None else d}
 
     def _spawn(self, entries: list) -> "Stack":
         """派生一个新容器（不可变的落点）。"""
