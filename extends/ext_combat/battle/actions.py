@@ -700,7 +700,7 @@ def _skill_seg_damage(battle, actor, target, st, est, info, lv,
             [{"expr": expr, "type": seg_type}], st, est.get("def", 0), est.get("mdef", 0),
             is_crit=seg_crit, pene_phys=pp_phys, pene_magi=pp_magi,
             pene_flat_phys=pf_phys, pene_flat_magi=pf_magi,
-            mult=pmult_expr, variance=0.15,
+            mult=pmult_expr, variance=_F.damage_variance(),   # L246 同族未收口：0.15 已下沉骨架表
         )
         # 幸运一击（v133 lucky_mult=1.3）：暴击命中后 30% 追加
         if lucky:

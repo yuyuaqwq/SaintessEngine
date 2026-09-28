@@ -85,7 +85,7 @@ class _NullFormulas:
     """
 
     @staticmethod
-    def calc_damage(atk, def_, is_crit=False, variance=0.15, pierce=False,
+    def calc_damage(atk, def_, is_crit=False, variance=None, pierce=False,
                     pene_pct=0.0, pene_flat=0, dmg_type="phys"):
         return 0
 

@@ -94,6 +94,12 @@ _NEUTRAL_SKELETON = {
     #   制造 0 消耗 ⇒ 留在 `actions.py` 并补注释说明（见该处）。
     "lucky": {"rate": 0.30, "mult": 1.3},
     "lifesteal_cap": 0.30,
+    # ---- 2026-09-28（审计 L246 同族未收口）：伤害浮动幅度 `variance` ----
+    #   原写死在**三处函数签名/调用点**（`calc_damage` 默认参 / `resolve_formula` 默认参 /
+    #   `actions._roll_damage` 的 expr 段实参），内容侧零配置面 ⇒ 每款游戏都被迫吃 0.15。
+    #   与上面三行同理由，**不在零效应段**：归零 = 伤害零浮动（另一个平衡选择，不是「没有」），
+    #   故默认值取原写死值 0.15，与已装内容逐字一致。读点 = `damage_variance()`。
+    "damage": {"variance": 0.15},
 }
 
 
@@ -242,6 +248,18 @@ def lifesteal_cap() -> float:
     默认值 = 原写死值 0.30。物理/法术两条读点（`_do_lifesteal` 的 758/765 行）共用本 getter。
     """
     return _skel_num("lifesteal_cap", 0.30)
+
+
+def damage_variance() -> float:
+    """**伤害浮动幅度**（`dmg × (1 + U(-v, +v))`，原写死 0.15）。
+
+    ★ 2026-09-28（审计 L246 同族未收口）：L246 那一轮把 `actions.py` 的 6 处下沉了，
+    但 `formulas.py` **自己签名里的 0.15** 与 `actions` 的 expr 段实参 `variance=0.15`
+    一起留了下来（同一笔账的邻支，Step 0p）。而它是**玩家可见的平衡数值**：
+    浮动幅度决定「同一技能两次出手的伤害差多少」，内容侧却零配置面。
+    内容侧声明 `FORMULA_SKELETON["damage"]["variance"]`；默认值 = 原写死值 0.15。
+    """
+    return _skel_sub_num("damage", "variance", 0.15)
 
 
 def skill_max_level_default() -> int:
@@ -483,7 +501,7 @@ def _damage_binding():
     return binding_of("damage", table=tbl), tbl
 
 
-def calc_damage(atk, def_, is_crit=False, variance=0.15, pierce=False, pene_pct=0.0, pene_flat=0, dmg_type="phys", *, level=None):
+def calc_damage(atk, def_, is_crit=False, variance=None, pierce=False, pene_pct=0.0, pene_flat=0, dmg_type="phys", *, level=None):
     """伤害公式(v22 非线性减伤)：dmg = atk²/(atk+def)，防御收益递减，杜绝物理免疫
     v106 穿透：有效防御 = max(0, int(def × (1-pene_pct)) - pene_flat)（先百分比后固定，下限 0）
     v107 伤害类型四层架构（鱼鱼拍板）：dmg_type = phys/magi/true
@@ -501,6 +519,13 @@ def calc_damage(atk, def_, is_crit=False, variance=0.15, pierce=False, pene_pct=
         2. 旧：非线性减伤 atk²/(atk+def)；声明：def/(def+k_def) 双曲线
       ⇒ 未绑定的包（含旧包）行为逐字节不变；这是 R1「不配 = 不存在」的判据。
     """
+    # ★ L246 同族未收口（2026-09-28）：`variance` 原是签名上的 `0.15` 写死默认值 ——
+    #   平衡数值住在引擎里，内容侧零配置面。改 `None` 哨兵 + 函数体回落
+    #   （**不能**在签名默认值里调 getter：import 期骨架表可能还没装配）。
+    #   回落 = `damage_variance()`（内容侧 `FORMULA_SKELETON["damage"]["variance"]`），
+    #   未装配时 `_NEUTRAL_SKELETON` 给 0.15 = 与改前逐字一致。
+    if variance is None:
+        variance = damage_variance()
     _did, _tbl = _damage_binding()
     if _did is not None:
         if level is None:
@@ -548,7 +573,7 @@ def calc_damage(atk, def_, is_crit=False, variance=0.15, pierce=False, pene_pct=
 
 def resolve_formula(formula, stats, target_def, target_mdef, is_crit=False,
                     pene_phys=0.0, pene_magi=0.0, pene_flat_phys=0, pene_flat_magi=0,
-                    variance=0.15, mult=1.0, target_max_hp=None, randomize=True):
+                    variance=None, mult=1.0, target_max_hp=None, randomize=True):
     """v156 通用公式解释器——所有伤害来源（技能/装备/食物/宠物/敌方）共用。
 
     formula 每段：
@@ -562,9 +587,13 @@ def resolve_formula(formula, stats, target_def, target_mdef, is_crit=False,
     target_def/target_mdef: 目标防御
     mult: 外部乘区（技能 power 成长/条件/叠层等，由调用方算好）
     target_max_hp: 目标 max_hp（stat=max_hp 时用；缺省用 stats.max_hp）
+    variance: 伤害浮动幅度；**None = 读 `damage_variance()`**（L246 同族未收口：原写死 0.15）
 
     返回 (总伤害, 魔法段伤害) —— magi 段单独返回供吸血/魔免分账。
     """
+    # ★ L246 同族未收口（2026-09-28）：见 `calc_damage` 同一段注释 —— 签名默认值不能调
+    #   getter（import 期骨架表可能未装配），故 None 哨兵 + 函数体回落。本函数把 variance
+    #   原样转交 `calc_damage`，而后者也会回落 ⇒ 这里**不重复回落**（单一回落点）。
     # ★ E1b：槽位 `damage` 的声明链要用 level 算 k_def。等级真源 = stats["level"]
     #   （`stats.actor_stats` 统一从 actor 取，玩家与怪一视同仁；缺键 ⇒ 0，未绑定时无人读它）。
     _lv = int((stats or {}).get("level", 0) or 0)
