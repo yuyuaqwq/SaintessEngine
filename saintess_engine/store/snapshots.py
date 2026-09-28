@@ -44,11 +44,15 @@
   内容语义，引擎只给 `keep` + `on_expire` 两个注入口，**默认 = 删**。
 * ③ **打标不改 `stamp`** —— 标记是幂等的、可重复观察的；若顺手更新 stamp，「过期标记」会被
   自己续命。故打标只写 `blob` 列/载荷，绝不碰时间戳。
-* ④ **`put` 只收 dict** —— 标量文本（`str(value)` 那一支口径）不进本形状：标量走 `counters`，
+* ④ **`put` 不传 `stamp` 不反覆盖时间戳** —— 时间戳在「列」里时整行 upsert 自然保留旧值
+  （列未进 `row` → 不在 `ON CONFLICT DO UPDATE` 的 SET 清单里）；在「载荷键」里时整行覆盖会把旧键一并抹掉 →
+  旧行永远不过期（过期门静默关闭）。故与列形态对齐：缺 `stamp` 时读回旧值保留；
+  要刷新过期基准就显式传 `stamp`（也是 `merge` 既有的行为）。
+* ⑤ **`put` 只收 dict** —— 标量文本（`str(value)` 那一支口径）不进本形状：标量走 `counters`，
   或由内容侧自己转文本。两种口径不混进一个方法。
-* ⑨ **`prepare` 是「清 set」而不是「拒收」** —— 历史档把 `set` 落成过字符串（修过 bug）；
+* ⑥ **`prepare` 是「清 set」而不是「拒收」** —— 历史档把 `set` 落成过字符串（修过 bug）；
   转是修复口径，拒收会让老档读不出来。清洗规则是内容现状，故注入；默认 `None`（= 不清）。
-* ⑩ **`sweep` 只扫自己那张表** —— 按**键前缀**扫共享 KV 表是内容协议（且那张表上钉着别的门禁），
+* ⑦ **`sweep` 只扫自己那张表** —— 按**键前缀**扫共享 KV 表是内容协议（且那张表上钉着别的门禁），
   引擎不该知道谁的键长什么样。前缀扫描留在内容侧。
 
 **明确不做**
@@ -292,13 +296,17 @@ class SnapshotRepo:
 
     # ------------------------------------------------------------ 写
     def put(self, conn, owner, payload, *, stamp=None) -> None:
-        """整行 upsert（写入前过 `prepare`）。`stamp` 给了就写时间戳列/载荷键。"""
+        """整行 upsert（写入前过 `prepare`）。`stamp` 给了就写时间戳列/载荷键；
+        **不给就保留旧时间戳**（不因整行覆盖把它抹掉 —— 口径 ④）。"""
         if not isinstance(payload, dict):
             raise TypeError(
                 f"快照载荷必须是 dict，收到 {type(payload).__name__} —— "
                 f"标量文本请走 counters 或内容侧自己转"
             )
-        if stamp is not None:
+        if stamp is None:
+            # 缺 stamp 时读回旧值保留（与「列」形态对齐；否则载荷形态会把旧时间戳抹掉、过期门静默关闭）
+            stamp = self._stamp_of_row(self.repo.get(conn, owner))
+        else:
             self._require_writable_stamp()
         body = dict(payload)
         if self.prepare is not None:
