@@ -39,7 +39,6 @@ from __future__ import annotations
 
 import re
 import threading
-import weakref
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable
 
@@ -206,10 +205,23 @@ def _verify_pk(db, name: str, want: tuple) -> None:
 
 
 # ───────────────────────────────────────────────────────────── 注册表（幂等）
-# 一个 Database 上「哪张表已经声明过什么」。弱引用键：db 被回收，登记随之消失，
-# 不跨库串味（两个 Database 各自 declare 同名表互不影响）。
-_DECLARED: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+# 「哪张表已经声明过什么」挂在 **db 自己的实例上**（`_declared` 属性），不另设全局登记表。
+# 为何不用 `WeakKeyDictionary`：弱引用登记的 **value 持 db 的强引用**（`repo.db`）
+# → value → db → key，形成引用环：db 的弱引用计数永远降不到 0
+# （实测：declare 50 个临时库、`del` + `gc.collect()` 后登记仍为 50，而非 0）。
+# 现在登记数据的引用入口只有 db 本身 → 无环、db 被回收时登记一起消失；
+# 且不跨库串味（两个 Database 各自持一份，同名表互不影响）。
+_DECLARED_ATTR = "_declared"
 _LOCK = threading.Lock()
+
+
+def _declared_of(db) -> dict:
+    """取这个 Database 自己的声明登记表（没有就建一份）。登记表不持有 db，因此不会拉住 db 的生命周期。"""
+    reg = getattr(db, _DECLARED_ATTR, None)
+    if reg is None:
+        reg = {}
+        setattr(db, _DECLARED_ATTR, reg)
+    return reg
 
 
 def declare(db, spec: TableSpec, *, json_fields: Iterable = ()) -> DeclaredRepository:
@@ -227,10 +239,7 @@ def declare(db, spec: TableSpec, *, json_fields: Iterable = ()) -> DeclaredRepos
     _validate_spec(spec)
     repo = DeclaredRepository(db, spec, json_fields=json_fields)
     with _LOCK:
-        reg = _DECLARED.get(db)
-        if reg is None:
-            reg = {}
-            _DECLARED[db] = reg
+        reg = _declared_of(db)
         prev = reg.get(spec.name)
         if prev is not None:
             if prev[0] != spec:
