@@ -62,6 +62,22 @@ def _cfg(cfg: dict, key, default=None):
     return cfg.get(key, default)
 
 
+def _num_cfg(bd: dict, key: str, default: float) -> float:
+    """配置数值回落：**缺键**才用 `default`，合法 `0` 原样保留。
+
+    ★ 为什么要这样（审计 L251 同族 · falsy 吞合法值）：本文件原先写
+      `float(bd.get(key, D) or E)` —— `or` 把**合法 0** 吞成 E，而 0 与缺键语义
+      完全相反：对 `threshold_inc` / `threshold_cap` 这类乘区，0 的含义是
+      「阈值不递增」/「不封顶」，缺键才是「照声明默认」。吞掉之后
+      **「阈值固定」这类配置做不出来**，且零报错。
+      回落只认**缺键**（同 `bar_preserve_pct` 的口径），默认值一律取**声明默认**。
+    """
+    if not isinstance(bd, dict) or key not in bd:
+        return default
+    value = bd[key]
+    return default if value is None else float(value)
+
+
 def _state_prefix() -> str:
     """条状态在 effects 容器里的键前缀（内容侧经 game_config 注入；未装配 → 历史兜底 "bar:"）。"""
     try:
@@ -106,7 +122,10 @@ def bar_state(enemy: dict, bar_key: str, now: float | None = None) -> dict:
         bd = bar_def(bar_key)
         bs = {
             "val": 0.0,
-            "threshold": int(bd.get("threshold_base", 50) or 0),
+            # ★ 与 bar_trigger 同口径（_num_cfg 回落 50）：原先这里是 or 0、
+            #   bar_trigger 是 or 50 ⇒ 同一个「声明默认」两套值，缺键时初始阈值与
+            #   触发后的封顶基数分叉。
+            "threshold": int(_num_cfg(bd, "threshold_base", 50.0)),
             "trigger_count": 0,
             "_at": float(now or 0.0),
             # 初始免疫窗口 = 0（免疫只在触发后由 bar_trigger 设置）
@@ -217,10 +236,13 @@ def bar_trigger(battle, enemy: dict, bar_key: str, logs: list | None = None,
         return False
     bs = bar_state(enemy, bar_key, now)
     # 阈值递增（防无限控）：threshold × threshold_inc，封顶 threshold_cap × base
-    base = float(bd.get("threshold_base", 50) or 50)
-    inc = float(bd.get("threshold_inc", 1.35) or 1.0)
-    cap = float(bd.get("threshold_cap", 2.5) or 1.0)
-    new_thr = floor(float(bs.get("threshold", base) or base) * inc)
+    # ★ 回落只认缺键（_num_cfg）：原先的 `or` 会把合法的 inc=0 / cap=0 / base=0
+    #   吞成 1.0 / 1.0 / 50，「阈值不递增」「不封顶」「零蓄积即触发」这类配置做不出来；
+    #   且 base 与 `bar_state`（:109 使用同一个默认 50）形成两套口径。
+    base = _num_cfg(bd, "threshold_base", 50.0)
+    inc = _num_cfg(bd, "threshold_inc", 1.35)
+    cap = _num_cfg(bd, "threshold_cap", 2.5)
+    new_thr = floor(_num_cfg(bs, "threshold", base) * inc)
     bs["threshold"] = int(min(floor(base * cap), new_thr))
     bs["trigger_count"] = int(bs.get("trigger_count", 0) or 0) + 1
     # 触发后清空积蓄 + 免疫窗口（绝对时刻）：策划案「触发后 N 刻内不再积蓄」
