@@ -646,13 +646,29 @@ def _recover_scale(spd, base) -> float:
 
 
 def _action_base(action: str) -> float:
-    """`action_base_fn` 供体：行动类别 → 第一段基准耗时。"""
-    return float((_TIME_MODEL["cast"] or {{}}).get(action) or _TIME_MODEL["cast"]["attack"])
+    """`action_base_fn` 供体：行动类别 → 第一段基准耗时。
+
+    ★ 回落**只认 `None`**（台账 L4646）：旧写法 `or` 把**合法的 `0.0`**
+      吓成 attack 的值。`0.0` 在这里是「这一类行动不花时间」的**唯一表达**，
+      被吓成意外的 base 时长 → 新包一上线就是脆的（本模板自身现值已然正确，
+      因为 `cast` 的四项都非 0）。归一到 `None` 后：`None`/缺项 → attack（本就该回落），
+      `0.0` 原样通过。
+    """
+    table = _TIME_MODEL["cast"] or {{}}
+    v = table.get(action)
+    return float(table["attack"] if v is None else v)
 
 
 def _recover_base(action: str) -> float:
-    """`recover_base_fn` 供体：行动类别 → 第二段基准耗时（本模板全 0）。"""
-    return float((_TIME_MODEL["recover"] or {{}}).get(action) or _TIME_MODEL["recover"]["attack"])
+    """`recover_base_fn` 供体：行动类别 → 第二段基准耗时（本模板全 0）。
+
+    ★ 同 `_action_base`：回落只认 `None`。本模板 `recover` 四项全 `0.0`、且 `attack` 也是 `0.0`
+      → `or` 短路后恒等于 `attack`，**现值恰好正确**；但只要有人给某一类动作配了非 0 的
+      第二段耗时，其余的 `0.0` 就会被吓成那个值（第二段端点被推后）。
+    """
+    table = _TIME_MODEL["recover"] or {{}}
+    v = table.get(action)
+    return float(table["attack"] if v is None else v)
 
 
 def install_engine() -> None:
