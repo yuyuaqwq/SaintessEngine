@@ -74,7 +74,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 
-from ..conditions.declarative import SpecError, compile_spec
+from ..conditions.declarative import NODE_KEYS, SpecError, compile_spec
 
 __all__ = ["Acts", "Plan", "UnknownVerb", "SpecError"]
 
@@ -83,9 +83,8 @@ class UnknownVerb(LookupError):
     """装配期遇到没登记的动词名（fail-closed：不静默跳过、不退回默认实现）。"""
 
 
-# 声明节点的保留键（与 conditions.declarative 的节点形状一致）——
+# 声明节点的保留键取自 conditions.declarative（单一真源，不在本模块再抄一份）——
 # 出现这些键的映射按「节点」编译；不含这些键的映射按「字面量」递归重建。
-_NODE_KEYS = frozenset({"const", "field", "op"})
 
 
 def _verb_name(name) -> str:
@@ -107,7 +106,7 @@ def _is_node(value) -> bool:
     """
     if not isinstance(value, Mapping):
         return False
-    return bool(set(value) & _NODE_KEYS)
+    return bool(set(value) & NODE_KEYS)
 
 
 def _value(value, where: str):

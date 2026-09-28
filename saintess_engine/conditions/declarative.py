@@ -67,7 +67,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-__all__ = ["SpecError", "compile_spec", "compile_specs", "bind_spec", "register_specs"]
+__all__ = ["SpecError", "compile_spec", "compile_specs", "bind_spec", "register_specs",
+           "NODE_KEYS"]
 
 _CMP = {
     "eq": lambda a, b: a == b,
@@ -79,6 +80,10 @@ _CMP = {
 }
 
 _OPS = frozenset(_CMP) | {"and", "or", "not", "truthy", "len", "int", "contains"}
+
+#: 节点「保留键」名单（`const` / `field` / `op`）—— 公开给 `acts` 侧判形，
+#: 免得下游再抄一份（抄一份 = 改一侧漏另一侧）。
+NODE_KEYS = frozenset({"const", "field", "op"})
 
 _KEYS_CONST = frozenset({"const"})
 _KEYS_FIELD = frozenset({"field"})
