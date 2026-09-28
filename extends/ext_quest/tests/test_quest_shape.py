@@ -466,6 +466,14 @@ def t_ledger_migrate():
           log.deliver(lane=None, next_of=lambda cur: None)["cur"] is None)
     check("★ 口径⑥ deliver 缺省 next_of=None → current 置 None（引擎不猜下一环）",
           log.deliver(lane=None)["cur"] is None)
+    # 口径⑪ current 为 None 不进历史（空账本交付是调用方 bug，不该把 None 灌进完成史）
+    thrice = {}
+    for _ in range(3):
+        thrice = QuestLog(thrice, fields=FIELDS, states=STATES, lanes=LANES).deliver(lane=None)
+    check("★ 口径⑪ current=None → 不追加历史（连调 3 次 archive 仍为空，不是 [None,None,None]）",
+          thrice["hist"] == [], thrice["hist"])
+    check("★ 口径⑪ 与口径⑦ 两口径确实不同：非 None 仍照常**重复追加**（不去重没被顺手改掉）",
+          _mk(_raw(hist=["t1"])).deliver(lane=None, next_of=lambda c: "t2")["hist"] == ["t1", "t1"])
     new = log.deliver(lane="sub", key="s1")
     check("★ 口径① deliver 子账本：条目置终结态（**不追加 done**）",
           new["sub"]["s1"] == {"st": "s_ended"}, new["sub"]["s1"])

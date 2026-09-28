@@ -301,6 +301,11 @@ class QuestLog:
         """交付。**主 lane** 四步（现状逐字）：历史追加 current → current 换 `next_of(current)`
         → status 归 todo → 进度清空。**子账本**：条目置**最小终态**（只有 status 一格，
         现状 `{"status": "done"}` 的口径），**不**追加历史、**不**认 `next_of`。
+
+        **current 为 `None` 不进历史**（口径⑪）：那是「没有可交付的东西」——调用方
+        在空账本上交付属 bug，进度不该被灌 `None`（`done` 读口会原样吐出来，且
+        「追加不去重」⇒ 永久留存）。★ **`next_of` 仍照传**（口径⑥ 钉住：
+        `next_of(None)` 必须被交出去，由内容侧裁决「终章 vs 数据缺」）——只是不记账。
         """
         if next_of is not None and not callable(next_of):
             raise TypeError("下一环回调必须可调用（收当前条目、出下一环）")
@@ -311,7 +316,8 @@ class QuestLog:
             current = self.current
             got = self._m().get(self._fields[_F_ARCHIVE], _MISSING)
             items = list(got) if isinstance(got, (list, tuple)) else []
-            items.append(current)
+            if current is not None:
+                items.append(current)
             new[self._fields[_F_ARCHIVE]] = items
             new[self._fields[_F_CURRENT]] = next_of(current) if next_of is not None else None
             new[field_status] = self._words[_S_TODO]
