@@ -24,9 +24,9 @@
 | `cap` | int | ✅ `effects._cap_of`（`effects.py:66-84`） | 叠层上限基数。**收敛点唯一**：`apply op=add/set`、`schedule` gain、内容侧渠道攒取都走它。缺声明（0）→ **999999（不设限）** |
 | ★ 层级继承 | — | 全表（`state_effects.state_def`，`state_effects.py:13`） | **声明支持点分层级**：`control.stun` 没单独写就用 `control` 那份（精确优先、逐级往父级找）。一族 tag 的共同行为写父级一次即可；全都没有 = 空声明（不声明 = 不适用）。实现 = `tags.rule_of` |
 | `name` | str | ⚠️ 包不读 | 展示名。内容侧做日志/UI 标签（`class_mech_proc.py:1895`） |
-| `stat_scale` | `{stat: 每层系数}` | ✅ `stats._apply_effects`（`stats.py:60-67`） | 每层面板修正。`st[stat] *= (1 + n×系数)`；特殊 stat：`dmg_mult`（写 `st["_state_dmg_mult"]`，伤害乘区读它）、`reduce`（写 `st["reduce"]`，⚠️ 见「已知死字段」） |
+| `stat_scale` | `{stat: 每层系数}` | ✅ `stats._apply_effects`（`stats.py:64-72`） | 每层面板修正。`st[stat] *= (1 + n×系数)`；特殊 stat：`dmg_mult`（写 `st["_state_dmg_mult"]`，伤害乘区读它）、`reduce`（写 `st["reduce"]`，⚠️ 见「已知死字段」） |
 | `debuff_scale` | `{stat: 每层系数}` | ✅ **`ext_combat` 消费**（2026-09-11） | `landing.deal_damage` 遍历持有者状态：Σ(系数 × stacks) → 伤害 ×(1+Σ)。与 `stat_scale` 对称；层数上限由数据侧 `cap` 给。另仍是 `effects._is_stack_resource` 的判据关键词（`effects.py:282`，分派用） |
-| `panel` | `{"stat","op","mult"}` | ✅ `effects.act_apply` 快照分支（`effects.py:468-482`） | 静态面板增益的默认值（动作参数缺省时查表）。`op`：`mul`（乘）/ `add`（加）；`op="reduce"` 特殊（见 `stats.py:75-76`） |
+| `panel` | `{"stat","op","mult"}` | ✅ `effects.act_apply` 快照分支（`effects.py:468-482`） | 静态面板增益的默认值（动作参数缺省时查表）。`op`：`mul`（乘）/ `add`（加）；`op="reduce"` 特殊（`mult` 本身就是「减掉的比例」，见 `stats.py:88-89`） |
 | `consume` | `{"mode": ...}` | ✅ `effects.act_apply`（`effects.py:356-359`）+ `Battle.act`（`battle.py:526-550`） | 控制型条目的消费模式：`"skip"`（整跳行动）/ `"no_skill"`（技能转普攻） |
 | `period` | dict | ✅ `schedule._settle_time_effects`（`schedule.py:656-664`） | 周期结算声明（见下） |
 | `cleanse` | bool | ✅ `effects.act_cleanse`（`effects.py:638`） | `True` = 可被净化 |

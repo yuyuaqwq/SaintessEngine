@@ -77,7 +77,15 @@ def _apply_effects(st: dict, actor: dict) -> dict:
             entry_mult = (cfg.get("panel") or {}).get("mult")
         if entry_stat and entry_mult is not None:
             _op = entry.get("op") or (cfg.get("panel") or {}).get("op") or "mul"
-            if key == "spd_down" or _op == "reduce":
+            # ★ 2026-09-29 审计 L245：原判据 `if key == "spd_down" or _op == "reduce":`
+            #   把「**减益**」和「**乘区口径**」混成一条。`spd_down` 的**全部生产写口**
+            #   （class_mech.py:1527 · we_procs.py:700/1267）都传 `op:"mul", mult:1-pct`
+            #   ——`mult` 已经是「×几」（0.7 = 减速 30%）。原分支又取一次 `1.0-mult`
+            #   ⇒ 减速 30% 实跑成 **spd 30（-70%）**、减速 50% 才是对的（×0.5 两次 = 同值）。
+            #   反证：`test_passive_p6.py:113` 钉的就是「mult=0.7」这一形态。
+            #   口径：判据**只认 op**（`op:"reduce"` = 乘区本身是「减掉的比例」），
+            #   条目名不参与判定 —— 引擎零游戏名词（准则 1）。
+            if _op == "reduce":
                 st[entry_stat] = int(st.get(entry_stat, 0) * (1.0 - min(float(entry_mult), 0.9)))
             elif _op == "add":
                 st[entry_stat] = float(st.get(entry_stat, 0) or 0) + float(entry_mult)
