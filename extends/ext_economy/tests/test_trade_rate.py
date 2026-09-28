@@ -196,6 +196,22 @@ def t5_fail_closed():
         ('mode="bad" + floor=None → ValueError（mode 先于地板判定）',
          lambda: apply_rate(1, mode="bad", floor=None), ValueError),
         ("price=1.5 → TypeError（沿现约定）", lambda: apply_rate(1.5), TypeError),
+        # ★ rate/discount 的数值守卫（守卫单源 = _validators.number_of）。旧写法
+        #   `float(rate)` 对 bool 静默当 1.0（= 不打折）、对 nan/inf 一路穿到算式上。
+        ("rate=True → TypeError（bool 不算数值；旧写法静默 = 不打折）",
+         lambda: apply_rate(100, rate=True), TypeError),
+        ("discount=True → TypeError（同上，点名字段）",
+         lambda: apply_rate(100, discount=True), TypeError),
+        ("rate=nan → ValueError（必须有限）",
+         lambda: apply_rate(100, rate=float("nan")), ValueError),
+        ("rate=inf → ValueError（必须有限）",
+         lambda: apply_rate(100, rate=float("inf")), ValueError),
+        ("discount=-inf → ValueError（必须有限）",
+         lambda: apply_rate(100, discount=float("-inf")), ValueError),
+        ("rate='0.5' → TypeError（字符串不算数值）",
+         lambda: apply_rate(100, rate="0.5"), TypeError),
+        ("discount=None → TypeError（None 不静默当 1.0）",
+         lambda: apply_rate(100, discount=None), TypeError),
     )
     for label, fn, exc in cases:
         try:
@@ -206,6 +222,14 @@ def t5_fail_closed():
             check(label, True)
         except Exception as other:                                              # noqa: BLE001
             check(label, False, f"抛了 {type(other).__name__}: {other}")
+    # ★ 消息**点名字段**（旧写法 `float(rate)` 的原生报错不带字段名，报出来没人知道是哪个参数坏）
+    for kw, field in (({"rate": True}, "rate"), ({"discount": float("nan")}, "discount")):
+        try:
+            apply_rate(100, **kw)
+            check(f"点名 {field}：没抛", False, "没抛（守卫被摘掉？）")
+        except Exception as e:                                                  # noqa: BLE001
+            check(f"点名 {field}：报错文案含字段名", field in str(e),
+                  f"文案里没有 {field!r}：{e}")
 
 
 # ════════════════════════════════════════════════════════ ⑥ 零知识
