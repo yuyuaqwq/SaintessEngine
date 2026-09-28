@@ -103,6 +103,12 @@ class SimpleCtx:
         self.hooks = kw.get("hooks") or {}
 
     def __getattr__(self, name):
+        # ★ 宽容**只对数据属性**（2026-09-28，审计 L568，批次 1）。dunder 一律走正常查找链
+        #   （缺失就抛 AttributeError）—— 否则 `copy` 的协议探针
+        #   （`__copy__` → `__reduce_ex__` → `__setstate__`）拿到的全是 **None**
+        #   （不是「调用它」），标准库于是抛 `TypeError: 'NoneType' object is not callable`。
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(name)
         return None
 
 
@@ -354,13 +360,18 @@ class LootTable:
     
     # ────────────────────────────── 抽取
     def sub_ctx(self, ctx, qty):
-        """子池上下文：复制一份改 `qty`（不动原 ctx）；复制不了就改原对象。"""
-        try:
-            c = copy.copy(ctx)
-            c.qty = qty
-            return c
-        except Exception:                                     # noqa: BLE001
-            return ctx
+        """子池上下文：复制一份改 `qty`（不动原 ctx）。
+
+        ★ 复制失败**抛**，不静默改原对象（2026-09-28，审计 L568）：
+          旧写法 `except Exception: return ctx` 表面兜底、实则把「子池按自己的 n 抽」
+          悄悄降成「子池按外层 ctx 的 qty 抽」——`n:[3,7]` 整段失效、玩家少掉，
+          而全程零报错（`SimpleCtx.__getattr__` 吞 dunder 让这一支**恒**命中）。
+          `copy` 支持的协议只有 `__copy__` / `__reduce_ex__` / `__reduce__` / `__getstate__`；
+          别的类型不给这些**不是错**（自定义 ctx 类完全合法），但**不许悄悄拿原对象顶替**。
+        """
+        c = copy.copy(ctx)
+        c.qty = qty
+        return c
 
     def fallback(self, pool, ctx, key: str = "fallback") -> list:
         """池抽空时的兜底钩子（`ctx.fallback_roll(pool, fallback声明, ctx)`）。"""

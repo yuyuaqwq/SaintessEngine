@@ -409,6 +409,60 @@ def t9_determinism():
     check("不传 rng 时默认标准库 random", LootTable(pools).rng is random)
 
 
+def t10_sub_ctx_copy_contract():
+    """审计 L568（批次 1）：`SimpleCtx` 吞 dunder ⇒ `sub_ctx` 的复制**恒**失败。
+
+    旧形态：`__getattr__` 无条件返回 None，于是 `copy.copy` 的协议探针
+    （`__copy__` → `__reduce_ex__` → `__setstate__`）拿到的全是 None（不是「调用它」），
+    标准库抛 `TypeError` ⇒ `sub_ctx` 的 `except Exception: return ctx` 永远命中、
+    永远返回**原对象** ⇒ 嵌套池的 `n:[3,7]` 整段失效（实跑每次只出 1 条）。
+    """
+    import copy as _copy
+
+    # ① 宽容袋子只对**数据属性**开，dunder 一律走正常查找链
+    check("★ 数据属性缺失仍给 None（不抛）", SimpleCtx().whatever is None)
+    check("★ dunder 缺失抛 AttributeError（不许被袋子吞成 None）",
+          _raises(AttributeError, lambda: getattr(SimpleCtx(), "__no_such_dunder__")))
+
+    # ② copy.copy 真能复制 SimpleCtx，且副本与原件不共享 qty
+    c = SimpleCtx(uid="p1", qty=1)
+    cc = _copy.copy(c)
+    cc.qty = 9
+    check("★ copy.copy(SimpleCtx) 可用", cc is not c and c.qty == 1 and cc.qty == 9)
+
+    # ③ 端到端：子池 `n:[3,7]` 必须真的按 3~7 抽（旧形态恒为 1）
+    pools = {
+        "main": {"type": "table", "rolls": [{"pool": "sub", "n": [3, 7]}]},
+        "sub": {"type": "weighted", "entries": [{"item": "sword", "w": 1}]},
+    }
+    t = LootTable(pools, strategies={}, strict=True, rng=random.Random(7),
+                  resolver=lambda ref, ctx: {"type": "item", "item_id": ref})
+    ctx = SimpleCtx(uid="p1", qty=1)
+    got = t.roll("main", ctx)
+    check("★ 嵌套池 n:[3,7] 真的抽 3~7 条（sub_ctx 复制生效）",
+          3 <= len(got) <= 7, "got %d 条" % len(got))
+    check("★ sub_ctx 不改原 ctx（外层 qty 保持 1）", ctx.qty == 1)
+
+    # ④ 反向护栏：复制真失败时**抛**，不静默拿原对象顶替
+    #    （copy 对任何普通对象都能靠 __reduce_ex__ 复制，所以要显式打断它）
+    class _Uncopyable:
+        def __init__(self):
+            self.qty = 1
+
+        def __reduce_ex__(self, proto):
+            raise TypeError("这个 ctx 不可复制")
+
+        def __reduce__(self):
+            raise TypeError("这个 ctx 不可复制")
+
+    def _raise_on_getattr(name):
+        raise AssertionError("不该走到 getattr：%s" % name)
+
+    _c = _Uncopyable()
+    _c.__getattr__ = _raise_on_getattr
+    check("★ 复制失败抛（不静默改原对象）", _raises(TypeError, lambda: t.sub_ctx(_c, 3)))
+
+
 def main():
     print("== loot 门禁：抽取 / 池与策略 / 展开审计 / 档位 / 挂载 / 零知识 ==")
     t1_pick()
@@ -420,6 +474,7 @@ def main():
     t7_mount()
     t8_zero_knowledge()
     t9_determinism()
+    t10_sub_ctx_copy_contract()
     print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
     return 1 if failed else 0
 
