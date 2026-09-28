@@ -59,10 +59,20 @@ _MODES = ("add", "mul", "set")
 
 
 def _label(src) -> str:
-    """来源标签规范化：空标签 = 撤不掉的来源 ⇒ 当场报错。"""
-    if src is None or not str(src).strip():
+    """来源标签规范化：去首尾空白 + 空标签报错。
+
+    ★ 校验与存储必须同源（台账 L1888）：旧写法只在**校验**时判 `str(src).strip()`、
+    存储时反而存原文 `str(src)` ⇒ `add("panel","  a  ",3)` 与 `add("panel","a",5)`
+    变成**两条并存**（resolve=8，而不是幂等覆盖的 5），且 `drop("a")` 两条都撤不掉。
+    两条不变量（“同 (domain,src) 重复 add = 幂等覆盖”/ “drop = 撤掉从未 add 过的来源”）
+    本来就在 docstring 里写着、也被门禁钉死 —— 修根因，不加兼容分支。
+    """
+    if src is None:
         raise ValueError("来源标签不能为空")
-    return str(src)
+    label = str(src).strip()
+    if not label:
+        raise ValueError("来源标签不能为空")
+    return label
 
 
 def _value(v):

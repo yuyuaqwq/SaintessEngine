@@ -205,6 +205,53 @@ def t2_idempotent():
     check("同来源登记序不变（重复 add 不重排）", b.sources() == ["s1"])
 
 
+# ------------------------------------------------------- 2b 来源标签归一（台账 L1888）
+def t2b_label_normalized():
+    """「校验 strip / 存储不 strip」会把同一个来源拆成两条 ⇒ t2 的幂等与 t3 的撤销同时失效。
+    这里不复述现象（那是探针的事），只钉住修后应有的性质。"""
+    print("\n来源标签归一：首尾空白不得把同一来源拆成两条")
+    b = Bonus()
+    b.add("panel", "  a  ", 3)
+    b.add("panel", "a", 5)
+    print(f"    add('panel','  a  ',3) + add('panel','a',5) → resolve={b.resolve('panel')}"
+          f"（旧行为拆两条 = 8）")
+    check("首尾空白归一后重复 add = 覆盖（resolve 5，不是 8）",
+          b.resolve("panel") == 5)
+    check("来源表只剩一条（无裸版/带白两个键）",
+          b.sources("panel") == ["a"], str(b.sources("panel")))
+    check("存的就是归一后那个键（to_dict 往返不带空白）",
+          list(b.to_dict()["domains"]["panel"]) == ["a"])
+
+    b2 = Bonus()
+    b2.add("panel", " a", 3)
+    b2.add("panel", "a ", 4)
+    b2.drop("a")
+    check("drop 归一后两个变体都撤得掉（旧行为剩 [' a','a ']）",
+          b2.sources("panel") == [], str(b2.sources("panel")))
+    check("drop 后值也回到空域（resolve 0）", b2.resolve("panel") == 0)
+
+    # 归一必须对非字符串来源也成立（不只是 strip 那一侧）
+    b3 = Bonus()
+    b3.add("panel", "a", 2)
+    b3.add("panel", 123, 3)          # int 来源：存的应该是 '123'
+    check("非字符串来源也走同一个归一出口（不分叉字符串/数字）",
+          b3.sources("panel") == ["a", "123"], str(b3.sources("panel")))
+
+    # 反证：空白仍当场报错（归一不能把非法值放过）
+    ok = True
+    for bad in ("", "   ", None, "	"):
+        try:
+            b3.add("panel", bad, 1)
+            ok = False
+        except ValueError:
+            pass
+    check("全空/纯空白来源仍报错（归一不放行非法值）", ok)
+
+    # 归一不得改变其他语义：已归一的键不被 mode 等影响
+    check("归一后仍保持三段合并口径（add 仍是累加）",
+          (lambda x: (x.add("panel", "a", 2), x.add("panel", "b", 3), x.resolve("panel"))[2])(Bonus()) == 5)
+
+
 # ---------------------------------------------------------------- 3 撤销
 def t3_drop():
     print("\n[3] 撤销：drop(src) 后逐域 == 从未 add 过该来源")
@@ -389,6 +436,7 @@ def main():
     print("== bonus 门禁：分域合并 / 幂等 / 撤销 / 空域 / 非法域 / 往返 / 零知识 ==")
     t1_same_value()
     t2_idempotent()
+    t2b_label_normalized()
     t3_drop()
     t4_empty()
     t5_fail_closed()
