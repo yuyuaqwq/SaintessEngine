@@ -303,7 +303,7 @@ def t2_positive(body, tpat):
     #   `text_table_fn`；引擎侧真源 = `ext_combat.battle.cues.CUE_NAMES`）
     #   ⇒ 3210 → 3272。②中文键数锚点**照样不变**（仍 169，键名全 ASCII）——别跟着 +62；
     #   ③标签字已同步（本行）。措辞逐字 = cue 迁移前引擎 `render_via` 模板。
-    check("包内文案条数锚点 == 3272（条数变了就同步更新本门禁的锚点）", len(body) == 3272, len(body))
+    check("包内文案条数锚点 == 3273（条数变了就同步更新本门禁的锚点）", len(body) == 3273, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
