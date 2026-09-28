@@ -440,7 +440,23 @@ class Package:
         return obj
 
     def resolve_handler(self, ref):
-        """处理器引用 → 可调用：`"content.cmds.x:fn"` / `"content.cmds.x.fn"` / callable。"""
+        """处理器引用 → 可调用：`"content.cmds.x:fn"` / `"content.cmds.x.fn"` / callable。
+
+        ★ 2026-09-28（审计 L857）：**不拿 import 异常当信号**。
+          旧写法 `except Exception: return None` 把三种完全不同的故障压成同一个 `None`：
+            ① 引用写错 / 模块压根不存在（配置错）
+            ② **模块存在，但它自己 import 崩了**（缺依赖 / 代码坏了）← 玩家侧表现为
+               「战斗能力不存在」，`resolve_ref` 紧接着报「引用解析不到」，**真因消失**
+            ③ 引用格式不合法
+          口径照同文件 `optional_submodule`（`:466`，那里已把这条列为「旧版
+          `except Exception` 的病根」并改用 `find_spec`）——**存在性用 `find_spec` 判，
+          包自身的错误原样抛**：
+            · 拼不出来（`mod_name`/`attr` 缺一）→ 返回 `None`（**没配** ≠ **配坏了**）
+            · `find_spec` 说没有 → 返回 `None`（模块确实不存在，仍是「没配」）
+            · `find_spec` 说有 → **直接 `import_module`，异常原样抛**（配置面/代码面自己负责）
+          ★ `find_spec` 对「已在 `sys.modules` 里的模块」同样返回非 None，
+            所以本模块自己的 import 不会把自己判没。
+        """
         if callable(ref):
             return ref
         if not isinstance(ref, str) or not ref.strip():
@@ -453,9 +469,18 @@ class Package:
         if not mod_name or not attr:
             return None
         try:
-            mod = importlib.import_module(mod_name)
-        except Exception:                                        # noqa: BLE001
+            exists = importlib.util.find_spec(mod_name) is not None
+        except (ImportError, AttributeError, ValueError) as exc:
+            # 父包本身不存在（`find_spec` 会去 import 父包）⇒ 同样判「模块不存在」
+            if isinstance(exc, ModuleNotFoundError):
+                exists = False
+            else:
+                raise PackageError(
+                    "处理器引用 %r 的模块名 %r 非法：%s: %s"
+                    % (ref, mod_name, type(exc).__name__, exc)) from exc
+        if not exists:
             return None
+        mod = importlib.import_module(mod_name)   # ★ 包自身的错误原样抛，不再吞
         fn = getattr(mod, attr, None)
         return fn if callable(fn) else None
 
