@@ -257,6 +257,27 @@ def main() -> int:
           G.PANEL_KEYS and all(str(k).isascii() for k in G.PANEL_KEYS), f"{G.PANEL_KEYS}")
     check("stat_scale 标记 panel（用面板键做候选）", G.suggest_meta("effect_rules", "stat_scale")["panel"])
 
+    # ── 审计 L126：PANEL_KEYS 名单必须**跟着引擎真读的键走**，不能自己漂 ────────────
+    # 判据 = 直接从 `stats._monster_base_stats` 的返回值取键集（那才是面板的权威名单），
+    # 断言 `PANEL_KEYS` 覆盖它 —— 旧名单漏了 5 个键（tenacity/block/phys_reduce/
+    # magic_reduce/elem_res）且注释指向的出处理根本不存在，两者都靠这条钉住。
+    # ★ 不要求**相等**：PANEL_KEYS 另含表达式层/伤害乘区的键（dmg_mult/reduce/hp/mp），
+    #   那是**候选面**（编辑器下拉），故意比「怪物基础面板」宽。
+    _STATS_MOD = os.path.join(ROOT, "extends", "ext_combat", "battle", "stats.py")
+    _real_panel_keys = set()
+    if os.path.exists(_STATS_MOD):
+        import importlib.util as _ilu
+        _spec = _ilu.spec_from_file_location("_probe_panel_stats", _STATS_MOD)
+        _m = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_m)
+        _real_panel_keys = set(_m._monster_base_stats({}))
+    check("PANEL_KEYS 覆盖引擎面板真读的键（tenacity/block/phys_reduce/magic_reduce/elem_res）",
+          _real_panel_keys.issubset(set(G.PANEL_KEYS)),
+          f"引擎面板键={sorted(_real_panel_keys)} 缺={sorted(_real_panel_keys - set(G.PANEL_KEYS))}")
+    check("PANEL_KEYS 里的 combat 核心键一个都不少（防整段被误删）",
+          {"atk", "def", "matk", "mdef", "spd", "crit", "dodge", "max_hp"}
+          .issubset(set(G.PANEL_KEYS)), f"{G.PANEL_KEYS}")
+
     print(f"\n{'-' * 46}\n通过 {PASS} / 失败 {FAIL}")
     for f in FAILURES:
         print("  ❌", f)

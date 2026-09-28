@@ -1206,10 +1206,19 @@ REF_DOMAINS = {
     "elite_equip_drop": "equip_roster",
 }
 
-# 引擎面板键（**框架协议**，出自 `extends/ext_combat/battle/stats.py:117-122` 的 actor 面板读取）
-# —— 给 stat_scale / panel.stat 这类字段做候选；与任何具体游戏无关。
+# 引擎面板键（**框架协议**）—— 给 stat_scale / panel.stat 这类字段做候选；与任何具体游戏无关。
+#
+# ★ 出处订正（审计 L126，2026-09-28）：旧注释称「出自 `stats.py:117-122` 的 actor 面板读取」，
+#   但那几行实为 `panel_layers` 的**声明式**取值（`_bk["keys"]` 读声明表），**没有这份名单字面量**
+#   ⇒ 注释指向的出处理不存在（口径断裂）。真的名单是同文件的 `_monster_base_stats`
+#   （`extends/ext_combat/battle/stats.py`），`stat_scale` 写的键必须是它（及表达式层）真读的键。
+#   旧名单漏了它真读的 5 个键（tenacity / block / phys_reduce / magic_reduce / elem_res）
+#   ⇒ 编辑器下拉候选里没有它们，接线的包作者会以为「配了没生效」。
+#   `dmg_mult` / `reduce` **不是**面板键：它们是伤害公式里的乘区（`landing.deal_damage`
+#   单独读 `effects[...]["dmg_mult"]`），不在 `_monster_base_stats` 里。
 PANEL_KEYS = ["atk", "def", "matk", "mdef", "spd", "crit", "dodge", "max_hp", "max_mp",
-              "hp", "mp", "dmg_mult", "reduce"]
+              "hp", "mp", "tenacity", "block", "phys_reduce", "magic_reduce", "elem_res",
+              "dmg_mult", "reduce"]
 _PANEL_PATHS = {"stat_scale", "panel.stat", "debuff_scale", "stat"}
 
 

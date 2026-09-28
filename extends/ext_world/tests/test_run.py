@@ -244,6 +244,25 @@ def t4_progress():
     check("空节点表 done=False（不谎报清空）", Progress([]).done is False)
     check("未创建池的节点算已清（缺字段不是有内容）", Progress(["a"]).node_cleared("a") is True)
 
+    # ★ done 不再把「一个池都没播种」当成「都清完了」（台账 run/progress.py done 条）：
+    #   旧实现下 Progress([l1,l2]) 全新未播种 ⇒ done=True，而 is_last() 仍 False。
+    fresh = Progress([{"key": "l1"}, {"key": "l2"}])
+    check("★ 全新未播种 → done=False（不是「清完了」，是「还没有东西」）",
+          fresh.done is False, f"done={fresh.done} is_last={fresh.is_last()} left={fresh.total_left()}")
+    check("★ 同一份上 node_cleared 仍逐节点判定（口径未动）",
+          fresh.node_cleared("l1") is True and fresh.node_cleared("l2") is True)
+    fresh.push("l1", "units", "m1")
+    check("播种一处未取 → done=False", fresh.done is False)
+    check("取走最后一件 → done=True（有内容且全清）", (fresh.take("l1", "units"), fresh.done is True)[1])
+    only_empty = Progress([{"key": "l1"}])
+    only_empty.push("l1", "units", "m1")
+    only_empty.take("l1", "units")
+    check("播种过又取空 → done=True（真清完）", only_empty.done is True)
+    empty_list_pool = Progress([{"key": "l1"}])
+    empty_list_pool.push("l1", "units", [])
+    check("push 空 list 的池：不算「有内容」→ done=False",
+          empty_list_pool.done is False, f"done={empty_list_pool.done}")
+
     # 往返
     q = Progress([{"key": "a", "label": "甲"}, {"key": "b", "label": "乙"}], index=1)
     q.push("b", "units", 1); q.push("b", "units", 2); q.set_budget("coin", 7)

@@ -217,8 +217,29 @@ class Progress:
 
     @property
     def done(self) -> bool:
-        """所有节点都清空（空节点表 → False）。"""
-        return bool(self.nodes) and all(self.node_cleared(n["key"]) for n in self.nodes)
+        """**真有内容、且全清**才算 done。空节点表 → False。
+
+        ★ 口径裁定（2026-09-28，台账 `run/progress.py`「`done` 混了两种意思」条）：
+          旧实现 `bool(self.nodes) and all(self.node_cleared(k) ...)` 会在
+          **「节点建了、但一个池都没播种」**时报 `True` —— 探针实测
+          `Progress([l1, l2])` 全新未播种 ⇒ `done=True` 而 `is_last()` 仍 False、
+          `total_left()` 为 0。调用方（副本预览 `editor/instance_view.py:162`
+          的 `progress_check.done`、内容侧任何「走完没走完」的发奖判定）据此
+          会把**「本该有内容却没有」**当成**「都清完了」**。
+          `node_cleared` 的「未创建的池视为空」是**逐节点**判定（已被门禁钉住，
+          见 tests/test_run.py「未创建池的节点算已清」），那一格不动；
+          变的是 `done` 这一格：它问的是**全局**是否「有东西且都没了」。
+
+          本形状**不知道**每节点「本该有哪些池」（那是内容侧声明的事，引擎零知识），
+          所以这里只做**引擎能判的那一半**：`done` 要求**至少存在一个已播种的池**。
+          想要更强的保证（「该有的池都播种过了才谈清空」），由内容侧在调用前
+          用 `audit()` / `pools_of()` 断言，或声明应有池集合。
+        """
+        if not self.nodes:
+            return False                   # 空节点表：不谎报清空
+        if not any(self._pools.get(n["key"]) for n in self.nodes):
+            return False                   # ★ 一个池都没播种 ⇒ 不是「清完了」，是「还没有东西」
+        return all(self.node_cleared(n["key"]) for n in self.nodes)
 
     # ---------------------------------------------------------------- 预算
     def set_budget(self, name, value):
