@@ -23,6 +23,7 @@ _EXAMPLE = os.path.dirname(_HERE)                              # examples/minima
 _REPO = os.path.dirname(os.path.dirname(_EXAMPLE))             # 框架根（saintess_engine 所在）
 sys.path.insert(0, _EXAMPLE)
 sys.path.insert(0, _REPO)
+sys.path.insert(0, os.path.join(_REPO, "extends"))                 # 扩展包目录（ext_combat / ext_economy 的家）
 
 from ext_combat import ActCtx, Battle, deal_damage               # noqa: E402
 from content import apply_game_content                          # noqa: E402

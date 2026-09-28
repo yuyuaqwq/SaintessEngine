@@ -5,7 +5,13 @@ import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)                                                  # import content
-sys.path.insert(0, os.path.dirname(os.path.dirname(_HERE)))  # 框架根（saintess_engine 所在）
+_REPO = os.path.dirname(os.path.dirname(_HERE))                            # 框架根（saintess_engine 所在）
+sys.path.insert(0, _REPO)
+sys.path.insert(0, os.path.join(_REPO, "extends"))                 # 扩展包目录（ext_combat / ext_economy 的家）
+
+# ★ 自举说明：上面三行是**自包含**的 —— 本示例不靠 PYTHONPATH、不靠仓根 conftest/.pth，
+# 照抄这个文件的第三方拿到的是同一个可运行骨架。门禁曾经给测试进程注入 extends/
+# 才让它绿，那是门禁替示例兜了底，掩盖了「文档里写的命令跑不通」。
 
 from ext_combat import Battle                                  # noqa: E402
 from content import apply_game_content                           # noqa: E402

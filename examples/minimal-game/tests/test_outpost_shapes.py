@@ -21,6 +21,7 @@ _EXAMPLE = os.path.dirname(_HERE)                                   # examples/m
 _REPO = os.path.dirname(os.path.dirname(_EXAMPLE))                  # 框架根
 sys.path.insert(0, _EXAMPLE)
 sys.path.insert(0, _REPO)
+sys.path.insert(0, os.path.join(_REPO, "extends"))                 # 扩展包目录（ext_combat / ext_economy 的家）
 
 from saintess_engine.bonus import Bonus                                # noqa: E402
 from saintess_engine.clock import wall                                 # noqa: E402
