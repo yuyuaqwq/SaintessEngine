@@ -283,6 +283,28 @@ def t5_budget():
         check("形态不匹配 → 报错（不静默按 0 处理）", False)
     except TypeError:
         check("形态不匹配 → 报错（不静默按 0 处理）", True)
+    # 计数预算只认 int：小数残渣既花不掉也不报错（spend 原来 int(cur) 截断却留浮点，
+    # set_budget("coin", 3.5) 花 3 次后剩 0.5 永久残留 ⇒ 写入口 fail-closed）
+    for bad, why in ((3.5, "浮点"), (2.0, "整值浮点"), (True, "布尔")):
+        try:
+            p.set_budget("bad", bad)
+            check(f"★ 计数预算 {why} {bad!r} → TypeError（不静默截断）", False)
+        except TypeError:
+            check(f"★ 计数预算 {why} {bad!r} → TypeError（不静默截断）", True)
+    try:
+        p.set_budget("mats", {"iron": 2.5})
+        check("★ 计数表的表项也必须是 int", False)
+    except TypeError:
+        check("★ 计数表的表项也必须是 int", True)
+    try:
+        Progress(["a"], budgets={"gold": 1.5})
+        check("★ 构造期 budgets= 同样守（from_dict / 实例资源池走这条）", False)
+    except TypeError:
+        check("★ 构造期 budgets= 同样守（from_dict / 实例资源池走这条）", True)
+    check("★ 合法路径逐字不变：int 计数仍能扣到 0",
+          (p.set_budget("ok", 3), p.spend("ok", 3), p.budget("ok"))[2] == 0)
+    check("★ 清单预算不受影响（没有「必须 int」这回事）",
+          (p.set_budget("lst", ["a"]), p.spend_one("lst", "a"), p.budget("lst"))[2] == [])
     try:
         p.spend_one("coin", "x")
         check("spend_one 用在计数预算上 → 报错", False)

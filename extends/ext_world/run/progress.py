@@ -37,6 +37,34 @@ from typing import Iterable, Optional
 __all__ = ["Progress"]
 
 
+def _count(value, label: str):
+    """一份**计数**预算的值：必须是 `int`（**不是 bool**）。
+
+    为什么 fail-closed（台账 L539）：计数预算只能**整份**扣减，带小数的残渣既
+    花不掉也不报错 —— `spend` 原写 `int(cur)` 截断却让 `cur` 留浮点，
+    `set_budget("coin", 3.5)` 花 3 次后剩 **0.5 永久残留**（任何 want 都取不到它，
+    写回面 `int(...)` 又会把它抹成另一个数）。本类的契约本就写明「`int` 计数」
+    （模块 docstring），故此处是**把已有声明执行掉**，不是新增限制。
+    """
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(label + " 必须是 int 计数，收到 " + type(value).__name__
+                        + "（计数预算没有小数口径：小数残渣既花不掉也不报错）")
+    return value
+
+
+def _one_budget(value, label: str):
+    """一份预算的三形态归一：计数表（逐值过 `_count`）· 清单（原样）· 计数。"""
+    if isinstance(value, dict):
+        return {k: _count(v, f"{label} 的计数项 {k!r}") for k, v in value.items()}
+    if isinstance(value, list):
+        return list(value)
+    return _count(value, label)
+
+
+def _budgets_map(raw) -> dict:
+    return {k: _one_budget(v, f"预算 {k!r}") for k, v in dict(raw or {}).items()}
+
+
 def _norm_node(raw, i: int, key: str, label: str) -> dict:
     if isinstance(raw, dict):
         k = raw.get(key, None)
@@ -57,8 +85,7 @@ class Progress:
         self.index = int(index or 0)
         self._pools = {k: {p: list(v) for p, v in dict(m or {}).items()}
                        for k, m in dict(pools or {}).items()}
-        self._budgets = {k: (dict(v) if isinstance(v, dict) else (list(v) if isinstance(v, list) else v))
-                         for k, v in dict(budgets or {}).items()}
+        self._budgets = _budgets_map(budgets)
 
     # ---------------------------------------------------------------- 节点
     @property
@@ -195,9 +222,12 @@ class Progress:
 
     # ---------------------------------------------------------------- 预算
     def set_budget(self, name, value):
-        """设/换一份预算：`int` 计数 · `dict[str, int]` 计数表 · `list` 清单。"""
-        self._budgets[str(name)] = (dict(value) if isinstance(value, dict)
-                                    else (list(value) if isinstance(value, list) else value))
+        """设/换一份预算：`int` 计数 · `dict[str, int]` 计数表 · `list` 清单。
+
+        计数**必须是 int**：小数计数会在扣减后留下既花不掉也不报错的残渣
+        （见 `_count`）。fail-closed ⇒ 直接抛，不静默截断。
+        """
+        self._budgets[str(name)] = _one_budget(value, f"预算 {str(name)!r}")
         return self._budgets[str(name)]
 
     def budget(self, name, default=0):
@@ -238,7 +268,7 @@ class Progress:
             "index": self.index,
             "pools": {k: {p: list(v) for p, v in per.items()} for k, per in self._pools.items()},
             "budgets": {k: (dict(v) if isinstance(v, dict) else (list(v) if isinstance(v, list) else v))
-                        for k, v in self._budgets.items()},
+                        for k, v in self._budgets.items()},   # 已由 _one_budget 归一，原样写出
         }
 
     @classmethod
