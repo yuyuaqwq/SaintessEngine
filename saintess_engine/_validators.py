@@ -17,6 +17,7 @@
 """
 from __future__ import annotations
 
+import math
 from typing import Any, Callable, Optional
 
 __all__ = ["callable_of", "clock_now", "int_of", "layer_of", "number_of", "owner_key",
@@ -33,10 +34,20 @@ def int_of(value: Any, label: str, *, minimum: Optional[int] = None) -> int:
 
 
 def number_of(value: Any, label: str) -> float:
-    """数值校验（`bool` 不算数值）→ `float`。"""
+    """数值校验（`bool` 不算数值、**`nan` / `inf` 不算数值**）→ `float`。
+
+    ★ 为什么要拒 `nan`/`inf`：它们能通过 `isinstance(x, (int, float))`，而下游
+      的比较对它们全部失效 —— `nan < 0` 是 False（所以「不得为负」拦不住），
+      `inf` 则让绝对时刻 / 射程这类判据恒真（`reach=inf` ⇒ 射程判 `>=1` 恒过
+      ⇒ 选全部目标）。而 `json.loads('{"base": NaN}')` 默认就接受这两个值，
+      存档里一行坏数值就能一路穿到判据上。坏数值要**点名是谁**。
+    """
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise TypeError(f"{label} 必须是数值，收到 {type(value).__name__}：{value!r}")
-    return float(value)
+    out = float(value)
+    if not math.isfinite(out):
+        raise ValueError(f"{label} 必须是有限数值，收到 {out!r}")
+    return out
 
 
 def callable_of(fn: Any, label: str) -> Callable:
@@ -73,21 +84,20 @@ def segment_of(value: Any, label: str):
             raise ValueError(f"{label} 作为类别名不得为空串")
         return value
     if isinstance(value, (int, float)):
-        if value < 0:
+        out = number_of(value, label)
+        if out < 0:
             raise ValueError(f"{label} 不得为负，收到 {value!r}")
-        return float(value)
+        return out
     if isinstance(value, dict):
         extra = set(value) - {"base"}
         if extra:
             raise ValueError(f"{label} 只允许键 'base'，多出：{sorted(extra)}")
         if "base" not in value:
             raise ValueError(f"{label} 必须含键 'base'")
-        b = value["base"]
-        if isinstance(b, bool) or not isinstance(b, (int, float)):
-            raise TypeError(f"{label}.base 必须是数值，收到 {type(b).__name__}：{b!r}")
-        if b < 0:
-            raise ValueError(f"{label}.base 不得为负，收到 {b!r}")
-        return {"base": float(b)}
+        out = number_of(value["base"], f"{label}.base")
+        if out < 0:
+            raise ValueError(f"{label}.base 不得为负，收到 {value['base']!r}")
+        return {"base": out}
     raise TypeError(f"{label} 必须是 str / 数值 / {{'base': 数值}}，"
                     f"收到 {type(value).__name__}：{value!r}")
 
@@ -95,7 +105,7 @@ def segment_of(value: Any, label: str):
 def layer_of(value: Any, label: str, *, default: Optional[int] = None) -> int:
     """**射程层号**校验（整数 ≥ 1；`bool` 不算整数）。
 
-    `None` → 返回 `default`（`default` 也为 `None` 时抛）。
+    `None` → 返回 `default`（同样走 `int_of(..., minimum=1)`，`default` 也为 `None` 时抛）。
 
     ★ 补掉现状的一个硬伤：调用点曾有 `int(info.get("reach") or 3)` ——
       遇到 `"near"` 这类字符串会抛**裸 ValueError**，栈里看不出是哪个条目。
@@ -104,7 +114,7 @@ def layer_of(value: Any, label: str, *, default: Optional[int] = None) -> int:
     if value is None:
         if default is None:
             raise ValueError(f"{label} 缺失且未给默认值")
-        return default
+        return int_of(default, f"{label} 的 default", minimum=1)
     return int_of(value, label, minimum=1)
 
 
