@@ -99,6 +99,47 @@ def _root_of(dotted: str) -> str:
     return (dotted or "").split(".")[0]
 
 
+#: 准则 1 意义上的「游戏内容包」根名 —— 扩展包**不得**认识它们
+#: （`orlandia` / `aetheran` 是本仓 `games/` 下的包；`dragonfall` 是宿主内容包）。
+GAME_PKG_ROOTS = frozenset({"orlandia", "aetheran", "dragonfall"})
+
+
+def scan_extends_game_deps():
+    """`extends/**` **生产码**里 import 游戏内容包的位置（准则 1 的 extends 覆盖面）。
+
+    * 扫描 `EXT_DIR/<包>/**`，**跳过 `tests/`**（测试按包名 import 自己的包是本分）
+    * 判据 = 导入的根名落在 `GAME_PKG_ROOTS` 内
+    * ★ 别改成「把 EXT_DIR 加进 PKG_DIRS」：那会把「扩展包互相 import」与
+      「import 引擎」这两类**合法**依赖一并判红（实测 92 + 7 条）
+    """
+    out = []
+    if not os.path.isdir(EXT_DIR):
+        return ["扩展包目录不存在：%s" % EXT_DIR]
+    for pkg in sorted(os.listdir(EXT_DIR)):
+        pkg_dir = os.path.join(EXT_DIR, pkg)
+        if not os.path.isdir(pkg_dir):
+            continue
+        for root, _dirs, files in os.walk(pkg_dir):
+            if "__pycache__" in root or os.path.basename(root) == "tests":
+                continue
+            for fn in sorted(files):
+                if not fn.endswith(".py"):
+                    continue
+                path = os.path.join(root, fn)
+                rel = os.path.relpath(path, FW_ROOT).replace("\\", "/")
+                tree = ast.parse(open(path, encoding="utf-8").read(), filename=path)
+                for node in ast.walk(tree):
+                    mods = []
+                    if isinstance(node, ast.Import):
+                        mods = [a.name for a in node.names]
+                    elif isinstance(node, ast.ImportFrom) and not node.level:
+                        mods = [node.module or ""]
+                    for m in mods:
+                        if _root_of(m) in GAME_PKG_ROOTS:
+                            out.append("%s:%d: %s" % (rel, node.lineno, m))
+    return out
+
+
 def scan():
     """返回 (非标准库绝对 import 列表, 动态导入违规列表, 扫描文件数)。"""
     bad, dyn, n = [], [], 0
@@ -155,6 +196,19 @@ def main():
           f"残留={ghosts}（无源文件的目录应整个删掉）")
     check("零非标准库绝对 import（可分发性闸门）", not bad,
           "\n      " + "\n      ".join(bad))
+    # ★ 准则 1 对**扩展包**的覆盖（台账 L340，`tests/test_engine_purity.py:40`）
+    #   原状：`PKG_DIRS = (ENGINE_DIR,)`，`EXT_DIR` 算好了却只进了 `sys.path`
+    #   ⇒ `scan()` 从不遍历 `extends/` ⇒ 全部扩展包对纯度门禁**零覆盖**。
+    #   为什么不直接把 EXT_DIR 加进 PKG_DIRS（实测否决，勿再试）：
+    #   那样跑出 92 条绝对 import + 7 条动态导入，但绝大多数**合法** —— 扩展包本来就
+    #   互相 import（`from ext_achieve.cond import ...`）、本来就 import 引擎门面
+    #   （`from saintess_engine import ...`）。把它们判红 = 判据本身错。
+    #   ⇒ 单开一条**按准则 1 原意**的判据：扩展包**生产码**不得 import 任何游戏内容包。
+    #   覆盖面刻意排除 `tests/`（测试按包名 import 自己的包是本分）；本仓互相 import
+    #   与 import 引擎都属于契约允许面。
+    gamedeps = scan_extends_game_deps()
+    check("扩展包生产码零游戏内容包 import（准则 1 对 extends 的覆盖）", not gamedeps,
+          "\n      " + "\n      ".join(gamedeps))
     check("零动态导入穿透（importlib/__import__ 指向外部包）", not dyn,
           "\n      " + "\n      ".join(dyn))
 
