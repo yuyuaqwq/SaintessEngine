@@ -33,7 +33,20 @@ from saintess_engine.text import render_or
 
 from .diagnostics import diag as _diag
 
-__all__ = ["CUE_NAMES", "build_cue_bus", "cue", "cue_of"]
+__all__ = ["CUE_NAMES", "TIME_SLOT", "build_cue_bus", "cue", "cue_of", "with_now"]
+
+#: ★ payload 里「绝对时刻」这一格的键名（2026-09-28）。
+#:
+#: 形状：**每**一条 cue 的 payload 都带这一格，一个都不例外（`with_now` 是唯一补它的地方）。
+#: 为什么必须「每条都给」而不是「用到才给」：内容侧的渲染口是 `safe_format`
+#: （`saintess_engine/text/template.py`）—— 缺槽位**不抛**，而是把字面量
+#: ``{t}`` 原样吐到玩家屏上。那是一种只在真机上、且只在没走到那条分支时才显形的问题。
+#: 缺格还会在包侧文案表里留下一个「看起来能用的假槽位」，让缺口更难被看见。
+#:
+#: 为什么是 `t`：中性词，只声明「这是时间轴上的一个位置」，不声明单位、不声明怎么显示 ——
+#: 单位与呈现全归内容侧（引擎不内置任何措辞，见本模块头注「引擎没有任何模板可回落」）。
+#: 全仓核过：`t` 在引擎侧没有任何同名槽位/占位符占用。
+TIME_SLOT = "t"
 
 #: **已迁移**的 cue 名（随批次增长）。未迁移的点位**不进**本集合 —— 它们今天压根不发事件。
 #: ★ B2（2026-09-27）：landing 核心 14 点位同批迁移（B1 的 3 条不动）。
@@ -122,16 +135,70 @@ def cue_of(battle):
     return getattr(battle, "cues", None)
 
 
+def now_of(battle) -> float:
+    """取一场战斗的**绝对时刻**（秒；战斗未推进时 = 0）。
+
+    ★ 不新增钟源：直接读引擎内部那一个（`Battle._now`，绝对时刻制 v152 起）。
+    重复实现一份「怎么取时刻」= 第二个钟源，日后必然与真钟漂移。
+    这里只做**形状收口**，不重新定义时间。
+
+    ★ 为什么收口必须是 **给 0 但不出静默兜底**：`now_of` 在 `cue()` 的 `try` **之内**被求值
+    （`bus.emit(logs, name, with_now(...))`）—— 若这里抛，异常会被转成「诊断 + 一行坏数据」，
+    于是**一个脏时钟就能让整条表现事件消失**（住在 `try/except` 里的已迁移点位连结算判定
+    一起被跳过）。所以给 0（一个诚实的时刻），不抛。
+
+    ★ 但「给 0」**不等于**可以悄悄给 0：脏时钟意味着时间轴算错了（后面每一次 CD / 状态
+    过期都会跟着错），那是**别人要处理**的事 ⇒ 走诊断通道（`diag`），不是静默吞掉。
+    门禁 `tests/test_no_silent_fallback.py` 钉的正是这条（`except` 要么记诊断、要么显式抛）。
+    """
+    # 函数内 import：`battle.py` 也在本包内，模块顶层互相 import 会成环。
+    from .battle import _now_of
+    try:
+        return float(_now_of(battle) or 0.0)
+    except (TypeError, ValueError) as _e:
+        # 记诊断（内容侧探针钉着「整场 diagnostics 必须为空」⇒ 脏时钟当场有人管），
+        # 然后给 0：表现事件照发，玩家少看到的是时刻，不是整行。
+        _diag(battle, "cue().now_of", _e)
+        return 0.0
+
+
+def with_now(battle, payload=None) -> dict:
+    """给任意 payload 补上「绝对时刻」那一格（`TIME_SLOT`），返回**新** dict。
+
+    这是补时刻的**唯一**实现（唯一出口 `cue()` 走它）—— 门禁 `tests/test_cues_shape.py` §8
+    钉住「每条 cue 的 payload 必含 `TIME_SLOT`」，所以新加 cue 名不需要在这里补任何一行。
+
+    三条口径：
+
+    1. **调用点已有的 `t` 不被覆盖**（调用点赢）—— 时刻由**发出那一刻**的 `Battle._now` 决定，
+       不是由调用点自己编的数决定。真的会有调用点想覆盖时，门禁会当场红。
+    2. **给不了就 0，不静默缺格**：`battle` 为 None / 没有 `_now` / 值非法 ⇒ 0。
+       0 是「此刻确实在开战前」的合法取值（见下），所以它不与「没给」混淆 ——
+       **没给**才是要杜绝的状态。
+    3. **不写进调用点传进来的那个 dict**（`emit` 只读契约：订阅者拿到的必须是副本，
+       原件也不能被我们偷偷改掉）。
+    """
+    out = dict(payload or {})
+    if TIME_SLOT in out:
+        return out
+    out[TIME_SLOT] = now_of(battle)
+    return out
+
+
 def cue(battle, logs: list, name: str, payload=None) -> None:
     """发一条表现事件（点位迁移后**唯一**的出口 —— 没有第二条路，也没有 `default`）。
 
     ★ 没有 `default` 参数（2026-09-27 B2）：已迁移点位的模板**已从引擎删掉** ⇒
     措辞真源只剩内容侧文案表；调用点只给 cue 名 + 槽位，不再给任何兜底串。
+
+    ★ 出口职责（2026-09-28）：**在这里**给 payload 补上「绝对时刻」那一格。
+    补在这一个地方而不是补在 62 个调用点里，是因为这层是「一条 cue 要不要发」的唯一决策点
+    —— 补在上面就自动覆盖将来新增的点位，不会漏（漏了 ⇒ 包侧把字面量 `{t}` 打到玩家屏上）。
     """
     bus = cue_of(battle)
     if bus is not None:
         try:
-            bus.emit(logs, name, payload)
+            bus.emit(logs, name, with_now(battle, payload))
             return
         except Exception as _e:                                # noqa: BLE001
             _diag(battle, "cue().emit", _e)
@@ -146,5 +213,7 @@ def _cue_broken_line(logs: list, name: str) -> None:
 
     措辞与 `saintess_engine.cues.MISS_LINE` **同一份**（一个字符串常量）：
     两条路（引擎诊断面 / 本层兜底）在玩家眼里必须是同一句话。
+    ★ 这一行**不**带时刻：它不是一次表现事件（没有订阅者渲染过），是诊断行。
+    时刻由 `MISS_LINE` 自己的措辞决定要不要报 —— 归内容侧，引擎不编。
     """
     logs.append(render_or(None, "cue.render_failed", MISS_LINE, name=name))

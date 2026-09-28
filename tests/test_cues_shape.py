@@ -51,6 +51,79 @@ from _check import bind_check  # noqa: E402
 check = bind_check(globals(), "passed", "failed")
 
 BATTLE_DIR = os.path.join(_ROOT, "extends", "ext_combat")
+CUES_FILE = os.path.join(BATTLE_DIR, "battle", "cues.py")
+
+
+def _emit_calls_in_cues() -> list:
+    """`cues.py` 里的 `bus.emit(logs, name, …)` 直发点 → `[(函数名, 行号, 源码)]`。
+
+    ★ 判别方式：实参里出现**名字就叫 `name` 的形参**。早先写成
+    `isinstance(args[1], ast.Constant) and args[1].value == "name"` —— `name` 在真代码里
+    是 `ast.Name` 不是字面量 ⇒ 扫到 0 处 ⇒ 这条静态门禁恒绿（假绿）。已修。
+    """
+    out = []
+    for fn in [n for n in ast.parse(open(CUES_FILE, encoding="utf-8").read()).body
+               if isinstance(n, ast.FunctionDef)]:
+        for node in ast.walk(fn):
+            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "emit" and len(node.args) == 3):
+                continue
+            if not (isinstance(node.args[1], ast.Name) and node.args[1].id == "name"):
+                continue
+            out.append((fn.name, node.lineno, ast.unparse(node)))
+    return out
+
+
+def _ast_all_ext_combat() -> list:
+    """扫 `ext_combat` 全包（`battle/cues.py` 除外）的 `bus.emit(...)` 直发点。
+
+    保护什么：`cue()` 是补时刻的**唯一**出口。只要有第二处直接 emit（有人为了「省一步」
+    自己 emit 了一条），那一支就绕过补格 ⇒ 包侧的 `{t}` 在那条点位上变成字面量。
+    这条门禁是**加强**方向的：它现在会红，不放松。
+    """
+    out = []
+    for dirpath, _dirs, files in os.walk(BATTLE_DIR):
+        for fn in sorted(files):
+            if not fn.endswith(".py") or fn.startswith("test_"):
+                continue
+            path = os.path.join(dirpath, fn)
+            rel = os.path.relpath(path, BATTLE_DIR).replace("\\", "/")
+            if rel == "battle/cues.py":
+                continue          # 那一处已由上一条 check 单独钉住（就应该是它）
+            try:
+                tree = ast.parse(open(path, encoding="utf-8").read())
+            except (OSError, SyntaxError):
+                continue
+            for node in ast.walk(tree):
+                if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                        and node.func.attr == "emit" and len(node.args) == 3):
+                    continue
+                if not (isinstance(node.args[1], ast.Name) and node.args[1].id == "name"):
+                    continue
+                out.append("%s:%d %s" % (rel, node.lineno, ast.unparse(node)))
+    return out
+
+
+def _S_count() -> int:
+    """跑一遍「零静默兜底」扫描器，返回 `ext_combat` 里 S 类（静默吞）的条数。
+
+    为什么在这里复跑它：本车道给 `now_of` 加了一个 `except`（脏时钟 ⇒ 给 0），
+    那条门禁（`tests/test_no_silent_fallback.py`）会扫到它。把它的判据借过来当场量一次，
+    是为了**不让「加了 except」这件事悄悄依赖另一个车道的运行顺序**（并行跑时看不到）。
+    """
+    import subprocess
+    res = subprocess.run([sys.executable, os.path.join(_HERE, "test_no_silent_fallback.py")],
+                         capture_output=True, text=True, encoding="utf-8")
+    out = (res.stdout or "") + (res.stderr or "")
+    # 口径行形如「… 白名单 X=12 · ★静默兜底 S=0」（**没有**空格）—— 正则取 S= 后面那个数。
+    import re
+    for line in out.splitlines():
+        if "静默兜底" not in line or "=" not in line:
+            continue
+        m = re.search(r"S\s*=\s*(\d+)", line)
+        if m:
+            return int(m.group(1))
+    return -1                      # 读不到口径行 = 门禁本身炸了 = 当红
 
 
 def _raises(fn, exc=CueContractError):
@@ -572,6 +645,90 @@ check("★ ③ 直接改 actor ⇒ 两态 to_state **不同**（越权可被 sta
 check("★ ③ 且差的就是被改的那一格（不是别处漂移）",
       _st_clean["sides"]["enemy"][0]["hp"] != _st_dirty["sides"]["enemy"][0]["hp"]
       and _st_clean["sides"]["enemy"][0]["uid"] == _st_dirty["sides"]["enemy"][0]["uid"])
+
+# ============================================================
+# 9. ★ 绝对时刻（2026-09-28）：**每**一条 cue 的 payload 都必含 TIME_SLOT
+# ============================================================
+from ext_combat.battle.cues import TIME_SLOT, now_of, with_now                # noqa: E402
+from _cue_time_probe import run as _probe_cue_time                            # noqa: E402
+
+print("\n【9. 绝对时刻：每条 cue 的 payload 都必含 %r】" % TIME_SLOT)
+
+check("★ 键名 = %r（中性词；单位/呈现归内容侧，引擎不内置措辞）" % TIME_SLOT,
+      TIME_SLOT == "t")
+
+# ---- 9.1 主判据：覆盖尺真驱动出来的**每一条** cue 的 payload 都带 `t` ----
+# 为什么用覆盖尺而不是手搓几条：这 62 条里有大量「只有特定战斗形态才会发」的点位
+# （dot_tick / gauge.* / taken_mult_skipped …）。手搓会漏，漏了门禁就变成自证。
+# 覆盖尺的驱动走的是引擎**真结算路径**（`tests/test_cue_coverage.py` §3 已钉死不许直接发 cue），
+# 所以这里量到的是「真实那 62 条」，不是「我挑的几条」。
+_seen_slots, _fired, _missing = _probe_cue_time(seal=True)
+
+check("★ 覆盖尺真驱动跑通（union == CUE_NAMES，%d 条都真打到）" % len(CUE_NAMES),
+      _fired == len(CUE_NAMES), "驱动到 %d / 声明 %d" % (_fired, len(CUE_NAMES)))
+check("★ 声明的每一条都真发过一次（不是「没发到所以没查」）", not _missing,
+      str(_missing)[:150])
+_bad_t = sorted(n for n, s in _seen_slots.items() if TIME_SLOT not in s)
+check("★★ 判据：每条 cue 的 payload 都含 %r（一条都不许缺）" % TIME_SLOT,
+      not _bad_t, "缺 %r 的：%s" % (TIME_SLOT, str(_bad_t)[:150]))
+check("★ 且拿到的是**数**（不是 None / 字符串 / bool 冒充）",
+      all(isinstance(s.get(TIME_SLOT), (int, float)) and not isinstance(s.get(TIME_SLOT), bool)
+          for s in _seen_slots.values()),
+      str([(n, s.get(TIME_SLOT)) for n, s in sorted(_seen_slots.items())][:3]))
+check("★ 时刻**有真的在动**（不是恒 0：冻结 5 组推进过时间轴）",
+      len({s.get(TIME_SLOT) for s in _seen_slots.values()}) > 1,
+      str(sorted({s.get(TIME_SLOT) for s in _seen_slots.values()})[:6]))
+
+# ---- 9.2 反证：拿掉补格那一步 ⇒ 判据当场红（证明它真的在保护东西）----
+_anti_seen, _anti_fired, _ = _probe_cue_time(seal=False)
+check("★★ 反证：出口不补 %r ⇒ 同一批 cue 全部缺格（判据有牙，不是恒真）" % TIME_SLOT,
+      _anti_fired > 0 and all(TIME_SLOT not in s for s in _anti_seen.values()),
+      "反证里发到 %d 条，其中仍带 %r 的：%s"
+      % (_anti_fired, TIME_SLOT,
+         [n for n, s in _anti_seen.items() if TIME_SLOT in s][:3]))
+
+# ---- 9.3 补格位置：唯一出口，且不改调用点传进来的那个 dict ----
+_orig = {"name": "乙", "dmg": 3}
+_sealed = with_now(_b2, _orig)
+check("★ 补格只做在新副本上（调用点的 dict 一个字节都不动 —— 只读契约）",
+      TIME_SLOT not in _orig and TIME_SLOT in _sealed and _sealed["name"] == "乙",
+      "原件=%s 副本=%s" % (_orig, _sealed))
+check("★ 补格不覆盖调用点已有的 %r（时刻只由发出那一刻的钟决定）" % TIME_SLOT,
+      with_now(_b2, {TIME_SLOT: 42})[TIME_SLOT] == 42)
+check("★ 调用点没给 %r 时 = 取引擎内部那一个钟（不是 0、也不是新钟）" % TIME_SLOT,
+      with_now(_b2, {})[TIME_SLOT] == now_of(_b2) == float(_b2._now),
+      "with_now=%s _now=%s" % (with_now(_b2, {})[TIME_SLOT], _b2._now))
+
+# ---- 9.4 给不了的时刻必须是 0，且是**合法**的 0（不许缺格、不许 None）----
+class _NoClock:                          # 战斗未接入 schedule：没有 _now
+    cues = None
+check("★ 无 `_now` 的战斗 ⇒ 给 0（不是缺格、不是 None）",
+      with_now(_NoClock(), {})[TIME_SLOT] == 0.0)
+check("★ battle=None ⇒ 给 0（照样是 float）",
+      with_now(None, None)[TIME_SLOT] == 0.0
+      and isinstance(with_now(None, None)[TIME_SLOT], float))
+check("★ `_now` 是 None / 非法值 ⇒ 给 0（不把脏值透给包侧）",
+      with_now(type("X", (), {"_now": None, "cues": None})(), {})[TIME_SLOT] == 0.0
+      and with_now(type("Y", (), {"_now": "坏值", "cues": None})(), {})[TIME_SLOT] == 0.0)
+check("★ 脏时钟**不是静默兜底**：`tests/test_no_silent_fallback.py` 的 S 判据仍绿",
+      _S_count() == 0, "S=%s" % (_S_count(),))
+_dirty = type("Z", (), {"_now": "坏值", "cues": None})()
+with_now(_dirty, {})
+_dd = [d for d in (getattr(_dirty, "diagnostics", None) or [])]
+check("★ 且脏时钟会**记诊断**（内容侧探针钉着「整场 diagnostics 必须为空」）",
+      len(_dd) == 1 and _dd[0].get("stage") == "cue().now_of", str(_dd)[:120])
+check("★ 刚构造、没推进过的战斗 ⇒ 0（开战前这一刻 = 合法取值，不是缺格）",
+      now_of(_b2) == 0.0, "now_of=%r" % (now_of(_b2),))
+
+# ---- 9.5 静态：补格只在这一个地方做（不许第二个出口偷偷漏掉）----
+_emit_sites = _emit_calls_in_cues()
+check("★ 静态：`cues.py` 里只有 `cue()` 一处直接 emit（补格点唯一 ⇒ 将来加 cue 也会漏不掉）",
+      len(_emit_sites) == 1 and _emit_sites[0][0] == "cue", str(_emit_sites)[:150])
+check("★ 且那一处 emit 传的是 `with_now(...)`（不是原 payload）",
+      bool(_emit_sites) and "with_now(" in _emit_sites[0][2],
+      _emit_sites[0][2] if _emit_sites else "")
+check("★ 静态：ext_combat 全包没有第二处 `bus.emit(...)` 直发（漏了就没法保证每条都有 %r）"
+      % TIME_SLOT, not _ast_all_ext_combat(), str(_ast_all_ext_combat())[:150])
 
 print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
 sys.exit(1 if failed else 0)
