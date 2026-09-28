@@ -212,6 +212,41 @@ def t8_bridge():
     check("桥不产出提示行（旁路）", bus.fire("order_paid", {"qq_id": 1, "lines": []}) is not None
           and m.records[-1].kind == "shop.paid")
     check("未映射事件被记入 missed", br.missed == [] or "nope" not in br.missed)
+
+    # L669：ctlog 保留参数名不得再作流水字段名传过去。
+    # ctx 里本来就带 `actor`（actor_keys 的第一个键）；一旦它被放进
+    # fields，`emit(**fields)` 就会报 "got multiple values for keyword argument" ——
+    # 而总线默认 tolerant_fire 只记一句 warning 就跳过 ⇒ **流水无声丢失**。
+    # 上面那条用例漏掉它：那条用的是「详细映射表」，
+    # 白名单 filters 掉了 actor；**简写映射表**（allow 为空 = 不过滤）才会报。
+    mL = TL.MemorySink()
+    busL = EventBus(("order_paid",))
+    brL = TL.EventLogBridge(TL.TLog(sinks=[mL]), {"order_paid": "shop.paid"})   # 简写 = 无白名单
+    brL.attach(busL)
+    busL.fire("order_paid", {"actor": "p1", "amount": 999})
+    check("★ 简写映射表 + ctx 带 actor → 流水真落盘（不被 tolerant_fire 吞掉）",
+          len(mL.records) == 1 and mL.records[0].actor == "p1", str(len(mL.records)))
+    check("保留名 actor 不进 fields（它是 emit 的保留参数）",
+          "actor" not in mL.records[0].fields, str(mL.records[0].fields))
+    check("普通字段仍然进 fields（不是一律丢掉）",
+          mL.records[0].fields == {"amount": 999}, str(mL.records[0].fields))
+    for reserved in ("kind", "tags", "fields"):        # 同系列全部保留名
+        mm = TL.MemorySink()
+        bb = EventBus(("e",))
+        rl = TL.EventLogBridge(TL.TLog(sinks=[mm]), {"e": "a.b"})
+        rl.attach(bb)
+        bb.fire("e", {reserved: "X", "ok": 1})
+        check("保留名 %r 不进 fields 且不报错" % reserved,
+              len(mm.records) == 1 and reserved not in mm.records[0].fields,
+              str([r.fields for r in mm.records]))
+    # 反证：保留名**不可由调用方的 drop 参数解除**（否则下个读者会把它拆下来）
+    md = TL.MemorySink()
+    bd = EventBus(("e",))
+    rd = TL.EventLogBridge(TL.TLog(sinks=[md]), {"e": "a.b"}, drop=())
+    rd.attach(bd)
+    bd.fire("e", {"actor": "p1"})
+    check("保留名不受调用方 drop 参数影响（drop=() 也报错等于流水丢失）",
+          len(md.records) == 1, str(len(md.records)))
     br2 = TL.EventLogBridge(tl, {}, strict=True)
     bus2 = EventBus(("x",))
     sub = br2.subscriber("x")
