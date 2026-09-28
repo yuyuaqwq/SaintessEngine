@@ -23,6 +23,7 @@ T1 的硬判据是「一个域能从内容包上移到引擎、再迁回包，�
 """
 from __future__ import annotations
 
+import io
 import json
 import os
 import sys
@@ -215,6 +216,37 @@ def main() -> int:
           and PK.domain_source(pkg, "instances") == "package"
           and R.resolve_domain(pkg, "instances").replace("\\", "/") == "content/data",
           sorted(set(eff2) ^ set(R.read_domain_decl(pkg))))
+
+    # ───────────────────────────────────── E. 模块级不留死导入（审计 L121 同族残留）
+    # 为什么有它：上一批把「读扩展包域声明」的 except 收窄到只包单次文件读取，
+    # 函数内的 `import json as _json` 成了真身，**模块级那份 `import json` 就成了死导入**
+    # （零 `json.` 使用）。它不报错、不影响行为，只是骗下一个人以为本模块用 json 做别的什么。
+    # ⇒ 判据按 **AST 走引用**（不是 grep 字面量）：数模块级 import 的绑定名在文件里
+    #   到底有没有被真的取用。函数内的同名 import 不算 —— 那份才是真身。
+    print("\n【E. ★ 模块级 import 死导入清零（不靠人眼，靠 AST 引用计数）】")
+    import ast
+    _src = os.path.join(FW_ROOT, "saintess_engine", "domains.py")
+    _tree = ast.parse(io.open(_src, encoding="utf-8").read(), filename=_src)
+    _mod_level = []          # [(绑定名, 行号)]
+    for _n in _tree.body:
+        if isinstance(_n, ast.Import):
+            for _a in _n.names:
+                _mod_level.append((_a.asname or _a.name.split(".")[0], _n.lineno))
+        elif isinstance(_n, ast.ImportFrom):
+            for _a in _n.names:
+                if _a.name != "*":
+                    _mod_level.append((_a.asname or _a.name, _n.lineno))
+    # AST 不带作用域，函数体内的同名 Load 会被一并算进来 —— 对本模块而言这是
+    # **故意的保守口径**：宁可多算一次引用、也不放过真死导入（不存在误红的代价）。
+    _dead = []
+    for _name, _ln in _mod_level:
+        _used = sum(1 for _n2 in ast.walk(_tree)
+                    if isinstance(_n2, ast.Name) and _n2.id == _name
+                    and isinstance(_n2.ctx, ast.Load))
+        if _used == 0:
+            _dead.append(":%d %s" % (_ln, _name))
+    check("domains.py 模块级 import 零死导入（AST 引用计数）",
+          not _dead, "死了：%s" % "; ".join(_dead))
 
     print("\n===== 结果：通过 %d / %d =====" % (PASS, PASS + FAIL))
     for f in FAILURES:

@@ -35,7 +35,10 @@
   `<pkg>/editor/domains.json`。包声明了同名域 → 这份里的那一域不再参与取值。
 """
 import io
-import json
+# ★ 审计 L121 同族残留：模块级 `import json` 是**死导入**（零 `json.` 使用，
+#   函数内另有 `import json as _json`）—— 上一批把 except 收窄到「只包单次文件读取」
+#   时函数级 import 就成了真身，模块级那份没跟着下。留着它 = 让下一个人以为
+#   本模块用 json 做别的什么（判据 4 死代码）。**别在这里加回** —— 要 json 就用函数内那份。
 import os
 
 
