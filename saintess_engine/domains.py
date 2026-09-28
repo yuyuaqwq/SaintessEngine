@@ -206,4 +206,14 @@ def decl_switch(raw) -> tuple:
                 v = holder.pop(opt)
                 if isinstance(v, bool):
                     use_builtin = v
-    return (inner if inner is not None else raw), use_builtin
+    # ★ 2026-09-28 审计 L1934-1：包装层与顶层**合并**，不再「整体替换」。
+    #   原写法 `inner if inner is not None else raw` 在 {"skills":…,"domains":{…}} 下
+    #   把顶层 skills 整条丢掉（复现：返回 {'maps':…}，skills 静默消失）。
+    #   口径：包装层**优先**（同名域以包装层为准），顶层其余键补进来 ——
+    #   两种写法都合法（docstring 已列），不许任一种静默吃掉另一种。
+    if inner is None:
+        return raw, use_builtin
+    merged = {k: v for k, v in raw.items() if k != "domains"}
+    for did, meta in inner.items():
+        merged[did] = meta
+    return merged, use_builtin
