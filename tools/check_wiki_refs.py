@@ -184,6 +184,14 @@ def main() -> int:
     drifts, unresolved, unverified, checked = [], [], [], 0
     bare_checked, bare_unverified = 0, []
     crossrepo = []   # 显式标注「游戏仓」的引用：本仓解析不到属预期，只提示
+    # ★ L208 静默吞：crossrepo 的判据本应是「本仓确实没有该文件」，但它只看
+    #   basename 名单（`_is_game_repo_ref`）与文档里的「游戏仓/游戏侧」字样。
+    #   实测 14 条引用是**已失效的旧游戏仓布局**（`game/content_rules/apply.py`、
+    #   `game/data/skills.py:1466`、`commands/boss_script.py`）—— 那些路径如今在游戏仓
+    #   已不存在（orlandia 改成 `content/`），而本仓又**恰好有同名文件**（13 份 apply.py）
+    #   ⇒ 尾部路径匹配失败 ⇒ 归 crossrepo「属预期」⇒ 门禁一直绿。
+    #   这一档单列成 `misresolved` 并计入退出码：同名不是理由，路径对不上才是。
+    misresolved = []
     for root, dirs, fs in os.walk(WIKI):
         for f in sorted(fs):
             if not f.endswith(".md"):
@@ -269,9 +277,17 @@ def main() -> int:
                         else:
                             target = cands[0]
                     if not target:
-                        # 显式标注跨仓的引用（wiki 里写 `游戏仓 xxx.py:NN`）：
-                        # 本仓解析不到属**预期**，归入 crossrepo 提示而非"文件未找到"。
-                        if CROSSREPO_RE.search(text[:m.start()] + " " + text[m.start():m.start() + 24]) \
+                        # ★ 跨仓判据只对「本仓确实没有该文件」成立（L208）。
+                        #   basename 在本仓命中、而带路径引用的**尾部对不上** = 引用已失效
+                        #   （游戏仓改目录布局的最典型形态）⇒ 单列并计入退出码，
+                        #   不许归 crossrepo「属预期」而让门禁一直绿。
+                        bn = os.path.basename(base.lstrip("./").replace("\\", "/"))
+                        same_name = [c for c in (cands or ()) if os.path.basename(c) == bn]
+                        if same_name:
+                            misresolved.append((wrel, ln, base, n, same_name[:3]))
+                        # 显式标注跨仓的引用（wiki 里写「游戏仓 xxx.py:NN」）：
+                        # 本仓解析不到属**预期**，归入 crossrepo 提示而非「文件未找到」。
+                        elif CROSSREPO_RE.search(text[:m.start()] + " " + text[m.start():m.start() + 24]) \
                                 or _is_game_repo_ref(base):
                             crossrepo.append((wrel, ln, base, n))
                         else:
@@ -325,11 +341,18 @@ def main() -> int:
     print(f"wiki 行号引用自检：可判定 {checked} 处（另纯行号档 {bare_checked} 处） → "
           f"drift {len(drifts)} 处"
           f"；语义存疑 {len(unverified)} + {len(bare_unverified)} 处；"
-          f"跨仓 {len(crossrepo)} 处；未解析 {len(unresolved)} 处")
+          f"跨仓 {len(crossrepo)} 处；未解析 {len(unresolved)} 处"
+          + (f"；★ 失效（旧布局/改名，本仓有同名文件）{len(misresolved)} 处" if misresolved else ""))
     if unresolved:
         print("\n-- 未解析文件（basename 不在仓库，且非已知游戏仓路径 → 建议核对） --")
         for r in unresolved[:15]:
             print(f"  {r[0]}:{r[1]} → {r[2]}:{r[3]}  ({r[4]})")
+    if misresolved:
+        print("\n-- ★ 失效引用（本仓有同名文件，但引用的尾部路径对不上 ⇒ 不是「属预期的跨仓」）"
+              f"{len(misresolved)} 处 --")
+        print("   典型成因：游戏仓改了目录布局（如 game/ → content/），文档仍指旧路径。")
+        for wrel, ln, base, n, same in misresolved:
+            print("  %s:%d → %s:%d   本仓同名: %s" % (wrel, ln, base, n, ", ".join(same)))
     if drifts:
         print("\n-- drift（文档说 A 行，符号区间在 B） --")
         for d in drifts:
@@ -375,7 +398,9 @@ def main() -> int:
                     total += 1
             open(wpath, "w", encoding="utf-8", newline="\n").write(t)
         print(f"\n-- --fix 已改写 {total} 处（限定文件：{', '.join(sorted(FIX_ALLOW))}）--")
-    return 1 if drifts else 0
+    # ★ misresolved 与 drifts 同档：都是「文档指到了不存在的地方」，
+    #   阻断（否则这 14 条会永远绿着，直到有人手动翻 crossrepo 清单才发现）。
+    return 1 if (drifts or misresolved) else 0
 
 
 if __name__ == "__main__":

@@ -170,17 +170,17 @@ from ext_combat.battle.effects import register_action
 def _reuse_existing(): ...
 
 # ③ 技能数据：被动技能 + passive dict
-#    真实样例（game/data/skills.py:1123，狂热 zhan_yi_crit）：
+#    真实样例（games/orlandia/content/data/skills.json，狂热 zhan_yi_crit）：
 #    'passive': {"proc": "zhan_yi_crit", "stacks": 8, "add": 0.15}
 #    即：proc 选声明、stacks 是阈值（对应 judge.ge_field="stacks"）、add 是数值
 #    本模板对应写成：'passive': {"proc": "my_proc", "stacks": 8, "mult": 0.15}
 
 # ④ 开战装配
-from game.content_rules.apply import apply_game_content
-apply_game_content(actor)              # ← 内容侧单一入口（游戏仓侧 S7 步）：内含 apply_class_mech 等全部步骤
+from content.apply import apply_game_content
+apply_game_content(actor)              # ← 内容侧单一入口（数据包 S7 步）：内含 apply_class_mech 等全部步骤
 ```
 
-> ⚠️ 参考实现里 `apply_game_content`（`game/content_rules/apply.py:100`）是
+> ⚠️ 参考实现里 `apply_game_content`（`games/orlandia/content/apply.py:338`）是
 > **唯一**开战装配入口，顺序契约写死在里面（① 引擎配置 → ② 装备词条 → ③ `apply_class_mech`
 > → ④ 挂敌身条 → ⑤ 条件乘区 → ⑥ 食物），并用 actor 顶部标记 `_content_applied` 保证幂等。
 > **自己写时不要绕过它单点调 `apply_class_mech`** —— 顺序错了会静默不生效

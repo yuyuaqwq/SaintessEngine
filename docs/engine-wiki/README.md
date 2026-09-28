@@ -258,8 +258,8 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
 
 - `phase` / `player_low` / `pv_broken` 三个事件在 `EVENTS` 里，但**引擎没有任何 fire 点位**（由上层驱动）。
 - `effects["reduce"]` 由 `stats.py` 写入面板，但**伤害路径不消费**它。
-- 技能级 `accuracy`（`game/data/skills.py:1466,2284` 两处）与技能级 `crit` 字段**无引擎消费方**。
-- `game/data/skills.py` 里有 **20 个** `effect=` 名词既不在 `EFFECT_ACTIONS` 也不是引擎动词 → **静默 no-op**。
+- 技能级 `accuracy`（`games/orlandia/content/data/skills.json` 两处）与技能级 `crit` 字段**无引擎消费方**。
+- `games/orlandia/content/data/skills.json` 里有 **20 个** `effect=` 名词既不在 `EFFECT_ACTIONS` 也不是引擎动词 → **静默 no-op**。
 - ~~`Battle.dmg_mult` / `Battle.pet` / `Battle._cast_ctx` / `Battle._target_ctx` / `Battle._events` /
   `Battle.__init__(st=…)` / `schedule.HOT_INTERVAL` / `schedule.CAST_ITEM` / `Battle.DEFAULT_CT_WAIT`~~
   —— **2026-09-11 已全部删除**。⚠️ 但 `dmg_mult` / `pet` 不是死字段：它们是

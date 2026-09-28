@@ -46,7 +46,7 @@
 | **扩展包** | `extends/<pkg>/` | 装游戏能力：类与形状、`install_engine()` 注册动作与规则、自己的 `domains.json` 域声明、可选 `provides` 能力键；可 `depends` 别的扩展包 | `depends` 数据包（报错）· 偷偷 import 没写进 `depends` 的包（门禁 B）· 占「身份」（谁的玩家 / 哪款游戏） |
 | **数据包** | `games/<pkg>/` | 装一款游戏的全部内容：数据表 + 声明表 + 装配器（`install_engine()` / `apply_game_content(actor)`）+ 命令层；`depends` 任意扩展包 | 一个进程装两个（指令路由 / 动作注册表 / 文案表 / 时钟都是进程级单例，会互撞 —— 要跑两款游戏就开两个进程）· 要求别人 import 它 |
 
-**判断某个东西该放哪一层**（沿用游戏仓 `game/content_rules/__init__.py:10` 的判据）：
+**判断某个东西该放哪一层**（沿用数据包 `games/orlandia/content/__init__.py` 的判据）：
 
 > **凡读游戏表或职业名 → 数据包。** 引擎不得 import 内容包；
 > 需要数值时经 `saintess_engine.config` 注入 hook 取。
@@ -252,16 +252,16 @@
 `game/content_rules/apply.py`（156 行，S7 新增）：
 
 ```python
-def ensure_engine_configured() -> None:                    # game/content_rules/apply.py:88
+def install_engine() -> None:                    # games/orlandia/content/apply.py:129
     """引擎配置一次性装配（旧 load_game_defaults 的收敛点，幂等）"""
 
-def apply_game_content(actor: dict, ctx: dict | None = None) -> dict:   # game/content_rules/apply.py:100
+def apply_game_content(actor: dict, ctx: dict | None = None) -> dict:   # games/orlandia/content/apply.py:338
     """开战/进场内容装配的唯一收敛点（幂等）"""
 ```
 
 内容侧的**调用顺序契约**写死在 `apply_game_content` 里（原文注释：
 「铁律，写死在 `apply_game_content` 里——命令层不得再自行排列」）。逐字顺序
-（`game/content_rules/apply.py:24-41` 的 docstring）：
+（`games/orlandia/content/apply.py:10-24` 的模块 docstring）：
 
 | # | 调用 | 说明 |
 |---|---|---|
@@ -276,10 +276,10 @@ def apply_game_content(actor: dict, ctx: dict | None = None) -> dict:   # game/c
 你自己做时，照这个结构写一个 `apply_my_content(actor)`，把顺序写成契约并加幂等测试。
 
 ⚠️ **S7 的已知副作用（值得学）**：`apply_game_content` 的幂等靠 actor 顶部标记键
-`_content_applied`（`game/content_rules/apply.py:81`）实现，而**该键会随 actor 全量落进战斗存档 / PVP 状态**
+`_content_applied`（`games/orlandia/content/apply.py:88`）实现，而**该键会随 actor 全量落进战斗存档 / PVP 状态**
 （`serialize._STRIP_KEYS` 只剥 `_skill_index`）。原文自己记了这件事：
 「无任何数值/读取语义依赖它，S9 若要清掉需改引擎 `serialize.py`（引擎改动，本步不做）」
-（`game/content_rules/apply.py:55-58`）。**教训**：往 actor 上加内部标记 = 进存档。
+（`games/orlandia/content/apply.py:31-36`）。**教训**：往 actor 上加内部标记 = 进存档。
 
 ## 内容侧（游戏仓 / 奥兰迪亚侧）还有哪些 **不属于** 引擎文档的东西
 

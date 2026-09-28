@@ -143,9 +143,9 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 
 | 项 | 结论 |
 |---|---|
-| `actor["_content_applied"]`（bool） | S7 的 `apply_game_content` 幂等标记（游戏仓 `game/content_rules/apply.py:81`）。**会随 actor 全量落进战斗存档 / PVP 状态**（引擎 `serialize._STRIP_KEYS` 只剥 `_skill_index`）。原文自记「无任何数值/读取语义依赖它，S9 若要清掉需改引擎 `serialize.py`」（游戏仓 `apply.py:55-58`） |
+| `actor["_content_applied"]`（bool） | S7 的 `apply_game_content` 幂等标记（数据包 `games/orlandia/content/apply.py:88`）。**会随 actor 全量落进战斗存档 / PVP 状态**（引擎 `serialize._STRIP_KEYS` 只剥 `_skill_index`）。原文自记「无任何数值/读取语义依赖它，S9 若要清掉需改引擎 `serialize.py`」（数据包 `apply.py:31-36`） |
 | `actor["dot_next"]` / `actor["dot_jumps"]`（dict） | 引擎周期结算的运行期辅助（`schedule.py:645-646` 惰性建），**同样落盘**。这是「续战能对上」的原因，但字段名与内容无关 |
-| `actor["_dmg_taken_mult"]`（float） | 承伤乘区（`landing.py:102-108` 读）。由上层直写（例 游戏仓 `commands/boss_script.py:684`）；**同样落盘** |
+| `actor["_dmg_taken_mult"]`（float） | 承伤乘区（`landing.py:102-108` 读）。由上层直写（例 数据包 `content/flow/boss_script.py:769`）；**同样落盘** |
 | ~~`actor["reduce_left"]`~~ / `reduce_all_left` | ★ 2026-09-28 收口第 2 批**已删**（引擎不再写；它原先无消费者，是容器 `expire` 的影子账）。`reduce_all_left` **仍**只由内容侧 bridge 透传/播种 |
 | `actor["act_count"]` | `actor_auto` 每动 +1（`battle.py:475`），AI 的 `round_mod` 谓词读它；落盘 |
 
