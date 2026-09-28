@@ -306,7 +306,9 @@ def t2_positive(body, tpat):
     # ★ 2026-09-28 审计 L4781（批次 2 · 包侧）：`require_stats` 计数键玩家可见名 **2** 键
     #   （`stat_count_name.fish_count` / `.craft_count`，新分类「计数名」）⇒ 3273 → 3275。
     #   ②中文键数锚点**照样不变**（仍 169，键名全 ASCII）——别跟着 +2。
-    check("包内文案条数锚点 == 3275（条数变了就同步更新本门禁的锚点）", len(body) == 3275, len(body))
+    # ★ 2026-09-29 审计 afix2 批次 2：删死文案 `nav.here` ⇒ 3275 → 3274
+    #   （中文键数锚点仍 169，键名全 ASCII —— 别跟着动）。
+    check("包内文案条数锚点 == 3274（条数变了就同步更新本门禁的锚点）", len(body) == 3274, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
