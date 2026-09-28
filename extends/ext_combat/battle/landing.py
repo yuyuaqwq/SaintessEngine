@@ -107,7 +107,7 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
             from . import stats as _S
             _st_t = _S.actor_stats(battle, target)
             _res_key = "abyss_res" if element == "dark" else "elem_res"
-            _ar = min(float(_st_t.get(_res_key, 0) or 0), 0.5)
+            _ar = min(float(_st_t.get(_res_key, 0) or 0), _F.taken_elem_resist_cap())
             if _ar > 0 and dmg > 0:
                 red = max(1, int(dmg * _ar))
                 dmg = max(1, dmg - red)
@@ -337,23 +337,25 @@ def _apply_taken_reductions(battle, target: dict, dmg: int, dmg_kind: str,
                             logs: list) -> int:
     """N10-B6：承伤侧百分比免伤 + 格挡（对齐旧 _damage_actor 物免/魔免段 + block 段）。
 
-    按 dmg_kind 消费（phys 段吃物免 / magi 段吃魔免；各 cap 40%），随后 block 格挡
+    按 dmg_kind 消费（phys 段吃物免 / magi 段吃魔免；**各封顶到内容侧声明的 cap**，
+    原写死 40%，2026-09-29 下沉为 `formulas.taken_resist_cap()`），随后 block 格挡
     概率减免一半（cap 40%）。真伤/空 kind 不减免。引擎零知识：减免率是面板数值；
-    格挡的两个常量（概率上限 cap / 命中减免比例 reduce）读内容侧骨架表（V4 下沉，
-    `formulas.block_cap()/block_reduce()`；未装配 → 0.0 = 不格挡）。
+    ★ **本函数三个 cap 现在全部走内容侧骨架表**（V4 迁 block 的两个 · E2 迁 dodge 之外的
+      物免/魔免），未装配 → 各自同语义中性值：block 段 0.0 = 不格挡，
+      物免/魔免段 **0.40 = 原写死值**（与已装内容逐字一致）。
     """
     try:
         from . import stats as S
         st = S.actor_stats(battle, target)
         kd = str(dmg_kind or "")
         if "phys" in kd and "true" not in kd:
-            pr = min(float(st.get("phys_reduce", 0) or 0), 0.4)
+            pr = min(float(st.get("phys_reduce", 0) or 0), _F.taken_resist_cap())
             if pr > 0:
                 red = max(1, int(dmg * pr))
                 dmg = max(1, dmg - red)
                 _cue(battle, logs, "battle.landing.phys_immune", {"red": red})
         if "magi" in kd and "true" not in kd:
-            mr = min(float(st.get("magic_reduce", 0) or 0), 0.4)
+            mr = min(float(st.get("magic_reduce", 0) or 0), _F.taken_resist_cap())
             if mr > 0:
                 red = max(1, int(dmg * mr))
                 dmg = max(1, dmg - red)

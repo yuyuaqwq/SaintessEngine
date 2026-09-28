@@ -100,6 +100,21 @@ _NEUTRAL_SKELETON = {
     #   与上面三行同理由，**不在零效应段**：归零 = 伤害零浮动（另一个平衡选择，不是「没有」），
     #   故默认值取原写死值 0.15，与已装内容逐字一致。读点 = `damage_variance()`。
     "damage": {"variance": 0.15},
+    # ---- 2026-09-29（审计 L566/L246 同族未收口 · 第 4 次）：承伤侧**物免/魔免的 cap** ----
+    #   原写死在 `landing._apply_taken_reductions`（`min(phys_reduce, 0.4)` /
+    #   `min(magic_reduce, 0.4)` 两处）。它是**玩家可见的平衡数值**（决定「物抗词条叠满
+    #   最多能减掉几成伤害」），内容侧零配置面 ⇒ 第二款游戏想改自己的减伤上限只能改引擎。
+    #   ★ 与 block / dodge 同族同形：那两个 cap 早已下沉（`block_cap()` / `dodge_cap()`），
+    #   唯独这两个漏在原地 —— **同一次收口只覆盖被点名的那个点，邻支不会顺带修掉**。
+    #   默认值取原写死值 0.40（与已装内容逐字一致 ⇒ 玩家可见行为零变化）；
+    #   **不在零效应中性段**：cap 归 0 = 减伤整条失效（是另一个平衡选择，不是「没有」）。
+    "taken_resist": {"cap": 0.40},
+    # ---- 2026-09-29（同上，邻支 ②）：**元素抗性**减免上限（原写死 0.5）----
+    #   `landing.deal_damage` 里 `min(elem_res / abyss_res, 0.5)`。同族第三处硬编码
+    #   （前两处 = 物免/魔免 cap 0.4，同一次被收口）。同样是玩家可见平衡数值
+    #   （决定「元素抗性词条最多减几成」），内容侧零配置面。
+    #   默认值取原写死值 0.50 ⇒ 与已装内容逐字一致。
+    "taken_elem_resist": {"cap": 0.50},
 }
 
 
@@ -188,6 +203,30 @@ def dodge_cap() -> float:
     不必动引擎。默认值 = 原写死值 0.40（未装配时也逐字一致）。
     """
     return _skel_sub_num("dodge", "cap", 0.40)
+
+
+def taken_resist_cap() -> float:
+    """承伤侧**物免/魔免的减免上限**（`pr = min(phys_reduce, cap)`）。
+
+    ★ 2026-09-29（审计 L566/L246 同族未收口）：原先写死在
+      `landing._apply_taken_reductions` 的两处 `min(..., 0.4)`。同一笔账的邻支 ——
+      闪避上限（`dodge_cap()`，2026-09-25 迁）与格挡上限（`block_cap()`，V4 迁）
+      **早已下沉到这张表**，唯独物免/魔免这两个漏在引擎里。
+      内容侧声明 `FORMULA_SKELETON["taken_resist"]["cap"]`；默认值 = 原写死值 0.40
+      （未装配时也逐字一致 —— 这是本 getter 唯一的回落点，**不加第二处**）。
+    """
+    return _skel_sub_num("taken_resist", "cap", 0.40)
+
+
+def taken_elem_resist_cap() -> float:
+    """承伤侧**元素抗性**减免上限（`ar = min(elem_res / abyss_res, cap)`）。
+
+    ★ 2026-09-29（同族邻支 ②）：原先写死在 `landing.deal_damage` 的
+      `min(..., 0.5)`。与物免/魔免的 cap 是**同一笔账的第三处**硬编码，
+      前两处（0.4）本轮已下沉，此处一并收口（Step 0p：点了 1 处、同族实有 3 处）。
+      内容侧声明 `FORMULA_SKELETON["taken_elem_resist"]["cap"]`；默认值 = 原写死值 0.50。
+    """
+    return _skel_sub_num("taken_elem_resist", "cap", 0.50)
 
 
 def heal_down_per_stack() -> float:

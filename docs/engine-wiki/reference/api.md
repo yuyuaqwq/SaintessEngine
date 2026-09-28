@@ -177,7 +177,7 @@ act(ctx: ActCtx) -> (logs, ended)                                     # battle.p
 | `_seed_ct_one` / `_index_one_actor` / `_index_skills` | `battle.py:134/117/151` | 仅包内 |
 | `_do_defend` / `_do_flee` | `battle.py:649/654` | 仅包内 |
 | `_ensure_battle_started` | `battle.py:668` | 仅包内 |
-| `_on_actor_dead(actor, logs=None)` | `battle.py:684` | `landing._apply_damage` 调（`landing.py:411`） |
+| `_on_actor_dead(actor, logs=None)` | `battle.py:684` | `landing._apply_damage` 调（`landing.py:492`） |
 | `_check_side_end` | `battle.py:710` | 仅包内 |
 
 ### 序列化
