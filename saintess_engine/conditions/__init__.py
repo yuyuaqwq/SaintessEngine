@@ -55,7 +55,7 @@
 from __future__ import annotations
 
 from types import MappingProxyType
-from typing import Callable, Iterable, Optional
+from typing import Any, Callable, Iterable, Optional
 
 __all__ = ["Conditions", "Ctx", "UnknownCondition"]
 
@@ -201,7 +201,7 @@ class Conditions:
         return out
 
     # ---------------------------------------------------------------- 求值
-    def evaluate(self, key: str, ctx) -> bool:
+    def evaluate(self, key: str, ctx) -> Any:
         """用 `ctx` 判一次 `key`。**返回值 = 判定函数的原样返回**。
 
         * 未注册 → `UnknownCondition`（点名 key，并把已注册清单带上）——
