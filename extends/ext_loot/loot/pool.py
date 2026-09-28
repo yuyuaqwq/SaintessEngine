@@ -335,11 +335,23 @@ class LootTable:
         return spec
 
     def resolve(self, ref, ctx):
-        """调内容侧解析器（未配置 → None，等于"这条出不来"）。"""
+        """调内容侧解析器（未配置 → None，等于"这条出不来"）。
+
+        ★ 返回前**深拷贝**（审计 L565）：`r["count"] = r.get("count",1) * n` 这三处写口
+          （`_s_weighted` / `_s_fixed` / `roll_sub`）都**就地改**解析器返回的那个 dict。
+          解析器若返的是**域表里的共享对象**（`return TABLE.get(ref)` 这种现实写法），
+          第一次 roll 把 count 从 1 写成 4、第二次写 16、第三次 64 —— **数据表被永久污染**，
+          且**自污染**（第二次跑数值已经错，同一局内先掉的东西和后掉的不一样）。
+          拷贝在**唯一入口**做一次：内容侧拿到深拷贝、行为逐值不变，域表不再被写回。
+          判据：extends/ext_loot/tests/test_loot.py `t3_roll` 的「域表不被写回」组。
+        """
         if self._resolver is None:
             return None
-        return self._resolver(ref, ctx)
-
+        got = self._resolver(ref, ctx)
+        if not got:
+            return None                     # None / {} / 空容器 = 这条出不来（口径不变）
+        return copy.deepcopy(got)            # ★ 写口只改副本（深拷贝：data 子层也不共享）
+    
     # ────────────────────────────── 抽取
     def sub_ctx(self, ctx, qty):
         """子池上下文：复制一份改 `qty`（不动原 ctx）；复制不了就改原对象。"""

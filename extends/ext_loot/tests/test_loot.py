@@ -151,6 +151,23 @@ def t3_roll():
         return {"type": "item", "item_id": ref}
 
     t = _tbl(pools, resolver=resolve, inline_prefixes=("gold:", "item:"))
+
+    # ★ 审计 L565：resolver 返**域表里的共享对象**时，count 写口不得把数据表就地写脏
+    #   （旧行为：第一次 roll 把 count 1→4、第二次 →16、第三次 →64，数据表永久污染且自污染）
+    _DOM = {"shared": {"type": "item", "item_id": "shared", "count": 1, "data": {"lv": 3}}}
+    _td = _tbl({"ps": {"type": "weighted", "entries": [{"item": "shared", "w": 1, "n": 2}]}},
+               resolver=lambda ref, ctx: _DOM.get(ref))
+    _got = [_td.roll("ps", qty=2) for _ in range(3)]
+    check("域表不被写回：三次 roll 的 count 逐次相同（1→2/2→2/3→2）",
+          all(len(x) == 2 and all(e["count"] == 2 for e in x) for x in _got), str(_got))
+    check("域表对象逐字未改：count 仍 1、data 子层不共享",
+          _DOM["shared"]["count"] == 1 and _DOM["shared"]["data"] == {"lv": 3}, str(_DOM))
+    check("返回的是副本（改返回值不写回域表）",
+          (_td.resolve("shared", None) or {}).pop("count", None) is not None
+          and _DOM["shared"]["count"] == 1, str(_DOM))
+    check("空解析结果仍按『出不来』处理（None / 空 dict 都不给条）",
+          _td.resolve("没有这个", None) is None)
+
     r = t.roll("w1", t.ctx if hasattr(t, "ctx") else None, qty=2) if False else t.roll("w1", qty=2)
     check("weighted：抽 qty 次且每条 count 乘 n",
           len(r) == 2 and all(x["count"] == 2 for x in r), str(r))
