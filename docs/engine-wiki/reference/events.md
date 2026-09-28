@@ -32,7 +32,7 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 | 7 | `crit` | `actions.py:526-524` | `actor`, `target`, `info`, `dmg` | 攻击者 | 暴击命中（`skill_hit`/`attack_hit` 的子集，**紧跟其后**） |
 | 8 | `on_taken` | `landing.py:246`（`deal_damage`） | `actor`, `target`, `source`, `dmg` | 受击者 | 承伤落地后；**死者不触发**（走 `on_death`） |
 | 9 | `on_heal` | `landing.py:532`（`heal_actor`） | `actor`, `target`, `source`, `amount`, `overflow` | 被治疗者 | 实际回血 > 0 时 |
-| 10 | `on_kill` | `landing.py:459`（`_apply_damage`） | `actor`, `target`, `dmg` | **击杀者** | 致死伤害落地后；`source is None`（DOT/环境杀）不触发 |
+| 10 | `on_kill` | `landing.py:460`（`_apply_damage`） | `actor`, `target`, `dmg` | **击杀者** | 致死伤害落地后；`source is None`（DOT/环境杀）不触发 |
 | 11 | `on_death` | `battle.py:705`（`_on_actor_dead`） | `actor`, `target` | 死者 | 所有死亡路径统一在此；**死者的声明仍会执行**（subject 例外） |
 | 12 | `dot_tick` | `schedule.py:803`（`_settle_time_effects`） | `actor`, `target`, `key`, `dmg` | 受跳者 | DOT 每一跳 |
 | 13 | `dot_calc` | `schedule.py:749`（同上） | `target`, `dot_key`, `dmg`, `mult` | **无**（广播） | DOT 伤害落地**前**的乘区钩子 |

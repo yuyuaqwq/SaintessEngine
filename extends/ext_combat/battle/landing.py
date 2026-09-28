@@ -403,6 +403,15 @@ def _skip_event_mult(battle, target: dict, mult: float, logs: list) -> bool:
     """
     if not isinstance(mult, (int, float)) or float(mult) == 1.0:
         return False                       # 没改乘区 = 通道 B 根本没参与，无从互斥
+    # ★ 2026-09-28 审计修（台账 L3298-3）：判据**只管减免**（`mult < 1.0`）。
+    #   原判据只排除了 `== 1.0`，于是 `mult > 1.0` 的**放大**乘区（易伤 / vuln，
+    #   真实内容侧写口 `games/orlandia/content/mech/team_procs.py::timed_vuln_apply`
+    #   = `ctx["mult"] *= (1+amp)`）也会被整条互斥路径判**跳过** ⇒ **放大乘区被静默丢弃**：
+    #   角色身上同时有 `taken_pct` 声明与易伤时，易伤**完全不生效**（伤害不涨反少）。
+    #   判据的口径是「两条**减伤**相乘会让减免不可预测」——放大器**不属减免**，
+    #   它与声明通道不冲突，必须照常生效。
+    if float(mult) >= 1.0:
+        return False                       # 放大乘区：不是减免 ⇒ 不构成互斥，放行
     try:
         from .state_effects import taken_pct_keys
         if not taken_pct_keys(target):

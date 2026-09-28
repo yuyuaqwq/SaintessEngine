@@ -130,6 +130,7 @@ def _with_skeleton(patch: dict):
 
 
 #: 乘区动作（通道 B）：改 `_fire_ctx["mult"]` —— 形状同内容侧 `passive_taken_reduce`。
+NL = chr(10)
 MULT_ACT = "probe_taken_mult"
 #: 旁证动作（判据 ⑥）：只读 `_fire_ctx["dmg"]`，**不改 mult** —— 同「溢出承伤转盾」那一族。
 SPY_ACT = "probe_taken_spy"
@@ -286,6 +287,35 @@ check("★ ⑦ 声明在但不减伤 ⇒ 不跳乘区（否则两条都声明却
       real == 60, "real=%s（若被误跳过会是 100）" % real)
 check("⑦ 该档不发互斥 cue", not [x for x in lg if "已跳过" in x], str(lg))
 undo_skel0()
+
+# ============================================================
+# ⑨ ★ 放大乘区（mult > 1.0 = 易伤）**不属减免** ⇒ 必须照常生效
+# ============================================================
+print(NL + "【⑨ ★ 放大乘区（易伤）+ taken_pct 声明并存 ⇒ 放大**必须**仍生效】")
+t9, src9 = _mk("t9", "enemy", hp=500), _mk("src9", "player")
+bt9 = _bt(t9, src9)
+open_entry(t9, "probe_ward", stacks=1, value=0.30, expire=99.0)
+_arm(t9, {"taken_calc": [{"action": MULT_ACT, "mult": 1.5}]})
+_reset()
+lg = []
+real = LND.deal_damage(bt9, src9, t9, 100, lg, dmg_kind="phys")
+# 声明通道 30% 与放大乘区不冲突（一个减伤、一个放大）⇒ 两条都该生效：1.5 × 0.7 = 1.05
+check("★ ⑨ 放大乘区未被静默丢弃：100 × 1.5 × 0.7 = 105（期望 105，非 70）",
+      real == 105, "real=%s（旧判据会把放大整条跳过 ⇒ 给 70）" % real)
+check("★ ⑨ 放大时不发互斥 cue（两条没冲突，提示本身就是错的）",
+      not [x for x in lg if "已跳过" in x], str(lg))
+# 减伤方向仍然互斥（证明守卫只放开放大那一侧，没把整条判据拆掉）
+t9b, src9b = _mk("t9b", "enemy", hp=500), _mk("src9b", "player")
+bt9b = _bt(t9b, src9b)
+open_entry(t9b, "probe_ward", stacks=1, value=0.30, expire=99.0)
+_arm(t9b, {"taken_calc": [{"action": MULT_ACT, "mult": 0.6}]})
+_reset()
+lg = []
+real = LND.deal_damage(bt9b, src9b, t9b, 100, lg, dmg_kind="phys")
+check("★ ⑨ 减伤方向互斥照旧成立（100 × 0.7 = 70，且发 cue）",
+      real == 70 and len([x for x in lg if "已跳过" in x]) == 1,
+      "real=%s / %s" % (real, lg))
+
 
 # ============================================================
 # ⑧ 引擎零游戏名词：互斥判据里不含游戏专名
