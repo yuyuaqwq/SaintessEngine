@@ -313,6 +313,36 @@ def main():
           r9.get("ok") is False and "game.json" in (r9.get("err") or ""), str(r9.get("err"))[:160])
 
     print(f"\n===== 结果：通过 {PASS} / {PASS + FAIL} =====")
+    # ---- ⑲（审计 L856）read_json：「文件不存在」与「文件存在但内容坏了」必须分开 ----
+    from saintess_engine.package import PackageError, read_json
+
+    f_bad = os.path.join(tmp, "bad.json")
+    with open(f_bad, "w", encoding="utf-8") as fh:
+        fh.write('{"a": [1, 2,')                                   # 截断的 JSON
+    try:
+        got = read_json(f_bad, {})
+        check("②8a 坏 JSON 不再静默变 default", False,
+              "静默返回了 %r" % (got,))
+    except PackageError as exc:
+        check("②8a 坏 JSON 抛 PackageError 且点名文件",
+              "bad.json" in str(exc), str(exc)[:160])
+
+    check("②8b 文件不存在仍返回 default",
+          read_json(os.path.join(tmp, "definitely_absent.json"), {"dflt": 1}) == {"dflt": 1})
+
+    f_ok = os.path.join(tmp, "ok.json")
+    with open(f_ok, "w", encoding="utf-8") as fh:
+        fh.write('{"k": 1}')
+    check("②8c 正常文件读法一字未变",
+          read_json(f_ok, {}) == {"k": 1})
+
+    # 反证：若把 read_json 改回「坏 JSON 也返回 default」，⑲a/⑲d 立刻报红
+    try:
+        read_json(f_bad, {"SENTINEL": "silently-swallowed"})
+        check("②8d 反证：坏 JSON 绝不能悄悄拿到 default", False, "拿到 default 了")
+    except PackageError:
+        check("②8d 反证：坏 JSON 绝不能悄悄拿到 default", True)
+
     for f in FAILURES:
         print("  ·", f)
     return 1 if FAIL else 0
