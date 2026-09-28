@@ -277,6 +277,18 @@ _FROZEN_DIVERGENCE = {
          r'''        _cue(battle, logs, "battle.gauge.phase_preserve",
              {"name": host.get('name', '目标'), "bar": bd.get('name', key),
               "pct": pct, "before": int(before), "after": int(after)})'''),
+        # 审计 L251 同族（2026-09-28 · 批次 4 · phase_preserve_pct 的 falsy 吞值）：
+        # 保留比例的单源化 —— 播报侧改走 `bar_preserve_pct` 单一解析口。
+        # 动因：`bd.get("phase_preserve_pct", 0.5) or 0.5` 会把内容侧显式写的 0
+        # 吞成 0.5（阶段转换「清空该条积蓄」静默变成「保留一半」，零报错），
+        # 且该比例原本在 bar_preserve 与此处各算一遍 ⇒ 播报值与落盘值可能分叉。
+        # 合法配置（0.5 / 1.0）行为逐字节不变；只有原先被吞的 0 这一支改变。
+        (r'''    from . import bar_def, bar_preserve, bar_state''',
+         r'''    from . import bar_def, bar_preserve, bar_preserve_pct, bar_state'''),
+        (r'''        pct = int(round(float(bd.get("phase_preserve_pct", 0.5) or 0.5) * 100))''',
+         r'''        # 比例走 bar_preserve_pct 单一解析口（本轮审计 L251 同族）：原先此处与
+        # bar_preserve 各自 `or 0.5`，合法 0 被吞成 0.5 ⇒ 播报值与落盘值可能分叉。
+        pct = int(round(bar_preserve_pct(key) * 100))'''),
     ),
     "passive_reflect_bar_act": (
         (r'''        logs.append(f"🪨 反震：反弹 {rd} 点伤害！")''',
@@ -318,7 +330,9 @@ PIN_NEW = {
     # ★ 重钉（2026-09-28 · 审计 L251）：bar_gain_act 的两处宽泛 except 收窄并接诊断。
     #   PIN_FROZEN（冻结副本）**一字未动**；只重钉本函数的活实现 sha，算法与旧值同源。
     'bar_gain_act': 'e831f1aaf63a4fbd6f10aad9d51748815be958e387d98a6797a581868bde9206',
-    'bar_phase_preserve_act': 'ff9f3e2c5fc920ea6e6b5b9e058ee92b6b40f8691ed9eccfbbaa1e451a59de7d',
+    # ★ 重钉（2026-09-28 · 审计 L251 同族）：保留比例单源化（falsy 吞合法 0）。
+    #   PIN_FROZEN（冻结副本）**一字未动**；只重钉本函数的活实现 sha，算法与旧值同源。
+    'bar_phase_preserve_act': '2da1168d5de782be512157838065a420ae24bc3558b8ea916c118f5944a267e7',
     'bar_time_settle_act': 'bc9bf48679b0fc8aef3a1e29ec9d7574a511d8b98f91559b6b7c67a3eab390d6',
     'passive_reflect_bar_act': '17e17b36ebcd303091da276273fcf1baa879bf51de41877b4e7e64ef4402e64a',
 }
@@ -587,6 +601,62 @@ def test_log_render_equivalence():
             _Holder(cues=_cue_bus(_StubText({"battle.gauge.phase_preserve": "P"}))),
             None, None, {"_owner": host2}, logs)
         check("④' 换表 → 该行输出变", logs == ["P"], repr(logs))
+
+        # ④'' 审计 L251 同族（2026-09-28 · 批次 4）：保留比例的 falsy 吞合法值。
+        # `bd.get("phase_preserve_pct", 0.5) or 0.5` 把内容侧显式写的 0 吞成 0.5 ——
+        # 「阶段转换清空该条积蓄」静默变成「保留一半」，零报错。
+        # 现在比例单源到 `bar_preserve_pct`：缺键才回落 0.5，合法 0 原样放行。
+        _Bus0 = _cue_bus(_StubText({"battle.gauge.phase_preserve": "P"}))
+
+        def _phase0(pct_cfg):
+            """装一份 phase_preserve_pct=pct_cfg 的 shaken 配置，跑一次阶段更迭，
+            返回 (播报行, 落盘 val)。猴补在 finally 里还原，跑完不写盘。"""
+            _orig_def = G.bar_def
+
+            def _def(k):
+                _d = dict(_orig_def(k))
+                if k == "shaken" and pct_cfg is not None:
+                    _d["phase_preserve_pct"] = pct_cfg
+                return _d
+            G.bar_def = _def
+            try:
+                h = {"name": "目标", "effects": {"bar:shaken": {"val": 40.0}}}
+                lg = []
+                A.bar_phase_preserve_act(
+                    _Holder(cues=_Bus0), None, None, {"_owner": h}, lg)
+                return lg[-1] if lg else None, G.bar_state(h, "shaken")["val"]
+            finally:
+                G.bar_def = _orig_def
+
+        # ★ 核心一条：合法 0 必须被放行（改前落盘 20.0、播报 50%）
+        _line, _val = _phase0(0)
+        check("④'' 合法 0 不被吞：落盘清空（原 20.0 → 0.0）", _val == 0.0, repr(_val))
+        check("④'' 合法 0 不被吞：播报也是 0%（原播报 50%）", _line == "P", repr(_line))
+        # 合法非 0 逐字不变（这一对是「没改坏」的护栏）
+        _line5, _val5 = _phase0(0.5)
+        check("④'' 合法 0.5 行为逐字不变（40 → 20）", _val5 == 20.0, repr(_val5))
+        _line1, _val1 = _phase0(1.0)
+        check("④'' 合法 1.0 行为逐字不变（40 → 40）", _val1 == 40.0, repr(_val1))
+        # 缺键仍回落 0.5（显式给 None = 不装该键）
+        _lineN, _valN = _phase0(None)
+        check("④'' 缺键仍回落 0.5（40 → 20）", _valN == 20.0, repr(_valN))
+        # 单一解析口直断：合法 0 四种形态
+        check("④'' bar_preserve_pct 直断：0/0.0 → 0.0",
+              G.bar_preserve_pct("shaken", 0) == 0.0
+              and G.bar_preserve_pct("shaken", 0.0) == 0.0)
+        check("④'' bar_preserve_pct 直断：None → 缺键回落 0.5",
+              G.bar_preserve_pct("__no_such_bar__") == 0.5
+              and G.bar_preserve_pct("__no_such_bar__", None) == 0.5)
+        # ★ 反证有牙：把解析口退回旧的 `or 0.5` 形态 → 上面两条 ★ 必须转红
+        _orig_pct = G.bar_preserve_pct
+        G.bar_preserve_pct = lambda k, p=None: float(
+            p if p is not None else (G.bar_def(k).get("phase_preserve_pct", 0.5) or 0.5))
+        try:
+            _r_line, _r_val = _phase0(0)
+            check("★ 反证·退回旧 `or 0.5` 解析口 → 合法 0 确实被吞成 0.5",
+                  _r_val == 20.0, repr(_r_val))
+        finally:
+            G.bar_preserve_pct = _orig_pct
 
         # ⑤ 反震（配表 / 换表）；deal_damage 猴补 no-op，隔离它自己的日志
         L.deal_damage = lambda *a, **kw: None

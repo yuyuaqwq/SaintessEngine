@@ -163,7 +163,7 @@ def bar_phase_preserve_act(battle, caster, target, params, logs):
     host = params.get("_owner") or _host_of(caster, target, params)
     if not isinstance(host, dict):
         return
-    from . import bar_def, bar_preserve, bar_state
+    from . import bar_def, bar_preserve, bar_preserve_pct, bar_state
     for key in _bar_keys_of(host):
         before = float((bar_state(host, key) or {}).get("val", 0.0) or 0.0)
         if before <= 0:
@@ -171,7 +171,9 @@ def bar_phase_preserve_act(battle, caster, target, params, logs):
         bar_preserve(host, key)
         after = float((bar_state(host, key) or {}).get("val", 0.0) or 0.0)
         bd = bar_def(key) or {}
-        pct = int(round(float(bd.get("phase_preserve_pct", 0.5) or 0.5) * 100))
+        # 比例走 bar_preserve_pct 单一解析口（本轮审计 L251 同族）：原先此处与
+        # bar_preserve 各自 `or 0.5`，合法 0 被吞成 0.5 ⇒ 播报值与落盘值可能分叉。
+        pct = int(round(bar_preserve_pct(key) * 100))
         _cue(battle, logs, "battle.gauge.phase_preserve",
              {"name": host.get('name', '目标'), "bar": bd.get('name', key),
               "pct": pct, "before": int(before), "after": int(after)})

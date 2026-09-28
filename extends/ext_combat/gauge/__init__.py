@@ -237,13 +237,29 @@ def bar_trigger(battle, enemy: dict, bar_key: str, logs: list | None = None,
     return True
 
 
+def bar_preserve_pct(bar_key: str, pct: float | None = None) -> float:
+    """阶段转换保留比例的**唯一解析口**（写口 `bar_preserve` 与 cue 播报共用）。
+
+    显式 `pct` 优先；否则读内容侧 `ENEMY_BAR_CFG[bar_key]["phase_preserve_pct"]`，
+    **缺键**才回落 0.5。回落只认 `None`：`0.0` 是合法值 —— 内容侧写
+    `"phase_preserve_pct": 0` 的语义是「阶段转换时清空该条积蓄」，
+    原 `bd.get(k, 0.5) or 0.5` 会把 0 吞成 0.5（清空变成保留一半），零报错。
+    同一比例此前在 `bar_preserve` 与 `bar_phase_preserve_act` 两处各算一遍，
+    单源化后播报与落盘不可能再分叉。
+    """
+    if pct is not None:
+        return float(pct)
+    raw = bar_def(bar_key).get("phase_preserve_pct")
+    return 0.5 if raw is None else float(raw)
+
+
 def bar_preserve(enemy: dict, bar_key: str, pct: float | None = None) -> None:
     """阶段转换保留：val 保留 pct 比例（进度遗产）。"""
     bd = bar_def(bar_key)
     if not bd:
         return
     bs = bar_state(enemy, bar_key)
-    p = float(pct if pct is not None else bd.get("phase_preserve_pct", 0.5) or 0.5)
+    p = bar_preserve_pct(bar_key, pct)
     bs["val"] = float(int(float(bs.get("val", 0.0) or 0.0) * p))
 
 
