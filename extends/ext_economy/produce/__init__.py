@@ -101,12 +101,25 @@ class Job:
 
     @classmethod
     def from_dict(cls, data: Mapping) -> "Job":
-        """从 `to_dict()` 的形状还原；缺 `started_at` → 当作 0。"""
+        """从 `to_dict()` 的形状还原；`started_at` / `ends_at` **缺一个都抛**（fail-closed）。
+
+        ★ 曾是 `started_at=data.get("started_at") or 0` + `ends_at=data.get("ends_at")`：
+          缺 `ends_at` 漏出 `int(None)` 的**原生 TypeError**（不是本模块的异常类，调用方
+          接不住也判不了哪条坏了），而 `started_at` 的 falsy 回落把 `0` 与「缺失」混成一格
+          —— 计时作业的「到点时刻」缺失 = 在途作业判不出到点，整条静默卡住。
+          缺项按**坏数据**处置：抛 `ProduceStorageError` 并点名缺哪个字段。
+          （`0` 本身仍是合法值 —— 显式写 `{"started_at": 0}` 照常还原。）
+        """
         if not isinstance(data, Mapping):
             raise ProduceStorageError(f"作业表条目不是映射：{type(data).__name__}")
+        for required in ("started_at", "ends_at"):
+            if required not in data or data[required] is None:
+                raise ProduceStorageError(
+                    f"作业表条目缺 {required!r}（坏数据 → fail-closed，不静默当 0/不漏原生异常）"
+                    f"：{dict(data)!r}")
         payload = data.get("payload")
-        return cls(kind=data.get("kind"), started_at=data.get("started_at") or 0,
-                   ends_at=data.get("ends_at"), payload=payload or {})
+        return cls(kind=data.get("kind"), started_at=data["started_at"],
+                   ends_at=data["ends_at"], payload=payload or {})
 
     def __repr__(self) -> str:  # pragma: no cover - 调试用
         return (f"Job(kind={self.kind!r}, started_at={self.started_at}, "
@@ -244,9 +257,20 @@ class Jobs:
         return self._load_by_key(self._key_of(owner))
 
     def _load_by_key(self, owner_key: str) -> list:
-        """按存储键读作业表。缺失 → 空表；在但坏 → fail-closed 抛错。"""
+        """按存储键读作业表。**只有键缺失** → 空表；键在但坏 → fail-closed 抛错。
+
+        ★ 原先是 `if raw is _MISSING or raw is None or raw == "": return []` ——
+          把「键在、值为 `None` / `""`」也当成「没有作业」，与**本模块头注 44-45 行
+          白纸黑字写的承诺**（「键在、值取不出作业表 → fail-closed 抛 ProduceStorageError」）
+          直接相反。实跑后果：玩家**在途作业与待收奖励一并蒸发且零报错**。
+          同族对照很说明问题 —— `shelf:283` 遇同样的 `None` 抛 `ShelfStateError`，
+          本包却返回 `[]`（同族两包两套判据）。
+          处置：只留 `raw is _MISSING`（**键真的不在** = 读成「没有作业」，
+          这是头注认可的合法空态）；`None` / `""` 往下走 ⇒ 落进下面的「形态不对」
+          fail-closed 抛错，点名类型。不做兜底、不做兼容。
+        """
         raw = self.store.get(owner_key, _MISSING)
-        if raw is _MISSING or raw is None or raw == "":
+        if raw is _MISSING:
             return []
         if isinstance(raw, (list, tuple)):
             data = list(raw)

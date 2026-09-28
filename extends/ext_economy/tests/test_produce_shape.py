@@ -220,8 +220,36 @@ def t5_roundtrip():
           (Job(kind="k9", started_at=11, ends_at=77, payload={"n": 2, "tags": ["x", "y"]})))
     check("from_dict 深拷贝载荷（改副本不影响原作业）",
           (j2.payload.__setitem__("n", 99), j.payload["n"])[1] == 2)
-    check("payload 缺省 = 空映射", Job.from_dict({"kind": "k", "ends_at": 1}).payload == {})
-    check("started_at 缺省 → 0", Job.from_dict({"kind": "k", "ends_at": 1}).started_at == 0)
+    check("payload 缺省 = 空映射",
+          Job.from_dict({"kind": "k", "started_at": 0, "ends_at": 1}).payload == {})
+    # ★ 审计 ext_economy 单元「produce」第 2 条（falsy 吞合法值 + 漏原生 TypeError）：
+    #   旧两条断言把「started_at/ends_at 缺一个 → 静默当 0 / 漏 int(None) 的原生 TypeError」
+    #   **钉成期望**，与该单元判定的缺陷方向相反 ⇒ 属「判据的前提已失效」，正规推进：
+    #   ① 缺任一必填时刻 ⇒ 抛 ProduceStorageError 并点名缺哪个字段
+    #   ② 显式 0 仍是合法值（回落只认「缺/None」，不认 falsy）
+    for miss in ("started_at", "ends_at"):
+        bad = {"kind": "k", "started_at": 0, "ends_at": 1}
+        del bad[miss]
+        try:
+            Job.from_dict(bad)
+            check(f"②9 缺 {miss} → 抛 ProduceStorageError", False, "静默还原了")
+        except ProduceStorageError as exc:
+            check(f"②9 缺 {miss} → 抛 ProduceStorageError 且点名字段",
+                  miss in str(exc), str(exc)[:160])
+    check("②10 显式 0 照常还原（回落只认缺/None，不吞 falsy）",
+          Job.from_dict({"kind": "k", "started_at": 0, "ends_at": 0}).started_at == 0)
+    # ★ 审计 L632：键在、值为 None / "" 不再被当成「没有作业」（静默清空在途作业与待收奖励）
+    for bad_val, why in ((None, "None"), ("", "空串")):
+        st_bad = {"o": bad_val}
+        try:
+            _ = Jobs(st_bad, Clock(0)).current("o")
+            check(f"②11 键在值为 {why} → fail-closed 抛 ProduceStorageError", False,
+                  "静默读成空表 %r" % (st_bad["o"],))
+        except ProduceStorageError as exc:
+            check(f"②11 键在值为 {why} → fail-closed 抛 ProduceStorageError",
+                  "o" in str(exc), str(exc)[:160])
+    check("②12 键真的缺失 → 仍读成空表（头注认可的合法空态）",
+          Jobs({}, Clock(0)).current("o") is None)
     st, ck = {}, Clock(5)
     q = mk(st, ck)
     q.begin("o1", Job(kind="k1", started_at=0, ends_at=50, payload={"a": 1}))
