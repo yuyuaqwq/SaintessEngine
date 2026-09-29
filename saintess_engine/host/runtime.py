@@ -32,10 +32,13 @@ import threading
 import time
 
 from ..command.registry import CommandRegistry
+from ..log import get_logger
 from ..tlog import KindTable, MemorySink, TLog
 from .env import Env, run_guards
 from .outcome import BattleOutcome, Scenario, StandIns
 from ..package import Package, PackageError, PackageStack, load_stack
+
+_log = get_logger("host.runtime")
 
 #: 默认「没有角色档」的拦截文案（中性，**不是**游戏文案；宿主/包可覆盖）
 #: ★ 2026-09-25 审计 E2b：引擎不再自带守卫文案（原默认值已搬去宿主声明）
@@ -158,8 +161,14 @@ class Host:
         try:
             from ..text import TextTable
             return TextTable.from_data(data, name=self.stack.id)
-        except Exception:                                        # noqa: BLE001
-            return None
+        except Exception as exc:                                # noqa: BLE001
+            # ★ 审计 L5469 同族（晚到批 · 第三十轮）：**读到数据却装不出表 = 真故障**，
+            # 不能与「这个包没有文案表」（上一行已 return None，那是合法路径）压成同一个结果。
+            # 后果：宿主带着 `self.texts = None` 继续跑，包内每条 `T(...)` 落回 fallback
+            # ⇒ 玩家看到的是**空句/兜底文案**，运维侧零痕迹。
+            _log.error("文案表装载失败（域 %r，%d 条）：%s", self.texts_domain,
+                       len(data), exc, exc_info=True)
+            raise
 
     # ------------------------------------------------------------ 可选钩子
     def _hook(self, name: str):
@@ -208,8 +217,12 @@ class Host:
             return
         try:
             fn({"kind": kind, **fields})
-        except Exception:                                        # noqa: BLE001
-            pass
+        except Exception as exc:                                # noqa: BLE001
+            # ★ 审计 L5469 同族（第三十轮）：流水写失败 = 这条流水**永久丢失**且无人知晓。
+            # 「没有 on_tlog 钩子」是合法可选路径（上面 `fn is None` 已 return）；
+            # 能走到这里说明钩子**接了却炸了** ⇒ 留痕（不抛：流水不该阻断命令通道）。
+            _log.error("流水钩子 on_tlog 抛异常，kind=%r 本条流水已丢：%s",
+                       kind, exc, exc_info=True)
 
     # ------------------------------------------------------------ 三函数的宿主调用点
     def recv(self):
@@ -289,7 +302,12 @@ class Host:
             return None
         try:
             ok = bool(self.battle_check(env.uid, env.group_id))
-        except Exception:                                        # noqa: BLE001
+        except Exception as exc:                                # noqa: BLE001
+            # ★ 审计 L5469 同族（第三十轮）：守卫炸了 ⇒ 回落 `ok=False`（**拦下**）是安全的，
+            # 但它与「守卫说不许进战斗」被压成同一结果 ⇒ 运维侧看不出是守卫本身坏了。
+            # 保留回落（安全侧优先，不改成放行），但必须留痕。
+            _log.error("battle_check 守卫抛异常，uid=%s gid=%s，按「不在战斗中」拦下：%s",
+                       env.uid, env.group_id, exc, exc_info=True)
             ok = False
         if ok:
             return None
@@ -425,7 +443,12 @@ class Host:
             return None
         try:
             return self.commands.first_hit(text, visible_only=True)
-        except Exception:                                        # noqa: BLE001
+        except Exception as exc:                                # noqa: BLE001
+            # ★ 审计 L5469 同族（第三十轮）：匹配层炸了 ⇒ 回落「没命中」是安全的
+            # （玩家得到「不认识这条指令」，不会被误执行），但**整条命令通道被静默瘫掉**
+            # 且零痕迹。保留回落，留痕。
+            _log.error("声明匹配 first_hit 抛异常，本条按「未命中」处理（通道可能已瘫）：%s",
+                       exc, exc_info=True)
             return None
 
     def route(self, ctx: dict, player: dict, text: str) -> list:
