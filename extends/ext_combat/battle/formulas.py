@@ -124,6 +124,19 @@ _NEUTRAL_SKELETON = {
     #   **不在零效应中性段**：default 归 0 = 姿态完全不减伤、cap 归 0 = 姿态整条失效，
     #   两者都是「另一个平衡选择」，不是「没有这条规则」。
     "defend_posture": {"default": 0.50, "cap": 0.95},
+    # ---- 2026-09-29（审计 L246/L566/L248 同族未收口 · 第 6 次）：**暴击伤害倍率** ----
+    #   原写死在 `calc_damage` 的**两个读点**（声明路径
+    #   `"crit_mult": 1.5 if is_crit else 1.0` + 旧路径 `dmg = int(dmg * 1.5)`）。它与同文件
+    #   `lucky.mult = 1.3` **同族同形**：都是**玩家可见的平衡数值**
+    #   （决定「一次出手乘多少」）。那个已下沉（批次 `8b1fa0a`）、
+    #   这个漏在引擎里 ⇒ **内容侧零配置面**（两个读点全仓
+    #   orlandia / aetheran-package 零命中）。真正的影响 = **第二款游戏
+    #   想改自己的暴击倍率只能改引擎**。
+    #   不开第二张表：按同形式下沉到**既有**的 `formula_skeleton_fn`
+    #   注入面；默认值 = 原写死值 1.5 ⇒ 与已装内容**逐字一致**。
+    #   **不在零效应中性段**：归零 = 暴击不加成伤 = 又一个平衡选择，
+    #   不是「没有这条规则」。
+    "crit": {"mult": 1.5},
 }
 
 
@@ -264,6 +277,23 @@ def defend_posture_cap() -> float:
         默认值 = 原写死值 0.95。
     """
     return _skel_sub_num("defend_posture", "cap", 0.95)
+
+
+def crit_mult() -> float:
+    """暴击伤害倍率（决定「暴击打出多大成伤」）。
+
+    ★ 2026-09-29（审计 L246/L566/L248 同族未收口 · 第 6 次）：原写死在
+      `calc_damage` 的**两个读点**（声明路径 `"crit_mult": 1.5 if is_crit else 1.0`
+      + 旧路径 `dmg = int(dmg * 1.5)`）。与同文件的 `lucky.mult = 1.3`（幸运一击倍率）
+      **同族同形**：两者都是**玩家可见的平衡数值**（决定「一次出手乘多少」），
+      而前者已下沉（批次 `8b1fa0a`）、后者漏在引擎 ⇒ **内容侧零配置面**
+      （两个读点全仓 orlandia / aetheran-package 零命中）⇒ 第二款游戏想改自己的
+      暴击倍率只能改引擎。
+      写法 = 不新开第二张表，按同族形式下沉到**既有**的 `formula_skeleton_fn` 注入面；
+      默认值 = 原写死值 1.5 ⇒ 与已装内容**逐字一致**。
+      **不在零效应中性段**：归零 = 暴击不加成伤（另一个平衡选择，不是「没有这条规则」）。
+    """
+    return _skel_sub_num("crit", "mult", 1.5)
 
 
 def heal_down_per_stack() -> float:
@@ -588,7 +618,7 @@ def calc_damage(atk, def_, is_crit=False, variance=None, pierce=False, pene_pct=
     ★ E1b（2026-09-21）：槽位 `damage` 被绑定时走**声明**；不配绑定表 ⇒ 下面一字不动。
       声明链的输入映射（足量、无静默兜底）：
         base=atk · def=def_（真伤/穿透 ⇒ 0，等价于"绕过减伤"）
-        crit_mult = 1.5 / 1.0 · variance=variance · pene_* 原样
+        crit_mult = `crit_mult()` / 1.0 · variance=variance · pene_* 原样
         level ⇒ 算 k_def 用（**没给就抛**，不猜）
       ★ 两处**有意**的语义差异（新游戏的声明是设计真源，旧路径只服务未绑定的包）：
         1. 旧：先波动后暴击（两次取整）；声明：先暴击后波动（一次取整）
@@ -610,12 +640,15 @@ def calc_damage(atk, def_, is_crit=False, variance=None, pierce=False, pene_pct=
                 "槽位 'damage' 已绑定声明，但调用方没给 level（算 k_def 要用）——"
                 "★ 不许拿默认等级兜底：那会把『少传参数』变成静默错值")
         _zero_dr = bool(pierce) or dmg_type == "true"
+        # L246/L566/L248 同族未收口 · 第 6 次：暴击倍率下沉 `crit_mult()`；
+        # 旧路径（下方 `if is_crit:`）走同一个 getter —— 不留第二处落点。
+        _cm = crit_mult()
         _v = {
             "level": float(level),
             "def": 0.0 if _zero_dr else float(def_),
             "base": float(atk),
             "mult_skill": 1.0, "amp": 0.0, "mitigation": 0.0,
-            "crit_mult": 1.5 if is_crit else 1.0, "elem_mult": 1.0,
+            "crit_mult": _cm if is_crit else 1.0, "elem_mult": 1.0,
             "variance": float(variance),
             "pene_pct": 0.0 if _zero_dr else float(pene_pct or 0.0),
             "pene_flat": 0.0 if _zero_dr else float(pene_flat or 0),
@@ -643,7 +676,9 @@ def calc_damage(atk, def_, is_crit=False, variance=None, pierce=False, pene_pct=
     dmg = max(1, dmg)
     dmg = int(dmg * (1 + random.uniform(-variance, variance)))
     if is_crit:
-        dmg = int(dmg * 1.5)
+        # 同上：与声明路径共用同一个 getter，不留第二处落点（L246 同族经验：
+        # 一次收口只覆盖被点名的那个点，邻支不会顺带修掉）。
+        dmg = int(dmg * crit_mult())
     return max(1, dmg)
 
 
