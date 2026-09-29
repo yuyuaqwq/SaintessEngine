@@ -47,6 +47,7 @@ check = bind_check(globals(), "PASS", "FAIL", "FAILURES")
 
 from saintess_engine import _sinkbase as SB          # noqa: E402
 from saintess_engine.log import sinks as LOG         # noqa: E402
+from saintess_engine.tlog import sinks as TLOG       # noqa: E402
 
 
 def _apply_mutant(which):
@@ -149,6 +150,29 @@ def t_sink_error_names_the_sink():
         _rm(blk)
 
 
+# ─────────────────────────────── ③b what 必填，不留死默认值（审计 L2735-5）
+def t_what_is_required():
+    print("\n[3b] sink_error 的 what 必填（原：默认值「写入」零隐式使用，审计 L2735-5）")
+    import inspect as _insp
+    # ① 签名层面：what 必须是无默认值的必填参数
+    _p = _insp.signature(SB.sink_error).parameters["what"]
+    check("★ what 无默认值（不留死默认值 = 漏传即 TypeError，不静默落进「写入」）",
+          _p.default is _insp.Parameter.empty, "default=%r" % (_p.default,))
+    # ② 调用点层面：全部显式传 what（漏一处本门禁真跑就 TypeError）
+    _miss = []
+    for _m in (LOG, TLOG):
+        for _n, _line in enumerate(_insp.getsource(_m).splitlines(), 1):
+            if "sink_error(" in _line and "what=" not in _line:
+                _miss.append("%s:%d %s" % (_m.__name__, _n, _line.strip()))
+    check("★ 四个调用点全部显式传 what（无一处吃默认值）", not _miss, str(_miss))
+    # ③ 行为层面：漏传当场 TypeError（不是静默出一行「写入失败」）
+    try:
+        SB.sink_error(LOG.FileSink("nope.log"), RuntimeError("x"))
+        _raised = False
+    except TypeError:
+        _raised = True
+    check("★ 漏传 what 当场 TypeError（不留兼容壳、不静默取默认措辞）", _raised)
+
 # ────────────────────────────────────────────────── ④ close 不是终态（审计 L2739 口径）
 def t_close_then_write_reopens():
     print("\n[4] close() 之后再写会自动重开同一文件（审计 L2739 口径不漂）")
@@ -196,6 +220,7 @@ def main(argv):
     t_flush_actually_flushes()
     t_close_releases_handle()
     t_sink_error_names_the_sink()
+    t_what_is_required()
     t_close_then_write_reopens()
     if not mutant:
         t_counterproof()
