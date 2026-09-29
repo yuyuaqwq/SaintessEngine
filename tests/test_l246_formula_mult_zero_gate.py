@@ -49,6 +49,9 @@ sys.path.insert(0, _ROOT)
 sys.path.insert(0, os.path.join(_ROOT, "extends"))
 
 from _check import bind_check                                    # noqa: E402
+from _l246_surface_scan import MULT_KEYS as _MULT_KEYS           # noqa: E402
+from _l246_surface_scan import doc_lines as _doc_lines           # noqa: E402
+from _l246_surface_scan import scan_tree                         # noqa: E402
 
 FAILS: list = []
 PASS = 0
@@ -63,9 +66,10 @@ _FORMULAS = os.path.join(_ROOT, "extends", "ext_combat", "battle", "formulas.py"
 #     · 第三轮（本文件）：扫描根 = **单个** formulas.py，且**没有覆盖面自证**
 #       => 「我扫够了没有」永远无法判定（本轮实测整棵子树的文件数与命中数后才敢说清）。
 #   ⇒ 这一条不是「多加几个断言」，是把「够宽」变成**可判定的**（Step 0g）。
-_MULT_KEYS = ("mult", "atk_mult", "hp_mult", "pct", "factor", "rate", "ratio", "scale")
-# 跳过：__pycache__/.git 无意义 · data/ docs/ 无产品码 · tests/ 是门禁自身（自己审自己会永真）
-#   · games/ 是**子模块检出**（别人的仓）=> 由包仓那份 whole_tree 门禁管，本门禁不越界
+# ★ `_MULT_KEYS` / `_doc_lines` / 扫描主体已收进**共享** `tests/_l246_surface_scan.py`
+#   （第三十四轮收口）—— 本文件原来带着**第三份逐字复制**的扫描实现。
+#   同族教训（Step 0f）：同一份判定逻辑在 N 个文件各存一份 = 双源，改一处忘另一处。
+# 跳过目录里 games/ 是**子模块检出**（别人的仓）=> 由包仓那份 whole_tree 门禁管，本门禁不越界。
 _SKIP_DIRS = {"__pycache__", ".git", "data", "docs", "design", "tests", "games"}
 # 扫哪些子树：引擎自有的产品面。**不写死文件** —— 写死的根就是下一轮漏网的起点。
 _SCAN_ROOTS = ("extends", "saintess_engine", "editor", "tools", "examples")
@@ -156,67 +160,24 @@ def test_both_call_sites_use_shared_helper():
         check(f"{fname} 段乘区走 _num 回落", uses_num)
 
 
-def _doc_lines(tree):
-    """返回「属于 docstring 的行号集合」—— 文档里引用旧写法不算活代码。"""
-    bad = set()
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
-            if ast.get_docstring(node, clean=False) is None:
-                continue
-            first = node.body[0]
-            bad.update(range(first.lineno, (first.end_lineno or first.lineno) + 1))
-    return bad
-
-
 def test_static_whole_engine_tree():
-    """静态向：引擎自有子树零处 `get(乘区键, 非零默认) or 常量`（含覆盖面自证）。"""
+    """静态向：引擎自有子树零处 `get(乘区键, 非零默认) or 常量`（含覆盖面自证）。
+
+    ★ 扫描主体走**共享** `scan_tree`（第三十四轮收口）：本文件原来带着第三份逐字复制，
+      与 orlandia 那份、新增的两面门禁共三份实现 —— 同一族逻辑改一处忘一处是 Step 0f
+      点名的双源形态。此处只保留**本门禁特有的三件事**：扫哪几棵子树、覆盖面下限、
+      报告标签里的子树前缀（保持既有标签 `extends/.../formulas.py:NN` 不变）。
+    """
     hits, scanned, parse_fail = [], 0, []
     for sub in _SCAN_ROOTS:
         root_dir = os.path.join(_ROOT, sub)
         if not os.path.isdir(root_dir):
             parse_fail.append("扫描根不存在: %s" % sub)
             continue
-        for root, dirs, files in os.walk(root_dir):
-            dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
-            for f in sorted(files):
-                if not f.endswith(".py"):
-                    continue
-                p = os.path.join(root, f)
-                rel = os.path.relpath(p, _ROOT).replace("\\", "/")
-                try:
-                    tree = ast.parse(io.open(p, encoding="utf-8").read())
-                except SyntaxError as e:
-                    parse_fail.append("%s: %s" % (rel, e))
-                    continue
-                scanned += 1
-                bad = _doc_lines(tree)
-                for n in ast.walk(tree):
-                    if not (isinstance(n, ast.BoolOp) and isinstance(n.op, ast.Or)
-                            and len(n.values) == 2):
-                        continue
-                    if n.lineno in bad:
-                        continue
-                    lhs = n.values[0]
-                    if not (isinstance(lhs, ast.Call) and isinstance(lhs.func, ast.Attribute)
-                            and lhs.func.attr == "get" and lhs.args
-                            and isinstance(lhs.args[0], ast.Constant)):
-                        continue
-                    if lhs.args[0].value not in _MULT_KEYS or len(lhs.args) < 2:
-                        continue
-                    try:
-                        default = float(lhs.args[1].value)
-                    except (AttributeError, IndexError, TypeError, ValueError):
-                        continue
-                    if default == 0.0:
-                        continue
-                    # ★ 右值也必须非零才算「吞 0」：`x or 0` 保留 0（判据自我纠错①）
-                    try:
-                        rhs = float(n.values[1].value)
-                    except (AttributeError, TypeError, ValueError):
-                        rhs = None
-                    if rhs == 0.0:
-                        continue
-                    hits.append("%s:%s" % (rel, n.lineno))
+        n_scanned, n_hits, n_fail, _per = scan_tree(root_dir, skip_top=_SKIP_DIRS)
+        scanned += n_scanned
+        parse_fail.extend("%s: %s" % (sub, f) for f in n_fail)
+        hits.extend("%s/%s" % (sub, h) for h in n_hits)
     check("引擎子树全部可解析（扫描前提）", not parse_fail, "解析失败 %s" % parse_fail)
     check("引擎自有子树扫到 >=%d 个 .py（覆盖面自证）" % _ENGINE_PY_MIN,
           scanned >= _ENGINE_PY_MIN, "只扫了 %s" % scanned)

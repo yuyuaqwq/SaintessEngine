@@ -43,7 +43,9 @@ def doc_lines(tree):
 def scan_tree(root, skip_top=()):
     r"""扫一棵目录树。返回 (scanned, hits, parse_fail, per_top)。
 
-    skip_top：按「相对根的第一层目录名」整棵排除（子模块检出 = 别人的仓，不越界）。
+    skip_top：按「相对根的**第一层**目录名」整棵排除（子模块检出 = 别人的仓，不越界）。
+    ★ 只看第一层（本轮实测钉住）：`root/skipme/x.py` 会被排除，`root/content/skipme/x.py`
+      **不会** —— 它的第一层是 `content`。要排第二层请把它的第一层加进来。
     ★ 切分必须用 `/`：relpath 在 Windows 上给的是 `\`（本轮实测踩过 —— 用 `os.sep`
       切出来是整个 `framework/games/orlandia`，整棵别人的仓混进本仓覆盖面，30 个命中全是噪音）。
     """
