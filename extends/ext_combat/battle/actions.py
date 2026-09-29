@@ -870,9 +870,9 @@ def _do_heal(battle, ctx, actor, info, logs) -> list:
     cond_mult = 1.0
     heal = _heal_amount(st, actor, info, lv)
     heal = int(heal * cond_mult)
-    # 治疗强度 heal_power（属性面板化，cap 50%）
+    # 治疗强度 heal_power（属性面板化；上限 50% 已下沉骨架表）
     try:
-        hpv = min(float(st.get("heal_power", 0) or 0), 0.5)
+        hpv = min(float(st.get("heal_power", 0) or 0), _F.heal_power_cap())
         if hpv > 0:
             heal = int(heal * (1 + hpv))
     except Exception as _e:

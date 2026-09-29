@@ -152,6 +152,15 @@ _NEUTRAL_SKELETON = {
     #   默认值取原写死值 0.90（与已装内容逐字一致 ⇒ 玩家可见行为零变化）。
     #   **不在零效应中性段**：cap 归 0 = 所有减益状态都不再减伤（另一个平衡选择，不是「没有」）。
     "status_reduce": {"cap": 0.90},
+    #   ★ 2026-09-29（审计 heal_power 同族未收口 · 第 8 次）：治疗强度面板的
+    #   **上限**原先写死在 actions._do_heal（`min(heal_power, 0.5)`）。与 block /
+    #   dodge / taken_resist / taken_elem_resist / defend_posture / crit / status_reduce /
+    #   variance **同族同形**：那些 cap 早已下沉，唯独这条漏在引擎里。
+    #   ★ 与上面 status_reduce **两码事**：那条封「减益最多减掉几成」（承伤侧），
+    #     这条封「治疗强度最多加几成」（治疗侧）—— 两个消费者、两条平衡线。
+    #   默认值取原写死值 0.50（与已装内容逐字一致 ⇒ 玩家可见行为零变化）。
+    #   **不在零效应中性段**：cap 归 0 = 治疗强度整条不生效（另一个平衡选择，不是「没有」）。
+    "heal_power": {"cap": 0.50},
 }
 
 
@@ -401,6 +410,24 @@ def damage_variance() -> float:
     内容侧声明 `FORMULA_SKELETON["damage"]["variance"]`；默认值 = 原写死值 0.15。
     """
     return _skel_sub_num("damage", "variance", 0.15)
+
+
+def heal_power_cap() -> float:
+    """**治疗强度上限**「治疗最多因 heal_power 加成多几成」（原写死 0.50）。
+
+    ★ 2026-09-29（审计 heal_power 同族未收口 · 第 8 次）：原先写死在
+      actions._do_heal 的 min(float(st.get("heal_power", 0) or 0), 0.5)。
+      与 block / dodge / taken_resist / taken_elem_resist / defend_posture / crit /
+      status_reduce / variance **同族同形**：那些 cap 早已下沉到这张表，唯独这条漏在
+      引擎里。而它是**玩家可见的平衡数值且数据面真实在用**（orlandia
+      affixes.json 的 heal_power 词条、classes.json 的治疗职业基础
+      0.1、equip_roster.json 的套装件共 22 个文件命中）⇒ 内容侧想改自己的
+      「治疗强度上限」**只能改引擎**。
+    ★ 与 status_reduce.cap **两码事**：那条封「减益最多减掉几成」（承伤侧），
+      这条封「治疗强度最多加几成」（治疗侧）—— 两个消费者、两条独立平衡线。
+    内容侧声明 FORMULA_SKELETON["heal_power"]["cap"]；默认值 = 原写死值 0.50。
+    """
+    return _skel_sub_num("heal_power", "cap", 0.50)
 
 
 def skill_max_level_default() -> int:
