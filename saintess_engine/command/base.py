@@ -127,17 +127,38 @@ class CommandBase:
     def _record_list_state(self, qq_id, cmd, page, pages) -> None:
         """记录玩家最后一次列表视图（翻页快捷键用）。
 
-        `cmd`：重建指令文本（不含页码，如 `'背包 材料'`）。失败静默（附加功能）。
+        `cmd`：重建指令文本（不含页码，如 `'背包 材料'`）。
+
+        ★ 2026-09-29 晚到批第二十九轮（探针实测，非推断）：原先整段是
+        `except Exception: pass` —— **零痕迹**。但这处有两个语义完全不同的情况，
+        而 `self._record_state` 恰好把「没接」与「炸了」编码在**同一个形状**里：
+
+        · 基类 `_record_state` 是个 `return None` 的空实现（base.py:72），
+          即「这个壳没接存储半边」= **合法**（纯静态/测试链路），
+          此时本方法什么都不做是对的；
+        · `host/shell.py:151` 的实现是 `self._store.set_event_state(key, value)`
+          —— 真宿主。**接了却炸了**（列不存在 / 锁库 / 事务回滚）是真故障。
+
+        两者在原写法下运维侧**完全一样**：翻页快捷键用不到、`last_list_<qq>` 没写进去，
+        玩家下一次翻页静默回到第 1 页，**零日志零异常**。这不是降级，是丢功能。
+
+        处置 = **按有没有覆写判定**「接了没有」：`type(self)._record_state is
+        CommandBase._record_state` ⇒ 没接 ⇒ 早退（合法）；否则写入失败要留痕。
+        留痕面用这层既有的 `self._warn`（同文件 `_run_shortcut` 已在用），
+        不新造旁路、不静默。
         """
         if not qq_id:
             return
         import json
+        if type(self)._record_state is CommandBase._record_state:
+            return                      # 没接存储半边（合法早退，与 _player 的 NotImplemented 同族）
         try:
             self._record_state(self.list_state_key(qq_id),
                                json.dumps({"cmd": cmd, "page": page, "pages": pages},
                                           ensure_ascii=False))
-        except Exception:
-            pass
+        except Exception as exc:        # noqa: BLE001
+            self._warn("列表视图状态写入失败（翻页快捷键会退回第 1 页）key=%r: %s",
+                       self.list_state_key(qq_id), exc)
 
     # ============================================================ 宿主事件小工具
     @staticmethod
