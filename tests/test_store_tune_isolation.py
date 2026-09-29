@@ -17,8 +17,10 @@
 ★ 判据钉的是**性质**（一条失败不牵连其余 + 失败要留痕），不是源码形态：
   把守卫写成 `try/except` 还是别的形状都应照样绿；合法路径逐字不变。
 """
+import io
 import logging
 import os
+import re
 import sqlite3
 import sys
 import tempfile
@@ -130,6 +132,32 @@ check("D3 五个调优项都仍在（防「顺手删掉一条」也能绿）",
           'PRAGMA %s' % k in open(
               os.path.join(ROOT, "saintess_engine", "store", "database.py"),
               encoding="utf-8").read() for k in _ALL_TUNE))
+
+# ---------------------------------------------------------------- E 段 · 头注不许说谎（审计 L190）
+#   `store/database.py` 头注原写「框架不读环境变量、不推导宿主目录」，而同文件
+#   真的 `os.environ.get("GWEN_SQLITE_SYNC")`（b9dbfe7 引入的测试跑器同步模式档）。
+#   头注那句来自 55c197f 的模块化重排，**比引入读环境变量那次改动早**
+#   ⇒ 一次「只调优不改语义」的性能改动就把它变成了假话。假头注比代码 bug 更贵：
+#   下一个审计会拿它当判据本体（本条就是这么被翻出来的）。
+#   本段钉的是**性质**「头注不得与本文件真实的环境变量读取矛盾」，不是逐字文本：
+#   日后换措辞照样绿；再有人加一个 os.environ 却不同步头注 ⇒ 立刻报红。
+_E_SRC = os.path.join(ROOT, "saintess_engine", "store", "database.py")
+_E_TEXT = io.open(_E_SRC, encoding="utf-8").read()
+_E_HEAD = _E_TEXT.split('"""', 2)[1]          # 模块头注（第一个 docstring）
+_E_RE = r"os\.environ(?:\.get)?\(\s*['\"]([A-Z_][A-Z0-9_]*)['\"]"
+_E_REAL = sorted(set(re.findall(_E_RE, _E_TEXT)))
+# 头注按**变量名本身**点名（不必把 os.environ.get(...) 整句抄一遍）。
+_E_DOC = sorted(v for v in _E_REAL if v in _E_HEAD)
+check("E1 本文件真的读得到环境变量（否则 E2/E3 恒真、整组空转）",
+      len(_E_REAL) >= 1, _E_REAL)
+check("E2 头注逐个点名了真实读取的每一个环境变量（缺一个 = 头注正在说谎）",
+      _E_DOC == _E_REAL, {"真实读取": _E_REAL, "头注点名": _E_DOC})
+check("E3 头注不再宣称「框架不读环境变量」这类与 E1 直接矛盾的话",
+      "不读环境变量" not in _E_HEAD,
+      [ln for ln in _E_HEAD.splitlines() if "不读环境变量" in ln])
+# 有牙反证锚点：把头注还原成旧句，E2/E3 必须转红（E1 仍绿）。
+check("E4 反证锚点就位（E2 是逐名对拍、不是靠某句固定措辞）",
+      all(v in _E_HEAD for v in _E_REAL) and len(_E_REAL) >= 1, _E_REAL)
 
 print("=" * 56)
 print("PASS=%d  FAIL=%d" % (passed, failed))
