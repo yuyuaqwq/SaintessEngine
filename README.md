@@ -18,7 +18,7 @@
 
 **依赖方向严格单向：数据包 → 扩展包 → 引擎**（门禁 `tests/test_layering.py` 机器钉死）。
 
-- 引擎目录：`saintess_engine/`（**19** 个子包 + **7** 个顶层模块；共 **65** 个 `.py` / **14 157** 行）
+- 引擎目录：`saintess_engine/`（**19** 个子包 + **7** 个顶层模块；共 **65** 个 `.py` / **14 170** 行）
   —— 数字由 `tests/test_editor_wiki.py` 逐项对照磁盘锁定（本文件与 `docs/engine-wiki/README.md` 两处都要一致）
 - 引擎侧的模块（与 `saintess_engine/__init__.py` 里的「模块布局」同一份口径，全部平级）：
   - **基础** `config`（注入面）· `domains`（引擎默认域集 + 合并规则）· `package`（包栈加载器）

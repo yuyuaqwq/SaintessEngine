@@ -583,15 +583,28 @@ class Host:
         collector, tlog = handle
         try:
             collector.on_end(battle, result=battle.result)
-        except Exception:                                        # noqa: BLE001
-            pass
+        except Exception as e:                                   # noqa: BLE001
+            # 同上：采集器收尾（battle.end 那条）是**真故障**，不是容错 ——
+            # 它抛了就等于这场战斗的结束记录没发出去，记桩而不是静默。
+            out.stubs.append("tlog: 采集器收尾未完成（%r）—— battle.end 未记录" % e)
         hook = self._hook("on_tlog")
+        # ★ 晚到批（第二十八轮）：这两处静默都要分清「合法」与「真故障」。
+        # ① hook 为 None 是**合法**的（适配器没接流水出口 = 没配，与 tlog_write 同一条约定）
+        #    —— 旧实现没判，hook(...) 直接 TypeError，被 except 一并吞掉，于是
+        #    「没配钩子」与「配了但投递炸了」在运维侧**都是零痕迹**。
+        #    处置：照 tlog_write 的写法显式早退，不当故障。
+        # ② 配了却炸了 = **真故障**：本场流水会整段丢（flush 与逐条投递同在一个 try，
+        #    第一条抛了后面全不投），而战斗照常结算、玩家看不见任何异常。
+        #    处置：记桩 —— 与同文件 _settle / _post_battle 的失败处置同一条路
+        #    （out.stubs 是这层既有的留痕面，不新造旁路）。
+        if hook is None:
+            return
         try:
             tlog.flush()
             for record in self._tlog_sink.read_records():
                 hook(record.to_dict())
-        except Exception:                                        # noqa: BLE001
-            pass
+        except Exception as e:                                   # noqa: BLE001
+            out.stubs.append("tlog: 流水投递未完成（%r）—— 本场记录未落库" % e)
 
     # ---- 战斗末段：结算（包内 settlement，策略半边）------------------
     def _settle(self, out: BattleOutcome, player: dict, monster, sides: dict) -> None:
