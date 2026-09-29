@@ -50,7 +50,17 @@ MINIMAL_SAVE_KEYS = ("uid", "name", "level")
 #:   上**传这两个键**（不传句子），内容侧装 `config` 的 `guard_text_fn` 按自己的文案表渲染。
 #:   ★ 键名是注入面契约的一部分：宿主传的键必须在这个全集里（否则当场抛），
 #:     这样宿主面就写不出**包专属**的文案键（那等于把包知识搬回宿主）。
-GUARD_KEYS = ("guard.register_missing", "guard.battle_missing")
+#: `player` 守卫对应的中性键（★ 按**名字**绑定，不按下标 —— 台账 L2613 高）。
+#:   下标绑定把语义挂在**位置**上，而 `GUARD_KEYS` 的消费面（`in` 判定 + 报错消息 `join`）
+#:   全是**集合语义** —— 两边对不上：谁按位置取、谁按集合看，没有一处会拦。
+#:   ⇒ 引擎自己按名取：`GUARD_REGISTER_KEY` / `GUARD_BATTLE_KEY`，元组只当**全集**用。
+#:   （★ 交接一句：那两条句子属内容侧文案表，**不许在这儿的注释里引用原文** ——
+#:     `tests/test_host_contract.py` 有一条门禁盯「引擎源码里一个玩家文案字都不在」。）
+GUARD_REGISTER_KEY = "guard.register_missing"
+GUARD_BATTLE_KEY = "guard.battle_missing"
+#: 中性键名全集（注入面契约：宿主传的键必须落在这个集合里）。★ 集合**无序** ——
+#:   要按名字取键用上面两个常量，别用下标。
+GUARD_KEYS = (GUARD_REGISTER_KEY, GUARD_BATTLE_KEY)
 
 DEFAULTS_HINTS = {
     "clock": "time.time()",
@@ -266,7 +276,8 @@ class Host:
         if not env.player:
             if not self.register_hint:
                 raise _NotConfigured("宿主守卫文案没声明：给 `Host(register_hint=...)`（属内容）")
-            return self._guard_text(GUARD_KEYS[0], self.register_hint, "register_hint")
+            # ★ L2613：按名取键（不取 `GUARD_KEYS[0]`）—— 换序不得改变这句回话。
+            return self._guard_text(GUARD_REGISTER_KEY, self.register_hint, "register_hint")
         return None
 
     def _guard_battle(self, env: Env):
@@ -281,7 +292,8 @@ class Host:
             return None
         if not self.battle_hint:
             raise _NotConfigured("宿主守卫文案没声明：给 `Host(battle_hint=...)`（属内容）")
-        return self._guard_text(GUARD_KEYS[1], self.battle_hint, "battle_hint")
+        # ★ L2613：按名取键（不取 `GUARD_KEYS[1]`）—— 换序不得改变这句回话。
+        return self._guard_text(GUARD_BATTLE_KEY, self.battle_hint, "battle_hint")
 
     def build_env(self, key: str, spec, ctx: dict, player: dict, *, raw=None) -> Env:
         """构造一条消息的执行环境（字段契约见 `Env`）。"""
