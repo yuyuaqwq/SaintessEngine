@@ -9,7 +9,8 @@
 """
 import io, json, os, re, sys
 sys.path.insert(0, "C:/Users/yuyu/framework-engine")
-from saintess_engine.command.registry import CommandRegistry, _is_catch_all, _CATCHALL_PROBES
+from saintess_engine.command.registry import (CommandRegistry, CommandSpec,  # noqa: E402
+                                           _is_catch_all, _CATCHALL_PROBES)
 
 PASS = FAIL = 0
 def check(cond, label, extra=""):
@@ -24,6 +25,20 @@ BROKEN = "背包("
 
 def mk(spec):
     reg = CommandRegistry(name="t").load({"k": spec})
+    return reg
+
+
+def mk_raw(spec):
+    """装配一个**含非法正则**的注册表，绕过装载漏斗（`register` 已 fail-closed）。
+
+    ★ 2026-09-29：只被 D2 用 —— 它验的是「`validate()` 把非法正则**只**报成
+      「正则非法」、不重复报 catch-all」。走公开装载路径会在漏斗处先抛，
+      那样就测不到 `validate()` 自己的报告形状了。断言与被测逻辑一字未改。
+    """
+    reg = CommandRegistry(name="t")
+    s = CommandSpec.from_dict(dict(spec, key="k"))
+    reg._order.append(s.key)
+    reg._specs[s.key] = s
     return reg
 
 # ---------- A 段：黑盒（真正的那条判据） ----------
@@ -59,7 +74,7 @@ check(not _is_catch_all("背包.*") and not _is_catch_all("^加点"), "C4 判据
 # ---------- D 段：边界 ----------
 check(mk({"patterns": [HALF], "visible": True, "category": "c", "desc": "d", "usage": "u"}).validate() == [],
       "D1 只吞部分文本的 regex 不点名")
-pb = mk({"patterns": [BROKEN], "visible": True, "category": "c", "desc": "d", "usage": "u"}).validate()
+pb = mk_raw({"patterns": [BROKEN], "visible": True, "category": "c", "desc": "d", "usage": "u"}).validate()
 check(any("正则非法" in x for x in pb) and not any("catch-all" in x for x in pb),
       "D2 非法正则只报「正则非法」，不重复报 catch-all", pb)
 

@@ -253,6 +253,29 @@ def _is_catch_all(pat: str) -> bool:
     return True
 
 
+def _reject_bad_patterns(patterns: Sequence[str], key: str) -> None:
+    """声明的正则**逐条可编译**，否则点名抛 `ValueError`（fail-closed）。
+
+    为什么不靠 `validate()`：它是**只报告**的自检，而线上装载走 `load()` →
+    `register()`，不经过它；引擎另有 `build_registry()` 会调 `validate()` 并抛，
+    **但线上不走它**（`host/runtime.py:150` 直接 `load()`）。
+    ⇒ 静默只可能发生在「装载成功、匹配期 `except re.error: continue` 吃掉」这条路上，
+    玩家看到的是「指令不存在」，所以在**登记期**就点名。
+
+    错误串与 `validate()` 的那条**逐字同形**（`<key>：正则非法（<re 报错>）—— <pattern>`），
+    两处口径一致，将来若合流只需改一处。
+    """
+    for pat in patterns or ():
+        if not isinstance(pat, str):
+            raise TypeError("%s：正则必须是非空字符串：%r" % (key, pat))
+        if not pat:
+            continue                      # 空串：`validate()` 报「未声明任何正则」，不在这里
+        try:
+            re.compile(pat)
+        except re.error as e:
+            raise ValueError("%s：正则非法（%s）—— %s" % (key, e, pat)) from e
+
+
 def _any_hit(patterns: Sequence[str], text: str, mode: str = "search") -> bool:
     for pat in patterns or ():
         if not pat:
@@ -361,9 +384,23 @@ class CommandRegistry:
 
     # ============================================================ 装载
     def register(self, spec: CommandSpec, *, replace: bool = False) -> CommandSpec:
-        """登记一条声明。同 key 重复 → 默认抛 `ValueError`（防静默覆盖）。"""
+        """登记一条声明。同 key 重复 → 默认抛 `ValueError`（防静默覆盖）。
+
+        ★ **非法正则在登记期点名抛**（2026-09-29 审计 L5577 同族 · 上一轮交棒）。
+          旧实现只在 `validate()`（**只报告**）与 `build_registry()`（会调它）里查非法正则，
+          而**线上真实入口是 `load()`** —— `host/runtime.py:150` 的
+          `CommandRegistry(name=...).load(stack.command_declarations())`
+          **不经过 `validate()`**。实测该形状：
+          `load({'ok':[{'patterns':['^ok$']}], 'bad':{'patterns':['^(unclosed']}})`
+          ⇒ **boot 不抛、注册表照样装进 2 条**，而 `_any_hit()` 的
+          `except re.error: continue` 让那条声明**静默永不命中** ⇒
+          玩家视角是「这条指令不存在」，启动期零痕迹。
+          ⇒ 装载漏斗（`register`，本类所有声明的唯一入口）改成 fail-closed。
+          **不给 `load()` 加开关**：那条路径一旦有「宽容模式」就是第二个静默入口。
+        """
         if not isinstance(spec, CommandSpec):
             spec = CommandSpec.from_dict(spec)
+        _reject_bad_patterns(spec.patterns, spec.key)
         if spec.key in self._specs and not replace:
             raise ValueError("指令 key 重复：%r（要覆盖请 replace=True）" % spec.key)
         if spec.key not in self._specs:

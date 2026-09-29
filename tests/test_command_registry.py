@@ -135,9 +135,17 @@ check("to_data → 重载 round-trip 稳定（key/可见/排序保真）",
 
 # ---------------------------------------------------------------- 5. 自检
 print("\n【5. 自检：validate（声明自身）+ audit_handlers（漂移两向）】")
-bad = CommandRegistry.from_data([{"key": "ok", "pattern": "^ok$"},
-                                 {"key": "nopat", "pattern": ""},
-                                 {"key": "badre", "pattern": "([("}])
+# ★ 2026-09-29：非法正则在**装载漏斗**（`register`）已 fail-closed 点名抛，
+#   所以「`validate()` 会**报告**非法正则」这一条只能在 validate() 自己那一层构造
+#   —— 走公开装载路径会被更严的漏斗先拦下（那正是本条要防的静默）。
+#   断言与被测逻辑一字未改，只换夹具的装配方式。
+bad = CommandRegistry(name="bad")
+for _s in ({"key": "ok", "pattern": "^ok$"},
+           {"key": "nopat", "pattern": ""},
+           {"key": "badre", "pattern": "([("}):
+    _spec = CommandSpec.from_dict(_s)
+    bad._order.append(_spec.key)
+    bad._specs[_spec.key] = _spec
 probs = bad.validate()
 check("报告「未声明正则」", any("nopat" in p and "未声明" in p for p in probs), probs)
 check("报告「正则非法」", any("badre" in p and "非法" in p for p in probs), probs)
