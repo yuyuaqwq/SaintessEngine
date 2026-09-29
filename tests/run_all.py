@@ -37,6 +37,7 @@
 """
 from __future__ import annotations
 
+import io
 import os
 import re
 import shutil
@@ -50,6 +51,17 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 PY = sys.executable
 TIMEOUT = int(os.environ.get("FW_TEST_TIMEOUT", "600"))
+
+# 失败输出的「控制台保留窗口」：只打这么多行，但**完整输出永远落盘**。
+_TAIL_LINES = 30
+_LOG_DIR = os.environ.get("FW_TEST_LOG_DIR") or os.path.join(
+    tempfile.gettempdir(), "fw_test_logs")
+# 证据行判据：Traceback / 断言 / 异常收尾 —— 窗口必须**优先**保住它们，
+# 不能让收尾噪音（atexit 的 DeprecationWarning、惰性 import 的 SyntaxWarning…）
+# 把真断言顶出窗口。
+_EVIDENCE_RE = re.compile(
+    r'^(Traceback \(most recent call last\)|AssertionError\b|'
+    r'[A-Za-z_][\w.]*(?:Error|Exception)\b)')
 
 SKIP = {"run_all.py", "conftest.py"}
 
@@ -161,10 +173,60 @@ def _run_one(path, env):
     return ok, out, time.time() - ts
 
 
+def _evidence_window(lines, limit=_TAIL_LINES):
+    """从失败输出里挑一个**必含证据行**的窗口（优先证据，其次尾部）。
+
+    旧实现直接 `[-30:]`：断言先炸、收尾噪音后到时（atexit 的 DeprecationWarning、
+    惰性 import 的 SyntaxWarning 都排在 traceback 之后），窗口里 100% 是噪音、
+    零证据 —— 排障的人只看到「一堆 DeprecationWarning」，**看不到哪条断言炸了**。
+    ★ 本函数只决定「控制台打哪一段」，**不丢证据**：完整输出永远落盘到
+      `FW_TEST_LOG_DIR`（见 _report），窗口只是入口。返回 (窗口行, 是否截断)。
+    """
+    lines = list(lines)
+    if len(lines) <= limit:
+        return lines, False
+    idx = [i for i, x in enumerate(lines) if _EVIDENCE_RE.match(x.strip())]
+    if not idx:
+        return lines[-limit:], True
+    end = max(idx) + 1
+    start = max(0, end - limit)
+    return lines[start:end], True
+
+
+def _log_path(rel):
+    """失败日志落点：<FW_TEST_LOG_DIR 或系统 temp>/<rel 的分隔符换成 __>.<时间戳>.<pid>.log。
+
+    带时间戳 + pid ⇒ 并发跑两份全量不会互相截断（曾踩：同一 OUT 目录两次 run
+    互相覆盖 summary / probe 日志，报告里出现「多个 TOTAL 行」）。
+    """
+    os.makedirs(_LOG_DIR, exist_ok=True)
+    stem = rel.replace(os.sep, "__").replace("/", "__").replace(":", "")
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    return os.path.join(_LOG_DIR, f"{stem}.{stamp}.{os.getpid()}.log")
+
+
+def _write_log(rel, out):
+    lp = _log_path(rel)
+    with io.open(lp, "w", encoding="utf-8", newline="") as fh:
+        fh.write(out)
+    return lp
+
+
 def _report(rel, ok, out, dt):
     print(f"{'✅' if ok else '❌'} {rel} ({dt:.1f}s)", flush=True)
     if not ok:
-        print("\n".join(out.strip().splitlines()[-30:]), flush=True)
+        lines = out.strip().splitlines()
+        try:
+            lp = _write_log(rel, out)
+        except OSError:
+            lp = None
+        window, truncated = _evidence_window(lines)
+        for x in window:
+            print(x, flush=True)
+        if truncated:
+            where = f"完整输出见 {lp}" if lp else "（落盘失败，日志未写出）"
+            print(f"[run_all] ⚠ 本条只打印 {len(window)}/{len(lines)} 行（收尾噪音"
+                  f"把证据顶出去了）—— {where}", flush=True)
         print("-" * 56, flush=True)
 
 
