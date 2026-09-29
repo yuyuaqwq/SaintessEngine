@@ -274,6 +274,24 @@ def _reject_bad_patterns(patterns: Sequence[str], key: str) -> None:
             re.compile(pat)
         except re.error as e:
             raise ValueError("%s：正则非法（%s）—— %s" % (key, e, pat)) from e
+    # ★ 还要验**合并后**那条（2026-09-29 审计 · 同 L5577 同族的另一半）。
+    #   逐条合法 ≠ 合并后合法：宿主的「是不是游戏指令」过滤器
+    #   （`host/_platform._GameCmdFilter`）吃的是 `spec.combined()` 这**一条**，
+    #   而 `combine_patterns` 把多条用 `(?:…)` 串起来 ⇒ **同名命名组重复**会让
+    #   合并串 `re.error`，逐条编译却全绿（实测：两条 `^(?P<act>攻击)$` /
+    #   `^(?P<act>防御)$` 各自合法，合并后 `redefinition of group name 'act'`）。
+    #   ⇒ 那种声明能过上面那条逐条漏斗、装载成功，却在本类
+    #   （`command/router.PatternSet`）那条独立编译入口上被静默丢弃 ⇒
+    #   玩家那条指令在过滤器眼里消失，零异常零日志。
+    #   合并串 = 单条时逐字等于它（`combine_patterns` 的既有口径），已验过不重复报错。
+    combined = combine_patterns(patterns)
+    if combined:
+        try:
+            re.compile(combined)
+        except re.error as e:
+            raise ValueError(
+                "%s：合并正则非法（%s）—— %s（单条各自合法，但合并后同名命名组冲突；"
+                "宿主过滤器吃的是这一条）" % (key, e, combined)) from e
 
 
 def _any_hit(patterns: Sequence[str], text: str, mode: str = "search") -> bool:

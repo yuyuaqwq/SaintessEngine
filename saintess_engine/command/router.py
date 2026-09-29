@@ -62,6 +62,12 @@ class PatternSet:
     """懒编译 + 缓存的命令正则集合（供宿主的 filter 类调用）。
 
     使用方给「取正则字符串的函数」，本类负责编译与缓存一次。
+
+    ★ 本类是**独立于 `CommandRegistry` 的第二条编译入口**（注册表那条走
+      `register()` 的漏斗），因此本类**自带**逐条编译校验、不复用注册表那份 ——
+      复用会引入跨模块顶层 import（`registry` 并不 import `router`，反之亦然，
+      但仓内判据存在「单文件装载」用法，顶层 import 会打红它们），
+      故两处各自守自己那一口，口径与错误串保持逐字同形。
     """
 
     def __init__(self, patterns_getter: Callable[[], Sequence[str]]) -> None:
@@ -72,10 +78,25 @@ class PatternSet:
         if self._compiled is None:
             self._compiled = []
             for pat in self._get() or ():
+                # ★ 非法正则**点名抛**（2026-09-29 审计 · 同 L5577 装载期 fail-closed 同族）。
+                #   原写法 `except re.error: continue` 是**静默丢弃**：本类被宿主的
+                #   「是不是游戏指令」过滤器（`host/_platform._GameCmdFilter`）**直接使用**，
+                #   而那条声明的正则若非法，玩家那条指令在过滤器眼里**根本不是游戏指令**
+                #   —— 停服 gate 拦不住它、日常消息走不到它的 handler，全程零异常零日志。
+                #   与同仓 `find_static` 的 L298 fail-closed（静态表方法名取不到 ⇒ 抛，
+                #   不与「没命中」同形）同一判据：**认不出就点名，不与「没这条」同形**。
+                #   错误串沿用注册表 `_reject_bad_patterns` 的同一形态，便于两处对读。
+                if not isinstance(pat, str):
+                    raise TypeError("指令正则必须是非空字符串：%r" % (pat,))
+                # ★ **空串不跳过**：空模式是**合法的零宽正则**（re.compile('') 合法），
+                #   本类的 skip_empty 开关就是为它准备的（零宽匹配默认不算命中）——
+                #   把它当「非法/空声明」丢掉会改掉既有语义。
+                #   注册表那条漏斗之所以跳过空串，是因为它**逐条**编译；
+                #   本类要保留它们交给 matches_any 的 skip_empty 判定。两者口径不同是有理由的。
                 try:
                     self._compiled.append(re.compile(pat))
-                except re.error:
-                    continue
+                except re.error as e:
+                    raise ValueError("指令正则非法（%s）—— %s" % (e, pat)) from e
         return self._compiled
 
     def matches(self, text: str, *, skip_empty: bool = True) -> bool:
