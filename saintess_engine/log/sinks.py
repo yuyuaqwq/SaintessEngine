@@ -130,15 +130,16 @@ class StreamSink:
             self.stream.write(line)
             try:
                 self.stream.flush()
-            except Exception:                                     # pragma: no cover
-                pass
+            except Exception as exc:                             # noqa: BLE001
+                sink_error(self, exc, what="文本出口逐行 flush",
+                           detail="（行已写进缓冲区、只是没落；不抛以免日志带崩主流程）")
 
     def flush(self) -> None:
         with self._lock:
             try:
                 self.stream.flush()
-            except Exception:                                     # pragma: no cover
-                pass
+            except Exception as exc:                             # noqa: BLE001
+                sink_error(self, exc, what="文本出口 flush")
 
 
 class FileSink(FileSinkBase):
