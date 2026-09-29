@@ -22,6 +22,7 @@ import inspect
 import io
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -94,6 +95,63 @@ def main() -> int:
           (type(EVENT_KINDS).__name__, type(REPRO_KEYS).__name__))
     check("EVENT_KINDS 是非空映射（映射表骨架在包里、具体键名由数据包给值）",
           isinstance(EVENT_KINDS, dict) and len(EVENT_KINDS) > 0, len(EVENT_KINDS or ()))
+
+    # ------------------------------------------------------------ 2b. ★ 文档零过期导入路径（L1612）
+    # 缺陷形态 = **文档指向一个不存在的模块**：数据包照 `apply.py` 头注 / README 的那行
+    # `from ext_reward.tlog import …` 抄下来 ⇒ `ModuleNotFoundError`（本包只有
+    # `tlog_collect.py` 一个模块，`git ls-files` 证实无 `tlog.py` / `tlog/` 目录）。
+    # 而门禁此前**只从正确路径导入**、从不校验文档里写的那行 ⇒ 这条缺陷零阻力地活下来。
+    # 判据 = 「本包文档里出现的每一处 `ext_reward.X` 导入路径，X 必须是真实可导入的模块」。
+    _doc_bad = []
+    _doc_files = ["README.md", "apply.py", "tlog_collect.py"]
+    for _df in _doc_files:
+        _dp = os.path.join(PKG_DIR, _df)
+        if not os.path.exists(_dp):
+            continue
+        with io.open(_dp, encoding="utf-8") as _f:
+            _dtxt = _f.read()
+        for _m in re.findall(r"ext_reward\.([A-Za-z_][A-Za-z0-9_]*)", _dtxt):
+            # `ext_reward.tlog_collect` 是真模块；日志器名 `ext_reward.tlog_collect` 同名不重复计
+            _mod = "ext_reward." + _m
+            if not os.path.exists(os.path.join(PKG_DIR, _m + ".py"))                     and not os.path.isdir(os.path.join(PKG_DIR, _m)):
+                _doc_bad.append("%s: %s" % (_df, _mod))
+    check("★ 入包文档零过期导入路径（README / apply.py / tlog_collect.py 里的 "
+          "`ext_reward.X` 逐个可导入）", not _doc_bad, sorted(set(_doc_bad)))
+    check("★ 扫描面确实读到了本包文档（3 个文件都在，别让判据空转恒绿）",
+          all(os.path.exists(os.path.join(PKG_DIR, _d)) for _d in _doc_files), _doc_files)
+    # ★ 有牙：造一处过期路径喂给扫描器，它必须报出来（否则上面那条恒绿）
+    _probe_bad = [m for m in ("tlog",) if not os.path.exists(os.path.join(PKG_DIR, "tlog.py"))
+                  and not os.path.isdir(os.path.join(PKG_DIR, "tlog"))]
+    check("★ 反证：扫描器对不存在的 `ext_reward.tlog` 报红（判据有牙）",
+          _probe_bad == ["tlog"], _probe_bad)
+
+    # ★ 构造签名钉死（L1612 的另一半）：旧 README 写 `BattleTLog(battle, tlog, EVENT_KINDS)`
+    #   —— 三个位置参数，真实签名只收一个。文档错了没人发现，是因为**门禁从不核对
+    #   文档里写的构造签名**。这里钉「真实签名逐字」+「README 那行不得再声称三个位置参数」。
+    import inspect as _insp
+    #   ★ 比「参数名 + 位置/关键字形态」而不是逐字比 repr：本文件有 `from __future__ import
+    #   annotations`，repr 里的注解是**字符串**（`tags: 'Iterable[str]'`），
+    #   逐字比会假红；而「谁位置、谁关键字」才是「抄错即 TypeError」的那条契约本身。
+    _params = list(_insp.signature(BattleTLog.__init__).parameters.values())
+    _shape = [(p.name, p.kind.name) for p in _params]
+    check("★ 构造签名钉死：`__init__` 只有 tlog 一个位置参数，tags/name 关键字（抄错即 TypeError）",
+          _shape == [("self", "POSITIONAL_OR_KEYWORD"), ("tlog", "POSITIONAL_OR_KEYWORD"),
+                     ("tags", "KEYWORD_ONLY"), ("name", "KEYWORD_ONLY")], _shape)
+    with io.open(os.path.join(PKG_DIR, "README.md"), encoding="utf-8") as _f:
+        _rd = _f.read()
+    #   只看**围栏代码块内**的行 —— 说明文字里提「旧写法是错的」是文档该做的事，
+    #   把那段也扫进去等于要求文档不许提起自己犯过的错。
+    _fenced, _in = [], False
+    for _l in _rd.splitlines():
+        if _l.lstrip().startswith("```"):
+            _in = not _in
+            continue
+        if _in:
+            _fenced.append(_l)
+    check("★ README 的可复制代码块里没有 `BattleTLog(battle, tlog, …)` 那种多位置参数写法",
+          not [l for l in _fenced if "BattleTLog(battle," in l],
+          [l.strip() for l in _fenced if "BattleTLog(battle," in l])
+    check("★ README 代码块确实扫到了内容（别让上面那条恒绿）", len(_fenced) >= 8, len(_fenced))
 
     # ------------------------------------------------------------ 3. 零行为红线
     class _Sink:

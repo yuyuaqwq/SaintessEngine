@@ -12,10 +12,33 @@ stack = load_stack("path/to/game", exts=["path/to/extends"])   # 数据包 depen
 
 ## 用它
 
-```python
-from ext_reward.tlog import BattleTLog, EVENT_KINDS, REPRO_KEYS
+★ 下面这段**逐行跑通过**（不是示意）。★ 导入路径只认下面这一行：
+本包**唯一的模块**是 `tlog_collect`（旧版文档写的那个「多一层目录」的名字在本包**不存在** ——
+照抄旧版会 `ModuleNotFoundError`）。
 
-collector = BattleTLog(battle, tlog, EVENT_KINDS)   # tlog / kind 表都由调用方给
+```python
+import json, os, sys
+sys.path.insert(0, "<引擎仓根>"); sys.path.insert(0, "<引擎仓根>/extends")
+
+from saintess_engine.tlog import JSONLSink, KindTable, TLog      # 引擎侧：sink / TLog
+from ext_reward.tlog_collect import BattleTLog, EVENT_KINDS, REPRO_KEYS
+
+# ① kind 表由**调用方**从数据包自己的 content/data/tlogs.json 读出来
+kt = KindTable.from_data(json.load(open("content/data/tlogs.json", encoding="utf-8")))
+# ② TLog(sinks, *, kinds=..., strict=..., name=...) —— sink 由调用方构造后传进来
+tlog = TLog([JSONLSink("battle.jsonl")], kinds=kt, name="demo")
+# ③ 构造签名逐字是 `BattleTLog(tlog=None, *, tags=(), name="")`：
+#    **只有 tlog 是位置参数**；kind 表不在参数里（`EVENT_KINDS` 是模块级映射表，采集器自读）。
+#    旧版文档给的构造调用带**三个位置参数**（战斗对象 / sink / kind 表）—— 真实签名不收，
+#    照抄旧版即 TypeError；战斗对象一律走下面 ④ 的 attach()。
+collector = BattleTLog(tlog, tags=("v1",), name="collector-1")
+# ④ 战斗对象走 attach()，不是构造参数
+collector.attach(battle, btype="monster", player=hero, enemies=foes)
+# ⑤ 事件侧由引擎 fire 触发（战斗对象上的 on_event 被包一层），这里直接喂一条示例
+collector.on_event(battle, "skill_hit",
+                   {"actor": {"uid": "p1"}, "target": {"uid": "e1"}, "dmg": 7}, [])
+collector.flush(); tlog.flush()
+# ⇒ battle.jsonl 落下 battle.start + battle.hit 两行，battle.hit 带 tags=["v1"]
 ```
 
 * `BattleTLog(tlog=None)` ⇒ **全部方法零行为**（可拔插红线：不链观察者、不包 `human_act`、
@@ -27,7 +50,7 @@ collector = BattleTLog(battle, tlog, EVENT_KINDS)   # tlog / kind 表都由调�
 
 | 半边 | 在哪 | 为什么 |
 |---|---|---|
-| 采集（本包） | `ext_reward/tlog/collect.py` | 纯形状：事件 → 流水，零包内依赖 |
+| 采集（本包） | `ext_reward/tlog_collect.py` | 纯形状：事件 → 流水，零包内依赖 |
 | 回放 | 数据包 `content/tlog_replay.py` | 要宿主重建链与 `event_state`（内容侧的活） |
 | 落库（DB sink / 开关） | **宿主** | 平台面（DB 路径、单进程锁） |
 

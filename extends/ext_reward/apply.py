@@ -8,7 +8,7 @@
 
 数据包要用它：在 `game.json` 里声明 `"depends": ["ext_reward"]`，然后
 
-    from ext_reward.tlog import BattleTLog, EVENT_KINDS, REPRO_KEYS
+    from ext_reward.tlog_collect import BattleTLog, EVENT_KINDS, REPRO_KEYS
 
 ★ 可拔插红线（逐字继承自原地 `content/tlog_collect.py`）：`BattleTLog(tlog=None)` 时
 **全部方法零行为** —— 不链观察者、不包 `human_act`、不写一个字段。
