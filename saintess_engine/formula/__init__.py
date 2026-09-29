@@ -265,16 +265,23 @@ class FormulaTable:
                         cs["_compiled"]["expr"] = _compile(eid, f"steps.{sid}.expr", st["expr"])
                     csteps.append(cs)
                 norm["_steps"] = csteps
-                rnd = e.get("random")                                    # V7
-                if rnd is not None:
-                    _need(isinstance(rnd, dict) and isinstance(rnd.get("key"), str),
-                          f"条目 {eid!r} 的 random 必须形如 {{key, pct}}")
-                    _need(isinstance(rnd.get("pct"), (int, float, str)),
-                          f"条目 {eid!r} 的 random.pct 必须是数或变量名")
-                    if isinstance(rnd["pct"], (int, float)):
-                        _need(_is_finite(rnd["pct"]),
-                              f"条目 {eid!r} 的 random.pct 必须是有限数")
-                norm["_random"] = rnd
+            # V7 · `random` 是**通用字段**（wiki formula.md 的「通用字段」部分列了它）
+            #   三种 kind 都走 `_inject_random`，故校验与落盘一律放到 **kind 分支之外**。
+            #   ★ 审计 L995-3（实跑）：原先这段整段**嵌在 `else: # chain` 分支里** →
+            #     `kind: formula` / `kind: aggregate` 的 `random` **装配期不报错也不落盘**，
+            #     运行期 `_inject_random` 因 `e["_random"]` 缺失直接返回 ⇒ **波动恒为 0**。
+            #     实跑：同一份 `random:{key:spd,pct:0.15}` 赋给三种 kind，各跑 400 次：
+            #       chain → 400 个不同值（生效）；formula → **1**；aggregate → **1**（静默丢失）。
+            rnd = e.get("random")                                    # V7
+            if rnd is not None:
+                _need(isinstance(rnd, dict) and isinstance(rnd.get("key"), str),
+                      f"条目 {eid!r} 的 random 必须形如 {{key, pct}}")
+                _need(isinstance(rnd.get("pct"), (int, float, str)),
+                      f"条目 {eid!r} 的 random.pct 必须是数或变量名")
+                if isinstance(rnd["pct"], (int, float)):
+                    _need(_is_finite(rnd["pct"]),
+                          f"条目 {eid!r} 的 random.pct 必须是有限数")
+            norm["_random"] = rnd
             entries[eid] = norm
 
         _check_no_cycle(entries)                                            # V2

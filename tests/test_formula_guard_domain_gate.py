@@ -128,6 +128,57 @@ check("guard 为空对象时照常装配", not _r, "got=%s" % _m)
 
 
 print("")
+print("== D2. random 是通用字段：三种 kind 都必须真的生效（审计 L995-3）==")
+_VRS = {"base": 10.0, "items": [1.0, 2.0, 3.0]}
+
+
+def _varies(kind, extra, variables, n=400):
+    """跑 n 次看取值有几个不同值（波动生效 ⇒ >1）。"""
+    e = {"kind": kind, "version": 1, "returns": "number",
+         "vars": list(variables), "random": {"key": "spd", "pct": 0.15}}
+    e.update(extra)
+    t = FormulaTable.from_decl({"e1": e})
+    out = set()
+    for _ in range(n):
+        v = t.run("e1", dict(_VRS))[0] if kind == "chain" else t.eval("e1", dict(_VRS))
+        out.add(round(float(v), 9))
+    return len(out)
+
+
+_N_CHAIN = _varies("chain", {"steps": [{"id": "s1", "expr": "spd * 2", "returns": "number"}]},
+                   ("spd", "base"))
+check("对照组：chain 的 random 生效（取值有波动）", _N_CHAIN > 1, "distinct=%d" % _N_CHAIN)
+
+_N_FORMULA = _varies("formula", {"expr": "spd * 2"}, ("spd", "base"))
+check("formula 的 random 生效（原为静默丢失：恒 1 个取值）",
+      _N_FORMULA > 1, "distinct=%d ⇒ random 被静默丢弃" % _N_FORMULA)
+
+_N_AGG = _varies("aggregate",
+                 {"op": "sum", "over": "items", "item_expr": "base", "combine": "spd * 2"},
+                 ("spd", "base", "items"))
+check("aggregate 的 random 生效（原为静默丢失：恒 1 个取值）",
+      _N_AGG > 1, "distinct=%d ⇒ random 被静默丢弃" % _N_AGG)
+
+# 无 random 的条目必须逐字不变（不得凭空长出波动）
+_t = FormulaTable.from_decl({"e1": {"kind": "formula", "version": 1, "returns": "number",
+                                    "vars": ["def"], "expr": "def * 2"}})
+_vals = {round(float(_t.eval("e1", {"def": 5.0})), 9) for _ in range(50)}
+check("没有 random 的老条目逐字不变（不得凭空长出波动）", _vals == {10.0}, "got=%r" % _vals)
+
+# 通用字段的校验现在对三种 kind 一致生效
+for _k, _x, _vs in (("formula", {"expr": "def * 2"}, ("def",)),
+                    ("aggregate", {"op": "sum", "over": "items", "item_expr": "base",
+                                   "combine": "def * 2"}, ("def", "base", "items")),
+                    ("chain", {"steps": [{"id": "s1", "expr": "def * 2", "returns": "number"}]},
+                     ("def", "base"))):
+    _e = {"kind": _k, "version": 1, "returns": "number", "vars": list(_vs),
+          "random": {"pct": 0.15}}          # ← 缺 key，非法形状
+    _e.update(_x)
+    _r, _m = _raises({"e1": _e})
+    check("random 缺 key 时 %s 装配期抛错（通用字段口径一致）" % _k, _r, "got=%s" % _m)
+
+
+print("")
 print("== D. 静态向：guard 的键不得再被并进 allowed ==")
 check("源码里不再有 `allowed |= set((e.get(\"guard\") or {}))` 这一形态",
       'allowed |= set((e.get("guard") or {}))' not in _src,
