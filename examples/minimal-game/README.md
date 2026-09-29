@@ -15,10 +15,10 @@
 ```bash
 PY="C:/Users/yuyu/AppData/Roaming/uv/tools/astrbot/Scripts/python.exe"
 
-# ① 跑一场战斗并打印日志（20 行内的 main.py）
+# ① 跑一场战斗并打印日志（36 行，含 extends/ 自举）
 "$PY" examples/minimal-game/main.py
 
-# ② 冒烟测试 + 纯度自检（20 项，exit 0 全绿）
+# ② 冒烟测试 + 纯度自检（25 项，exit 0 全绿）
 "$PY" examples/minimal-game/tests/test_smoke.py
 
 # ③ 让**宿主骨架**对本包开一场战斗（宿主侧口径；那半边 = content/bridge.py）
@@ -36,7 +36,9 @@ PY="C:/Users/yuyu/AppData/Roaming/uv/tools/astrbot/Scripts/python.exe"
 ```
 examples/minimal-game/
 ├─ README.md              本文：怎么跑 / 各部分作用 / 为什么这样设计 / 踩到的坑
-├─ main.py                20 行跑完一场战斗：造 actor → Battle(sides=…) → auto_run → 打印
+├─ main.py                36 行跑完一场战斗：造 actor → Battle(sides=…) → auto_run → 打印
+│                         （★ 前 10 行是 extends/ 自举，**别删** —— 删了裸跑 ImportError，
+│                           审计 L5615 的修复就是补这个，L5616 的「20 行」说法已被它证伪）
 ├─ game.json              包清单（id / name / engine 要求 / domains / entry）—— 编辑器当包打开的凭据
 ├─ editor/
 │  └─ domains.json        本游戏的**域声明**（编辑器扩展面的真源，见第 8 节）
