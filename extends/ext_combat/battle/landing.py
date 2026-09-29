@@ -197,9 +197,20 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     # 0.5——如风暴之眼 0.8 = 防御挡 80% 只受 20%）
     # ★ 状态容器收口：姿态**读容器一次**（`effects["defend"]` 窗口条目；裸 bool 兄弟字段已删）
     if window_open(target, DEFEND_TAG):
-        _dr = 0.5
-        if isinstance(defend_reduce, (int, float)) and 0 <= float(defend_reduce) <= 0.95:
-            _dr = float(defend_reduce)
+        # ★ 2026-09-29（审计 L248/L566/L246 同族未收口 · 第 5 次）：缺省 0.5 与技能值
+        #   上界 0.95 原先都**写死在本行**（两个都是玩家可见平衡数值），而同族的
+        #   block / dodge / taken_resist / taken_elem_resist 四个 cap 早已下沉
+        #   `FORMULA_SKELETON` ⇒ 内容侧要调自己的防御姿态只能改引擎。
+        #   现读 `formulas.defend_posture_default()` / `defend_posture_cap()`，
+        #   默认值 = 原写死值（0.50 / 0.95）⇒ 与已装内容逐字一致。
+        # ★★ 顺带修掉一处**静默失效**（实测）：原判据是「`defend_reduce` 落在
+        #   `0 <= v <= 0.95` 才采纳」，于是**超界的值被整条丢掉**、静默回落缺省 0.5
+        #   —— 技能数据写「挡 99%」实跑只有「挡 50%」，零报错零诊断。
+        #   口径：**非数 → 回落缺省；是数 → 按 cap 封顶**（封顶 = 认「最多挡这么多」，
+        #   而「丢弃」既不报错也不符合调用方意图）。下界 0.0 仍合法（= 完全不减伤）。
+        _dr = _F.defend_posture_default()
+        if isinstance(defend_reduce, (int, float)) and not isinstance(defend_reduce, bool):
+            _dr = min(max(float(defend_reduce), 0.0), _F.defend_posture_cap())
         # int 截断对齐旧 landing 默认 0.5 行为（coverage 87 断言口径）
         dmg = max(1, int(dmg * (1.0 - _dr)))
         _cue(battle, logs, "battle.landing.blocked_amount", {"dmg": dmg})

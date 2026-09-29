@@ -115,6 +115,15 @@ _NEUTRAL_SKELETON = {
     #   （决定「元素抗性词条最多减几成」），内容侧零配置面。
     #   默认值取原写死值 0.50 ⇒ 与已装内容逐字一致。
     "taken_elem_resist": {"cap": 0.50},
+    # ---- 2026-09-29（同族未收口 · 第 5 次）：**防御姿态**的缺省减伤与技能值上界 ----
+    #   原写死在 `landing.deal_damage`（`_dr = 0.5` 与合法区间判据 `<= 0.95`）。
+    #   与 block / dodge / taken_resist / taken_elem_resist 同族同形：那几个 cap
+    #   早已下沉，唯独防御姿态这两个漏在引擎里。两者都是**玩家可见平衡数值**
+    #   （决定「摆出防御姿态默认挡几成」+「技能自带减伤最多能到几成」）。
+    #   默认值取原写死值（0.50 / 0.95）⇒ 与已装内容逐字一致、行为零变化。
+    #   **不在零效应中性段**：default 归 0 = 姿态完全不减伤、cap 归 0 = 姿态整条失效，
+    #   两者都是「另一个平衡选择」，不是「没有这条规则」。
+    "defend_posture": {"default": 0.50, "cap": 0.95},
 }
 
 
@@ -227,6 +236,34 @@ def taken_elem_resist_cap() -> float:
       内容侧声明 `FORMULA_SKELETON["taken_elem_resist"]["cap"]`；默认值 = 原写死值 0.50。
     """
     return _skel_sub_num("taken_elem_resist", "cap", 0.50)
+
+
+def defend_posture_default() -> float:
+    """防御姿态**缺省减伤比例**（技能未自带 `defend_reduce` 时用）。
+
+    ★ 2026-09-29（审计 L248/L566/L246 同族未收口 · 第 5 次）：原先写死在
+      `landing.deal_damage` 的 `_dr = 0.5`。同一笔账的邻支 —— 格挡 cap
+      （`block_cap()`，V4 迁）· 闪避 cap（`dodge_cap()`，E2 迁）· 物免/魔免 cap
+      （`taken_resist_cap()`）· 元素抗性 cap（`taken_elem_resist_cap()`）
+      **早已下沉到这张表**，唯独防御姿态的缺省值漏在引擎里。它是**玩家可见的
+      平衡数值**（决定「摆出防御姿态默认能挡掉几成伤害」），内容侧零配置面。
+      内容侧声明 `FORMULA_SKELETON["defend_posture"]["default"]`；默认值 = 原写死值
+      0.50（未装配时也逐字一致 —— 本 getter 是唯一回落点，**不加第二处**）。
+    """
+    return _skel_sub_num("defend_posture", "default", 0.50)
+
+
+def defend_posture_cap() -> float:
+    """防御姿态**技能自带减伤的上界**（`defend_reduce` 合法区间是 `0 <= v <= cap`）。
+
+    ★ 2026-09-29（同上，邻支）：原先写死在 `landing.deal_damage` 的 `<= 0.95`。
+      ★ 它不只是「一个可配的平衡数」，还藏着**一处静默失效**（实测）：
+        `defend_reduce=0.99` 过不了 `0 <= v <= 0.95` 这一句，于是**被整条丢掉**、
+        静默回落到缺省 0.5 —— 技能数据写「挡 99%」实跑只有「挡 50%」，
+        零报错、零诊断。内容侧声明 `FORMULA_SKELETON["defend_posture"]["cap"]`；
+        默认值 = 原写死值 0.95。
+    """
+    return _skel_sub_num("defend_posture", "cap", 0.95)
 
 
 def heal_down_per_stack() -> float:
