@@ -218,11 +218,19 @@ class PanelStack:
             n["status"] = L.get("status", "active")
             norm.append(n)
 
-        emit = decl.get("emit") or {}
-        _need(isinstance(emit, dict), "emit 必须是对象")
-        ik = emit.get("int_keys") or []
-        _need(isinstance(ik, list) and all(isinstance(x, str) for x in ik),
-              "emit.int_keys 必须是字符串数组")
+        # ★ 回落只认 None：`or {}` / `or []` 会把 **falsy 非空类型**（"" / 0 / [] / 0.0 / False）
+        #   静默当成"没给"，于是 `_need(isinstance(...))` 形同虚设（实测 emit="" 直接摸到
+        #   引擎内部的 'function' object has no attribute 'get'，声明归属全丢）。
+        #   口径与紧邻两行的 `audit` 一致（那里写的是 `und is None or isinstance(...)`）。
+        _emit = decl.get("emit")
+        _need(_emit is None or isinstance(_emit, dict),
+              f"emit 必须是对象，收到 {type(_emit).__name__}")
+        emit = {} if _emit is None else _emit
+        _ik = emit.get("int_keys")
+        _need(_ik is None or (isinstance(_ik, list)
+                              and all(isinstance(x, str) for x in _ik)),
+              f"emit.int_keys 必须是字符串数组，收到 {type(_ik).__name__}")
+        ik = [] if _ik is None else _ik
         rd = emit.get("round", 6)
         _need(isinstance(rd, int) and not isinstance(rd, bool) and rd >= 0,
               f"emit.round 必须是 ≥0 的整数，收到 {rd!r}")

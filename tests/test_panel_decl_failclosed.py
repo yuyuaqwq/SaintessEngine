@@ -29,6 +29,7 @@ extends/ext_combat/panel/__init__.py 有两条 raise，此前**全仓零断言**
 ★ 只加强：新增门禁，未改任何既有判据、未动任何冻结基线、生产码零改动。
 """
 import ast
+import hashlib
 import importlib.util
 import io
 import os
@@ -134,6 +135,150 @@ empty_stack = PanelStack.from_decl(_decl(layers=[]))
 check("★ 空 layers 合法（头注：可为空数组）", empty_stack.resolve({})["atk"] == 10.0,
       "空 layers 被拒了 —— 判据把严格化成了什么都拒")
 
+_PANEL = os.path.join(ROOT, "extends", "ext_combat", "panel", "__init__.py")
+MUT = os.path.join(ROOT, "_panel_mut_tmp.py")
+with io.open(_PANEL, "r", encoding="utf-8", newline="") as f:
+    ORIG = f.read()
+
+
+def _anchor(needle, fallback_lineno):
+    """按**内容**定位行号（★ 别把行号当锚点：产品码一改行号就漂，
+    上一次就因为 _emit 那处补丁位移而让整条反证报 FileNotFoundError）。
+
+    定位规则 = 找第一行同时满足「含 needle」且「本行或下一行是 raise」。
+    找不到才退回调用方给的行号（并让 _mutate 返回 0 条 = 判据自己报红）。
+    """
+    lines = ORIG.splitlines()
+    # 两种锚点形状都要覆盖：
+    #  ① `raise X(...)` 独占一行，消息串在下一行（多行 f-string）⇒ 命中行 i，往上找 i-1。
+    #  ② `_need(cond, "消息")` 两行展开 —— 里面**没有** raise 子句，是
+    #     `_need` 函数的**调用点**（要拆的是这一整条调用，不是 raise）⇒ 命中行 i 本身。
+    for i, ln in enumerate(lines):
+        if needle not in ln:
+            continue
+        # 形状 ② `_need(cond,` 起头、消息串在**后续行**（跨行调用）⇒ 从本行往上回溯
+        # 找最近的 `_need(` 起头行（最多回溯 3 行，覆盖 cond 跨行的情况）。
+        if ln.lstrip().startswith("_need("):
+            return i + 1
+        for j in range(i, max(-1, i - 4), -1):
+            if lines[j].lstrip().startswith("_need("):
+                return j + 1
+        for j in (i - 1, i):
+            if 0 <= j < len(lines) and lines[j].lstrip().startswith("raise "):
+                return j + 1
+    return fallback_lineno
+
+
+def _mutate(lineno):
+    """把第 lineno 行那条 raise 整块换成 pass（同缩进），写到 MUT。
+
+    ★ 为什么整块而非逐行 replace：两条 raise 都是跨行的，按行删会留下
+    悬空表达式 → IndentationError ⇒ 反证自身崩掉 = 反证无效。
+    ★ 也不就地改真仓再还原：中途崩掉会把变异态留在真仓（本车道踩过一次）。
+    """
+    lines = ORIG.splitlines(True)
+    spans = sorted({(n.lineno, n.end_lineno) for n in ast.walk(ast.parse(ORIG))
+                    if isinstance(n, ast.Raise) and n.end_lineno and n.lineno == lineno})
+    if not spans:
+        return 0
+    for a, b in reversed(spans):
+        ind = lines[a - 1][:len(lines[a - 1]) - len(lines[a - 1].lstrip())]
+        lines[a - 1:b] = [ind + "pass" + _NL]
+    with io.open(MUT, "w", encoding="utf-8", newline="") as f:
+        f.write("".join(lines))
+    return len(spans)
+
+
+def _mutate_need_call(lineno):
+    """把第 lineno 行起的**整条 `_need(...)` 调用**（可能跨多行）换成 pass。
+
+    为什么单独一个函数：`_need` 是被调用的函数，调用点里没有 ast.Raise 节点，
+    `_mutate()` 的 AST 定位对它无效（会返回 0 条 = 判据自报红）。
+    """
+    lines = ORIG.splitlines(True)
+    if not (0 < lineno <= len(lines)):
+        return 0
+    i = lineno - 1
+    if not lines[i].lstrip().startswith("_need("):
+        return 0
+    j, depth = i, 0
+    while j < len(lines):
+        depth += lines[j].count("(") - lines[j].count(")")
+        if depth <= 0:
+            break
+        j += 1
+    ind = lines[i][:len(lines[i]) - len(lines[i].lstrip())]
+    lines[i:j + 1] = [ind + "pass" + _NL]
+    with io.open(MUT, "w", encoding="utf-8", newline="") as f:
+        f.write("".join(lines))
+    return 1
+
+
+def _load_mut():
+    spec = importlib.util.spec_from_file_location("_panel_mut", MUT)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# -- 2b ★ emit / int_keys 的 falsy 族（2026-09-29 批次 4 真修的那条）----------
+# 立项依据（实跑，不是推断）：改前 `emit = decl.get("emit") or {}` 与
+# `ik = emit.get("int_keys") or []` 两处 or 链，把 **falsy 非 dict**
+# （"" / 0 / [] / 0.0 / False）静默当成"没给" ⇒ 后面的
+# `_need(isinstance(emit, dict))` 形同虚设；实测 emit="" 一路摸到引擎内部
+# `AttributeError: 'function' object has no attribute 'get'`，**声明归属全丢**。
+# 同一函数里紧邻两行的 `audit` 早就是「回落只认 None」的正确写法 ⇒ 同族不一致。
+# 现口径：`_emit is None or isinstance(_emit, dict)` / 同款 int_keys。
+print(_NL + "[2b] ★ emit / int_keys 的 falsy 族（回落只认 None）")
+
+# (a) falsy 非 dict 逐个点名 —— 钉「不许退化成引擎内部形态名」
+_FALSY_NON_DICT = [("空串", ""), ("0", 0), ("空数组", []), ("0.0", 0.0), ("False", False)]
+for _nm, _v in _FALSY_NON_DICT:
+    _m = _raised(_decl(emit=_v))
+    check("emit=" + _nm + " → PanelDeclError（不得摸到引擎内部）",
+          _m is not None and not _m.startswith("!!"),
+          "退化: " + repr(_m))
+    check("emit=" + _nm + " 文案点名 emit", _m is not None and "emit" in _m,
+          "没点名: " + repr(_m))
+
+# (b) int_keys 同样的 falsy 族（改动前这条是同一个 or 链，一起钉住）
+for _nm, _v in [("空串", ""), ("0", 0), ("非空串", "abc")]:
+    _m = _raised(_decl(emit={"int_keys": _v, "round": 2}))
+    check("emit.int_keys=" + _nm + " → PanelDeclError",
+          _m is not None and not _m.startswith("!!"), "退化: " + repr(_m))
+    check("emit.int_keys=" + _nm + " 文案点名 int_keys",
+          _m is not None and "int_keys" in _m, "没点名: " + repr(_m))
+
+# (c) ★ 合法面钉「不许放松成见谁都抛」—— 这三条是本节最关键的防过度守卫
+check("emit 缺省（None）仍合法（回落成 {}）",
+      isinstance(PanelStack.from_decl(_decl(emit=None)), PanelStack), "被误伤了")
+check("emit={} 仍合法（等价于缺省）",
+      isinstance(PanelStack.from_decl(_decl(emit={})), PanelStack), "被误伤了")
+_ik_ok = PanelStack.from_decl(_decl(emit={"int_keys": ["atk"], "round": 2}))
+check("int_keys=['atk'] 仍合法", isinstance(_ik_ok, PanelStack), "被误伤了")
+check("int_keys 缺省（None）仍合法（回落成 []）",
+      isinstance(PanelStack.from_decl(_decl(emit={"round": 2})), PanelStack), "被误伤了")
+
+# (d) 有牙反证：把 _emit 那条 _need 拆掉 ⇒ falsy 族重新摸到引擎内部 ⇒ 必须报红
+_a_emit = _anchor("emit 必须是对象，收到", 0)
+check("★ 反证锚点能定位到 emit 那条 _need", _a_emit > 0, "定位失败")
+_n_emit = _mutate_need_call(_a_emit)
+check("★ 反证：定位到 emit 那条 raise", _n_emit == 1, "定位到 " + str(_n_emit) + " 条")
+if _n_emit == 1:
+    _me = _load_mut()
+    _bad = "none"
+    try:
+        _me.PanelStack.from_decl(_decl(emit=""))
+    except _me.PanelDeclError:
+        _bad = "paneldeclerror"
+    except Exception as _e:                                    # noqa: BLE001
+        _bad = type(_e).__name__
+    check("★ 反证有牙：拆掉后 emit='' 不再被点名（退化形态已记录）",
+          _bad != "paneldeclerror", "拆了还照抛点名的 PanelDeclError")
+    check("★ 反证记录了退化形态（实得 " + repr(_bad) + "）",
+          _bad != "paneldeclerror" and _bad != "none", "实得 " + repr(_bad))
+    os.remove(MUT)
+
 # -- 3 求值期：base.mode=actor 缺键 --------------------------------
 print(_NL + "[3] 求值期：base.mode=actor 缺键 → 点名")
 actor_stack = PanelStack.from_decl(_decl(base=_base("actor", keys=["atk", "def"])))
@@ -189,42 +334,10 @@ print("  ※ 上面四条改为**哨兵逻辑自证**（不靠产品码造样本
 
 # -- 5 反证有牙 ----------------------------------------------------
 print(_NL + "[5] ★ 反证：把两条 raise 换成静默 pass")
-_PANEL = os.path.join(ROOT, "extends", "ext_combat", "panel", "__init__.py")
-MUT = os.path.join(ROOT, "_panel_mut_tmp.py")
-with io.open(_PANEL, "r", encoding="utf-8", newline="") as f:
-    ORIG = f.read()
-
-
-def _mutate(lineno):
-    """把第 lineno 行那条 raise 整块换成 pass（同缩进），写到 MUT。
-
-    ★ 为什么整块而非逐行 replace：两条 raise 都是跨行的，按行删会留下
-    悬空表达式 → IndentationError ⇒ 反证自身崩掉 = 反证无效。
-    ★ 也不就地改真仓再还原：中途崩掉会把变异态留在真仓（本车道踩过一次）。
-    """
-    lines = ORIG.splitlines(True)
-    spans = sorted({(n.lineno, n.end_lineno) for n in ast.walk(ast.parse(ORIG))
-                    if isinstance(n, ast.Raise) and n.end_lineno and n.lineno == lineno})
-    if not spans:
-        return 0
-    for a, b in reversed(spans):
-        ind = lines[a - 1][:len(lines[a - 1]) - len(lines[a - 1].lstrip())]
-        lines[a - 1:b] = [ind + "pass" + _NL]
-    with io.open(MUT, "w", encoding="utf-8", newline="") as f:
-        f.write("".join(lines))
-    return len(spans)
-
-
-def _load_mut():
-    spec = importlib.util.spec_from_file_location("_panel_mut", MUT)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
 try:
-    n59 = _mutate(59)
-    check("反证：定位到 L59 的 raise", n59 == 1, "定位到 " + str(n59) + " 条")
+    _a59 = _anchor("raise PanelDeclError(msg)", 59)
+    n59 = _mutate(_a59)
+    check("反证：定位到 _need 那条 raise", n59 == 1, "定位到 " + str(n59) + " 条")
     m59 = _load_mut()
     d = _decl()
     d["base"] = {"mode": "xxx"}
@@ -250,8 +363,9 @@ try:
     check("★ 反证有牙：拆 _need 后层缺 id 不再被点名", leaked2, "拆了还照抛")
 
     os.remove(MUT)
-    n248 = _mutate(248)
-    check("反证：定位到 L248 的 raise", n248 == 1, "定位到 " + str(n248) + " 条")
+    _a248 = _anchor("base.mode=actor：调用方未提供声明的键", 248)
+    n248 = _mutate(_a248)
+    check("反证：定位到 base.mode=actor 那条 raise", n248 == 1, "定位到 " + str(n248) + " 条")
     m248 = _load_mut()
     a2 = m248.PanelStack.from_decl(_decl(base=_base("actor", keys=["atk", "def"])))
     exc = "none"
@@ -272,12 +386,19 @@ finally:
 with io.open(_PANEL, "r", encoding="utf-8", newline="") as f:
     check("★ 反证后真仓一字未动", f.read() == ORIG, "变异态残留在真仓")
 
-diff = subprocess.run(["git", "diff", "--stat", "--",
-                       "extends/ext_combat/panel/__init__.py"],
-                      cwd=ROOT, capture_output=True, text=True,
-                      encoding="utf-8", errors="replace")
-check("★ 生产码零改动（git diff 对 panel 为空）", not diff.stdout.strip(),
-      "有改动: " + repr(diff.stdout))
+# ★ 基准重采（2026-09-29 · 批次 4 · 正当推进，不是放宽）：
+#   原判据是「panel 生产码零改动」—— 那是**建门禁那一轮**的自限约束
+#   （当轮只加判据、不碰产品码）。本轮批次 4 把 `emit = decl.get("emit") or {}`
+#   的 falsy 族真修掉了（见文件头「已修生产码」节），「零改动」这一条的前提
+#   **已失效** —— 留着就是一条永假的同义反复。
+#   正解不是删掉它，而是**换一条更强、且仍能抓同一种漂移**的判据：
+#   钉 panel/__init__.py 的 sha256。变异反证跑完必须把文件还原成这个字节，
+#   任何残留变异 / 忘记还原 / 手滑多改一个字都会当场报红。
+#   重采依据 = 本轮提交（b1 的那笔修法）落定后的字节；判据强度严格高于原「diff 为空」。
+_PANEL_SHA = "bb8635884c11ba2119272e47e4cf2a22cefbf0ff3800b06632d76e4aec00f4cd"
+_now = hashlib.sha256(io.open(_PANEL, "rb").read()).hexdigest()
+check("★ panel 生产码是钉住的那份字节（sha256 · 抓变异残留/忘记还原）",
+      _now == _PANEL_SHA, "sha256 不一致：钉 " + _PANEL_SHA[:12] + " · 实得 " + _now[:12])
 
 print(_NL + "=" * 60)
 print("通过 %d · 失败 %d · 总检查 %d" % (PASS, FAIL, TOTAL))
