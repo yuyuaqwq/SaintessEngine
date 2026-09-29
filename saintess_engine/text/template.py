@@ -182,9 +182,20 @@ class TextSpec:
             raise ValueError(
                 "文案声明用了已收掉的别名键 %s —— 入口键只有 `key` / `value`"
                 "（别名自审计 L1453 删除，全仓零写手；见 text.schema.json）" % (bad,))
+        # ★ key 缺项/空串**点名抛**（与本 docstring 的承诺对齐；L1453 同批）
+        #   原写法 `str(data.get("key") or "")` 把「忘了写 key」与「key 写错成别名」
+        #   一起静默读成空 key ⇒ 只能等到 validate() 报一句「存在空 key 的文案」，
+        #   点名不到**是哪一条**。表形态由 `TextTable.load` 的 `setdefault("key", k)`
+        #   补齐，所以这里抛**只会打到数组形态 / 直调 from_dict** 那两条通路。
+        _k = data.get("key")
+        if not isinstance(_k, str) or not _k.strip():
+            raise ValueError(
+                "文案声明缺 key（或 key 不是非空字符串）：收到 %r。"
+                "★ 表形态 `{key: 声明}` 的 key 由对象键决定、可省 `key` 字段；"
+                "数组形态必须显式写 `key`（见 text.schema.json）。" % (_k,))
         p = data.get("params", ())
         params = (p,) if isinstance(p, str) and p else tuple(p or ())
-        return cls(key=str(data.get("key") or ""),
+        return cls(key=_k,
                    value="" if data.get("value") is None else str(data["value"]),
                    desc=str(data.get("desc", "") or ""),
                    category=str(data.get("category", "") or ""),

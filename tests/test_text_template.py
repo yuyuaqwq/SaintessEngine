@@ -192,6 +192,28 @@ try:
 except TypeError:
     check("L1453：非 Mapping 声明点名抛 TypeError", True)
 
+# ── L1453 同批尾巴：key 缺项/空串**点名抛**（原 `str(data.get("key") or "")` 静默读成空 key）
+#    反证要点：报错文案必须**点名收到的值**，不能只说「缺 key」——
+#    「忘了写 key」与「key 写错成别名」两种坏法都落到空串上，不点名就分不出来。
+for _bad, _why in (("", "空串"), (None, "缺项"), (0, "数字 0"), ("   ", "纯空白"),
+                   (["k"], "列表")):
+    try:
+        TextSpec.from_dict({"key": _bad, "value": "V"})
+        check("L1453：key %s 点名抛（不静默兜成空串）" % _why, False, "没抛")
+    except ValueError as _e:
+        check("L1453：key %s 点名抛（不静默兜成空串）" % _why,
+              repr(_bad) in str(_e) or "缺 key" in str(_e), str(_e)[:60])
+# 合法通路零变化：表形态由 load 的 setdefault 补 key（不写 key 字段也能装载）
+_t = TextTable()
+_t.load({"a.b": {"value": "甲"}, "c.d": "裸串"})
+check("L1453：表形态省略 key 字段照常装载（setdefault 补齐）",
+      _t.validate() == [] and _t.get("a.b") == "甲" and _t.get("c.d") == "裸串",
+      str(_t.validate()))
+# 数组形态写全 key 照常装载
+_t2 = TextTable()
+_t2.load([{"key": "x.y", "value": "乙"}])
+check("L1453：数组形态写全 key 照常装载", _t2.get("x.y") == "乙", _t2.get("x.y"))
+
 # ---------------------------------------------------------------- 5. 回写 / 统计
 print("\n【5. 回写与统计】")
 orig = TextTable({"a": "A {x}", "b": {"value": "B", "desc": "说明", "category": "类"}})
