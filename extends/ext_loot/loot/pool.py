@@ -44,19 +44,40 @@ from .pick import pick_weighted, roll_range
 STRATEGIES: dict = {}
 
 
+
+USES_KINDS = ("entries", "rolls", "none")
+
+
+def _check_spec(name, fn, uses, *, needs_weights=False, expand=None):
+    """**策略 spec 的唯一合法性判定**（审计 L573）。
+
+    ★ 原缺陷：只有 register_strategy 那条入口做了校验，而 LootTable(strategies=...)
+      的**构造期入口**零校验 —— 内容侧传 dict spec 时 uses 拼错（"entry"）
+      既不报错、又让 audit() 的 entries / rolls **两个分支都不进**
+      （探针实测：issue 列表为空 ⇒ 整张表「审计通过」而实际一条都没判）。
+      修法 = 两条入口**共用这一份判定**（不留兼容分支、不加兜底）。
+    """
+    if not isinstance(name, str) or not name:
+        raise ValueError("策略名必须是非空字符串")
+    if not callable(fn):
+        raise TypeError(
+            f"策略必须可调用：fn(pool, ctx, table) -> list[dict]（{name!r} 收到 {fn!r}）")
+    if uses not in USES_KINDS:
+        raise ValueError(
+            f"uses 只能是 {"/".join(USES_KINDS)}，收到 {uses!r}（策略 {name!r}）")
+    if expand is not None and not callable(expand):
+        raise TypeError(f"expand 必须可调用或为 None（策略 {name!r} 收到 {expand!r}）")
+    return {"fn": fn, "uses": uses,
+            "needs_weights": bool(needs_weights), "expand": expand}
+
 def register_strategy(name: str, fn, *, doc: str = "", uses: str = "entries",
                       needs_weights: bool = False, expand=None, replace: bool = False):
     """注册一个策略。重名默认报错（防静默覆盖）；要覆盖写 `replace=True`。"""
-    if not isinstance(name, str) or not name:
-        raise ValueError("策略名必须是非空字符串")
     if name in STRATEGIES and not replace:
         raise ValueError(f"策略已注册：{name}（要覆盖请显式 replace=True）")
-    if not callable(fn):
-        raise TypeError("策略必须可调用：fn(pool, ctx, table) -> list[dict]")
-    if uses not in ("entries", "rolls", "none"):
-        raise ValueError(f"uses 只能是 entries/rolls/none，收到 {uses!r}")
-    STRATEGIES[name] = {"fn": fn, "doc": doc, "uses": uses,
-                        "needs_weights": bool(needs_weights), "expand": expand}
+    spec = _check_spec(name, fn, uses, needs_weights=needs_weights, expand=expand)
+    spec["doc"] = doc
+    STRATEGIES[name] = spec
     return fn
 
 
@@ -73,6 +94,19 @@ class UnknownStrategy(ValueError):
       实证：`get_strategy("per_entry_roll")` 曾静默返回 `_s_weighted`。
     """
 
+
+class EmptyPoolDef(ValueError):
+    """池声明为空 —— **不静默变成「这次没掉」**（审计 L574 / L575）。
+
+    ★ 为什么必须抛：strategy_of() 已经把「未知 type 静默回落 weighted」堵死了
+      （UnknownStrategy，审计 L566）。但**同一条哑弹还有另一半** —— 池结构与策略名
+      都对，唯独该策略要的那一档（rolls 族要 rolls / entries 族要 entries）
+      **整档是空的**。旧写法 `pool.get("rolls", [])` 拿到空列表后 for 一次都不进，
+      直接 return []：
+        · uses=rolls 的 type=table / table_choice 实跑 = []（探针实测）
+        · 玩家体感 = 池子配了却什么都没掉，无报错、无诊断、无从察觉。
+      与 L566 同源同修法：**声明错就抛，不许兜底成一个合法外观的返回值**。
+    """
 
 def _lookup(name: str) -> dict:
     try:
@@ -205,10 +239,31 @@ def _s_fixed(pool: dict, ctx, table) -> list:
     return out
 
 
+def _rolls_of(pool: dict, strategy: str) -> list:
+    """取 rolls 族的档位表：**缺档 / 空档 / 非列表一律抛**（审计 L574 / L575）。
+
+    * `strategy` 只用于报错定位（type=table / type=table_choice）。
+    * 不用 `pool.get("rolls", [])` 的默认值：缺键与空列表**报同一条**。
+    """
+    if "rolls" not in pool:
+        raise EmptyPoolDef(
+            f"type={strategy!r} 的池缺 rolls 字段（现有字段 {sorted(pool)}）；"
+            "★ 缺这一档等于「什么都不掉」，不静默返回空列表")
+    rolls = pool["rolls"]
+    if not isinstance(rolls, list):
+        raise EmptyPoolDef(
+            f"type={strategy!r} 的池 rolls 必须是列表，收到 {type(rolls).__name__}")
+    if not rolls:
+        raise EmptyPoolDef(
+            f"type={strategy!r} 的池 rolls 为空 —— 整池永远抽不出东西；"
+            "★ 这是数据缺陷，不是一次「没命中」")
+    return rolls
+
 def _s_table(pool: dict, ctx, table) -> list:
     """多层概率表：每行独立判定（`chance` 不中即跳过）。"""
+    rolls = _rolls_of(pool, "table")
     out = []
-    for roll_cfg in pool.get("rolls", []):
+    for roll_cfg in rolls:
         chance = float(roll_cfg.get("chance", 1.0))
         if chance < 1.0 and table.rng.random() >= chance:
             continue
@@ -222,7 +277,7 @@ def _s_table_choice(pool: dict, ctx, table) -> list:
     * `cutoff` 累计概率优先（末档 cutoff 不足 1.0 时容错兜底 —— 数据小瑕疵不吞奖励）
     * 否则按序首个命中的 `chance`
     """
-    rolls = pool.get("rolls", [])
+    rolls = _rolls_of(pool, "table_choice")
     if any("cutoff" in rc for rc in rolls):
         total = table.rng.random()
         acc = 0.0
@@ -287,12 +342,21 @@ class LootTable:
         self._strategies = dict(STRATEGIES)
         for k, v in dict(strategies or {}).items():
             if callable(v):
-                self._strategies[k] = {"fn": v, "doc": "", "uses": "entries",
-                                       "needs_weights": False, "expand": None}
-            else:
-                spec = dict(STRATEGIES.get(k) or {})
-                spec.update(v or {})
-                self._strategies[k] = spec
+                # 裸可调用 = 「entries 族、无 expand」的简写（既有语义）
+                self._strategies[k] = _check_spec(k, v, "entries")
+                continue
+            if not isinstance(v, dict):
+                raise TypeError(
+                    f"strategies[{k!r}] 必须是可调用或 dict spec，收到 {v!r}"
+                    "（可调用 = entries 族简写；dict = fn/uses/expand）")
+            merged = dict(STRATEGIES.get(k) or {})
+            merged.update(v)
+            # ★ 与内置策略**用同一份判定**（审计 L573）——原先这条路径零校验
+            merged["fn"] = _check_spec(
+                k, merged.get("fn"), merged.get("uses", "entries"),
+                needs_weights=merged.get("needs_weights", False),
+                expand=merged.get("expand"))
+            self._strategies[k] = merged
         self.inline_prefixes = tuple(inline_prefixes)
         self.pool_key_prefixes = tuple(pool_key_prefixes)
         self.special_refs = frozenset(special_refs)

@@ -576,6 +576,73 @@ def t11_pool_key_prefix_strip():
 
 
 
+
+def t12_spec_and_empty_rolls_fail_closed():
+    """审计 L573 / L574 / L575：声明错一律抛，不许退化成「什么都没掉」。
+
+    ★ 这三条同源：`strategy_of` 已经堵死「未知 type 静默回落 weighted」（L566），
+      但还有两条同形的哑弹 ——
+      ① L573 构造期 `strategies={...}` 那条入口零校验：uses 拼错 / fn 不可调用都不报，
+         且 uses 拼错会让 audit() 的 entries 与 rolls **两个分支都不进**（整表「审计通过」）；
+      ② L574/L575 rolls 族遇缺 rolls / 空 rolls 直接 return []（池配了却什么都不掉）。
+      判据意图「可选项的优雅跳过」原样保留在别处（strict=False 钩子分流 / 未命中），
+      这里钉的是**声明错**不许伪装成合法返回值。
+    """
+    print(chr(10) + "[12] 声明错 fail-closed（L573 / L574 / L575）")
+    def _fn(pool, ctx, table):
+        return []
+    # ---- L573：构造期 strategies 走**同一份**判定 ----
+    check("uses 拼错 → 构造期就抛（旧：静默进表，audit 两个分支都不进）",
+          _raises(ValueError,
+                  lambda: LP.LootTable({"p": {"type": "m", "entries": []}},
+                                       strategies={"m": {"fn": _fn, "uses": "entry"}})))
+    check("fn 不可调用 → 构造期抛（旧：跑到 roll 才 TypeError）",
+          _raises(TypeError,
+                  lambda: LP.LootTable({"p": {"type": "m2", "entries": []}},
+                                       strategies={"m2": {"fn": 5}})))
+    check("strategies 值既非可调用也非 dict → 抛（旧：.update() 静默吞掉）",
+          _raises(TypeError,
+                  lambda: LP.LootTable({"p": {"type": "m3", "entries": []}},
+                                       strategies={"m3": "nope"})))
+    # 合法 dict spec 仍然可用（不许把门禁写成「一律拒收」）
+    ok_t = LP.LootTable({"p": {"type": "ok", "entries": []}},
+                        strategies={"ok": {"fn": _fn, "uses": "none"}})
+    check("合法 dict spec 仍可注册并取到",
+          ok_t.strategy_of({"type": "ok"})["uses"] == "none")
+    # 裸可调用 = entries 族简写（既有语义不许被这次收口打断）
+    check("裸可调用简写仍走 entries 族",
+          LP.LootTable({"p": {"type": "cf", "entries": []}},
+                       strategies={"cf": _fn}).strategy_of({"type": "cf"})["uses"]
+          == "entries")
+    # ---- L574 / L575：rolls 族缺档 / 空档 / 非列表 ----
+    for name in ("table", "table_choice"):
+        check(f"{name} 缺 rolls → 抛 EmptyPoolDef（旧：静默 []）",
+              _raises(LP.EmptyPoolDef,
+                      lambda n=name: LP.LootTable({"e": {"type": n}}).roll("e")))
+        check(f"{name} rolls=[] → 抛 EmptyPoolDef（旧：静默 []）",
+              _raises(LP.EmptyPoolDef,
+                      lambda n=name: LP.LootTable({"e": {"type": n, "rolls": []}}).roll("e")))
+        check(f"{name} rolls 非列表 → 抛 EmptyPoolDef",
+              _raises(LP.EmptyPoolDef,
+                      lambda n=name: LP.LootTable({"e": {"type": n, "rolls": 7}}).roll("e")))
+    # 有 rolls 的正常路径一字未变
+    good = LP.LootTable(
+        {"g": {"type": "table",
+               "rolls": [{"pool": "g2", "chance": 1.0}]},
+         "g2": {"type": "fixed",
+                "entries": [{"item": "gold"}]}},
+        resolver=lambda ref, ctx: {"item_id": ref, "count": 1})
+    check("rolls 非空 → 正常掉落路径不变",
+          [r["item_id"] for r in good.roll("g")] == ["gold"])
+    # ---- AST：两条入口必须共用 _check_spec（防「以后又分叉一份」）----
+    import ast as _ast
+    _tree = _ast.parse(io.open(LP.__file__, encoding="utf-8").read())
+    _users = [n for n in _ast.walk(_tree)
+              if isinstance(n, _ast.Call)
+              and isinstance(n.func, _ast.Name) and n.func.id == "_check_spec"]
+    check("AST：_check_spec ≥ 3 个调用点（内置注册 + 构造期两条入口）",
+          len(_users) >= 3)
+
 def main():
     print("== loot 门禁：抽取 / 池与策略 / 展开审计 / 档位 / 挂载 / 零知识 ==")
     t1_pick()
@@ -589,6 +656,7 @@ def main():
     t9_determinism()
     t10_sub_ctx_copy_contract()
     t11_pool_key_prefix_strip()
+    t12_spec_and_empty_rolls_fail_closed()
     print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
     return 1 if failed else 0
 

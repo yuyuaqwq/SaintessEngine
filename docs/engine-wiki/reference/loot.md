@@ -120,14 +120,14 @@ draw_slots(pool_ids, 3, fixed=("series_mark",), no_dup=True, rng=rng)  # 固定�
 | `pick_many` | `loot/pick.py:77` | 等概率（委托 `rng.sample`）或带权；可放回 / 不放回；`where` 过滤 |
 | `roll_range` | `loot/pick.py:116` | `int` / `[a,b]` / `None` → 数量 |
 | `weigh` / `total_weight` | `loot/pick.py:32` / `:37` | 权重列表 / 权重和 |
-| `LootTable` | `loot/pool.py:219` | 池 + 策略；`roll` `:306` / `expand` `:324` / `audit` `:334` / `audit_pretty` `:399` |
-| `LootTable.audit(resolvable=…)` 的判定回调 | `loot/pool.py:474` | `resolvable(ref, pool)` → `True` / `False` / **措辞字符串** / `None` |
-| `LootTable.roll_sub` / `roll_cfg` | `loot/pool.py:321` / `:271` | 子池/引用抽取 / 抽一行 roll（自定义策略也用得上） |
-| `LootTable.fallback` / `sub_ctx` | `loot/pool.py:299` / `:251` | 兜底钩子 / 子上下文（qty 覆盖） |
-| `register_strategy` / `strategy_names` | `loot/pool.py:47` / `:63` | 策略注册（`uses`/`needs_weights`/`expand` 元数据） |
-| `SimpleCtx` | `loot/pool.py:95` | 宽容上下文（缺属性 → None） |
-| `TierTable` | `loot/tier.py:29` | 档位阶梯；`weights_at` `:116` / `pick` `:165` / `upgrade` `:103` / `resolve` `:90` |
-| `count_for` | `loot/tier.py:175` | 档位 → 条数（定值 / 区间 + 命中概率） |
+| `LootTable` | `loot/pool.py:334` | 池 + 策略；`roll` `:518` / `expand` `:536` / `audit` `:546` / `audit_pretty` `:640` |
+| `LootTable.audit(resolvable=…)` 的判定回调 | `loot/pool.py:546` | `resolvable(ref, pool)` → `True` / `False` / **措辞字符串** / `None` |
+| `LootTable.roll_sub` / `roll_cfg` | `loot/pool.py:482` / `:471` | 子池/引用抽取 / 抽一行 roll（自定义策略也用得上） |
+| `LootTable.fallback` / `sub_ctx` | `loot/pool.py:448` / `:434` | 兜底钩子 / 子上下文（qty 覆盖） |
+| `register_strategy` / `strategy_names` | `loot/pool.py:73` / `:84` | 策略注册（`uses`/`needs_weights`/`expand` 元数据） |
+| `SimpleCtx` | `loot/pool.py:129` | 宽容上下文（缺属性 → None） |
+| `TierTable` | `loot/tier.py:39` | 档位阶梯；`weights_at` `:116` / `pick` `:165` / `upgrade` `:103` / `resolve` `:90` |
+| `count_for` | `loot/tier.py:193` | 档位 → 条数（定值 / 区间 + 命中概率） |
 | `draw_slots` | `loot/mount.py:20` | 固定前缀 + 随机补足（不可重复 / 可带权） |
 
 门禁：`extends/ext_loot/tests/test_loot.py`（87 断言：抽取原语的随机流与末项兜底 / 策略注册表与元数据 /
