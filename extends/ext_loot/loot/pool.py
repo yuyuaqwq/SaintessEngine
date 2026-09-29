@@ -306,12 +306,20 @@ class LootTable:
         return self._pools
 
     def pool(self, pool_key) -> dict | None:
-        """池对象（不存在 → None；`weighted:xxx` 这类前缀会先剥掉再查）。"""
+        """池对象（不存在 → None；`weighted:xxx` 这类前缀会先剥掉再查）。
+
+        ★ 前缀**按声明的前缀本身**切，不再写死 `":"`（L-audit2 同族）：
+          写死分隔符时，前缀若不含 `:`（内容侧声明 `("side.",)` 这类命名空间前缀），
+          `split(":", 1)[1]` 会切在**池名自己的冒号**上 ⇒ 查出**另一个池**（静默给错池），
+          而前缀恰好等于整串时直接 `IndexError`。本函数「不存在 → None、不抛错」的契约两种都被破。
+        切完剩空串 ⇒ 没有池名可查 ⇒ None（**不是** IndexError）。
+        """
         if pool_key in self._pools:
             return self._pools[pool_key]
         for p in self.pool_key_prefixes:
             if isinstance(pool_key, str) and pool_key.startswith(p):
-                return self._pools.get(pool_key.split(":", 1)[1])
+                name = pool_key[len(p):]
+                return self._pools.get(name) if name else None
         return None
 
     def has_pool(self, pool_key) -> bool:

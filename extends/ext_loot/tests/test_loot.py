@@ -11,6 +11,7 @@
   ③ **零知识**：`loot/` 源码常量里不得出现任何内容侧取值（档位取值 / 引用前缀 / 专属策略名）
 """
 import ast
+import io
 import os
 import random
 import sys
@@ -482,6 +483,81 @@ def t10_sub_ctx_copy_contract():
     check("★ 复制失败抛（不静默改原对象）", _raises(TypeError, lambda: t.sub_ctx(_c, 3)))
 
 
+# ── L-audit2（afix2 自查新开口）────────────────────────────────────────────
+# `LootTable.pool` 剥前缀时写死 `split(":", 1)`，而前缀是**内容侧声明的**。
+# 前缀不含 ":" 时，切点落在**池名自己的冒号**上 ⇒ 静默查出另一个池；
+# 前缀恰好等于整串时 ⇒ IndexError，把「不存在 → None、不抛错」的契约也破掉。
+# 下面全部**真调生产函数**（不在测试里重写一遍剥前缀逻辑，否则反证会假通过）。
+def t11_pool_key_prefix_strip():
+    pools = {
+        "a:b": {"type": "weighted", "entries": [{"item": "RIGHT", "w": 1}]},
+        "b":   {"type": "weighted", "entries": [{"item": "WRONG", "w": 1}]},
+    }
+    def items(t, k):
+        # ★ 必须**吞掉异常并回报**，不能让它冒出去：冒出去会让门禁在第一条红就
+        #   Traceback 中止 ⇒ 后面的断言一条都不跑 ⇒ 看不到完整红集（Step 0c 守恒）。
+        #   召回「本车道 gate 崩在第一处」那一族：判据要报红，不是要崩。
+        try:
+            r = t.pool(k)
+        except Exception as e:                              # noqa: BLE001
+            return ("RAISED", type(e).__name__)
+        return None if r is None else [e["item"] for e in r["entries"]]
+
+    # ① 含冒号前缀（既有口径）：剥掉后按整名查
+    t_colon = LootTable(pools, pool_key_prefixes=("weighted:", "fixed:"))
+    check("剥冒号前缀后按整名查得着",
+          items(t_colon, "weighted:a:b") == ["RIGHT"]
+          and items(t_colon, "fixed:a:b") == ["RIGHT"])
+    check("冒号前缀 + 池名自带冒号 ≠ 切在池名的冒号上",
+          items(t_colon, "weighted:a:b") != ["WRONG"])
+
+    # ② 不含冒号的前缀（内容侧命名空间）：按**声明的前缀**切，不能切池名的冒号
+    t_dot = LootTable(pools, pool_key_prefixes=("side.",))
+    check("★ 无冒号前缀：整名命中 RIGHT（改前静默给 WRONG）",
+          items(t_dot, "side.a:b") == ["RIGHT"])
+    check("★ 无冒号前缀：不被切到 WRONG（这条是静默错池，防复发）",
+          items(t_dot, "side.a:b") != ["WRONG"])
+
+    # ③ 剥完剩空串 ⇒ 没有池名可查 ⇒ None，**不抛**（契约：不存在 → None）
+    for key, tbl in (("side.", t_dot), ("weighted:", t_colon), ("fixed:", t_colon)):
+        def _empty(k, tt):
+            return not _raises(Exception, lambda: tt.pool(k)) and tt.pool(k) is None
+        check("剥完剩空串 %r → None 且不抛（改前 IndexError）" % key, _empty(key, tbl))
+    check("前缀恰好等于整串时 has_pool 也不抛",
+          not _raises(Exception, lambda: t_dot.has_pool("side."))
+          and t_dot.has_pool("side.") is False)
+
+    # ④ 上游两个读口（roll / expand）跟着不抛 —— 它们都走 pool()
+    for meth in ("roll", "expand"):
+        check("%s 遇空串键 → [] 而非 IndexError" % meth,
+              not _raises(Exception, lambda m=meth: getattr(t_dot, m)("side."))
+              and getattr(t_dot, meth)("side.") == [])
+
+    # ⑤ 未命中的一律 None（正常路逐字不变）
+    check("未命中 → None", items(t_dot, "side.nope") is None and items(t_colon, "nope") is None)
+    check("命中本体键不经剥前缀", items(t_dot, "a:b") == ["RIGHT"])
+
+    # ⑥ AST：pool() 里不许再出现写死的 split(":", …) 切法
+    src = io.open(os.path.join(_PKG_ROOT, "loot", "pool.py"), encoding="utf-8").read()
+    fn = next(n for n in ast.walk(ast.parse(src))
+              if isinstance(n, ast.FunctionDef) and n.name == "pool")
+    body = ast.dump(fn)
+    check("★ AST：pool() 内不再出现按冒号切前缀的写法（改前是 split 冒号 取下标 1）",
+          not (("split" in body) and ("':'" in body or "'\:'" in body)))
+    # ★ 这条第一版写成 `len(p) in body.replace(" ","")` —— **ast.dump 不会把
+    #   `len(p)` 渲染成这串字面量**（它是 Call(func=Name('len')) 结构）
+    #   ⇒ 子串判据恒假 = 假门禁。改成真判 AST 节点形状。
+    def _has_len_call(n):
+        for x in ast.walk(n):
+            if (isinstance(x, ast.Call) and isinstance(x.func, ast.Name)
+                    and x.func.id == "len" and x.args
+                    and isinstance(x.args[0], ast.Name)):
+                return True
+        return False
+    check("★ AST：pool() 用 len(前缀变量) 切声明的前缀本身", _has_len_call(fn))
+
+
+
 def main():
     print("== loot 门禁：抽取 / 池与策略 / 展开审计 / 档位 / 挂载 / 零知识 ==")
     t1_pick()
@@ -494,6 +570,7 @@ def main():
     t8_zero_knowledge()
     t9_determinism()
     t10_sub_ctx_copy_contract()
+    t11_pool_key_prefix_strip()
     print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
     return 1 if failed else 0
 
