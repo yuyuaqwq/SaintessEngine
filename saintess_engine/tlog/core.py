@@ -90,10 +90,7 @@ class TLog:
                 if self.strict:
                     raise ValueError("流水与声明不符：" + "；".join(problems))
                 if self.on_undeclared is not None:
-                    try:
-                        self.on_undeclared(problems)
-                    except Exception:                             # noqa: BLE001
-                        pass
+                    self._report_undeclared(problems)
         if not self.sinks:
             return rec                                            # ★ 零 sink = 零行为
         _sinks.dispatch(self.sinks, [rec])
@@ -120,13 +117,27 @@ class TLog:
                 if self.strict:
                     raise ValueError("流水与声明不符：" + "；".join(problems))
                 if self.on_undeclared is not None:
-                    try:
-                        self.on_undeclared(problems)
-                    except Exception:                             # noqa: BLE001
-                        pass
+                    self._report_undeclared(problems)
         if not self.sinks:
             return 0
         return _sinks.dispatch(self.sinks, batch)
+
+    # ============================================================ 未声明上报
+    def _report_undeclared(self, problems) -> None:
+        """把「记录与声明不符」交给内容侧回调；**回调自己崩了也要出声**。
+
+        ★ 审计 L680（2026-09-29，批次 3）：原先这里是 `except Exception: pass`
+        —— 回调抛异常时 `emit` / `write_many` 照常返回，问题仍记在 `_problems` 里，
+        而**一个字都不出声**（实测：回调抛 → 日志 0 条）。
+        那正是本流水要暴露的东西自己静默消失：上报通道挂了 = 上报功能整体失效，
+        而调用方看到的是「一切正常」。与 `flush` / `close` 的逐个隔离同款处理
+        （本流水已经有的口径），只是这里**必须**出声而不是「已忽略」——
+        丢的是「数据与声明不符」这个事实本身。
+        """
+        try:
+            self.on_undeclared(problems)
+        except Exception:                                     # noqa: BLE001
+            _LOG.warning("未声明上报回调失败（问题已记进 _problems）", exc_info=True)
 
     # ============================================================ 读
     def reader(self):

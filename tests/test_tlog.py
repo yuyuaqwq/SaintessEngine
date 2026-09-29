@@ -374,6 +374,57 @@ def t11_malformed_fails_closed():
           TL.is_valid_kind("a.0b") and TL.is_valid_kind("a.b.0c")
           and TL.is_valid_kind("_x.1y"))
 
+
+
+# ------------------------------------------------- 12 上报回调崩了也要出声（L680）
+def t12_undeclared_reporter_not_silent():
+    print("\n[12] on_undeclared 回调崩了不许静默（L680）")
+    import logging
+    from saintess_engine.log import get_logger
+
+    kt = TL.KindTable({"battle.hit": {"fields": ["dmg"]}})
+
+    def _boom(probs):
+        raise RuntimeError("回调自己崩了")
+
+    def _capture(fn):
+        got = []
+
+        class _Cap(logging.Handler):
+            def emit(self, r):
+                if r.levelno >= logging.WARNING:
+                    got.append(r.getMessage())
+
+        lg = get_logger("tlog")          # 引擎内 logger 名单源（门面）
+        old = (lg.level, lg.propagate, list(lg.handlers))
+        lg.setLevel(logging.DEBUG)
+        lg.propagate = False             # 不靠 root，门禁自己就是出口
+        lg.handlers = [_Cap()]
+        try:
+            fn()
+        finally:
+            lg.setLevel(old[0])
+            lg.propagate = old[1]
+            lg.handlers = old[2]
+        return got
+
+    def _single():
+        TL.TLog(kinds=kt, on_undeclared=_boom).emit("battle.hit", dmg=1, surprise=2)
+
+    def _batch():
+        TL.TLog(kinds=kt, on_undeclared=_boom).write_many(
+            [TL.Record(kind="battle.hit", fields={"surprise": 2})])
+
+    # ★ 原码是 `except Exception: pass` ⇒ 回调抛了日志 0 条、调用方看着「一切正常」。
+    for _tag, _fn in (("emit 单条", _single), ("write_many 批量", _batch)):
+        _w = _capture(_fn)
+        check("★%s：回调崩了仍有 warning（原码 0 条）" % _tag,
+              len(_w) == 1, "warning=%d %r" % (len(_w), _w[:1]))
+
+    # ★ 零行为变化：回调不抛时不得凭空多一条 warning。
+    _w2 = _capture(lambda: TL.TLog(kinds=kt, on_undeclared=lambda p: None)
+                   .emit("battle.hit", dmg=1, surprise=2))
+    check("回调正常时不加 warning（零行为变化）", not _w2, str(_w2))
 def main():
     print("== tlog 门禁：Record / KindTable / sinks / Reader / Replay / Bridge ==")
     t1_record()
@@ -387,6 +438,7 @@ def main():
     t9_tlog_declaration()
     t10_dispatch_discipline()
     t11_malformed_fails_closed()
+    t12_undeclared_reporter_not_silent()
     print(f"\n===== 结果：通过 {passed} / {passed + failed} =====")
     return 1 if failed else 0
 
