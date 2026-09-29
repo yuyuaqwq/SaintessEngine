@@ -740,23 +740,48 @@ def _deal_hit(battle, actor: dict, target: dict, dmg: int,
     return logs
 
 
-def _mortal_wound_mult(battle, actor: dict) -> float:
-    """N10-B1：Boss『重创』（mortal_wound）→ 吸血减半。
+def _declared_lifesteal_mult(effect_key: str) -> float:
+    """取某效果条目对吸血率的**声明**倍率（`EFFECT_RULES[key]["lifesteal_mult"]`）。
 
-    玩家 effects["mortal_wound"] 条目由 boss_script opening 施加（{stacks, expire}）。
-    过期条目由 schedule._settle_time_effects 自动清，此处防御性判 expire。
+    ★ 台账 L250（中）：改前这里写死 `return 0.5` + 键名写死 `"mortal_wound"`，
+      引擎因此**认识一个 Boss 概念**（docstring 自承「Boss『重创』」）—— 换款游戏、
+      换一种减益名，引擎都得跟着改。**零名词化**：引擎只问声明，与本文件既有的
+      `cd_mult`（:127 那一段）走同一个读口 `state_effects.state_def`、同一套形状。
+
+    **没声明 = 不适用** ⇒ `1.0`（不衰减）。这一条与 `rule_of` 的口径同向
+    （`state_effects` docstring：「不声明 = 这条规则不适用于任何人，零兜底」）。
+    """
+    from .state_effects import state_def as _sdef
+    got = (_sdef(effect_key) or {}).get("lifesteal_mult")
+    if got is None:
+        return 1.0
+    return float(got)
+
+
+def _mortal_wound_mult(battle, actor: dict) -> float:
+    """**任一**已施加的减益条目对吸血的声明倍率（默认 `1.0` = 不衰减）。
+
+    条目由内容侧施加（ex：`boss_script` opening 写 `effects["<key>"] = {stacks, expire}`）；
+    过期条目由 `schedule._settle_time_effects` 自动清，此处防御性判 `expire`。
+    ★ 遍历**全部** effects 条目、逐条问声明（与上面 `cd_mult` 那一段同形）⇒ 引擎零游戏知识：
+      内容侧新增一种「吸血减半」的减益，只要在 `EFFECT_RULES` 里声明一行
+      `{"lifesteal_mult": 0.5}` 就生效，**引擎代码一个字不动**。
+    多个条目同时命中 ⇒ 取**最衰减**那档（`min`），与 `cd_mult` 取 `min` 同向。
     """
     try:
-        ef = actor.get("effects") or {}
-        mw = ef.get("mortal_wound")
-        if not isinstance(mw, dict):
-            return 1.0
-        exp = mw.get("expire")
-        if exp is not None:
-            now = float(getattr(battle, "_now", 0) or 0)
-            if now >= float(exp):
-                return 1.0
-        return 0.5
+        _mult = 1.0
+        for _ek, _ee in (actor.get("effects") or {}).items():
+            if not isinstance(_ee, dict):
+                continue
+            _exp = _ee.get("expire")
+            if _exp is not None:
+                _now = float(getattr(battle, "_now", 0) or 0)
+                if _now >= float(_exp):
+                    continue                       # 已过期（这条不衰减）
+            _m = _declared_lifesteal_mult(_ek)
+            if _m < _mult:
+                _mult = _m
+        return _mult
     except Exception as _e:
         _diag(battle, "_mortal_wound_mult", _e)          # 审计 P-44 余量：不再静默（行为不变）
         return 1.0
