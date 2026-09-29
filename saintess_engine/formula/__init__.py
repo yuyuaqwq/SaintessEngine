@@ -525,14 +525,25 @@ def _check_no_cycle(entries: dict) -> None:
 def _check_var_domain(eid: str, e: dict) -> None:
     """V5 / V9：表达式里出现的变量名必须落在**声明过的集合**里。
 
-    允许集合 = `vars` ∪ 步 id ∪ `params` 名 ∪ `guard`/`random` 注入名 ∪ 聚合固定名
+    允许集合 = `vars` ∪ 步 id ∪ `params` 名 ∪ `random` 注入名 ∪ 聚合固定名
     （`aggregate` 的 `x` / `agg`；`chain` 的 `use` 步自带）。
     ★ 为什么必须有这条：`eval_expr` 对**未知变量取 0**（`expr/__init__.py`）⇒
       表达式里拼错一个变量名会**静默算成 0**，是最难查的一类错。
+    ★ `guard` 的键**不再进允许集合**（审计 L995-4）——它们是**钉在 `vars`/`params` 上的
+      钳制式**，不是新变量。先前把 guard 键并进 `allowed` 等于**把打错的 guard
+      名当成合法名**：装配期放行 → 运行期 `_apply_guard` 的 `if name not in out: continue`
+      静默跳过 → 钳制样式写错了也不报错（实跑：`F1_eff_def` 的 `pene_pct`（`cap:0.6`）
+      拼成 `pene_pcts` 后装配期通过、运行期 `5.0` 原样穿过；对照组拼对 = `0.6`）。
     """
+    guard = e.get("guard") or {}
+    # guard 键必须落在已声明的变量域里（否则它永远不会生效）
+    for _gname in guard:
+        _need(_gname in (set(e.get("vars") or []) | set(e.get("params") or {})),
+              f"条目 {eid!r} 的 guard 键 {_gname!r} 不在 vars/params 里"
+              f"（它是给已声明变量加的钳制式；拼错了就永远不生效）"
+              f"；已声明的变量 = {sorted(set(e.get('vars') or []) | set(e.get('params') or {}))}")
     allowed = set(e.get("vars") or [])
     allowed |= set((e.get("params") or {}))
-    allowed |= set((e.get("guard") or {}))
     if e.get("_random"):
         allowed.add(e["_random"]["key"])
 
