@@ -71,17 +71,74 @@ from _check import bind_check  # noqa: E402
 check = bind_check(globals(), "passed", "failed", "DETAIL")
 
 
+#: 处理块里一到就结束的语句 —— 它们**之后**的代码永远不执行。
+_TERMINATORS = (ast.Return, ast.Raise, ast.Break, ast.Continue)
+
+
+def _executable(body):
+    """交出「处理块里真正会执行到」的语句。
+
+    ★ 审计 L2313-②（2026-09-29，批次 3）：原判据用 `ast.walk` 走**整棵子树**，
+    于是「诊断调用写在 `return` 之后」或「写在一个从没被调用的嵌套 `def` 里」
+    同样算「已接诊断」⇒ 那样的 `except` 被判成 W（合格）而实际一个字都不出声。
+    扫面变宽/重构改写时这类块会混进包，**门禁从此对它们失明**。
+    这里收两处：① `return`/`raise`/`break`/`continue` 之后的部分不交；
+    ② 不下钻进新的函数/类/lambda 作用域（那里面的调用不是本块的行为）。
+    """
+    out = []
+    for st in body:
+        out.append(st)
+        if isinstance(st, _TERMINATORS):
+            break
+    return out
+
+
+class _Shallow(ast.NodeVisitor):
+    """只在本层找 `Call` / `Raise`，不下钻进新的作用域。"""
+
+    def __init__(self):
+        self.found = None
+
+    def visit_Call(self, n):
+        if self.found is not None:
+            return
+        nm = getattr(n.func, "id", None) or getattr(n.func, "attr", None)
+        if nm in ("diag", "_diag"):
+            self.found = "diag"
+            return
+        self.generic_visit(n)
+
+    def visit_Raise(self, n):
+        if self.found is None:
+            self.found = "raise"
+
+    # ★ 新的作用域：里面的 `diag` / `raise` 不算本块的（没被调用就等于没出声）。
+    def visit_FunctionDef(self, n):
+        pass
+
+    def visit_AsyncFunctionDef(self, n):
+        pass
+
+    def visit_ClassDef(self, n):
+        pass
+
+    def visit_Lambda(self, n):
+        pass
+
+
+def _scan_body(body):
+    v = _Shallow()
+    for st in _executable(body):
+        v.visit(st)
+    return v.found
+
+
 def has_diag(body):
-    for n in ast.walk(ast.Module(body=body, type_ignores=[])):
-        if isinstance(n, ast.Call):
-            nm = getattr(n.func, "id", None) or getattr(n.func, "attr", None)
-            if nm in ("diag", "_diag"):
-                return True
-    return False
+    return _scan_body(body) == "diag"
 
 
 def has_raise(body):
-    return any(isinstance(s, ast.Raise) for s in ast.walk(ast.Module(body=body, type_ignores=[])))
+    return _scan_body(body) == "raise"
 
 
 def _enclosing_name(tree, ln):
@@ -112,6 +169,16 @@ def classify(path):
             cat = "S"
         out.append((n.lineno, cat, _enclosing_name(tree, n.lineno)))
     return out
+
+
+def classify_text(src_text):
+    """→ [分类]：给「构造出来的片段」用，与 `classify` **同一套**分类器。
+
+    单独开这个口是为了让精度断言能钉分类器本身，而不必造临时文件去扫全包。
+    """
+    return [("W" if has_diag(h.body) else ("R" if has_raise(h.body) else "S"))
+            for h in ast.walk(ast.parse(src_text))
+            if isinstance(h, ast.ExceptHandler)]
 
 
 def scan_tree(root):
@@ -182,7 +249,38 @@ check("反证·静默兜底被记为 S", hit == ["S"], str(hit))
 
 # ★ 本次改动的核心反证：把扫面**缩回** battle/ ⇒ 「扫面不止 battle/」必须报红。
 #   没有这一条，把 BATTLE_DIR 改窄（回退成本极低、后果极重）不会被任何人发现。
-print("\n【4. 反证：扫面被改窄（只剩 battle/）⇒ 必须报红】")
+# ★ 审计 L2313-②（2026-09-29，批次 3）：分类器自身的两条精度断言。
+#   把分类器放宽只要三行（换回 `ast.walk` 走整棵子树）而后果极重 ——
+#   「已接诊断」一旦认死代码里的调用，「静默兜底 S = 0」整条就是恒真的同义反复，
+#   门禁从此对「写了诊断但一个字都不出声」的那批 `except` 失明。
+#   这几条打的是**分类器**，与被测包的改动无关，恒定成立。
+print("\n【4. 反证：分类器把「其实没出声的 except」判成 W/R ⇒ 必须报红】")
+_CLS = [
+    ("真·接诊断通道",
+     "try:\n    pass\nexcept Exception:\n    _diag(b, 'x', e)\n", "W"),
+    ("★diag 写在 return 之后（死代码）",
+     "try:\n    pass\nexcept Exception:\n    return 0\n    _diag(b, 'x', e)\n", "S"),
+    ("★diag 写在一个从没被调的嵌套 def 里",
+     "try:\n    pass\nexcept Exception:\n    def _log():\n        _diag(b, 'x', e)\n", "S"),
+    ("★diag 写进 lambda（没被调）",
+     "try:\n    pass\nexcept Exception:\n    _f = lambda: _diag(b, 'x', e)\n", "S"),
+    ("★raise 写在 return 之后（死代码）",
+     "try:\n    pass\nexcept Exception:\n    return 0\n    raise ValueError('x')\n", "S"),
+    ("真·显式抛",
+     "try:\n    pass\nexcept Exception:\n    raise ValueError('x')\n", "R"),
+    ("真·诊断写在 try 块里（不是处理块 ⇒ 不算接了诊断）",
+     "try:\n    _diag(b, 'x', e)\nexcept Exception:\n    pass\n", "S"),
+]
+_wrong = ["%s 判成 %s（应 %s）" % (n, classify_text(b), w)
+          for n, b, w in _CLS if classify_text(b) != [w]]
+check("★分类器：死代码 / 嵌套作用域里的 diag·raise 不算『已出声』",
+      not _wrong, "；".join(_wrong))
+check("★分类器：真接诊断 / 真显式抛仍认得（防上面那条把自己收得过严）",
+      classify_text(_CLS[0][1]) == ["W"] and classify_text(_CLS[5][1]) == ["R"],
+      "接诊断=%s 显式抛=%s" % (classify_text(_CLS[0][1]), classify_text(_CLS[5][1])))
+
+
+print("\n【5. 反证：扫面被改窄（只剩 battle/）⇒ 必须报红】")
 _wide = sorted(set(r[0] for r in scan_tree(BATTLE_DIR)))
 check("反证·整包扫面确实比 battle/ 宽（否则第 1 条判据是恒真的同义反复）",
       any(not f.startswith("battle/") for f in _wide),
