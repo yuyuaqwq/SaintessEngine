@@ -171,7 +171,22 @@ class CueBus:
                 if prob not in self.problems:
                     self.problems.append(prob)
                 return [MISS_LINE]
-            return [line] if line else []
+            if not line:
+                # ★ 审计 L2060：key **命中了**却渲染出空串（模板 value 为空，或所有槽位
+                #   都空）。原写法 `return [line] if line else []` 把这一行**静默蒸发**：
+                #   `logs` 行数 0、`problems` 空、`strict=True` 也不抛 —— 与本模块头注
+                #   「不静默丢行」「坏数据就地一行可读」两条硬规矩自相矛盾，且
+                #   `audit_subs` 查不出（key 命中了），只有真机上那一行不见时才现形。
+                #   `TextTable.validate()` 已把「模板为空」列为坏数据（只报告不抛）——
+                #   那正是本条把它**当坏数据**而非「合法地没有这行」的既有口径。
+                prob = ("cue %r 的文案 key %r 渲染出空串（模板为空或所有槽位都空；"
+                        "key 命中了，所以 audit_subs 查不出）" % (name, key))
+                if self.strict:
+                    raise CueContractError(prob)
+                if prob not in self.problems:
+                    self.problems.append(prob)
+                return [MISS_LINE]
+            return [line]
         fn = sub.get("handler")
         if not callable(fn):
             raise CueContractError("cue %r 的 call 订阅者不可调用：%r" % (name, fn))

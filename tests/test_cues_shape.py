@@ -280,6 +280,39 @@ check("★ strict=False ⇒ 不崩：一行可读坏数据 + 问题落 problems�
       _lc2 == [MISS_LINE] and any("x.a" in p for p in _miss_diag.problems),
       "%s / %s" % (_lc2, _miss_diag.problems))
 
+# ---- ★ 审计 L2060：key **命中了**却渲染出空串 —— 原写法 `return [line] if line else []`
+#   把整行静默蒸发（logs 行数 0 / problems 空 / strict=True 也不抛），且 `audit_subs`
+#   查不出（key 命中了）⇒ 只有真机上那一行不见时才现形。与本模块头注「不静默丢行」
+#   「坏数据就地一行可读」自相矛盾。口径 = 与上面「缺 key」**同级**：strict 抛、
+#   宽松态记问题 + 出 MISS_LINE（`TextTable.validate()` 早已把「模板为空」列为坏数据）。
+_empty_tpl = CueBus(normalize_subs({"x.e": {"kind": "text", "key": "x.e"}}),
+                    table=_Table({"x.e": ""}), strict=False)
+_le: list = []
+_empty_tpl.emit(_le, "x.e", {})
+check("★ key 命中但模板为空 ⇒ 出 MISS_LINE 一行（不静默丢行）+ 问题落 problems",
+      _le == [MISS_LINE] and any("x.e" in p for p in _empty_tpl.problems),
+      "%s / %s" % (_le, _empty_tpl.problems))
+
+check("★ 同上 strict=True ⇒ 抛 CueContractError（点名 cue 名与 key）",
+      _raises(lambda: CueBus(normalize_subs({"x.e": {"kind": "text", "key": "x.e"}}),
+                             table=_Table({"x.e": ""}), strict=True).emit([], "x.e", {})) is not None)
+
+_notempty = CueBus(normalize_subs({"x.f": {"kind": "text", "key": "x.f"}}),
+                   table=_Table({"x.f": "打中 {n} 点"}))
+_nl: list = []
+_notempty.emit(_nl, "x.f", {"n": 7})
+check("★ 反证：非空渲染逐字不变（正常路径不受影响，且 problems 仍为空）",
+      _nl == ["打中 7 点"] and not _notempty.problems, "%s / %s" % (_nl, _notempty.problems))
+
+# 槽位给空串时**行仍非空**（模板有字面量）⇒ 属正常渲染，不是坏数据
+_slotempty = CueBus(normalize_subs({"x.g": {"kind": "text", "key": "x.g"}}),
+                    table=_Table({"x.g": "打中 {n} 点"}))
+_sle: list = []
+_slotempty.emit(_sle, "x.g", {"n": ""})
+check("★ 反证：槽位空但模板有字面量 ⇒ 照常出行、不记问题（不把正常渲染当坏数据）",
+      _sle == ["打中  点"] and not _slotempty.problems,
+      "%s / %s" % (_sle, _slotempty.problems))
+
 # ---- ★ 审计 L2054：一条 cue 要么整条渲染出来，要么一行都不留 ----
 # 原先逐行 append：第二个订阅者的 key 没命中时抛错，第一个订阅者已写进 logs 的
 # 真行留了下来（实测 ['第一行:7']）⇒ 半条真行 + 一条坏数据行。
