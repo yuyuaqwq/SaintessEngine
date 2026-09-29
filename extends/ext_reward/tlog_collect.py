@@ -43,6 +43,21 @@ from __future__ import annotations
 
 from typing import Iterable, Optional
 
+# 采集器自身出错的报告口径（引擎 log 门面 —— 本包声明「零包内依赖，只吃引擎」，
+# 走引擎侧不破声明方向）。★ 下面四处宽异常原来一律 pass：真故障零痕迹。
+from saintess_engine import log as _log
+
+
+def _warn(what: str, exc: BaseException, **detail) -> None:
+    """采集半边自身炸了 —— 留痕且**不抛**（采集不改行为是本模块纪律 3）。
+
+    分两类：一类是「本该发的流水发不出去 / 观察者装不上」这类**可归因故障**，
+    要让运维看得见；另一类是调用方战斗对象不配合（只读属性 / 换了实现），
+    那是**合法可选路径**——但同样不能一个字都不说。
+    """
+    _log.get_logger("ext_reward.tlog_collect").warning(
+        "采集半边故障：%s：%s: %s", what, type(exc).__name__, exc, extra=detail or None)
+
 # 引擎事件 → 流水 kind（框架不认，映射表在内容侧）
 EVENT_KINDS = {
     "skill_hit": "battle.hit",
@@ -118,8 +133,10 @@ class BattleTLog:
             return b
         try:
             b._battle_tlog = self
-        except Exception:                                        # noqa: BLE001
-            pass
+        except Exception as exc:                                # noqa: BLE001
+            # 挂不上去 ⇒ 战斗对象侧查不到采集器（回放/诊断那条路失效），
+            # 但后面三步挂载照跑 —— 原先 pass ⇒ 零痕迹。
+            _warn("挂载采集器到战斗对象失败（后三步仍照挂）", exc, btype=str(btype))
         self._chain_observer(b)
         self._wrap_human_act(b)
         self._wrap_landing(b)
@@ -144,15 +161,19 @@ class BattleTLog:
             out = orig(actor, slot, logs)
             try:
                 self._maybe_end(b)
-            except Exception:                                    # noqa: BLE001
-                pass
+            except Exception as exc:                            # noqa: BLE001
+                # 收尾检查炸了 ⇒ 这一次不置 _end_sent、下一行动还会重试（幂等守卫在 on_end）。
+                # 原先 pass ⇒ 每步静默重试、零痕迹。
+                _warn("落地段自动收尾失败（下次行动会重试）", exc)
             return out
 
         wrapped._battle_tlog_wrapped = True
         try:
             b._dispatch_pending = wrapped
-        except Exception:                                        # noqa: BLE001
-            pass
+        except Exception as exc:                                # noqa: BLE001
+            # ★ 这条最贵：装不上 ⇒ 落地段永不触发 ⇒ **整场打完 0 条 battle.end**
+            #   （docstring 自己记着 2026-09-13 那次同类缺口）。原先 pass ⇒ 零痕迹。
+            _warn("包 _dispatch_pending 失败（本场不会自动发 battle.end）", exc)
 
     def _chain_observer(self, b) -> None:
         """把采集挂到既有 `on_event` **之后**（既有观察者先跑；两边异常各自隔离）。"""
@@ -162,8 +183,11 @@ class BattleTLog:
             if prev is not None:
                 try:
                     prev(battle, evt_name, ctx, logs)
-                except Exception:                                # noqa: BLE001
-                    pass
+                except Exception as exc:                        # noqa: BLE001
+                    # 既有观察者炸了 —— 本包那条观察者照跑（纪律 3：两边异常各自隔离）。
+                    # 原先 pass ⇒ 别人的观察者坏了，流水侧一个字都不知道。
+                    _warn("既有 on_event 观察者抛错（本包观察者照跑）", exc,
+                          evt=str(evt_name))
             self.on_event(battle, evt_name, ctx, logs)
 
         b.on_event = combined
@@ -177,8 +201,11 @@ class BattleTLog:
             try:
                 who = actor if actor is not None else b.focus()
                 self.on_act(b, action, skill_name, who, target)
-            except Exception:                                    # noqa: BLE001
-                pass
+            except Exception as exc:                            # noqa: BLE001
+                # 行动流水发不出去（on_act 本身炸 / sink 炸）⇒ 行动照打、流水少一条。
+                # 原先 pass ⇒ 缺条流水零痕迹（doctor 看流水断档完全查不出原因）。
+                _warn("记 battle.act 失败（行动照打、流水少一条）", exc,
+                      action=str(action))
             return orig(action, skill_name, actor, target, target_side)
 
         wrapped._battle_tlog_wrapped = True
