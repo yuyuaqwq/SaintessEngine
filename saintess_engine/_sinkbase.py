@@ -9,7 +9,10 @@
   · sink 自身出错时的报告口径 —— 直接写 stderr、**不经日志系统**（sink 坏了再走日志会递归）；
   · 文件出口的生命周期 —— 懒开（父目录自建）· `flush()` · `close()`。
 
-收成单点后，纪律只有一处可改：「两套出口口径一致」不再靠注释互相提醒，而是同一份代码。
+收成单点后，纪律只有一处可改：「两套出口的**生命周期与报告纪律**一致」不再靠注释互相提醒，而是同一份代码。
+（★ 审计 L2735-4：**排版 / 行尾各自定义**，不在这个「一致」里 ——
+  `_newline` 基类给 `None`（跟随平台翻译）、`JSONLSink` 显式给反斜杠 n，
+  实跑落盘 Windows 下是 CRLF vs LF。这是**子类有意覆写**，不是双口径。）
 
 **协议层仍各自定义**（`Sink` / `dispatch`）：两侧的记录形状与批/单语义本就不同 ——
 日志是 `emit(record)` 单条、流水是 `write(records)` 整批，合并会同时污染两侧的形状。
@@ -34,7 +37,7 @@ SINK_ERROR_ESCALATE = 50
 _STATS = {"errors": 0, "kinds": {}, "first": ""}
 
 
-def sink_error(sink, exc, what: str = "写入", detail: str = "") -> None:
+def sink_error(sink, exc, what: str, detail: str = "") -> None:
     """sink 自身出错时的统一报告口径 —— 与标准库 `Handler.handleError` 同一纪律。
 
     直接写 stderr，**不经过 logging**（否则 sink 坏了会递归触发自己）。

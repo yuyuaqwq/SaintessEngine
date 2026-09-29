@@ -611,15 +611,26 @@ class Host:
         """结算：调包内 `settlement` 的策略半边，拿回**计划**（经验/金币/入包 grants）。
 
         宿主只给「替身」（它自己的存储没有的 → 中性值；包内键清单在包模块），
-        并把引擎已挂的面板 hook 算好的面板塞进去。跑不出来就**记桩**（不编数字）。
+        并把引擎已挂的面板 hook 算好的面板塞进去。
+
+        半边缺席（或在、但没实现本契约名）= 可拔插半边没接 ⇒ 记桩（合法，同 `_post_battle` 的 loot 半边）。
         """
         mod = self.stack.optional_submodule("settlement")
         if mod is None or not isinstance(monster, dict):
             self._stub_missing(out, "settlement")
             return
-        fn = getattr(mod, "victory_settle_plan", None) or getattr(mod, "settle", None)
+        # ★ 合同名只留一个（批次 2 自开口）。原先后写两个名：`victory_settle_plan` or `settle`，但两者在
+        #   三个仓、所有包、所有历史提交里**零生产者**（`git log -S` 只有引入它的那一笔 B19a 宿主骨架）。
+        #   orlandia `content/settlement.py` 真正导出的是 `victory_settle(host, group_id, qq_id, player,
+        #   monster, result)` —— 签名与本处期待的 `fn(player, mon, result, io)` 不同，且它由
+        #   `content/combat_cmds.py` 直接驱动、**不走本宿主契约**。所以「两个名字并列」的代价是：无论包内写什么，
+        #   这路都落到记桩、`out.settlement` 恒空 ⇒ 留桩文案点不出「你缺的是哪个名」，下一个人会照着改错方向。
+        #   ⇒ 收成**一个**真名（不留兼容壳）；没实现就记桩并点名这个名，与同文件 loot 半边同一口径。
+        #   ★ 登记给主线：这条宿主结算接面**至今零生产者**（不是本条引入的）—— 是否保留该接面属设计裁决，不在本车道。
+        fn = getattr(mod, "settlement_plan", None)
         if not callable(fn):
-            out.stubs.append("settlement: 包内 content/settlement.py 无 victory_settle_plan/settle")
+            out.stubs.append("settlement: 包内 content/settlement.py 未实现本契约名 "
+                            "settlement_plan(player, monster, result, stand_ins) → 结算计划留桩")
             return
         mon = dict(monster)
         mon.setdefault("lv", mon.get("level", 1))
