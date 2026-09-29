@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import ast
+import inspect
 import json
 import os
 import sys
@@ -119,8 +120,16 @@ def main() -> int:
           sorted(vars(off)))
     check("tlog=None ⇒ 不包 human_act（包装标记不存在）",
           not getattr(off.human_act, "_battle_tlog_wrapped", False), None)
+    # 旧写法是字面态：``check(…, True, None)`` 的第二参数是常量，flush 怎么改都绿。
+    # 不能换成运行期断言：``tlog=None`` 时**无 sink 可看**，「门控在」与
+    # 「门控不在」两种实现的运行时可观测结果**逐字相同**（已实跑对拍），
+    # 且若把门控抹掉、测试先跑 ``flush()`` 就是**崩溃**（AttributeError）而不是可归因的报红。
+    # 接口不可观测时，唯一能证明它的形式是**源码结构** —— 故放在 ``flush()`` 之前。
+    flush_src = inspect.getsource(BattleTLog.flush)
+    check("tlog=None ⇒ flush() 空操作：实现存在 enabled 门控（接口不可观测，只能钉结构）",
+          "if self.enabled" in flush_src and "self.tlog.flush()" in flush_src,
+          flush_src.strip().splitlines())
     col_off.flush()
-    check("tlog=None ⇒ flush() 是空操作（不碰 sink）", True, None)
 
     sink = _Sink()
     col_on = BattleTLog(sink)
