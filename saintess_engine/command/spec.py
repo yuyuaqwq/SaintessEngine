@@ -42,7 +42,8 @@ import json
 import os
 from typing import Optional
 
-from .registry import CommandRegistry, CommandSpec, combine_patterns
+from .registry import (UNCATEGORIZED, CommandRegistry, CommandSpec,
+                      combine_patterns)
 
 __all__ = [
     "load_table", "build_registry", "pattern_map_from_table", "catalog_of",
@@ -97,10 +98,11 @@ def pattern_map_from_table(table) -> dict:
 
 
 def catalog_of(registry: CommandRegistry) -> dict:
-    """注册表 → `{分类: [声明, ...]}`（仅 visible，组内保持声明顺序）。"""
+    """注册表 → `{分类: [声明, ...]}`（仅 visible，组内保持声明顺序）。
+    空分类归 `UNCATEGORIZED`（与 `registry.by_category` 同口径、同字面）。"""
     out: dict = {}
     for spec in registry.visible():
-        out.setdefault(spec.category or "其他", []).append(spec)
+        out.setdefault(spec.category or UNCATEGORIZED, []).append(spec)
     return out
 
 

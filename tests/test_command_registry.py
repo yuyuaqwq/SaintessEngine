@@ -17,7 +17,9 @@ FW_ROOT = os.path.dirname(_HERE)
 if FW_ROOT not in sys.path:
     sys.path.insert(0, FW_ROOT)
 
-from saintess_engine.command import CommandRegistry, CommandSpec, combine_patterns  # noqa: E402
+from saintess_engine.command import (CommandRegistry, CommandSpec,  # noqa: E402
+                                  catalog_of, combine_patterns)
+from saintess_engine.command.registry import UNCATEGORIZED
 
 passed = failed = 0
 
@@ -63,8 +65,13 @@ reg2 = CommandRegistry.from_data([
     {"key": "c", "pattern": "^c$", "category": "", "order": 0},
     {"key": "d", "pattern": "^d$", "visible": False},
 ])
-check("by_category 分组", set(reg2.by_category()) == {"移动", ""},
+# 空分类归 `UNCATEGORIZED`（原为 `""`）—— 与 `spec.catalog_of` 同口径，不得再各拟一个。
+check("by_category 分组", set(reg2.by_category()) == {"移动", UNCATEGORIZED},
       list(reg2.by_category()))
+# 同形两侧必须给出**同一个空分类名**（既有门禁只分别断了各自的分组，
+# 两侧分开变就不报红 —— 正是本条在保的事）。
+check("同形两侧空分类同名（by_category ↔ catalog_of）",
+      set(reg2.by_category()) == set(catalog_of(reg2)), (list(reg2.by_category()), list(catalog_of(reg2))))
 check("分类内保持注册序", [s.key for s in reg2.by_category()["移动"]] == ["b", "a"])
 check("visible 按 order 升序", [s.key for s in reg2.visible()] == ["c", "a", "b"],
       [s.key for s in reg2.visible()])

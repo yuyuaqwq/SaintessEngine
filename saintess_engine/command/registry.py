@@ -50,7 +50,13 @@ from typing import Any, Iterable, Mapping, Optional, Sequence
 from .binding import BindSpec
 
 __all__ = ["CommandSpec", "CommandRegistry", "CommandBinding", "HandlerMissing",
-           "combine_patterns"]
+           "combine_patterns", "UNCATEGORIZED"]
+
+#: **空分类的唯一展示名**（实跑取值，不得另拟）。
+#: 定义在注册表这一层（`by_category` 与 `spec.catalog_of` 都是它的消费方），
+#: 两处各写一份时同一张表的空分类会分别落到 `""` 与 `其他`，
+#: 帮助/目录两个口径同时输出、而正可见面上的分组名不一致。
+UNCATEGORIZED = "其他"
 
 
 def combine_patterns(patterns: Sequence[str]) -> str:
@@ -390,10 +396,11 @@ class CommandRegistry:
         return iter(self.specs())
 
     def by_category(self) -> dict:
-        """`{分类: (声明…)}`（分类内保持注册序）。空分类归 `""`。"""
+        """`{分类: (声明…)}`（分类内保持注册序）。
+        空分类归 `UNCATEGORIZED`（**与 `spec.catalog_of` 同口径**，不再各拟一个）。"""
         out: dict = {}
         for spec in self.specs():
-            out.setdefault(spec.category, []).append(spec)
+            out.setdefault(spec.category or UNCATEGORIZED, []).append(spec)
         return {k: tuple(v) for k, v in out.items()}
 
     def visible(self) -> tuple:
