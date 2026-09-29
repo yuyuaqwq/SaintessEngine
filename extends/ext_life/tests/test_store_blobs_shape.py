@@ -519,6 +519,93 @@ def t6b_whitelist():
         check("next_of 无行 → 1", cnt.next_of(conn, "zz", "a") == 1)
 
 
+def _probe_next_of_whitelist():
+    """`next_of` 白名单有牙：非法字段名必须被**点名**挡下，而不是退化。
+
+    ★ 这条探针的存在理由：`:243` 的 `field not in self.spec.fields` 守卫
+      **全仓零断言** —— `t6b` 只钉了 `bump` / `reset` 两个写口。
+      守卫拆掉后实测有**三种不同退化**（不假设静默）：
+        · `nope`（表里没有的列）      → `sqlite3.OperationalError: no such column`
+        · `owner_key`（真存在的主键列）→ `ValueError: invalid literal for int(): 'o1'`
+        · `spare`（真存在的 extra 列） → **静默返回 1**（不抛、不报错）
+      第三种最阴：字段名直接拼进 `SELECT {field}`，白名单是**唯一**拦它的地方。
+    判据钉「抛的是点名带字段名的 ValueError」——点名归属是这个守卫的全部价值。
+    """
+    db, cnt = _cnt("tooth_nextof.db")
+    with db.session() as conn:
+        cnt.init(conn, "o1")
+        cnt.bump(conn, "o1", a=4)
+    for bad in ("nope", "owner_key", "spare", "table", ""):
+        try:
+            with db.readonly() as conn:
+                cnt.next_of(conn, "o1", bad)
+        except ValueError as e:
+            if "非法计数字段" not in str(e) or repr(bad) not in str(e):
+                return False, f"{bad!r} 抛了 ValueError 但没点名：{e}"
+        except Exception as e:                                   # noqa: BLE001
+            raise AssertionError(
+                f"{bad!r} 退化成 {type(e).__name__}: {e}（丢点名归属）") from e
+        else:
+            raise AssertionError(f"{bad!r} **没抛**（静默接受，白名单失效）")
+    # ★ 走到这里 = 全部非法字段名都被点名挡下 ⇒ 绿。
+    #   （少这一行会隐式返回 None = falsy ⇒ 「牙前」那条会误报红 —— 本轮真踩过。）
+    return True
+
+
+def _probe_next_of_legal():
+    """合法面：`next_of` 对声明内字段逐字不变（钉「不许放松成见谁都抛」）。"""
+    db, cnt = _cnt("tooth_nextof_ok.db")
+    with db.session() as conn:
+        cnt.init(conn, "o1")
+        cnt.bump(conn, "o1", a=4, b=9)
+    with db.readonly() as conn:
+        assert cnt.next_of(conn, "o1", "a") == 5, "声明内字段 a → 5"
+        assert cnt.next_of(conn, "o1", "b") == 10, "声明内字段 b → 10"
+        assert cnt.next_of(conn, "zz", "a") == 1, "无行 → 1"
+        assert cnt.read(conn, "o1")["a"] == 4, "next_of 不写库"
+    return True
+
+
+def t6d_next_of_whitelist():
+    print(chr(10) + "[6d] next_of 白名单 fail-closed（读口与 bump/reset 同口径）")
+    db, cnt = _cnt("cnt_nextof.db")
+    with db.session() as conn:
+        cnt.init(conn, "o1")
+        cnt.bump(conn, "o1", a=4)
+
+    # 非法字段名 → 点名抛。逐个坏形态（含「表里真存在的列」这一最阴的一种）
+    for bad, why in (("nope", "表里没有的列"),
+                     ("owner_key", "主键列（真存在，但不是计数字段）"),
+                     ("spare", "extra 列（真存在，拆守卫后静默返回 1）"),
+                     ("", "空串字段名")):
+        ok, msg = _reject(lambda b=bad: _call(lambda c: cnt.next_of(c, "o1", b), db))
+        check(f"★ next_of 非法字段（{why}）→ 点名 ValueError", ok, msg)
+        check(f"   ↳ 报错串里带字段名 {bad!r}", bad in msg or repr(bad) in msg, msg)
+
+    # 复合键表同口径（白名单与 subject 维度正交，两条都要)
+    dbs, cnts = _cnt("cnt_nextof_sub.db", COUNT_SUB_SPEC)
+    with dbs.session() as conn:
+        cnts.init(conn, "o1", subject="x")
+    ok, msg = _reject(lambda: _call(lambda c: cnts.next_of(c, "o1", "zz", subject="x"), dbs))
+    check("★ next_of 复合键表白名单外 → 同样点名 ValueError", ok, msg)
+
+    # 合法面逐字不变（不许把守卫改成「见谁都抛」）
+    with db.readonly() as conn:
+        check("合法 next_of 仍回「当前值 + 1」", cnt.next_of(conn, "o1", "a") == 5)
+        check("合法 next_of 无行 → 1", cnt.next_of(conn, "zz", "a") == 1)
+    with dbs.session() as conn:
+        cnts.bump(conn, "o1", subject="x", n=3)
+    with dbs.readonly() as conn:
+        check("合法 next_of（复合键）回 4 且不写库",
+              cnts.next_of(conn, "o1", "n", subject="x") == 4
+              and cnts.read(conn, "o1", subject="x")["n"] == 3)
+
+    # 白名单必须是「声明的 fields」，不是「表里存在的列」：extra / 主键 / subject 都不在
+    with db.readonly() as conn:
+        check("extra 列不在白名单（拆守卫后它会静默回 1）",
+              _reject(lambda: cnt.next_of(conn, "o1", "spare"))[0])
+
+
 def t6c_composite_key():
     print("\n[6c] 复合键（subject）：同一 owner 不同 subject 互不干扰")
     db, cnt = _cnt("cnt_sub.db", COUNT_SUB_SPEC)
@@ -974,6 +1061,36 @@ def t10_teeth():
     _tooth("⑥ 复合键退化（subject 未进 WHERE）", _probe_subject_isolated, m6,
            lambda: setattr(Counters, "bump", orig_bump))
 
+    # ⑦ next_of 白名单守卫被拆（审计 L2498 交棒：`:243` 全仓零断言）
+    orig_next = Counters.next_of
+
+    def m7():
+        def _next_open(self, conn, owner, field, *, subject=None):
+            # 与「`:243` 整块换 pass」逐字等价：不再校验 field，直接拼进 SELECT
+            subj = self._subject_of(subject)
+            where, args = self._where(owner, subj)
+            row = conn.execute(
+                f"SELECT {field} FROM {self.spec.table}{where}", args).fetchone()
+            if row is None or row[0] is None:
+                return 1
+            return int(row[0]) + 1
+        Counters.next_of = _next_open
+    _tooth("⑦ next_of 白名单放开（任意列名进 SELECT）", _probe_next_of_whitelist, m7,
+           lambda: setattr(Counters, "next_of", orig_next))
+
+    # ⑧ 合法面：**不是牙** —— 拆守卫后它**应当仍绿**（合法调用本来就不该被拦）。
+    #    这条钉的是「不许把守卫改成见谁都抛」：若把白名单改成 `raise` 无条件或改成
+    #    对 declared 字段也拒，探针会红。_tooth 的形状（预期变红）在这里是**错的**，
+    #    所以单列一条「预期仍绿」断言，别硬套 _tooth。
+    _mut8_holder = {}
+    _mut8_holder["orig"] = orig_next
+    m7()
+    try:
+        ok8, d8 = _green(_probe_next_of_legal)
+    finally:
+        setattr(Counters, "next_of", _mut8_holder["orig"])
+    check("⑧ 拆守卫后合法面**仍绿**（不许把白名单改成见谁都抛）", ok8, d8)
+
 
 def t11_multifault_and_order():
     print("\n[11] 多故障 + 顺序断言（只坏一处证明不了顺序）")
@@ -1031,6 +1148,7 @@ def main():
         t6_accumulate()
         t6b_whitelist()
         t6c_composite_key()
+        t6d_next_of_whitelist()
         t7_no_commit()
         t8_constant_time()
         t9_static_scan()
