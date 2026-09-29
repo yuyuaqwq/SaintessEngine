@@ -158,13 +158,34 @@ class TextSpec:
 
     @classmethod
     def from_dict(cls, data: Mapping) -> "TextSpec":
+        """从一条声明 dict 建 `TextSpec`（**只认 `key` / `value` 两个入口键**）。
+
+        ★ 审计 L1453：原先这里挂着**六个别名入口**（`key`/`name`/`id` 取 key，
+        `value`/`text`/`template` 取值），实测**零写手**：两个 texts 真源
+        （`games/orlandia/content/data/texts.json` 3 275 条 · `games/my_game/…` 0 条）
+        逐条扫过，`name`/`id`/`text`/`template` 顶层命中 **0**；
+        `schemas/text.schema.json` 的 `text_entry` 也只声明 `key`/`value`/`desc`/
+        `category`/`params` 五个字段。那六个别名是**兼容壳**（判据 #2/#4），
+        且它把「写法写错」变成**静默失效**：`{"name": "x", "value": "V"}` 会
+        悄悄读成 key=`"x"`，而 `{"name": "x"}`（忘了 value）读成空 key + 空模板 ——
+        `validate()` 只报「存在空 key 的文案」，看不出是哪一条写错了别名。
+        ⇒ 收净：别名删掉不留兼容；**入口键缺了当场点名抛**，不静默兜成空串。
+
+        表形态 `{key: 声明}` 的 key 由 `TextTable.load` 用 `setdefault("key", k)`
+        补齐；数组形态才需要显式写 `key`（见 `text.schema.json` 的 `key` 说明）。
+        """
         if not isinstance(data, Mapping):
-            return cls(key=str(data), value=str(data))
-        key = data.get("key", data.get("name", data.get("id", "")))
-        value = data.get("value", data.get("text", data.get("template", "")))
+            raise TypeError("文案声明必须是对象（Mapping），收到：%r" % (type(data).__name__,))
+        _ALIAS = ("name", "id", "text", "template")
+        bad = [k for k in _ALIAS if k in data]
+        if bad:
+            raise ValueError(
+                "文案声明用了已收掉的别名键 %s —— 入口键只有 `key` / `value`"
+                "（别名自审计 L1453 删除，全仓零写手；见 text.schema.json）" % (bad,))
         p = data.get("params", ())
         params = (p,) if isinstance(p, str) and p else tuple(p or ())
-        return cls(key=str(key or ""), value="" if value is None else str(value),
+        return cls(key=str(data.get("key") or ""),
+                   value="" if data.get("value") is None else str(data["value"]),
                    desc=str(data.get("desc", "") or ""),
                    category=str(data.get("category", "") or ""),
                    params=params)

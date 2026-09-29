@@ -157,6 +157,41 @@ check("报告「声明了模板没有的占位符」", any("mismatch" in p and "
 check("报告「用了未声明的占位符」", any("extra" in p and "未声明" in p for p in probs), probs)
 check("正常表 validate 为空", TextTable({"ok": "A {x}"}).validate() == [])
 
+# ------------------------------------------------- L1453：别名入口键已收净（fail-closed）
+# 台账：TextSpec.from_dict 曾同时认 key/name/id 与 value/text/template 六个别名，
+# 实测两个 texts 真源零写手、schema 也只声明五个字段 ⇒ 兼容壳 +「写错别名静默失效」。
+# 这组断言钉住两件事：① 真实数据一条不少地照常装载 ② 别名当场点名抛、不是静默兜底。
+_n_real = 0
+_real = {}
+for _p in (os.path.join(FW_ROOT, "games", "orlandia", "content", "data", "texts.json"),
+           os.path.join(FW_ROOT, "games", "my_game", "content", "data", "texts.json")):
+    if os.path.exists(_p):
+        import json as _json
+        _d = _json.load(open(_p, encoding="utf-8"))
+        check("L1453：真源 %s 的条目一条都能装（value 齐、无别名）" % os.path.basename(_p),
+              TextTable(_d).validate() == [], TextTable(_d).validate()[:3])
+        _real.update(_d)
+        _n_real += len(_d)
+check("L1453：两个 texts 真源合计条数与装配后一致", len(TextTable(_real)) == _n_real, _n_real)
+for _a in ("name", "id"):
+    try:
+        TextSpec.from_dict({_a: "x", "value": "V"})
+        check("L1453：别名键 %s 点名抛（不静默兜底）" % _a, False, "没抛")
+    except ValueError as _e:
+        check("L1453：别名键 %s 点名抛（不静默兜底）" % _a, _a in str(_e), str(_e)[:40])
+for _a in ("text", "template"):
+    try:
+        TextSpec.from_dict({"key": "k", _a: "T"})
+        check("L1453：别名键 %s 点名抛（不静默兜底）" % _a, False, "没抛")
+    except ValueError as _e:
+        check("L1453：别名键 %s 点名抛（不静默兜底）" % _a, _a in str(_e), str(_e)[:40])
+# 留着的一条合法容错（**不是**本次删掉的东西）：整条声明不是 Mapping 时点名抛类型
+try:
+    TextSpec.from_dict("裸字符串")
+    check("L1453：非 Mapping 声明点名抛 TypeError", False, "没抛")
+except TypeError:
+    check("L1453：非 Mapping 声明点名抛 TypeError", True)
+
 # ---------------------------------------------------------------- 5. 回写 / 统计
 print("\n【5. 回写与统计】")
 orig = TextTable({"a": "A {x}", "b": {"value": "B", "desc": "说明", "category": "类"}})
