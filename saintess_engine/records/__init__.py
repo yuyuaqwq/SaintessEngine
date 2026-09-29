@@ -699,7 +699,16 @@ def set_from_domains(pkg_root, domains, *, decl: str = DEFAULT_DECL, kind_dirs=N
     for name in domains:
         sub = resolve_domain(pkg_root, name, decl=decl, kind_dirs=kind_dirs,
                              declaration=declaration)
-        cfg = dict(overrides.pop(name, None) or {})
+        # ★ 回落只认 None：原写法 `dict(overrides.pop(name, None) or {})` 把
+        #   **falsy 非 dict**（0 / "" / [] / 0.0 / False）静默当成"这个域没有 overrides"，
+        #   实跑 cfg=0 照样构造成功 ⇒ 内容侧把 overrides 写坏（少一个逗号、变量算错）
+        #   在装配期零报错地过去；cfg=5 则是裸 TypeError: 'int' object is not iterable，
+        #   **不点名是哪个域**。两种退化都违反本模块的 fail-closed 契约。
+        _raw_cfg = overrides.pop(name, None)
+        if _raw_cfg is not None and not isinstance(_raw_cfg, dict):
+            raise RecordsDeclarationError(
+                "域 %r 的 overrides 必须是对象，收到 %s" % (name, type(_raw_cfg).__name__))
+        cfg = dict(_raw_cfg) if _raw_cfg is not None else {}
         if "sub" in cfg:
             raise RecordsDeclarationError(
                 "域 %r 的 overrides 里给了 sub —— 落点由声明的 kind 派生，不许手抄" % (name,))

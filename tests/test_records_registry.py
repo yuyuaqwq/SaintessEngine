@@ -168,6 +168,68 @@ def t4_release_all():
     check("回收后 reload_all_sets() 仍返回 {}（不是报错）", reload_all_sets() == {})
 
 
+def t5_overrides_shape(root):
+    """★ set_from_domains 的 overrides 形状守卫（2026-09-29 批次 4 真修的那条）。
+
+    立项依据 = 实跑：原写法 `dict(overrides.pop(name, None) or {})` 的 or 链把
+    **falsy 非 dict**（0 / "" / [] / 0.0 / False）静默当成"这个域没有 overrides" ——
+    构造照样成功、内容侧把 overrides 写坏在装配期零报错地过去；
+    truthy 非 dict（5）则是裸 `TypeError: 'int' object is not iterable`，**不点名是哪个域**。
+    两种退化都违反本模块「坏声明装配期即点名抛」的 fail-closed 契约。
+    ★ 本节此前**零覆盖**（全门禁 grep 不到 overrides）。
+    """
+    print(chr(10) + "【⑥ set_from_domains 的 overrides 形状（回落只认 None）】")
+    from saintess_engine.records import (                                       # noqa: E402
+        RecordsDeclarationError, set_from_domains,
+    )
+
+    # 自建一个**完整的包根**（域声明 + 落点表）——上面那个 root 是裸目录，
+    # 只够直接造 RecordsSet，走不了 set_from_domains 的声明面。
+    pkg = os.path.join(TMP, "ovr")
+    os.makedirs(os.path.join(pkg, "editor"), exist_ok=True)
+    with open(os.path.join(pkg, "editor", "domains.json"), "w", encoding="utf-8") as f:
+        json.dump({"items": {"kind": "data", "order": ["id"]}}, f, ensure_ascii=False)
+    _write(pkg, "content/data", "items", {"1": {"id": 1}})
+
+    def _probe(ov):
+        try:
+            set_from_domains(pkg, ("items",), overrides=ov)
+            return None
+        except RecordsDeclarationError as e:
+            return str(e)
+        except Exception as e:                                                 # noqa: BLE001
+            return "!!裸" + type(e).__name__ + ":" + str(e)
+
+    # (a) falsy 非 dict 逐个点名（改前这五种全部**静默通过**）
+    for nm, v in [("0", 0), ("空串", ""), ("空数组", []), ("0.0", 0.0), ("False", False)]:
+        m = _probe({"items": v})
+        check("overrides[items]=" + nm + " → 点名 RecordsDeclarationError（不许静默当空）",
+              m is not None and not m.startswith("!!"), "静默通过 / 退化: " + repr(m))
+        check("overrides[items]=" + nm + " 文案点名域 items",
+              m is not None and "items" in m, "没点名域: " + repr(m))
+    # (b) truthy 非 dict 也不许退化成裸 TypeError
+    m = _probe({"items": 5})
+    check("overrides[items]=5 → 点名 RecordsDeclarationError（不许裸 TypeError）",
+          m is not None and not m.startswith("!!"), "退化: " + repr(m))
+    check("overrides[items]=5 文案点名域 items", m is not None and "items" in m,
+          "没点名域: " + repr(m))
+    # (c) ★ 合法面钉「不许放松成见谁都抛」—— 这一组最关键
+    check("overrides 缺省(None) 仍合法",
+          _probe(None) is None, "被误伤: " + repr(_probe(None)))
+    check("overrides={} 仍合法", _probe({}) is None, "被误伤: " + repr(_probe({})))
+    check("overrides[items]={'order':['id']} 仍合法",
+          _probe({"items": {"order": ["id"]}}) is None, "被误伤")
+    check("overrides[items]={} （显式空对象）仍合法",
+          _probe({"items": {}}) is None, "被误伤: " + repr(_probe({"items": {}})))
+    # (d) 既有的两条 fail-closed 语义不许被这次改动碰坏
+    m = _probe({"items": {"sub": "x"}})
+    check("overrides 里手抄 sub 仍被点名拒绝",
+          m is not None and "sub" in m, "退化: " + repr(m))
+    m = _probe({"未请求的域": {"order": ["id"]}})
+    check("overrides 里有未请求的域 仍被点名拒绝（不静默忽略）",
+          m is not None and not m.startswith("!!"), "退化: " + repr(m))
+
+
 def main() -> int:
     print("== 门禁：资料表集合弱引用注册表 ==")
     t0_empty()
@@ -177,6 +239,7 @@ def main() -> int:
     del a, c
     gc.collect()
     t4_release_all()
+    t5_overrides_shape(root)
     print("-" * 56)
     print("通过 %d · 失败 %d" % (PASS, FAIL))
     return 1 if FAIL else 0
