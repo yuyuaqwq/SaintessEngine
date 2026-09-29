@@ -415,7 +415,14 @@ def _apply_death_guard(battle, target: dict, logs: list) -> bool:
         _left = max(0, n - 1)
         _drop = (_left <= 0 and not entry.get("expire"))
         # 保底
-        guard_pct = float(cfg.get("guard_hp_pct") or 0.10)
+        # ★ 审计 afix1（2026-09-29）：原 `float(cfg.get("guard_hp_pct") or 0.10)` 用 `or`
+        #   回落 ⇒ **内容侧声明 0.0 被吞成 0.10**。0.0 在这里是合法值：下一行
+        #   `_hp = max(1, int(mhp * guard_pct))` 的 `max(1, …)` 本就是为「保命只留 1 点」
+        #   准备的（保底 1 血），而 0.0 走 `or` 后恒给 10% 血 —— 声明「只保命不回血」
+        #   的机制被静默改成回 10%。实测：max_hp=1000 声明 0.0 ⇒ 旧写法 hp=100、
+        #   期望 hp=1。回落只认 **None**（缺键），与本仓其余乘区同口径。
+        _raw_guard = cfg.get("guard_hp_pct")
+        guard_pct = 0.10 if _raw_guard is None else float(_raw_guard)
         _hp = max(1, int(mhp * guard_pct))
         # 【写口 1/3】保命下限 `max(1,…)` 是**机制行为**（不是引擎内建规则）⇒ 算完再交给写口
         ATTR.set_current(target, "hp", _hp,
