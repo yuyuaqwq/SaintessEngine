@@ -295,17 +295,22 @@ def test_cast_window_two_phase():
         bt = _bt(a, b)
         logs1, _ended = bt.act(ActCtx(caster=a, action="defend"))
         slot = SCH.pending_of(a)
-        check("① T0 只登记：日志是「开始出招」，被分派动作**未**执行（容器里还没有窗口条目）",
-              not _win(a) and any("开始出招" in x for x in logs1),
+        # ★ 2026-09-29（R2.2 配套）：防御窗改为**T0 即刻开**（battle.act 预开，
+        #   test_texts_table IN19/RT1 的修复口径）——「T0 只登记」对防御动作不再要求
+        #   「无窗口」；「未落地」的观测改判**待发槽**（见下一条）。
+        check("① T0 登记：日志「开始出招」+ 防御窗口**即刻开**（R2.2 口径）",
+              _win(a) and any("开始出招" in x for x in logs1),
               f"effects={a.get('effects')} logs={logs1}")
         check("① 待发槽：落地时刻 = T0 + 第一段（spd=50 ⇒ 1.0）",
               bool(slot) and abs(float(slot["cast_done_at"]) - 1.0) < 1e-9,
               str(slot))
         lg = []
         SCH._advance_time(bt, 0.5, lg)
-        check("① 未到点不落地（0.5 < 1.0）", not _win(a), str(lg))
+        check("① 未到点 ⇒ 未落地（待发槽仍在；窗口已在 = R2.2 口径）",
+              SCH.pending_of(a) is not None, str(lg))
         SCH._advance_time(bt, 0.5, lg)
-        check("① 到点真落地（防御姿态在 T0+第一段 生效）", _win(a), str(lg))
+        check("① 到点真落地（槽清 + 窗口在）",
+              _win(a) and SCH.pending_of(a) is None, str(lg))
         check("① 落地后槽已清（无残留待发）", SCH.pending_of(a) is None)
         check("① 第一段按速度缩放（spd=100 ⇒ 0.5）",
               abs(SCH._segment_seconds(bt, _mk("z", "player", spd=100), "attack") - 0.5) < 1e-9)
