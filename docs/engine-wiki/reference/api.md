@@ -233,8 +233,8 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 ```
 
 两个都是**落地唯一收口**。内部子函数（无外部引用）：`_lv_pressure`（`:254`）、
-`_roll_dodge`（`:287`）、`_apply_taken_reductions`（`:313`）、`_apply_death_guard`（`:352`）、
-`_skip_event_mult`（`:388`，承伤减免**两条通道互斥**判定）、`state_reduce_of`（`:423`）、
+`_roll_dodge`（`:321`）、`_apply_taken_reductions`（`:313`）、`_apply_death_guard`（`:352`）、
+`_skip_event_mult`（`:388`，承伤减免**两条通道互斥**判定）、`state_reduce_of`（`:424`）、
 `_apply_damage`（`:451`）、`_apply_heal_mods`（`:596`）。
 
 ### `schedule.py`
@@ -312,8 +312,8 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 |---|---|---|
 | `to_state(battle)` | `:34` | Battle → dict |
 | `from_state(st)` | `:57` | dict → Battle |
-| `state_to_json(state)` | `:123` | `json.dumps(..., ensure_ascii=False, default=str)` |
-| `json_to_state(raw)` | `:127` | `json.loads` |
+| `state_to_json(state)` | `:136` | `json.dumps(..., ensure_ascii=False, default=str)` |
+| `json_to_state(raw)` | `:140` | `json.loads` |
 | `_STRIP_KEYS` | `:31` | `{"_skill_index"}` |
 
 ### `actions.py`

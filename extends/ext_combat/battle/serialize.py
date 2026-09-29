@@ -80,6 +80,17 @@ def from_state(st: dict, *, text=None) -> Battle:
     # 续战（恢复的战斗已在开战事件后）→ 不重复 fire battle_start
     b._started = True
     # 击杀记录（uid → 找 actor；找不到跳过——已从 sides 移除的阵亡单位）
+    #
+    # ★ 2026-09-29 审计 afix1 第 28 轮：内层 `break` **只跳出最内层循环**，
+    #   外层的 `for acts in b.sides.values()` 会带着同一个 uid 继续找下一个 side ⇒
+    #   **同一个 uid 出现在两个 side 时被 append 两次**。`killed` 落盘的是 uid 列表，
+    #   天然只记一次，所以一条真实击杀在恢复后变成两条。
+    #   黑盒复现（`tests/test_killed_restore_once.py`）：落盘 `killed=['m1']` ⇒
+    #   还原后 `killed_actors` **2 条**。落点 `games/orlandia/content/combat_cmds.py:1594/1890`
+    #   把这份名单当 `extra_kills` 交给 `victory_settle`（经验/金币/掉落）⇒ 重复计数；
+    #   复活被动（`class_mech.py:1826/1866`）又按**对象身份** `owner in ka` 判定
+    #   ⇒ 名单里混进的另一个 side 的同 uid 对象会让「移除死亡记录」漏掉真死者。
+    #   修法 = **取首个匹配即停**（`break` 提到外层，语义 = 一个 uid 对应一个 actor）。
     b.killed_actors = []
     for uid in (st.get("killed") or []):
         for acts in b.sides.values():
@@ -87,6 +98,9 @@ def from_state(st: dict, *, text=None) -> Battle:
                 if a.get("uid") == uid:
                     b.killed_actors.append(a)
                     break
+            else:
+                continue
+            break
     return b
 
 
