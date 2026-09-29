@@ -69,6 +69,23 @@ _SOURCE_KINDS = ("stat", "input", "const")
 _SOURCE_REQUIRED_KEY = {"stat": "key", "input": "key", "const": "value"}
 
 
+#: 变量名的**合法形状**（= `_TOKEN_RE` 的 `var` 组，两者必须同一条规则）。
+#: ★ 2026-09-29（审计 afix2 第 ㉘ 族「内容侧声明的词汇表 ≠ 引擎写死的分隔符/模式」）：
+#:   `translate_expr` 用 `rf"\b{_var}\b"` 把**内容侧声明的变量名**拼进正则模式，而
+#:   `_TOKEN_RE` 的变量组只认 `[A-Za-z_][A-Za-z0-9_]*`。二者原本各写各的 ⇒ 声明里
+#:   出现 `.` `(` `\` 等字符时：① 名字里的元字符**当通配/分组**用，把正文里毫不相干的
+#:   文本也替换掉（实测声明 `"a.t"` ⇒ `translate_expr("abt*2")` 得 `"点A×2"`，
+#:   `abt` 根本不是任何变量）；② 括号不配平直接 `re.error`（实测声明 `"a("` ⇒
+#:   `missing ), unterminated subpattern`，**玩家看技能详情那条路整条炸掉**）；
+#:   而 `translate_expr` 又把 label 原样当**替换串**，`` 这类会被 `re` 当回引用组 ⇒
+#:   `invalid group reference`。
+#:   正确的口径 = **声明侧把关**：名字不合这条形状就当场抛（与 `_validate_source` 同一种
+#:   fail-closed），而不是在消费端做正则转义 —— 那种名字在 `compile_expr` 里**根本
+#:   token 化不出来**，公式永远引用不到它，是**恒不可达的声明**，留着的唯一效果就是
+#:   让 `translate_expr` 静默乱替换 / 抛错。
+_VAR_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
 def _validate_source(source, var_name: str, path: str) -> None:
     """校验一条来源声明；不合法 ⇒ 抛 `EngineNotConfigured`（fail-closed）。
 
@@ -146,6 +163,14 @@ def declared_vars() -> dict:
             raise EngineNotConfigured(
                 "expr_vars_fn 变量 %r 的声明缺 `source`（取值来源）—— "
                 "形状见 saintess_engine.expr 模块头" % (_name,))
+        # ★ 名字必须能被 tokenizer 认出（否则这条声明**恒不可达**，见 `_VAR_NAME_RE` 头注）
+        if not isinstance(_name, str) or not _VAR_NAME_RE.fullmatch(_name):
+            raise EngineNotConfigured(
+                "expr_vars_fn 的变量名 %r 不合法 —— 只能是标识符形状"
+                "（字母或下划线开头，只含字母/数字/下划线；与引擎 tokenizer 的 var 组同一规则）。"
+                r"带 `.` `(` `\` 等字符的名字**在公式里永远引用不到**（token 化不出来），"
+                "而 `translate_expr` 会把它当正则模式用、把正文里别的文本替换掉或直接抛错。"
+                % (_name,))
         _validate_source(_spec["source"], _name, "source")
     return dict(table)          # ★ L1289：同上，内容侧那张表也不按引用交出去
 
@@ -456,6 +481,13 @@ def translate_expr(expr: str) -> str:
     import re as _re
     _labels = labels_of()
     for _var in sorted(_labels, key=len, reverse=True):
-        out = _re.sub(rf"\b{_var}\b", _labels[_var], out)
+        # ★ 2026-09-29（审计 afix2 第 ㉘ 族）：label 是内容侧给的**显示名**，而
+        #   `re.sub` 的第二个参数是**替换串模板** —— 里面的 `` / `\g<x>` 会被当作
+        #   回引用组（实跑 label = 攻击下 ⇒ `re.error: invalid group reference 1`，
+        #   玩家点开技能详情那条路直接炸）。用**函数**当替换（返回值按字面量使用，
+        #   不再过模板解析）⇒ 显示名里任何字符都原样上屏。
+        #   变量名一侧已由 `_VAR_NAME_RE` 在**声明期**把关（名字必是标识符形状，
+        #   拼进 `\b…\b` 不会有元字符），这里是配套的**替换串**那一面。
+        out = _re.sub(rf"\b{_var}\b", lambda _m, _l=_labels[_var]: _l, out)
     out = out.replace("*", "×").replace("/", "÷")
     return out
