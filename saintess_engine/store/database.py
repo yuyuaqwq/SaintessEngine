@@ -14,6 +14,7 @@
 """
 from __future__ import annotations
 
+import logging
 import os
 import sqlite3
 import threading
@@ -21,6 +22,9 @@ from contextlib import contextmanager
 from typing import Callable, Iterator, Optional
 
 __all__ = ["Database"]
+
+# ★ 调优项被跳过时**点名留痕**（连同 sqlite3 原始异常），零痕迹静默是本条修掉的病。
+_TUNE_WARN = logging.getLogger(__name__)
 
 
 def _tune_file_conn(conn: sqlite3.Connection, timeout: float) -> None:
@@ -37,29 +41,46 @@ def _tune_file_conn(conn: sqlite3.Connection, timeout: float) -> None:
     的既有用法没有可观察行为差异（`-wal`/`-shm` 是 SQLite 自管文件）。
 
     `journal_mode` 是**持久属性**（写进库文件头，后续连接自动继承），重复设置无害。
-    只读挂载 / 网络盘等不支持 WAL 的场合静默回退默认行为，不阻断初始化。
+    只读挂载 / 网络盘等不支持 WAL 的场合回退默认行为，不阻断初始化。
+
+    ★ 2026-09-29 修（实测驱动）：原写法是**一整个 try 包住全部 5 条 PRAGMA**，
+    `except sqlite3.Error: pass`。只读挂载上第一条 `journal_mode=WAL` 就抛
+    `sqlite3.OperationalError` ⇒ **后面 4 条一条都没跑**，而 `busy_timeout`
+    （等锁时长）恰恰是网络盘 / 共享挂载上最要紧的那条。实测：只读文件库调优后
+    `busy_timeout=5000`（SQLite 默认）/ `temp_store=0`（默认）/ `wal_autocheckpoint=1000`
+    （默认），即 `Database(timeout=30)` 显式配的 30 秒**根本没生效**，
+    在他那边读起来却像「超时设了就是 30 秒」—— 与 2026-09-18 那次优化想解决的问题
+    （磁盘队列饱和、commit 慢）**在只读挂载上一点没被解决**。
+    ⇒ 改成**逐条独立** try：一条失败只废掉它自己，其余照跑；失败项**点名留痕**
+    （`logging.warning` + `exc_info`），不再是零痕迹静默。
     """
-    try:
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA busy_timeout=%d" % max(0, int(timeout * 1000)))
-        # ★ 2026-09-18 二次调优（实测驱动）：6 个门禁并发时 **CPU 只占 19%、
-        #   磁盘队列 1~6（饱和）** ⇒ 瓶颈在磁盘 IO 而非 CPU。三条都不动耐久性：
-        #   · wal_autocheckpoint 1000 → 4000 页（≈4MB → 16MB）：checkpoint 要回写主库
-        #     并 fsync，降低频率直接砍掉一块磁盘压力（留有限值，不像 0 那样让 WAL 无限涨）。
-        #   · temp_store=MEMORY：临时表 / 排序不进磁盘。
-        #   · cache_size=-8000（8MB）：减少重复页读。
-        conn.execute("PRAGMA wal_autocheckpoint=4000")
-        conn.execute("PRAGMA temp_store=MEMORY")
-        conn.execute("PRAGMA cache_size=-8000")
-        # ★ 同步模式开关（**默认不动 = FULL**，耐久性最高）。
-        #   测试跑器可设 `GWEN_SQLITE_SYNC=NORMAL`：WAL 下只在 checkpoint 时 fsync，
-        #   commit 不再逐次落盘 —— 崩溃极端情况下可能丢最近若干事务（库不会损坏），
-        #   对一次性的测试库零风险；真实运行默认保持 FULL。
-        _sync = os.environ.get("GWEN_SQLITE_SYNC", "").strip().upper()
-        if _sync in ("FULL", "NORMAL", "OFF"):
-            conn.execute("PRAGMA synchronous=%s" % _sync)
-    except sqlite3.Error:
-        pass
+
+    def _one(stmt: str) -> None:
+        """跑一条 PRAGMA；该库不支持就点名跳过，不牵连其余调优项。"""
+        try:
+            conn.execute(stmt)
+        except sqlite3.Error:
+            _TUNE_WARN.warning(
+                "连接调优项被跳过（该库可能不支持此 PRAGMA）：%s", stmt, exc_info=True)
+
+    _one("PRAGMA journal_mode=WAL")
+    _one("PRAGMA busy_timeout=%d" % max(0, int(timeout * 1000)))
+    # ★ 2026-09-18 二次调优（实测驱动）：6 个门禁并发时 **CPU 只占 19%、
+    #   磁盘队列 1~6（饱和）** ⇒ 瓶颈在磁盘 IO 而非 CPU。三条都不动耐久性：
+    #   · wal_autocheckpoint 1000 → 4000 页（≈4MB → 16MB）：checkpoint 要回写主库
+    #     并 fsync，降低频率直接砍掉一块磁盘压力（留有限值，不像 0 那样让 WAL 无限涨）。
+    #   · temp_store=MEMORY：临时表 / 排序不进磁盘。
+    #   · cache_size=-8000（8MB）：减少重复页读。
+    _one("PRAGMA wal_autocheckpoint=4000")
+    _one("PRAGMA temp_store=MEMORY")
+    _one("PRAGMA cache_size=-8000")
+    # ★ 同步模式开关（**默认不动 = FULL**，耐久性最高）。
+    #   测试跑器可设 `GWEN_SQLITE_SYNC=NORMAL`：WAL 下只在 checkpoint 时 fsync，
+    #   commit 不再逐次落盘 —— 崩溃极端情况下可能丢最近若干事务（库不会损坏），
+    #   对一次性的测试库零风险；真实运行默认保持 FULL。
+    _sync = os.environ.get("GWEN_SQLITE_SYNC", "").strip().upper()
+    if _sync in ("FULL", "NORMAL", "OFF"):
+        _one("PRAGMA synchronous=%s" % _sync)
 
 
 class Database:
