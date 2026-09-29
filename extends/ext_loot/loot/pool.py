@@ -352,10 +352,15 @@ class LootTable:
             merged = dict(STRATEGIES.get(k) or {})
             merged.update(v)
             # ★ 与内置策略**用同一份判定**（审计 L573）——原先这条路径零校验
-            merged["fn"] = _check_spec(
+            # ★ 2026-09-29 收口修复：`_check_spec` 返回的是**整个 spec dict**；旧写法把它
+            #   直接塞进 `spec["fn"]` ⇒ 凡「覆盖内置策略」的实例（奥兰迪亚的
+            #   `{"table": {"expand": ...}}` 即此形态），该策略一被 roll 就
+            #   `TypeError: 'dict' object is not callable` ⇒ 副本战利品堆等所有
+            #   `type=table` 的池摸不出东西。改为以其规范化结果**更新四键**。
+            merged.update(_check_spec(
                 k, merged.get("fn"), merged.get("uses", "entries"),
                 needs_weights=merged.get("needs_weights", False),
-                expand=merged.get("expand"))
+                expand=merged.get("expand")))
             self._strategies[k] = merged
         self.inline_prefixes = tuple(inline_prefixes)
         self.pool_key_prefixes = tuple(pool_key_prefixes)
