@@ -137,6 +137,21 @@ _NEUTRAL_SKELETON = {
     #   **不在零效应中性段**：归零 = 暴击不加成伤 = 又一个平衡选择，
     #   不是「没有这条规则」。
     "crit": {"mult": 1.5},
+    # ---- 2026-09-29（审计 L246/L566/L248/L245 同族未收口 · 第 7 次）：**状态减伤的两个 cap** ----
+    #   原写死在 `battle/stats.py::_apply_effects` 的**两个读点**，都是 `min(..., 0.9)`：
+    #   ① 叠层累加型 `st["reduce"] = min(已累加 + n×per, 0.9)`（`stat_scale.reduce`）
+    #   ② 单条快照型 `st[stat] = int(st[stat] × (1.0 - min(mult, 0.9)))`（`panel.op="reduce"`）
+    #   ★ 与 block / dodge / taken_resist / taken_elem_resist / defend_posture / crit **同族同形**：
+    #     那六个 cap 早已下沉到这张表，唯独 stats 这两个漏在引擎里 ⇒ 内容侧零配置面
+    #     （两个读点全仓 orlandia / aetheran-package 零命中）⇒ 第二款游戏想改自己的
+    #     「状态减伤上限」只能改引擎。
+    #   ★★ 与 `reduce.cap`（V4 已迁）是**两码事，别混**：`reduce.cap` 封的是**承伤侧
+    #     累加 `taken_pct` 声明值**（`landing._taken_pct_total`，读点 :500）；
+    #     这里封的是**面板折算里减益状态最多能减掉几成**（`stats._apply_effects`），
+        #     故**另起一组**而不是复用 —— 复用会把两条独立的平衡线绑成一条。
+    #   默认值取原写死值 0.90（与已装内容逐字一致 ⇒ 玩家可见行为零变化）。
+    #   **不在零效应中性段**：cap 归 0 = 所有减益状态都不再减伤（另一个平衡选择，不是「没有」）。
+    "status_reduce": {"cap": 0.90},
 }
 
 
@@ -327,6 +342,26 @@ def gauge_default_max() -> float:
     未装配 → 0.0；调用方按「<=0 → 历史兜底 100」处理（见 `ext_combat.gauge`）。
     """
     return _skel_sub_num("gauge", "default_max", 0.0)
+
+
+def status_reduce_cap() -> float:
+    """**面板折算侧**「减益状态最多能减掉几成」的上限（`stats._apply_effects` 的两个读点）。
+
+    ★ 2026-09-29（审计 L245 同族未收口 · 第 7 次）：原先写死在 `stats.py` 的两处
+      `min(..., 0.9)` —— ① 叠层累加型（`stat_scale.reduce`）② 单条快照型
+      （`panel.op="reduce"`）。与 block / dodge / taken_resist / taken_elem_resist /
+      defend_posture / crit **同族同形**：那些 cap 早已下沉到这张表，唯独这两个漏在引擎里
+      （两个读点全仓 orlandia / aetheran-package **零命中** ⇒ 内容侧零配置面）。
+
+    ★★ 为什么不复用 `reduce.cap`（V4 已迁、默认值 0.0）：那条封的是**承伤侧累加的
+      `taken_pct` 声明值**（`landing._taken_pct_total`），这里封的是**面板折算里减益
+      状态能减掉几成** —— 两个消费者、两条平衡线、中性地值也不同（那边 0.0 = 不减伤，
+      这边 0.0 = 状态不再减伤）。共用一个键会把两款游戏的独立调参绑成一条。
+
+    内容侧声明 `FORMULA_SKELETON["status_reduce"]["cap"]`；默认值 = 原写死值 0.90
+    （未装配时逐字一致 —— 本 getter 是这两个读点**唯一**的回落点，不加第二处）。
+    """
+    return _skel_sub_num("status_reduce", "cap", 0.90)
 
 
 def lucky_rate() -> float:

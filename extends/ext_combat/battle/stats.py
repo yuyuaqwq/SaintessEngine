@@ -55,6 +55,11 @@ def _apply_effects(st: dict, actor: dict) -> dict:
     if not isinstance(ef, dict) or not ef:
         return st
     from .state_effects import state_def
+    # ★ 惰性 import：stats.py 会被 spec_from_file_location **单文件装载**
+    #   （tests/test_editor_glossary.py:270 那条判据直接取 _monster_base_stats 的键集），
+    #   模块级相对 import 在那种装载下没有父包 ⇒ ImportError。
+    #   与本文件既有的 state_def / panel 同一写法。
+    from .formulas import status_reduce_cap as _cap
     for key, entry in ef.items():
         if not isinstance(entry, dict):
             continue
@@ -67,7 +72,11 @@ def _apply_effects(st: dict, actor: dict) -> dict:
                 if stat == "dmg_mult":
                     st["_state_dmg_mult"] = float(st.get("_state_dmg_mult", 1.0)) * (1.0 + n * float(per))
                 elif stat == "reduce":
-                    st["reduce"] = min(float(st.get("reduce", 0) or 0) + n * float(per), 0.9)
+                    # ★ 2026-09-29 审计 L245 同族未收口（原写死 0.9 → 下沉内容侧骨架表）：
+                    #   cap 走 `formulas.status_reduce_cap()`（唯一回落点，默认 = 原写死值 0.90）
+                    #   ⇒ 内容侧声明 FORMULA_SKELETON["status_reduce"]["cap"] 即可改，引擎不再写死。
+                    st["reduce"] = min(float(st.get("reduce", 0) or 0) + n * float(per),
+                                        _cap())
                 elif stat in st:
                     st[stat] = int(st.get(stat, 0) * (1.0 + n * float(per)))
         # ② 面板快照型（buff：条目内嵌 stat/op/mult 或声明 panel）——默认 1 层
@@ -86,7 +95,10 @@ def _apply_effects(st: dict, actor: dict) -> dict:
             #   口径：判据**只认 op**（`op:"reduce"` = 乘区本身是「减掉的比例」），
             #   条目名不参与判定 —— 引擎零游戏名词（准则 1）。
             if _op == "reduce":
-                st[entry_stat] = int(st.get(entry_stat, 0) * (1.0 - min(float(entry_mult), 0.9)))
+                # ★ 同上：第二个读点（单条快照型 `panel.op="reduce"`）与上面那个
+                #   叠层累加型**共用同一个 cap getter** —— 同族两处，不许只收一处。
+                st[entry_stat] = int(st.get(entry_stat, 0)
+                                     * (1.0 - min(float(entry_mult), _cap())))
             elif _op == "add":
                 st[entry_stat] = float(st.get(entry_stat, 0) or 0) + float(entry_mult)
             else:
