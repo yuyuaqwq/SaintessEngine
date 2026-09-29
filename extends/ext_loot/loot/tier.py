@@ -26,6 +26,16 @@ import random as _random
 from .pick import pick_weighted
 
 
+def _weight_value(v) -> float:
+    """一个权重值：None/缺 → 0.0；其余按 float 原样取回（**不取整** —— 取整会改概率分布）。"""
+    if v is None:
+        return 0.0
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 class TierTable:
     """有序档位阶梯。构造后不可变。"""
 
@@ -148,7 +158,15 @@ class TierTable:
         if spec is None:
             return self.weights_at(level, clamp=clamp) if level is not None else [1] * len(self._order)
         if isinstance(spec, dict):
-            return [int(spec.get(k, 0) or 0) for k in self._order]
+            # ★ 审计 L576：原先 `int(spec.get(k, 0) or 0)` 把**小数权重截成整数** ——
+            #   与同文件 `weights_at` 的口径自相矛盾（它明确「浮点，不取整 —— 取整会改概率
+            #   分布」，插值出来的是 15.0/7.5/2.5 这类真浮点）。**只有 dict 这一条路在截**。
+            #   实跑：dict 权重 {'b':1.9,'c':1.1} 截成 [0,1,1] ⇒ 抽出来 b:c = 51:49，
+            #   真值应按 1.9:1.1 = 63.3:36.7 ⇒ 抽签概率整个错掉、零报错。
+            #   （台账原记的位点 `pick.py:27` 的 `int(... or 0)` 本轮核实**不是这一处**：
+            #   那处管的是**条目权重**（另一形状、确实要整数），截断权重行的是本行。）
+            #   回落只认 None：0.0 是合法权重（该档永不被抽中），不能当成「没给」。
+            return [_weight_value(spec.get(k)) for k in self._order]
         row = list(spec)
         if len(row) < len(self._order):
             row = row + [0] * (len(self._order) - len(row))

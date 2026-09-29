@@ -347,6 +347,24 @@ def t6_tier():
           TierTable(["a"], weights_by_level={1: [1], 9: [9]}, clamp=(1, 9)).weights_at(5) == [5.0])
     check("weights_at：无权重表 → 等权",
           TierTable(["a", "b"]).weights_at(3) == [1, 1])
+    # ★ 审计 L576：dict 权重行原先走 `int(spec.get(k,0) or 0)`，把**小数截成整数** ——
+    #   与上一行同一个对象自己的 `weights_at`（浮点插值 7.5/2.5）口径自相矛盾。
+    #   抽签因此按整数权重走：1.9/1.1 → [0,1,1] ⇒ b:c = 51:49（真值 63.3:36.7）。
+    #   本组钉「dict 路径不取整 + 与 list 路径逐字同形 + 0.0 仍是合法权重」。
+    _wt = TierTable(["a", "b", "c"], weights_by_level={1: [100.0, 0.0, 0.0]})
+    check("★ weights_from(dict) 不取整（小数权重原样保留）",
+          _wt.weights_from({"a": 0.0, "b": 1.9, "c": 1.1}) == [0.0, 1.9, 1.1],
+          _wt.weights_from({"a": 0.0, "b": 1.9, "c": 1.1}))
+    check("weights_from(dict) 与 weights_from(list) 逐字同形",
+          _wt.weights_from({"a": 0.0, "b": 1.9, "c": 1.1}) == _wt.weights_from([0.0, 1.9, 1.1]))
+    check("weights_from(dict) 缺键 → 0.0（不给就当没这条权重）",
+          _wt.weights_from({"b": 2.0}) == [0.0, 2.0, 0.0],
+          _wt.weights_from({"b": 2.0}))
+    check("weights_from(dict) 0.0 是合法权重（该档永不被抽中，不当『没给』）",
+          _wt.weights_from({"b": 0.0, "c": 3.0}) == [0.0, 0.0, 3.0],
+          _wt.weights_from({"b": 0.0, "c": 3.0}))
+    check("★ dict 路径不再截断：插值出来的浮点权重经 dict 回读仍逐字不变",
+          _wt.weights_from({"a": 15.0, "b": 7.5, "c": 2.5}) == [15.0, 7.5, 2.5])
     check("pick：命中非零权重档（fix rng）",
           T.pick(weights=[0, 0, 1, 0, 0], rng=FixRng(0.5)) == "t3")
     check("pick：exclude 全排除 → None",
