@@ -209,7 +209,7 @@ mech/actions.py            data/rules.py                      apply.py
   `human_act("skill", "过载铆钉")` 显式驱动（原因见第 6 节坑 4）。
 - 不做结算 / 掉落半边（`content/settlement.py` / `content/loot.py`）：宿主 `run_battle`
   照常跑完并把这半边记**桩**（`stubs`）——两者属策略，留给按 wiki 扩展。
-- 包内冒烟（20 项）不覆盖 `content/bridge.py`（那条链要宿主在场）；宿主侧实证 =
+- 包内冒烟（25 项）不覆盖 `content/bridge.py`（那条链要宿主在场）；宿主侧实证 =
   第 1 节第 ③ 条 `examples/host-skeleton/adapter_cli.py --package examples/minimal-game`。
 
 ## 8. ★ 编辑器扩展：本包自带域（**最小样板**）
