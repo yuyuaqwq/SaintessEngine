@@ -84,7 +84,9 @@ class CommandSpec:
     * `usage`     —— 用法示例文本（帮助用）
     * `guards`    —— 守卫**名字**列表（如 "player" / "battle"；语义由使用方实现）
     * `page_size` —— 该指令列表输出的每页条数（0 = 不适用）
-    * `visible`   —— 是否出现在帮助/目录
+    * `visible`   —— 是否出现在帮助/目录。**必须是 JSON 布尔**（`true` / `false`）；
+                     字符串 `"false"` / `"0"` / `"no"` 一律点名抛 `TypeError`
+                     （见 `_flag_of` 的口径说明）
     * `order`     —— 帮助排序（小在前；同值按注册序）
     * `priority`  —— **命中优先级**（大在前；同值按注册序）。与 `order` 各管一头：
                      `order` 只排帮助/目录（`visible()`），`priority` 只排命中
@@ -108,9 +110,37 @@ class CommandSpec:
     extra: dict = field(default_factory=dict)
 
     # ---------- 构造 ----------
+    @staticmethod
+    def _flag_of(data: Mapping, field: str) -> bool:
+        """`visible` 取值校验：**只认 JSON 布尔**，其余点名抛 `TypeError`。
+
+        为什么不用 `bool(v)`（本条被修之前的写法）：`bool` 只看「是否非空」，
+        于是 `"false"` / `"0"` / `"no"` 全是 `True` —— 声明写「这条不可见」，
+        实机却**照常路由**；而 `null` / `0` / `[]` 全是 `False` —— 声明写「这条可见」，
+        实机却**静默不出现在目录与路由里**。两边都是**零报错**的方向相反的错。
+        `bool` 还会把 `1` / `0` 收下，但 JSON 侧 `1/0` 与 `true/false` 不是同一个形状，
+        收了就是在帮写错的人兜底 ⇒ 一并点名，让写法在装载期就暴露。
+        """
+        if field not in data:
+            return True                      # 缺键 = 默认可见（既有口径，不变）
+        value = data[field]
+        if not isinstance(value, bool):
+            raise TypeError(
+                "指令声明的 %r 必须是 JSON 布尔 true/false，收到 %s：%r"
+                "（字符串 %r 不算 false —— bool() 会把它读成 true，声明的「不可见」会照常路由）"
+                % (field, type(value).__name__, value, value))
+        return value
+
     @classmethod
     def from_dict(cls, data: Mapping) -> "CommandSpec":
-        """从 dict/JSON 装载。容错：别名键（name/regex/pattern）都认，坏值降级不抛。"""
+        """从 dict/JSON 装载。容错：别名键（name/regex/pattern）都认，坏值降级不抛。
+
+        ★ **唯一不降级的字段是 `visible`**：它门控「这条指令会不会被路由」，
+          `bool("false")` 是 `True` ⇒ 写 `"visible": "false"` 声明的**停服 gate 会照常放行**；
+          反向 `visible=None` 被 `bool()` 吞成 `False` ⇒ 指令**静默不参与路由**、玩家打不出来。
+          两种都是「声明写坏了但内容侧零报错」，故这里点名抛，不并入降级档。
+          （`bind` 走 `BindSpec.from_data` fail-closed，与本条同纪律。）
+        """
         if not isinstance(data, Mapping):
             return cls(key=str(data))
         key = data.get("key", data.get("name", data.get("id", "")))
@@ -144,7 +174,7 @@ class CommandSpec:
             usage=str(data.get("usage", "") or ""),
             guards=guards,
             page_size=page_size,
-            visible=bool(data.get("visible", True)),
+            visible=cls._flag_of(data, "visible"),
             order=order,
             priority=priority,
             bind=bind,
@@ -162,7 +192,7 @@ class CommandSpec:
             out["guards"] = list(self.guards)
         if self.page_size:
             out["page_size"] = self.page_size
-        if not self.visible:
+        if not self.visible:            # 必是 bool（`_flag_of` 只放布尔进来）⇒ 往返不引入字符串
             out["visible"] = False
         if self.order:
             out["order"] = self.order
@@ -187,6 +217,40 @@ class CommandSpec:
     def hits(self, text: str, *, mode: str = "search") -> bool:
         """文本是否命中本指令任一正则（默认 `search`，与宿主 filter 语义一致）。"""
         return _any_hit(self.patterns, text, mode)
+
+
+#: catch-all 探测用的探针文本（**互不相干**：空串 / 空白 / 日常聊天 / 纯 ASCII /
+#: 纯数字 / 指令样式 / 领域词）。为什么要一组而不是一条：单条文本可能被
+#: 「只匹配某前缀」的正常正则命中；一组**互不相干**的文本**全部**命中 ⇒ 只可能是 catch-all。
+#: ★ 刻意**同时含** `_maint_gate` 那种「零宽全可选组」与 `^.*$` 那种「整串吞噬」两种形态 ——
+#:   前者 `search` 命中片段为空、后者非空，**两者都必须被认出来**（只认其一 = 漏一半，
+#:   这正是 `mount` 那条 fix 漏掉「装了一半」的同型教训）。
+_CATCHALL_PROBES = ("", " ", "你好", "zzz", "12345", "攻击 野猪", "背包", "abc def ghi")
+
+
+def _is_catch_all(pat: str) -> bool:
+    """`pat` 是否「吞掉一切」—— 对一组互不相干的探针文本**全部命中**。
+
+    ★ 判据是「**是否全部命中**」，**不是**「是否零宽」：`_maint_gate` 的全可选组
+    命中片段为空，而 `^.*$` 命中的是**整串** —— 两者都吞掉每一条消息，都是 catch-all。
+    只按零宽判会把 `^.*$` 这类最常见的写法放过去（实测：那样写 A/C 段共 4 条判据当场红）。
+
+    只回答「是不是 catch-all」，**不**回答「该不该有」：不可见的平台 gate
+    （如 `_maint_gate`）就是有意 catch-all，由 `validate()` 按 `visible` 过滤。
+    真源 = 内容侧 `commands.json:/_maint_gate` 的 `extra.note`
+    （「正则无 $ 锚定、设计上匹配所有消息」）+ `docs/engine-wiki` 路由口径
+    （路由只考虑 `visible=True` 的声明，平台 gate 不参与包内路由）。
+
+    纯函数、无副作用：不写状态、不抛、不读磁盘 —— 与同文件 `combine_patterns` 同款。
+    """
+    try:
+        rx = re.compile(pat)
+    except re.error:
+        return False          # 非法正则由 validate 的另一条判据点名，这里不重复报
+    for text in _CATCHALL_PROBES:
+        if rx.search(text) is None:
+            return False      # 有一次不命中 ⇒ 不是 catch-all
+    return True
 
 
 def _any_hit(patterns: Sequence[str], text: str, mode: str = "search") -> bool:
@@ -490,6 +554,24 @@ class CommandRegistry:
                     problems.append("正则被多条指令共用：%s ↔ %s（%s）"
                                     % (seen[p], spec.key, p))
                 seen.setdefault(p, spec.key)
+        # ★ 2026-09-29 审计（批次1 第35轮，屏幕线索角度）：**可见的 catch-all** 零告警。
+        #   `_maint_gate`（内容侧停服 gate，visible=False）的正则刻意写成「匹配一切且零宽」
+        #   （全部为可选组），实测对 8 条互不相干探针文本 8/8 命中且 8/8 group(0)=="" ⇒
+        #   那是**有意设计**（它不参与包内路由，路由口径 `first_hit(visible_only=True)` 会剔它）。
+        #   但 `validate()` 过去**只**查「共用正则」，不查「谁吞掉一切」⇒ 一条
+        #   `visible=True` 的 catch-all（复制粘贴 `_maint_gate` 时顺手带上 visible）
+        #   能一路零告警装载进线上路由，把每一条玩家消息都判成它。
+        #   本模块 fail-closed 铁律：认不出 ⇒ 抛；吞掉一切 ⇒ 也得点名。
+        #   口径 = **只看 visible 声明**（不可见的平台 gate 是设计使然，不报）；
+        #   判据用 AST 无关的「整串可匹配空串 + 一组互不相干探针全命中」，不靠行号、不靠猜。
+        for spec in self.specs():
+            if not spec.visible:
+                continue
+            for p in spec.patterns:
+                if _is_catch_all(p):
+                    problems.append(
+                        "%s：可见声明的 catch-all 正则会吞掉每一条消息"
+                        "（若本意是平台 gate，请显式设 visible=false）—— %s" % (spec.key, p))
         return problems
 
     def audit_handlers(self, handler_names: Iterable[str]) -> dict:
