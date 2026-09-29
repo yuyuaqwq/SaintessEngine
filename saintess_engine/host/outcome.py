@@ -12,6 +12,7 @@ from __future__ import annotations
 import random
 
 from ..clock.wall import today as _wall_today      # 挂钟单一出口纪律：日期只许经 clock/
+from ..config import EngineNotConfigured as _NotConfigured
 
 
 def _read_json(path, default=None):
@@ -97,14 +98,25 @@ class StandIns(dict):
         from .. import config as engine_config
         panel = engine_config.get_hook("panel_fn")
         if callable(panel):
+            # ★ 审计（晚到批 · 引擎面）：原写法 `except Exception: self["final_stats"] = {}`
+            #   把「面板公式算炸了」压成「面板是个空表」。`{}` 与 `__missing__` 给的 None 不是一回事：
+            #   它是**已存在、已赋值、只是空**的键 ⇒ 内容侧拿到「存在但没有 max_hp」⇒ 按 None 续算
+            #   ⇒ 开出一场血量对不上的战斗，且零日志零异常。与本类 docstring 的「绝不编数字」相反，
+            #   也与同仓已修的 PVP 面板实时化、`_record_list_state` 两处同族口径相反。
+            #   处置：形状类故障 fail-closed 抛（配了面板却算不出来 = 接面没接通）；
+            #   缺 hook 那一支原样不动（仍走 `__missing__` 的 None，那是合法中性值）。
             try:
                 self["final_stats"] = panel(player.get("class_name"), int(player.get("level", 1) or 1),
                                             player.get("equipment") or {},
                                             int(player.get("class_tier", 0) or 0),
                                             player.get("attributes"),
                                             int(player.get("evolve_path", 0) or 0), {}, player.get("race"))
-            except Exception:                                    # noqa: BLE001
-                self["final_stats"] = {}
+            except (TypeError, ValueError, KeyError, AttributeError) as exc:
+                raise _NotConfigured(
+                    "final_stats 面板 hook 算炸了（引擎已挂 panel_fn，但内容侧给的面板形状不对）："
+                    "键=class_name/level/equipment/class_tier/attributes/evolve_path/race；"
+                    "原样拒绝而不是给空表——给空表会让战斗按 max_hp=None 开出一场血量对不上的仗"
+                ) from exc
 
     def __missing__(self, key):                                  # 未知键 → 中性值（不炸）
         return None
