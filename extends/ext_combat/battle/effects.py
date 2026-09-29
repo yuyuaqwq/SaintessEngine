@@ -225,13 +225,22 @@ def effects_from_skill(info: dict, lv: int, caster_side_is_player: bool = True) 
     - 否则保留名词 type，由 EFFECT_ACTIONS 配置翻译成动词
     """
     effects = []
+    from . import formulas as _F
     mech = info.get("mech") or ""
-    mval = int(info.get("mech_val", 0) or 0)
+    # ★ 审计 r22（2026-09-29）：叠层数走**等级成长曲线** `skill_mech_val(info, lv)`，
+    #   不用裸 `mech_val`。原先这里恒取裸值 ⇒ 技能面板承诺的 `sk.gain_stack` /
+    #   `sk.curve_stack`（内容侧 `combat_cmds.py` 两处都打 `skill_mech_val(info, lv)`）
+    #   与**实机落下的层数**在 Lv≥2 全不相等（实测真包 110 格里 **72 格对不上**，
+    #   21 条技能受影响）。同包 `actions.py:1015` 的护盾路**早就**走 `skill_mech_val`，
+    #   本函数是同族漏网 ⇒ 修法 = 与那条路同调一个函数，不新开第二套口径。
+    mval = _F.skill_mech_val(info, lv)
     if mech and mval:
         effects.append(_mech_to_effect(mech, mval, info))
     mech2 = info.get("mech2") or ""
     if mech2:
-        m2v = int(info.get("mech2_val", 0) or 0)
+        # mech2 同族：内容侧面板只展示 `mech` 那一格（无 mech2 文案槽位），
+        # 成长口径仍按同一条曲线走（lv=0/负数由 skill_mech_val 的 max(1,…) 兜住）。
+        m2v = _F.skill_mech_val(info, lv) if info.get("mech2_val") is not None else 0
         effects.append(_mech_to_effect(mech2, m2v, info))
     return effects
 

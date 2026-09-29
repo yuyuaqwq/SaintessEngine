@@ -47,7 +47,7 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 | 22 | `phase` | ⚠️ **无引擎点位** | — | — | Boss 阶段转换（上层驱动） |
 | 23 | `player_low` | ⚠️ **无引擎点位** | — | — | 玩家低血量（上层驱动） |
 | 24 | `pv_broken` | ⚠️ **无引擎点位** | — | — | 破防（上层驱动） |
-| 25 | `interrupt` | `landing.py:241`（伤害打断蓄力）/ `effects.py:708`（`act_interrupt` 动词） | `actor`, `target`, `source` | 被打断者 | 读条被打断 |
+| 25 | `interrupt` | `landing.py:241`（伤害打断蓄力）/ `effects.py:710`（`act_interrupt` 动词） | `actor`, `target`, `source` | 被打断者 | 读条被打断 |
 | 26 | `time_advance` | `schedule.py:597`（`_advance_time`） | `dt`, `now` | **无**（广播） | 时钟推进（结算**之后**广播） |
 
 ### 关于 `skill_hit` / `attack_hit` 的「静态 grep 不到」
