@@ -24,7 +24,7 @@ import re
 import sqlite3
 from typing import Iterable, Mapping
 
-__all__ = ["columns_of", "ensure_columns"]
+__all__ = ["columns_of", "ensure_columns", "missing_columns"]
 
 # 标识符白名单：表名/列名要拼进 SQL，务必校验（防注入 / 防拼错）
 _IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")

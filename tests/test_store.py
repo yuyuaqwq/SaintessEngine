@@ -23,8 +23,9 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 FW_ROOT = os.path.dirname(_HERE)
 sys.path.insert(0, FW_ROOT)
 
-from saintess_engine.store import Database, Repository, columns_of, ensure_columns  # noqa: E402
-from saintess_engine.store.migrate import _check_ident, missing_columns  # noqa: E402
+from saintess_engine.store import (Database, Repository, columns_of, ensure_columns,  # noqa: E402
+                              missing_columns)
+from saintess_engine.store.migrate import _check_ident  # noqa: E402
 
 PASS = 0
 FAIL = 0
@@ -138,6 +139,21 @@ check("columns_of 取到现有列", {"qq_id", "name", "level", "equipment"} <= c
 with db.session() as conn:
     miss = missing_columns(conn, "players", ["qq_id", "hp", "mp"])
 check("missing_columns 只报缺的", miss == ["hp", "mp"], miss)
+
+# ★ 审计 L191：`missing_columns` 此前**不在** `store.migrate.__all__`、也不在 `store` 门面
+#   ⇒ 它是本包唯一「只被测试用私有路径 `from ...migrate import` 摸到」的公开函数，
+#   生产代码零消费者、门禁也不盖门面一致性。改法 = 导出门面（不删：docstring 自陈
+#   「供校验/报告用」，是真形状）+ 测试改走公开面（顺带把门面钉住）。
+#   本组钉「公开面 == 私有面」：任何一侧漏导出都要报红，而不只是两侧都在但内容不同。
+import saintess_engine.store as _store_facade  # noqa: E402
+import saintess_engine.store.migrate as _migrate_mod  # noqa: E402
+check("门面 re-export 与实现是同一对象（不复制、不包装）",
+      _store_facade.missing_columns is _migrate_mod.missing_columns)
+check("missing_columns 在 store.__all__ 里", "missing_columns" in _store_facade.__all__)
+check("missing_columns 在 store.migrate.__all__ 里", "missing_columns" in _migrate_mod.__all__)
+check("门面 re-export 全在 __all__ 内（无漏网）",
+      sorted(_store_facade.__all__) == sorted(set(_store_facade.__all__)),
+      _store_facade.__all__)
 
 with db.session() as conn:
     added = ensure_columns(conn, "players", {

@@ -45,13 +45,13 @@
     declare_file(db, "/path/to/tables.json")     # 逐表 declare，返回声明序的仓库列表
 """
 from .database import Database  # noqa: F401
-from .migrate import columns_of, ensure_columns  # noqa: F401
+from .migrate import columns_of, ensure_columns, missing_columns  # noqa: F401
 from .repository import Repository  # noqa: F401
 from .spec import Column, DeclaredRepository, TableSpec, declare  # noqa: F401
 from .spec_json import declare_file, specs_from_file, specs_from_json  # noqa: F401
 
 __all__ = [
-    "Database", "Repository", "columns_of", "ensure_columns",
+    "Database", "Repository", "columns_of", "ensure_columns", "missing_columns",
     # 声明式建表（Column / TableSpec / declare / DeclaredRepository）
     "Column", "TableSpec", "DeclaredRepository", "declare",
     # JSON 装载口（specs_from_json / specs_from_file / declare_file）
