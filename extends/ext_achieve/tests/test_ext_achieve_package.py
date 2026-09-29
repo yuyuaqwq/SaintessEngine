@@ -110,6 +110,13 @@ def _shape_sources():
     return out
 
 
+class _Callable:
+    """带 `__call__` 的对象 —— 判定函数不限于函数（与引擎 `callable()` 口径一致）。"""
+
+    def __call__(self, ctx):
+        return 7
+
+
 def t1_contract():
     print("\n[1] 包契约：game.json / apply.py / 门面")
     mf = json.loads(open(os.path.join(_PKG_ROOT, "game.json"), encoding="utf-8").read())
@@ -898,6 +905,97 @@ def t9_ledger():
     except RuntimeError:
         check("★ 未装配就取用 ⇒ 当场报错（本段收尾后再验一次）", True)
 
+def t10_register_callable_guard():
+    """登记期的可调用校验：**装配期点名**，不拖到玩家触发那条条件才现形。
+
+    台账 L813「两份易分叉」那条在**登记路**上的落点。旧写法把
+    `register("坏", 123)` 静默收下（`names()` 里看得见），求值期才炸
+    `'int' object is not callable` —— 报错点是引擎内部形态名，
+    既不点名是哪个 key 写坏、也拿不到「判定函数必须可调用」这条契约。
+    引擎 `Conditions.register` 同一个动作**当场点名**，本形状是引擎的薄壳 ⇒ 同一纪律。
+    """
+    print(chr(34)+chr(10)+"[10] 登记期可调用校验：不可调用 ⇒ 装配期点名（不拖到求值期）")
+    from ext_achieve.cond import Registry
+
+    # ★ 显式 None **不在**本组：fn=None 是「返回装饰器」那条既有两用签名（口径见 register
+    #   docstring），不是「登记一个 None」。把 None 当坏值钉住会逼代码改掉那条两用签名 = 越权。
+    for bad in (123, "字符串", [], {}, 0, object()):
+        reg = Registry(default_key="any")
+        reg.register("any", lambda ctx: True)
+        try:
+            reg.register("坏", bad)
+            check("直接路 register(不可调用) ⇒ 登记期点名抛", False,
+                  "收到 %s，登记成功且 names=%s" % (type(bad).__name__, reg.names()))
+        except TypeError as e:
+            msg = str(e)
+            check("直接路 register(不可调用 %s) ⇒ 登记期点名抛" % type(bad).__name__,
+                  "判定函数" in msg and "可调用" in msg, msg)
+            check("点名里带 key（不只报形态名）", "'坏'" in msg or '"坏"' in msg, msg)
+            check("★ 抛完表里不留残骸（names 仍是登记前的两条）",
+                  reg.names() == ("any",), str(reg.names()))
+            check("★ 抛完 has/get 都说没有它",
+                  not reg.has("坏") and reg.get("坏") is None)
+
+    # 装饰器路：同一个守卫，不能只有直接路有
+    for bad in (123, "字符串", None):
+        reg = Registry(default_key="any")
+        reg.register("any", lambda ctx: True)
+        try:
+            reg.register("坏")(bad)
+            check("装饰器路 register(不可调用) ⇒ 登记期点名抛", False,
+                  "登记成功且 names=%s" % (reg.names(),))
+        except TypeError:
+            check("装饰器路 register(不可调用 %s) ⇒ 登记期点名抛" % type(bad).__name__, True)
+            check("★ 装饰器路抛完表里不留残骸", reg.names() == ("any",), str(reg.names()))
+
+    # ★ 合法面逐字不变（钉「严格 ≠ 见谁都抛」）
+    reg = Registry(default_key="any")
+    reg.register("any", lambda ctx: True)
+
+    @reg.register("装饰器")
+    def _f(ctx):
+        return True
+
+    reg.register("直接", lambda ctx: False)
+    reg.register("类", lambda ctx: 1)                      # 函数仍照收
+    reg.register("可调用对象", _Callable())                          # 有 __call__ 也算
+    check("合法面：五条照收不抛",
+          set(reg.names()) == {"any", "装饰器", "直接", "类", "可调用对象"}, str(reg.names()))
+    check("合法面：装饰器路仍返回函数本身（可继续用）", _f is not None)
+    check("合法面：求值逐字不变",
+          reg.check("装饰器", {}) is True and reg.check("直接", {}) is False
+          and reg.check("可调用对象", {}) == 7)
+    check("★ 后注册者胜 / 重登记不搬家（既有口径未变）",
+          reg.register("装饰器", lambda ctx: "second") is not None
+          and reg.check("装饰器", {}) == "second"
+          and reg.names() == ("any", "装饰器", "直接", "类", "可调用对象"), str(reg.names()))
+
+    # ★ 表仍是同一份普通 dict：外部直写**照旧不拦**（有意口径，本条不许顺手改掉）
+    reg.table["outside"] = lambda ctx: 7
+    check("表是同一份 dict：外部直写即可用", reg.check("outside", {}) == 7)
+    reg.table["外部写的坏值"] = 123
+    try:
+        reg.check("外部写的坏值", {})
+        check("外部直写不可调用 ⇒ 求值期仍报错", False, "竟然没报错")
+    except TypeError as e:
+        check("外部直写不可调用 ⇒ 求值期仍报错（有意保留的退化形态）",
+              "not callable" in str(e), str(e))
+    reg.table.pop("outside", None)
+    reg.table.pop("外部写的坏值", None)
+
+    # 与引擎 Conditions 同一纪律（防未来只改一边）
+    from saintess_engine.conditions import Conditions
+    for conds, label in ((Registry(default_key="any"), "Registry"),
+                         (Conditions(), "Conditions")):
+        if isinstance(conds, Registry):
+            conds.register("any", lambda ctx: True)
+        try:
+            conds.register("坏", 123)
+            check("★ %s 对不可调用同样点名（同一纪律）" % label, False, "收下了")
+        except TypeError:
+            check("★ %s 对不可调用同样点名（同一纪律）" % label, True)
+
+
 def main():
     print("== ext_achieve 门禁：包契约 / 条件注册表 / 环境位图 / 规则触发 / 逐条求值 / 账本 / 零内容知识 ==")
     t1_contract()
@@ -909,6 +1007,7 @@ def main():
     t7_rule()
     t8_earn()
     t9_ledger()
+    t10_register_callable_guard()
     print("\n===== 结果：通过 %d / %d =====" % (passed, passed + failed))
     return 1 if failed else 0
 

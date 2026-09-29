@@ -48,14 +48,29 @@ class Registry:
         """装饰器 / 直接两用：`@REG.register("k")` 或 `REG.register("k", fn)`。
 
         重复登记 = 后者胜（与原地 `CONDITIONS[name] = fn` 同）；要撤销就 `REG.table.pop(name)`。
+
+        ★ **`fn` 不可调用 ⇒ 登记期就点名抛**（与引擎 `Conditions.register` 同一纪律）。
+          旧写法把它留到求值期，于是 `register("坏", 123)` 静默登记成功、`names()` 里看得见，
+          要等**玩家触发那条条件**才炸一个 `'int' object is not callable` ——
+          报错点是引擎内部形态名，既不点名是哪个 key 写坏、也拿不到「判定函数必须可调用」
+          这条契约。装配期的问题不该拖到玩家面前才现形。
+          （`table` 仍是同一份普通 dict，外部 `CONDITIONS["x"] = ...` 直写**照旧不拦** ——
+          那是内容侧自己的 dict 口径，与本条的登记路是两回事，见 `check()` 的说明。）
         """
         if fn is None:
             def _deco(f):
-                self.table[name] = f
+                self._put(name, f)
                 return f
             return _deco
-        self.table[name] = fn
+        self._put(name, fn)
         return fn
+
+    def _put(self, name, fn) -> None:
+        """登记一条：先校验后落表（**落表前**抛 ⇒ 坏声明不会留在表里被 `names()` 看见）。"""
+        if not callable(fn):
+            raise TypeError("判定函数必须可调用，收到 %s（key=%r）"
+                            % (type(fn).__name__, name))
+        self.table[name] = fn                       # 重复登记 = 后者胜（dict 语义，位置不动）
 
     def register_specs(self, table, names=None):
         """声明表**整表**装配：任一条不合法 ⇒ 一条都不登记（先编译后登记，见引擎实现）。
@@ -82,6 +97,10 @@ class Registry:
 
         ★ 默认值是**立即求值**的：默认键没登记时，即便 `name` 命中了也会抛 KeyError ——
         与原地写法逐字同口径（「默认键必须存在」是装配期契约，不是求值期的意外）。
+
+        ★ 求值期**只**报两类错：默认键没登记（KeyError，上面那条）、以及外部直写
+          `table` 塞进来的不可调用值（`TypeError`，形如 `'int' object is not callable`）。
+          走 `register()` 登记的条目在**登记期**已拦过，走到这里必然可调用。
         """
         table = self.table
         fn = table.get(name or self.default_key, table[self.default_key])
