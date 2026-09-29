@@ -138,10 +138,13 @@ class Host:
         self.stack = load_stack(self.package_dir, exts=self.ext_paths,
                                 inject=self.inject or None)
         self.stack.install()
-        try:
-            self.commands = CommandRegistry(name=self.stack.id).load(self.stack.command_declarations())
-        except Exception:                                        # noqa: BLE001
-            self.commands = CommandRegistry(name=self.stack.id)
+        # ★ 审计 L5469 同族（晚到批 L5577/L5578 面 · 第二十八轮）：声明装载**不许静默**。
+        # 旧实现 `except Exception: <空注册表>` 的后果不是「少几条指令」，而是
+        # **宿主带着 0 条声明启动、零报错**：声明表坏掉（重复 key / 非法正则 / 形状不对）
+        # 与「这个包本来就没声明指令」被压成同一个结果 —— 而后者是**合法**的
+        # （`command_declarations()` 缺域返回 `{}`，`load({})` 正常成功）。
+        # ⇒ 合法路径本来就抛不出来异常，**能走到 except 的都是真故障** ⇒ 直接炸。
+        self.commands = CommandRegistry(name=self.stack.id).load(self.stack.command_declarations())
         self.handlers = dict(self.stack.command_handlers())
         self.texts = self._load_texts()
         return self.stack
