@@ -5,7 +5,7 @@
 
 1. **包契约**：`game.json` 的 `id` / `kind` / `entry` 自洽，`install_engine()` 是**显式空实现**
    （纯形状库 —— 不留含糊空壳）。
-2. **形状可用**：`from ext_reward.tlog_collect import BattleTLog, EVENT_KINDS, REPRO_KEYS`
+2. **形状可用 + ★ 回放契约**：`from ext_reward.tlog_collect import BattleTLog, EVENT_KINDS, REPRO_KEYS`；另钉 `_uid()` 的「无 uid 回落 name」—— 那是**回放侧的既有契约**（内容侧 `content/tlog_replay.py` import 它建 `by_uid` 表），防被当死代码删
    三个名字都在，且 `EVENT_KINDS` 非空（映射表骨架）。
 3. ★ **可拔插红线**：`BattleTLog(tlog=None)` ⇒ `attach()` 原样返回战斗对象、不挂任何属性、
    `flush()` 不碰 sink（**零行为**）；给了 sink ⇒ `flush()` 真的落到 sink（证明这条红线
@@ -19,8 +19,10 @@ from __future__ import annotations
 
 import ast
 import inspect
+import io
 import json
 import os
+import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -35,6 +37,8 @@ from _check import bind_check                          # noqa: E402
 PASS = 0
 FAILS: list = []
 check = bind_check(globals(), "PASS", failures="FAILS")
+
+
 
 
 # ---------------------------------------------------------------- 层级扫描（判据 ④）
@@ -159,6 +163,108 @@ def main() -> int:
           sorted(proof) == ["content", "content.texts"], proof)
     check("反证：包内相对导入（`from . import x`）不算数据包依赖",
           content_imports("from . import collect\n") == [], None)
+
+    # ------------------------------- 5. 回放契约：_uid 的「无 uid 回落 name」
+    # 台账 L1617：`_uid` 全仓仅本文件**定义**，但内容侧 `content/tlog_replay.py:34` 真的
+    # import 它（并原样再导出），用它给重建后的战斗单位建 `by_uid` 表，
+    # 随后 `by_uid.get(r.fields["uid"])` / `by_uid.get(r.fields["target_uid"])` 两处查表。
+    # ⇒ 「拿不到 uid 就回落 name」不是静默兜底，是**回放侧的既有契约**；
+    #   但此前**零门禁钉住** —— 下一个人看到「只被自己用」很容易当死代码删掉，
+    #   删了之后回放整表查不到人（静默退化成 `b.focus()` 拿错人）或直接 KeyError。
+    from ext_reward.tlog_collect import _uid
+
+    # ① 契约本体：uid 在就取 uid；uid 缺（/ 空）回落 name；两个都缺 => 空串。
+    check("回放契约：有 uid 取 uid（name 不参与）",
+          _uid({"uid": "p1", "name": "史莱姆"}) == "p1",
+          _uid({"uid": "p1", "name": "史莱姆"}))
+    check("回放契约：无 uid 回落 name（★ 这条就是 L1617 要钉住的那条）",
+          _uid({"name": "史莱姆"}) == "史莱姆", _uid({"name": "史莱姆"}))
+    check("回放契约：uid 为空串时同样回落 name（空串不算「有 uid」）",
+          _uid({"uid": "", "name": "史莱姆"}) == "史莱姆",
+          _uid({"uid": "", "name": "史莱姆"}))
+    check("回放契约：两者都缺 => 空串（不是 None、也不是抛错）",
+          _uid({}) == "", repr(_uid({})))
+    check("回放契约：非 dict（None / 列表）=> 空串（引擎侧不配合的可选路径）",
+          _uid(None) == "" and _uid([1, 2]) == "",
+          (_uid(None), _uid([1, 2])))
+
+    # ② 端到端：复刻内容侧 `tlog_replay.py:97-110` 的建表 + 查表，
+    #    证明「两种写法各自建一个键、都能查得到」—— 这是回放能对上人的前提。
+    _hero = {"uid": "p1", "name": "勇者"}      # 玩家侧：带 uid
+    _foe = {"name": "哥布林"}                    # 敌方替身：只有 name
+    _by_uid = {}
+    for _side in ([_hero], [_foe]):             # 两侧各一个单位（最小形状）
+        for _a in _side:
+            _by_uid[_uid(_a)] = _a
+    check("回放契约：两种写法各建一个键（by_uid 键集 == {uid, name}）",
+          sorted(_by_uid) == ["p1", "哥布林"], sorted(_by_uid))
+    check("回放契约：两条流水各自查得到对应单位（回放不靠 b.focus() 瞎猜）",
+          _by_uid.get("p1") is _hero and _by_uid.get("哥布林") is _foe,
+          (_by_uid.get("p1") is _hero, _by_uid.get("哥布林") is _foe))
+
+    # ③ 形状钉死（防「自己留一份、别处不用」这种绕法）：实现仍住本包。
+    check("回放契约：_uid 仍在本包实现里（不是别处搬来的一份）",
+          _uid.__module__ == "ext_reward.tlog_collect",
+          getattr(_uid, "__module__", None))
+
+    # ④ 反证（判据有牙）：把「无 uid 回落 name」那一半删掉（改回只认 uid）
+    #    ⇒ 上面的契约三条必须转红。真跑：把包复制到一次性目录、在**副本**里变异，
+    #    子进程带 AFIX4_UID_MUTANT_CHILD=1（防自举）跑副本门禁 ⇒ **真仓零写入**。
+    with open(os.path.join(PKG_DIR, "tlog_collect.py"), encoding="utf-8") as f:
+        _mod_src = f.read()
+    _old_uid = '    return str(a.get("uid") or a.get("name") or "")'
+    _new_uid = '    return str(a.get("uid") or "")'
+    if os.environ.get("AFIX4_UID_MUTANT_CHILD") == "1":
+        # 子进程自证：import 到的 tlog_collect 必须来自**副本**（否则变异不生效 ⇒ 假绿）
+        _mod = sys.modules.get("ext_reward.tlog_collect")
+        _f = getattr(_mod, "__file__", "") or ""
+        check("反证分支：import 的是副本 tlog_collect（变异真生效，非真仓）",
+              _f.startswith(os.path.join(os.environ.get("TEMP") or "", "afix4_uid_shadow")),
+              _f)
+        check("反证分支：副本确实被改掉了（拿不到 name 回落）",
+              _uid({"name": "x"}) == "", _uid({"name": "x"}))
+    elif _old_uid not in _mod_src:
+        check("反证锚点：真仓 _uid 源码逐字含「回落 name」那一半（变异基线对得上）",
+              False, repr(_old_uid))
+    else:
+        import shutil
+        # ★ 影子树 = 只复制本包；`saintess_engine` 用**真实**那份（本包唯一的跨包依赖）。
+        #   子进程必须**切断继承的 PYTHONPATH**：会话里 `PYTHONPATH` 指着真仓，
+        #   不切断的话副本门禁 import 到的仍是真仓 `tlog_collect.py` ⇒ 变异不生效、
+        #   rc 恒 0（实测踩过：上一版反证就是这么假绿的）。
+        _shadow = os.path.join(os.environ.get("TEMP") or os.environ.get("TMP") or ".",
+                             "afix4_uid_shadow")
+        _mut = os.path.join(_shadow, "extends", "ext_reward")
+        shutil.rmtree(_shadow, ignore_errors=True)
+        os.makedirs(os.path.dirname(_mut), exist_ok=True)
+        shutil.copytree(PKG_DIR, _mut)
+        _mp = os.path.join(_mut, "tlog_collect.py")
+        with io.open(_mp, encoding="utf-8", newline="") as f:
+            _ms = f.read()
+        with io.open(_mp, "w", encoding="utf-8", newline="") as f:
+            f.write(_ms.replace(_old_uid, _new_uid, 1))
+        #   子进程 PYTHONPATH 顺序 = **影子在前、真仓在后**：
+        #     `ext_reward` 命中影子（变异生效）；`saintess_engine` 只在真仓有 → 回落到真仓
+        #     （本包唯一的跨包依赖）。切掉真仓会让子进程 ModuleNotFoundError，
+        #     那样 rc≠0 是**巧合报错**而不是契约被咬住 —— 故真仓必须留在末尾。
+        _child_env = dict(os.environ, AFIX4_UID_MUTANT_CHILD="1",
+                         PYTHONPATH=os.pathsep.join([_shadow,
+                                                     os.path.join(_shadow, "extends"),
+                                                     FW_ROOT]),
+                         GWEN_FRAMEWORK_DIR=FW_ROOT)
+        _rc = subprocess.run(
+            [sys.executable, os.path.join(_mut, "tests", "test_ext_reward_package.py")],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            env=_child_env, cwd=FW_ROOT)
+        _out = (_rc.stdout or "") + (_rc.stderr or "")
+        # ★ 判「真的报红」看 **❌ 行**而不是「文本里出现过这句话」——
+        #   子进程 rc=0 时它的 ✅ 行里同样含这句，照旧写法就是一条**恒绿废判据**。
+        _red = [l for l in _out.splitlines() if l.strip().startswith("❌")]
+        check("反证：副本里删掉「回落 name」那一半 ⇒ 子进程必须 rc!=0（有牙）",
+              _rc.returncode != 0, "rc=%d %s" % (_rc.returncode, _out.strip().splitlines()[-3:]))
+        check("反证：报红的正是「无 uid 回落 name」那条契约（不是别的巧合报错）",
+              any("无 uid 回落 name" in l for l in _red), _red[-4:])
+        shutil.rmtree(_shadow, ignore_errors=True)
 
     print("\n通过 %d / 失败 %d" % (PASS, len(FAILS)))
     if FAILS:
