@@ -169,6 +169,46 @@ def main():
     print(f"    （真包进度：声明 {real['declared']} 个动作 / 已实现 {real['implemented']} 个"
           f"（引擎内置+包内）/ 缺 {len(real['missing'])} 个）")
 
+    # ---------- 3c. 「实现」只认生产代码：测试树里的 @register_action 不算实现（审计 L-本轮）----------
+    #   为什么守：`declared_missing()` 拿 `inventory()` 的清单回答「声明了没实现」，
+    #   而 `inventory()` 走 `tools/export_actions.py::_walk_py` —— 它原来**不排 tests 目录**，
+    #   于是「实现只写在测试文件里、生产永不 import」会被算成已实现 ⇒ `ok=True` 假绿。
+    #   玩家侧后果不是报错而是**静默不生效**：`apply_effects()` 对未注册动词
+    #   （`ACTION_HANDLERS.get` 不命中）直接 `continue` ⇒ 被动永远不触发、零提示。
+    #   两格对拍：同一个声明，实现在 tests/ ⇒ 必须报缺；实现在生产目录 ⇒ 必须报有。
+    def _ghost_pkg(where: str) -> str:
+        gp = tempfile.mkdtemp(prefix="fw_actions_ghost_")
+        tdir = os.path.join(gp, where)
+        os.makedirs(tdir, exist_ok=True)
+        with open(os.path.join(tdir, "impl.py"), "w", encoding="utf-8") as f:
+            f.write(PKG_SRC.replace("tst_plain", "ghost_verb")
+                         .replace("tst_opts", "ghost_verb2"))
+        rdir = os.path.join(gp, "content", "rules")
+        os.makedirs(rdir, exist_ok=True)
+        with open(os.path.join(rdir, "passive_proc.json"), "w", encoding="utf-8") as f:
+            json.dump({"p_ghost": {"action": "ghost_verb"}}, f)
+        return gp
+
+    g_bad = _ghost_pkg("tests")
+    dm_bad = AC.declared_missing(g_bad)
+    check("★ 实现只在 tests/ 里 ⇒ 必须报「没实现」（测试树不算实现）",
+          "ghost_verb" in dm_bad["missing"] and dm_bad["ok"] is False,
+          f"missing={dm_bad['missing']} ok={dm_bad['ok']}")
+    g_ok = _ghost_pkg("content")
+    dm_ok = AC.declared_missing(g_ok)
+    check("★ 实现在生产目录 ⇒ 仍报「有实现」（判据没被改瞎）",
+          "ghost_verb" not in dm_ok["missing"] and dm_ok["ok"] is True,
+          f"missing={dm_ok['missing']} ok={dm_ok['ok']}")
+    check("★ inventory 清单里不再出现 tests/ 来源的动作（口径本身）",
+          not [a for a in AC.inventory(g_bad, use_cache=False)["actions"]
+               if a["file"].replace(chr(92), "/").split("/")[0] == "tests"],
+          [a["file"] for a in AC.inventory(g_bad, use_cache=False)["actions"]])
+    check("★ 真包口径未变（修的只是 tests 误计，真包一个都没少）",
+          len(AC.inventory(os.path.join(ROOT, "games", "orlandia"),
+                           use_cache=False)["actions"]) == 104,
+          len(AC.inventory(os.path.join(ROOT, "games", "orlandia"),
+                           use_cache=False)["actions"]))
+
     # ---------- 4. API 接线 ----------
     gd = tempfile.mkdtemp(prefix="fw_actions_games_")
     SRV.GAMES_DIR = gd

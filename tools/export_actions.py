@@ -215,9 +215,22 @@ def scan_file(path: str, source_tag: str, rel: str) -> list:
     return out
 
 
+# 审计 L-本轮（工具面 false-green）：**测试树不是实现**。
+#   `_walk_py` 原来只排 `__pycache__/.git/_archive_unused`，于是包内 `tests/**` 与
+#   框架 `tests/**` 里的 `@register_action` 全被当成「已实现」上报 —— 而编辑器
+#   `declared_missing()` 正是拿这份清单回答「声明了没实现」，`ok=True` 会变假绿：
+#   声明表写 `ghost_verb`，实现只躺在某个测试文件里（生产永不 import），
+#   编辑器报「有实现」，而引擎 `apply_effects()` 对未注册动词是**静默跳过**
+#   （`ACTION_HANDLERS.get` 不命中 → `continue`）⇒ 玩家侧 = 被动永远不触发、零报错。
+#   ⇒ 口径 = **「实现」= 生产代码里注册过的**；测试文件不算实现。
+#   刻意**只排目录名 `tests`**，不排 `test_*.py` 文件名：框架 `tests/test_editor_actions.py`
+#   这类**自身就要被扫到**的判据文件排掉会让判据自证失效；生产代码本来就不该叫 test_*。
+_TEST_DIRS = ("tests", "__pycache__", ".git", "_archive_unused")
+
+
 def _walk_py(root: str):
     for dirpath, dirs, files in os.walk(root):
-        dirs[:] = [d for d in dirs if d not in ("__pycache__", ".git", "_archive_unused")]
+        dirs[:] = [d for d in dirs if d not in _TEST_DIRS]
         for f in sorted(files):
             if f.endswith(".py"):
                 yield os.path.join(dirpath, f)
