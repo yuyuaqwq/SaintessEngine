@@ -17,8 +17,8 @@
        │    ├─ 分派：
        │    │    attack → actions.do_attack                      actions.py:70
        │    │    skill  → actions.do_skill                       actions.py:83
-       │    │    defend → Battle._do_defend                      battle.py:649
-       │    │    flee   → Battle._do_flee                        battle.py:658
+       │    │    defend → Battle._do_defend                      battle.py:658
+       │    │    flee   → Battle._do_flee                        battle.py:667
        │    │    其他   → Battle.action_override 注入点           battle.py:563
        │    ├─ fire("act_done")                                 battle.py:640   ⚡
        │    └─ _check_side_end()                                battle.py:710
@@ -162,7 +162,7 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 │      ├─ hp <= 0 → _apply_death_guard(...)（濒死保护）   landing.py:352     │
 │      │     effects["death_guard"].stacks > 0 → hp 拉回 guard_hp_pct      │
 │      │     （+heal_pct 额外治疗，走 heal_actor）→ 层 -1                    │
-│      ├─ 仍 <= 0 → Battle._on_actor_dead(...)   landing.py:411（定义 battle.py:684） │
+│      ├─ 仍 <= 0 → Battle._on_actor_dead(...)   landing.py:411（定义 battle.py:693） │
 │      │       killed_actors.append / 清 charging + 容器窗口（离场）          │
 │      │     ⚡ fire("on_death", {actor, target})                            │
 │      │     source 非 None → ⚡ fire("on_kill", {actor: source, ...})       │

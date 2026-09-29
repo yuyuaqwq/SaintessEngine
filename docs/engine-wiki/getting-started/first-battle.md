@@ -97,7 +97,7 @@ b = Battle(btype="monster", sides={"player": [hero], "enemy": [wolf]})
    —— 快者先手、开局第一动也按速度排（`schedule.initial_ct`，`schedule.py:45`）
 
 `sides` 的键名由你定；引擎唯一硬编码的约定是 **`"player"`** 这个键名
-（`_check_side_end` 里 `alive[0] == "player"` → `result="victory"`，`battle.py:717`）。
+（`_check_side_end` 里 `alive[0] == "player"` → `result="victory"`，`battle.py:726`）。
 
 ## 3. 打一拳
 
@@ -143,7 +143,7 @@ print(b.result, b.winner_side)       # victory / player
 - `auto_run` 里人控 actor 也走普攻（`battle.py:381`），适合测试与仿真。
 - 胜负判定在 `_check_side_end`（`battle.py:710`）：存活阵营数 ≤ 1 → 置 `result`；
   `alive[0] == "player"` → `"victory"`，否则 `"defeat"`；全灭 → `"defeat"`。
-- `"fled"` 只由 `Battle._do_flee`（`battle.py:658`）写。
+- `"fled"` 只由 `Battle._do_flee`（`battle.py:667`）写。
 
 ## 5. 读日志 / 读状态
 

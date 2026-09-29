@@ -97,7 +97,7 @@ def from_state(st, *, text=None):
 
 ### ② `_started=True`
 
-`battle_start` 事件是**整场一次**的（`_ensure_battle_started`，`battle.py:680`），
+`battle_start` 事件是**整场一次**的（`_ensure_battle_started`，`battle.py:689`），
 它承载「起手效果 / 词条套装 / 仪式祝福」。恢复的战斗已经在开战之后，
 再 fire 一次会让起手 buff **双份**。
 
@@ -115,7 +115,7 @@ for uid in (st.get("killed") or []):
 ⚠️ 用的是**对象引用**重建：从 squad 里找 `uid` 相同的 actor。注释说
 「找不到跳过——已从 sides 移除的阵亡单位」（`serialize.py:82`）。
 但**引擎其实从不把阵亡 actor 从 `sides` 移除**（`_on_actor_dead` 只 append 进
-`killed_actors`，`battle.py:690-708`；`_check_side_end` 也不删）。
+`killed_actors`，`battle.py:699-717`；`_check_side_end` 也不删）。
 所以正常情况下找得到；「找不到」只在外部手工删过 sides 时才发生。
 
 ## 旧档迁移：`_deserialize_actor`

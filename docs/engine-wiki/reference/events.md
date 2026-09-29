@@ -23,7 +23,7 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 
 | # | 事件 | 引擎 fire 点位（`文件:行号`） | `ctx` 字段 | subject | 时机语义 |
 |---|---|---|---|---|---|
-| 1 | `battle_start` | `battle.py:685`（`_ensure_battle_started`） | `{}` | **无**（全体触发） | 首个 actor 行动前，**整场一次**（`_started` 守卫） |
+| 1 | `battle_start` | `battle.py:694`（`_ensure_battle_started`） | `{}` | **无**（全体触发） | 首个 actor 行动前，**整场一次**（`_started` 守卫） |
 | 2 | `turn_start` | `battle.py:507`（`act`） | `actor` | 行动者 | 回合开始，**先于控制检查**（所以「回合开始回蓝」被晕也触发） |
 | 3 | `act_begin` | `battle.py:552`（`act`） | `actor`, `target` | 行动者 | 控制通过、行动执行前 |
 | 4 | `act_cast` | `actions.py:113`（`do_skill`） | `actor`, `target`, `info` | 施法者 | 扣费与冷却之后、结算之前 |
@@ -33,7 +33,7 @@ EVENTS = ("battle_start", "turn_start", "act_begin", "act_cast", "skill_hit", "a
 | 8 | `on_taken` | `landing.py:246`（`deal_damage`） | `actor`, `target`, `source`, `dmg` | 受击者 | 承伤落地后；**死者不触发**（走 `on_death`） |
 | 9 | `on_heal` | `landing.py:532`（`heal_actor`） | `actor`, `target`, `source`, `amount`, `overflow` | 被治疗者 | 实际回血 > 0 时 |
 | 10 | `on_kill` | `landing.py:492`（`_apply_damage`） | `actor`, `target`, `dmg` | **击杀者** | 致死伤害落地后；`source is None`（DOT/环境杀）不触发 |
-| 11 | `on_death` | `battle.py:705`（`_on_actor_dead`） | `actor`, `target` | 死者 | 所有死亡路径统一在此；**死者的声明仍会执行**（subject 例外） |
+| 11 | `on_death` | `battle.py:714`（`_on_actor_dead`） | `actor`, `target` | 死者 | 所有死亡路径统一在此；**死者的声明仍会执行**（subject 例外） |
 | 12 | `dot_tick` | `schedule.py:803`（`_settle_time_effects`） | `actor`, `target`, `key`, `dmg` | 受跳者 | DOT 每一跳 |
 | 13 | `dot_calc` | `schedule.py:749`（同上） | `target`, `dot_key`, `dmg`, `mult` | **无**（广播） | DOT 伤害落地**前**的乘区钩子 |
 | 14 | `on_act_consume` | `battle.py:540`（`act`） | `actor`, `tag` | 行动者 | 被控跳过行动（`mode="skip"`）时 |
