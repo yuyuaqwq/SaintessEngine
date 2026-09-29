@@ -310,7 +310,9 @@ def t2_positive(body, tpat):
     #   （中文键数锚点仍 169，键名全 ASCII —— 别跟着动）。
     # ★ C-R2.27（2026-09-29）：面板快照型 8 族接线新增文案 `iu.potion_stat`
     #   → 3274 → 3275。中文键数锚点**不变**（新键名全 ASCII）。
-    check("包内文案条数锚点 == 3275（条数变了就同步更新本门禁的锚点）", len(body) == 3275, len(body))
+    # ★ C-R2.28B（2026-09-29）：新槽位 `iu.buff_extend`（包侧 C-R2.28 到期顺延族）
+    #   ⇒ 3275 → 3276。中文键数锚点不变（新键名全 ASCII）。
+    check("包内文案条数锚点 == 3276（条数变了就同步更新本门禁的锚点）", len(body) == 3276, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
