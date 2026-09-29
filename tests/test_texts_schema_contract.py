@@ -312,7 +312,9 @@ def t2_positive(body, tpat):
     #   → 3274 → 3275。中文键数锚点**不变**（新键名全 ASCII）。
     # ★ C-R2.28B（2026-09-29）：新槽位 `iu.buff_extend`（包侧 C-R2.28 到期顺延族）
     #   ⇒ 3275 → 3276。中文键数锚点不变（新键名全 ASCII）。
-    check("包内文案条数锚点 == 3276（条数变了就同步更新本门禁的锚点）", len(body) == 3276, len(body))
+    # ★ C-R2.29A（2026-09-29）：乘区触发族新槽位 `iu.execute_pot` / `iu.mult_window`
+    #   ⇒ 3276 -> 3278。中文键数锚点不变（新键名全 ASCII）。
+    check("包内文案条数锚点 == 3278（条数变了就同步更新本门禁的锚点）", len(body) == 3278, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])
