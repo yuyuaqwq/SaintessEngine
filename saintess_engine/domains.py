@@ -43,17 +43,17 @@ import os
 
 
 BUILTIN_DEFAULT_DOMAINS = {
-    # ── ① commands「指令」：引擎通用命令注册表。消费端 `command/registry.py:164`
-    #    class CommandRegistry（`:206` from_data 直接吃这张表）；配套泛用件 `command/router.py`
+    # ── ① commands「指令」：引擎通用命令注册表。消费端 `command/registry.py:353`
+    #    class CommandRegistry（`:396` from_data 直接吃这张表）；配套泛用件 `command/router.py`
     #    / `command/guards.py` / `command/text.py`。不填 = 无指令（零行为）。
     "commands": {"label": "指令", "kind": "data", "schema": "command.schema.json",
                  "primary": "command", "icon": "⌨️"},
-    # ── ② texts「文案」：引擎通用文案表。消费端 `text/template.py:129` class TextTable
-    #    （`:176` from_data）+ `safe_format` / `extract_params`（同文件）。不填 = 零行为。
+    # ── ② texts「文案」：引擎通用文案表。消费端 `text/template.py:192` class TextTable
+    #    （`:239` from_data）+ `safe_format` / `extract_params`（同文件）。不填 = 零行为。
     "texts": {"label": "文案", "kind": "data", "schema": "text.schema.json",
               "primary": "text_entry", "icon": "💬"},
     # ── ③ tlogs「流水声明」：引擎结构化流水。「哪个 kind 有哪些字段」的声明表。
-    #    消费端 `tlog/record.py:115` class KindTable（`tlog/core.py:34` 再导出、
+    #    消费端 `tlog/record.py:127` class KindTable（`tlog/core.py:34` 再导出、
     #    `:47`/`:53` 由 TLog(kinds=KindTable) 吃）。不填 = 不做校验（零行为）。
     "tlogs": {"label": "流水声明", "kind": "data", "schema": "tlog.schema.json",
               "primary": "tlog_entry", "icon": "🧾"},
