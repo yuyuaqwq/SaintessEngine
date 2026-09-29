@@ -12,6 +12,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Sequence
 
+from ..log import get_logger
+
+_log = get_logger("host.env")
+
 
 @dataclass
 class Env:
@@ -75,7 +79,16 @@ class Env:
         text = self.text if raw is None else raw
         try:
             return int(parse_page(text or "") or default)
-        except Exception:                                        # noqa: BLE001
+        except Exception as exc:                                # noqa: BLE001
+            # ★ 审计 L5469 同族（第三十一轮）：能走到这里**一定**是可归因的真故障。
+            #   玩家输入乱页码（"abc" / "第 2 页" / "-1" / ""）根本**到不了**这个 except ——
+            #   引擎 `command.parse_page` 对它们一律**返回 1**、自己不抛（实测四种输入全部
+            #   返回 1）。所以「合法回落」与「供体故障」并不共用这条路，原先的静默只可能
+            #   掩盖后者：解析器自己炸了，或返回了不可转 int 的脏类型（实测 dict ⇒ TypeError），
+            #   而调用方拿到一个**编造的**页码、运维侧零痕迹。
+            #   仍回落 default（**行为零变化**：不把玩家指令炸掉），但留痕。
+            _log.error("页码解析器故障，text=%r 已回落 default=%r：%s",
+                       text, default, exc, exc_info=True)
             return int(default)
 
     def page_items(self, items: Sequence, page: int = 1, per_page: int = 10):
@@ -88,8 +101,13 @@ class Env:
         if callable(self.tlog):
             try:
                 self.tlog(kind, **fields)
-            except Exception:                                    # noqa: BLE001
-                pass
+            except Exception as exc:                            # noqa: BLE001
+                # ★ 审计 L5469 同族（第三十一轮）：「没给出口」是合法可选路径
+                # （上面 `callable(self.tlog)` 已挡住），能走到这里说明**出口接了却炸了**
+                # ⇒ 这条流水永久丢失且原先无人知晓。留痕但不抛（流水不该阻断命令通道），
+                # 与 `host/runtime.py::tlog_write` 第三十轮的口径逐字一致。
+                _log.error("流水出口抛异常，kind=%r 本条流水已丢：%s",
+                           kind, exc, exc_info=True)
 
 
 # ============================================================
