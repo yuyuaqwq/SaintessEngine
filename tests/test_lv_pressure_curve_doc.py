@@ -9,7 +9,13 @@
 判据只加强零放宽：A 段是黑盒实跑（钉真实曲线，非钉 docstring 措辞）；
 B 段钉 docstring 不得再宣称 0.30 封顶；C 段钉**曲线实现一字未动**（本次只改文档）。
 """
-import sys, inspect, re
+import os, sys, inspect, re
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.path.insert(0, os.path.join(ROOT, "extends"))   # ext_combat
+sys.path.insert(0, ROOT)                            # saintess_engine
+
 from ext_combat.battle.landing import _lv_pressure
 OK=FAIL=0
 def check(cond, label):

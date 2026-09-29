@@ -15,7 +15,13 @@
   D 段 = 实现形状：整批校验在**动 _HOOKS 之前**（AST，不靠行号）
   E 段 = 非法路径绝不能把 _HOOKS 改坏（逐键值对拍）
 """
-import sys, ast, inspect
+import os, sys, ast, inspect
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.path.insert(0, os.path.join(ROOT, "extends"))
+sys.path.insert(0, ROOT)
+
 import saintess_engine.config as CFG
 
 OK = FAIL = 0
