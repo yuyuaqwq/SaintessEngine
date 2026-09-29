@@ -152,15 +152,41 @@ class ShellBase(_EngineCommandBase):
         self._store.set_event_state(key, value)
 
     def _in_any_battle(self, group_id, qq_id):
+        """是否处于战斗中（普通战斗行 or 副本战斗行）。
+
+        ★ 2026-09-29 审计（批次 1 第三十二轮）：**副本判定的供体炸了，按「不在战斗」放行**。
+          原写法的 `except Exception: return False` 是**守卫 fail-open**：
+          `_instance_battle_for`（内容侧那一大段反查：world_id 反查大陆实例 → 队长 battle 行
+          → party 反查）里任何一处出错 —— 存档缺 `state` 键、锁库、`_get_instance_world`
+          拿到坏形状 —— 都落到这一行，**玩家在副本战斗里却被判成脱战**。
+
+          实测（黑盒）：玩家确实在副本战斗中（`get_battle` 空），反查函数抛
+          `RuntimeError` ⇒ 改前 `False`（放行）、改后 `True`（拦下）。
+
+          危害面是**真守卫**（不是装饰性检查）：`command/guards.py::require_battle`
+          据此拦下战斗内指令（技能/列表/面板），`cmds_tower.py:58`、Orlandia
+          `guards.py::battle`、属性面板 `player_cmds.py:1060` 三处也用同一钩子。
+          一旦放行，玩家可在副本战斗中敲技能 / 敲面板，被战斗侧状态机带着跑。
+
+          处置 = **fail-closed（认作在战斗）+ 留痕**，与同仓
+          `host/env.py::page` 的解析器故障口径**逐字同族**（第三十一轮那条）：那里
+          判「能走到 except 一定可归因的真故障」，回落 default 但**记 error**；
+          这里回落 True 但**记 error**。区别只在方向 —— 那是页码（读侧无害），
+          这里是**守卫**（fail-open 会放行本该拦下的操作），所以方向必须反过来。
+          仍**不抛**（抛会把一条守卫变命令级炸断），与 `env.py` 一致。
+        """
         if self._store.get_battle(group_id, qq_id):
             return True
         fn = getattr(self, "_instance_battle_for", None)
         if fn is None:
-            return False
+            return False                      # 本壳没接副本反查（无副本的游戏）= 真不在战斗
         try:
             return bool(fn(group_id, qq_id))
-        except Exception:                                        # noqa: BLE001
-            return False
+        except Exception as exc:                               # noqa: BLE001
+            # fail-closed：认作「在战斗」⇒ 战斗内指令被守卫拦下，fail-open 的越权被堵住。
+            self._warn("副本战斗判定故障（按「在战斗」fail-closed 拦下战斗内指令）"
+                       "group=%r user=%r：%s", group_id, qq_id, exc, exc_info=True)
+            return True
 
     # ---- 框架钩子：静态正则表 / 平台注册表探测 ----
     @classmethod
