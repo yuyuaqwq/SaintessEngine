@@ -451,6 +451,28 @@ def t7_fail_closed():
         check("state 计数为负 → ValueError", False)
     except ValueError:
         check("state 计数为负 → ValueError", True)
+    # ★ 审计 L638：坏计数的报错必须**带 key**（形参 `store_key` 此前是死参数、
+    #   文案只打裸值 ⇒ 玩家/GM 拿到 'oops' 无从判断是哪个限购项坏了）。
+    #   这里钉三件事：文案含该 key · 两种坏值都带 · 不同 key 的报错可区分。
+    _msg_bad = {}
+    for _k, _v in (("buy_sword", "oops"), ("sell_ore", -1), ("gift_box", True)):
+        try:
+            DailyLimit({"limit:d1:" + _k: _v}, lambda: "d1").used(_k)
+            _msg_bad[_k] = "没抛"
+        except ValueError as _e:
+            _msg_bad[_k] = str(_e)
+    check("★ 坏计数报错带 key（三种坏值都带，且 key 与调用点一致）",
+          all(("limit:d1:" + k) in v for k, v in _msg_bad.items()), _msg_bad)
+    check("★ 三个不同 key 的坏值报错可区分（不是同一句模板）",
+          len(set(_msg_bad.values())) == len(_msg_bad), _msg_bad)
+    # 形参真的被用上了：删掉文案里的 key ⇒ 本组必须报红（有牙的反向自检）
+    import inspect as _insp
+    _asrc = _insp.getsource(DailyLimit._as_count)
+    check("★ `_as_count` 形参 store_key 真的被用上（不再是死参数）",
+          _asrc.count("store_key") >= 4, [l.strip() for l in _asrc.splitlines() if "store_key" in l])
+    check("★ `_as_count` 的报错文案与 ext_life.periodic 同一形状（都带 key=）",
+          _asrc.count("key={store_key!r}") == 2, _asrc.count("key={store_key!r}"))
+
     st3 = {"limit:junk": 1}                                    # 本命名空间里的坏键
     try:
         DailyLimit(st3, lambda: "d1").reset()
@@ -520,8 +542,12 @@ _MUTATIONS = [
     ("折价 floor",
      [("    return max(floor, value)", "    return value")],
      lambda ns: ns["apply_rate"](3, rate=0.1) != 1),
+    # ★ 锚点随 L638 的诊断补 key 更新（**改的是变异目标那一行的字面量，不是判据强度**）：
+    #   变异仍然打在这条 fail-closed 的 raise 上、探针仍要求「改坏后不再抛」，
+    #   变的只是它现在长什么样（审计 L638 往文案里补了 `key={store_key!r}`）。
     ("fail-closed（坏计数）",
-     [('            raise ValueError(f"当日计数不是整数：{raw!r}")', "            return 0")],
+     [('            raise ValueError(f"当日计数不是整数（key={store_key!r}）：{raw!r}")',
+       "            return 0")],
      lambda ns: _no_raise(lambda: ns["DailyLimit"]({"limit:d1:k": "oops"},
                                                    lambda: "d1").used("k"), ValueError)),
 ]

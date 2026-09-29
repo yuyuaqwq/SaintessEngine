@@ -117,10 +117,14 @@ class DailyLimit:
         """
         if raw is None or raw == "":
             return 0
+        # ★ 审计 L638：形参 `store_key` 此前**全仓零使用**（只出现在签名与那一个传参上），
+        #   报错文案也只打 `{raw!r}` ⇒ 玩家/GM 拿到一个裸值，无从判断是哪个限购项的计数坏了。
+        #   `ext_life.periodic._as_count` 同一形状的报错是带 key 的 ⇒ 这里补齐，
+        #   口径对齐（形参**留名**并真的用上，不删：`_used_at` 的调用点已经按位置传它）。
         if isinstance(raw, bool) or not isinstance(raw, int):
-            raise ValueError(f"当日计数不是整数：{raw!r}")
+            raise ValueError(f"当日计数不是整数（key={store_key!r}）：{raw!r}")
         if raw < 0:
-            raise ValueError(f"当日计数为负：{raw!r}")
+            raise ValueError(f"当日计数为负（key={store_key!r}）：{raw!r}")
         return raw
 
     def _used_at(self, store_key: str) -> int:
