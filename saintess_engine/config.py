@@ -289,9 +289,27 @@ def set_hook(name: str, value) -> None:
 
 
 def mount(**hooks) -> None:
-    """内容侧批量挂载 hook（幂等）。**未知名抛 `UnknownHook`**，不静默丢弃。"""
-    for name, value in hooks.items():
-        set_hook(name, value)
+    """内容侧批量挂载 hook（幂等）。**未知名抛 `UnknownHook`**，不静默丢弃。
+
+    ★ 整批先校验、后落盘（2026-09-29 审计 afix1 第 27 轮）：旧写法是
+      `for name, value in hooks.items(): set_hook(name, value)` —— **逐个**抛。
+      于是一个**拼错的名字会把这一批前面那些合法的 hook 留在已装状态**：
+      实跑 `mount(action_base_fn=..., pannel_fn=...)` ⇒ `UnknownHook` 抛了，
+      而 `action_base_fn` 已装上 ⇒ 注入面停在**半装**的中途状态。
+      这恰好是 `set_hook` 上面那段取证想防的那一类（拼错一个字母 ⇒
+      装配看起来成功、实则注入面残缺），只是从「整条没装」换成了「装了一半」。
+      对更危险的是它**不留任何痕迹**：抛错之后没人知道前面那几个已经落盘了。
+
+    口径 = **要么全装、要么一个都不装**（事务性）：先把整批名字过一遍 `set_hook`
+      的名单校验，任何一个不认识就在**动任何 `_HOOKS` 之前**抛 `UnknownHook`。
+      逐字对齐 `set_hook` 的报错内容（`UnknownHook(name, sorted(_HOOKS))`），
+      不另造第二份错误措辞。
+    """
+    for name in hooks:                                   # 先整批校验，未动任何 _HOOKS
+        if name not in _HOOKS:
+            raise UnknownHook(name, sorted(_HOOKS))
+    for name, value in hooks.items():                    # 全装
+        _HOOKS[name] = value
 
 
 def _resolved(name: str):
