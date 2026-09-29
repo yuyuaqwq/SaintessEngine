@@ -66,16 +66,32 @@ class Repository:
         return out
 
     def _decode(self, row: Optional[sqlite3.Row]) -> Optional[dict]:
-        """读入后：`json_fields` 里的 JSON 文本 → 对象（解析失败保持原值）。"""
+        """读入后：`json_fields` 里的 JSON **容器**文本 → 对象/数组。
+
+        只解 `dict` / `list` 两种形状（**标量按原值返回**）。
+
+        为什么不解标量：`json_fields` 的语义是「这列存一份 JSON 数据」，
+        落盘面真在用的是对象与数组（快照 blob · props_use.used · battle_state.state）。
+        若连标量一起解，`event_state.value` 这类**存任意标量文本**的列会静默换类型：
+        写进去的 `"1"` 读回来是 `int 1`、`"true"` 是 `True`、`"null"` 是 `None`
+        ⇒ 业务按 str 用的值凭空变型，且零痕迹。旧实现解析失败时
+        `except Exception: pass` 静默吞掉一切；本版按形状分流，两条路都有痕可追：
+        * 解析失败 → 保留原文本（调用方自会看见那串非 JSON 文本）
+        * 解出标量 → 同上保留原文本（类型不漂）
+        """
         if row is None:
             return None
         d = dict(row)
         for f in self.json_fields:
-            if f in d and isinstance(d[f], str):
+            v = d.get(f)
+            if isinstance(v, str):
                 try:
-                    d[f] = json.loads(d[f])
-                except Exception:
-                    pass
+                    obj = json.loads(v)
+                except (ValueError, TypeError):
+                    continue          # 非法 JSON 文本：保留原值，不静默换型
+                if isinstance(obj, (dict, list)):
+                    d[f] = obj
+                # 标量（int/float/bool/None/str）：保留原文本，类型不漂
         return d
 
     # ------------------------------------------------------------ 查询
