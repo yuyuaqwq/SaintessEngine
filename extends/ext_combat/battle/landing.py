@@ -406,15 +406,24 @@ def _apply_death_guard(battle, target: dict, logs: list) -> bool:
         from .state_effects import state_def
         cfg = state_def("death_guard") or {}
         mhp = int(target.get("max_hp", 1) or 1)
-        # 层 -1（保留条目——资源耗尽后由调用方清；这里只减层）
-        entry["stacks"] = max(0, n - 1)
-        if entry.get("stacks", 0) <= 0 and not entry.get("expire"):
-            ef.pop("death_guard", None)
+        # 【写口在后】层 -1（保留条目——资源耗尽后由调用方清；这里只减层）
+        #   上面那几行全是**纯计算**，不动状态；下面才是唯一的写口。
+        #   提证（2026-09-29 afix2）：层减本来写在 `ATTR.set_current` **之前** ——
+        #   保命那一步一抛（属性层/注入面），层层已扣、条目已删，
+        #   而血一点没回来、cue 一条不发、返回 False → 玩家**白消耗了一层保命并仍然死亡**。
+        #   改成「先算完、后写入」后，任一步抛都不动状态。
+        _left = max(0, n - 1)
+        _drop = (_left <= 0 and not entry.get("expire"))
         # 保底
         guard_pct = float(cfg.get("guard_hp_pct") or 0.10)
-        # 保命下限 `max(1,…)` 是**机制行为**（不是引擎内建规则）⇒ 算完再交给写口
-        ATTR.set_current(target, "hp", max(1, int(mhp * guard_pct)),
+        _hp = max(1, int(mhp * guard_pct))
+        # 【写口 1/3】保命下限 `max(1,…)` 是**机制行为**（不是引擎内建规则）⇒ 算完再交给写口
+        ATTR.set_current(target, "hp", _hp,
                          reason="death_guard", battle=battle)
+        # 【写口 2/3】层 -1（保命已成功，此刻才值）
+        entry["stacks"] = _left
+        if _drop:
+            ef.pop("death_guard", None)
         # 额外回血（走 heal_actor 收口——clamp max_hp / on_heal 联动）
         heal_pct = float(cfg.get("heal_pct") or 0.0)
         if heal_pct > 0 and target.get("hp", 0) < mhp:
