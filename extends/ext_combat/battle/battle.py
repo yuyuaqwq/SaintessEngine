@@ -602,6 +602,15 @@ class Battle:
             _cast, _recover = ((action, None) if _plan is None
                                else (_plan["cast"], _plan["recover"]))
             ctx._plan = (_cast, _recover)          # ★ ct 段复用同一份声明（不许各自解析）
+        # ★ R2.2（2026-09-29 收口 · 引擎立项落实）：防御姿态的窗口**在登记段即刻开**。
+        #   两步化驱动（包侧 `instance_battle.act`：human_act(T0) → land_pending(B)）下，
+        #   若窗口等 B 段 `_do_defend` 才开，对手帧会在「T0 已清旧窗、B 段未开新窗」的
+        #   空窗里结算承伤 —— test_texts_table IN19/RT1 两条红（R2.2 案卷 §0.4 定位、
+        #   晚到批第十七轮复核；本行由其「T0 同步开窗」选项落实）。
+        #   幂等性：`open_entry` 重复写 = 覆盖（B 段 `_do_defend` 的重开与原「再敲一次
+        #   防御」同口径，刷新为同一值）；被控 skip 已在上方早退，不误开。
+        if ctx.action == "defend":
+            open_window(actor, DEFEND_TAG)
         pending_begin(self, ctx, cast=_cast, recover=_recover, pre_logs=pre_logs)
         _cue(self, logs, "battle.schedule.cast_begin", {"name": actor.get('name', '目标')})
         return logs, bool(self.result)

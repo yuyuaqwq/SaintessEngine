@@ -722,6 +722,14 @@ def act_interrupt(battle, caster, target, params, logs):
     if slot.get("unstoppable"):
         return
     actor["charging"] = None
+    # ★ R2.2 配套（2026-09-29）：防御姿态窗已在 T0 预开（battle.act）——打断 = 「这一手
+    #   不发生」⇒ 连同它开的姿态窗一并撤（否则「被打断还减半」；test_engine_neutral_fallback ③）。
+    #   当前唯一窗口型动作 = defend（引擎侧 open_window 调用点只有它）。
+    if str(slot.get("action") or "") == "defend":
+        from .actors import DEFEND_TAG
+        _ef = actor.get("effects")
+        if isinstance(_ef, dict):
+            _ef.pop(DEFEND_TAG, None)
     _cue(battle, logs, "battle.effects.cast_broken", {"name": actor.get('name', '目标')})
     # N5B5c P5：打断事件（on_interrupt 剧本联动：出招被断 → 反噬/易伤）
     try:
