@@ -204,6 +204,36 @@ print("\n【5. 现场恢复：本文件不许留下被改动的全局 hook】")
 check("恢复后 declared_vars() 回到默认表", EX.declared_vars() == EX._DEFAULT_EXPR_VARS)
 check("恢复后 variable_names() == 历史 13 名", EX.variable_names() == HISTORIC_NAMES, repr(EX.variable_names()))
 
+# ---------------------------------------------------------------- ⑥ ★ 审计 L1289：读口不按引用交出表本体
+# 原写法两条分支都 `return <表本身>`（未声明时 `is _DEFAULT_EXPR_VARS` 实测 True）
+# ⇒ 消费方一次 `d.pop("atk")` / `d["x"]=...` 就改掉引擎全局，而本进程只有那一张表
+# ⇒ 后续每一次 declared_vars()/variable_names()/build_vars()/labels_of() 全被污染，
+#    且跨会话、跨玩家。判据 = 两条分支都交副本，污染不外泄。
+print("\n【6. ★ L1289：declared_vars() 返回副本，不把表本体交出去】")
+_d1 = EX.declared_vars()
+check("★ 未声明时不是全局表本体（is 判定）", _d1 is not EX._DEFAULT_EXPR_VARS)
+check("★ 内容逐条与默认表相同（只改身份不改内容）", _d1 == EX._DEFAULT_EXPR_VARS,
+      repr(sorted(set(_d1) ^ set(EX._DEFAULT_EXPR_VARS))))
+_d1.pop("atk", None)
+_d1["injected"] = {"label": "注入的", "source": {"from": "const", "value": 1.0}}
+check("★ 消费方改返回值 ⇒ 全局表不受影响（'injected' 不进默认表）",
+      "injected" not in EX._DEFAULT_EXPR_VARS and "atk" in EX._DEFAULT_EXPR_VARS)
+check("★ 污染不外泄到读口（variable_names 仍是历史 13 名）",
+      EX.variable_names() == HISTORIC_NAMES, repr(EX.variable_names()))
+
+# 同一条对**声明态**也成立（内容侧那张表同样不按引用交出）
+_mount(lambda: {"x": {"source": {"from": "const", "value": 3}}})
+_DECLARED = {"x": {"source": {"from": "const", "value": 3}}}
+_mount(lambda: _DECLARED)
+_d2 = EX.declared_vars()
+_d2["y"] = {}
+check("★ 声明态也不交引用（改返回值不污染内容侧那张表）",
+      "y" not in _DECLARED and set(_DECLARED) == {"x"}, repr(sorted(_DECLARED)))
+_restore()
+check("★ 恢复后默认表仍完好（前面那次污染没留下痕迹）",
+      "injected" not in EX._DEFAULT_EXPR_VARS and EX.variable_names() == HISTORIC_NAMES,
+      repr(EX.variable_names()))
+
 print("\n" + "=" * 56)
 print("通过 %d · 失败 %d" % (passed, failed))
 for _d in DETAIL:

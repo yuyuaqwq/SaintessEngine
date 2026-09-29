@@ -469,7 +469,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 | `schedule.next_ct` | `schedule.py:49` | 有定义、无调用方 |
 | `state_effects.stat_scale_of` | `state_effects.py:18` | 仅测试引用 |
 | `formation.reachable_units` | `formation/__init__.py:28` | 零外部引用 |
-| `expr.expr_or` | `expr/__init__.py:221` | 零外部引用 |
+| `expr.expr_or` | `expr/__init__.py:422` | 零外部引用 |
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
 | ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 不实现） |
 | `config.set_hook` | `config.py:269` | 零外部引用（都走 `mount`） |

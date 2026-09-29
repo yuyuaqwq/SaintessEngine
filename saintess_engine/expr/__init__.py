@@ -123,10 +123,19 @@ def declared_vars() -> dict:
     ★ fail-closed：装了声明口却给不出可用表（`None` / 空 / 不是 dict / 有条目缺 `source` /
       来源类别不认）⇒ 抛 `EngineNotConfigured`，**不**静默退回默认表（写错的声明不许无声无息）。
       注：这是**「没声明」（走默认表，与历史逐字一致）**与**「声明了但坏」（抛）**两态的分界。
+
+    ★ 审计 L1289：**返回浅拷贝，不按引用把表本体交出去**。原写法两条分支都
+      `return <那张表本身>`（未声明时 `is _DEFAULT_EXPR_VARS` 实测 True）⇒ 消费方
+      任何一次「拿到表改一下」——`d.pop("atk")`、`d["x"] = ...`、就地改 `source` ——
+      直接改掉**引擎全局**：后续每一次 `declared_vars()` / `variable_names()` /
+      `build_vars()` / `labels_of()` 都拿到被污染的表，且**跨会话、跨玩家**（本进程
+      唯一那张表）。实测：`d.pop("atk")` 之后 `variable_names()` 里 `atk` 消失。
+      浅拷贝够用：表是**声明**（值不被本模块改写），本模块自己只读不写；
+      深拷贝会把 `source` 子树也复制，与「读口只交声明」的语义无关。
     """
     fn = _cfg.get_hook("expr_vars_fn")
     if fn is None:
-        return _DEFAULT_EXPR_VARS
+        return dict(_DEFAULT_EXPR_VARS)
     table = fn()
     if not isinstance(table, dict) or not table:
         raise EngineNotConfigured(
@@ -138,7 +147,7 @@ def declared_vars() -> dict:
                 "expr_vars_fn 变量 %r 的声明缺 `source`（取值来源）—— "
                 "形状见 saintess_engine.expr 模块头" % (_name,))
         _validate_source(_spec["source"], _name, "source")
-    return table
+    return dict(table)          # ★ L1289：同上，内容侧那张表也不按引用交出去
 
 
 def variable_names() -> tuple:
