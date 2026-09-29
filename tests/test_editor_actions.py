@@ -203,9 +203,13 @@ def main():
           not [a for a in AC.inventory(g_bad, use_cache=False)["actions"]
                if a["file"].replace(chr(92), "/").split("/")[0] == "tests"],
           [a["file"] for a in AC.inventory(g_bad, use_cache=False)["actions"]])
+    # ★ C-R2.29B（2026-09-29）：包侧新增 `we_cost_discount_expire`（消耗折扣族到期
+    #   归零动作，`we_procs.py` 第 28 个 @register_action）⇒ 真包动作数 104 -> 105。
+    #   本锚点的意图是「真包**一个都没少**」（防 tests/ 误计把真实现算没），
+    #   随真包新增同步上移，**判据强度不变**（仍是精确等值，不是「≥ N」）。
     check("★ 真包口径未变（修的只是 tests 误计，真包一个都没少）",
           len(AC.inventory(os.path.join(ROOT, "games", "orlandia"),
-                           use_cache=False)["actions"]) == 104,
+                           use_cache=False)["actions"]) == 105,
           len(AC.inventory(os.path.join(ROOT, "games", "orlandia"),
                            use_cache=False)["actions"]))
 
