@@ -58,11 +58,11 @@ bind(log, actor="p1", command="攻击").info("结算完成")   # actor/command �
 | 形状 | 位置 | 说明 |
 |---|---|---|
 | `get_logger(name)` | `saintess_engine/log/facade.py:72` | 取 logger；不配置时等价 `logging.getLogger(全名)` |
-| `configure(*, level, fmt, sinks, prefix, propagate)` | `saintess_engine/log/facade.py:80` | 显式配置；`sinks=()` 不动出口；重复调用**替换**（幂等） |
+| `configure(*, level, fmt, sinks, prefix, propagate)` | `saintess_engine/log/facade.py:101` | 显式配置；`sinks=()` 不动出口；重复调用**替换**（幂等） |
 | `logger_name(name)` | `saintess_engine/log/facade.py:66` | 全名计算 |
-| `remove_sinks(prefix=None)` | `saintess_engine/log/facade.py:127` | 摘掉本门面装的出口（返回摘掉几个） |
-| `bind(logger, **ctx)` | `saintess_engine/log/facade.py:172` | 结构化上下文（见下） |
-| `ContextAdapter` | `saintess_engine/log/facade.py:144` | `bind` 的返回类型；可链式 `.bind()` |
+| `remove_sinks(prefix=None)` | `saintess_engine/log/facade.py:157` | 摘掉本门面装的出口（返回摘掉几个） |
+| `bind(logger, **ctx)` | `saintess_engine/log/facade.py:207` | 结构化上下文（见下） |
+| `ContextAdapter` | `saintess_engine/log/facade.py:174` | `bind` 的返回类型；可链式 `.bind()` |
 | `Sink` 协议 | `saintess_engine/log/sinks.py:40` | `emit(record)` 必须，`flush()` / `close()` 可选 |
 | `dispatch(sinks, record)` | `saintess_engine/log/sinks.py:61` | 逐个分发 + 异常隔离（返回成功数） |
 

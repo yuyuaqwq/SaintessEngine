@@ -94,14 +94,14 @@ Battle(btype="monster", sides=None, hostile_map=None, target_picker=None,
 
 | 参数 | 语义 | 包内消费者 |
 |---|---|---|
-| `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:269`） |
+| `btype` | 战斗类型标签 | **只在一处读**：`landing._lv_pressure` 判 `== "pvp"` 跳过等级压制（`landing.py:302`） |
 | `sides` | `{阵营名: [actor]}`，**唯一入口** | 全包（`ext_combat`） |
-| `hostile_map` | `{side: [敌对 side]}` | `actors.hostile_sides`（`actors.py:202-204`）；缺省 = 除自己外全部阵营 |
+| `hostile_map` | `{side: [敌对 side]}` | `actors.hostile_sides`（`actors.py:339`）；缺省 = 除自己外全部阵营 |
 | `target_picker` | `callable(battle, actor) -> actor\|None`；自动 actor 行动前问「打谁」 | `Battle.actor_auto`（`battle.py:461-465`） |
 | `on_event` | `callable(battle, event, ctx, logs)`，事件总线尾部观察者 | `effect_triggers.fire`（`effect_triggers.py:117-122`） |
 | `action_override` | `callable(battle, action, actor, skill_name, target) -> (logs, cast)`；接管非内置行动 | `Battle.act`（`battle.py:552-560`） |
 | `script_hook` | `callable(battle, actor, logs) -> bool`；自动 actor 行动前的前置导演钩子，返回 True = 拦截本刻 | `Battle.actor_auto`（`battle.py:406-415`） |
-| `redirect_hook` | `callable(battle, victim, guard, amount, dmg_kind) -> bool`；承伤转移是否真由保护者承受 | `landing.deal_damage`（`landing.py:69`）；治疗侧同款见 `heal_redirect_hook`（`landing.py:555`，非构造参数） |
+| `redirect_hook` | `callable(battle, victim, guard, amount, dmg_kind) -> bool`；承伤转移是否真由保护者承受 | `landing.deal_damage`（`landing.py:70`）；治疗侧同款见 `heal_redirect_hook`（`landing.py:645`，非构造参数） |
 | `seed_ct` | `True` = 播种初始 ct；`from_state` 传 `False` | `battle.py:124-127` |
 | `text` | 文案表（鸭子类型：`render_or` / `__contains__`） | `Battle.__init__`（`battle.py:93`，**三级取表**：显式 `text=` > 内容侧 hook `text_table_fn` > 未注入）→ 表现层 `cue` 渲染；不落盘，恢复方重新注入 |
 
@@ -196,14 +196,14 @@ Battle.from_state(st, *, text=None)   # battle.py:742（classmethod）→ serial
 
 | 函数 | 位置 | 语义 |
 |---|---|---|
-| `make_actor(uid, name, side, kind="monster", human_controlled=False, class_name=None, level=1, equipment=None, skills=None, learned_skills=None, auto_act=None, **stats)` | `:61` | 造同构 actor；额外键透传；播种全部战斗状态键 |
+| `make_actor(uid, name, side, kind="monster", human_controlled=False, class_name=None, level=1, equipment=None, skills=None, learned_skills=None, auto_act=None, **stats)` | `:74` | 造同构 actor；额外键透传；播种全部战斗状态键 |
 | `ActCtx(caster, action="attack", skill_name=None, info=None, target=None, target_side=None, scope="single")` | `:20` | 行动上下文 dataclass |
-| `actor_alive(actor)` / `actor_dead(actor)` | `:151` / `:156` | `hp > 0` |
-| `effects_of(actor)` | `:162` | 读 `effects` 容器（非 dict → `{}`） |
-| `actor_ext(actor)` | `:302` | 读 `ext`（惰性播种） |
-| `actor_side_of(battle, actor)` | `:312` | 查阵营（以 `battle.sides` 权威，`actor.side` 兜底） |
-| `hostile_sides(battle, side)` | `:327` | 敌对阵营名列表（**S2 公开 API**） |
-| `hostile_actors(battle, side)` | `:340` | 敌对阵营存活 actor |
+| `actor_alive(actor)` / `actor_dead(actor)` | `:163` / `:168` | `hp > 0` |
+| `effects_of(actor)` | `:172` | 读 `effects` 容器（非 dict → `{}`） |
+| `actor_ext(actor)` | `:314` | 读 `ext`（惰性播种） |
+| `actor_side_of(battle, actor)` | `:324` | 查阵营（以 `battle.sides` 权威，`actor.side` 兜底） |
+| `hostile_sides(battle, side)` | `:339` | 敌对阵营名列表（**S2 公开 API**） |
+| `hostile_actors(battle, side)` | `:352` | 敌对阵营存活 actor |
 
 ### `effects.py`
 
@@ -227,15 +227,15 @@ Battle.from_state(st, *, text=None)   # battle.py:742（classmethod）→ serial
 
 ```python
 deal_damage(battle, source, target, amount, logs, dmg_kind="", defend_reduce=None, element="") -> int
-# landing.py:30
+# landing.py:29
 heal_actor(battle, target, amount, logs, source=None, label="") -> int
-# landing.py:544
+# landing.py:617
 ```
 
-两个都是**落地唯一收口**。内部子函数（无外部引用）：`_lv_pressure`（`:254`）、
-`_roll_dodge`（`:321`）、`_apply_taken_reductions`（`:313`）、`_apply_death_guard`（`:352`）、
-`_skip_event_mult`（`:388`，承伤减免**两条通道互斥**判定）、`state_reduce_of`（`:424`）、
-`_apply_damage`（`:451`）、`_apply_heal_mods`（`:596`）。
+两个都是**落地唯一收口**。内部子函数（无外部引用）：`_lv_pressure`（`:288`）、
+`_roll_dodge`（`:326`）、`_apply_taken_reductions`（`:352`）、`_apply_death_guard`（`:393`）、
+`_skip_event_mult`（`:445`，承伤减免**两条通道互斥**判定）、`state_reduce_of`（`:496`）、
+`_apply_damage`（`:530`）、`_apply_heal_mods`（`:675`）。
 
 ### `schedule.py`
 
@@ -279,14 +279,14 @@ heal_actor(battle, target, amount, logs, source=None, label="") -> int
 
 见 [../concepts/config-injection.md](../concepts/config-injection.md) 的 29 hook 表。
 公开面（引擎侧只剩「注入面 + 严格模式」这几个）：
-`EngineNotConfigured`（`:29`）· `strict`（`:215`）· `set_config`（`:234`）· `get_config`（`:243`）·
-`register_hook_provider`（`:252`）· `set_hook`（`:266`）· `mount`（`:288`）· `get_hook`（`:315`）·
-`unconfigured(name, default)`（`:385`）。
+`EngineNotConfigured`（`:29`）· `strict`（`:217`）· `set_config`（`:236`）· `get_config`（`:248`）·
+`register_hook_provider`（`:257`）· `set_hook`（`:271`）· `mount`（`:293`）· `get_hook`（`:338`）·
+`unconfigured(name, default)`（`:408`）。
 ★ 原先那一串「游戏配置取件面」（`load_game_rules` / `get_effect_rules` / `state_def` /
 `formulas()` / `kind_of` / `monster_skill_of` …）**已随第 7 批搬进扩展包** —— 现在住
 `ext_combat.battle.game_config`（包内写 `from ext_combat.battle import game_config`）。
 2026-09-25 校准：本段原先把这批已搬走的名字留着并带着旧行号，按源码逐条重写。
-`_NullFormulas`（`:199`）是模块级私有属性（未装配时的中性公式面）。
+2026-09-30 校准：`_NullFormulas` 已不在源码（公式面随第 7 批迁出）——未装配的中性兜底（数值 0 / 空表）口径见 `strict` 注释（`:211` 一带）。
 
 ### `effect_triggers.py`
 
@@ -413,7 +413,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 已整体下沉到**内容侧**（游戏仓 `game/data/kinds.py`；奥兰迪亚内容包 `content/mech/kinds.py`
 是同内容同源的副本）。原实现里的中文枚举值（`PHYS = "物理"` … `TAUNT = "嘲讽"`）随之离开引擎。
 
-引擎主路径一律经 `config.kind_of(name)` 注入（`config.py:390`）读 kind 值 —— 第三方内容
+引擎主路径一律经 `config.kind_of(name)` 注入（`config.py:394`）读 kind 值 —— 第三方内容
 自带词表即可，不受任何语言限制。
 （历史上该模块是 S3「通用件归位」时从 `game/core/` 搬进引擎的；P4 实测引擎内部**零消费者**，
 故按「机制归引擎、词表归内容」的边界原则迁回内容侧 —— 见
@@ -472,7 +472,7 @@ fire(battle, event: str, ctx: dict, logs: list) -> None    # :62
 | `expr.expr_or` | `expr/__init__.py:422` | 零外部引用 |
 | ~~`gauge.charge_*`（6 个）~~ | — | **已删**（2026-09-11） |
 | ~~`actions._aoe_falloff_apply`~~ | — | **已删**（2026-09-11；AOE falloff 不实现） |
-| `config.set_hook` | `config.py:269` | 零外部引用（都走 `mount`） |
+| `config.set_hook` | `config.py:271` | 零外部引用（都走 `mount`） |
 | `effects.resolve_actions` | `effects.py:142` | 零外部引用（`effects` 内部调用） |
 | `ai.eval_when` | `ai.py:159` | 零外部引用（`resolve_ai_move` 内部调） |
 | ~~`Battle.dmg_mult` / `pet` / `st` / `_cast_ctx` / `_target_ctx` / `_events`~~ | — | **已删**（2026-09-11） |

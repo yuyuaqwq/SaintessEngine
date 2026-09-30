@@ -145,7 +145,7 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 │ 4. ⚡ fire("taken_calc", {actor: target, dmg, mult: 1.0})   landing.py:118-124 │
 │      → 读回 mult → dmg *= mult                                            │
 │ 5. target["_dmg_taken_mult"] > 1 → dmg *= 它           landing.py:141-143    │
-│ 6. _roll_dodge(battle, target, logs)                   landing.py:175（定义 :260） │
+│ 6. _roll_dodge(battle, target, logs)                   landing.py:191（定义 :326） │
 │      dodge 面板 cap 0.40 → 命中则 return 0（整个伤害免掉）                 │
 │      ★ `no_dodge=True` ⇒ 跳过这一掷（内容侧自付那一笔没人能闪 —— 2026-09-27 开的一格开关） │
 │ 7. 防御姿态 → dmg *= (1 - defend_reduce or 0.5) landing.py:188-194          │
@@ -155,7 +155,7 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 │ 9. effects 里带 wake_on_hit 的态 → pop（打醒）+ 日志    landing.py:221-230  │
 │10. ★ **这一层不打断前摇**（T15 §0 D15 第 2 条）：普通伤害照常结算、前摇不动；  │
 │      控制类效果由**内容侧**挂引擎 `interrupt` 动作显式打断                  │
-│      （`effects.act_interrupt` —— 引擎不认识「控制」这个词）  landing.py:235-238 │
+│      （`effects.act_interrupt` —— 引擎不认识「控制」这个词）  landing.py:269-271 │
 │11. _apply_damage(battle, target, dmg, logs, source)    landing.py:237（定义 :364） │
 │      ├─ 承伤吸收（遍历容器里**声明 absorb** 的条目，按 value 扣，耗尽即 pop）  │
 │      ├─ hp 扣减                                                          │
@@ -173,7 +173,7 @@ landing.deal_damage(battle, source, target, amount, logs, dmg_kind, defend_reduc
 ```
 
 ⚠️ 第 6 步（闪避）的位置有注释明确说明：**「位置在防御姿态减伤前（对齐旧顺序：
-闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）」**（`landing.py:175`）。
+闪避 → 防御格挡；闪避免伤不打断蓄力——招被闪开）」**（`landing.py:189`）。
 改顺序会改变「闪避是否省下防御姿态/是否打断读条」这类语义。
 
 ## 展开 4：事件在链上的位置（一次普攻）

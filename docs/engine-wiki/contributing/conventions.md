@@ -66,8 +66,8 @@ from saintess_engine.landing import deal_damage, heal_actor
 `cooldown`（调度表）是**唯一**允许的独立容器（行动记账，不是状态）。
 承伤资源（护盾）已并进 `effects`（收口第 2 批 · 2026-09-28）：它是容器里一条
 **声明了 `absorb`** 的带 `value` 条目。
-（`actors.py:114-117` 给了理由）。要放「引擎不读的自定义状态」用 `actor["ext"]`
-（`actors.py:135-136`：**引擎绝不读**）。
+（`actors.py:127-128` 给了理由）。要放「引擎不读的自定义状态」用 `actor["ext"]`
+（`actors.py:145`：**引擎绝不读**）。
 
 ⚠️ 三个容器都会随存档落盘。别把不可 JSON 化的对象塞进去。
 

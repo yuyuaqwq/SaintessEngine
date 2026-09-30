@@ -24,7 +24,7 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:652`）。旧字段 `is
 
 ## 字段全集
 
-`make_actor`（`actors.py:62`）产生的字段分四组。
+`make_actor`（`actors.py:88`）产生的字段分四组。
 
 ### ① 身份 / 数据标签
 
@@ -47,7 +47,7 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:652`）。旧字段 `is
 （例：`schedule._after_act` 用 `stats.actor_spd`，`schedule.py:498`）。
 
 > 唯一的数值兜底：`stats._monster_base_stats` 里 `crit` 缺省取 **0.05**（`stats.py:145`），
-> 而 `make_actor` 播种的是 0.0（`actors.py:102`）。这两处不一致，见
+> 而 `make_actor` 播种的是 0.0（`actors.py:114`）。这两处不一致，见
 > [_selfcheck.md](../_selfcheck.md)。
 
 ### ③ 战斗可变状态（构造时已播种）
@@ -81,7 +81,7 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:652`）。旧字段 `is
 | 字段 | 说明 |
 |---|---|
 | `class_name` | 有值 → `stats` 走职业面板公式；**这是引擎唯一的「身份→行为」分支**，但它是配置读取，不是类型分派 |
-| `level` | 等级。⚠️ 引擎不认 `lv`（`actors.py:83`），旧数据的 `lv` 必须由你的桥翻译 |
+| `level` | 等级。⚠️ 引擎不认 `lv`（`actors.py:95`），旧数据的 `lv` 必须由你的桥翻译 |
 | `equipment` | 装备 dict，透传给 `panel_fn` |
 | `skills` | 技能 key 列表（构造 Battle 时索引进 `_skill_index`） |
 | `learned_skills` | 已学技能列表（**引擎不读**，是给你的装配器扫的，如《奥兰迪亚》的 `_learned_mech_skills`） |
@@ -93,11 +93,11 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:652`）。旧字段 `is
 
 | 区域 | 位置 | 用途 |
 |---|---|---|
-| `ext` | `actor["ext"]`，`actor_ext()` 惰性播种（`actors.py:170`） | 你的机制自定义状态（名字空间自管） |
+| `ext` | `actor["ext"]`，`actor_ext()` 惰性播种（`actors.py:314`） | 你的机制自定义状态（名字空间自管） |
 | `bonus` | `actor["bonus"]["panel" / "cap" / "cost"]` | 外部数值增幅聚合（引擎读 `bonus.cap` / `bonus.cost` / `bonus.panel`） |
 | `triggers` | 见上 | 事件声明 |
 
-`ext` 的原文约定（`actors.py:135-136`）：**「引擎绝不读；职业/机制自定义状态放这里，
+`ext` 的原文约定（`actors.py:145`）：**「引擎绝不读；职业/机制自定义状态放这里，
 命名空间自管」**。
 
 `bonus` 是「平行容器哲学」：引擎把它当**纯数值增量**读，不认识里面的语义。
@@ -112,7 +112,7 @@ DOT 折扣档看该周期的 `trait_tags`（`schedule.py:652`）。旧字段 `is
 ### 其余透传字段
 
 `make_actor(**stats)` 里没被上面消费的任何键都会**原样留在 actor 上**
-（`actors.py:139-141`）。这就是 `rank` / `reach` / `traits` / `exp` / `gold` /
+（`actors.py:163-165`）。这就是 `rank` / `reach` / `traits` / `exp` / `gold` /
 `drops` / `element_immune` / `element_weak` / `phys_reduce` / `magic_reduce` 的来路。
 它们由**引擎的具体规则**按键读取，不需要在 `make_actor` 里声明。
 其中**唯一**参与身份判定的是 `traits`（内容侧写的标签数组）—— 引擎只做
@@ -184,7 +184,7 @@ class ActCtx:                       # actors.py:19
 事件广播（`fire` 遍历全部 sides）都在运行期直接遍历它，所以 `add_actor` 不需要
 通知任何人（`battle.py:292-294`）。
 
-阵营敌对关系由 `hostile_sides`（`actors.py:206`）决定：优先读 `battle.hostile_map[side]`，
+阵营敌对关系由 `hostile_sides`（`actors.py:339`）决定：优先读 `battle.hostile_map[side]`，
 没有则「除自己外的全部阵营」。**引擎不预设玩家/怪身份**。
 
 ## 相关

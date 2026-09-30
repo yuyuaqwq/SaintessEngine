@@ -150,15 +150,15 @@ register_topology("ring", _ring, doc="环形：首尾相连")
 
 | 形状 | 位置 | 说明 |
 |---|---|---|
-| `Space(nodes, topology=None, *, roles, role_key, id_key, label_key, links, root, gate)` | `space/graph.py:57` | 构造即派生（不可变，无 setter） |
-| `links(id)` | `space/graph.py:213` | 邻接；未知 id → `[]` |
-| `adjacency()` | `space/graph.py:217` | 全图邻接（含零邻接节点 → 空列表） |
-| `depth(id)` | `space/graph.py:221` | 深度（两口径见上） |
-| `gate()` / `entry()` | `space/graph.py:231` / `:259` | 跨图落点 / 出图点（同义，`entry` 是内容侧旧名的别名） |
-| `route(src, dst)` / `route_names(...)` | `space/graph.py:262` / `:292` | 必经路径 / 其显示名 |
-| `audit()` | `space/graph.py:297` | 结构自检 |
-| `edges()` / `to_view(label_key=None)` | `space/graph.py:335` / `:343` | 有向边 / 纯 JSON 视图 |
-| `node(id)` / `role_of(id)` / `label_of(id)` | `space/graph.py:192` / `:199` / `:202` | 原始节点 / 角色 / 显示名 |
+| `Space(nodes, topology=None, *, roles, role_key, id_key, label_key, links, root, gate)` | `space/graph.py:65` | 构造即派生（不可变，无 setter） |
+| `links(id)` | `space/graph.py:221` | 邻接；未知 id → `[]` |
+| `adjacency()` | `space/graph.py:225` | 全图邻接（含零邻接节点 → 空列表） |
+| `depth(id)` | `space/graph.py:229` | 深度（两口径见上） |
+| `gate()` / `entry()` | `space/graph.py:239` / `:259` | 跨图落点 / 出图点（同义，`entry` 是内容侧旧名的别名） |
+| `route(src, dst)` / `route_names(...)` | `space/graph.py:266` / `:296` | 必经路径 / 其显示名 |
+| `audit()` | `space/graph.py:305` | 结构自检 |
+| `edges()` / `to_view(label_key=None)` | `space/graph.py:343` / `:343` | 有向边 / 纯 JSON 视图 |
+| `node(id)` / `role_of(id)` / `label_of(id)` | `space/graph.py:200` / `:199` / `:202` | 原始节点 / 角色 / 显示名 |
 | `register_topology(name, fn, *, doc, replace)` | `space/topology.py:34` | 注册自定义形状 |
 | `topology_names()` / `get_topology(name)` | `space/topology.py:51` / `:56` | 已注册形状名 / 取函数 |
 | `MESH` | `space/topology.py:28` | 保留名（显式连通表） |

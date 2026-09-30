@@ -31,7 +31,7 @@
 **依赖方向严格单向：数据包 → 扩展包 → 引擎**（门禁 `tests/test_layering.py` 机器钉死）。
 反方向一律报错：扩展包 `depends` 数据包 = `PackageError`，依赖成环 = `PackageError`。
 
-- 引擎目录：`saintess_engine/`（**19** 个子包 + **7** 个顶层模块；共 **65** 个 `.py` / **14 619** 行）
+- 引擎目录：`saintess_engine/`（**19** 个子包 + **7** 个顶层模块；共 **65** 个 `.py` / **14 702** 行）
   —— 数字由 `tests/test_editor_wiki.py` 逐项对照磁盘锁定，改模块结构必同步（否则门禁红）
 - 引擎侧的模块（与 `saintess_engine/__init__.py` 里的「模块布局」同一份口径，全部平级）：
   - **基础** `config`（注入面）· `domains`（引擎默认域集 + 合并规则）· `package`（包栈加载器）
@@ -179,7 +179,7 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
 
 | 特性 | 一句话 | 入口 | 层 |
 |---|---|---|---|
-| **全同构 actor** | 玩家/怪/召唤物/变身是同一个 dict 模型，无身份分派 | `make_actor`（`actors.py:62`） | `ext_combat` |
+| **全同构 actor** | 玩家/怪/召唤物/变身是同一个 dict 模型，无身份分派 | `make_actor`（`actors.py:88`） | `ext_combat` |
 | **单 effects 容器** | 增益/减益/DOT/控制/标记/资源全部是 `actor.effects[key]` 一个容器 | `effects.py` 的 `act_apply` | `ext_combat` |
 | **事件总线** | 26 个引擎事件名（`EVENTS`）+ `fire()`；效果声明挂 `actor.triggers` | `effect_triggers.py:53/57` | `ext_combat` |
 | **声明表驱动** | 效果行为查 `EFFECT_RULES`；名词→动词查 `EFFECT_ACTIONS` | `game/data/battle_rules.py`（游戏仓侧） | `ext_combat`（表在数据包） |
@@ -187,7 +187,7 @@ print(b.result, hero["hp"], wolf["hp"])   # victory / 80 上下 / 0
 | **CTB 绝对时刻制** | `ct` = 下次可行动时刻；耗时多少由**内容侧装配**（引擎零公式） | `schedule.py:96` + `time_model_fn` | `ext_combat` |
 | **零默认值** | 未声明即无行为（`strict=False` 静默 / `strict=True` 抛错两档） | `config.py:146` | 引擎 |
 | **存档/续战** | sides-only JSON，`to_state` / `from_state`，旧档字段迁移 | `serialize.py:34/55` | `ext_combat` |
-| **注入式边界** | 引擎不 import 游戏；游戏把公式/面板/技能表 mount 进来 | `config.py:234` | 引擎 |
+| **注入式边界** | 引擎不 import 游戏；游戏把公式/面板/技能表 mount 进来 | `config.py:236` | 引擎 |
 
 ---
 

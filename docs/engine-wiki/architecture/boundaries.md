@@ -190,7 +190,7 @@
 | B5 | ~~`effects.act_apply` 里 `if holder.get("is_boss") or holder.get("role") == "boss"`（旧案）~~ **2026-09-25 E3 已消除** | `effects.py:378-379`（现为 `traits.has_any(holder, state_def(key)["ctrl_half_traits"])`） | 同上（控制时长减半）：**带哪些标签才减半**由该状态的规则声明给（`ctrl_half_traits`），引擎不认标签叫什么 | `extends/ext_combat/battle/effects.py` |
 | B6 | `effects._mech_to_effect` 的 `_is_stack_resource` 判据关键词含 `debuff_scale` / `dot` / `on_threshold` / `guard_hp_pct` | `effects.py:279-283` | 这些字段**没有消费者**（`debuff_scale` 已于 2026-09-11 接线），但它们的**存在与否改变分派结果** —— 声明了 `debuff_scale` 会意外让 mech 走叠层路径 | `extends/ext_combat/battle/effects.py` |
 | B7 | `battle.py` 里 `"player"` 阵营名硬编码 | `battle.py:726`（`_check_side_end`）、`:170`（`focus`） | 你的游戏若不叫 `player` 就得改这个包或用 `hostile_map` 绕过 | `extends/ext_combat/battle/battle.py` |
-| B8 | `B6` 的反面：`stats._monster_base_stats` 的 `crit` 兜底 0.05 与 `make_actor` 播种 0.0 不一致 | `stats.py:145` vs `actors.py:102` | 同一种 actor 在不同路径下暴击率不同 | `extends/ext_combat/battle/stats.py` vs `battle/actors.py` |
+| B8 | `B6` 的反面：`stats._monster_base_stats` 的 `crit` 兜底 0.05 与 `make_actor` 播种 0.0 不一致 | `stats.py:145` vs `actors.py:114` | 同一种 actor 在不同路径下暴击率不同 | `extends/ext_combat/battle/stats.py` vs `battle/actors.py` |
 
 **结论（三层后，边界瑕疵分成两类）**：
 

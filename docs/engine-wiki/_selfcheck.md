@@ -126,7 +126,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | `gauge.charge_*`（6 个） | `gauge/__init__.py:244-321` | **全部零外部引用** —— 蓄力三律无消费者 |
 | `support.battle_bars.bar_should_trigger` / `bar_preserve` | `:164` / `:204` | 仅内部/单点引用（`bar_preserve` 被命令层 Boss 脚本用 1 处） |
 | `effects.effects_from_skill(..., caster_side_is_player=True)` | `effects.py:220` | **第三个参数在函数体里从未使用** |
-| `config.set_hook` | `config.py:269` | 零外部引用（都走 `mount`） |
+| `config.set_hook` | `config.py:271` | 零外部引用（都走 `mount`） |
 | ~~`serialize.to_state` 的 `flags`~~ | ~~`serialize.py:45`~~ | ✅ **已接线（2026-09-27）**：原先恒写 `{}`、无读无写 ⇒ 已改成 `Battle.flags` 的一等字段，`to_state` 写出（`serialize.py:47`）、`from_state` 读回（`:`79）—— 内容侧「每场一次 / 每场几层」那类**战斗级跨手记账**就挂它（挂 `Battle` 上的临时属性过不了每手往返 ⇒ 每手清零，见 `tests/test_cross_hand_state.py` ② 与它的反证那条）。这一行从「写了白写」名单里销号。 |
 | `Battle.auto_run(max_steps=500)` | `battle.py:375` | 全仓调用点**只在 `tests/`**（游戏仓 `test_battle_add_actor.py:159`、游戏仓 `test_battle_bridge.py:154`、游戏仓 `test_battle_bar_procs.py:240` 等），内容侧零调用 —— 实质是**测试/AI 模式辅助**，不是生产路径（生产走 `human_act` + `advance`） |
 
@@ -180,7 +180,7 @@ C1（`19 时机` → 26）、C2（`16 个` → 23）已改。C3/C4/C5/C6 在**�
 | # | 瑕疵 | 位置 |
 |---|---|---|
 | B1 | ~~`kinds/` 枚举值写死中文（`PHYS = "物理"` …）~~ **2026-09-13 P4 下沉已消除** | 引擎侧无 `kinds/`（词表移居内容侧，引擎只经 `config.kind_of` 读值） |
-| B2 | 固定效果 key：`"death_guard"`（濒死保护）、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`（受疗修正）。（原含 `"sleep"` 打醒 —— **2026-09-11 已数据化**移除，改读 `wake_on_hit` 字段） | `landing.py:190-202, 248, 361-384, 617-625` |
+| B2 | 固定效果 key：`"death_guard"`（濒死保护）、`"heal_amp_pct"` / `"heal_down"` / `"_anti_heal_pct"`（受疗修正）。（原含 `"sleep"` 打醒 —— **2026-09-11 已数据化**移除，改读 `wake_on_hit` 字段） | `landing.py:393-441, 583, 698-734` |
 | B3 | `effects.act_apply` 里 `if key == "reduce":` | `effects.py:489` |
 | B4 | ~~`is_boss` / `role == "boss"`（控制减半 / DOT `pct_boss`）~~ **2026-09-25 E3 已消除**：身份 = 内容侧声明的 `traits`，引擎只做 `traits.of` / `has` / `has_any`（名单为空 ⇒ 一律 False） | `effects.py:378-379` · `schedule.py:649` |
 | B5 | `battle.py` 里 `"player"` 阵营名 | `battle.py:188, 515` |

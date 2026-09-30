@@ -49,7 +49,7 @@ config.mount(
 | + `formula_skeleton_fn` | 起得了战斗，但 `human_act` 返回 `[]`、目标 hp 不变 —— **静默 0 伤害**（R8 语义） |
 | + `time_model_fn` / `action_base_fn` | ✅ `💥 野狼 受到 34 点伤害！` |
 
-> ⚠️ **坑（建议改进）**：`config.mount(**hooks)`（`config.py:291`）只认 `_HOOKS`
+> ⚠️ **坑（建议改进）**：`config.mount(**hooks)`（`config.py:293`）只认 `_HOOKS`
 > （`config.py:57-208`）名单里的 32 个名字，**未知名会抛 `UnknownHook`**（`set_hook` 里
 > `if name in _HOOKS` 没有 else 分支）。写错 hook 名不会报错，只是不生效。
 > 开发期建议打开 `config.strict = True`（`config.py:211`）——未装配的 hook 会抛
@@ -58,7 +58,7 @@ config.mount(
 
 ## 1. 造 actor
 
-`make_actor(uid, name, side, kind=...)`（`actors.py:62`）返回一个**全同构 dict**：
+`make_actor(uid, name, side, kind=...)`（`actors.py:88`）返回一个**全同构 dict**：
 玩家与怪除了字段值以外没有任何区别。
 
 ```python
@@ -72,15 +72,15 @@ wolf = make_actor("e1", "野狼", "enemy", kind="monster",
 
 - `kind` 只是**数据标签**（`"player"` / `"monster"` / 你自己的词），引擎不按它分支；
   真正决定「谁是人控」的是 `human_controlled`（`Battle.focus()` 只看它，`battle.py:246`）。
-- 等级字段统一是 `level`；引擎不认 `lv`（`actors.py:83` 注释明写）。
+- 等级字段统一是 `level`；引擎不认 `lv`（`actors.py:95` 注释明写）。
 - 额外关键字（`rank` / `reach` / `traits` / 你的自定义标签）会**原样透传**进 actor
-  （`actors.py:139-145`）。引擎**不认识 Boss 这类身份**：身份由**内容侧声明** —— 在 actor 上写
+  （`actors.py:148`）。引擎**不认识 Boss 这类身份**：身份由**内容侧声明** —— 在 actor 上写
   `traits: ["boss"]`（标签名随你起），引擎只用 `traits.of` / `traits.has` / `traits.has_any`
   判「身上有没有这个标签」，**名单为空 ⇒ 一律 False**（不声明 = 这条规则不适用于任何人）。
   身份标签的用点（控制时长减半 / DOT 折扣档）见 [reference/effect-rules.md](../reference/effect-rules.md)。
 - 战斗可变状态已被播种：`effects`（承伤资源/护盾也在里面）/ `cooldown` / `charging` / `ct`
   （`_MUTABLE_KEYS`，`actors.py:54`）。防御姿态这类**窗口状态**不另开字段 —— 收在 `effects`
-  容器里（条目 `{"stacks": 1, "expire": None, "until": "own_act"}`，`actors.py:204`）。
+  容器里（条目 `{"stacks": 1, "expire": None, "until": "own_act"}`，`actors.py:228`）。
 
 ## 2. 起战斗：`sides` 是唯一入口
 
@@ -91,7 +91,7 @@ b = Battle(btype="monster", sides={"player": [hero], "enemy": [wolf]})
 `Battle.__init__`（`battle.py:48`）做的事，按顺序：
 
 1. 把 `sides` 拷成 `self.sides`（dict，值是 list）—— `battle.py:99-102`
-2. `hostile_map` 缺省 → 之后由 `hostile_sides()` 推「除自己外全部阵营」（`actors.py:206`）
+2. `hostile_map` 缺省 → 之后由 `hostile_sides()` 推「除自己外全部阵营」（`actors.py:339`）
 3. 建技能索引 `actor["_skill_index"]`（`_index_skills` → `_index_one_actor`，`battle.py:218/117`）
 4. **播种初始 ct**（`_seed_ct_one`，`battle.py:134`）：`ct = action_time(聚合 spd)`
    —— 快者先手、开局第一动也按速度排（`schedule.initial_ct`，`schedule.py:45`）

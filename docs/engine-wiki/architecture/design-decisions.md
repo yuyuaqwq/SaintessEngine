@@ -45,7 +45,7 @@
 **但保留了 2 个独立容器**（2026-09-28 收口第 2 批后只剩 `cooldown` 调度表 ——
 `shields` 承伤资源已并进 `effects`，成为一条声明了 `absorb` 的带 `value` 条目）。
 理由见
-`actors.py:114-117` 注释：它们不是「状态」，混进去会让净化清掉盾、让面板折算把盾当减伤。
+`actors.py:127-128` 注释：它们不是「状态」，混进去会让净化清掉盾、让面板折算把盾当减伤。
 
 **痕迹**：`actors.py:48-50` 的「V 系列统一：四容器 → 单 effects 容器」注释；
 `_MUTABLE_KEYS`（`actors.py:51-57`）里四个键变三个。
@@ -88,7 +88,7 @@
 - 报错少、调试难：症状是「没反应」而不是「抛异常」
 - 必须自己写测试（[../guides/testing.md](../guides/testing.md)）
 - 唯一的例外要记住：`stats._monster_base_stats` 的 `crit` 兜底 **0.05**
-  （`stats.py:145`），而 `make_actor` 播种的是 0.0（`actors.py:102`）
+  （`stats.py:145`），而 `make_actor` 播种的是 0.0（`actors.py:114`）
 
 **痕迹**：
 - `config.py:124-128` 的 R8 说明：「静默降级」两档语义
@@ -184,7 +184,7 @@ actor 的 `triggers = {事件名: [效果声明]}` 决定响应什么。
 **代价**：
 - 没有不变量保护：允许你手工把同一个人塞进两个阵营、塞进同一个 list 两次
 - 「谁属于哪个阵营」有两处真相（`actor["side"]` 与 `battle.sides` 的键），
-  于是需要 `actor_side_of`（`actors.py:180`）来定权威（sides 优先，字段兜底）
+  于是需要 `actor_side_of`（`actors.py:204`）来定权威（sides 优先，字段兜底）
 
 **收益**：`add_actor` 不需要通知任何人（`battle.py:292-294` 注释：
 「sides 是普通 dict，调度与序列化均动态遍历 sides，故新 actor 自动参与行动与存档」）。
