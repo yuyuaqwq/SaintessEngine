@@ -97,7 +97,11 @@ def today() -> _dt.date:
 
 
 def day_key(fmt: str = "%Y-%m-%d") -> str:
-    """本地日历日的稳定字符串键（做每日刷新的 key 就用它）。"""
+    """本地日历日的稳定字符串键（做每日刷新的 key 就用它）。
+
+    ★ 文档注（2026-09-30，审计 L1356）：默认格式与 `today().isoformat()` 逐字同形
+    （两种写法等价，都过本地时区）—— 属**合法用法**，不是兜底；`fmt` 与 `stamp(fmt=…)` 同族。
+    """
     return today().strftime(fmt)
 
 
@@ -148,6 +152,9 @@ def set_zone(tz):
     global _ZONE, _ZONE_NAME
     z = parse_zone(tz)
     _ZONE = z
+    # ★ 说明注（2026-09-30，审计 L1355）：`getattr(z, "key", None) or str(z)` **不是兜底**、
+    #   是合法回落 —— `ZoneInfo` 有 `.key`；固定偏移 `timezone(timedelta)` 没有它，
+    #   于是走 `str(z)`（`set_zone("UTC+8")` → "UTC+08:00"）。勿改成硬取 `.key`（会炸）。
     _ZONE_NAME = getattr(z, "key", None) or str(z)
     return z
 

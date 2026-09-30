@@ -31,6 +31,7 @@ import random
 import threading
 import time
 
+from ..clock.wall import now as _wall_now
 from ..command.registry import CommandRegistry
 from ..log import get_logger
 from ..tlog import KindTable, MemorySink, TLog
@@ -176,8 +177,14 @@ class Host:
         return fn if callable(fn) else None
 
     def clock(self) -> float:
+        """墙上时间（秒）——适配器 `clock` 钩子优先，否则走**挂钟单一出口** `wall.now()`。
+
+        ★ 审计 L1354（2026-09-30）：缺省钟原先直调 `time.time`（绕过 wall 的第二条
+        真源，测试注入的假钟穿不进来）。改走 `wall.now()`：未注入 = 系统钟（行为逐字
+        不变），注入了假钟连宿主一起跟着走。
+        """
         fn = self._hook("clock")
-        return float(fn()) if fn else time.time()
+        return float(fn()) if fn else _wall_now()
 
     def seed_now(self, seed=None):
         """本场的随机种子：显式 > 适配器 `rng()` 钩子 > None（系统随机，不可复现）。
@@ -741,7 +748,9 @@ class Host:
         停机条件：适配器 `should_stop()`（扩展面，如 CLI 收到 EOF）/ `max_messages` /
         `idle_timeout` 秒没有新消息。返回处理过的消息条数。
         """
-        last = time.time()
+        # ★ 审计 L1354（2026-09-30）：空闲计时的墙钟读数走 `self.clock()`（挂钟单一
+        #   出口：适配器 clock 钩子 → wall.now()）——不再是绕过两者的一条裸 time.time。
+        last = self.clock()
         while True:
             if max_messages is not None and self._messages >= int(max_messages):
                 break
@@ -750,11 +759,11 @@ class Host:
                 break
             ctx = self.recv()
             if ctx is None:
-                if idle_timeout is not None and (time.time() - last) >= float(idle_timeout):
+                if idle_timeout is not None and (self.clock() - last) >= float(idle_timeout):
                     break
                 time.sleep(self.idle_sleep)
                 continue
-            last = time.time()
+            last = self.clock()
             self._messages += 1
             self.handle(ctx)
         return self._messages

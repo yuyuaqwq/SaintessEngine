@@ -26,6 +26,11 @@
 
 **顺序是内容**：`sort_by` 只负责「按你给的键重排」，键（速度？等级？加入时间？）
 是内容侧的事；本形状不猜。
+
+**归档登记（2026-09-30，台账 L542）**：`mark_dead` / `revive` / `any_alive` 在引擎与
+orlandia 生产侧**暂零引用**（只有本包测试在调）—— 属**公开形状 API**，供第三方包/未来
+内容侧用；台账判「**保留不删**」（`Roster` 本体被 ext_social / orlandia 大量使用，
+只删这批方法会破公开面）。
 """
 from __future__ import annotations
 

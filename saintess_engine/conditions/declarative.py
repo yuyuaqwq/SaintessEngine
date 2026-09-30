@@ -116,6 +116,11 @@ def _step(step):
     """一步 → `(键, 取值函数, 是否有 or, or 值)`。形状不对 → SpecError。"""
     if not isinstance(step, Mapping):
         raise SpecError("步必须是字典，收到 %s" % type(step).__name__)
+    # ★ 归档注（2026-09-30，台账 L932）：下面两条判断**不合并**（有意分列、非冗余）——
+    #   `<=` 子集判断管「步里出现了 `_KEYS_STEP` 之外的键」（拼写错的键当场点名，乱键
+    #   不会混进 `parsed`）；紧接的 `"key" in step` 管「一步只给了 default/or、没给 key」。
+    #   零键步会穿过前者、仍被后者拦下；若只留一条 `key` 存在性判断，多余键
+    #   （`{"key":…, "typo":…}`）就静默放行了。两条各有各的点名文案，按原样保留。
     if not frozenset(step) <= _KEYS_STEP:
         raise SpecError("步的键不对：%r" % (sorted(step),))
     if "key" not in step:

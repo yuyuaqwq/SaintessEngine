@@ -318,7 +318,9 @@ def t2_positive(body, tpat):
     #   ⇒ 3278 -> 3280。中文键数锚点不变（新键名全 ASCII）。
     # ★ C-R2.30（2026-09-29）：第 5 族 `mana_restore` 新槽位 `iu.mana_full` /
     #   `iu.mana_restore_cost` ⇒ 3281 -> 3283。中文键数锚点不变（新键名全 ASCII）。
-    check("包内文案条数锚点 == 3283（条数变了就同步更新本门禁的锚点）", len(body) == 3283, len(body))
+    #   2026-09-30 审计残余 O4/O5 ⇒ 3283 -> 3285（`wild.default_title`、`explore.reward_line`；
+    #   新键名仍全 ASCII，中文键数锚点不变）。
+    check("包内文案条数锚点 == 3285（条数变了就同步更新本门禁的锚点）", len(body) == 3285, len(body))
     errs = table_errors(body)
     check(f"★ 整表口径（$defs/text_table，含 propertyNames）{len(body)} 条全过",
           not errs, errs[:3])

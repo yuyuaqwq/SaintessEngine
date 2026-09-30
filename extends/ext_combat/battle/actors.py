@@ -58,6 +58,19 @@ _MUTABLE_KEYS = {
 }
 
 
+def _seed_mutable(stats: dict) -> dict:
+    """按 `_MUTABLE_KEYS` 播种战斗可变状态 —— **单源**（2026-09-30，审计 L254：
+    原先 `make_actor` 把这组键逐字重列了一遍，两边能各改各的）。
+
+    * 值 `dict` ⇒ 映射容器：`dict(stats[k] or {})`（来值一律拷成新 dict）
+    * 值 `None` ⇒ 可选透传：`stats.get(k)`（缺省 None，原样带着）
+    """
+    out = {}
+    for key, kind in _MUTABLE_KEYS.items():
+        out[key] = dict(stats.get(key) or {}) if kind is dict else stats.get(key)
+    return out
+
+
 def make_actor(
     uid: str,
     name: str,
@@ -106,15 +119,14 @@ def make_actor(
         "block": float(stats.get("block", 0.0)),
         "pene": float(stats.get("pene", 0.0)),
         "race": stats.get("race"),
-        # ③ 战斗可变状态（播种）
+        # ③ 战斗可变状态（播种）—— 键表与播种口径都在 `_MUTABLE_KEYS`（单源；审计 L254）
         # V 系列统一：单 effects 容器（原 state/buffs/hot/debuffs 四键合并）
         #   条目形态 effects[key] = {"stacks": 叠层, "expire": 绝对时刻|None, "value": 动态数值|None}
         #   + 运行时辅助 last_tick/hits_left（schedule/消费点自管，可缺省）
         #   行为/数值/周期/消费全查 EFFECT_RULES[key] 声明（引擎零名词）
-        "effects": dict(stats.get("effects") or {}),
-        # 调度资源（技能下次可用时刻；不是「状态」，是行动记账——保留独立容器）
-        "cooldown": dict(stats.get("cooldown") or {}),
-        "charging": stats.get("charging"),
+        # cooldown（调度）/ charging（出招窗口）不是「状态」——它们是**行动记账**，
+        # 保留独立容器（播种口径见 `_seed_mutable`）。
+        **_seed_mutable(stats),
         "ct": float(stats.get("ct", 0.0)),
         "poi_buff": stats.get("poi_buff"),
         # 事件触发声明（N8）：{事件名: [效果名词 dict, ...]}——数据桥/上层构造时

@@ -46,6 +46,11 @@ class EventBus(WarnMixin):
         lines = bus.fire("order_paid", {"order": o})
     """
 
+    # ★ 登记注（2026-09-30，审计 L2181）：下面 4 个旋钮（strict_register / tolerant_fire
+    #   / blank_line_default / sink_key）**生产零覆盖** —— 现唯一生产调用方（orlandia
+    #   player_events）只用默认值。保留理由：它们是**已发布形状的语义注入面**（事件注册
+    #   与 fire 的宽松度、行收集键由接线方决定），删掉等于把默认值焊死进调用方；
+    #   台账判「留档观察」，不以「零覆盖」为由删。
     def __init__(self, events: Iterable[str] = (), *,
                  strict_register: bool = True,
                  tolerant_fire: bool = True,

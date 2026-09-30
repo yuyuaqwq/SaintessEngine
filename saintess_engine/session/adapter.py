@@ -7,7 +7,9 @@
 `event.get_message_str()` / `event.plain_result(text)` / `event.get_group_id()` …
 契约是隐式的 —— 新宿主实现者只能去读框架源码反推。本模块把它**显式化**：
 
-* `EventLike` / `ResultLike`：契约说明（Protocol 文档，不强制继承）
+* 事件 / 回复的**契约**（鸭子类型，不强制继承）：形状说明以 `PlainEvent` / `PlainResult`
+  的 docstring 为准（★ 审计 L2299：原 `EventLike` / `ResultLike` 两个名字全仓零定义，
+  属幻影声明，已删 —— 别再按这两个名字找类/Protocol）
 * `PlainEvent` / `PlainResult`：**参考实现**（纯标准库）——
   测试、CLI、非 AstrBot 宿主都能直接用
 * `SessionAdapter`：把「从事件取会话标识」这一步收拢成一处可替换的适配点
@@ -53,6 +55,8 @@ class PlainEvent:
     | `stop_event()`（可选） | 停止事件传播 |
 
     `message_str` 是可写属性 —— 快捷转发会临时改写它再恢复。
+    ★ 说明（2026-09-30，审计 L2300）：恢复由 `command.binding.TextSink` 负责 ——
+    它只在替身上记本地值、**从不回写真事件对象**（真事件一字未动）；本层不存恢复栈。
     """
 
     def __init__(self, message: str = "", *, group_id: Optional[str] = None,

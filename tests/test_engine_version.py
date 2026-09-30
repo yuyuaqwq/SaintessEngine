@@ -35,6 +35,25 @@ check("包门面导出 __version__（形如 x.y.z）",
 check("VERSION_INFO 是 3 元整数元组",
       isinstance(E.VERSION_INFO, tuple) and len(E.VERSION_INFO) == 3
       and all(isinstance(x, int) for x in E.VERSION_INFO), E.VERSION_INFO)
+# ★ 审计 L2646 补牙（2026-09-30）：`parse` 对坏输入**必抛**（不锚定的 findall 会把
+#   `abc123` 刮成数字静默放行，与「不满足要显式报错、不静默降级」正面冲突）；
+#   并钉住版本元组只有一条读法（VERSION_INFO == parse(__version__) 补零三位）。
+_bad_versions = ("vNext", "abc123", "1.2.3-rc1", "")
+_bad_passed = []
+for _bv in _bad_versions:
+    try:
+        V.parse(_bv)
+        _bad_passed.append(_bv)
+    except ValueError:
+        pass
+check("★ parse 对坏输入必抛 ValueError（vNext / abc123 / 1.2.3-rc1 / 空串）",
+      _bad_passed == [], _bad_passed)
+check("★ parse 正常输入逐字不变（'0.1.0'→(0,1,0) / 'v1.2'→(1,2)）",
+      V.parse("0.1.0") == (0, 1, 0) and V.parse("v1.2") == (1, 2))
+check("★ VERSION_INFO 与 parse(__version__) 单源同口径（补零三位）",
+      E.VERSION_INFO == tuple(list(V.parse(E.__version__))
+                              + [0] * (3 - len(V.parse(E.__version__)))),
+      (E.VERSION_INFO, V.parse(E.__version__)))
 check("version 模块可从门面取到", hasattr(E, "version") and E.version is V)
 
 # 2. 比较语义（★ 用例**版本相对**：从实际版本推导，升版不红）

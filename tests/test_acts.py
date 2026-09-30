@@ -168,7 +168,7 @@ def t2_compile_fail_closed():
 
 # ============================================================ 3 执行
 def t3_run():
-    print("\n[3] 执行：序 / 结果 / out / when / stop_if / ctx 透传")
+    print("\n[3] 执行：序 / 结果 / when / stop_if / ctx 透传")
     acts, calls = _mk_acts()
     acts.verbs["stop"] = lambda ctx, **kw: calls.append(("stop", {})) or "stop"
     plans = acts.compile_table({
@@ -184,10 +184,11 @@ def t3_run():
     check("实参逐值求值后传给动词", calls[0][1] == {"k": 1}, calls[0][1])
 
     calls.clear()
-    plans["p"].run({"flag": True}, out=["pre"])
-    check("给了 out 就往它里追加", calls and True)
-    got = plans["p"].run({"flag": True}, out=["pre"])
-    check("out 追加在尾部且不新建", got == ["pre", "a", "b", "c"], got)
+    first = plans["p"].run({"flag": True})
+    second = plans["p"].run({"flag": True})
+    check("★ 每次 run 返回全新列表（不共享缓冲；`out=` 已删·审计 L1822）",
+          first == ["a", "b", "c"] and second == ["a", "b", "c"] and first is not second,
+          (first, second))
 
     calls.clear()
     check("when 假 ⇒ 空列表（不是 None）", plans["w"].run({"flag": False}) == [])

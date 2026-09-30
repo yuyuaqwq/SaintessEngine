@@ -77,6 +77,27 @@ def get_logger(name: str = "", *, prefix: Optional[str] = None) -> logging.Logge
     return logging.getLogger(logger_name(name, prefix=prefix))
 
 
+def _drop_installed(name: str) -> None:
+    """摘掉 `name` 上**本门面装的** handler（removeHandler + close）—— 换 prefix 时用。
+
+    ★ 审计 L1032（2026-09-30）：`_installed` 按 prefix 记 —— 换 prefix 后旧条目再也没有
+    默认摘除路径（`remove_sinks()` 无参摘的是**新** prefix）⇒ 旧 handler 继续收日志、
+    文件句柄永不 close（与「摘出口要 close」同族的漏洞）。修法：换 prefix 时按**旧
+    prefix** 摘除 + close + 一条 warning（不静默）。宿主/别人自己 `addHandler` 的照旧不碰。
+    """
+    handler = _installed.pop(name, None)
+    if handler is None:
+        return
+    logging.getLogger(name).removeHandler(handler)
+    try:
+        handler.close()
+    except Exception:                                             # noqa: BLE001
+        pass
+    logging.getLogger(name).warning(
+        "configure 换 prefix：旧 prefix %r 上本门面装的日志出口已摘除并关闭（不留孤儿 handler）",
+        name)
+
+
 def configure(*, level=None, fmt: Optional[str] = None, sinks=(),
               prefix: Optional[str] = None, propagate: Optional[bool] = None
               ) -> logging.Logger:
@@ -87,7 +108,9 @@ def configure(*, level=None, fmt: Optional[str] = None, sinks=(),
     level:     级别（字符串或 int；None = 不动）
     fmt:       文本 sink 的排版（对实现了 `set_format()` 的 sink 生效；None = 不动）
     sinks:     出口序列；**空（默认）= 不动任何出口**，非空 = 换成本批出口（幂等：替换上次装的）
-    prefix:    命名前缀（None = 不动；须为非空字符串）
+    prefix:    命名前缀（None = 不动；须为非空字符串）。★ 换 prefix 时（审计 L1032）：
+               旧 prefix 上**本门面装的**出口会被摘除并关闭 + 一条 warning —— 换前缀即换
+               出口归属，不留孤儿 handler（宿主自己 `addHandler` 的一律不碰）
     propagate: 是否向父 logger 冒泡（None = 不动）—— 宿主 root 另有 handler 时用它去重
 
     返回配好的 prefix logger。
@@ -95,6 +118,9 @@ def configure(*, level=None, fmt: Optional[str] = None, sinks=(),
     if prefix is not None:
         if not isinstance(prefix, str) or not prefix.strip():
             raise ValueError(f"prefix 须为非空字符串，收到 {prefix!r}")
+        old_name = _state["prefix"]
+        if prefix != old_name:
+            _drop_installed(old_name)          # 换 prefix：先收旧出口（审计 L1032）
         _state["prefix"] = prefix
 
     name = _state["prefix"]

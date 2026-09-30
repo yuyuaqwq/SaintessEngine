@@ -8,8 +8,9 @@
 三处专门钉住的地方（都是「改了就静默变行为」的）：
   ① **跨天边界**：假钟推过本地午夜 → `day_key()` 必须跟着变（不许缓存 / 不许用 UTC 算日历日）
   ② **不静默退 UTC**：坏时区必须抛可读错（退回 UTC = 每天的刷新在错误的时刻发生，最难查）
-  ③ **单一出口**：引擎里除挂钟模块外不得直接 `datetime.now()` / `date.today()`
-     （假钟穿不过去 → 测试与真机行为分叉）
+  ③ **单一出口**：引擎里除挂钟模块外不得直接 `datetime.now()` / `date.today()` /
+     `time.time()`（假钟穿不过去 → 测试与真机行为分叉；`time.time()` 的逐处豁免
+     登记见 `_WALL_CALL_EXEMPT`）
 """
 import datetime as dt
 import os
@@ -130,22 +131,75 @@ def t5_reset():
     check("读出口回系统钟", abs(wall.now() - time.time()) < 2.0)
 
 
-# ============================================================ ⑥ 单一出口（扫源码）
-def t6_single_outlet():
-    print("\n-- ⑥ 引擎里「墙上时间」只有一个出口")
-    hits = []
-    for dirpath, dirnames, filenames in os.walk(os.path.join(ROOT, "saintess_engine")):
+#: 直调 `time.time(` 的**逐处豁免登记**（不许整文件豁免 —— 与 `test_no_silent_fallback`
+#: 的白名单口径同族；登记项 0 命中 ⇒ 报红，防「过期挡箭牌」）。扫描口径：除挂钟本尊
+#: `clock/wall.py` 外，任何 `time.time(` 都要么改走挂钟（`wall.now()` / 可注入钟），
+#: 要么在此登记「它为什么不是旁路」的理由。
+_WALL_CALL_EXEMPT = {
+    ("saintess_engine/clock/timer.py",
+     r"self\._clock\s*=\s*clock\s+or\s+\(lambda: int\(time\.time\(\)\)\)"):
+        "可注入默认：`clock` 参数优先，系统钟只是缺省值（下方 ⑥ 形状检查同钉）",
+    ("saintess_engine/host/runtime.py",
+     r'"clock":\s*"time\.time\(\)"'):
+        "DEFAULTS_HINTS 展示串（描述缺省钟源的说明文字），不是调用",
+}
+
+
+def _scan_wall_outlets(root):
+    """扫 `root/saintess_engine`：返回 `(datetime 直调, 未豁免的 time.time 直调, 用到的豁免项)`。
+
+    `datetime` 三项与 `time.time` 走同一张豁免表（当前表里没有 datetime 项）。
+    """
+    dt_hits, wall_hits, used = [], [], set()
+    for dirpath, dirnames, filenames in os.walk(os.path.join(root, "saintess_engine")):
         dirnames[:] = [d for d in dirnames if d != "__pycache__"]
         for fn in filenames:
             if not fn.endswith(".py"):
                 continue
             p = os.path.join(dirpath, fn)
-            if os.path.relpath(p, ROOT).replace("\\", "/") == "saintess_engine/clock/wall.py":
+            rel = os.path.relpath(p, root).replace("\\", "/")
+            if rel == "saintess_engine/clock/wall.py":
                 continue
             src = open(p, encoding="utf-8").read()
             for m in re.finditer(r"datetime\.now\(|date\.today\(|utcnow\(", src):
-                hits.append(f"{os.path.relpath(p, ROOT)}:{src[:m.start()].count(chr(10)) + 1}")
-    check("除挂钟外没有直接 datetime.now()/date.today()/utcnow()", hits == [], hits[:6])
+                dt_hits.append("%s:%d" % (rel, src[:m.start()].count(chr(10)) + 1))
+            src_lines = src.splitlines()
+            for m in re.finditer(r"time\.time\(", src):
+                ln = src[:m.start()].count(chr(10))
+                line = src_lines[ln] if ln < len(src_lines) else ""
+                for (ex_rel, ex_pat), _why in _WALL_CALL_EXEMPT.items():
+                    if ex_rel == rel and re.search(ex_pat, line):
+                        used.add((ex_rel, ex_pat))
+                        break
+                else:
+                    wall_hits.append("%s:%d" % (rel, ln + 1))
+    return dt_hits, wall_hits, used
+
+
+# ============================================================ ⑥ 单一出口（扫源码）
+def t6_single_outlet():
+    print("\n-- ⑥ 引擎里「墙上时间」只有一个出口")
+    dt_hits, wall_hits, used = _scan_wall_outlets(ROOT)
+    check("除挂钟外没有直接 datetime.now()/date.today()/utcnow()", dt_hits == [], dt_hits[:6])
+    check("★ 除挂钟外没有未登记的 time.time() 直调（豁免表 _WALL_CALL_EXEMPT，逐处登记）",
+          wall_hits == [], wall_hits[:6])
+    stale = sorted(set(_WALL_CALL_EXEMPT) - used)
+    check("★ 豁免登记项全部真命中（0 命中的登记 = 过期挡箭牌，须清）", stale == [], stale)
+    # 反证（有牙）：临时假仓根里造一个 `time.time()` 直调 ⇒ 扫描器必须抓到
+    tmp_root = os.path.join(ROOT, "tests", "_wall_scan_negative_tmp")
+    tmp_pkg = os.path.join(tmp_root, "saintess_engine")
+    os.makedirs(tmp_pkg, exist_ok=True)
+    tmp = os.path.join(tmp_pkg, "zz_tmp_wallcall.py")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write("import time\n\n\ndef f():\n    return time.time()\n")
+        _d2, _w2, _u2 = _scan_wall_outlets(tmp_root)
+        check("反证：新造 time.time() 直调会被扫出（有牙）", len(_w2) == 1, _w2)
+        check("反证：它与任一豁免都不匹配（豁免不吞新点）", _u2 == set(), _u2)
+    finally:
+        os.remove(tmp)
+        os.rmdir(tmp_pkg)
+        os.rmdir(tmp_root)
     # 惰性计时器的默认钟：只能是「可注入默认」，不许是唯一来源
     tsrc = open(os.path.join(ROOT, "saintess_engine", "clock", "timer.py"), encoding="utf-8").read()
     ok = re.search(r"self\._clock\s*=\s*clock\s+or\s+", tsrc) is not None

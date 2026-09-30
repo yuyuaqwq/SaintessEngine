@@ -45,6 +45,10 @@
 
 **零知识**：`hub` / `through` / `exit` 只是**角色名**，角色**取值**由内容侧给
 （本引擎不认任何具体取值，也不 import 宿主）。
+
+**归档登记（2026-09-30，台账 L542）**：`adjacency` / `route_names` / `edges` 在引擎与
+orlandia 生产侧**暂零引用**（只有本包测试在调）—— 属**公开形状 API**，供第三方包/未来
+内容侧用；台账判「**保留不删**」。
 """
 from __future__ import annotations
 

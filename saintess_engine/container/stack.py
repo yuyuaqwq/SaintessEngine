@@ -65,9 +65,17 @@ def _cap_of(cap: Any) -> Optional[int]:
 
 
 def _stored_records(stored: Any, marks: str) -> Any:
-    """已存一格的个体记录：映射取 `marks`（缺键 → `[]`）；裸序列即记录本身；其它 → `[]`。"""
+    """已存一格的个体记录：映射取 `marks`（缺键 / `None` → `[]`）；裸序列即记录本身；其它 → `[]`。
+
+    ★ `None` 归一（2026-09-30，审计 L1545）：`marks` 键存在且值为 `None` 的存量
+    （`{"marks": null}`）是**合法落盘形态** —— `None` = 明确「没有个体记录」，与
+    `carries_records` 的口径同源。原先原样返回 `None` ⇒ `merge_records` 里
+    `None + list` 当场 TypeError（实跑复现）。归一成 `[]` 只对齐这一种口径；
+    其余分支（裸序列 / 其它类型）一字未动（坏类型照旧原样返回、照旧炸）。
+    """
     if isinstance(stored, dict):
-        return stored.get(marks, [])
+        recs = stored.get(marks)
+        return [] if recs is None else recs
     if isinstance(stored, list):
         return stored
     return []
@@ -112,7 +120,7 @@ def trim_records(stored: Any, taken: int, *, marks: str) -> Any:
     return out
 
 
-# ---------------------------------------------------------------- 容器（不可变）
+# ---------------------------------------------------------------- 容器（写操作不可变：返回新容器）
 def _absorb(existing: dict, incoming: dict, *, merge: bool, marks: str,
             cap: Optional[int]) -> dict:
     """把 `incoming` 格并进 `existing` 格：件数相加；合并开启且来件带记录时并记录。
@@ -128,7 +136,12 @@ def _absorb(existing: dict, incoming: dict, *, merge: bool, marks: str,
 
 
 class Stack:
-    """键控堆叠容器（**不可变**：写操作返回新容器，无 setter）。"""
+    """键控堆叠容器（**写操作不可变**：add / take 皆返回新容器、无 setter）。
+
+    ★ 口径钉住（2026-09-30，台账 L1548）：「不可变」的边界在**容器层**——读口
+    `entries()` / `get()` 给出的元素是**原字典对象**（浅层暴露：改元素即改容器、
+    `dump()` 跟着变）。要连元素一起冻结，调用方自己拷贝；本类不做深拷贝。
+    """
 
     def __init__(self, entries: Optional[Iterable[Any]] = None, *,
                  marks: str, cap: Optional[int] = None) -> None:

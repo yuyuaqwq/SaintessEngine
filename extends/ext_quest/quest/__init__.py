@@ -206,8 +206,9 @@ class Quest:
         return self._objs.lines(self.objective, progress=progress)
 
     def progress_lines(self, progress) -> list:
-        """面板入口：同一骨架，**进度必给**（两个入口共用一份实现，不各自产文案）。"""
-        return self._objs.lines(self.objective, progress=progress)
+        """面板入口：同一骨架（**与 `lines` 共用一份实现** —— 审计 L611 合并，
+        不再各写一份同体；进度透传，缺省语义随 `Objectives.lines`：`None` = 只出骨架）。"""
+        return self.lines(progress=progress)
 
     def __repr__(self) -> str:
         return f"Quest(id={self.id!r})"

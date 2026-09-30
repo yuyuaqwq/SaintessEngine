@@ -120,7 +120,7 @@ def deal_damage(battle, source: Optional[dict], target: dict, amount: int,
     # 改 battle._fire_ctx["mult"]（沸血全减伤/death_dance 减伤等条件减伤）
     # ★ 2026-09-28 互斥（鱼鱼拍板，机制可预测）：承伤减免**只走一条通道**。同一 actor
     #   身上若既有声明了 `taken_pct` 的容器条目、又有 `taken_calc` 乘区，两条会**相乘**
-    #   （0.3 × 0.4 ⇒ 实吃 0.28 伤害，机制不可预测）⇒ **声明优先**：乘区被**跳过**，
+    #   （声明减 30% × 乘区减 40% ⇒ 实吃 0.7 × 0.6 = 0.42，机制不可预测）⇒ **声明优先**：乘区被**跳过**，
     #   并发一条 cue 说清「走了哪条、另一支被跳过」（`_skip_event_mult`）。
     # 为什么只弃**乘区**、不整条事件不 fire：内容侧挂在 `taken_calc` 上的**别的**声明动作
     #   读的是 `_fire_ctx["dmg"]` 而不是 `mult`（例：奥兰迪亚 `passive_overflow_shield`
@@ -449,7 +449,7 @@ def _skip_event_mult(battle, target: dict, mult: float, logs: list,
     ★ 2026-09-28（鱼鱼拍板）：承伤减免**同一状态只走一条通道**。
       · 通道 A（**声明**）= 容器里声明了 `taken_pct` 的条目累加（`state_reduce_of`）
       · 通道 B（**事件**）= `taken_calc` 乘区（内容侧在 `on_taken`/乘区动作里改 `_fire_ctx["mult"]`）
-      两条各自成立时**会相乘**（0.3 × 0.4 ⇒ 实吃 28% 而非 42%）⇒ 机制不可预测。
+      两条各自成立时**会相乘**（声明减 30% × 乘区减 40% ⇒ 实吃 0.7 × 0.6 = 0.42）⇒ 机制不可预测。
       ⇒ **声明优先**：通道 A 命中时通道 B 被跳过，并发一条 cue 说清走了哪条、弃了哪条。
 
     返回 True = 跳过（通道 A 优先）；False = 照常乘。
@@ -516,6 +516,12 @@ def state_reduce_of(actor: dict) -> float:
             total += float(entry.get("value", 0) or 0)
         except (TypeError, ValueError) as _e:
             _diag(None, "state_reduce_of · 坏 value", _e)      # 审计 P-44：不再静默（行为不变）
+    if total < 0:
+        # ★ 审计 L3363（2026-09-30）：负累加 = 声明侧给了负 value（坏数据）—— 原写法
+        #   把它静默当成「没声明」抹平。照本文件 `_diag` 惯例**报**（不拦、不改行为）：
+        #   返回值语义照旧（负值仍折 0.0，不做反向放大）。
+        _diag(None, "state_reduce_of · 负累加", ValueError(
+            "taken_pct 累加为负（声明了负 value）：total=%r" % (total,)))
     if total <= 0:
         return 0.0
     return min(total, _F.reduce_cap())
@@ -603,13 +609,16 @@ def _apply_damage(battle, target: dict, dmg: int, logs: list,
 # ============================================================
 
 def heal_actor(battle, target: dict, amount: int, logs: list,
-               source: Optional[dict] = None, label: str = "",
+               source: Optional[dict] = None,
                _no_redirect: bool = False) -> int:
     """治疗落地核心（actor-agnostic，统一收口）。
 
     - 禁疗修正（target.state/buffs 的 heal_down / _anti_heal_pct，后续扩展）
     - clamp max_hp
     返回实际回血量。
+    ★ 本函数**不产玩家可见行**：措辞一律走 cue / 内容侧文案表 —— 2026-09-30 审计
+      （L253 · 分拣单 #20）已删 `label` 形参 + `label.format` 出口 + 重定向两处透传；
+      它曾是引擎里最后一条「调用方塞模板串拼措辞」的旁路（生产零调用、无实现方）。
     """
     if target is None or amount is None:
         return 0
@@ -630,7 +639,7 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
                 _hook = getattr(battle, "heal_redirect_hook", None)
                 if _hook is not None:
                     try:
-                        _ok = bool(_hook(battle, target, _share, amount, label))
+                        _ok = bool(_hook(battle, target, _share, amount))
                     except Exception as _e:
                         _diag(battle, "heal_actor", _e)          # 审计 P-44 余量：不再静默（行为不变）
                         _ok = False
@@ -638,7 +647,7 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
                     _cue(battle, logs, "battle.landing.heal_shared",
                          {"name": _share.get('name', '分担者')})
                     return heal_actor(battle, _share, amount, logs, source=source,
-                                      label=label, _no_redirect=True)
+                                      _no_redirect=True)
     heal = max(0, int(amount))
     if heal <= 0:
         return 0
@@ -649,8 +658,8 @@ def heal_actor(battle, target: dict, amount: int, logs: list,
     _before = int(target.get("hp", 0) or 0)
     ATTR.set_current(target, "hp", _before + heal, reason="heal", battle=battle)
     _real = int(target["hp"]) - _before
-    if _real > 0 and label:
-        logs.append(label.format(_real=_real, _planned=heal))
+    # （2026-09-30 审计删）：原 `if _real > 0 and label: logs.append(label.format(...))`
+    #   出口已随 `label` 形参退役 —— 措辞一律走 cue / 内容侧文案表。
     # N8 事件：治疗生效（主体=被治疗者；实际回血 >0；治疗者放 source；
     # overflow = 计划治疗超出 max_hp 的浪费量——溢出转盾类效果消费）
     if _real > 0:

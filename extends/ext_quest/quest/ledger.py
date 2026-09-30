@@ -21,7 +21,7 @@
               元数据清单一类）引擎**不解释**
     unknown   未声明子账本名的策略：`unknown(名字, 值) -> 真值`；真 = 按 dict 口径当子账本读
 
-**读口（全部零遍历、零缓存）**::
+**读口（全部零遍历；未声明名字的 `unknown` 判定按实例一次定稿 —— 见 `_spec`）**::
 
     raw / current / status / progress / done / lane(名) / entry(lane, key) /
     status_of(lane, key=None) / is_open(lane, key)
@@ -46,6 +46,8 @@
 **不变量（门禁逐条钉住）**
 --------------------------
 * **构造 O(1)、零遍历**：只校验注入面 + 存引用；不读账本、不建索引、不补默认值。
+* **`unknown` 判定一次定稿**：未声明名字的策略判定**按实例只问一次**（首问后进缓存，
+  含否定结果）—— 读口不重复执行内容侧代码；实例按不可变约定不改 raw ⇒ 判定稳定。
 * **不可变**：迁移返回新 mapping；未改动的嵌套对象按浅拷贝共享（不做深拷、不写回原 raw）。
 * **异常不吞**：注入回调与校验错误原样上抛。
 * **顺序即语义**：`snapshot()` 的键名与键序逐字保留；`archive` 追加**不去重**。
@@ -167,9 +169,10 @@ def _bumped(old, patch, kind, where):
 
 # ───────────────────────────────────────────────────────── 账本外壳
 class QuestLog:
-    """一份任务账本的**只读外壳 + 状态迁移**：构造 O(1)，不遍历账本、不缓存、不落库。"""
+    """一份任务账本的**只读外壳 + 状态迁移**：构造 O(1)，不遍历账本、不缓存账本内容、不落库。"""
 
-    __slots__ = ("_raw", "_fields", "_words", "_specs", "_unknown_fn", "_default_lane")
+    __slots__ = ("_raw", "_fields", "_words", "_specs", "_unknown_fn", "_default_lane",
+                 "_unknown_cache")
 
     def __init__(self, raw=None, *, fields, states, lanes=(), unknown=None) -> None:
         self._fields = _fields_map(fields)
@@ -186,6 +189,8 @@ class QuestLog:
         self._raw = raw
         self._unknown_fn = unknown
         self._default_lane = default
+        # 未声明名字的 `unknown` 判定缓存（实例级一次定稿；见 `_spec`）。
+        self._unknown_cache: dict = {}
 
     # ---------------------------------------------------------------- 读口
     @property
@@ -405,12 +410,22 @@ class QuestLog:
         return dict(self._m())
 
     def _spec(self, name):
-        """子账本声明；未声明的名字交给 `unknown` 策略（真 = 按 dict 口径认它）。"""
+        """子账本声明；未声明的名字交给 `unknown` 策略（真 = 按 dict 口径认它）。
+
+        ★ 一次定稿（2026-09-30，审计 L604）：未声明名字的判定**按实例缓存** —— 首次
+        需要时问一次 `unknown`，之后（读口/写口任何路径）直接取缓存。原先每读一次
+        问一次（`is_open('ghost','a')` / `lane('ghost')` 重复读不收敛）：读口在承诺
+        「零遍历」的前提下每读都执行**任意内容侧代码**。同一实例按不可变约定不改
+        raw ⇒ 判定结果稳定，没有重复问的理由；缓存**含否定结果**（判「不认」也只问一次）。
+        """
         if name in self._specs:
             return self._specs[name]
-        if self._unknown_fn is not None and self._unknown_fn(name, self._m().get(name)):
-            return {_SPEC_PROGRESS: dict}
-        return None
+        cache = self._unknown_cache
+        if name not in cache:
+            ok = (self._unknown_fn is not None
+                  and self._unknown_fn(name, self._m().get(name)))
+            cache[name] = {_SPEC_PROGRESS: dict} if ok else None
+        return cache[name]
 
     def _kind(self, lane):
         """lane 的进度容器形态；未声明且策略不认 → KeyError（fail-closed）。"""

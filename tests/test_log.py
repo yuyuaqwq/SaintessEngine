@@ -104,6 +104,18 @@ def t3_configure_effective_and_idempotent():
     check("remove_sinks 摘掉 1 个", L.remove_sinks(prefix=P) == 1)
     check("摘掉后 handler 归零", logging.getLogger(P).handlers == [])
     check("再摘返回 0", L.remove_sinks(prefix=P) == 0)
+    # ★ 审计 L1032（2026-09-30）：换 prefix ⇒ **旧 prefix 上本门面装的出口被摘除并关闭**
+    #   （不留孤儿 handler、不拖文件句柄）；此后 remove_sinks 默认再也够不着它。
+    L.configure(prefix="t3probe_a", sinks=[L.MemorySink()], propagate=False)
+    check("布置：t3probe_a 挂 1 个", len(logging.getLogger("t3probe_a").handlers) == 1)
+    L.configure(prefix="t3probe_b", sinks=[L.MemorySink()], propagate=False)
+    check("★ 换 prefix 后：旧 prefix 的 handler 已摘（审计 L1032）",
+          logging.getLogger("t3probe_a").handlers == [])
+    check("★ 换 prefix 后：新 prefix 挂 1 个",
+          len(logging.getLogger("t3probe_b").handlers) == 1)
+    check("★ 旧 prefix 的出口已随换前缀收口（remove_sinks 返回 0 = 没有孤儿可摘）",
+          L.remove_sinks(prefix="t3probe_a") == 0)
+    check("对照：新 prefix 仍可正常摘除", L.remove_sinks(prefix="t3probe_b") == 1)
     try:
         L.configure(prefix="   ")
         ok = False

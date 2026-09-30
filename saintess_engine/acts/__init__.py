@@ -167,14 +167,17 @@ class Plan:
         self.steps = tuple(steps)          # ((动词名, 动词, {实参名: 取值fn}, 短路fn|None), ...)
         self._when = when_fn
 
-    def run(self, ctx, *, out: list | None = None) -> list:
-        """执行序列；返回结果列表（给了 `out` 就往它里追加，不新建）。
+    def run(self, ctx) -> list:
+        """执行序列；返回结果列表（每次全新；`when` 假 ⇒ 空列表，不是 None）。
 
-        * `when` 给了且为假 ⇒ 返回 `out`（可能是空列表）
         * 每步：先取实参（按声明序）再调动词；`stop_if` 为真 ⇒ 记完这一步就停
         * 动词异常**原样上抛**
+
+        ★ 审计 L1822（2026-09-30）：原 `out=` 形参已删 —— 生产零调用（orlandia /
+        aetheran grep 无 `out=`），唯一调用方是本仓 `tests/test_acts.py` 自测（已同步）；
+        序列结果的收集口只留「新建」这一条，不留复用外传缓冲的第二条路。
         """
-        result: list = [] if out is None else out
+        result: list = []
         if self._when is not None and not self._when(ctx):
             return result
         for verb_name, verb, kwargs, stop_if in self.steps:

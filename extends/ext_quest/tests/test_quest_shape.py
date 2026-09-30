@@ -423,6 +423,18 @@ def t_ledger_read():
     check("★ unknown 策略放行未声明 lane 名后 → 按原对象读",
           _mk(raw_with_ghost, unknown=lambda name, value: True).lane("ghost")
           is raw_with_ghost["ghost"])
+    calls = []
+    _log_u = _mk(raw_with_ghost, unknown=lambda name, value: (calls.append(name), True)[1])
+    check("★ unknown 一次定稿：重复读同一未声明名只问一次（审计 L604）",
+          _log_u.lane("ghost") == raw_with_ghost["ghost"]
+          and _log_u.is_open("ghost", "g1") is True
+          and _log_u.status_of("ghost", "g1") == "s_live"
+          and calls == ["ghost"], calls)
+    calls2 = []
+    _log_n = _mk(raw_with_ghost, unknown=lambda name, value: (calls2.append(name), False)[1])
+    check("★ unknown 否定判定同样一次定稿（两次读只问一次）",
+          _log_n.lane("ghost") == {} and _log_n.lane("ghost") == {}
+          and calls2 == ["ghost"], calls2)
 
     check("entry 命中 → 条目原对象", log.entry("sub", "s1") is raw["sub"]["s1"])
     check("★ 兜底：entry 缺失 → None", log.entry("sub", "nope") is None)

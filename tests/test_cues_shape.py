@@ -239,8 +239,9 @@ check("★ payload 只读（引擎给副本：订阅者改它不影响调用方�
 _nostrict = CueBus({}, strict=False)
 _l3: list = []
 _nostrict.emit(_l3, "x.a", {})
-check("strict=False（诊断面）⇒ 不崩，写一条可读坏数据行",
-      _l3 == ["x.a 无订阅者（装配缺口）"], str(_l3))
+check("★ strict=False（诊断面）⇒ 不崩：中性坏数据行 + 问题落 problems（机器名不进玩家面）",
+      _l3 == [MISS_LINE] and any("x.a" in p for p in _nostrict.problems),
+      "%s / %s" % (_l3, _nostrict.problems))
 try:
     CueBus({}, strict=True).emit([], "x.a", {})
     _strict_raised = None

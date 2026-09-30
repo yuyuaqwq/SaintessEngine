@@ -16,7 +16,7 @@
     "engine": ">=0.1,<0.2"            # 区间
     "engine": "==0.1.0"               # 精确（不推荐，升级会卡住）
 
-**约定（设计稿 framework-editor-design.md §1）**：不满足时调用方显式报错，
+**约定（设计决策记录 docs/engine-wiki/architecture/design-decisions.md）**：不满足时调用方显式报错，
 **不静默降级** —— 否则会变成「配了不生效」这类最难查的故障。
 
 用法::
@@ -31,11 +31,6 @@ import re
 
 __version__ = "0.2.0"
 
-# 版本元组（便于程序比较）
-VERSION_INFO: tuple = tuple(int(x) for x in re.findall(r"\d+", __version__)[:3]) or (0,)
-VERSION_INFO = tuple(list(VERSION_INFO) + [0] * (3 - len(VERSION_INFO)))
-
-_OPS = (">=", "<=", "==", "!=", ">", "<")
 _CLAUSE = re.compile(r"^\s*(>=|<=|==|!=|>|<)?\s*v?(\d+(?:\.\d+)*)\s*$")
 # 整串锚定的版本号（不做 findall 刮数字；见 parse 的说明）
 _VERSION_RE = re.compile(r"^v?(\d+(?:\.\d+)*)$")
@@ -56,6 +51,14 @@ def parse(text: str) -> tuple:
     if not m:
         raise ValueError(f"不是合法版本号：{text!r}")
     return tuple(int(x) for x in m.group(1).split("."))[:3]
+
+
+# 版本元组（便于程序比较）—— ★ 审计 L2645：与 `parse` **同一读法（单源）**，
+# 故定义在它之后。原先自己 findall + `or (0,)` 兜底：`__version__` 一旦写成 "vNext"
+# 这类非法串，这里静默得 `(0,0,0)`，而 `parse("vNext")` 抛 ValueError —— 同一份
+# 版本号两条读法、两样结局。现在直接复用 `parse`：合法版本补零到三位
+# （`0.1` → `(0,1,0)`，与旧输出逐字一致）；非法版本号在**导入期当场炸**（不再伪装成 0.0.0）。
+VERSION_INFO: tuple = tuple(list(parse(__version__)) + [0] * (3 - len(parse(__version__))))
 
 
 def _cmp(a: tuple, b: tuple) -> int:

@@ -144,7 +144,13 @@ class CueBus:
                 raise EngineNotConfigured(
                     "cue %r 没有任何订阅者：装配缺口（内容侧该在 cue_subs_fn 里声明它）"
                     % (name,))
-            logs.append("%s 无订阅者（装配缺口）" % name)
+            # ★ 审计 L2059（2026-09-30）：玩家可见行不许带机器名（`.` 分域名泄露面）——
+            #   与下面「缺 key / 渲染空串」两个诊断出口同口径：诊断面记全（含原始 cue 名），
+            #   玩家面只出一行中性坏数据（MISS_LINE，绝不静默丢行）。
+            prob = "cue %r 没有任何订阅者（装配缺口）" % (name,)
+            if prob not in self.problems:
+                self.problems.append(prob)
+            logs.append(MISS_LINE)
             return
         slots = dict(payload or {})
         # ★ 先全部渲染、再一次 append。原先逐行 append：中途某个订阅者抛

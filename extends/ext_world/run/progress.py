@@ -29,6 +29,10 @@
 
 **两个自由度**：`order` 只是「声明序」的默认含义（`advance` = 下一站）；
 网状连通、必经路径、出入口属空间形状（`ext_world.space`），本形状不重复实现。
+
+**归档登记（2026-09-30，台账 L542）**：`next_key` / `pools_of` / `set_budget` / `current_key`
+在引擎与 orlandia 生产侧**暂零引用**（只有本包测试在调）—— 属**公开形状 API**，供第三方包/
+未来内容侧用；台账判「**保留不删**」。
 """
 from __future__ import annotations
 

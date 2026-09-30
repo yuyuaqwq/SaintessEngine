@@ -452,6 +452,7 @@ class Package:
         self.sources: dict = {}
         self.gaps: list = []
         self.import_refs: list = []
+        self.engine_refs: list = []       # 包 → `saintess_engine.*` 的 import（2026-09-30 新增核验面）
         self.rules: list = []
 
     # ---------- 发现 ----------
@@ -728,6 +729,13 @@ def _resolve_base(pkg: Package, src_module: str, level: int, module: "str | None
 
 
 def collect_imports(pkg: Package, abs_path: str, tree, lines: list) -> list:
+    """收集该文件的 import 引用。
+
+    ★ 登记补记（2026-09-30，审计 L4973 · 分拣单 #36）：本函数只收指向本包
+    `root_name` 的目标（「包内 `content.*` 互引」面）；**「包 → 引擎公开 API」面
+    已于同日由下方 `collect_engine_imports` / `check_engine_ref` 补齐**（同套导出面
+    核验，缺口进同一份 gaps/--json 管道）。本注保留为历史登记。
+    """
     src_module = pkg.module_of_path(abs_path)
     refs: list = []
     for node in ast.walk(tree):
@@ -755,6 +763,131 @@ def collect_imports(pkg: Package, abs_path: str, tree, lines: list) -> list:
         uniq.append(r)
     uniq.sort(key=lambda r: (r.line, r.name))
     return uniq
+
+
+# ============================================================
+# 引擎面核验（包 → `saintess_engine.*` 公开 API）
+# ============================================================
+# ★ 2026-09-30（审计残余修复线 · 台账 L4973 / 分拣单 #36）：原先本门禁只覆盖
+#   「包内 content.* 互引」，「包 → 引擎公开 API」零覆盖（实测 122 处 / 92 个模块
+#   `import saintess_engine.*`）。现在对这类来源**复用同一套导出面核验**：
+#     · 目标模块存在（<引擎根>/saintess_engine/**.py 或 <包>/__init__.py）；
+#     · `from saintess_engine.X import n` ⇒ `n` ∈ X 的导出面（静态/__all__ 同口径）；
+#     · `from saintess_engine import n` ⇒ `n` 是子模块**或**引擎包 __init__ 的导出面成员；
+#     · `import saintess_engine...`（整模块）⇒ 只验模块存在。
+#   与包内口径一致的三件事：函数体内延迟 import 一样扫；不可枚举面走「放行 + 点名」
+#   （不静默）；缺口进同一份 gaps/--json 管道。
+
+ENGINE_PKG_NAME = "saintess_engine"
+ENGINE_ROOT = os.path.join(REPO_ROOT, ENGINE_PKG_NAME)
+
+_ENGINE_SURFACES: dict = {}
+
+
+def _engine_module_path(mod: str) -> "str | None":
+    """`saintess_engine.a.b` → 源文件路径（不存在 → None）。只认引擎根这一支。"""
+    if mod != ENGINE_PKG_NAME and not mod.startswith(ENGINE_PKG_NAME + "."):
+        return None
+    parts = mod.split(".")[1:]
+    cands = []
+    if parts:
+        cands.append(os.path.join(ENGINE_ROOT, *parts, "__init__.py"))
+        cands.append(os.path.join(ENGINE_ROOT, *parts) + ".py")
+    else:
+        cands.append(os.path.join(ENGINE_ROOT, "__init__.py"))
+    for p in cands:
+        if os.path.isfile(p):
+            return p
+    return None
+
+
+def _engine_surface(mod: str) -> "ExportSurface | None":
+    """引擎模块导出面（惰性 + 缓存；模块不存在/语法坏 → None）。"""
+    if mod not in _ENGINE_SURFACES:
+        surface = None
+        path = _engine_module_path(mod)
+        if path is not None:
+            try:
+                src = io.open(path, encoding="utf-8", errors="replace").read()
+                surface = scan_exports(mod, ast.parse(src))
+            except SyntaxError:
+                surface = None
+        _ENGINE_SURFACES[mod] = surface
+    return _ENGINE_SURFACES[mod]
+
+
+def collect_engine_imports(pkg: Package, abs_path: str, tree, lines: list) -> list:
+    """收集该文件里指向 `saintess_engine.*` 的 import（含函数体/分支/延迟 import）。"""
+    src_module = pkg.module_of_path(abs_path)
+    refs: list = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == ENGINE_PKG_NAME or alias.name.startswith(ENGINE_PKG_NAME + "."):
+                    ref = ImportRef(pkg.rel_of(abs_path), src_module, node.lineno,
+                                    _import_text(lines, node), alias.name,
+                                    alias.asname or alias.name.split(".")[0])
+                    ref.module_only = True
+                    refs.append(ref)
+            continue
+        if isinstance(node, ast.ImportFrom):
+            if (node.level or 0) != 0 or not node.module:
+                continue
+            if node.module != ENGINE_PKG_NAME and not node.module.startswith(ENGINE_PKG_NAME + "."):
+                continue
+            for alias in node.names:
+                refs.append(ImportRef(pkg.rel_of(abs_path), src_module, node.lineno,
+                                      _import_text(lines, node), node.module,
+                                      alias.name, star=(alias.name == "*")))
+    seen, uniq = set(), []
+    for r in refs:
+        key = (r.src_file, r.line, r.target, r.name)
+        if key in seen:
+            continue
+        seen.add(key)
+        uniq.append(r)
+    uniq.sort(key=lambda r: (r.line, r.name))
+    return uniq
+
+
+def check_engine_ref(pkg: Package, ref: ImportRef) -> None:
+    """一条引擎侧 import 的核验（缺口进 pkg.gaps，与包内口径同一管道）。"""
+    target = ref.target
+    if _engine_module_path(target) is None:
+        pkg.gaps.append(Gap(
+            "engine_missing_module", ref,
+            "engine module %s does not exist (no %s.py and no %s/__init__.py)"
+            % (target, target.replace(".", "/"), target.replace(".", "/"))))
+        return
+    if getattr(ref, "module_only", False):
+        return
+    if ref.star:
+        surface = _engine_surface(target)
+        if surface is not None and not (surface.static | surface.exec_time | surface.dynamic):
+            pkg.gaps.append(Gap(
+                "engine_star_empty", ref,
+                "`import *` from engine module with an empty export surface", 0))
+        return
+    if target == ENGINE_PKG_NAME and \
+            _engine_module_path(ENGINE_PKG_NAME + "." + ref.name) is not None:
+        return                        # `from saintess_engine import <子模块>`
+    surface = _engine_surface(target)
+    if surface is None:
+        return
+    if surface.has(ref.name) or ref.name in surface.dynamic:
+        return
+    if surface.open_rules:
+        print("   * [engine open-face allow] %s | %s | %s -> %s"
+              % (ref.where(), ref.text.strip(), ref.name,
+                 "；".join(m[0] for m in surface.open_rules[:2])))
+        return
+    extra = ""
+    if surface.mechanisms:
+        extra = "engine module mechanisms: %s" % "，".join(surface.mechanisms[:3])
+    pkg.gaps.append(Gap(
+        "engine_missing_name", ref,
+        "`%s` not found in engine module %s" % (ref.name, target),
+        surface.count(), extra=extra))
 
 
 # ============================================================
@@ -809,6 +942,10 @@ def discover_packages() -> list:
                 out.append(_mk_pkg(p.strip()))
         return _dedupe([p for p in out if p])
     out = []
+    # ★ 口径登记（2026-09-30，审计 L4977）：`games/` 直读 = **子模块的工作树**（不是
+    #   gitlink 指针）—— 指针落后时本门禁测的是**工作树**（现状：orlandia 工作树
+    #   干净，故结论不掺在途改动）；记账 / 对拍请用 `git submodule status` +
+    #   `cherry` / `show --numstat` 量口径，别拿本门禁当「指针态」的证明。
     games = os.path.join(REPO_ROOT, "games")
     if os.path.isdir(games):
         for name in sorted(os.listdir(games)):
@@ -894,6 +1031,7 @@ def scan_package(pkg: Package, rules: list) -> None:
     pkg.rules = rules
     pkg.files, pkg.module_files = [], {}
     pkg.gaps, pkg.import_refs = [], []
+    pkg.engine_refs = []
     pkg.discover()
     pkg.load_sources()
 
@@ -937,6 +1075,11 @@ def scan_package(pkg: Package, rules: list) -> None:
                 "`%s` not found in target module %s (%s)"
                 % (ref.name, ref.target, pkg.label_of(target_path)),
                 len(pkg.available(ref.target)), extra=extra))
+
+        # ★ 引擎面核验（2026-09-30 · 分拣单 #36）：包 → `saintess_engine.*` 公开 API
+        for ref in collect_engine_imports(pkg, path, tree, lines):
+            pkg.engine_refs.append(ref)
+            check_engine_ref(pkg, ref)
 
     # 兜底去重（同一处 import 的同一名字只留一条，绝不重复计数）
     seen, uniq = set(), []
@@ -1058,10 +1201,11 @@ def main(argv) -> int:
 
     total_files = sum(len(p.files) for p in packages)
     total_imports = sum(len(p.import_refs) for p in packages)
+    total_engines = sum(len(p.engine_refs) for p in packages)
     total_gaps = sum(len(p.gaps) for p in packages)
 
-    print("\n扫描面 scan surface：%d 个包 · %d 个 .py · %d 条包内 import"
-          % (len(packages), total_files, total_imports))
+    print("\n扫描面 scan surface：%d 个包 · %d 个 .py · %d 条包内 import · %d 条引擎面 import"
+          % (len(packages), total_files, total_imports, total_engines))
     if total_files == 0 or total_imports == 0:
         print("[FAIL] scan surface is empty -- the gate scanned nothing (broken口径) -> RED")
         return 1
@@ -1071,12 +1215,13 @@ def main(argv) -> int:
 
     for pkg in packages:
         if pkg.gaps:
-            banner("[FAIL] %s：%d 处包内 import 面不自洽 / closure gaps"
+            banner("[FAIL] %s：%d 处 import 面不自洽（含引擎面）/ closure gaps"
                    % (pkg.dir, len(pkg.gaps)))
             for g in sorted(pkg.gaps, key=lambda x: (x.ref.src_file, x.ref.line)):
                 print("  %s" % g.render())
         else:
-            print("\n[OK] %s：%d 条包内 import 全部自洽" % (pkg.dir, len(pkg.import_refs)))
+            print("\n[OK] %s：%d 条包内 import + %d 条引擎面 import 全部自洽"
+                  % (pkg.dir, len(pkg.import_refs), len(pkg.engine_refs)))
 
     print_open_surfaces(packages)
 
@@ -1087,6 +1232,7 @@ def main(argv) -> int:
             "root_name": pkg.root_name,
             "files": len(pkg.files),
             "imports": len(pkg.import_refs),
+            "engine_imports": len(pkg.engine_refs),
             "gaps": [{"file": g.ref.src_file, "line": g.ref.line,
                       "import": g.ref.text.strip(), "target": g.ref.target,
                       "missing": g.ref.name if g.kind == "missing_name" else g.ref.target,
@@ -1106,10 +1252,11 @@ def main(argv) -> int:
     print("\n" + "=" * 72)
     if total_gaps:
         print("[FAIL] 包内 import 面自洽门禁：%d 处缺口"
-              "（kind=missing_module / missing_name；逐条见上）" % total_gaps)
+              "（kind=missing_module / missing_name / engine_missing_module / engine_missing_name；逐条见上）"
+              % total_gaps)
         return 1
-    print("[OK] 包内 import 面自洽门禁：全绿（%d 个包 · %d 个文件 · %d 条 import）"
-          % (len(packages), total_files, total_imports))
+    print("[OK] 包内 import 面自洽门禁：全绿（%d 个包 · %d 个文件 · %d 条包内 import · %d 条引擎面 import）"
+          % (len(packages), total_files, total_imports, total_engines))
     return 0
 
 
